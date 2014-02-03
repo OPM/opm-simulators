@@ -47,22 +47,7 @@
 namespace
 {
 
-    struct WellData
-    {
-        WellType type;
-        // WellControlType control;
-        // double target;
-        double reference_bhp_depth;
-        // Opm::InjectionSpecification::InjectorType injected_phase;
-        int welspecsline;
-    };
 
-
-    struct PerfData
-    {
-        int cell;
-        double well_index;
-    };
 
     namespace ProductionControl
     {
@@ -301,23 +286,8 @@ namespace Opm
             return;
         }
 
-        // global_cell is a map from compressed cells to Cartesian grid cells.
-        // We must make the inverse lookup.
-        const int* global_cell = grid.global_cell;
-        const int* cpgdim = grid.cartdims;
         std::map<int,int> cartesian_to_compressed;
-
-        if (global_cell) {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
-                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
-            }
-        }
-        else {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
-                cartesian_to_compressed.insert(std::make_pair(i, i));
-            }
-        }
-
+        setupCompressedToCartesian(grid, cartesian_to_compressed);
 
         // Obtain phase usage data.
         PhaseUsage pu = phaseUsageFromDeck(eclipseState);
@@ -330,121 +300,17 @@ namespace Opm
 
         // For easy lookup:
         std::map<std::string, int> well_names_to_index;
-        typedef std::map<std::string, int>::const_iterator WNameIt;
 
-
-
-        // Main "well-loop" to populate the data structures (well_names, well_data, ...)
         ScheduleConstPtr schedule = eclipseState->getSchedule();
         std::vector<WellConstPtr> wells = schedule->getWells(timeStep);
+
         well_names.reserve(wells.size());
         well_data.reserve(wells.size());
         wellperf_data.resize(wells.size());
 
+        createWellsFromSpecs(schedule, timeStep, grid, well_names, well_data, wellperf_data, well_names_to_index, pu, cartesian_to_compressed, permeability);
+
         int well_index = 0;
-        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-            WellConstPtr well = (*wellIter);
-            {   // WELSPECS handling
-                well_names_to_index[well->name()] = well_index;
-                well_names.push_back(well->name());
-                {
-                    WellData wd;
-                    // If negative (defaulted), set refdepth to a marker
-                    // value, will be changed after getting perforation
-                    // data to the centroid of the cell of the top well
-                    // perforation.
-                    wd.reference_bhp_depth = (well->getRefDepth() < 0.0) ? -1e100 : well->getRefDepth();
-                    wd.welspecsline = -1;
-                    if (well->isInjector( timeStep ))
-                        wd.type = INJECTOR;
-                    else
-                        wd.type = PRODUCER;
-                    well_data.push_back(wd);
-                }
-            }
-
-            {   // COMPDAT handling
-                CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
-                for (size_t c=0; c<completionSet->size(); c++) {
-                    CompletionConstPtr completion = completionSet->get(c);
-                    int i = completion->getI();
-                    int j = completion->getJ();
-                    int k = completion->getK();
-                    int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
-                    std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
-                    if (cgit == cartesian_to_compressed.end()) {
-                        OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                                  << k << " not found in grid (well = " << well->name() << ')');
-                    }
-                    int cell = cgit->second;
-                    PerfData pd;
-                    pd.cell = cell;
-                    if (completion->getCF() > 0.0) {
-                        pd.well_index = completion->getCF();
-                    } else {
-                        double radius = 0.5*completion->getDiameter();
-                        if (radius <= 0.0) {
-                            radius = 0.5*unit::feet;
-                            OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-                        }
-                        std::array<double, 3> cubical = getCubeDim(grid, cell);
-                        const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
-                        pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
-                    }
-                    wellperf_data[well_index].push_back(pd);
-                }
-            }
-            well_index++;
-        }
-
-        // Set up reference depths that were defaulted. Count perfs.
-
-        const int num_wells = well_data.size();
-
-        int num_perfs = 0;
-        assert(grid.dimensions == 3);
-        for (int w = 0; w < num_wells; ++w) {
-            num_perfs += wellperf_data[w].size();
-            if (well_data[w].reference_bhp_depth < 0.0) {
-                // It was defaulted. Set reference depth to minimum perforation depth.
-                double min_depth = 1e100;
-                int num_wperfs = wellperf_data[w].size();
-                for (int perf = 0; perf < num_wperfs; ++perf) {
-                    double depth = grid.cell_centroids[3*wellperf_data[w][perf].cell + 2];
-                    min_depth = std::min(min_depth, depth);
-                }
-                well_data[w].reference_bhp_depth = min_depth;
-            }
-        }
-
-        // Create the well data structures.
-        w_ = create_wells(pu.num_phases, num_wells, num_perfs);
-        if (!w_) {
-            OPM_THROW(std::runtime_error, "Failed creating Wells struct.");
-        }
-
-
-        // Add wells.
-        for (int w = 0; w < num_wells; ++w) {
-            const int w_num_perf = wellperf_data[w].size();
-            std::vector<int> perf_cells(w_num_perf);
-            std::vector<double> perf_prodind(w_num_perf);
-            for (int perf = 0; perf < w_num_perf; ++perf) {
-                perf_cells[perf] = wellperf_data[w][perf].cell;
-                perf_prodind[perf] = wellperf_data[w][perf].well_index;
-            }
-            const double* comp_frac = NULL;
-            // We initialize all wells with a null component fraction,
-            // and must (for injection wells) overwrite it later.
-            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
-                              comp_frac, &perf_cells[0], &perf_prodind[0], well_names[w].c_str(), w_);
-            if (!ok) {
-                OPM_THROW(std::runtime_error, "Failed adding well " << well_names[w] << " to Wells data structure.");
-            }
-        }
-        
-        
-        well_index = 0;
         for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
             WellConstPtr well = (*wellIter);
             
@@ -1433,4 +1299,138 @@ namespace Opm
         well_collection_.applyExplicitReinjectionControls(well_reservoirrates_phase, well_surfacerates_phase);
     }
 
+    void WellsManager::setupCompressedToCartesian(const UnstructuredGrid& grid, std::map<int,int>& cartesian_to_compressed ) {
+        // global_cell is a map from compressed cells to Cartesian grid cells.
+        // We must make the inverse lookup.
+        const int* global_cell = grid.global_cell;
+
+        if (global_cell) {
+            for (int i = 0; i < grid.number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+            }
+        }
+        else {
+            for (int i = 0; i < grid.number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(i, i));
+            }
+        }
+
+    }
+
+    void WellsManager::createWellsFromSpecs(ScheduleConstPtr schedule, size_t timeStep,
+                                            const UnstructuredGrid& grid,
+                                            std::vector<std::string>& well_names,
+                                            std::vector<WellData>& well_data,
+                                            std::vector<std::vector<PerfData> >& wellperf_data,
+                                            std::map<std::string, int>& well_names_to_index,
+                                            const PhaseUsage& phaseUsage,
+                                            std::map<int,int> cartesian_to_compressed,
+                                            const double* permeability)
+    {
+        std::vector<WellConstPtr> wells = schedule->getWells(timeStep);
+        int well_index = 0;
+        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
+            WellConstPtr well = (*wellIter);
+            {   // WELSPECS handling
+                well_names_to_index[well->name()] = well_index;
+                well_names.push_back(well->name());
+                {
+                    WellData wd;
+                    // If negative (defaulted), set refdepth to a marker
+                    // value, will be changed after getting perforation
+                    // data to the centroid of the cell of the top well
+                    // perforation.
+                    wd.reference_bhp_depth = (well->getRefDepth() < 0.0) ? -1e100 : well->getRefDepth();
+                    wd.welspecsline = -1;
+                    if (well->isInjector( timeStep ))
+                        wd.type = INJECTOR;
+                    else
+                        wd.type = PRODUCER;
+                    well_data.push_back(wd);
+                }
+            }
+
+            {   // COMPDAT handling
+                CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
+                for (size_t c=0; c<completionSet->size(); c++) {
+                    CompletionConstPtr completion = completionSet->get(c);
+                    int i = completion->getI();
+                    int j = completion->getJ();
+                    int k = completion->getK();
+
+                    const int* cpgdim = grid.cartdims;
+                    int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
+                    std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
+                    if (cgit == cartesian_to_compressed.end()) {
+                        OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                                  << k << " not found in grid (well = " << well->name() << ')');
+                    }
+                    int cell = cgit->second;
+                    PerfData pd;
+                    pd.cell = cell;
+                    if (completion->getCF() > 0.0) {
+                        pd.well_index = completion->getCF();
+                    } else {
+                        double radius = 0.5*completion->getDiameter();
+                        if (radius <= 0.0) {
+                            radius = 0.5*unit::feet;
+                            OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
+                        }
+                        std::array<double, 3> cubical = getCubeDim(grid, cell);
+                        const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
+                        pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
+                    }
+                    wellperf_data[well_index].push_back(pd);
+                }
+            }
+            well_index++;
+        }
+
+        // Set up reference depths that were defaulted. Count perfs.
+
+        const int num_wells = well_data.size();
+
+        int num_perfs = 0;
+        assert(grid.dimensions == 3);
+        for (int w = 0; w < num_wells; ++w) {
+            num_perfs += wellperf_data[w].size();
+            if (well_data[w].reference_bhp_depth < 0.0) {
+                // It was defaulted. Set reference depth to minimum perforation depth.
+                double min_depth = 1e100;
+                int num_wperfs = wellperf_data[w].size();
+                for (int perf = 0; perf < num_wperfs; ++perf) {
+                    double depth = grid.cell_centroids[3*wellperf_data[w][perf].cell + 2];
+                    min_depth = std::min(min_depth, depth);
+                }
+                well_data[w].reference_bhp_depth = min_depth;
+            }
+        }
+
+        // Create the well data structures.
+        w_ = create_wells(phaseUsage.num_phases, num_wells, num_perfs);
+        if (!w_) {
+            OPM_THROW(std::runtime_error, "Failed creating Wells struct.");
+        }
+
+
+        // Add wells.
+        for (int w = 0; w < num_wells; ++w) {
+            const int w_num_perf = wellperf_data[w].size();
+            std::vector<int> perf_cells(w_num_perf);
+            std::vector<double> perf_prodind(w_num_perf);
+            for (int perf = 0; perf < w_num_perf; ++perf) {
+                perf_cells[perf] = wellperf_data[w][perf].cell;
+                perf_prodind[perf] = wellperf_data[w][perf].well_index;
+            }
+            const double* comp_frac = NULL;
+            // We initialize all wells with a null component fraction,
+            // and must (for injection wells) overwrite it later.
+            int ok = add_well(well_data[w].type, well_data[w].reference_bhp_depth, w_num_perf,
+                              comp_frac, &perf_cells[0], &perf_prodind[0], well_names[w].c_str(), w_);
+            if (!ok) {
+                OPM_THROW(std::runtime_error, "Failed adding well " << well_names[w] << " to Wells data structure.");
+            }
+        }
+
+    }
 } // namespace Opm

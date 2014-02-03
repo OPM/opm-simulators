@@ -34,7 +34,22 @@ namespace Opm
 {
 
     class EclipseGridParser;
+    struct WellData
+    {
+        WellType type;
+        // WellControlType control;
+        // double target;
+        double reference_bhp_depth;
+        // Opm::InjectionSpecification::InjectorType injected_phase;
+        int welspecsline;
+    };
 
+
+    struct PerfData
+    {
+        int cell;
+        double well_index;
+    };
     /// This class manages a Wells struct in the sense that it
     /// encapsulates creation and destruction of the wells
     /// data structure.
@@ -42,41 +57,41 @@ namespace Opm
     class WellsManager
     {
     public:
-	/// Default constructor -- no wells.
-    WellsManager();
+        /// Default constructor -- no wells.
+        WellsManager();
 
-    /// Construct from existing wells object.
-    /// WellsManager is not properly initialised in the sense that the logic to
-    /// manage control switching does not exist.
-    ///
-    /// @param[in] W Existing wells object.
-    WellsManager(struct Wells* W);
+        /// Construct from existing wells object.
+        /// WellsManager is not properly initialised in the sense that the logic to
+        /// manage control switching does not exist.
+        ///
+        /// @param[in] W Existing wells object.
+        WellsManager(struct Wells* W);
 
-	/// Construct from input deck and grid.
-	/// The permeability argument may be zero if the input contain
-	/// well productivity indices, otherwise it must be given in
-	/// order to approximate these by the Peaceman formula.
-	WellsManager(const Opm::EclipseGridParser& deck,
-		     const UnstructuredGrid& grid,
-             const double* permeability);
+        /// Construct from input deck and grid.
+        /// The permeability argument may be zero if the input contain
+        /// well productivity indices, otherwise it must be given in
+        /// order to approximate these by the Peaceman formula.
+        WellsManager(const Opm::EclipseGridParser& deck,
+                     const UnstructuredGrid& grid,
+                     const double* permeability);
 
 
-    WellsManager(const Opm::EclipseStateConstPtr eclipseState,
-                 const size_t timeStep,
-                 const Opm::EclipseGridParser& deck,
-                 const UnstructuredGrid& grid,
-                 const double* permeability);
+        WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+                     const size_t timeStep,
+                     const Opm::EclipseGridParser& deck,
+                     const UnstructuredGrid& grid,
+                     const double* permeability);
 
-	/// Destructor.
-	~WellsManager();
+        /// Destructor.
+        ~WellsManager();
 
         /// Does the "deck" define any wells?
         bool empty() const;
 
-	/// Access the managed Wells.
-	/// The method is named similarly to c_str() in std::string,
-	/// to make it clear that we are returning a C-compatible struct.
-	const Wells* c_wells() const;
+        /// Access the managed Wells.
+        /// The method is named similarly to c_str() in std::string,
+        /// to make it clear that we are returning a C-compatible struct.
+        const Wells* c_wells() const;
 
         /// Access the well group hierarchy.
         const WellCollection& wellCollection() const;
@@ -117,18 +132,27 @@ namespace Opm
         void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                               const std::vector<double>& well_surfacerates_phase);
 
+
     private:
-	// Disable copying and assignment.
-	WellsManager(const WellsManager& other);
-	WellsManager& operator=(const WellsManager& other);
+        // Disable copying and assignment.
+        WellsManager(const WellsManager& other);
+        WellsManager& operator=(const WellsManager& other);
+        static void setupCompressedToCartesian(const UnstructuredGrid& grid, std::map<int,int>& cartesian_to_compressed );
+        void createWellsFromSpecs( ScheduleConstPtr schedule, size_t timeStep,
+                                   const UnstructuredGrid& grid,
+                                   std::vector<std::string>& well_names,
+                                   std::vector<WellData>& well_data,
+                                   std::vector<std::vector<PerfData> >& wellperf_data,
+                                   std::map<std::string, int> & well_names_to_index,
+                                   const PhaseUsage& phaseUsage,
+                                   const std::map<int,int> cartesian_to_compressed,
+                                   const double* permeability);
 
-	// Data
-	Wells* w_;
-    WellCollection well_collection_;
 
 
-
-
+        // Data
+        Wells* w_;
+        WellCollection well_collection_;
     };
 
 } // namespace Opm
