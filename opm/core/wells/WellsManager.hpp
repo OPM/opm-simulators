@@ -138,6 +138,9 @@ namespace Opm
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
         static void setupCompressedToCartesian(const UnstructuredGrid& grid, std::map<int,int>& cartesian_to_compressed );
+        void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
+                               std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
+
         void createWellsFromSpecs( ScheduleConstPtr schedule, size_t timeStep,
                                    const UnstructuredGrid& grid,
                                    std::vector<std::string>& well_names,
