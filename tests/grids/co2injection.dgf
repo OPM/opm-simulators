@@ -1,10 +1,17 @@
 DGF
+
 Interval
 0 0   % first corner 
 60 40   % second corner
 24 16   % 24 cells in x and 16 in y direction
-# 
+#Interval
+
 BOUNDARYDOMAIN
 default 1    % all boundaries have id 1
 #BOUNDARYDOMAIN
-# unitcube.dgf 
+
+GridParameter
+Overlap 1
+#GridParameter
+
+#DGF
