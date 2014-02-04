@@ -562,6 +562,8 @@ namespace Opm
             if (! ((zgoc > z0) || (z0 > zwoc))) {
                 // Datum depth in oil zone  (zgoc <= z0 <= zwoc)
                 Details::equilibrateOWG(G, reg, grav, span, cells, press);
+            } else {
+                OPM_THROW(std::runtime_error, "Cannot initialise: the datum depth must be in the oil zone.");
             }
 
             return press;
