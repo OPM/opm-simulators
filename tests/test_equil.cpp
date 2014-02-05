@@ -324,10 +324,19 @@ BOOST_AUTO_TEST_CASE (RegMapping)
 BOOST_AUTO_TEST_CASE (DeckAllDead)
 {
     std::shared_ptr<UnstructuredGrid>
-        grid(create_grid_cart3d(10, 1, 10), destroy_grid);
+        grid(create_grid_cart3d(1, 1, 10), destroy_grid);
     Opm::EclipseGridParser deck("deadfluids.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, *grid, false);
     Opm::equil::DeckDependent::PhasePressureComputer<Opm::EclipseGridParser> comp(props, deck, *grid);
+    const auto& pressures = comp.press();
+    BOOST_REQUIRE(pressures.size() == 3);
+    BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
+    for (auto pp : pressures) {
+        for (auto p : pp){
+            std::cout << p << ' ';
+        }
+        std::cout << std::endl;
+    }
 }
 
 
