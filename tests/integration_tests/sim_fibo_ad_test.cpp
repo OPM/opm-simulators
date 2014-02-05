@@ -317,7 +317,9 @@ std::vector<BlackoilState> runWithNewParser(const parameter::ParameterGroup& par
 
 
 BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
-    char * argv[] = {const_cast<char*>(""),const_cast<char *>("deck_filename=non_public/SPE1_opm.DATA")};
+    const char* null = 0;
+    const char * argv[] = {"", "deck_filename=non_public/SPE1_opm.DATA", null};
+
     parameter::ParameterGroup param(2, argv, false);
   
     BOOST_ASSERT(param.has("deck_filename"));
