@@ -320,7 +320,6 @@ BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
     char * argv[] = {const_cast<char*>(""),const_cast<char *>("deck_filename=non_public/SPE1_opm.DATA")};
     parameter::ParameterGroup param(2, argv, false);
   
-    // If we have a "deck_filename", grid and props will be read from that.
     BOOST_ASSERT(param.has("deck_filename"));
 
     std::vector<BlackoilState> runWithOldParserStates = runWithOldParser(param);
