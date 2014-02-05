@@ -25,7 +25,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
-#include <opm/parser/eclipse/Utility/SimpleTable.hpp>
+#include <opm/parser/eclipse/Utility/RocktabTable.hpp>
 
 #include <iostream>
 
@@ -76,31 +76,23 @@ namespace Opm
             if (rtKeyword->size() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
 
-            std::vector<std::string> rtColumnNames
+            // the number of colums of the "ROCKTAB" keyword
+            // depends on the presence of the "RKTRMDIR"
+            // keyword. Messy stuff...
+            bool isDirectional = newParserDeck->hasKeyword("RKTRMDIR");
+            if (isDirectional)
             {
-                "PRESSURE",
-                "POREVOL MULT",
-                "TRANSMISC MULT"
-            };
-            if (newParserDeck->hasKeyword("RKTRMDIR"))
-            {
-                // the number of colums of the "ROCKTAB" keyword
-                // depends on the presence of the "RKTRMDIR"
-                // keyword. Messy stuff...
-                rtColumnNames.push_back("TRANSMISC MULT Y");
-                rtColumnNames.push_back("TRANSMISC MULT Z");
-
                 // well, okay. we don't support non-isotropic
-                // transmiscibility multipliers yet
+                // transmisibility multipliers yet
                 OPM_THROW(std::runtime_error, "Support for non-isotropic "
-                          "transmiscibility multipliers is not implemented yet.");
+                          "transmisibility multipliers is not implemented yet.");
             };
 
-            Opm::SimpleTable rtTable(rtKeyword, rtColumnNames);
+            Opm::RocktabTable rocktabTable(rtKeyword, isDirectional);
 
-            p_ = rtTable.getColumn(0);
-            poromult_ = rtTable.getColumn(1);
-            transmult_ = rtTable.getColumn(2);
+            p_ = rocktabTable.getPressureColumn();
+            poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
+            transmult_ =  rocktabTable.getTransmisibilityMultiplierColumn();
         } else if (newParserDeck->hasKeyword("ROCK")) {
             Opm::DeckKeywordConstPtr rockKeyword = newParserDeck->getKeyword("ROCK");
             if (rockKeyword->size() != 1)
