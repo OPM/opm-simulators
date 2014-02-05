@@ -26,6 +26,7 @@
 #include <opm/core/utility/linearInterpolation.hpp>
 
 #include <opm/parser/eclipse/Utility/RocktabTable.hpp>
+#include <opm/parser/eclipse/Utility/RockTable.hpp>
 
 #include <iostream>
 
@@ -94,13 +95,12 @@ namespace Opm
             poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
             transmult_ =  rocktabTable.getTransmisibilityMultiplierColumn();
         } else if (newParserDeck->hasKeyword("ROCK")) {
-            Opm::DeckKeywordConstPtr rockKeyword = newParserDeck->getKeyword("ROCK");
-            if (rockKeyword->size() != 1)
+            Opm::RockTable rockTable(newParserDeck->getKeyword("ROCK"));
+            if (rockTable.numRows() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCK.");
 
-            Opm::DeckRecordConstPtr rockRecord = rockKeyword->getRecord(0);
-            pref_ = rockRecord->getItem(0)->getSIDouble(0);
-            rock_comp_ = rockRecord->getItem(1)->getSIDouble(0);
+            pref_ = rockTable.getPressureColumn()[0];
+            rock_comp_ = rockTable.getCompressibilityColumn()[0];
         } else {
             std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
         }
