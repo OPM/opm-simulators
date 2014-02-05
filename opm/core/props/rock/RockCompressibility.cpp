@@ -84,16 +84,16 @@ namespace Opm
             if (isDirectional)
             {
                 // well, okay. we don't support non-isotropic
-                // transmisibility multipliers yet
+                // transmissibility multipliers yet
                 OPM_THROW(std::runtime_error, "Support for non-isotropic "
-                          "transmisibility multipliers is not implemented yet.");
+                          "transmissibility multipliers is not implemented yet.");
             };
 
             Opm::RocktabTable rocktabTable(rtKeyword, isDirectional);
 
             p_ = rocktabTable.getPressureColumn();
             poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
-            transmult_ =  rocktabTable.getTransmisibilityMultiplierColumn();
+            transmult_ =  rocktabTable.getTransmissibilityMultiplierColumn();
         } else if (newParserDeck->hasKeyword("ROCK")) {
             Opm::RockTable rockTable(newParserDeck->getKeyword("ROCK"));
             if (rockTable.numRows() != 1)
