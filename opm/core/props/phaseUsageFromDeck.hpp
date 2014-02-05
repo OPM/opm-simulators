@@ -67,6 +67,7 @@ namespace Opm
 
         return pu;
     }
+
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
     inline PhaseUsage phaseUsageFromDeck(const EclipseGridParser& deck)
