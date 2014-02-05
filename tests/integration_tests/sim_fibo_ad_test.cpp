@@ -67,7 +67,7 @@
 
 using namespace Opm;
 
-std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
+std::vector<BlackoilState> runWithOldParser(const parameter::ParameterGroup& param) {
     
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
@@ -189,7 +189,7 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
 }
 
 
-std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
+std::vector<BlackoilState> runWithNewParser(const parameter::ParameterGroup& param) {
     boost::scoped_ptr<EclipseGridParser> old_deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
