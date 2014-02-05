@@ -67,15 +67,8 @@
 
 using namespace Opm;
 
-std::vector<BlackoilState> runWithOldParser(int argc, char** argv) {
-    parameter::ParameterGroup param(argc, argv, false);
-  
-    // If we have a "deck_filename", grid and props will be read from that.
-    bool use_deck = param.has("deck_filename");
-    if (!use_deck) {
-        OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
-                  "Specify the deck with deck_filename=deckname.data (for example).");
-    }
+std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
+    
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -196,15 +189,7 @@ std::vector<BlackoilState> runWithOldParser(int argc, char** argv) {
 }
 
 
-std::vector<BlackoilState> runWithNewParser(int argc, char** argv) {
-    parameter::ParameterGroup param(argc, argv, false);
-  
-    // If we have a "deck_filename", grid and props will be read from that.
-    bool use_deck = param.has("deck_filename");
-    if (!use_deck) {
-        OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
-                  "Specify the deck with deck_filename=deckname.data (for example).");
-    }
+std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     boost::scoped_ptr<EclipseGridParser> old_deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -333,9 +318,13 @@ std::vector<BlackoilState> runWithNewParser(int argc, char** argv) {
 
 BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
     char * argv[] = {const_cast<char*>(""),const_cast<char *>("deck_filename=non_public/SPE1_opm.DATA")};
-    
-    std::vector<BlackoilState> runWithOldParserStates = runWithOldParser(2, argv);
-    std::vector<BlackoilState> runWithNewParserStates = runWithNewParser(2, argv);
+    parameter::ParameterGroup param(2, argv, false);
+  
+    // If we have a "deck_filename", grid and props will be read from that.
+    BOOST_ASSERT(param.has("deck_filename"));
+
+    std::vector<BlackoilState> runWithOldParserStates = runWithOldParser(param);
+    std::vector<BlackoilState> runWithNewParserStates = runWithNewParser(param);
     
     std::cout << "========    Checking old parser vs new parser BlackoilState ==========\n\n"; 
     for(size_t i=0; i<runWithOldParserStates.size(); i++) {
