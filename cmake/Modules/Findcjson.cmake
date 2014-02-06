@@ -38,7 +38,7 @@ find_library (CJSON_LIBRARY
   HINTS "${CJSON_ROOT}"
   PATHS "${PROJECT_BINARY_DIR}/../opm-parser"
         "${PROJECT_BINARY_DIR}/../opm-parser${BUILD_DIR_SUFFIX}"
-	"${PROJECT_BINARY_DIR}/../../opm-parser/${BUILD_DIR_SUFFIX}"
+        "${PROJECT_BINARY_DIR}/../../opm-parser/${BUILD_DIR_SUFFIX}"
   PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
                 "opm/json"
   DOC "Path to cjson library archive/shared object files"
