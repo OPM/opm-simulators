@@ -23,7 +23,8 @@
 
 namespace Opm
 {
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,                                                           const UnstructuredGrid& grid,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                                           const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
        if (init_rock){
