@@ -262,6 +262,14 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works_ExpandedData) {
 
         BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells(), true));
     }
+
+    Deck.setCurrentEpoch(2);
+    {
+        Opm::WellsManager wellsManager(eclipseState, 2,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
+
+        BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells(), true));
+    }
 }
 
 
@@ -301,5 +309,20 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     BOOST_CHECK(  !well_controls_equal( wellsManager1.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[0] , false));
     BOOST_CHECK(  !well_controls_equal( wellsManager1.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[1] , false));
 }
+
+
+
+BOOST_AUTO_TEST_CASE(WellHasSTOP_ExceptionIsThrown) {
+    Opm::EclipseGridParser Deck("wells_manager_data_wellSTOP.data");
+    Opm::GridManager gridManager(Deck);
+
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(parser->parseFile("wells_manager_data_wellSTOP.data")));
+
+    Deck.setCurrentEpoch(0);
+
+    BOOST_CHECK_THROW( new Opm::WellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL), std::runtime_error );
+}
+
 
 

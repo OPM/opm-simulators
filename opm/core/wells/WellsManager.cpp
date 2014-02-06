@@ -312,34 +312,6 @@ namespace Opm
 
         setupWellControls(wells, timeStep, well_names, pu);
 
-        if (deck.hasField("WELOPEN")) {
-            const WELOPEN& welopen = deck.getWELOPEN();
-            for (size_t i = 0; i < welopen.welopen.size(); ++i) {
-                WelopenLine line = welopen.welopen[i];
-                std::string wellname = line.well_;
-                std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
-                if (it == well_names_to_index.end()) {
-                    OPM_THROW(std::runtime_error, "Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
-                }
-                const int index = it->second;
-                if (line.openshutflag_ == "SHUT") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl >= 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) < 0);
-                } else if (line.openshutflag_ == "OPEN") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl < 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) >= 0);
-                } else {
-                    OPM_THROW(std::runtime_error, "Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
-                }
-            }
-        }
-
         // Build the well_collection_ well group hierarchy.
         if (deck.hasField("GRUPTREE")) {
             std::cout << "Found gruptree" << std::endl;
@@ -1199,6 +1171,10 @@ namespace Opm
         int well_index = 0;
         for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
             WellConstPtr well = (*wellIter);
+
+            if ( !( well->getStatus( timeStep ) == WellCommon::SHUT || well->getStatus( timeStep ) == WellCommon::OPEN) ) {
+                OPM_THROW(std::runtime_error, "Currently we do not support well status " << WellCommon::Status2String(well->getStatus( timeStep )));
+            }
 
             if (well->isInjector(timeStep)) {
                 clear_well_controls(well_index, w_);
