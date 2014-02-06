@@ -31,6 +31,10 @@ if ((NOT OPM_PARSER_ROOT) AND OPM_ROOT)
   set (OPM_PARSER_ROOT "${OPM_ROOT}/opm-parser")
 endif ()
 
+# Detect the build dir suffix or subdirectory
+string(REGEX REPLACE "${PROJECT_SOURCE_DIR}/?(.*)" "\\1"  BUILD_DIR_SUFFIX "${PROJECT_BINARY_DIR}")
+
+message("PROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} PROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} BUILD_DIR_SUFFIX=${BUILD_DIR_SUFFIX}")
 # if a root is specified, then don't search in system directories
 # or in relative directories to this one
 if (OPM_PARSER_ROOT)
@@ -43,9 +47,8 @@ else ()
     "${PROJECT_SOURCE_DIR}/../opm-parser")
   set (_opm_parser_build
     "${PROJECT_BINARY_DIR}/../opm-parser"
-    "${PROJECT_BINARY_DIR}/../opm-parser-build"
-    "${PROJECT_BINARY_DIR}/../../opm-parser/build"
-    "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build")
+    "${PROJECT_BINARY_DIR}/../opm-parser${BUILD_DIR_SUFFIX}"
+    "${PROJECT_BINARY_DIR}/../../opm-parser/${BUILD_DIR_SUFFIX}")
 endif ()
 
 # use this header as signature
@@ -82,6 +85,7 @@ if (CMAKE_SIZEOF_VOID_P)
   math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 endif (CMAKE_SIZEOF_VOID_P)
 
+message("_opm_parser_build=${_opm_parser_build}")
 # these libraries constitute the parser core
 find_library (OPM_PARSER_LIBRARY
   NAMES "Parser"
