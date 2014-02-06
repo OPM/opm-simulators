@@ -59,6 +59,7 @@ set (_opm_proj_exemptions
   dune-istl
   dune-grid
   dune-geometry
+  opm-parser
   )
 
 # although a DUNE module, it is delivered in the OPM suite
