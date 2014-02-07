@@ -100,8 +100,9 @@ namespace Opm
         }
 
         // Saturation table scaling
-        do_eps_ = false;
-        do_3pt_ = false;
+        do_hyst_ = false;
+        do_eps_  = false;
+        do_3pt_  = false;
         if (deck.hasField("ENDSCALE")) {
             //if (!phase_usage_.phase_used[Aqua] || !phase_usage_.phase_used[Liquid] || phase_usage_.phase_used[Vapour]) {
             //    OPM_THROW(std::runtime_error, "Currently endpoint-scaling limited to oil-water systems without gas.");
