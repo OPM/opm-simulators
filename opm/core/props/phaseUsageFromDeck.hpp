@@ -24,12 +24,12 @@
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 
 namespace Opm
 {
-
 
     /// Looks at presence of WATER, OIL and GAS keywords in state object
     /// to determine active phases.
@@ -83,6 +83,43 @@ namespace Opm
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
         if (deck.hasField("GAS")) {
+            pu.phase_used[BlackoilPhases::Vapour] = 1;
+        }
+        pu.num_phases = 0;
+        for (int i = 0; i < BlackoilPhases::MaxNumPhases; ++i) {
+            pu.phase_pos[i] = pu.num_phases;
+            pu.num_phases += pu.phase_used[i];
+        }
+
+        // Only 2 or 3 phase systems handled.
+        if (pu.num_phases < 2 || pu.num_phases > 3) {
+            OPM_THROW(std::runtime_error, "Cannot handle cases with " << pu.num_phases << " phases.");
+        }
+
+        // We need oil systems, since we do not support the keywords needed for
+        // water-gas systems.
+        if (!pu.phase_used[BlackoilPhases::Liquid]) {
+            OPM_THROW(std::runtime_error, "Cannot handle cases with no OIL, i.e. water-gas systems.");
+        }
+
+        return pu;
+    }
+
+    /// Looks at presence of WATER, OIL and GAS keywords in deck
+    /// to determine active phases.
+    inline PhaseUsage phaseUsageFromDeck(Opm::DeckConstPtr newParserDeck)
+    {
+        PhaseUsage pu;
+        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
+
+        // Discover phase usage.
+        if (newParserDeck->hasKeyword("WATER")) {
+            pu.phase_used[BlackoilPhases::Aqua] = 1;
+        }
+        if (newParserDeck->hasKeyword("OIL")) {
+            pu.phase_used[BlackoilPhases::Liquid] = 1;
+        }
+        if (newParserDeck->hasKeyword("GAS")) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
