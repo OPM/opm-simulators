@@ -34,7 +34,7 @@ namespace Opm
     class EclipseWriter;
     class RockCompressibility;
     class WellsManager;
-    class LinearSolverInterface;
+    class FullyImplicitSystemSolverInterface;
     class SimulatorTimer;
     class BlackoilState;
     class WellState;
@@ -71,7 +71,7 @@ namespace Opm
                                        const BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
-                                       LinearSolverInterface& linsolver,
+                                       FullyImplicitSystemSolverInterface& linsolver,
                                        const double* gravity,
                                        EclipseWriter &writer);
 

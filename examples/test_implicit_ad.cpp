@@ -23,6 +23,7 @@
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/FullyImplicitSystemSolverSimple.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -103,8 +104,9 @@ try
     Opm::DerivedGeology geo(*g, props, grav);
 
     Opm::LinearSolverFactory linsolver(param);
+    Opm::FullyImplicitSystemSolverSimple fis_solver(linsolver);
 
-    Opm::FullyImplicitBlackoilSolver solver(*g, props, geo, 0, *wells, linsolver);
+    Opm::FullyImplicitBlackoilSolver solver(*g, props, geo, 0, *wells, fis_solver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);

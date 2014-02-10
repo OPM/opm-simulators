@@ -23,6 +23,8 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/FullyImplicitBlackoilResidual.hpp>
+#include <opm/autodiff/FullyImplicitSystemSolverInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -31,7 +33,7 @@ namespace Opm {
 
     class DerivedGeology;
     class RockCompressibility;
-    class LinearSolverInterface;
+    class FullyImplicitSystemSolverInterface;
     class BlackoilState;
     class WellState;
 
@@ -62,7 +64,7 @@ namespace Opm {
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const LinearSolverInterface&    linsolver);
+                                    const FullyImplicitSystemSolverInterface& linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -78,45 +80,9 @@ namespace Opm {
              BlackoilState& state ,
              WellState&     wstate);
 
-        /// Typedef used throughout the solver, in the public section
-        /// since it is used in the definition of Residual.
-        typedef AutoDiffBlock<double> ADB;
-
-        /// Residual structure of the fully implicit solver.
-        /// All equations are given as AD types, with multiple
-        /// jacobian blocks corresponding to the primary unknowns. The
-        /// primary unknowns are for a three-phase simulation, in order:
-        ///    p    (pressure)
-        ///    sw   (water saturation)
-        ///    xvar (gas saturation, gas-oil ratio or oil-gas ratio)
-        ///    qs   (well outflows by well and phase)
-        ///    bhp  (bottom hole pressures)
-        /// In the above, the xvar variable will have a different
-        /// meaning from cell to cell, corresponding to the state in
-        /// that cell (saturated, undersaturated oil or undersaturated
-        /// gas). In a two-phase simulation, either sw or xvar is not
-        /// used, depending on which face is missing.
-        struct Residual {
-            /// The mass_balance vector has one element for each
-            /// active phase, each of which has size equal to the
-            /// number of cells. Each mass balance equation is given
-            /// in terms of surface volumes.
-            std::vector<ADB> mass_balance;
-            /// The well_flux_eq has size equal to the number of wells
-            /// times the number of phases. It contains the well flow
-            /// equations, relating the total well flows to
-            /// bottom-hole pressures and reservoir conditions.
-            ADB well_flux_eq;
-            /// The well_eq has size equal to the number of wells. It
-            /// contains the well control equations, that is for each
-            /// well either a rate specification or bottom hole
-            /// pressure specification.
-            ADB well_eq;
-        };
-
-
     private:
         // Types and enums
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
         typedef Eigen::Array<double,
@@ -159,7 +125,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells&                    wells_;
-        const LinearSolverInterface&    linsolver_;
+        const FullyImplicitSystemSolverInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -172,7 +138,7 @@ namespace Opm {
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
 
-        Residual residual_;
+        FullyImplicitBlackoilResidual residual_;
 
         // Private methods.
         SolutionState
