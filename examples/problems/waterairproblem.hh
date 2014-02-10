@@ -299,7 +299,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context &context, int spaceIdx, int timeIdx) const
+    const MaterialLawParams& materialLawParams(const Context &context,
+                                               int spaceIdx,
+                                               int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -368,8 +370,6 @@ public:
             values.setMassRate(massRate);
         }
         else if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
-            //int globalIdx = context.elementContext().globalSpaceIndex(context.insideScvIndex(spaceIdx,timeIdx), timeIdx);
-
             Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
             initialFluidState_(fs, context, spaceIdx, timeIdx);
 
@@ -457,7 +457,10 @@ private:
     { return (20 < pos[0]) && (pos[0] < 30) && (pos[1] < 30); }
 
     template <class Context, class FluidState>
-    void initialFluidState_(FluidState &fs, const Context &context, int spaceIdx, int timeIdx) const
+    void initialFluidState_(FluidState &fs,
+                            const Context &context,
+                            int spaceIdx,
+                            int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 

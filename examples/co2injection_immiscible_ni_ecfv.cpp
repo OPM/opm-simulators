@@ -31,8 +31,10 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel,
+                                                                Co2InjectionBaseProblem));
+SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice,
+             EcfvDiscretization);
 
 SET_BOOL_PROP(Co2InjectionImmiscibleNiEcfvProblem, EnableEnergy, true);
 }}
