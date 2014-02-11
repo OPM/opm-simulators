@@ -56,7 +56,23 @@ WCONINJE
 
 
 TSTEP
-14.0 
- /
+  14.0 /
+/
+
+
+WELSPECS
+    'TEST1' 'G1'    1  1    8335 'GAS'  /
+    'TEST2' 'G2'   10 10    8400 'OIL'  /
+/
+
+GRUPTREE
+ 'G1' 'SHIP' /
+ 'G2' 'SHIP' /
+/
+
+TSTEP
+  3 /
+/
+
 
 END

@@ -1141,4 +1141,55 @@ namespace Opm
 
         return return_value;
     }
+
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(GroupConstPtr group, size_t timeStep, const PhaseUsage& phase_usage )
+    {
+        InjectionSpecification injection_specification;
+        if (group->isInjectionGroup(timeStep)) {
+            injection_specification.injector_type_ = toInjectorType(Phase::PhaseEnum2String(group->getInjectionPhase(timeStep)));
+            injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(group->getInjectionControlMode(timeStep)));
+            injection_specification.surface_flow_max_rate_ = group->getSurfaceMaxRate(timeStep);
+            injection_specification.reservoir_flow_max_rate_ = group->getReservoirMaxRate(timeStep);
+            injection_specification.reinjection_fraction_target_ = group->getTargetReinjectFraction(timeStep);
+            injection_specification.voidage_replacment_fraction_ = group->getTargetVoidReplacementFraction(timeStep);
+        }
+        ProductionSpecification production_specification;
+        if (group->isProductionGroup(timeStep)) {
+            production_specification.oil_max_rate_ = group->getOilTargetRate(timeStep);
+            production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group->getProductionControlMode(timeStep)));
+            production_specification.water_max_rate_ = group->getWaterTargetRate(timeStep);
+            production_specification.gas_max_rate_ = group->getGasTargetRate(timeStep);
+            production_specification.liquid_max_rate_ = group->getLiquidTargetRate(timeStep);
+            production_specification.procedure_ = toProductionProcedure(GroupProductionExceedLimit::ActionEnum2String(group->getProductionExceedLimitAction(timeStep)));
+            production_specification.reservoir_flow_max_rate_ = group->getReservoirMaxRate(timeStep);
+        }
+
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group->name(), production_specification, injection_specification, phase_usage));
+        return wells_group;
+    }
+
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(WellConstPtr well, size_t timeStep, const PhaseUsage& phase_usage )
+    {
+        InjectionSpecification injection_specification;
+        ProductionSpecification production_specification;
+        if (well->isInjector(timeStep)) {
+            injection_specification.BHP_limit_ = well->getBHPLimit(timeStep);
+            injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(well->getInjectorType(timeStep)));
+            injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(well->getInjectorControlMode(timeStep)));
+            injection_specification.surface_flow_max_rate_ = well->getSurfaceInjectionRate(timeStep);
+            injection_specification.reservoir_flow_max_rate_ = well->getReservoirInjectionRate(timeStep);
+            production_specification.guide_rate_ = 0.0; // We know we're not a producer
+        }
+
+        if (well->isProducer(timeStep)) {
+            production_specification.BHP_limit_ = well->getBHPLimit(timeStep);
+            production_specification.reservoir_flow_max_rate_ = well->getResVRate(timeStep);
+            production_specification.oil_max_rate_ = well->getOilRate(timeStep);
+            production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(well->getProducerControlMode(timeStep)));
+            production_specification.water_max_rate_ = well->getWaterRate(timeStep);
+            injection_specification.guide_rate_ = 0.0; // we know we're not an injector
+        }
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), production_specification, injection_specification, phase_usage));
+        return wells_group;
+    }
 }

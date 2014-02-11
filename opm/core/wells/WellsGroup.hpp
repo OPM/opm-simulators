@@ -25,6 +25,10 @@
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
+
 #include <string>
 #include <memory>
 
@@ -403,9 +407,21 @@ namespace Opm
     /// \param[in] name the name of the wells group.
     /// \param[in] deck the deck from which to fetch information.
     std::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
-                                                               const EclipseGridParser& deck);
+                                                          const EclipseGridParser& deck);
 
+    /// Creates the WellsGroupInterface for the given well
+    /// \param[in] well the Well to construct object for
+    /// \param[in] timeStep the time step in question
+    /// \param[in] the phase usage
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(WellConstPtr well, size_t timeStep,
+                                                              const PhaseUsage& phase_usage );
 
+    /// Creates the WellsGroupInterface for the given Group
+    /// \param[in] group the Group to construct object for
+    /// \param[in] timeStep the time step in question
+    /// \param[in] the phase usage
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(GroupConstPtr group, size_t timeStep,
+                                                               const PhaseUsage& phase_usage );
 }
 #endif	/* OPM_WELLSGROUP_HPP */
 
