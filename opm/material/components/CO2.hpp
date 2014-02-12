@@ -242,6 +242,29 @@ public:
 
         return visco_CO2;
     };
+
+    /*!
+     * \brief Specific isobaric heat capacity of the component [J/kg]
+     *        as a liquid.
+     *
+     * This function uses the fact that heat capacity is the partial
+     * derivative of enthalpy function with respect to temperature.
+     *
+     * \param temperature Temperature of component \f$\mathrm{[K]}\f$
+     * \param pressure Pressure of component \f$\mathrm{[Pa]}\f$
+     */
+    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    {
+        Scalar eps = 1e-6;
+
+        // use central differences here because one-sided methods do
+        // not come with a performance improvement. (central ones are
+        // more accurate, though...)
+        Scalar h1 = gasEnthalpy(temperature - eps, pressure);
+        Scalar h2 = gasEnthalpy(temperature + eps, pressure);
+
+        return (h2 - h1) / (2*eps) ;
+    }
 };
 
 template <class Scalar, class CO2Tables>

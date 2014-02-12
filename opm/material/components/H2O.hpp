@@ -447,7 +447,7 @@ public:
     }
 
     /*!
-     * \brief Specific isochoric heat capacity of liquid water \f$\mathrm{[J/kg]}\f$.
+     * \brief Specific isochoric heat capacity of liquid water \f$\mathrm{[J/m^3]}\f$.
      *
      * See:
      *

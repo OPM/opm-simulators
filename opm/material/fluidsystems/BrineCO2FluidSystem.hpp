@@ -423,6 +423,31 @@ public:
         return 0.025; // conductivity of air [W / (m K ) ]
     }
 
+    /*!
+     * \copydoc BaseFluidSystem::heatCapacity
+     *
+     * We employ the heat capacity of the pure phases.
+     *
+     * Todo: Include compositional effects.
+     *
+     * \param fluidState An arbitrary fluid state
+     * \param paramCache The object which caches parameters which are expensive to compute
+     * \param phaseIdx The index of the fluid phase to consider
+     * \tparam FluidState the fluid state class
+     */
+    template <class FluidState>
+    static Scalar heatCapacity(const FluidState &fluidState,
+                               const ParameterCache &paramCache,
+                               int phaseIdx)
+    {
+        if(phaseIdx == lPhaseIdx)
+            return H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
+                                           fluidState.pressure(phaseIdx));
+        else
+            return CO2::gasHeatCapacity(fluidState.temperature(phaseIdx),
+                                        fluidState.pressure(phaseIdx));
+    }
+
 private:
     static Scalar gasDensity_(Scalar T,
                               Scalar pg,

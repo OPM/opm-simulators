@@ -226,6 +226,47 @@ public:
         // lambda_air is approximately 0.78*lambda_N2+0.22*lambda_O2
         return 0.0255535;
     }
+
+    /*!
+     * \brief Specific isobaric heat capacity \f$[J/(kg K)]\f$ of pure
+     *        air.
+     *
+     * This methods uses the formula for "zero-pressure" heat capacity
+     * that is only dependent on temperature, because the pressure
+     * dependence is rather small.  This one should be accurate for a
+     * pressure of 1 atm.  Values taken from NASA Contractor Report
+     * 4755, Real-Gas Flow Properties for NASA Langley Research Center
+     * Aerothermodynamic Facilities Complex Wind Tunnels using data
+     * from Hilsenrath et al 1955, "Tables of Thermal Properties of
+     * Gases"
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    static const Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    {
+        // scale temperature with referenence temp of 100K
+        Scalar phi = temperature/100;
+
+        Scalar c_p =
+            0.661738E+01
+            -0.105885E+01 * phi
+            +0.201650E+00 * std::pow(phi,2.)
+            -0.196930E-01 * std::pow(phi,3.)
+            +0.106460E-02 * std::pow(phi,4.)
+            -0.303284E-04 * std::pow(phi,5.)
+            +0.355861E-06 * std::pow(phi,6.);
+        c_p +=
+            -0.549169E+01 * std::pow(phi,-1.)
+            +0.585171E+01* std::pow(phi,-2.)
+            -0.372865E+01* std::pow(phi,-3.)
+            +0.133981E+01* std::pow(phi,-4.)
+            -0.233758E+00* std::pow(phi,-5.)
+            +0.125718E-01* std::pow(phi,-6.);
+        c_p *= IdealGas::R / (molarMass() * 1000); // in J/mol/K * mol / kg / 1000 = kJ/kg/K
+
+        return  c_p;
+    }
 };
 
 } // namespace Opm
