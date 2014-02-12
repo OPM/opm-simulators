@@ -23,10 +23,15 @@
 #define	OPM_WELLCOLLECTION_HPP
 
 #include <vector>
+#include <memory>
+
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <memory>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 namespace Opm
 {
@@ -34,6 +39,29 @@ namespace Opm
     class WellCollection
     {
     public:
+
+        /// Adds and creates if necessary the child to the collection
+        /// and appends it to parent's children. Also adds and creates the parent
+        /// if necessary.
+        /// \param[in] wellChild     the child well
+        /// \param[in] groupParent   the parent group
+        /// \param[in] phaseUsage    the phase usage
+        /// \param[in] timeStep      the current time step
+        void addChild(WellConstPtr wellChild, GroupConstPtr groupParent,
+                      size_t timeStep, const PhaseUsage& phaseUsage);
+
+
+        /// Adds and creates if necessary the child to the collection
+        /// and appends it to parent's children. Also adds and creates the parent
+        /// if necessary.
+        /// \param[in] groupChild   the child group
+        /// \param[in] groupParent  the parent group
+        /// \param[in] phaseUsage    the phase usage
+        /// \param[in] timeStep      the current time step
+        void addChild(GroupConstPtr groupChild, GroupConstPtr groupParent,
+                      size_t timeStep, const PhaseUsage& phaseUsage);
+
+
         /// Adds and creates if necessary the child to the collection
         /// and appends it to parent's children. Also adds and creates the parent
         /// if necessary.

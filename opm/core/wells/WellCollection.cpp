@@ -19,10 +19,92 @@
 
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
+
 #include <memory>
 
 namespace Opm
 {
+    void WellCollection::addChild(GroupConstPtr groupChild, GroupConstPtr groupParent,
+                                  size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* parent = findNode(groupParent->name());
+        if (!parent) {
+            roots_.push_back(createGroupWellsGroup(groupParent, timeStep, phaseUsage));
+            parent = roots_[roots_.size() - 1].get();
+        }
+
+        std::shared_ptr<WellsGroupInterface> child;
+
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            if (roots_[i]->name() == groupChild->name()) {
+                child = roots_[i];
+                // We've found a new parent to the previously thought root, need to remove it
+                for(size_t j = i; j < roots_.size() - 1; ++j) {
+                    roots_[j] = roots_[j+1];
+                }
+
+                roots_.resize(roots_.size()-1);
+                break;
+            }
+        }
+        if (!child.get()) {
+            child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
+        }
+
+        WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
+        if (!parent_as_group) {
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << groupParent->name() << ", but it's not a group.");
+        }
+        parent_as_group->addChild(child);
+
+        if(child->isLeafNode()) {
+            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
+        }
+
+        child->setParent(parent);
+    }
+
+    void WellCollection::addChild(WellConstPtr wellChild, GroupConstPtr groupParent,
+                                  size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* parent = findNode(groupParent->name());
+        if (!parent) {
+            roots_.push_back(createGroupWellsGroup(groupParent, timeStep, phaseUsage));
+            parent = roots_[roots_.size() - 1].get();
+        }
+
+        std::shared_ptr<WellsGroupInterface> child;
+
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            if (roots_[i]->name() == wellChild->name()) {
+                child = roots_[i];
+                // We've found a new parent to the previously thought root, need to remove it
+                for(size_t j = i; j < roots_.size() - 1; ++j) {
+                    roots_[j] = roots_[j+1];
+                }
+
+                roots_.resize(roots_.size()-1);
+                break;
+            }
+        }
+        if (!child.get()) {
+            child = createWellWellsGroup(wellChild, timeStep, phaseUsage);
+        }
+
+        WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
+        if (!parent_as_group) {
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << groupParent->name() << ", but it's not a group.");
+        }
+        parent_as_group->addChild(child);
+
+        if(child->isLeafNode()) {
+            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
+        }
+
+        child->setParent(parent);
+    }
+
 
     void WellCollection::addChild(const std::string& child_name,
                                   const std::string& parent_name,

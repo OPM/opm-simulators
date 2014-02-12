@@ -74,7 +74,7 @@ namespace Opm
     {
         return parent_;
     }
-    const std::string& WellsGroupInterface::name()
+    const std::string& WellsGroupInterface::name() const
     {
         return name_;
     }

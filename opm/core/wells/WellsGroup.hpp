@@ -62,7 +62,7 @@ namespace Opm
         virtual ~WellsGroupInterface();
 
         /// The unique identifier for the well or well group.
-        const std::string& name();
+        const std::string& name() const;
 
         /// Production specifications for the well or well group.
         const ProductionSpecification& prodSpec() const;
