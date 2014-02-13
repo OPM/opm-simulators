@@ -27,56 +27,52 @@
 
 namespace Opm
 {
-    void WellCollection::addChild(GroupConstPtr groupChild, GroupConstPtr groupParent,
+    void WellCollection::addField(GroupConstPtr fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* fieldNode = findNode(fieldGroup->name());
+        if (fieldNode) {
+            OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
+        }
+
+        roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
+    }
+
+    void WellCollection::addGroup(GroupConstPtr groupChild, std::string parent_name,
                                   size_t timeStep, const PhaseUsage& phaseUsage) {
-        WellsGroupInterface* parent = findNode(groupParent->name());
+        WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
-            roots_.push_back(createGroupWellsGroup(groupParent, timeStep, phaseUsage));
-            parent = roots_[roots_.size() - 1].get();
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << parent_name << ", but this does not exist in the WellCollection.");
         }
 
-        std::shared_ptr<WellsGroupInterface> child = getAndUnRootChild(groupChild->name());
+        if (findNode(groupChild->name())) {
+            OPM_THROW(std::runtime_error, "Trying to add child named " << groupChild->name() << ", but this group is already in the WellCollection.");
 
-        if (!child.get()) {
-            child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
         }
+
+        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
 
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
-            OPM_THROW(std::runtime_error, "Trying to add child to group named " << groupParent->name() << ", but it's not a group.");
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << parent->name() << ", but it's not a group.");
         }
         parent_as_group->addChild(child);
-
-        if(child->isLeafNode()) {
-            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
-        }
-
         child->setParent(parent);
     }
 
-    void WellCollection::addChild(WellConstPtr wellChild, GroupConstPtr groupParent,
-                                  size_t timeStep, const PhaseUsage& phaseUsage) {
-        WellsGroupInterface* parent = findNode(groupParent->name());
+    void WellCollection::addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* parent = findNode(wellChild->getGroupName(timeStep));
         if (!parent) {
-            roots_.push_back(createGroupWellsGroup(groupParent, timeStep, phaseUsage));
-            parent = roots_[roots_.size() - 1].get();
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << wellChild->getGroupName(timeStep) << ", but this group does not exist in the WellCollection.");
         }
 
-        std::shared_ptr<WellsGroupInterface> child = getAndUnRootChild(wellChild->name());
-
-        if (!child.get()) {
-            child = createWellWellsGroup(wellChild, timeStep, phaseUsage);
-        }
+        std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, timeStep, phaseUsage);
 
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
-            OPM_THROW(std::runtime_error, "Trying to add child to group named " << groupParent->name() << ", but it's not a group.");
+            OPM_THROW(std::runtime_error, "Trying to add child to group named " << wellChild->getGroupName(timeStep) << ", but it's not a group.");
         }
         parent_as_group->addChild(child);
 
-        if(child->isLeafNode()) {
-            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
-        }
+        leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
 
         child->setParent(parent);
     }

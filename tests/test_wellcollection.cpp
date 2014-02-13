@@ -52,22 +52,24 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add groups to WellCollection
     GroupConstPtr fieldGroup =  eclipseState->getSchedule()->getGroup(field->name());
+    collection.addField(fieldGroup, 2, pu);
+
     for (auto iter = field->begin(); iter != field->end(); ++iter) {
         GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
-        collection.addChild(childGroupNode, fieldGroup, 2, pu);
+        collection.addGroup(childGroupNode, fieldGroup->name(), 2, pu);
     }
 
     GroupConstPtr g1Group =  eclipseState->getSchedule()->getGroup(g1->name());
     for (auto iter = g1->begin(); iter != g1->end(); ++iter) {
         GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
-        collection.addChild(childGroupNode, g1Group, 2, pu);
+        collection.addGroup(childGroupNode, g1Group->name(), 2, pu);
     }
 
 
     GroupConstPtr g2Group =  eclipseState->getSchedule()->getGroup(g2->name());
     for (auto iter = g2->begin(); iter != g2->end(); ++iter) {
         GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
-        collection.addChild(childGroupNode, g2Group, 2, pu);
+        collection.addGroup(childGroupNode, g2Group->name(), 2, pu);
     }
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
@@ -78,8 +80,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     WellCollection wellCollection;
     std::vector<WellConstPtr> wells = eclipseState->getSchedule()->getWells();
     for (size_t i=0; i<wells.size(); i++) {
-        GroupConstPtr parentGroup = eclipseState->getSchedule()->getGroup(wells[i]->getGroupName(2));
-        collection.addChild(wells[i], parentGroup, 2, pu);
+        collection.addWell(wells[i], 2, pu);
     }
 
     BOOST_CHECK_EQUAL("G1", collection.findNode("INJ1")->getParent()->name());

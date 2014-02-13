@@ -40,27 +40,12 @@ namespace Opm
     {
     public:
 
-        /// Adds and creates if necessary the child to the collection
-        /// and appends it to parent's children. Also adds and creates the parent
-        /// if necessary.
-        /// \param[in] wellChild     the child well
-        /// \param[in] groupParent   the parent group
-        /// \param[in] phaseUsage    the phase usage
-        /// \param[in] timeStep      the current time step
-        void addChild(WellConstPtr wellChild, GroupConstPtr groupParent,
+        void addField(GroupConstPtr fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage);
+
+        void addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage);
+
+        void addGroup(GroupConstPtr groupChild, std::string parent_name,
                       size_t timeStep, const PhaseUsage& phaseUsage);
-
-
-        /// Adds and creates if necessary the child to the collection
-        /// and appends it to parent's children. Also adds and creates the parent
-        /// if necessary.
-        /// \param[in] groupChild   the child group
-        /// \param[in] groupParent  the parent group
-        /// \param[in] phaseUsage    the phase usage
-        /// \param[in] timeStep      the current time step
-        void addChild(GroupConstPtr groupChild, GroupConstPtr groupParent,
-                      size_t timeStep, const PhaseUsage& phaseUsage);
-
 
         /// Adds and creates if necessary the child to the collection
         /// and appends it to parent's children. Also adds and creates the parent
