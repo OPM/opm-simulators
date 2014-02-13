@@ -103,6 +103,10 @@ try
 #if USE_NEW_PARSER
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
+
+#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+    std::shared_ptr<EclipseGridParser> deck;
+    deck.reset(new EclipseGridParser(deck_filename));
 #else
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
@@ -115,7 +119,8 @@ try
     grid.reset(new GridManager(*deck));
 #endif
 
-#if USE_NEW_PARSER
+#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+#if 0 // USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 #else
     Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
@@ -205,7 +210,8 @@ try
     int step = 0;
 
     // Update the timer.
-#if USE_NEW_PARSER
+#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+#if 0 // USE_NEW_PARSER
     if (newParserDeck->hasKeyword("TSTEP")) {
         simtimer.init(newParserDeck);
     } else {
@@ -227,7 +233,8 @@ try
               << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
     // Create new wells, well_state
-#if USE_NEW_PARSER
+#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+#if 0 // USE_NEW_PARSER
     WellsManager wells(newParserDeck, *grid->c_grid(), props->permeability());
 #else
     WellsManager wells(*deck, *grid->c_grid(), props->permeability());
