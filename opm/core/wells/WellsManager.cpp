@@ -272,7 +272,6 @@ namespace Opm
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                                const size_t timeStep,
-                               const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
                                const double* permeability)
         : w_(0)
@@ -321,39 +320,6 @@ namespace Opm
             well_collection_.addWell((*wellIter), timeStep, pu);
         }
 
-
-        // Set the guide rates:
-        if (deck.hasField("WGRUPCON")) {
-            std::cout << "Found Wgrupcon" << std::endl;
-            WGRUPCON wgrupcon = deck.getWGRUPCON();
-            const std::vector<WgrupconLine>& lines = wgrupcon.wgrupcon;
-            std::cout << well_collection_.getLeafNodes().size() << std::endl;
-            for (size_t i = 0; i < lines.size(); i++) {
-                std::string name = lines[i].well_;
-                const int wix = well_names_to_index[name];
-                WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
-                assert(wellnode.name() == name);
-                if (well_data[wix].type == PRODUCER) {
-                    wellnode.prodSpec().guide_rate_ = lines[i].guide_rate_;
-                    if (lines[i].phase_ == "OIL") {
-                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
-                    } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << lines[i].phase_ << " specified for producer "
-                              << name << " in WGRUPCON, cannot handle.");
-                    }
-                } else if (well_data[wix].type == INJECTOR) {
-                    wellnode.injSpec().guide_rate_ = lines[i].guide_rate_;
-                    if (lines[i].phase_ == "RAT") {
-                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
-                    } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << lines[i].phase_ << " specified for injector "
-                              << name << " in WGRUPCON, cannot handle.");
-                    }
-                } else {
-                    OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << name);
-                }
-            }
-        }
         well_collection_.setWellsPointer(w_);
         well_collection_.applyGroupControls();
 

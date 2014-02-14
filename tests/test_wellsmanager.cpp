@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     Deck.setCurrentEpoch(0);
     {
-        Opm::WellsManager wellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         std::cout << "Checking new well structure, epoch 0" << std::endl;
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     Deck.setCurrentEpoch(1);
     {
-        Opm::WellsManager wellsManager(eclipseState, 1,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 1, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         std::cout << "Checking new well structure, epoch 1" << std::endl;
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works_ExpandedData) {
 
     Deck.setCurrentEpoch(0);
     {
-        Opm::WellsManager wellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         BOOST_CHECK(wells_equal(wellsManager.c_wells(), oldWellsManager.c_wells(),false));
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works_ExpandedData) {
 
     Deck.setCurrentEpoch(1);
     {
-        Opm::WellsManager wellsManager(eclipseState, 1,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 1, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells(), true));
@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works_ExpandedData) {
 
     Deck.setCurrentEpoch(2);
     {
-        Opm::WellsManager wellsManager(eclipseState, 2,Deck, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 2, *gridManager.c_grid(), NULL);
         Opm::WellsManager oldWellsManager(Deck, *gridManager.c_grid(), NULL);
 
         BOOST_CHECK(wells_equal( wellsManager.c_wells(), oldWellsManager.c_wells(), true));
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(WellHasSTOP_ExceptionIsThrown) {
 
     Deck.setCurrentEpoch(0);
 
-    BOOST_CHECK_THROW( new Opm::WellsManager(eclipseState, 0, Deck, *gridManager.c_grid(), NULL), std::runtime_error );
+    BOOST_CHECK_THROW( new Opm::WellsManager(eclipseState, 0, *gridManager.c_grid(), NULL), std::runtime_error );
 }
 
 

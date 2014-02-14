@@ -79,7 +79,6 @@ namespace Opm
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
-                     const Opm::EclipseGridParser& deck,
                      const UnstructuredGrid& grid,
                      const double* permeability);
 
