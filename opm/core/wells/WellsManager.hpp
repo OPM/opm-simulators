@@ -25,6 +25,7 @@
 
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
 struct Wells;
 struct UnstructuredGrid;
@@ -149,6 +150,8 @@ namespace Opm
                                    const PhaseUsage& phaseUsage,
                                    const std::map<int,int> cartesian_to_compressed,
                                    const double* permeability);
+
+        void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
 
 
 

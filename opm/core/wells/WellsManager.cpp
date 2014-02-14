@@ -307,24 +307,19 @@ namespace Opm
         well_names.reserve(wells.size());
         well_data.reserve(wells.size());
 
-
         createWellsFromSpecs(wells, timeStep, grid, well_names, well_data, well_names_to_index, pu, cartesian_to_compressed, permeability);
-
         setupWellControls(wells, timeStep, well_names, pu);
 
-        // Build the well_collection_ well group hierarchy.
-        if (deck.hasField("GRUPTREE")) {
-            std::cout << "Found gruptree" << std::endl;
-            const GRUPTREE& gruptree = deck.getGRUPTREE();
-            std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
-            for( ; it != gruptree.tree.end(); ++it) {
-                well_collection_.addChild(it->first, it->second, deck);
-            }
-        }
-        for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
-            well_collection_.addChild((*wellIter)->name(), (*wellIter)->getGroupName(timeStep), deck);
+        {
+            GroupTreeNodeConstPtr fieldNode = eclipseState->getSchedule()->getGroupTree(timeStep)->getNode("FIELD");
+            GroupConstPtr fieldGroup = eclipseState->getSchedule()->getGroup(fieldNode->name());
+            well_collection_.addField(fieldGroup, timeStep, pu);
+            addChildGroups(fieldNode, eclipseState->getSchedule(), timeStep, pu);
         }
 
+        for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
+            well_collection_.addWell((*wellIter), timeStep, pu);
+        }
 
 
         // Set the guide rates:
@@ -1387,4 +1382,13 @@ namespace Opm
         }
 
     }
+
+    void WellsManager::addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage) {
+        for (auto childIter = parentNode->begin(); childIter != parentNode->end(); ++childIter) {
+            GroupTreeNodeConstPtr childNode = (*childIter).second;
+            well_collection_.addGroup(schedule->getGroup(childNode->name()), parentNode->name(), timeStep, phaseUsage);
+            addChildGroups(childNode, schedule, timeStep, phaseUsage);
+        }
+    }
+
 } // namespace Opm
