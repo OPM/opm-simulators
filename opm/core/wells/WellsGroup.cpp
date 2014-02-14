@@ -1145,6 +1145,7 @@ namespace Opm
     std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(GroupConstPtr group, size_t timeStep, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
+        ProductionSpecification production_specification;
         if (group->isInjectionGroup(timeStep)) {
             injection_specification.injector_type_ = toInjectorType(Phase::PhaseEnum2String(group->getInjectionPhase(timeStep)));
             injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(group->getInjectionControlMode(timeStep)));
@@ -1153,8 +1154,7 @@ namespace Opm
             injection_specification.reinjection_fraction_target_ = group->getTargetReinjectFraction(timeStep);
             injection_specification.voidage_replacment_fraction_ = group->getTargetVoidReplacementFraction(timeStep);
         }
-        ProductionSpecification production_specification;
-        if (group->isProductionGroup(timeStep)) {
+        else if (group->isProductionGroup(timeStep)) {
             production_specification.oil_max_rate_ = group->getOilTargetRate(timeStep);
             production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group->getProductionControlMode(timeStep)));
             production_specification.water_max_rate_ = group->getWaterTargetRate(timeStep);
@@ -1180,8 +1180,7 @@ namespace Opm
             injection_specification.reservoir_flow_max_rate_ = well->getReservoirInjectionRate(timeStep);
             production_specification.guide_rate_ = 0.0; // We know we're not a producer
         }
-
-        if (well->isProducer(timeStep)) {
+        else if (well->isProducer(timeStep)) {
             production_specification.BHP_limit_ = well->getBHPLimit(timeStep);
             production_specification.reservoir_flow_max_rate_ = well->getResVRate(timeStep);
             production_specification.oil_max_rate_ = well->getOilRate(timeStep);
