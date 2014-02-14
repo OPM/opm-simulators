@@ -90,7 +90,20 @@ namespace Opm
             parent = roots_[roots_.size() - 1].get();
         }
 
-        std::shared_ptr<WellsGroupInterface> child = getAndUnRootChild(child_name);
+        std::shared_ptr<WellsGroupInterface> child;
+
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            if (roots_[i]->name() == child_name) {
+                child = roots_[i];
+                // We've found a new parent to the previously thought root, need to remove it
+                for(size_t j = i; j < roots_.size() - 1; ++j) {
+                    roots_[j] = roots_[j+1];
+                }
+
+                roots_.resize(roots_.size()-1);
+                break;
+            }
+        }
 
         if (!child.get()) {
             child = createWellsGroup(child_name, deck);
@@ -109,24 +122,6 @@ namespace Opm
         child->setParent(parent);
     }
 
-
-    std::shared_ptr<WellsGroupInterface> WellCollection::getAndUnRootChild(std::string child_name) {
-        std::shared_ptr<WellsGroupInterface> child;
-
-        for (size_t i = 0; i < roots_.size(); ++i) {
-            if (roots_[i]->name() == child_name) {
-                child = roots_[i];
-                // We've found a new parent to the previously thought root, need to remove it
-                for(size_t j = i; j < roots_.size() - 1; ++j) {
-                    roots_[j] = roots_[j+1];
-                }
-
-                roots_.resize(roots_.size()-1);
-                break;
-            }
-        }
-        return child;
-    }
 
     const std::vector<WellNode*>& WellCollection::getLeafNodes() const {
         return leaf_nodes_;

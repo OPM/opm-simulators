@@ -125,7 +125,6 @@ namespace Opm
                                               const std::vector<double>& well_surfacerates_phase);
 
     private:
-        std::shared_ptr<WellsGroupInterface> getAndUnRootChild(std::string child_name);
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
 
