@@ -19,10 +19,66 @@
 
 #include "config.h"
 #include <opm/core/wells/WellCollection.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
+
+#include <boost/lexical_cast.hpp>
+
 #include <memory>
 
 namespace Opm
 {
+    void WellCollection::addField(GroupConstPtr fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* fieldNode = findNode(fieldGroup->name());
+        if (fieldNode) {
+            OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
+        }
+
+        roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
+    }
+
+    void WellCollection::addGroup(GroupConstPtr groupChild, std::string parent_name,
+                                  size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* parent = findNode(parent_name);
+        if (!parent) {
+            OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent_name << ", but this does not exist in the WellCollection.");
+        }
+
+        if (findNode(groupChild->name())) {
+            OPM_THROW(std::runtime_error, "Trying to add child group named " << groupChild->name() << ", but this group is already in the WellCollection.");
+
+        }
+
+        std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
+
+        WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
+        if (!parent_as_group) {
+            OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent->name() << ", but it's not a group.");
+        }
+        parent_as_group->addChild(child);
+        child->setParent(parent);
+    }
+
+    void WellCollection::addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* parent = findNode(wellChild->getGroupName(timeStep));
+        if (!parent) {
+            OPM_THROW(std::runtime_error, "Trying to add well " << wellChild->name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild->getGroupName(timeStep) << ", but this group does not exist in the WellCollection.");
+        }
+
+        std::shared_ptr<WellsGroupInterface> child = createWellWellsGroup(wellChild, timeStep, phaseUsage);
+
+        WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
+        if (!parent_as_group) {
+            OPM_THROW(std::runtime_error, "Trying to add well to group named " << wellChild->getGroupName(timeStep) << ", but it's not a group.");
+        }
+        parent_as_group->addChild(child);
+
+        leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
+
+        child->setParent(parent);
+    }
+
 
     void WellCollection::addChild(const std::string& child_name,
                                   const std::string& parent_name,
@@ -33,6 +89,7 @@ namespace Opm
             roots_.push_back(createWellsGroup(parent_name, deck));
             parent = roots_[roots_.size() - 1].get();
         }
+
         std::shared_ptr<WellsGroupInterface> child;
 
         for (size_t i = 0; i < roots_.size(); ++i) {
@@ -47,6 +104,7 @@ namespace Opm
                 break;
             }
         }
+
         if (!child.get()) {
             child = createWellsGroup(child_name, deck);
         }
@@ -63,7 +121,6 @@ namespace Opm
 
         child->setParent(parent);
     }
-
 
 
     const std::vector<WellNode*>& WellCollection::getLeafNodes() const {
