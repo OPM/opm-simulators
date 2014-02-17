@@ -401,24 +401,16 @@ namespace Opm
                               const std::vector<double>& face_flux,
                               std::vector<double>& cell_velocity)
     {
-        const int dim = grid.dimensions;
-        cell_velocity.clear();
-        cell_velocity.resize(grid.number_of_cells*dim, 0.0);
-        for (int face = 0; face < grid.number_of_faces; ++face) {
-            int c[2] = { grid.face_cells[2*face], grid.face_cells[2*face + 1] };
-            const double* fc = &grid.face_centroids[face*dim];
-            double flux = face_flux[face];
-            for (int i = 0; i < 2; ++i) {
-                if (c[i] >= 0) {
-                    const double* cc = &grid.cell_centroids[c[i]*dim];
-                    for (int d = 0; d < dim; ++d) {
-                        double v_contrib = fc[d] - cc[d];
-                        v_contrib *= flux/grid.cell_volumes[c[i]];
-                        cell_velocity[c[i]*dim + d] += (i == 0) ? v_contrib : -v_contrib;
-                    }
-                }
-            }
-        }
+        estimateCellVelocity(grid.number_of_cells,
+                             grid.number_of_faces,
+                             grid.face_centroids,
+                             UgGridHelpers::faceCells(grid),
+                             grid.cell_centroids,
+                             grid.cell_volumes,
+                             grid.dimensions,
+                             face_flux,
+                             cell_velocity);
+        
     }
 
     /// Extract a vector of water saturations from a vector of

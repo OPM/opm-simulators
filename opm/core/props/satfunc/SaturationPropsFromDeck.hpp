@@ -60,6 +60,28 @@ namespace Opm
                   const UnstructuredGrid& grid,
                   const int samples);
 
+        /// Initialize from deck and grid.
+        /// \param[in]  deck            Deck input parser
+        /// \param[in]  number_of_cells The number of cells of the grid to which property
+        ///                             object applies, needed for the
+        ///                             mapping from cell indices (typically from a processed
+        ///                             grid) to logical cartesian indices consistent with the
+        ///                             deck.
+        /// \param[in]  global_cell     The mapping from local cell indices of the grid to
+        ///                             global cell indices used in the deck.
+        /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
+        /// \param[in]  dimensions      The dimensions of the grid. 
+        /// \param[in]  samples         Number of uniform sample points for saturation tables.
+        /// \tparam     T               The iterator Type for the cell centroids.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        template<class T>
+        void init(const EclipseGridParser& deck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const T& begin_cell_centroids,
+                  int dimensions,
+                  const int samples);
+        
         /// \return   P, the number of phases.
         int numPhases() const;
 
@@ -123,11 +145,14 @@ namespace Opm
         typedef SatFuncSet Funcs;
 
         const Funcs& funcForCell(const int cell) const;
-
+        template<class T>
         void initEPS(const EclipseGridParser& deck,
-                          const UnstructuredGrid& grid,
-                          const std::string& keyword,
-                          std::vector<double>& scaleparam);
+                     int number_of_cells,
+                     const int* global_cell,
+                     const T& begin_cell_centroids,
+                     int dimensions,
+                     const std::string& keyword,
+                     std::vector<double>& scaleparam);
         void relpermEPS(const double *s, const int cell, double *kr, double *dkrds= 0) const;
     };
 

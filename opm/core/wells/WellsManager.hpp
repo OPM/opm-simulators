@@ -65,7 +65,7 @@ namespace Opm
         /// manage control switching does not exist.
         ///
         /// @param[in] W Existing wells object.
-        WellsManager(struct Wells* W);
+        WellsManager(struct Wells* W, bool checkCellExistence=true);
 
         /// Construct from input deck and grid.
         /// The permeability argument may be zero if the input contain
@@ -73,14 +73,16 @@ namespace Opm
         /// order to approximate these by the Peaceman formula.
         WellsManager(const Opm::EclipseGridParser& deck,
                      const UnstructuredGrid& grid,
-                     const double* permeability);
+                     const double* permeability,
+                     bool checkCellExistence=true);
 
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
                      const Opm::EclipseGridParser& deck,
                      const UnstructuredGrid& grid,
-                     const double* permeability);
+                     const double* permeability,
+                     bool checkCellExistence=true);
 
         /// Destructor.
         ~WellsManager();
@@ -135,9 +137,9 @@ namespace Opm
 
     private:
         // Disable copying and assignment.
-        WellsManager(const WellsManager& other);
+        WellsManager(const WellsManager& other, bool checkCellExistence=true);
         WellsManager& operator=(const WellsManager& other);
-        static void setupCompressedToCartesian(const UnstructuredGrid& grid, std::map<int,int>& cartesian_to_compressed );
+        static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
 
@@ -155,6 +157,7 @@ namespace Opm
         // Data
         Wells* w_;
         WellCollection well_collection_;
+        bool checkCellExistence_;
     };
 
 } // namespace Opm

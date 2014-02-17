@@ -188,6 +188,26 @@ namespace Opm
 			      const std::vector<double>& face_flux,
 			      std::vector<double>& cell_velocity);
 
+    /// @brief Estimates a scalar cell velocity from face fluxes.
+    /// @param[in]  number_of_cells      The number of cells of the grid
+    /// @param[in]  number_of_faces      The number of cells of the grid
+    /// @param[in]  begin_face_centroids Iterator pointing to first face centroid.
+    /// @param[in]  face_cells           Mapping from faces to connected cells.
+    /// @param[in]  dimensions           The dimensions of the grid.
+    /// @param[in]  begin_cell_centroids Iterator pointing to first cell centroid.
+    /// @param[in]  face_flux            signed per-face fluxes
+    /// @param[out] cell_velocity        the estimated velocities.
+    template<class CC, class FC, class FC1, class CV>
+    void estimateCellVelocity(int number_of_cells,
+                              int number_of_faces,
+                              FC begin_face_centroids,
+                              FC1 face_cells,
+                              CC begin_cell_centroids,
+                              CV begin_cell_volumes,
+                              int dimension,
+                              const std::vector<double>& face_flux,
+                              std::vector<double>& cell_velocity);
+
     /// Extract a vector of water saturations from a vector of
     /// interleaved water and oil saturations.
     void toWaterSat(const std::vector<double>& sboth,
@@ -320,4 +340,5 @@ namespace Opm
 
 } // namespace Opm
 
+#include "miscUtilities_impl.hpp"
 #endif // OPM_MISCUTILITIES_HEADER_INCLUDED

@@ -58,22 +58,34 @@ namespace Opm
     void RockFromDeck::init(const EclipseGridParser& deck,
                             const UnstructuredGrid& grid)
     {
-        assignPorosity(deck, grid);
-        permfield_valid_.assign(grid.number_of_cells, false);
+        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims);
+    }
+
+    /// Initialize from deck and cell mapping.
+    /// \param  deck            Deck input parser
+    /// \param  number_of_cells The number of cells in the grid.
+    /// \param  global_cell     The mapping fom local to global cell indices.
+    ///                         global_cell[i] is the corresponding global index of i.
+    /// \param  cart_dims       The size of the underlying cartesian grid.
+    void RockFromDeck::init(const EclipseGridParser& deck,
+                            int number_of_cells, const int* global_cell,
+                            const int* cart_dims)
+    {
+        assignPorosity(deck, number_of_cells, global_cell);
+        permfield_valid_.assign(number_of_cells, false);
         const double perm_threshold = 0.0; // Maybe turn into parameter?
-        assignPermeability(deck, grid, perm_threshold);
+        assignPermeability(deck, number_of_cells, global_cell, cart_dims, perm_threshold);
     }
 
 
     void RockFromDeck::assignPorosity(const EclipseGridParser& parser,
-                                      const UnstructuredGrid& grid)
+                                      int number_of_cells, const int* global_cell)
     {
-        porosity_.assign(grid.number_of_cells, 1.0);
-        const int* gc = grid.global_cell;
+        porosity_.assign(number_of_cells, 1.0);
         if (parser.hasField("PORO")) {
             const std::vector<double>& poro = parser.getFloatingPointValue("PORO");
             for (int c = 0; c < int(porosity_.size()); ++c) {
-                const int deck_pos = (gc == NULL) ? c : gc[c];
+                const int deck_pos = (global_cell == NULL) ? c : global_cell[c];
                 porosity_[c] = poro[deck_pos];
             }
         }
@@ -82,16 +94,17 @@ namespace Opm
 
 
     void RockFromDeck::assignPermeability(const EclipseGridParser& parser,
-                                          const UnstructuredGrid& grid,
+                                          int number_of_cells,
+                                          const int* global_cell,
+                                          const int* cartdims,
                                           double perm_threshold)
     {
         const int dim              = 3;
-        const int num_global_cells = grid.cartdims[0]*grid.cartdims[1]*grid.cartdims[2];
-        const int nc = grid.number_of_cells;
+        const int num_global_cells = cartdims[0]*cartdims[1]*cartdims[2];
 
         assert(num_global_cells > 0);
 
-        permeability_.assign(dim * dim * nc, 0.0);
+        permeability_.assign(dim * dim * number_of_cells, 0.0);
 
         std::vector<const std::vector<double>*> tensor;
         tensor.reserve(10);
@@ -113,13 +126,12 @@ namespace Opm
         // chosen) default value...
         //
         if (tensor.size() > 1) {
-            const int* gc = grid.global_cell;
             int off = 0;
 
-            for (int c = 0; c < nc; ++c, off += dim*dim) {
+            for (int c = 0; c < number_of_cells; ++c, off += dim*dim) {
                 // SharedPermTensor K(dim, dim, &permeability_[off]);
                 int       kix  = 0;
-                const int glob = (gc == NULL) ? c : gc[c];
+                const int glob = (global_cell == NULL) ? c : global_cell[c];
 
                 for (int i = 0; i < dim; ++i) {
                     for (int j = 0; j < dim; ++j, ++kix) {

@@ -23,6 +23,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -182,13 +183,17 @@ namespace
     {
         using namespace std;
         std::array<double, 3> cube;
-        int num_local_faces = grid.cell_facepos[cell + 1] - grid.cell_facepos[cell];
+        typedef Opm::UgGridHelpers::Cell2FacesTraits<UnstructuredGrid>::Type Cell2Faces;
+        typedef Cell2Faces::row_type FaceRow;
+        Cell2Faces c2f=Opm::UgGridHelpers::cell2Faces(grid);
+        FaceRow faces=c2f[cell];
+        int num_local_faces = faces.size();
         vector<double> x(num_local_faces);
         vector<double> y(num_local_faces);
         vector<double> z(num_local_faces);
         for (int lf=0; lf<num_local_faces; ++ lf) {
-            int face = grid.cell_faces[grid.cell_facepos[cell] + lf];
-            const double* centroid = &grid.face_centroids[grid.dimensions*face];
+            int face = faces[lf];
+            const double* centroid = Opm::UgGridHelpers::faceCentroid(grid, face);
             x[lf] = centroid[0];
             y[lf] = centroid[1];
             z[lf] = centroid[2];
@@ -263,8 +268,8 @@ namespace Opm
 
 
     /// Construct from existing wells object.
-    WellsManager::WellsManager(struct Wells* W)
-        : w_(clone_wells(W))
+WellsManager::WellsManager(struct Wells* W, bool checkCellExistence)
+    : w_(clone_wells(W)), checkCellExistence_(checkCellExistence)
     {
     }
 
@@ -274,10 +279,11 @@ namespace Opm
                                const size_t timeStep,
                                const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
-                               const double* permeability)
-        : w_(0)
+                               const double* permeability,
+                               bool checkCellExistence)
+        : w_(0), checkCellExistence_(checkCellExistence)
     {
-        if (grid.dimensions != 3) {
+        if (UgGridHelpers::dimensions(grid) != 3) {
             OPM_THROW(std::runtime_error, "We cannot initialize wells from a deck unless the corresponding grid is 3-dimensional.");
         }
 
@@ -287,7 +293,8 @@ namespace Opm
         }
 
         std::map<int,int> cartesian_to_compressed;
-        setupCompressedToCartesian(grid, cartesian_to_compressed);
+        setupCompressedToCartesian(UgGridHelpers::globalCell(grid), 
+                                   UgGridHelpers::numCells(grid), cartesian_to_compressed);
 
         // Obtain phase usage data.
         PhaseUsage pu = phaseUsageFromDeck(eclipseState);
@@ -417,10 +424,11 @@ namespace Opm
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
-                               const double* permeability)
-        : w_(0)
+                               const double* permeability,
+                               bool checkCellExistence)
+        : w_(0), checkCellExistence_(checkCellExistence)
     {
-        if (grid.dimensions != 3) {
+        if (UgGridHelpers::dimensions(grid) != 3) {
             OPM_THROW(std::runtime_error, "We cannot initialize wells from a deck unless the corresponding grid is 3-dimensional.");
         }
         // NOTE: Implementation copied and modified from dune-porsol's class BlackoilWells.
@@ -489,17 +497,17 @@ namespace Opm
 
         // global_cell is a map from compressed cells to Cartesian grid cells.
         // We must make the inverse lookup.
-        const int* global_cell = grid.global_cell;
-        const int* cpgdim = grid.cartdims;
+        const int* global_cell = UgGridHelpers::globalCell(grid);
+        const int* cpgdim = UgGridHelpers::cartDims(grid);
         std::map<int,int> cartesian_to_compressed;
 
         if (global_cell) {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
+            for (int i = 0; i < UgGridHelpers::numCells(grid); ++i) {
                 cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
             }
         }
         else {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
+            for (int i = 0; i < UgGridHelpers::numCells(grid); ++i) {
                 cartesian_to_compressed.insert(std::make_pair(i, i));
             }
         }
@@ -553,8 +561,10 @@ namespace Opm
                         std::map<int, int>::const_iterator cgit =
                             cartesian_to_compressed.find(cart_grid_indx);
                         if (cgit == cartesian_to_compressed.end()) {
-                            OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << ix << ' ' << jy << ' '
-                                  << kz << " not found in grid (well = " << name << ')');
+                            if(checkCellExistence)
+                                OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << ix << ' ' << jy << ' '
+                                          << kz << " not found in grid (well = " << name << ')');
+                            continue;
                         }
                         int cell = cgit->second;
                         PerfData pd;
@@ -568,7 +578,8 @@ namespace Opm
                                 OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                             }
                             std::array<double, 3> cubical = getCubeDim(grid, cell);
-                            const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
+                            int dimensions = UgGridHelpers::dimensions(grid);
+                            const double* cell_perm = &permeability[dimensions*dimensions*cell];
                             pd.well_index = computeWellIndex(radius, cubical, cell_perm,
                                                              compdat.compdat[kw].skin_factor_);
                         }
@@ -586,7 +597,7 @@ namespace Opm
 
         // Set up reference depths that were defaulted. Count perfs.
         int num_perfs = 0;
-        assert(grid.dimensions == 3);
+        assert(UgGridHelpers::dimensions(grid) == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
             if (well_data[w].reference_bhp_depth < 0.0) {
@@ -594,7 +605,8 @@ namespace Opm
                 double min_depth = 1e100;
                 int num_wperfs = wellperf_data[w].size();
                 for (int perf = 0; perf < num_wperfs; ++perf) {
-                    double depth = grid.cell_centroids[3*wellperf_data[w][perf].cell + 2];
+                    double depth = UgGridHelpers::
+                        cellCentroidCoordinate(grid, wellperf_data[w][perf].cell, 2);
                     min_depth = std::min(min_depth, depth);
                 }
                 well_data[w].reference_bhp_depth = min_depth;
@@ -1058,18 +1070,18 @@ namespace Opm
         well_collection_.applyExplicitReinjectionControls(well_reservoirrates_phase, well_surfacerates_phase);
     }
 
-    void WellsManager::setupCompressedToCartesian(const UnstructuredGrid& grid, std::map<int,int>& cartesian_to_compressed ) {
+    void WellsManager::setupCompressedToCartesian(const int* global_cell, int number_of_cells,
+                                                  std::map<int,int>& cartesian_to_compressed ) {
         // global_cell is a map from compressed cells to Cartesian grid cells.
         // We must make the inverse lookup.
-        const int* global_cell = grid.global_cell;
 
         if (global_cell) {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
+            for (int i = 0; i < number_of_cells; ++i) {
                 cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
             }
         }
         else {
-            for (int i = 0; i < grid.number_of_cells; ++i) {
+            for (int i = 0; i < number_of_cells; ++i) {
                 cartesian_to_compressed.insert(std::make_pair(i, i));
             }
         }
@@ -1118,12 +1130,14 @@ namespace Opm
                     int j = completion->getJ();
                     int k = completion->getK();
 
-                    const int* cpgdim = grid.cartdims;
+                    const int* cpgdim = UgGridHelpers::cartDims(grid);
                     int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
                     std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
-                        OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                                  << k << " not found in grid (well = " << well->name() << ')');
+                        if (checkCellExistence_)
+                            OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                                      << k << " not found in grid (well = " << well->name() << ')');
+                        continue;
                     }
                     int cell = cgit->second;
                     PerfData pd;
@@ -1137,7 +1151,8 @@ namespace Opm
                             OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                         }
                         std::array<double, 3> cubical = getCubeDim(grid, cell);
-                        const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
+                        int dimensions=UgGridHelpers::dimensions(grid);
+                        const double* cell_perm = &permeability[dimensions*dimensions*cell];
                         pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
                     }
                     wellperf_data[well_index].push_back(pd);
@@ -1151,7 +1166,7 @@ namespace Opm
         const int num_wells = well_data.size();
 
         int num_perfs = 0;
-        assert(grid.dimensions == 3);
+        assert(=UgGridHelpers::dimensions(grid) == 3);
         for (int w = 0; w < num_wells; ++w) {
             num_perfs += wellperf_data[w].size();
             if (well_data[w].reference_bhp_depth < 0.0) {
@@ -1159,7 +1174,8 @@ namespace Opm
                 double min_depth = 1e100;
                 int num_wperfs = wellperf_data[w].size();
                 for (int perf = 0; perf < num_wperfs; ++perf) {
-                    double depth = grid.cell_centroids[3*wellperf_data[w][perf].cell + 2];
+                    double depth = UgGridHelpers::
+                        cellCentroidCoordinate(grid,wellperf_data[w][perf].cell, 2);
                     min_depth = std::min(min_depth, depth);
                 }
                 well_data[w].reference_bhp_depth = min_depth;

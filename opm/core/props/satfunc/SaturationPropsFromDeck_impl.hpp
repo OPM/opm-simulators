@@ -47,6 +47,19 @@ namespace Opm
                                                    const UnstructuredGrid& grid,
                                                    const int samples)
     {
+        init(deck, grid.number_of_cells, grid.global_cell, grid.cell_centroids,
+             grid.dimensions, samples);
+    }
+    /// Initialize from deck.
+    template <class SatFuncSet>
+    template< class T>
+    void SaturationPropsFromDeck<SatFuncSet>::init(const EclipseGridParser& deck,
+                                                   int number_of_cells,
+                                                   const int* global_cell,
+                                                   const T& begin_cell_centroids,
+                                                   int dimensions,
+                                                   const int samples)
+    {
         phase_usage_ = phaseUsageFromDeck(deck);
 
         // Extract input data.
@@ -61,11 +74,9 @@ namespace Opm
         if (deck.hasField("SATNUM")) {
             const std::vector<int>& satnum = deck.getIntegerValue("SATNUM");
             satfuncs_expected = *std::max_element(satnum.begin(), satnum.end());
-            const int num_cells = grid.number_of_cells;
-            cell_to_func_.resize(num_cells);
-            const int* gc = grid.global_cell;
-            for (int cell = 0; cell < num_cells; ++cell) {
-                const int deck_pos = (gc == NULL) ? cell : gc[cell];
+            cell_to_func_.resize(number_of_cells);
+            for (int cell = 0; cell < number_of_cells; ++cell) {
+                const int deck_pos = (global_cell == NULL) ? cell : global_cell[cell];
                 cell_to_func_[cell] = satnum[deck_pos] - 1;
             }
         }
@@ -118,14 +129,22 @@ namespace Opm
                 }
             }
             do_eps_ = true;
-            initEPS(deck, grid, std::string("SWCR"), eps_.swcr_);
-            initEPS(deck, grid, std::string("SWL"), eps_.swl_);
-            initEPS(deck, grid, std::string("SWU"), eps_.swu_);
-            initEPS(deck, grid, std::string("SOWCR"), eps_.sowcr_);
-            initEPS(deck, grid, std::string("KRW"), eps_.krw_);
-            initEPS(deck, grid, std::string("KRWR"), eps_.krwr_);
-            initEPS(deck, grid, std::string("KRO"), eps_.kro_);
-            initEPS(deck, grid, std::string("KRORW"), eps_.krorw_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("SWCR"), eps_.swcr_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("SWL"), eps_.swl_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("SWU"), eps_.swu_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("SOWCR"), eps_.sowcr_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("KRW"), eps_.krw_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("KRWR"), eps_.krwr_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("KRO"), eps_.kro_);
+            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions,
+                    std::string("KRORW"), eps_.krorw_);
         }
     }
 
@@ -253,10 +272,45 @@ namespace Opm
         return cell_to_func_.empty() ? satfuncset_[0] : satfuncset_[cell_to_func_[cell]];
     }
 
+namespace
+{
+
+    template<class T>
+    const T* increment(T* cc, int i, int dim)
+    {
+        return cc+(i*dim);
+    }
+
+    template<class T>
+    T increment(const T& t, int i, int)
+    {
+        return t+i;
+    }
+
+    template<class T>
+    double getCoordinate(T* cc, int i)
+    {
+        return cc[i];
+    }
+
+    template<class T>
+    double getCoordinate(T t, int i)
+    {
+        return t->center()[i];
+    }
+
+
+}
+
+
     // Initialize saturation scaling parameter
     template <class SatFuncSet>
+    template <class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(const EclipseGridParser& deck,
-                                                      const UnstructuredGrid& grid,
+                                                      int number_of_cells,
+                                                      const int* global_cell,
+                                                      const T& begin_cell_centroid,
+                                                      int dimensions,
                                                       const std::string& keyword,
                                                       std::vector<double>& scaleparam)
     {
@@ -273,29 +327,29 @@ namespace Opm
             if (keyword == std::string("SWL")) {
                 if (useKeyword || deck.getENPTVD().mask_[0]) {
                     itab = 1;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
                 }
             } else if (keyword == std::string("SWCR")) {
                 if (useKeyword || deck.getENPTVD().mask_[1]) {
                     itab = 2;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).swcr_;
                 }
             } else if (keyword == std::string("SWU")) {
                 if (useKeyword || deck.getENPTVD().mask_[2]) {
                     itab = 3;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
                 }
             } else if (keyword == std::string("SOWCR")) {
                 if (useKeyword || deck.getENPTVD().mask_[3]) {
                     itab = 4;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).sowcr_;
                 }
             }else {
@@ -308,29 +362,29 @@ namespace Opm
             if (keyword == std::string("KRW")) {
                 if (useKeyword || deck.getENKRVD().mask_[0]) {
                     itab = 1;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).krwmax_;
                 }
             } else if (keyword == std::string("KRO")) {
                 if (useKeyword || deck.getENKRVD().mask_[1]) {
                     itab = 2;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).kromax_;
                 }
             } else if (keyword == std::string("KRWR")) {
                 if (useKeyword || deck.getENKRVD().mask_[2]) {
                     itab = 3;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).krwr_;
                 }
             } else if (keyword == std::string("KRORW")) {
                 if (useKeyword || deck.getENKRVD().mask_[3]) {
                     itab = 4;
-                    scaleparam.resize(grid.number_of_cells);
-                    for (int i=0; i<grid.number_of_cells; ++i)
+                    scaleparam.resize(number_of_cells);
+                    for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).krorw_;
                 }
             } else {
@@ -346,10 +400,9 @@ namespace Opm
         } else if (useKeyword) {
             // Keyword values from deck
             std::cout << "--- Scaling parameter '" << keyword << "' assigned." << std::endl;
-            const int* gc = grid.global_cell;
             const std::vector<double>& val = deck.getFloatingPointValue(keyword);
             for (int c = 0; c < int(scaleparam.size()); ++c) {
-                const int deck_pos = (gc == NULL) ? c : gc[c];
+                const int deck_pos = (global_cell == NULL) ? c : global_cell[c];
                 scaleparam[c] = val[deck_pos];
             }
         } else {
@@ -358,14 +411,13 @@ namespace Opm
                 deck.getENPTVD().write(std::cout);
             else
                 deck.getENKRVD().write(std::cout);
-            const double* cc = grid.cell_centroids;
-            const int dim = grid.dimensions;
-            for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+            for (int cell = 0; cell < number_of_cells; ++cell) {
                 int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
                 if (table[itab][jtab][0] != -1.0) {
                     std::vector<double>& depth = table[0][jtab];
                     std::vector<double>& val = table[itab][jtab];
-                    double zc = cc[dim*cell+dim-1];
+                    double zc = getCoordinate(increment(begin_cell_centroid, cell, dimensions),
+                                              dimensions-1);
                     if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
                         scaleparam[cell] = linearInterpolation(depth, val, zc);
                     }
