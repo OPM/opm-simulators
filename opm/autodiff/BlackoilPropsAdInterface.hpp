@@ -315,6 +315,12 @@ namespace Opm
                                   const ADB& so,
                                   const ADB& sg,
                                   const Cells& cells) const = 0;
+                                  
+        /// Saturation update for hysteresis behavior.
+        /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
+        virtual
+        void updateSatHyst(const std::vector<double>& saturation,
+                           const std::vector<int>& cells) {assert(false); } // Please implement me ...
     };
 
 } // namespace Opm

@@ -68,7 +68,7 @@ namespace Opm
     public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
-             const BlackoilPropsAdInterface& props,
+             BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              LinearSolverInterface& linsolver,
@@ -92,7 +92,7 @@ namespace Opm
         int max_well_control_iterations_;
         // Observed objects.
         const UnstructuredGrid& grid_;
-        const BlackoilPropsAdInterface& props_;
+        BlackoilPropsAdInterface& props_;
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
         const Wells* wells_;
@@ -110,7 +110,7 @@ namespace Opm
 
     SimulatorFullyImplicitBlackoil::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                                                    const UnstructuredGrid& grid,
-                                                                   const BlackoilPropsAdInterface& props,
+                                                                   BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    LinearSolverInterface& linsolver,
@@ -258,7 +258,7 @@ namespace Opm
     // \TODO: Treat bcs.
     SimulatorFullyImplicitBlackoil::Impl::Impl(const parameter::ParameterGroup& param,
                                                const UnstructuredGrid& grid,
-                                               const BlackoilPropsAdInterface& props,
+                                               BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
                                                LinearSolverInterface& linsolver,
@@ -407,6 +407,9 @@ namespace Opm
                 initial_porevol = porevol;
                 computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
+
+            // Hysteresis
+            props_.updateSatHyst(state.saturation(), allcells_);
 
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
