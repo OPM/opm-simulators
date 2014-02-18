@@ -646,6 +646,13 @@ namespace Opm
     {
         if (scr.empty() && su.empty() && (sxcr.empty() || !do_3pt_) && s0.empty()) {
             data.doNotScale = true;
+            data.smin = sl_tab;
+            if (oil) {
+                data.smax = (s0_tab < 0.0) ? 1.0 - su_tab : 1.0 - su_tab - s0_tab;
+            } else {
+                data.smax = su_tab;
+            }
+            data.scr = scr_tab;
         } else {
             data.doNotScale = false;
             data.do_3pt = do_3pt_;
