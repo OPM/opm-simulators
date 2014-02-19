@@ -22,6 +22,9 @@
 
 
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <vector>
 
 struct UnstructuredGrid;
@@ -52,7 +55,16 @@ namespace Opm
         void init(const EclipseGridParser& deck,
                   int number_of_cells, const int* global_cell,
                   const int* cart_dims);
-        
+         /// Initialize from deck and cell mapping.
+        /// \param  newParserDeck            Deck produced by the opm-parser code
+        /// \param  number_of_cells The number of cells in the grid.
+        /// \param  global_cell     The mapping fom local to global cell indices.
+        ///                         global_cell[i] is the corresponding global index of i.
+        /// \param  cart_dims       The size of the underlying cartesian grid.
+        void init(Opm::DeckConstPtr newParserDeck,
+                  int number_of_cells, const int* global_cell,
+                  const int* cart_dims);
+
         /// \return   D, the number of spatial dimensions. Always 3 for deck input.
         int numDimensions() const
         {
@@ -83,11 +95,19 @@ namespace Opm
         void assignPorosity(const EclipseGridParser& parser,
                             int number_of_cells,
                             const int* global_cell);
+        void assignPorosity(Opm::DeckConstPtr newParserDeck,
+                            int number_of_cells,
+                            const int* global_cell);
         void assignPermeability(const EclipseGridParser& parser,
                                 int number_of_cells,
                                 const int* global_cell,
                                 const int* cart_dims,
                                 const double perm_threshold);
+        void assignPermeability(Opm::DeckConstPtr newParserDeck,
+                                int number_of_cells,
+                                const int* global_cell,
+                                const int* cart_dims,
+                                double perm_threshold);
 
         std::vector<double> porosity_;
         std::vector<double> permeability_;

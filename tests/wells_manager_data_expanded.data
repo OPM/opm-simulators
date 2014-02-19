@@ -16,6 +16,12 @@ DYV
 DZV
 10.0 20.0 30.0 10.0 5.0 /
 
+-- The DEPTHZ keyword is only here to satisfy the old parser; content might
+-- completely bogus.
+DEPTHZ
+121*2000 /
+
+
 SCHEDULE
 
 WELSPECS
@@ -66,7 +72,15 @@ WCONINJE
 
 
 TSTEP
-14.0
- /
+14.0 /
+/
+
+WELOPEN
+   'INJ1' 'SHUT' 5* /
+/
+
+TSTEP
+14.0 /
+/
 
 END

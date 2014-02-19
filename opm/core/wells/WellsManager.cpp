@@ -277,7 +277,6 @@ WellsManager::WellsManager(struct Wells* W, bool checkCellExistence)
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                                const size_t timeStep,
-                               const Opm::EclipseGridParser& deck,
                                const UnstructuredGrid& grid,
                                const double* permeability,
                                bool checkCellExistence)
@@ -314,86 +313,20 @@ WellsManager::WellsManager(struct Wells* W, bool checkCellExistence)
         well_names.reserve(wells.size());
         well_data.reserve(wells.size());
 
-
         createWellsFromSpecs(wells, timeStep, grid, well_names, well_data, well_names_to_index, pu, cartesian_to_compressed, permeability);
-
         setupWellControls(wells, timeStep, well_names, pu);
 
-        if (deck.hasField("WELOPEN")) {
-            const WELOPEN& welopen = deck.getWELOPEN();
-            for (size_t i = 0; i < welopen.welopen.size(); ++i) {
-                WelopenLine line = welopen.welopen[i];
-                std::string wellname = line.well_;
-                std::map<std::string, int>::const_iterator it = well_names_to_index.find(wellname);
-                if (it == well_names_to_index.end()) {
-                    OPM_THROW(std::runtime_error, "Trying to open/shut well with name: \"" << wellname<<"\" but it's not registered under WELSPECS.");
-                }
-                const int index = it->second;
-                if (line.openshutflag_ == "SHUT") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl >= 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) < 0);
-                } else if (line.openshutflag_ == "OPEN") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl < 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) >= 0);
-                } else {
-                    OPM_THROW(std::runtime_error, "Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
-                }
-            }
+        {
+            GroupTreeNodeConstPtr fieldNode = eclipseState->getSchedule()->getGroupTree(timeStep)->getNode("FIELD");
+            GroupConstPtr fieldGroup = eclipseState->getSchedule()->getGroup(fieldNode->name());
+            well_collection_.addField(fieldGroup, timeStep, pu);
+            addChildGroups(fieldNode, eclipseState->getSchedule(), timeStep, pu);
         }
 
-        // Build the well_collection_ well group hierarchy.
-        if (deck.hasField("GRUPTREE")) {
-            std::cout << "Found gruptree" << std::endl;
-            const GRUPTREE& gruptree = deck.getGRUPTREE();
-            std::map<std::string, std::string>::const_iterator it = gruptree.tree.begin();
-            for( ; it != gruptree.tree.end(); ++it) {
-                well_collection_.addChild(it->first, it->second, deck);
-            }
-        }
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
-            well_collection_.addChild((*wellIter)->name(), (*wellIter)->getGroupName(timeStep), deck);
+            well_collection_.addWell((*wellIter), timeStep, pu);
         }
 
-
-
-        // Set the guide rates:
-        if (deck.hasField("WGRUPCON")) {
-            std::cout << "Found Wgrupcon" << std::endl;
-            WGRUPCON wgrupcon = deck.getWGRUPCON();
-            const std::vector<WgrupconLine>& lines = wgrupcon.wgrupcon;
-            std::cout << well_collection_.getLeafNodes().size() << std::endl;
-            for (size_t i = 0; i < lines.size(); i++) {
-                std::string name = lines[i].well_;
-                const int wix = well_names_to_index[name];
-                WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
-                assert(wellnode.name() == name);
-                if (well_data[wix].type == PRODUCER) {
-                    wellnode.prodSpec().guide_rate_ = lines[i].guide_rate_;
-                    if (lines[i].phase_ == "OIL") {
-                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
-                    } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << lines[i].phase_ << " specified for producer "
-                              << name << " in WGRUPCON, cannot handle.");
-                    }
-                } else if (well_data[wix].type == INJECTOR) {
-                    wellnode.injSpec().guide_rate_ = lines[i].guide_rate_;
-                    if (lines[i].phase_ == "RAT") {
-                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
-                    } else {
-                        OPM_THROW(std::runtime_error, "Guide rate type " << lines[i].phase_ << " specified for injector "
-                              << name << " in WGRUPCON, cannot handle.");
-                    }
-                } else {
-                    OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << name);
-                }
-            }
-        }
         well_collection_.setWellsPointer(w_);
         well_collection_.applyGroupControls();
 
@@ -1216,6 +1149,10 @@ WellsManager::WellsManager(struct Wells* W, bool checkCellExistence)
         for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
             WellConstPtr well = (*wellIter);
 
+            if ( !( well->getStatus( timeStep ) == WellCommon::SHUT || well->getStatus( timeStep ) == WellCommon::OPEN) ) {
+                OPM_THROW(std::runtime_error, "Currently we do not support well status " << WellCommon::Status2String(well->getStatus( timeStep )));
+            }
+
             if (well->isInjector(timeStep)) {
                 clear_well_controls(well_index, w_);
                 int ok = 1;
@@ -1427,4 +1364,13 @@ WellsManager::WellsManager(struct Wells* W, bool checkCellExistence)
         }
 
     }
+
+    void WellsManager::addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage) {
+        for (auto childIter = parentNode->begin(); childIter != parentNode->end(); ++childIter) {
+            GroupTreeNodeConstPtr childNode = (*childIter).second;
+            well_collection_.addGroup(schedule->getGroup(childNode->name()), parentNode->name(), timeStep, phaseUsage);
+            addChildGroups(childNode, schedule, timeStep, phaseUsage);
+        }
+    }
+
 } // namespace Opm

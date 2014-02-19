@@ -23,7 +23,6 @@
 
 namespace Opm
 {
-
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
@@ -33,12 +32,29 @@ namespace Opm
     }
 
 
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                           const UnstructuredGrid& grid,
+                                                           bool init_rock)
+    {
+        init(newParserDeck, grid.number_of_cells, grid.global_cell, grid.cartdims,
+             grid.cell_centroids, grid.dimensions, init_rock);
+    }
+
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
                                                            const UnstructuredGrid& grid,
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
     {
         init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
+             grid.dimensions, param, init_rock);
+    }
+
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                           const UnstructuredGrid& grid,
+                                                           const parameter::ParameterGroup& param,
+                                                           bool init_rock)
+    {
+        init(newParserDeck, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
              grid.dimensions, param, init_rock);
     }
 

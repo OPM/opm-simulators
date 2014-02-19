@@ -27,6 +27,9 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <memory>
 
 struct UnstructuredGrid;
@@ -44,7 +47,15 @@ namespace Opm
         /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+        BlackoilPropertiesFromDeck(const EclipseGridParser &deck,
+                                   const UnstructuredGrid& grid, bool init_rock=true );
+
+        /// Initialize from deck and grid.
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
                                    const UnstructuredGrid& grid, bool init_rock=true );
 
         /// Initialize from deck, grid and parameters.
@@ -59,6 +70,22 @@ namespace Opm
         ///                      For both size parameters, a 0 or negative value indicates that no spline fitting is to
         ///                      be done, and the input fluid data used directly for linear interpolation.
         BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   const UnstructuredGrid& grid,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
+        /// Initialize from deck, grid and parameters.
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  param    Parameters. Accepted parameters include:
+        ///                        pvt_tab_size (200)          number of uniform sample points for dead-oil pvt tables.
+        ///                        sat_tab_size (200)          number of uniform sample points for saturation tables.
+        ///                        threephase_model("simple")  three-phase relperm model (accepts "simple" and "stone2").
+        ///                      For both size parameters, a 0 or negative value indicates that no spline fitting is to
+        ///                      be done, and the input fluid data used directly for linear interpolation.
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
                                    const UnstructuredGrid& grid,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
@@ -202,6 +229,23 @@ namespace Opm
                   const parameter::ParameterGroup& param,
                   bool init_rock);
 
+        template<class T>
+        void init(Opm::DeckConstPtr  newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  bool init_rock);
+        template<class T>
+        void init(Opm::DeckConstPtr  newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  const parameter::ParameterGroup& param,
+                  bool init_rock);
         RockFromDeck rock_;
         BlackoilPvtProperties pvt_;
         std::unique_ptr<SaturationPropsInterface> satprops_;

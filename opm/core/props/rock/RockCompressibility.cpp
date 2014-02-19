@@ -25,6 +25,9 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
+#include <opm/parser/eclipse/Utility/RocktabTable.hpp>
+#include <opm/parser/eclipse/Utility/RockTable.hpp>
+
 #include <iostream>
 
 namespace Opm
@@ -60,6 +63,44 @@ namespace Opm
             const ROCK& r = deck.getROCK();
             pref_ = r.rock_compressibilities_[0][0];
             rock_comp_ = r.rock_compressibilities_[0][1];
+        } else {
+            std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
+        }
+    }
+
+    RockCompressibility::RockCompressibility(Opm::DeckConstPtr newParserDeck)
+        : pref_(0.0),
+          rock_comp_(0.0)
+    {
+        if (newParserDeck->hasKeyword("ROCKTAB")) {
+            Opm::DeckKeywordConstPtr rtKeyword = newParserDeck->getKeyword("ROCKTAB");
+            if (rtKeyword->size() != 1)
+                OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
+
+            // the number of colums of the "ROCKTAB" keyword
+            // depends on the presence of the "RKTRMDIR"
+            // keyword. Messy stuff...
+            bool isDirectional = newParserDeck->hasKeyword("RKTRMDIR");
+            if (isDirectional)
+            {
+                // well, okay. we don't support non-isotropic
+                // transmissibility multipliers yet
+                OPM_THROW(std::runtime_error, "Support for non-isotropic "
+                          "transmissibility multipliers is not implemented yet.");
+            };
+
+            Opm::RocktabTable rocktabTable(rtKeyword, isDirectional);
+
+            p_ = rocktabTable.getPressureColumn();
+            poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
+            transmult_ =  rocktabTable.getTransmissibilityMultiplierColumn();
+        } else if (newParserDeck->hasKeyword("ROCK")) {
+            Opm::RockTable rockTable(newParserDeck->getKeyword("ROCK"));
+            if (rockTable.numRows() != 1)
+                OPM_THROW(std::runtime_error, "Can only handle a single region in ROCK.");
+
+            pref_ = rockTable.getPressureColumn()[0];
+            rock_comp_ = rockTable.getCompressibilityColumn()[0];
         } else {
             std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
         }

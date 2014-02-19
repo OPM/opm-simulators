@@ -27,6 +27,9 @@
 #include <opm/core/props/satfunc/SatFuncStone2.hpp>
 #include <opm/core/props/satfunc/SatFuncSimple.hpp>
 #include <opm/core/props/satfunc/SatFuncGwseg.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <vector>
 
 struct UnstructuredGrid;
@@ -82,6 +85,38 @@ namespace Opm
                   int dimensions,
                   const int samples);
         
+        /// Initialize from deck and grid.
+        /// \param[in]  newParserDeck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        void init(Opm::DeckConstPtr newParserDeck,
+                  const UnstructuredGrid& grid,
+                  const int samples);
+
+        /// Initialize from deck and grid.
+        /// \param[in]  newParserDeck     Deck input parser
+        /// \param[in]  number_of_cells The number of cells of the grid to which property
+        ///                             object applies, needed for the
+        ///                             mapping from cell indices (typically from a processed
+        ///                             grid) to logical cartesian indices consistent with the
+        ///                             deck.
+        /// \param[in]  global_cell     The mapping from local cell indices of the grid to
+        ///                             global cell indices used in the deck.
+        /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
+        /// \param[in]  dimensions      The dimensions of the grid. 
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        template<class T>
+        void init(Opm::DeckConstPtr newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const T& begin_cell_centroids,
+                  int dimensions,
+                  const int samples);
+
         /// \return   P, the number of phases.
         int numPhases() const;
 
@@ -123,37 +158,92 @@ namespace Opm
                       const int* cells,
                       double* smin,
                       double* smax) const;
+        
+        /// Update saturation state for the hysteresis tracking 
+        /// \param[in]  n      Number of data points. 
+        /// \param[in]  s      Array of nP saturation values.             
+        void updateSatHyst(const int n,
+                           const int* cells,
+                           const double* s);
 
     private:
         PhaseUsage phase_usage_;
         std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
 
-        struct { // End point scaling parameters
-            std::vector<double> swl_;
-            std::vector<double> swcr_;
-            std::vector<double> swu_;
-            std::vector<double> sowcr_;
-            std::vector<double> krw_;
-            std::vector<double> krwr_;
-            std::vector<double> kro_;
-            std::vector<double> krorw_;
-        } eps_;
         bool do_eps_;  // ENDSCALE is active
         bool do_3pt_;  // SCALECRS: YES~true  NO~false
+        bool do_hyst_;  // Keywords ISWL etc detected     
+        std::vector<EPSTransforms> eps_transf_;
+        std::vector<EPSTransforms> eps_transf_hyst_;
+        std::vector<SatHyst> sat_hyst_;
 
         typedef SatFuncSet Funcs;
 
         const Funcs& funcForCell(const int cell) const;
+
         template<class T>
         void initEPS(const EclipseGridParser& deck,
                      int number_of_cells,
                      const int* global_cell,
                      const T& begin_cell_centroids,
-                     int dimensions,
-                     const std::string& keyword,
-                     std::vector<double>& scaleparam);
-        void relpermEPS(const double *s, const int cell, double *kr, double *dkrds= 0) const;
+                     int dimensions);
+        template<class T>
+        void initEPSHyst(const EclipseGridParser& deck,
+                         int number_of_cells,
+                         const int* global_cell,
+                         const T& begin_cell_centroids,
+                         int dimensions);
+        template<class T>
+        void initEPSKey(const EclipseGridParser& deck,
+                        int number_of_cells,
+                        const int* global_cell,
+                        const T& begin_cell_centroids,
+                        int dimensions,
+                        const std::string& keyword,
+                        std::vector<double>& scaleparam);
+        template<class T>
+        void initEPS(Opm::DeckConstPtr newParserDeck,
+                     int number_of_cells,
+                     const int* global_cell,
+                     const T& begin_cell_centroids,
+                     int dimensions);
+        template<class T>
+        void initEPSHyst(Opm::DeckConstPtr newParserDeck,
+                         int number_of_cells,
+                         const int* global_cell,
+                         const T& begin_cell_centroids,
+                         int dimensions);
+        template<class T>
+        void initEPSKey(Opm::DeckConstPtr newParserDeck,
+                        int number_of_cells,
+                        const int* global_cell,
+                        const T& begin_cell_centroids,
+                        int dimensions,
+                        const std::string& keyword,
+                        std::vector<double>& scaleparam);
+        void initEPSParam(const int cell, 
+                          EPSTransforms::Transform& data,
+                          const bool oil,
+                          const double sl_tab,
+                          const double scr_tab,
+                          const double su_tab,
+                          const double sxcr_tab,
+                          const double s0_tab,
+                          const double krsr_tab,
+                          const double krmax_tab,
+                          const std::vector<double>& sl,
+                          const std::vector<double>& scr,
+                          const std::vector<double>& su,
+                          const std::vector<double>& sxcr,
+                          const std::vector<double>& s0,
+                          const std::vector<double>& krsr,
+                          const std::vector<double>& krmax);
+
+        bool columnIsMasked_(Opm::DeckConstPtr newParserDeck,
+                             const std::string &keywordName,
+                             int columnIdx)
+        { return newParserDeck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
     };
 
 
