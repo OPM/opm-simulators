@@ -17,6 +17,7 @@ set (opm-autodiff_DEPS
         # DUNE prerequisites
         "dune-common REQUIRED;
         dune-istl REQUIRED;
+        dune-cornerpoint;
         opm-core REQUIRED"
         # Eigen
         "Eigen3 3.1.2 REQUIRED"
