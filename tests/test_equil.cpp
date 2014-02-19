@@ -327,16 +327,20 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
         grid(create_grid_cart3d(1, 1, 10), destroy_grid);
     Opm::EclipseGridParser deck("deadfluids.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, *grid, false);
-    Opm::equil::DeckDependent::PhasePressureComputer<Opm::EclipseGridParser> comp(props, deck, *grid);
+    Opm::equil::DeckDependent::PhasePressureComputer<Opm::EclipseGridParser> comp(props, deck, *grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
-    for (auto pp : pressures) {
-        for (auto p : pp){
-            std::cout << p << ' ';
-        }
-        std::cout << std::endl;
-    }
+
+    const int first = 0, last = grid->number_of_cells - 1;
+    // The relative tolerance is too loose to be very useful,
+    // but the answer we are checking is the result of an ODE
+    // solver, and it is unclear if we should check it against
+    // the true answer or something else.
+    const double reltol = 1.0e-3;
+    BOOST_CHECK_CLOSE(pressures[0][first] , 14955e3   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 15045e3   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 1.50473e7   , reltol);
 }
 
 
