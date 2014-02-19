@@ -643,14 +643,15 @@ namespace Opm
             public:
                 PhasePressureComputer(const BlackoilPropertiesInterface& props,
                                       const EclipseGridParser&           deck ,
-                                      const UnstructuredGrid&            G    )
+                                      const UnstructuredGrid&            G    ,
+                                      const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
                           std::vector<double>(G.number_of_cells))
                 {
                     const std::vector<EquilRecord> rec = getEquil(deck);
                     const RegionMapping<> eqlmap(equilnum(deck, G));
 
-                    calcII(eqlmap, rec, props, G);
+                    calcII(eqlmap, rec, props, G, grav);
                 }
 
                 typedef std::vector<double> PVal;
@@ -669,7 +670,8 @@ namespace Opm
                 calcII(const RMap&                             reg  ,
                        const std::vector< EquilRecord >&       rec  ,
                        const Opm::BlackoilPropertiesInterface& props,
-                       const UnstructuredGrid&                 G    )
+                       const UnstructuredGrid&                 G    ,
+                       const double grav)
                 {
                     typedef miscibility::NoMixing NoMix;
 
@@ -685,7 +687,7 @@ namespace Opm
                         const EqReg eqreg(rec[r], calc, NoMix(), NoMix(),
                                           props.phaseUsage());
 
-                        const PPress& res = phasePressures(G, eqreg, cells);
+                        const PPress& res = phasePressures(G, eqreg, cells, grav);
 
                         for (int p = 0, np = props.numPhases(); p < np; ++p) {
                             PVal&                d = pp_[p];
