@@ -24,6 +24,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/Units.hpp>
 
 #include <array>
@@ -533,6 +534,143 @@ namespace Opm
             PhaseUsage  pu_;      /**< Active phase summary */
         };
 
+
+
+        /// Functor for inverting capillary pressure function.
+        /// Function represented is
+        ///   f(s) = pc(s) - target_pc
+        struct PcEq
+        {
+            PcEq(const BlackoilPropertiesInterface& props,
+                 const int phase,
+                 const int cell,
+                 const double target_pc)
+                : props_(props),
+                  phase_(phase),
+                  cell_(cell),
+                  target_pc_(target_pc)
+            {
+                std::fill(s_, s_ + BlackoilPhases::MaxNumPhases, 0.0);
+                std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
+            }
+            double operator()(double s) const
+            {
+                s_[phase_] = s;
+                props_.capPress(1, s_, &cell_, pc_, 0);
+                return pc_[phase_] - target_pc_;
+            }
+        private:
+            const BlackoilPropertiesInterface& props_;
+            const int phase_;
+            const int cell_;
+            const int target_pc_;
+            mutable double s_[BlackoilPhases::MaxNumPhases];
+            mutable double pc_[BlackoilPhases::MaxNumPhases];
+        };
+
+
+
+        /// Compute saturation of some phase corresponding to a given
+        /// capillary pressure.
+        inline double satFromPc(const BlackoilPropertiesInterface& props,
+                                const int phase,
+                                const int cell,
+                                const double target_pc,
+                                const bool increasing = false)
+        {
+            // Find minimum and maximum saturations.
+            double sminarr[BlackoilPhases::MaxNumPhases];
+            double smaxarr[BlackoilPhases::MaxNumPhases];
+            props.satRange(1, &cell, sminarr, smaxarr);
+            const double s0 = increasing ? smaxarr[phase] : sminarr[phase];
+            const double s1 = increasing ? sminarr[phase] : smaxarr[phase];
+
+            // Create the equation f(s) = pc(s) - target_pc
+            const PcEq f(props, phase, cell, target_pc);
+            const double f0 = f(s0);
+            const double f1 = f(s1);
+            if (f0 <= 0.0) {
+                return s0;
+            } else if (f1 > 0.0) {
+                return s1;
+            } else {
+                const int max_iter = 30;
+                const double tol = 1e-6;
+                int iter_used = -1;
+                typedef RegulaFalsi<ThrowOnError> ScalarSolver;
+                const double sol = ScalarSolver::solve(f, std::min(s0, s1), std::max(s0, s1), max_iter, tol, iter_used);
+                return sol;
+            }
+        }
+
+
+        /// Functor for inverting a sum of capillary pressure functions.
+        /// Function represented is
+        ///   f(s) = pc1(s) + pc2(1 - s) - target_pc
+        struct PcEqSum
+        {
+            PcEqSum(const BlackoilPropertiesInterface& props,
+                    const int phase1,
+                    const int phase2,
+                    const int cell,
+                    const double target_pc)
+                : props_(props),
+                  phase1_(phase1),
+                  phase2_(phase2),
+                  cell_(cell),
+                  target_pc_(target_pc)
+            {
+                std::fill(s_, s_ + BlackoilPhases::MaxNumPhases, 0.0);
+                std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
+            }
+            double operator()(double s) const
+            {
+                s_[phase1_] = s;
+                s_[phase2_] = 1.0 - s;
+                props_.capPress(1, s_, &cell_, pc_, 0);
+                return pc_[phase1_] + pc_[phase2_] - target_pc_;
+            }
+        private:
+            const BlackoilPropertiesInterface& props_;
+            const int phase1_;
+            const int phase2_;
+            const int cell_;
+            const int target_pc_;
+            mutable double s_[BlackoilPhases::MaxNumPhases];
+            mutable double pc_[BlackoilPhases::MaxNumPhases];
+        };
+
+
+
+
+        /// Compute saturation of some phase corresponding to a given
+        /// capillary pressure, where the capillary pressure function
+        /// is given as a sum of two other functions.
+        inline double satFromSumOfPcs(const BlackoilPropertiesInterface& props,
+                                      const int phase1,
+                                      const int phase2,
+                                      const int cell,
+                                      const double target_pc)
+        {
+            // Find minimum and maximum saturations.
+            double sminarr[BlackoilPhases::MaxNumPhases];
+            double smaxarr[BlackoilPhases::MaxNumPhases];
+            props.satRange(1, &cell, sminarr, smaxarr);
+            const double smin = sminarr[phase1];
+            const double smax = smaxarr[phase1];
+
+            // Create the equation f(s) = pc1(s) + pc2(1-s) - target_pc
+            const PcEqSum f(props, phase1, phase2, cell, target_pc);
+            const int max_iter = 30;
+            const double tol = 1e-6;
+            int iter_used = -1;
+            typedef RegulaFalsi<WarnAndContinueOnError> ScalarSolver;
+            const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
+            return sol;
+        }
+
+
+
         /**
          * Compute initial phase pressures by means of equilibration.
          *
@@ -577,6 +715,91 @@ namespace Opm
                        const Region&           reg,
                        const CellRange&        cells,
                        const double            grav = unit::gravity);
+
+
+
+        /**
+         * Compute initial phase saturations by means of equilibration.
+         *
+         * \tparam Region Type of an equilibration region information
+         *                base.  Typically an instance of the EquilReg
+         *                class template.
+         *
+         * \tparam CellRange Type of cell range that demarcates the
+         *                cells pertaining to the current
+         *                equilibration region.  Must implement
+         *                methods begin() and end() to bound the range
+         *                as well as provide an inner type,
+         *                const_iterator, to traverse the range.
+         *
+         * \param[in] reg             Current equilibration region.
+         * \param[in] cells           Range that spans the cells of the current
+         *                            equilibration region.
+         * \param[in] props           Property object, needed for capillary functions.
+         * \param[in] phase_pressures Phase pressures, one vector for each active phase,
+         *                            of pressure values in each cell in the current
+         *                            equilibration region.
+         * \return                    Phase saturations, one vector for each phase, each containing
+         *                            one saturation value per cell in the region.
+         */
+        template <class Region, class CellRange>
+        std::vector< std::vector<double> >
+        phaseSaturations(const Region&           reg,
+                         const CellRange&        cells,
+                         const BlackoilPropertiesInterface& props,
+                         const std::vector< std::vector<double> >& phase_pressures)
+        {
+            const double z0   = reg.datum();
+            const double zwoc = reg.zwoc ();
+            const double zgoc = reg.zgoc ();
+            if ((zgoc > z0) || (z0 > zwoc)) {
+                OPM_THROW(std::runtime_error, "Cannot initialise: the datum depth must be in the oil zone.");
+            }
+            if (!reg.phaseUsage().phase_used[BlackoilPhases::Liquid]) {
+                OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
+            }
+
+            std::vector< std::vector<double> > phase_saturations = phase_pressures; // Just to get the right size.
+
+            const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+            std::vector<double>::size_type local_index = 0;
+            for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
+                const int cell = *ci;
+                // Find saturations from pressure differences by
+                // inverting capillary pressure functions.
+                double sw = 0.0;
+                if (reg.phaseUsage().phase_used[BlackoilPhases::Aqua]) {
+                    const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
+                    const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
+                    sw = satFromPc(props, waterpos, cell, pcov);
+                    phase_saturations[waterpos][local_index] = sw;
+                }
+                double sg = 0.0;
+                if (reg.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
+                    const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    // Note that pcog is defined to be (pg - po), not (po - pg).
+                    const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
+                    const double increasing = true; // pcog(sg) expected to be increasing function
+                    sg = satFromPc(props, gaspos, cell, pcog, increasing);
+                    phase_saturations[gaspos][local_index] = sg;
+                }
+                if (sg > 0.0 && sw > 0.0) {
+                    // Overlapping gas-oil and oil-water transition
+                    // zones. Must recalculate using gas-water
+                    // capillary pressure.
+                    const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
+                    const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
+                    sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
+                    sg = 1.0 - sw;
+                    phase_saturations[waterpos][local_index] = sw;
+                    phase_saturations[gaspos][local_index] = sg;
+                }
+                phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
+            }
+        }
+
+
 
         namespace DeckDependent {
             inline
