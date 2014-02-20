@@ -3,7 +3,8 @@
 
 # defines that must be present in config.h for our headers
 set (opm-autodiff_CONFIG_VAR
-        )
+        HAVE_DUNE_CORNERPOINT
+				)
 
 # dependencies
 set (opm-autodiff_DEPS

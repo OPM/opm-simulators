@@ -26,7 +26,7 @@ find_opm_package (
   "dunecornerpoint"
 
   # defines to be added to compilations
-  ""
+  "HAVE_DUNE_CORNERPOINT"
 
   # test program
 "#include <dune/grid/CpGrid.hpp>
