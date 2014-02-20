@@ -543,7 +543,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rbub(n, po.data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, po.data(), rbub.data(), drbubdp.data());
         return rbub;
     }
 
@@ -561,7 +561,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rbub(n, po.value().data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, po.value().data(), rbub.data(), drbubdp.data());
         ADB::M drbubdp_diag = spdiag(drbubdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
