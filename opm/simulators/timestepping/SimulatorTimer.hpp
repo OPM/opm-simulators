@@ -20,6 +20,8 @@
 #ifndef OPM_SIMULATORTIMER_HEADER_INCLUDED
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+
 #include <iosfwd>
 #include <vector>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -46,6 +48,10 @@ namespace Opm
         /// Initialize from TSTEP field.
         /// Note that DATES are folded into TSTEP by the parser.
         void init(const EclipseGridParser& deck);
+
+        /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
+        void init(TimeMapConstPtr timeMap,
+                  int timeStepIdx = 0);
 
         /// Total number of steps.
         int numSteps() const;
@@ -99,6 +105,7 @@ namespace Opm
         bool done() const;
 
     private:
+        Opm::TimeMapConstPtr timeMap_;
         std::vector<double> timesteps_;
         int current_step_;
         double current_time_;
