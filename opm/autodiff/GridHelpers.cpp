@@ -17,7 +17,9 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "config.h"
+
 #include <opm/autodiff/GridHelpers.hpp>
 namespace Opm
 {
@@ -112,9 +114,13 @@ void extractInternalFaces(const UnstructuredGrid& grid,
         }
     }
 }
+} // end namespace AutoDiffHelpers
 
 #ifdef HAVE_DUNE_CORNERPOINT
 // Interface functions using CpGrid
+
+namespace UgGridHelpers
+{
 
 int numCells(const Dune::CpGrid& grid)
 {
@@ -131,6 +137,11 @@ int dimensions(const Dune::CpGrid&)
     return Dune::CpGrid::dimension;
 }
 
+int numCellFaces(const Dune::CpGrid& grid)
+{
+    return grid.numCellFaces();    
+}
+
 const int* cartDims(const Dune::CpGrid& grid)
 {
     return &(grid.logicalCartesianSize()[0]);
@@ -141,10 +152,50 @@ const int*  globalCell(const Dune::CpGrid& grid)
     return &(grid.globalCell()[0]);
 }
 
-FaceCellsContainerProxy faceCells(const Dune::CpGrid& grid)
+CellCentroidTraits<Dune::CpGrid>::IteratorType
+beginCellCentroids(const Dune::CpGrid& grid)
 {
-    return FaceCellsContainerProxy(&grid);
+    return CellCentroidTraits<Dune::CpGrid>::IteratorType(grid, 0);
 }
+
+double cellCentroidCoordinate(const Dune::CpGrid& grid, int cell_index,
+                              int coordinate)
+{
+    return grid.cellCentroid(cell_index)[coordinate];
+}
+
+FaceCentroidTraits<Dune::CpGrid>::IteratorType
+beginFaceCentroids(const Dune::CpGrid& grid)
+{
+    return FaceCentroidTraits<Dune::CpGrid>::IteratorType(grid, 0);
+}
+
+FaceCentroidTraits<Dune::CpGrid>::ValueType
+faceCentroid(const Dune::CpGrid& grid, int face_index)
+{
+    return grid.faceCentroid(face_index);
+}
+
+Opm::AutoDiffGrid::Cell2FacesContainer cell2Faces(const Dune::CpGrid& grid)
+{
+    return Opm::AutoDiffGrid::Cell2FacesContainer(&grid);
+}
+
+FaceCellTraits<Dune::CpGrid>::Type
+faceCells(const Dune::CpGrid& grid)
+{
+    return Opm::AutoDiffGrid::FaceCellsContainerProxy(&grid);
+}
+
+const double* faceNormal(const Dune::CpGrid& grid, int face_index)
+{
+    return &(grid.faceNormal(face_index)[0]);
+}
+
+} // end namespace UgGridHelpers
+
+namespace AutoDiffGrid
+{
 
 
 Eigen::Array<double, Eigen::Dynamic, 1>
@@ -167,11 +218,6 @@ const double* cellCentroid(const Dune::CpGrid& grid, int cell_index)
 const double* faceCentroid(const Dune::CpGrid& grid, int face_index)
 {
     return &(grid.faceCentroid(face_index)[0]);
-}
-
-Cell2FacesContainer cell2Faces(const Dune::CpGrid& grid)
-{
-    return Cell2FacesContainer(&grid);
 }
 
 double cellVolume(const  Dune::CpGrid& grid, int cell_index)

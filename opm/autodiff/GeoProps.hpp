@@ -21,8 +21,9 @@
 #define OPM_GEOPROPS_HEADER_INCLUDED
 
 #include <opm/core/grid.h>
-#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/autodiff/GridHelpers.hpp>
+//#include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/core/pressure/tpfa/TransTpfa.hpp>
 #include <Eigen/Eigen>
 
 namespace Opm
@@ -40,8 +41,8 @@ namespace Opm
 
         /// Construct contained derived geological properties
         /// from grid and property information.
-        template <class Props>
-        DerivedGeology(const UnstructuredGrid& grid,
+        template <class Props, class Grid>
+        DerivedGeology(const Grid&             grid,
                        const Props&            props ,
                        const double*           grav = 0)
             : pvol_ (Opm::AutoDiffGrid::numCells(grid))
@@ -57,8 +58,8 @@ namespace Opm
                            std::multiplies<double>());
 
             // Transmissibility
-            Vector htrans(grid.cell_facepos[nc]);
-            UnstructuredGrid* ug = const_cast<UnstructuredGrid*>(& grid);
+            Vector htrans(numCellFaces(grid));
+            Grid* ug = const_cast<Grid*>(& grid);
             tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             tpfa_trans_compute (ug, htrans.data()     , trans_.data());
 
@@ -72,13 +73,14 @@ namespace Opm
             std::fill(gravity_, gravity_ + 3, 0.0);
             if (grav != 0) {
                 const typename Vector::Index nd = dimensions(grid);
-                SparseTableView c2f=cell2Faces(grid);
+                typedef typename ADCell2FacesTraits<Grid>::Type Cell2Faces;
+                Cell2Faces c2f=cell2Faces(grid);
 
                 for (typename Vector::Index c = 0; c < nc; ++c) {
                     const double* const cc = cellCentroid(grid, c);
 
-                    typename SparseTableView::row_type faces=c2f[c];
-                    typedef SparseTableView::row_type::iterator Iter;
+                    typename Cell2Faces::row_type faces=c2f[c];
+                    typedef typename Cell2Faces::row_type::iterator Iter;
 
                     for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
                         const double* const fc = faceCentroid(grid, *f);

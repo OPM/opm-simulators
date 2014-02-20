@@ -28,11 +28,10 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
-	opm/autodiff/FullyImplicitBlackoilSolver.cpp
 	opm/autodiff/GridHelpers.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
-	opm/autodiff/SimulatorFullyImplicitBlackoil.cpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
@@ -103,8 +102,10 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/GridHelpers.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
+	opm/autodiff/FullyImplicitBlackoilSolver_impl.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
