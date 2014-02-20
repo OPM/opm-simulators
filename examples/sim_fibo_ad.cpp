@@ -104,7 +104,7 @@ try
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
 
-#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
 #else
@@ -119,7 +119,7 @@ try
     grid.reset(new GridManager(*deck));
 #endif
 
-#warning "HACK: required until the SimulationTimer, WellsManager and the EclipseWriter don't require the old parser anymore"
+#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
 #if 0 // USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 #else
@@ -179,7 +179,7 @@ try
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
-    std::ofstream epoch_os;
+    std::ofstream outStream;
     std::string output_dir;
     if (output) {
         output_dir =
@@ -191,8 +191,8 @@ try
         catch (...) {
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
-        std::string filename = output_dir + "/epoch_timing.param";
-        epoch_os.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
+        std::string filename = output_dir + "/timing.param";
+        outStream.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
         // open file to clean it. The file is appended to in SimulatorTwophase
         filename = output_dir + "/step_timing.param";
         std::fstream step_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
@@ -200,7 +200,48 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
+#warning "TODO: convert the well handling code to the new parser"
+#if USE_NEW_PARSER
+    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
+              << std::flush;
 
+    WellState well_state;
+    Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
+    SimulatorTimer simtimer;
+
+    // Create new wells, well_state
+    WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+    // @@@ HACK: we should really make a new well state and
+    // properly transfer old well state to it every epoch,
+    // since number of wells may change etc.
+    well_state.init(wells.c_wells(), state);
+
+    // Create and run simulator.
+    SimulatorFullyImplicitBlackoil simulator(param,
+                                             *grid->c_grid(),
+                                             *new_props,
+                                             rock_comp->isActive() ? rock_comp.get() : 0,
+                                             wells,
+                                             linsolver,
+                                             grav,
+                                             outputWriter);
+    simtimer.init(timeMap);
+    SimulatorReport report = simulator.run(simtimer, state, well_state);
+
+    if (output) {
+        report.reportParam(outStream);
+        warnIfUnusedParams(param);
+    }
+
+    std::cout << "\n\n================    End of simulation     ===============\n\n";
+    report.report(std::cout);
+
+    if (output) {
+        std::string filename = output_dir + "/walltime.param";
+        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
+        report.reportParam(tot_os);
+    }
+#else
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << "                        (number of epochs: "
               << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
@@ -258,7 +299,7 @@ try
         }
         SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
         if (output) {
-            epoch_rep.reportParam(epoch_os);
+            epoch_rep.reportParam(outStream);
         }
         // Update total timing report and remember step number.
         rep += epoch_rep;
@@ -273,7 +314,7 @@ try
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
         rep.reportParam(tot_os);
     }
-
+#endif
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
