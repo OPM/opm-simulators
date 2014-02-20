@@ -19,6 +19,7 @@
 
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -54,15 +55,21 @@ namespace {
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
     {
-        const int nc = grid.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid);
 
-        std::vector<int> f2hf(2 * grid.number_of_faces, -1);
-        for (int c = 0, i = 0; c < nc; ++c) {
-            for (; i < grid.cell_facepos[c + 1]; ++i) {
-                const int f = grid.cell_faces[ i ];
-                const int p = 0 + (grid.face_cells[2*f + 0] != c);
-
-                f2hf[2*f + p] = i;
+        std::vector<int> f2hf(2 * numFaces(grid), -1);
+        Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
+            face_cells;
+        SparseTableView c2f=cell2Faces(grid);
+        for (int c = 0; c < nc; ++c) {
+            typename SparseTableView::row_type 
+                cell_faces = c2f[c];
+            typedef typename SparseTableView::row_type::iterator Iter;
+            for (Iter f=cell_faces.begin(), end=cell_faces.end();
+                 f!=end; ++end) {
+                const int p = 0 + (face_cells(*f,0) != c);
+                f2hf[2*(*f) + p] = f-c2f[0].begin();
             }
         }
 
@@ -78,8 +85,10 @@ namespace {
         std::vector<Tri> grav;  grav.reserve(2 * ni);
         for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
             const int f  = ops.internal_faces[ i ];
-            const int c1 = grid.face_cells[2*f + 0];
-            const int c2 = grid.face_cells[2*f + 1];
+            Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
+                face_cells=faceCells(grid);
+            const int c1 = face_cells(f,0);
+            const int c2 = face_cells(f,1);
 
             assert ((c1 >= 0) && (c2 >= 0));
 
@@ -98,9 +107,10 @@ namespace {
 
     V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
     {
+        using namespace Opm::AutoDiffGrid;
         const int nw = wells.number_of_wells;
         const int nperf = wells.well_connpos[nw];
-        const int dim = grid.dimensions;
+        const int dim = dimensions(grid);
         V wdp = V::Zero(nperf,1);
         assert(wdp.size() == rho.size());
 
@@ -157,7 +167,8 @@ namespace {
                        BlackoilState& state,
                        WellState& well_state)
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int np = state.numPhases();
 
         well_flow_residual_.resize(np, ADB::null());
@@ -226,15 +237,16 @@ namespace {
                                      const BlackoilState& state,
                                      const WellState& well_state)
     {
+        using namespace Opm::AutoDiffGrid;
         // Suppress warnings about "unused parameters".
         static_cast<void>(dt);
         static_cast<void>(well_state);
 
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);
         const int np = state.numPhases();
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
-        const int dim = grid_.dimensions;
+        const int dim = dimensions(grid_);
 
         const std::vector<int> cells = buildAllCells(nc);
 
@@ -284,9 +296,9 @@ namespace {
                           const BlackoilState& state,
                           const WellState& well_state)
     {
-
+        using namespace Opm::AutoDiffGrid;
         const V& pv = geo_.poreVolume();
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);              ;
         const int np = state.numPhases();
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
@@ -415,7 +427,8 @@ namespace {
     ImpesTPFAAD::solveJacobianSystem(BlackoilState& state,
                                      WellState& well_state) const
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int nw = wells_.number_of_wells;
         // const int np = state.numPhases();
 
@@ -458,9 +471,10 @@ namespace {
     ImpesTPFAAD::computeFluxes(BlackoilState& state,
                                WellState& well_state) const
     {
+        using namespace Opm::AutoDiffGrid;
         // This method computes state.faceflux(),
         // well_state.perfRates() and well_state.perfPress().
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);
         const int np = state.numPhases();
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
@@ -515,8 +529,8 @@ namespace {
             flux += face_mob * head;
         }
 
-        V all_flux = superset(flux, ops_.internal_faces, grid_.number_of_faces);
-        std::copy(all_flux.data(), all_flux.data() + grid_.number_of_faces, state.faceflux().begin());
+        V all_flux = superset(flux, ops_.internal_faces, numFaces(grid_));
+        std::copy(all_flux.data(), all_flux.data() + numFaces(grid_), state.faceflux().begin());
 
         perf_flux = -perf_flux; // well_state.perfRates() assumed to be inflows.
         std::copy(perf_flux.data(), perf_flux.data() + nperf, well_state.perfRates().begin());

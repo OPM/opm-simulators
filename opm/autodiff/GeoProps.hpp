@@ -22,6 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <Eigen/Eigen>
 
 namespace Opm
@@ -43,14 +44,15 @@ namespace Opm
         DerivedGeology(const UnstructuredGrid& grid,
                        const Props&            props ,
                        const double*           grav = 0)
-            : pvol_ (grid.number_of_cells)
-            , trans_(grid.number_of_faces)
-            , gpot_ (Vector::Zero(grid.cell_facepos[ grid.number_of_cells ], 1))
-            , z_(grid.number_of_cells)
+            : pvol_ (Opm::AutoDiffGrid::numCells(grid))
+            , trans_(Opm::AutoDiffGrid::numFaces(grid))
+            , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
+            , z_(Opm::AutoDiffGrid::numCells(grid))
         {
+            using namespace Opm::AutoDiffGrid;
             // Pore volume
-            const typename Vector::Index nc = grid.number_of_cells;
-            std::transform(grid.cell_volumes, grid.cell_volumes + nc,
+            const typename Vector::Index nc = numCells(grid);
+            std::transform(beginCellVolumes(grid), endCellVolumes(grid),
                            props.porosity(), pvol_.data(),
                            std::multiplies<double>());
 
@@ -62,26 +64,27 @@ namespace Opm
 
             // Compute z coordinates
             for (int c = 0; c<nc; ++c){
-                z_[c] = grid.cell_centroids[c*3 + 2];
+                z_[c] = cellCentroid(grid, c)[2];
             }
 
 
             // Gravity potential
             std::fill(gravity_, gravity_ + 3, 0.0);
             if (grav != 0) {
-                const typename Vector::Index nd = grid.dimensions;
+                const typename Vector::Index nd = dimensions(grid);
+                SparseTableView c2f=cell2Faces(grid);
 
                 for (typename Vector::Index c = 0; c < nc; ++c) {
-                    const double* const cc = & grid.cell_centroids[c*nd + 0];
+                    const double* const cc = cellCentroid(grid, c);
 
-                    const int* const p = grid.cell_facepos;
-                    for (int i = p[c]; i < p[c + 1]; ++i) {
-                        const int f = grid.cell_faces[i];
+                    typename SparseTableView::row_type faces=c2f[c];
+                    typedef SparseTableView::row_type::iterator Iter;
 
-                        const double* const fc = & grid.face_centroids[f*nd + 0];
+                    for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
+                        const double* const fc = faceCentroid(grid, *f);
 
                         for (typename Vector::Index d = 0; d < nd; ++d) {
-                            gpot_[i] += grav[d] * (fc[d] - cc[d]);
+                            gpot_[f-faces.begin()] += grav[d] * (fc[d] - cc[d]);
                         }
                     }
                 }
