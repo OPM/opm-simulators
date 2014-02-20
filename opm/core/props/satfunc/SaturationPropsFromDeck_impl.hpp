@@ -494,7 +494,7 @@ namespace
     template<class T>
     double getCoordinate(T t, int i)
     {
-        return t->center()[i];
+        return (*t)[i];
     }
 
 
