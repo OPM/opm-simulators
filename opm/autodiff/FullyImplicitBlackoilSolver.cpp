@@ -22,6 +22,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 
@@ -79,15 +80,20 @@ namespace {
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
     {
-        const int nc = grid.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid);
+        SparseTableView c2f = cell2Faces(grid);
 
-        std::vector<int> f2hf(2 * grid.number_of_faces, -1);
+        std::vector<int> f2hf(2 * numFaces(grid), -1);
+        Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
+            face_cells = faceCells(grid);
         for (int c = 0, i = 0; c < nc; ++c) {
-            for (; i < grid.cell_facepos[c + 1]; ++i) {
-                const int f = grid.cell_faces[ i ];
-                const int p = 0 + (grid.face_cells[2*f + 0] != c);
+            typename SparseTableView::row_type faces=c2f[c];
+            typedef typename SparseTableView::row_type::iterator Iter;
+            for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
+                const int p = 0 + (face_cells(*f, 0) != c);
 
-                f2hf[2*f + p] = i;
+                f2hf[2*(*f) + p] = i;
             }
         }
 
@@ -103,8 +109,8 @@ namespace {
         std::vector<Tri> grav;  grav.reserve(2 * ni);
         for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
             const int f  = ops.internal_faces[ i ];
-            const int c1 = grid.face_cells[2*f + 0];
-            const int c2 = grid.face_cells[2*f + 1];
+            const int c1 = faceCells(grid)(f, 0);
+            const int c2 = faceCells(grid)(f, 1);
 
             assert ((c1 >= 0) && (c2 >= 0));
 
@@ -125,9 +131,10 @@ namespace {
 
     V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
     {
+        using namespace Opm::AutoDiffGrid;
         const int nw = wells.number_of_wells;
         const int nperf = wells.well_connpos[nw];
-        const int dim = grid.dimensions;
+        const int dim = dimensions(grid);
         V wdp = V::Zero(nperf,1);
         assert(wdp.size() == rho.size());
 
@@ -141,7 +148,7 @@ namespace {
             const double ref_depth = wells.depth_ref[w];
             for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
                 const int cell = wells.well_cells[j];
-                const double cell_depth = grid.cell_centroids[dim * cell + dim - 1];
+                const double cell_depth = cellCentroid(grid, cell)[dim - 1];
                 wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
             }
         }
@@ -203,7 +210,7 @@ namespace {
         , linsolver_ (linsolver)
         , active_(activePhases(fluid.phaseUsage()))
         , canph_ (active2Canonical(fluid.phaseUsage()))
-        , cells_ (buildAllCells(grid.number_of_cells))
+        , cells_ (buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
@@ -333,7 +340,8 @@ namespace {
     FullyImplicitBlackoilSolver::constantState(const BlackoilState& x,
                                                const WellState&     xw)
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int np = x.numPhases();
 
         // The block pattern assumes the following primary variables:
@@ -429,7 +437,8 @@ namespace {
     FullyImplicitBlackoilSolver::variableState(const BlackoilState& x,
                                                const WellState&     xw)
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int np = x.numPhases();
 
         std::vector<V> vars0;
@@ -618,6 +627,7 @@ namespace {
              const BlackoilState& x   ,
              const WellState&     xw  )
     {
+        using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
 
@@ -680,7 +690,7 @@ namespace {
 
         // Contribution to mass balance will have to wait.
 
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
@@ -700,7 +710,7 @@ namespace {
         // Compute well pressure differentials.
         // Construct pressure difference vector for wells.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const int dim = grid_.dimensions;
+        const int dim = dimensions(grid_);
         const double* g = geo_.gravity();
         if (g) {
             // Guard against gravity in anything but last dimension.
@@ -880,8 +890,9 @@ namespace {
                                                   BlackoilState& state,
                                                   WellState& well_state)
     {
+        using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);
         const int nw = wells_.number_of_wells;
         const V null;
         assert(null.size() == 0);
@@ -1128,7 +1139,8 @@ namespace {
     std::vector<ADB>
     FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state) const
     {
-        const int               nc   = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int               nc   = numCells(grid_);
         const std::vector<int>& bpat = state.pressure.blockPattern();
 
         const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
@@ -1153,7 +1165,8 @@ namespace {
     std::vector<ADB>
     FullyImplicitBlackoilSolver::computePressures(const SolutionState& state) const
     {
-        const int               nc   = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int               nc   = numCells(grid_);
         const std::vector<int>& bpat = state.pressure.blockPattern();
 
         const ADB null = ADB::constant(V::Zero(nc, 1), bpat);

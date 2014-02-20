@@ -158,7 +158,14 @@ namespace Opm
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
         std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
+                                  AutoDiffGrid::numFaces(grid),
+                                  AutoDiffGrid::beginFaceCentroids(grid),
+                                  AutoDiffGrid::faceCells(grid),
+                                  AutoDiffGrid::beginCellCentroids(grid),
+                                  AutoDiffGrid::beginCellVolumes(grid),
+                                  AutoDiffGrid::dimensions(grid),
+                                  state.faceflux(), cell_velocity);
         dm["velocity"] = &cell_velocity;
         Opm::writeVtkData(grid, dm, vtkfile);
     }
@@ -174,7 +181,14 @@ namespace Opm
         dm["pressure"] = &state.pressure();
         dm["surfvolume"] = &state.surfacevol();
         std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
+                                  AutoDiffGrid::numFaces(grid),
+                                  AutoDiffGrid::beginFaceCentroids(grid),
+                                  AutoDiffGrid::faceCells(grid),
+                                  AutoDiffGrid::beginCellCentroids(grid),
+                                  AutoDiffGrid::beginCellVolumes(grid),
+                                  AutoDiffGrid::dimensions(grid),
+                                  state.faceflux(), cell_velocity);
         dm["velocity"] = &cell_velocity;
 
         // Write data (not grid) in Matlab format
@@ -300,7 +314,7 @@ namespace Opm
         max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
 
         // Misc init.
-        const int num_cells = grid.number_of_cells;
+        const int num_cells = AutoDiffGrid::numCells(grid);
         allcells_.resize(num_cells);
         for (int cell = 0; cell < num_cells; ++cell) {
             allcells_[cell] = cell;

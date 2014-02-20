@@ -52,8 +52,67 @@ namespace Opm
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {
+        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+             grid.cell_centroids, grid.dimensions, init_rock);
+    }
+
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                     const UnstructuredGrid& grid,
+                                                     const bool init_rock)
+    {
+        init(newParserDeck, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+             grid.cell_centroids, grid.dimensions, init_rock);
+    }
+
+#ifdef HAVE_DUNE_CORNERPOINT
+        
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                                     const Dune::CpGrid& grid,
+                                                     const bool init_rock )
+    {
+        init(deck, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
+             static_cast<const int*>(&grid.logicalCartesianSize()[0]),
+             grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
+    }
+
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                     const Dune::CpGrid& grid,
+                                                     const bool init_rock )
+    {
+        init(newParserDeck, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
+             static_cast<const int*>(&grid.logicalCartesianSize()[0]),
+             grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
+    }
+#endif
+
+    /// Constructor wrapping an opm-core black oil interface.
+    template<class T>
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                     int number_of_cells,
+                                                     const int* global_cell,
+                                                     const int* cart_dims,
+                                                     T begin_cell_centroids,
+                                                     int dimensions,
+                                                     const bool init_rock)
+    {
+        init(newParserDeck, number_of_cells, global_cell, cart_dims, begin_cell_centroids,
+             dimensions, init_rock);
+    }
+
+    template<class T>
+    void BlackoilPropsAdFromDeck::init(const EclipseGridParser& deck,
+                                       int number_of_cells,
+                                       const int* global_cell,
+                                       const int* cart_dims,
+                                       T begin_cell_centroids,
+                                       int dimensions,
+                                       const bool init_rock)
+    {
         if (init_rock){
-            rock_.init(deck, grid);
+            rock_.init(deck, number_of_cells, global_cell, cart_dims);
         }
         const int samples = 0;
         const int region_number = 0;
@@ -122,7 +181,7 @@ namespace Opm
         SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
             = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
         satprops_.reset(ptr);
-        ptr->init(deck, grid, -1);
+        ptr->init(deck, number_of_cells, global_cell, begin_cell_centroids, dimensions, -1);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "
@@ -131,14 +190,17 @@ namespace Opm
         }
     }
 
-
-    /// Constructor wrapping an opm-core black oil interface.
-    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
-                                                     const UnstructuredGrid& grid,
-                                                     const bool init_rock)
+    template<class T>
+    void BlackoilPropsAdFromDeck::init(Opm::DeckConstPtr newParserDeck,
+                                       int number_of_cells,
+                                       const int* global_cell,
+                                       const int* cart_dims,
+                                       T begin_cell_centroids,
+                                       int dimensions,
+                                       const bool init_rock)
     {
         if (init_rock){
-            rock_.init(newParserDeck, grid);
+            rock_.init(newParserDeck, number_of_cells, global_cell, cart_dims);
         }
 
         const int samples = 0;
@@ -218,7 +280,7 @@ namespace Opm
         SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
             = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
         satprops_.reset(ptr);
-        ptr->init(newParserDeck, grid, -1);
+        ptr->init(newParserDeck, number_of_cells, global_cell, begin_cell_centroids, dimensions, -1);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "
