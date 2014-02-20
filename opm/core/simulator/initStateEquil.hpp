@@ -661,12 +661,20 @@ namespace Opm
 
             // Create the equation f(s) = pc1(s) + pc2(1-s) - target_pc
             const PcEqSum f(props, phase1, phase2, cell, target_pc);
-            const int max_iter = 30;
-            const double tol = 1e-6;
-            int iter_used = -1;
-            typedef RegulaFalsi<WarnAndContinueOnError> ScalarSolver;
-            const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
-            return sol;
+            const double f0 = f(smin);
+            const double f1 = f(smax);
+            if (f0 <= 0.0) {
+                return smin;
+            } else if (f1 > 0.0) {
+                return smax;
+            } else {
+                const int max_iter = 30;
+                const double tol = 1e-6;
+                int iter_used = -1;
+                typedef RegulaFalsi<ThrowOnError> ScalarSolver;
+                const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
+                return sol;
+            }
         }
 
 
@@ -760,35 +768,38 @@ namespace Opm
             }
 
             std::vector< std::vector<double> > phase_saturations = phase_pressures; // Just to get the right size.
+            double smin[BlackoilPhases::MaxNumPhases] = { 0.0 };
+            double smax[BlackoilPhases::MaxNumPhases] = { 0.0 };
 
+            const bool water = reg.phaseUsage().phase_used[BlackoilPhases::Aqua];
+            const bool gas = reg.phaseUsage().phase_used[BlackoilPhases::Vapour];
             const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+            const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
+            const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
             std::vector<double>::size_type local_index = 0;
             for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
                 const int cell = *ci;
+                props.satRange(1, &cell, smin, smax);
                 // Find saturations from pressure differences by
                 // inverting capillary pressure functions.
                 double sw = 0.0;
-                if (reg.phaseUsage().phase_used[BlackoilPhases::Aqua]) {
-                    const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
+                if (water) {
                     const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
                     sw = satFromPc(props, waterpos, cell, pcov);
                     phase_saturations[waterpos][local_index] = sw;
                 }
                 double sg = 0.0;
-                if (reg.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
-                    const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                if (gas) {
                     // Note that pcog is defined to be (pg - po), not (po - pg).
                     const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
                     const double increasing = true; // pcog(sg) expected to be increasing function
                     sg = satFromPc(props, gaspos, cell, pcog, increasing);
                     phase_saturations[gaspos][local_index] = sg;
                 }
-                if (sg > 0.0 && sw > 0.0) {
+                if (gas && water && sg > smin[gaspos] && sw > smin[waterpos]) {
                     // Overlapping gas-oil and oil-water transition
                     // zones. Must recalculate using gas-water
                     // capillary pressure.
-                    const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
-                    const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
                     const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
                     sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
                     sg = 1.0 - sw;
@@ -797,6 +808,7 @@ namespace Opm
                 }
                 phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
             }
+            return phase_saturations;
         }
 
 
