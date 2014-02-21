@@ -432,7 +432,51 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
             BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
         }
     }
+}
 
+
+
+BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
+{
+    Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
+    const UnstructuredGrid& grid = *(gm.c_grid());
+    Opm::EclipseGridParser deck("capillary_overlap.DATA");
+    Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
+
+    Opm::equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
+    const auto& pressures = comp.press();
+    BOOST_REQUIRE(pressures.size() == 3);
+    BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+
+    const int first = 0, last = grid.number_of_cells - 1;
+    // The relative tolerance is too loose to be very useful,
+    // but the answer we are checking is the result of an ODE
+    // solver, and it is unclear if we should check it against
+    // the true answer or something else.
+    const double reltol = 1.0e-6;
+    BOOST_CHECK_CLOSE(pressures[0][first] , 1.45e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.545e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 1.5351621345e7   , reltol);
+
+    const auto& sats = comp.saturation();
+    // std::cout << "Saturations:\n";
+    // for (const auto& sat : sats) {
+    //     for (const double s : sat) {
+    //         std::cout << s << ' ';
+    //     }
+    //     std::cout << std::endl;
+    // }
+    const std::vector<double> s[3]{
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.223141818182, 0.532269090909, 0.78471, 0.91526, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.207743333333, 0.08474, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.776858181818, 0.467730909091, 0.0075466666666, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+    for (int phase = 0; phase < 3; ++phase) {
+        BOOST_REQUIRE(sats[phase].size() == s[phase].size());
+        for (size_t i = 0; i < s[phase].size(); ++i) {
+            BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
+        }
+    }
 }
 
 
