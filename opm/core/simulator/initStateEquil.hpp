@@ -796,9 +796,10 @@ namespace Opm
                     sg = satFromPc(props, gaspos, cell, pcog, increasing);
                     phase_saturations[gaspos][local_index] = sg;
                 }
-                if (gas && water && sg > smin[gaspos] && sw > smin[waterpos]) {
+                if (gas && water && (sg + sw > 1.0)) {
                     // Overlapping gas-oil and oil-water transition
-                    // zones. Must recalculate using gas-water
+                    // zones can lead to unphysical saturations when
+                    // treated as above. Must recalculate using gas-water
                     // capillary pressure.
                     const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
                     sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
