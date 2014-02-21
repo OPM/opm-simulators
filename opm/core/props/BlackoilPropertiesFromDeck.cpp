@@ -31,11 +31,11 @@ namespace Opm
        if (init_rock){
             rock_.init(deck, grid);
         }
-        pvt_.init(deck, 200);
-        SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
-            = new SaturationPropsFromDeck<SatFuncSimpleUniform>();
+        pvt_.init(deck, 0);
+        SaturationPropsFromDeck<SatFuncSimpleNonuniform>* ptr
+            = new SaturationPropsFromDeck<SatFuncSimpleNonuniform>();
         satprops_.reset(ptr);
-        ptr->init(deck, grid, 200);
+        ptr->init(deck, grid, 0);
 
         if (pvt_.numPhases() != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
@@ -52,11 +52,11 @@ namespace Opm
             rock_.init(deck, grid);
         }
 
-        const int pvt_samples = param.getDefault("pvt_tab_size", 200);
+        const int pvt_samples = param.getDefault("pvt_tab_size", 0);
         pvt_.init(deck, pvt_samples);
 
         // Unfortunate lack of pointer smartness here...
-        const int sat_samples = param.getDefault("sat_tab_size", 200);
+        const int sat_samples = param.getDefault("sat_tab_size", 0);
         std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
         if (deck.hasField("ENDSCALE") && threephase_model != "simple") {
             OPM_THROW(std::runtime_error, "Sorry, end point scaling currently available for the 'simple' model only.");
