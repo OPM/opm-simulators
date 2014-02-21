@@ -21,6 +21,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/cart_grid.h>
+#include <opm/core/grid/GridManager.hpp>
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
@@ -342,6 +343,60 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     BOOST_CHECK_CLOSE(pressures[0][last ] , 15045e3   , reltol);
     BOOST_CHECK_CLOSE(pressures[1][last] , 1.50473e7   , reltol);
 }
+
+
+
+BOOST_AUTO_TEST_CASE (CapillaryInversion)
+{
+    // Test setup.
+    Opm::GridManager gm(1, 1, 40, 1.0, 1.0, 2.5);
+    const UnstructuredGrid& grid = *(gm.c_grid());
+    Opm::EclipseGridParser deck("capillary.DATA");
+    Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
+
+    // Test the capillary inversion for oil-water.
+    const int cell = 0;
+    const double reltol = 1.0e-7;
+    {
+        const int phase = 0;
+        const bool increasing = false;
+        const std::vector<double> pc = { 10.0e5, 0.5e5, 0.4e5, 0.3e5, 0.2e5, 0.1e5, 0.099e5, 0.0e5, -10.0e5 };
+        const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
+        BOOST_REQUIRE(pc.size() == s.size());
+        for (size_t i = 0; i < pc.size(); ++i) {
+            const double s_computed = Opm::equil::satFromPc(props, phase, cell, pc[i], increasing);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
+        }
+    }
+
+    // Test the capillary inversion for gas-oil.
+    {
+        const int phase = 2;
+        const bool increasing = true;
+        const std::vector<double> pc = { 10.0e5, 0.6e5, 0.5e5, 0.4e5, 0.3e5, 0.2e5, 0.1e5, 0.0e5, -10.0e5 };
+        const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
+        BOOST_REQUIRE(pc.size() == s.size());
+        for (size_t i = 0; i < pc.size(); ++i) {
+            const double s_computed = Opm::equil::satFromPc(props, phase, cell, pc[i], increasing);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
+        }
+    }
+
+    // Test the capillary inversion for gas-water.
+    {
+        const int water = 0;
+        const int gas = 2;
+        const std::vector<double> pc = { 0.9e5, 0.8e5, 0.6e5, 0.4e5, 0.3e5 };
+        const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
+        BOOST_REQUIRE(pc.size() == s.size());
+        for (size_t i = 0; i < pc.size(); ++i) {
+            const double s_computed = Opm::equil::satFromSumOfPcs(props, water, gas, cell, pc[i]);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
+        }
+    }
+}
+
+
 
 
 
