@@ -871,42 +871,47 @@ namespace Opm
             }
 
             template <class InputDeck>
-            class PhasePressureComputer;
+            class PhasePressureSaturationComputer;
 
             template <>
-            class PhasePressureComputer<Opm::EclipseGridParser> {
+            class PhasePressureSaturationComputer<Opm::EclipseGridParser> {
             public:
-                PhasePressureComputer(const BlackoilPropertiesInterface& props,
-                                      const EclipseGridParser&           deck ,
-                                      const UnstructuredGrid&            G    ,
-                                      const double                       grav = unit::gravity)
+                PhasePressureSaturationComputer(const BlackoilPropertiesInterface& props,
+                                                const EclipseGridParser&           deck ,
+                                                const UnstructuredGrid&            G    ,
+                                                const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
+                          std::vector<double>(G.number_of_cells)),
+                      sat_(props.numPhases(),
                           std::vector<double>(G.number_of_cells))
                 {
                     const std::vector<EquilRecord> rec = getEquil(deck);
                     const RegionMapping<> eqlmap(equilnum(deck, G));
 
-                    calcII(eqlmap, rec, props, G, grav);
+                    calcPressII(eqlmap, rec, props, G, grav);
+                    calcSat(eqlmap, rec, props, G, grav);
                 }
 
                 typedef std::vector<double> PVal;
                 typedef std::vector<PVal>   PPress;
 
                 const PPress& press() const { return pp_; }
+                const PPress& saturation() const { return sat_; }
 
             private:
                 typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
                 typedef EquilReg<RhoCalc> EqReg;
 
                 PPress pp_;
+                PPress sat_;
 
                 template <class RMap>
                 void
-                calcII(const RMap&                             reg  ,
-                       const std::vector< EquilRecord >&       rec  ,
-                       const Opm::BlackoilPropertiesInterface& props,
-                       const UnstructuredGrid&                 G    ,
-                       const double grav)
+                calcPressII(const RMap&                             reg  ,
+                            const std::vector< EquilRecord >&       rec  ,
+                            const Opm::BlackoilPropertiesInterface& props,
+                            const UnstructuredGrid&                 G    ,
+                            const double grav)
                 {
                     typedef miscibility::NoMixing NoMix;
 
@@ -937,6 +942,58 @@ namespace Opm
                         }
                     }
                 }
+
+                template <class RMap>
+                void
+                calcSat(const RMap&                             reg  ,
+                        const std::vector< EquilRecord >&       rec  ,
+                        const Opm::BlackoilPropertiesInterface& props,
+                        const UnstructuredGrid&                 G    ,
+                        const double grav)
+                {
+                    typedef miscibility::NoMixing NoMix;
+
+                    for (typename RMap::RegionId
+                             r = 0, nr = reg.numRegions();
+                         r < nr; ++r)
+                    {
+                        const typename RMap::CellRange cells = reg.cells(r);
+
+                        const int repcell = *cells.begin();
+                        const RhoCalc calc(props, repcell);
+
+                        const EqReg eqreg(rec[r], calc, NoMix(), NoMix(),
+                                          props.phaseUsage());
+
+                        const PPress press = phasePressures(G, eqreg, cells, grav);
+                        const PPress sat = phaseSaturations(eqreg, cells, props, press);
+
+                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
+                            PVal&                d = pp_[p];
+                            PVal::const_iterator s = press[p].begin();
+                            for (typename RMap::CellRange::const_iterator
+                                     c = cells.begin(),
+                                     e = cells.end();
+                                 c != e; ++c, ++s)
+                            {
+                                d[*c] = *s;
+                            }
+                        }
+                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
+                            PVal&                d = sat_[p];
+                            PVal::const_iterator s = sat[p].begin();
+                            for (typename RMap::CellRange::const_iterator
+                                     c = cells.begin(),
+                                     e = cells.end();
+                                 c != e; ++c, ++s)
+                            {
+                                d[*c] = *s;
+                            }
+                        }
+                    }
+                }
+
+
             };
         } // namespace DeckDependent
     } // namespace equil
