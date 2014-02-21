@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
         grid(create_grid_cart3d(1, 1, 10), destroy_grid);
     Opm::EclipseGridParser deck("deadfluids.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, *grid, false);
-    Opm::equil::DeckDependent::PhasePressureComputer<Opm::EclipseGridParser> comp(props, deck, *grid, 10.0);
+    Opm::equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, *grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
@@ -395,8 +395,6 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         }
     }
 }
-
-
 
 
 
