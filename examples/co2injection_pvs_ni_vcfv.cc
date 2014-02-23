@@ -19,8 +19,8 @@
 /*!
  * \file
  *
- * \brief Test for the non-isothermal primary variable switching VCVF
- *discretization.
+ * \brief Test for the non-isothermal primary variable switching model
+ *        using the VCVF discretization.
  */
 #include "config.h"
 

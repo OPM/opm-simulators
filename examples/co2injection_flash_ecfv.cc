@@ -55,7 +55,7 @@ SET_TYPE_PROP(
 #if HAVE_QUAD
 SET_TYPE_PROP(Co2InjectionFlashEcfvProblem, Scalar, quad);
 #else
-SET_SCALAR_PROP(Co2InjectionFlashEcfvProblem, NewtonRelativeTolerance, 1e-5);
+SET_SCALAR_PROP(Co2InjectionFlashEcfvProblem, NewtonTolerance, 1e-5);
 #endif
 } // namespace Properties
 } // namespace Opm
