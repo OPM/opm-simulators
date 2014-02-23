@@ -20,7 +20,7 @@
  * \file
  *
  * \brief Test for the non-isothermal primary variable switching VCVF
- *discretization.
+ *        discretization.
  */
 #include "config.h"
 

@@ -239,16 +239,13 @@ public:
     {
         eps_ = 1e-6;
 
-        temperatureLow_
-            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
-        temperatureHigh_
-            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
+        temperatureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
+        temperatureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
         nTemperature_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumTemperature);
 
         nPressure_ = EWOMS_GET_PARAM(TypeTag, int, FluidSystemNumPressure);
         pressureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureLow);
-        pressureHigh_
-            = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
+        pressureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
 
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);

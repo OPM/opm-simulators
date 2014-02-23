@@ -20,8 +20,8 @@
 /*
  * \file
  *
- * \brief Test for the isothermal primary variable switching VCVF
- *discretization.
+ * \brief Test for the isothermal primary variable switching model
+ *        using "obstacle" problem and the VCVF discretization.
  */
 #include "config.h"
 
