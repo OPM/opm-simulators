@@ -24,9 +24,7 @@
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
-#include <opm/core/utility/RootFinders.hpp>
 #include <opm/core/utility/Units.hpp>
 
 #include <array>
