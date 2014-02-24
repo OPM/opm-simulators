@@ -151,7 +151,7 @@ namespace Opm
                                    const double* permeability);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
-
+        void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
 
 
         // Data

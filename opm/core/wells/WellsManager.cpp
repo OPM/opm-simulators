@@ -268,7 +268,6 @@ namespace Opm
     {
     }
 
-
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                                const size_t timeStep,
@@ -322,6 +321,9 @@ namespace Opm
 
         well_collection_.setWellsPointer(w_);
         well_collection_.applyGroupControls();
+
+
+        setupGuideRates(wells, timeStep, well_data, well_names_to_index);
 
         // Debug output.
 #define EXTRA_OUTPUT
@@ -1354,6 +1356,40 @@ namespace Opm
             GroupTreeNodeConstPtr childNode = (*childIter).second;
             well_collection_.addGroup(schedule->getGroup(childNode->name()), parentNode->name(), timeStep, phaseUsage);
             addChildGroups(childNode, schedule, timeStep, phaseUsage);
+        }
+    }
+
+
+
+
+    void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
+    {
+        for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
+            WellConstPtr well = *wellIter;
+            const int wix = well_names_to_index[well->name()];
+            WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
+
+            if (well->getGuideRatePhase(timeStep) != GuideRate::UNDEFINED) {
+                if (well_data[wix].type == PRODUCER) {
+                    wellnode.prodSpec().guide_rate_ = well->getGuideRate(timeStep);
+                    if (well->getGuideRatePhase(timeStep) == GuideRate::OIL) {
+                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
+                    } else {
+                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well->getGuideRatePhase(timeStep)) << " specified for producer "
+                                  << well->name() << " in WGRUPCON, cannot handle.");
+                    }
+                } else if (well_data[wix].type == INJECTOR) {
+                    wellnode.injSpec().guide_rate_ = well->getGuideRate(timeStep);
+                    if (well->getGuideRatePhase(timeStep) == GuideRate::RAT) {
+                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                    } else {
+                        OPM_THROW(std::runtime_error, "Guide rate type " << GuideRate::GuideRatePhaseEnum2String(well->getGuideRatePhase(timeStep)) << " specified for injector "
+                                  << well->name() << " in WGRUPCON, cannot handle.");
+                    }
+                } else {
+                    OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
+                }
+            }
         }
     }
 
