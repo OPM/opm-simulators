@@ -49,7 +49,7 @@ namespace Opm
      * This namespace is intentionally nested to avoid name clashes
      * with other parts of OPM.
      */
-    namespace equil {
+    namespace Equil {
         template <class Props>
         class DensityCalculator;
 
@@ -116,7 +116,7 @@ namespace Opm
          * Types and routines relating to phase mixing in
          * equilibration calculations.
          */
-        namespace miscibility {
+        namespace Miscibility {
             /**
              * Type that implements "no phase mixing" policy.
              */
@@ -258,7 +258,7 @@ namespace Opm
                     return A_[np*opos + gpos] / A_[np*opos + opos];
                 }
             };
-        } // namespace miscibility
+        } // namespace Miscibility
 
 
 
@@ -336,8 +336,8 @@ namespace Opm
          * depth and (gas) pressure @c press.
          */
         template <class DensCalc,
-                  class RS = miscibility::NoMixing,
-                  class RV = miscibility::NoMixing>
+                  class RS = Miscibility::NoMixing,
+                  class RV = Miscibility::NoMixing>
         class EquilReg {
         public:
             /**
@@ -825,7 +825,7 @@ namespace Opm
                             const UnstructuredGrid&                 G    ,
                             const double grav)
                 {
-                    typedef miscibility::NoMixing NoMix;
+                    typedef Miscibility::NoMixing NoMix;
 
                     for (typename RMap::RegionId
                              r = 0, nr = reg.numRegions();
@@ -863,7 +863,7 @@ namespace Opm
                         const UnstructuredGrid&                 G    ,
                         const double grav)
                 {
-                    typedef miscibility::NoMixing NoMix;
+                    typedef Miscibility::NoMixing NoMix;
 
                     for (typename RMap::RegionId
                              r = 0, nr = reg.numRegions();
@@ -908,7 +908,7 @@ namespace Opm
 
             };
         } // namespace DeckDependent
-    } // namespace equil
+    } // namespace Equil
 } // namespace Opm
 
 #include <opm/core/simulator/initStateEquil_impl.hpp>
