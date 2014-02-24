@@ -42,6 +42,17 @@ typedef Ewoms::QuadrialteralQuadratureGeometry<Scalar, dim> QuadratureGeom;
 typedef QuadratureGeom::LocalPosition LocalPosition;
 typedef QuadratureGeom::GlobalPosition GlobalPosition;
 
+// function prototypes
+GlobalPosition::field_type f(const GlobalPosition &pos);
+void testIdenityMapping();
+template <class Grid>
+void writeTetrahedronSubControlVolumes(const Grid &grid);
+void testTetrahedron();
+template <class Grid>
+void writeCubeSubControlVolumes(const Grid &grid);
+void testCube();
+void testQuadrature();
+
 GlobalPosition::field_type f(const GlobalPosition &pos)
 {
     GlobalPosition::field_type result = 1;
