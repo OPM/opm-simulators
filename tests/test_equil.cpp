@@ -287,12 +287,12 @@ BOOST_AUTO_TEST_CASE (RegMapping)
                            G->cartdims, cdim,
                            &cells[0], &eqlnum[0]);
     }
-    Opm::equil::RegionMapping<> eqlmap(eqlnum);
+    Opm::RegionMapping<> eqlmap(eqlnum);
 
     PPress ppress(2, PVal(G->number_of_cells, 0));
     for (int r = 0, e = eqlmap.numRegions(); r != e; ++r)
     {
-        const Opm::equil::RegionMapping<>::CellRange&
+        const Opm::RegionMapping<>::CellRange&
             rng = eqlmap.cells(r);
 
         const int    rno  = r;
@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE (RegMapping)
             Opm::equil::phasePressures(*G, region[rno], rng, grav);
 
         PVal::size_type i = 0;
-        for (Opm::equil::RegionMapping<>::CellRange::const_iterator
+        for (Opm::RegionMapping<>::CellRange::const_iterator
                  c = rng.begin(), ce = rng.end();
              c != ce; ++c, ++i)
         {
