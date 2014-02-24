@@ -485,7 +485,7 @@ namespace Opm
         }
     } // namespace Details
 
-    namespace equil {
+    namespace Equil {
         template <class Region,
                   class CellRange>
         std::vector< std::vector<double> >
@@ -568,7 +568,7 @@ namespace Opm
 
             return press;
         }
-    } // namespace equil
+    } // namespace Equil
 } // namespace Opm
 
 #endif // OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
