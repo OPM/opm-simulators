@@ -184,7 +184,81 @@ namespace Opm
                 std::vector<double> depth_; /**< Depth nodes */
                 std::vector<double> rs_;    /**< Dissolved gas-oil ratio */
             };
+
+
+            /**
+             * Class that implements "dissolved gas-oil ratio" (Rs)
+             * as function of depth and pressure as follows:
+             *
+             *   1. The Rs at the gas-oil contact is equal to the
+             *      saturated Rs value, Rs_sat_contact.
+             *
+             *   2. The Rs elsewhere is equal to Rs_sat_contact, but
+             *      constrained to the saturated value as given by the
+             *      local pressure.
+             *
+             * This should yield Rs-values that are constant below the
+             * contact, and decreasing above the contact.
+             */
+            class RsSatAtContact {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * \param[in] props      property object
+                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] p_contact  oil pressure at the contact
+                 */
+                RsSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact)
+                    : props_(props), cell_(cell)
+                {
+                    auto pu = props_.phaseUsage();
+                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
+                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1e100;
+                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    rs_sat_contact_ = satRs(p_contact);
+                }
+
+                /**
+                 * Function call.
+                 *
+                 * \param[in] depth Depth at which to calculate RS
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RS
+                 * value.
+                 *
+                 * \return Dissolved gas-oil ratio (RS) at depth @c
+                 * depth and pressure @c press.
+                 */
+                double
+                operator()(const double /* depth */,
+                           const double press) const
+                {
+                    return std::max(satRs(press), rs_sat_contact_);
+                }
+
+            private:
+                const BlackoilPropertiesInterface& props_;
+                const int cell_;
+                double z_[BlackoilPhases::MaxNumPhases];
+                double rs_sat_contact_;
+                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
+
+                double satRs(const double press) const
+                {
+                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    // Rs/Bo is in the gas row and oil column of A_.
+                    // 1/Bo is in the oil row and column.
+                    // Recall also that it is stored in column-major order.
+                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    const int np = props_.numPhases();
+                    return A_[np*opos + gpos] / A_[np*opos + opos];
+                }
+            };
         } // namespace miscibility
+
 
         /**
          * Forward and reverse mappings between cells and
