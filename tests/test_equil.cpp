@@ -64,27 +64,27 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
     typedef Opm::BlackoilPropertiesBasic Props;
     Props props(param, G->dimensions, G->number_of_cells);
 
-    typedef Opm::equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
+    typedef Opm::Equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
     RhoCalc calc(props, 0);
 
-    Opm::equil::EquilRecord record =
+    Opm::Equil::EquilRecord record =
         {
             { 0 , 1e5 } , // Datum depth, pressure
             { 5 , 0   } , // Zwoc       , Pcow_woc
             { 0 , 0   }   // Zgoc       , Pcgo_goc
         };
 
-    Opm::equil::EquilReg<RhoCalc>
+    Opm::Equil::EquilReg<RhoCalc>
         region(record, calc,
-               Opm::equil::miscibility::NoMixing(),
-               Opm::equil::miscibility::NoMixing(),
+               Opm::Equil::Miscibility::NoMixing(),
+               Opm::Equil::Miscibility::NoMixing(),
                props.phaseUsage());
 
     std::vector<int> cells(G->number_of_cells);
     std::iota(cells.begin(), cells.end(), 0);
 
     const double grav   = 10;
-    const PPress ppress = Opm::equil::phasePressures(*G, region, cells, grav);
+    const PPress ppress = Opm::Equil::phasePressures(*G, region, cells, grav);
 
     const int first = 0, last = G->number_of_cells - 1;
     const double reltol = 1.0e-8;
@@ -118,10 +118,10 @@ BOOST_AUTO_TEST_CASE (CellSubset)
     typedef Opm::BlackoilPropertiesBasic Props;
     Props props(param, G->dimensions, G->number_of_cells);
 
-    typedef Opm::equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
+    typedef Opm::Equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
     RhoCalc calc(props, 0);
 
-    Opm::equil::EquilRecord record[] =
+    Opm::Equil::EquilRecord record[] =
         {
             {
                 { 0   ,  1e5     } , // Datum depth, pressure
@@ -136,26 +136,26 @@ BOOST_AUTO_TEST_CASE (CellSubset)
             }
         };
 
-    Opm::equil::EquilReg<RhoCalc> region[] =
+    Opm::Equil::EquilReg<RhoCalc> region[] =
         {
-            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
         };
 
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE (CellSubset)
         const int    rno  = int(r - cells.begin());
         const double grav = 10;
         const PPress p    =
-            Opm::equil::phasePressures(*G, region[rno], *r, grav);
+            Opm::Equil::phasePressures(*G, region[rno], *r, grav);
 
         PVal::size_type i = 0;
         for (std::vector<int>::const_iterator
@@ -233,10 +233,10 @@ BOOST_AUTO_TEST_CASE (RegMapping)
     typedef Opm::BlackoilPropertiesBasic Props;
     Props props(param, G->dimensions, G->number_of_cells);
 
-    typedef Opm::equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
+    typedef Opm::Equil::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
     RhoCalc calc(props, 0);
 
-    Opm::equil::EquilRecord record[] =
+    Opm::Equil::EquilRecord record[] =
         {
             {
                 { 0   ,  1e5     } , // Datum depth, pressure
@@ -251,26 +251,26 @@ BOOST_AUTO_TEST_CASE (RegMapping)
             }
         };
 
-    Opm::equil::EquilReg<RhoCalc> region[] =
+    Opm::Equil::EquilReg<RhoCalc> region[] =
         {
-            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
             ,
-            Opm::equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::equil::miscibility::NoMixing(),
-                                          Opm::equil::miscibility::NoMixing(),
+            Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
+                                          Opm::Equil::Miscibility::NoMixing(),
+                                          Opm::Equil::Miscibility::NoMixing(),
                                           props.phaseUsage())
         };
 
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE (RegMapping)
         const int    rno  = r;
         const double grav = 10;
         const PPress p    =
-            Opm::equil::phasePressures(*G, region[rno], rng, grav);
+            Opm::Equil::phasePressures(*G, region[rno], rng, grav);
 
         PVal::size_type i = 0;
         for (Opm::RegionMapping<>::CellRange::const_iterator
@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
         grid(create_grid_cart3d(1, 1, 10), destroy_grid);
     Opm::EclipseGridParser deck("deadfluids.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, *grid, false);
-    Opm::equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, *grid, 10.0);
+    Opm::Equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, *grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::equil::satFromPc(props, phase, cell, pc[i], increasing);
+            const double s_computed = Opm::Equil::satFromPc(props, phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::equil::satFromPc(props, phase, cell, pc[i], increasing);
+            const double s_computed = Opm::Equil::satFromPc(props, phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::equil::satFromSumOfPcs(props, water, gas, cell, pc[i]);
+            const double s_computed = Opm::Equil::satFromSumOfPcs(props, water, gas, cell, pc[i]);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -405,7 +405,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     Opm::EclipseGridParser deck("capillary.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
 
-    Opm::equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
+    Opm::Equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     Opm::EclipseGridParser deck("capillary_overlap.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
 
-    Opm::equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
+    Opm::Equil::DeckDependent::PhasePressureSaturationComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
