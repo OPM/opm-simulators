@@ -90,6 +90,45 @@ namespace Opm
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
+        template<class T>
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   bool init_rock=true);
+
+
+        template<class T>
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
+        template<class T>
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  newParserDeck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   bool init_rock=true);
+
+        template<class T>
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  newParserDeck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
 
