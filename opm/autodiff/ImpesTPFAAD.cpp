@@ -16,6 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <config.h>
 
 #include <opm/autodiff/ImpesTPFAAD.hpp>
 #include <opm/autodiff/GeoProps.hpp>
@@ -61,11 +62,14 @@ namespace {
         std::vector<int> f2hf(2 * numFaces(grid), -1);
         Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
             face_cells;
-        SparseTableView c2f=cell2Faces(grid);
+        
+        typedef typename Opm::UgGridHelpers::Cell2FacesTraits<UnstructuredGrid>::Type
+            Cell2Faces;
+        Cell2Faces c2f=cell2Faces(grid);
         for (int c = 0; c < nc; ++c) {
-            typename SparseTableView::row_type 
+            typename Cell2Faces::row_type 
                 cell_faces = c2f[c];
-            typedef typename SparseTableView::row_type::iterator Iter;
+            typedef typename Cell2Faces::row_type::iterator Iter;
             for (Iter f=cell_faces.begin(), end=cell_faces.end();
                  f!=end; ++end) {
                 const int p = 0 + (face_cells(*f,0) != c);

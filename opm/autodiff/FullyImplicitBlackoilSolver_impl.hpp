@@ -74,22 +74,23 @@ namespace {
         return all_cells;
     }
 
-    template <class GeoProps>
+    template <class GeoProps, class Grid>
     AutoDiffBlock<double>::M
-    gravityOperator(const UnstructuredGrid& grid,
+    gravityOperator(const Grid&             grid,
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid);
-        SparseTableView c2f = cell2Faces(grid);
+        typedef typename Opm::UgGridHelpers::Cell2FacesTraits<Grid>::Type Cell2Faces;
+        Cell2Faces c2f = cell2Faces(grid);
 
         std::vector<int> f2hf(2 * numFaces(grid), -1);
-        Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
+        typename ADFaceCellTraits<Grid>::Type
             face_cells = faceCells(grid);
         for (int c = 0, i = 0; c < nc; ++c) {
-            typename SparseTableView::row_type faces=c2f[c];
-            typedef typename SparseTableView::row_type::iterator Iter;
+            typename Cell2Faces::row_type faces=c2f[c];
+            typedef typename Cell2Faces::row_type::iterator Iter;
             for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
                 const int p = 0 + (face_cells(*f, 0) != c);
 
@@ -128,8 +129,8 @@ namespace {
     }
 
 
-
-    V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
+    template<class Grid>
+    V computePerfPress(const Grid& grid, const Wells& wells, const V& rho, const double grav)
     {
         using namespace Opm::AutoDiffGrid;
         const int nw = wells.number_of_wells;
@@ -194,9 +195,9 @@ namespace {
 
 
 
-
-    FullyImplicitBlackoilSolver::
-    FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::
+    FullyImplicitBlackoilSolver(const Grid&                     grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
@@ -215,7 +216,7 @@ namespace {
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
         , rq_    (fluid.numPhases())
-        , phaseCondition_(grid.number_of_cells)
+        , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null(),
@@ -226,9 +227,9 @@ namespace {
 
 
 
-
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::
+    FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
          WellState&     xw)
@@ -279,7 +280,8 @@ namespace {
 
 
 
-    FullyImplicitBlackoilSolver::ReservoirResidualQuant::ReservoirResidualQuant()
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
@@ -292,7 +294,8 @@ namespace {
 
 
 
-    FullyImplicitBlackoilSolver::SolutionState::SolutionState(const int np)
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
         , saturation(np, ADB::null())
         , rs        (    ADB::null())
@@ -306,7 +309,8 @@ namespace {
 
 
 
-    FullyImplicitBlackoilSolver::
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::
     WellOps::WellOps(const Wells& wells)
         : w2p(wells.well_connpos[ wells.number_of_wells ],
               wells.number_of_wells)
@@ -337,8 +341,9 @@ namespace {
 
 
 
-    FullyImplicitBlackoilSolver::SolutionState
-    FullyImplicitBlackoilSolver::constantState(const BlackoilState& x,
+    template<class T>
+    typename FullyImplicitBlackoilSolver<T>::SolutionState
+    FullyImplicitBlackoilSolver<T>::constantState(const BlackoilState& x,
                                                const WellState&     xw)
     {
         using namespace Opm::AutoDiffGrid;
@@ -434,8 +439,9 @@ namespace {
 
 
 
-    FullyImplicitBlackoilSolver::SolutionState
-    FullyImplicitBlackoilSolver::variableState(const BlackoilState& x,
+    template<class T>
+    typename FullyImplicitBlackoilSolver<T>::SolutionState
+    FullyImplicitBlackoilSolver<T>::variableState(const BlackoilState& x,
                                                const WellState&     xw)
     {
         using namespace Opm::AutoDiffGrid;
@@ -581,8 +587,9 @@ namespace {
 
 
 
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::computeAccum(const SolutionState& state,
+    FullyImplicitBlackoilSolver<T>::computeAccum(const SolutionState& state,
                                               const int            aix  )
     {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -622,8 +629,9 @@ namespace {
 
 
 
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::
+    FullyImplicitBlackoilSolver<T>::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
              const WellState&     xw  )
@@ -835,7 +843,8 @@ namespace {
 
 
 
-    V FullyImplicitBlackoilSolver::solveJacobianSystem() const
+    template<class T>
+    V FullyImplicitBlackoilSolver<T>::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
         ADB mass_res = residual_.mass_balance[0];
@@ -887,7 +896,8 @@ namespace {
 
 
 
-    void FullyImplicitBlackoilSolver::updateState(const V& dx,
+    template<class T>
+    void FullyImplicitBlackoilSolver<T>::updateState(const V& dx,
                                                   BlackoilState& state,
                                                   WellState& well_state)
     {
@@ -1137,8 +1147,9 @@ namespace {
 
 
 
+    template<class T>
     std::vector<ADB>
-    FullyImplicitBlackoilSolver::computeRelPerm(const SolutionState& state) const
+    FullyImplicitBlackoilSolver<T>::computeRelPerm(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
@@ -1163,8 +1174,9 @@ namespace {
     }
 
 
+    template<class T>
     std::vector<ADB>
-    FullyImplicitBlackoilSolver::computePressures(const SolutionState& state) const
+    FullyImplicitBlackoilSolver<T>::computePressures(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
@@ -1205,8 +1217,9 @@ namespace {
 
 
 
+    template<class T>
     std::vector<ADB>
-    FullyImplicitBlackoilSolver::computeRelPermWells(const SolutionState& state,
+    FullyImplicitBlackoilSolver<T>::computeRelPermWells(const SolutionState& state,
                                                      const DataBlock& well_s,
                                                      const std::vector<int>& well_cells) const
     {
@@ -1236,8 +1249,9 @@ namespace {
 
 
 
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::computeMassFlux(const int               actph ,
+    FullyImplicitBlackoilSolver<T>::computeMassFlux(const int               actph ,
                                                  const V&                transi,
                                                  const ADB&              kr    ,
                                                  const ADB&              phasePressure,
@@ -1277,8 +1291,9 @@ namespace {
 
 
 
+    template<class T>
     double
-    FullyImplicitBlackoilSolver::residualNorm() const
+    FullyImplicitBlackoilSolver<T>::residualNorm() const
     {
         double r = 0;
         for (std::vector<ADB>::const_iterator
@@ -1301,8 +1316,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::fluidViscosity(const int               phase,
+    FullyImplicitBlackoilSolver<T>::fluidViscosity(const int               phase,
                                                 const ADB&              p    ,
                                                 const ADB&              rs   ,
                                                 const ADB&              rv   ,
@@ -1326,8 +1342,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::fluidReciprocFVF(const int               phase,
+    FullyImplicitBlackoilSolver<T>::fluidReciprocFVF(const int               phase,
                                                   const ADB&              p    ,
                                                   const ADB&              rs   ,
                                                   const ADB&              rv   ,
@@ -1351,8 +1368,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::fluidDensity(const int               phase,
+    FullyImplicitBlackoilSolver<T>::fluidDensity(const int               phase,
                                               const ADB&              p    ,
                                               const ADB&              rs   ,
                                               const ADB&              rv   ,
@@ -1377,8 +1395,9 @@ namespace {
 
 
 
+    template<class T>
     V
-    FullyImplicitBlackoilSolver::fluidRsSat(const V&                p,
+    FullyImplicitBlackoilSolver<T>::fluidRsSat(const V&                p,
                                             const std::vector<int>& cells) const
     {
         return fluid_.rsSat(p, cells);
@@ -1388,15 +1407,17 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::fluidRsSat(const ADB&              p,
+    FullyImplicitBlackoilSolver<T>::fluidRsSat(const ADB&              p,
                                             const std::vector<int>& cells) const
     {
         return fluid_.rsSat(p, cells);
     }
 
+    template<class T>
     V
-    FullyImplicitBlackoilSolver::fluidRvSat(const V&                p,
+    FullyImplicitBlackoilSolver<T>::fluidRvSat(const V&                p,
                                             const std::vector<int>& cells) const
     {
         return fluid_.rvSat(p, cells);
@@ -1406,8 +1427,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::fluidRvSat(const ADB&              p,
+    FullyImplicitBlackoilSolver<T>::fluidRvSat(const ADB&              p,
                                             const std::vector<int>& cells) const
     {
         return fluid_.rvSat(p, cells);
@@ -1415,8 +1437,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::poroMult(const ADB& p) const
+    FullyImplicitBlackoilSolver<T>::poroMult(const ADB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -1442,8 +1465,9 @@ namespace {
 
 
 
+    template<class T>
     ADB
-    FullyImplicitBlackoilSolver::transMult(const ADB& p) const
+    FullyImplicitBlackoilSolver<T>::transMult(const ADB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -1467,8 +1491,9 @@ namespace {
 
 
     /*
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::
+    FullyImplicitBlackoilSolver<T>::
     classifyCondition(const SolutionState&        state,
                       std::vector<PhasePresence>& cond ) const
     {
@@ -1508,10 +1533,12 @@ namespace {
     } */
 
 
+    template<class T>
     void
-    FullyImplicitBlackoilSolver::classifyCondition(const BlackoilState& state)
+    FullyImplicitBlackoilSolver<T>::classifyCondition(const BlackoilState& state)
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int np = state.numPhases();
 
         const PhaseUsage& pu = fluid_.phaseUsage();

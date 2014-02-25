@@ -59,7 +59,8 @@ struct HelperOps
     M fulldiv;
 
     /// Constructs all helper vectors and matrices.
-    HelperOps(const UnstructuredGrid& grid)
+    template<class Grid>
+    HelperOps(const Grid& grid)
     {
         using namespace AutoDiffGrid;
         const int nc = numCells(grid);
@@ -93,7 +94,7 @@ struct HelperOps
         div = ngrad.transpose();
         std::vector<Tri> fullngrad_tri;
         fullngrad_tri.reserve(2*nf);
-        ADFaceCellTraits<UnstructuredGrid>::Type nb=faceCells(grid);
+        typename ADFaceCellTraits<Grid>::Type nb=faceCells(grid);
         for (int i = 0; i < nf; ++i) {
             if (nb(i,0) >= 0) {
                 fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
@@ -118,14 +119,15 @@ struct HelperOps
     public:
         typedef AutoDiffBlock<Scalar> ADB;
 
-        UpwindSelector(const UnstructuredGrid& g,
+        template<class Grid>
+        UpwindSelector(const Grid& g,
                        const HelperOps&        h,
                        const typename ADB::V&  ifaceflux)
         {
             using namespace AutoDiffGrid;
             typedef HelperOps::IFaces::Index IFIndex;
             const IFIndex nif = h.internal_faces.size();
-            ADFaceCellTraits<UnstructuredGrid>::Type
+            typename ADFaceCellTraits<Grid>::Type
                 face_cells = faceCells(g);
             assert(nif == ifaceflux.size());
 

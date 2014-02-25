@@ -17,11 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
-
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -29,7 +24,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
@@ -38,7 +33,6 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
@@ -62,12 +56,12 @@
 
 namespace Opm
 {
-
-    class SimulatorFullyImplicitBlackoil::Impl
+    template<class T>
+    class SimulatorFullyImplicitBlackoil<T>::Impl
     {
     public:
         Impl(const parameter::ParameterGroup& param,
-             const UnstructuredGrid& grid,
+             const Grid& grid,
              const BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
@@ -91,7 +85,7 @@ namespace Opm
         bool check_well_controls_;
         int max_well_control_iterations_;
         // Observed objects.
-        const UnstructuredGrid& grid_;
+        const Grid& grid_;
         const BlackoilPropsAdInterface& props_;
         const RockCompressibility* rock_comp_props_;
         WellsManager& wells_manager_;
@@ -99,7 +93,7 @@ namespace Opm
         const double* gravity_;
         // Solvers
         DerivedGeology geo_;
-        FullyImplicitBlackoilSolver solver_;
+        FullyImplicitBlackoilSolver<Grid> solver_;
         // Misc. data
         std::vector<int> allcells_;
         EclipseWriter &eclipseWriter_;
@@ -108,8 +102,9 @@ namespace Opm
 
 
 
-    SimulatorFullyImplicitBlackoil::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                                                   const UnstructuredGrid& grid,
+    template<class T>
+    SimulatorFullyImplicitBlackoil<T>::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
+                                                                   const Grid& grid,
                                                                    const BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
@@ -125,7 +120,8 @@ namespace Opm
 
 
 
-    SimulatorReport SimulatorFullyImplicitBlackoil::run(SimulatorTimer& timer,
+    template<class T>
+    SimulatorReport SimulatorFullyImplicitBlackoil<T>::run(SimulatorTimer& timer,
                                                         BlackoilState& state,
                                                         WellState& well_state)
     {
@@ -134,144 +130,11 @@ namespace Opm
 
 
 
-    static void outputStateVtk(const UnstructuredGrid& grid,
-                               const Opm::BlackoilState& state,
-                               const int step,
-                               const std::string& output_dir)
-    {
-        // Write data in VTK format.
-        std::ostringstream vtkfilename;
-        vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
-        std::ofstream vtkfile(vtkfilename.str().c_str());
-        if (!vtkfile) {
-            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
-        }
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  AutoDiffGrid::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-        Opm::writeVtkData(grid, dm, vtkfile);
-    }
-
-
-    static void outputStateMatlab(const UnstructuredGrid& grid,
-                                  const Opm::BlackoilState& state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        dm["surfvolume"] = &state.surfacevol();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  AutoDiffGrid::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-    static void outputWellStateMatlab(const Opm::WellState& well_state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["bhp"] = &well_state.bhp();
-        dm["wellrates"] = &well_state.wellRates();
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-
-#if 0
-    static void outputWaterCut(const Opm::Watercut& watercut,
-                               const std::string& output_dir)
-    {
-        // Write water cut curve.
-        std::string fname = output_dir  + "/watercut.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        watercut.write(os);
-    }
-
-    static void outputWellReport(const Opm::WellReport& wellreport,
-                                 const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-#endif
-
 
     // \TODO: Treat bcs.
-    SimulatorFullyImplicitBlackoil::Impl::Impl(const parameter::ParameterGroup& param,
-                                               const UnstructuredGrid& grid,
+    template<class T>
+    SimulatorFullyImplicitBlackoil<T>::Impl::Impl(const parameter::ParameterGroup& param,
+                                               const Grid& grid,
                                                const BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
@@ -321,10 +184,8 @@ namespace Opm
         }
     }
 
-
-
-
-    SimulatorReport SimulatorFullyImplicitBlackoil::Impl::run(SimulatorTimer& timer,
+    template<class T>
+    SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
                                                               BlackoilState& state,
                                                               WellState& well_state)
     {
@@ -334,9 +195,9 @@ namespace Opm
         // Initialisation.
         std::vector<double> porevol;
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
-            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
         } else {
-            computePorevolume(grid_, props_.porosity(), porevol);
+            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), porevol);
         }
         // const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
         std::vector<double> initial_porevol = porevol;
@@ -419,7 +280,7 @@ namespace Opm
             // Update pore volumes if rock is compressible.
             if (rock_comp_props_ && rock_comp_props_->isActive()) {
                 initial_porevol = porevol;
-                computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+                computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
 
             sreport.total_time =  step_timer.secsSinceStart();
