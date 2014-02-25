@@ -217,7 +217,6 @@ namespace Opm
     template <class FaceCells, class FCI, class CCI, class Props, class State>
     void initBlackoilStateFromDeck(int number_of_cells,
                                    const int* global_cell,
-                                   const int* cartdims,
                                    int number_of_faces,
                                    FaceCells face_cells,
                                    FCI begin_face_centroids,

@@ -953,7 +953,7 @@ namespace Opm
                                    const double gravity,
                                    State& state)
     {
-        initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell, grid.cartdims,
+        initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell,
                                   grid.number_of_faces, UgGridHelpers::faceCells(grid),
                                   grid.face_centroids, grid.cell_centroids,grid.dimensions,
                                   props, deck, gravity, state);
@@ -962,7 +962,6 @@ namespace Opm
     template <class FaceCells, class FCI, class CCI, class Props, class State>
     void initBlackoilStateFromDeck(int number_of_cells,
                                    const int* global_cell,
-                                   const int* cartdims,
                                    int number_of_faces,
                                    FaceCells face_cells,
                                    FCI begin_face_centroids,
