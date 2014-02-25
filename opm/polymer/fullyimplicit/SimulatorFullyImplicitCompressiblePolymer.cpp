@@ -242,7 +242,7 @@ namespace Opm
     }
 #endif
     static  void outputWaterCut(const Opm::Watercut& watercut,
-                            const std::string& output_dir)
+                	            const std::string& output_dir)
     {
         // Write water cut curve.
         std::string fname = output_dir  + "/watercut.txt";
@@ -270,14 +270,14 @@ namespace Opm
 
     // \TODO: Treat bcs.
     SimulatorFullyImplicitCompressiblePolymer::Impl::Impl(const parameter::ParameterGroup& param,
-                                               const UnstructuredGrid& grid,
-                                               const BlackoilPropsAdInterface& props,
-                                               const PolymerPropsAd&    polymer_props,
-                                               const RockCompressibility* rock_comp_props,
-                                               WellsManager& wells_manager,
-                                               PolymerInflowInterface&  polymer_inflow,
-                                               LinearSolverInterface& linsolver,
-                                               const double* gravity)
+                   			                              const UnstructuredGrid& grid,
+                              			                  const BlackoilPropsAdInterface& props,
+                                         			      const PolymerPropsAd&    polymer_props,
+                                  			              const RockCompressibility* rock_comp_props,
+                                  		                  WellsManager& wells_manager,
+                                 			              PolymerInflowInterface&  polymer_inflow,
+                         			                      LinearSolverInterface& linsolver,
+                                    		              const double* gravity)
         : grid_(grid),
           props_(props),
           polymer_props_(polymer_props),

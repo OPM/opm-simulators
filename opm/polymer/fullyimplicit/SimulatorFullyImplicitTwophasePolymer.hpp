@@ -60,15 +60,19 @@ namespace Opm
         ///
         /// \param[in] grid          grid data structure
         /// \param[in] props         fluid and rock properties
+        /// \param[in] polymer_props polymer properties
         /// \param[in] linsolver     linear solver
+        /// \param[in] well_manager  well manager, may manage no (null) wells
+        /// \param[in] polymer_inflow polymer influx.
+        /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitTwophasePolymer(const parameter::ParameterGroup& param,
-                                       const UnstructuredGrid& grid,
-                                       const IncompPropsAdInterface& props,
-                                       const PolymerPropsAd&    polymer_props,
-                                       LinearSolverInterface& linsolver,
-                                       WellsManager&      wells_manager,
-                                       PolymerInflowInterface& polymer_inflow,
-                                       const double* gravity);
+        	                                  const UnstructuredGrid& grid,
+               		                          const IncompPropsAdInterface& props,
+                      		                  const PolymerPropsAd&    polymer_props,
+                             		          LinearSolverInterface& linsolver,
+                                    		  WellsManager&      wells_manager,
+	                                          PolymerInflowInterface& polymer_inflow,
+       		                                  const double* gravity);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will

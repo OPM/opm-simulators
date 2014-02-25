@@ -1,5 +1,6 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -62,19 +63,21 @@ namespace Opm
         ///
         /// \param[in] grid          grid data structure
         /// \param[in] props         fluid and rock properties
-        /// \param[in] rock_comp_props     if non-null, rock compressibility properties
+        /// \param[in] polymer_props polymer properties
+        /// \param[in] rock_comp_props if non-null, rock compressibility properties
         /// \param[in] well_manager  well manager, may manage no (null) wells
+        /// \param[in] polymer_inflow polymer influx.
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
-                                       const UnstructuredGrid& grid,
-                                       const BlackoilPropsAdInterface& props,
-                                       const PolymerPropsAd&    polymer_props,
-                                       const RockCompressibility* rock_comp_props,
-                                       WellsManager& wells_manager,
-                                       PolymerInflowInterface& polymer_inflow,
-                                       LinearSolverInterface& linsolver,
-                                       const double* gravity);
+                        		                  const UnstructuredGrid& grid,
+                                   				  const BlackoilPropsAdInterface& props,
+                                       			  const PolymerPropsAd&    polymer_props,
+                                       			  const RockCompressibility* rock_comp_props,
+                                       			  WellsManager& wells_manager,
+                                       			  PolymerInflowInterface& polymer_inflow,
+                                       			  LinearSolverInterface& linsolver,
+                                       			  const double* gravity);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will

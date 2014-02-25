@@ -58,8 +58,10 @@ typedef Eigen::Array<double,
                      Eigen::RowMajor> DataBlock;
 
 
-namespace {
 
+
+
+namespace {
 
     std::vector<int>
     buildAllCells(const int nc)
@@ -70,6 +72,8 @@ namespace {
 
         return all_cells;
     }
+
+
 
 
 
@@ -123,6 +127,8 @@ namespace {
 
 
 
+
+
     V computePerfPress(const UnstructuredGrid& grid, const Wells& wells, const V& rho, const double grav)
     {
         const int nw = wells.number_of_wells;
@@ -148,23 +154,20 @@ namespace {
         return wdp;
     }
 
-
-
-
 } // Anonymous namespace
 
 
 
 
+
     FullyImplicitCompressiblePolymerSolver::
-    FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&         grid ,
-                                const BlackoilPropsAdInterface& fluid,
-                                const DerivedGeology&           geo  ,
-                                const RockCompressibility*      rock_comp_props,
-                                const PolymerPropsAd&           polymer_props_ad,
-                                const Wells&                    wells,
-                                const LinearSolverInterface&    linsolver
-								)
+    FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&  		grid,
+                                		   const BlackoilPropsAdInterface&  fluid,
+                                		   const DerivedGeology&           	geo  ,
+                                		   const RockCompressibility*      	rock_comp_props,
+                                		   const PolymerPropsAd&           	polymer_props_ad,
+                                		   const Wells&                    	wells,
+                                		   const LinearSolverInterface&    	linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -464,6 +467,7 @@ namespace {
 
 
 
+
     void 
     FullyImplicitCompressiblePolymerSolver::
     computeCmax(PolymerBlackoilState& state,
@@ -477,6 +481,10 @@ namespace {
 		std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 
     }
+
+
+
+
 
     void
     FullyImplicitCompressiblePolymerSolver::
@@ -514,7 +522,6 @@ namespace {
                                     + ops_.div*rq_[1].mflux;
         residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) //+ cell / dt * (rq_[2].ads[1] - rq_[2].ads[0])
                                     + ops_.div*rq_[2].mflux;
-
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
 
@@ -615,9 +622,7 @@ namespace {
         // well rates contribs to polymer mass balance eqn.
         // for injection wells.
         const V polyin = Eigen::Map<const V>(& polymer_inflow[0], nc);
-//		std::cout<< "Polymer in flow:" << polyin << std::endl;
         const V poly_in_perf = subset(polyin, well_cells);
-        //const V poly_c_cell = subset(state.concentration, well_cells).value();
 		const V poly_mc_cell = subset(mc, well_cells).value();
 		const V poly_in_c = poly_in_perf;// * poly_mc_cell;
         const V poly_mc = producer.select(poly_mc_cell, poly_in_c);
@@ -654,11 +659,6 @@ namespace {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
-//		for (int i = 0; i < nc; ++i) {
-//			std::cout << src[i] << "  ";
-//			if ((i+1) % 10 == 0)
-//				std::cout<<std::endl;
-//		}
         // DUMP(residual_.well_eq);
     }
 
@@ -703,9 +703,10 @@ namespace {
 
 
 
-    void FullyImplicitCompressiblePolymerSolver::updateState(const V& dx,
-                                                  PolymerBlackoilState& state,
-                                                  WellState& well_state) const
+    void FullyImplicitCompressiblePolymerSolver::
+	updateState(const V& 				dx,
+                PolymerBlackoilState& 	state,
+                WellState& 				well_state) const
     {
         const int np = fluid_.numPhases();
         const int nc = grid_.number_of_cells;
@@ -740,7 +741,6 @@ namespace {
         const V sw_old = s_old.col(0);
         const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
         const V sw = (sw_old - dsw_limited).unaryExpr(Chop01());
- //       const V sw = (sw_old - dsw);
         so -= sw;
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np] = sw[c];
@@ -814,6 +814,8 @@ namespace {
 
 
 
+
+
     std::vector<ADB>
     FullyImplicitCompressiblePolymerSolver::
 	computePressures(const SolutionState& state) const
@@ -840,6 +842,8 @@ namespace {
 
         return pressure;
     }
+
+
 
 
 
@@ -957,6 +961,9 @@ namespace {
     }
 
 
+
+
+
     // here mc means m(c) * c. 
     ADB
     FullyImplicitCompressiblePolymerSolver::computeMc(const SolutionState& state) const
@@ -964,6 +971,8 @@ namespace {
         ADB c = state.concentration;
         return polymer_props_ad_.polymerWaterVelocityRatio(c);
     }
+
+
 
 
 
@@ -1018,4 +1027,4 @@ namespace {
     }
 
 
-} // namespace Opm
+} //namespace Opm

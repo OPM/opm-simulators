@@ -1,5 +1,6 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -37,11 +38,10 @@ namespace Opm {
     class PolymerBlackoilState;
     class WellState;
 
-    /// A fully implicit solver for the black-oil problem.
+    /// A fully implicit solver for the oil-water with polymer problem.
     ///
-    /// The simulator is capable of handling three-phase problems
-    /// where gas can be dissolved in oil (but not vice versa). It
-    /// uses an industry-standard TPFA discretization with per-phase
+    /// The simulator is capable of handling oil-water-polymer problems
+    /// It uses an industry-standard TPFA discretization with per-phase
     /// upwind weighting of mobilities.
     ///
     /// It uses automatic differentiation via the class AutoDiffBlock
@@ -56,34 +56,36 @@ namespace Opm {
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
+        /// \param[in] polymer_props_ad polymer properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
         FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&         grid ,
-                                    const BlackoilPropsAdInterface& fluid,
-                                    const DerivedGeology&           geo  ,
-                                    const RockCompressibility*      rock_comp_props,
-                                    const PolymerPropsAd&           polymer_props_ad,
-                                    const Wells&                    wells,
-                                    const LinearSolverInterface&    linsolver);
+        		                               const BlackoilPropsAdInterface& fluid,
+                   			                   const DerivedGeology&           geo  ,
+                              			       const RockCompressibility*      rock_comp_props,
+                                    		   const PolymerPropsAd&           polymer_props_ad,
+                                    		   const Wells&                    wells,
+                                    		   const LinearSolverInterface&    linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
         ///   state.faceflux()
         ///   state.saturation()
-        ///   state.gasoilratio()
+        ///   state.concentration()
         ///   wstate.bhp()
         /// \param[in] dt        time step size
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
+        /// \param[in] polymer_inflow	polymer influx
+        /// \param[in] src				to caculate wc
         void
-        step(const double   dt    ,
-             PolymerBlackoilState& state ,
-             WellState&     wstate,
+        step(const double   			dt,
+             PolymerBlackoilState& 		state ,
+             WellState&     			wstate,
              const std::vector<double>& polymer_inflow,
-			 std::vector<double>& src);
+			 std::vector<double>& 		src);
 
     private:
-        // Types and enums
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
@@ -99,7 +101,7 @@ namespace Opm {
             ADB              b;     // Reciprocal FVF
             ADB              head;  // Pressure drop across int. interfaces
             ADB              mob;   // Phase mobility (per cell)
-			std::vector<ADB> ads;   //
+			std::vector<ADB> ads;   // Adsorption term.
         };
 
         struct SolutionState {
@@ -158,11 +160,11 @@ namespace Opm {
                      const int            aix  );
 
         void
-        assemble(const double             dt,
+        assemble(const double             	 dt,
                  const PolymerBlackoilState& x,
-                 const WellState&     xw,  
-                 const std::vector<double>& polymer_inflow,
-				 std::vector<double>& src);
+                 const WellState&     		 xw,  
+                 const std::vector<double>&  polymer_inflow,
+				 std::vector<double>& 		 src);
 
         V solveJacobianSystem() const;
 
@@ -185,6 +187,7 @@ namespace Opm {
                         const V&                transi,
                         const std::vector<ADB>& kr    ,
                         const SolutionState&    state );
+
         void
         computeMassFlux(const V&                trans,
                         const ADB&              mc,
@@ -196,15 +199,20 @@ namespace Opm {
         computeFracFlow(const ADB&              kro,
                         const ADB&              krw_eff,
                         const ADB&              c) const;
+
         void
         computeCmax(PolymerBlackoilState& state,
 					const ADB& c);
+
         ADB
         computeMc(const SolutionState&  state) const;
+
         ADB
-        rockPorosity(const ADB&         p) const;
+        rockPorosity(const ADB& p) const;
+
         ADB
-        rockPermeability(const ADB&     p) const;
+        rockPermeability(const ADB& p) const;
+
         double
         residualNorm() const;
 

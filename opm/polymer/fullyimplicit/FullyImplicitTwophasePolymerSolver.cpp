@@ -1,3 +1,23 @@
+/*
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
 
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
@@ -15,13 +35,16 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <Eigen/Eigen>
 #include <algorithm>
+
 namespace Opm {
+
 
 
 
@@ -33,6 +56,7 @@ typedef Eigen::Array<double,
                      Eigen::Dynamic,
                      Eigen::Dynamic,
                      Eigen::RowMajor> DataBlock;
+
 
 
 
@@ -80,8 +104,7 @@ namespace {
         return wdp;
     }
 
-}//anonymous namespace
-
+} //anonymous namespace
 
 
 
@@ -201,6 +224,8 @@ namespace {
 
 
 
+
+
     FullyImplicitTwophasePolymerSolver::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())
         , mflux(   ADB::null())
@@ -209,6 +234,8 @@ namespace {
         , mob  (   ADB::null())
     {
     }
+
+
 
 
 
@@ -243,7 +270,6 @@ namespace {
         bpat.push_back(xw.bhp().size() * np);
         bpat.push_back(xw.bhp().size());
         
-
         SolutionState state(np);
 
         // Pressure.
@@ -357,6 +383,9 @@ namespace {
     }
   
 
+
+
+
     void
     FullyImplicitTwophasePolymerSolver::
     computeCmax(PolymerState& state,
@@ -370,6 +399,10 @@ namespace {
 
     }
 
+
+
+
+
     void
     FullyImplicitTwophasePolymerSolver::
 	computeAccum(const SolutionState& state,
@@ -381,14 +414,18 @@ namespace {
 
         rq_[0].accum[aix] = sat[0];
         rq_[1].accum[aix] = sat[1];
+
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const double rho_rock = polymer_props_ad_.rockDensity();
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
-
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
+
         rq_[2].accum[aix] = sat[0] * c * (1. - dead_pore_vol) + rho_rock * (1. - phi) / phi * ads;
     }
+
+
+
 
 
     void
@@ -547,6 +584,10 @@ namespace {
  //       residual_.well_eq = bhp_residual;
 
     }
+
+
+
+
    
     std::vector<ADB>
     FullyImplicitTwophasePolymerSolver::
@@ -566,6 +607,10 @@ namespace {
 
         return pressure;
     }
+
+
+
+
 
     void
     FullyImplicitTwophasePolymerSolver::computeMassFlux(const V&                trans,
@@ -602,6 +647,9 @@ namespace {
 		UpwindSelector<double> upwind(grid_, ops_, rq_[2].head.value());
 		rq_[2].mflux = upwind.select(rq_[2].mob) * rq_[2].head;
     }
+
+
+
 
 
     std::vector<ADB>
@@ -646,6 +694,7 @@ namespace {
 
         return source;
      }
+
 
 
 
@@ -744,8 +793,6 @@ namespace {
         const V c = (c_old - dc).max(zero);
         std::copy(&c[0], &c[0] + nc, state.concentration().begin());
 
-
-
         // Qs update.
         // Since we need to update the wellrates, that are ordered by wells,
         // from dqs which are ordered by phase, the simplest is to compute
@@ -756,12 +803,10 @@ namespace {
         const V wr = wr_old - dwr;
         std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
 
-
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         const V bhp = bhp_old - dbhp;
         std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
-
     }
    
 
@@ -782,13 +827,6 @@ namespace {
     
     
     
-    
-    
-    
-    
-    
-  
-   
     double
     FullyImplicitTwophasePolymerSolver::residualNorm() const
     {
@@ -803,15 +841,17 @@ namespace {
 
         r = std::max(r, residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>());
         r = std::max(r, residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>());
+
         return r;
     }
    
    
    
 
+
     ADB
     FullyImplicitTwophasePolymerSolver::fluidDensity(const int phase,
-                                              const ADB p) const
+		                                             const ADB p) const
     {
         const double* rhos = fluid_.surfaceDensity();
         ADB rho = ADB::constant(V::Constant(grid_.number_of_cells, 1, rhos[phase]),
@@ -819,7 +859,10 @@ namespace {
         
         return rho;
     }
-   
+  
+
+
+ 
    
     V
     FullyImplicitTwophasePolymerSolver::transmissibility() const
@@ -834,6 +877,10 @@ namespace {
         return trans;
     }
 
+
+
+
+
     // here mc means m(c) * c. 
     ADB
     FullyImplicitTwophasePolymerSolver::computeMc(const SolutionState& state) const
@@ -843,4 +890,7 @@ namespace {
     }
 
 
-}//namespace Opm
+
+
+
+} //namespace Opm

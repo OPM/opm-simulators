@@ -1,4 +1,22 @@
-/**/
+/*
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <opm/polymer/fullyimplicit/IncompPropsAdBasic.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -9,6 +27,7 @@
 
 namespace Opm
 {
+	/// Constructor.
     IncompPropsAdBasic::IncompPropsAdBasic(const parameter::ParameterGroup& param,
                                            const int dim,
                                            const int num_cells)
@@ -28,7 +47,7 @@ namespace Opm
         pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
 
-
+	/// Constructor.
     IncompPropsAdBasic::IncompPropsAdBasic(const int num_phases,
                                                  const  SaturationPropsBasic::RelPermFunc& relpermfunc,
                                                  const std::vector<double>&  rho,
@@ -48,10 +67,16 @@ namespace Opm
         viscosity_.resize(pvt_.numPhases());
         pvt_.mu(1, 0, 0, &viscosity_[0]);
     }
+
+	/// Destructor.
     IncompPropsAdBasic::~IncompPropsAdBasic()
     {
     }
 
+    ////////////////////////////
+    //      Rock interface    //
+    ////////////////////////////
+    
     /// \return   D, the number of spatial dimensions.
     int IncompPropsAdBasic::numDimensions() const
     {
@@ -79,7 +104,9 @@ namespace Opm
     }
 
 
-    // ---- Fluid interface ----
+    ////////////////////////////
+    //      Fluid interface   //
+    ////////////////////////////
 
     /// \return   P, the number of phases (also the number of components).
     int IncompPropsAdBasic::numPhases() const
@@ -92,21 +119,34 @@ namespace Opm
     {
         return &viscosity_[0];
     }
-    /// \return Array of P density values.
+
+	/// Densities of fluid phases at reservoir conditions.
+    /// \return   Array of P density values.
     const double* IncompPropsAdBasic::density() const
     {
         return pvt_.surfaceDensities();
     }
 
+	/// Densities of fluid phases at surface conditions.
+    /// \return   Array of P density values.
     const double* IncompPropsAdBasic::surfaceDensity() const
     {
         return pvt_.surfaceDensities();
     }
+
     typedef IncompPropsAdBasic::ADB ADB;
     typedef IncompPropsAdBasic::V V;
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
     typedef std::vector<int> Cells;
 
+    // ------ Relative permeability ------
+        
+    /// Relative permeabilities for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 2 elements, each an array of n relperm values,
+    ///                    containing krw, kro.
     std::vector<V> 
     IncompPropsAdBasic::relperm(const V& sw,
                                 const V& so,
@@ -130,6 +170,12 @@ namespace Opm
         return relperms;
     }
 
+    /// Relative permeabilities for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 2 elements, each an array of n relperm values,
+    ///                    containing krw, kro.
     std::vector<ADB>    
     IncompPropsAdBasic::relperm(const ADB& sw,
                                 const ADB& so,
@@ -169,4 +215,5 @@ namespace Opm
         }
         return relperms;
     }
-}
+
+} //namespace Opm

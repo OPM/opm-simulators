@@ -1,4 +1,23 @@
-/**/
+/*
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <opm/polymer/fullyimplicit/IncompPropsAdFromDeck.hpp>
 #include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -6,7 +25,8 @@
 #include <iostream>
 
 namespace Opm
-{
+{	
+	/// Constructor wrapping an opm-core two-phase interface.
     IncompPropsAdFromDeck::IncompPropsAdFromDeck(const EclipseGridParser& deck,
                                                  const UnstructuredGrid& grid)
     {
@@ -22,44 +42,62 @@ namespace Opm
     IncompPropsAdFromDeck::~IncompPropsAdFromDeck()
     {
     }
-    // rock interface
+
+    ////////////////////////////
+    //      Rock interface    //
+    ////////////////////////////
+
+    /// \return   D, the number of spatial dimensions.
     int IncompPropsAdFromDeck::numDimensions() const
     {
         return rock_.numDimensions();
     }
+
+    /// \return   N, the number of cells.
     int IncompPropsAdFromDeck::numCells() const
     {
         return rock_.numCells();
     }
 
+    /// \return   Array of N porosity values.
     const double* IncompPropsAdFromDeck::porosity() const
     {
         return rock_.porosity();
     }
+
+    /// \return   Array of ND^2 permeability values.
+    ///           The D^2 permeability values for a cell are organized as a matrix,
+    ///           which is symmetric (so ordering does not matter).
     const double* IncompPropsAdFromDeck::permeability() const
     {
         return rock_.permeability();
     }
 
-    // fluid interface
+    ////////////////////////////
+    //      Fluid interface   //
+    ////////////////////////////
+    
+    /// \return   P, Number of active phases (also the number of components).
     int IncompPropsAdFromDeck::numPhases() const
     {
         return pvt_.numPhases();
     }
 
-
+    /// \return   Array of P viscosity values.
     const double* IncompPropsAdFromDeck::viscosity() const
     {
         return pvt_.viscosity();
     }
 
-
+	///Densities of fluid phases at reservoir conditions.
+    /// \return   Array of P density values.
     const double* IncompPropsAdFromDeck::density() const
     {
         return pvt_.reservoirDensities();
     }
 
-
+	/// Densities of fluid phases at surface conditions.
+    /// \return   Array of P density values.
     const double* IncompPropsAdFromDeck::surfaceDensity() const
     {
         return pvt_.surfaceDensities();
@@ -71,6 +109,14 @@ namespace Opm
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
 
 
+    // ------ Relative permeability ------
+        
+    /// Relative permeabilities for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 2 elements, each an array of n relperm values,
+    ///                    containing krw, kro.
     std::vector<V> 
     IncompPropsAdFromDeck::relperm(const V& sw,
                                    const V& so,
@@ -94,6 +140,12 @@ namespace Opm
 
 
 
+    /// Relative permeabilities for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 2 elements, each an array of n relperm values,
+    ///                    containing krw, kro.
     std::vector<ADB> 
     IncompPropsAdFromDeck::relperm(const ADB& sw,
                                    const ADB& so,
@@ -132,6 +184,14 @@ namespace Opm
         }
         return relperms;
     }
+
+    /// Capillary pressure for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 2 elements, each an array of n capillary pressure values,
+    ///                    containing the offsets for each p_o, p_w. The capillary pressure between
+    ///                    two arbitrary phases alpha and beta is then given as p_alpha - p_beta.
     std::vector<ADB> 
 	IncompPropsAdFromDeck::capPress(const ADB& sw,
                                     const ADB& so,
