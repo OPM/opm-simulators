@@ -441,7 +441,7 @@ namespace Opm
             const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             const double rho =  props.density()[0]*init_saturation + props.density()[1]*(1.0 - init_saturation);
             const double dens[2] = { rho, rho };
-            const double ref_z = getCoordinate(begin_cell_centroids, dimensions - 1);
+            const double ref_z = UgGridHelpers::getCoordinate(begin_cell_centroids, dimensions - 1);
             initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
                                     dens, ref_z, gravity, ref_z, ref_p, state);
         } else {
@@ -450,7 +450,7 @@ namespace Opm
             const double ref_p = param.getDefault("ref_pressure", 100.0)*unit::barsa;
             const double rho =  props.density()[1];
             const double dens[2] = { rho, rho };
-            const double ref_z = getCoordinate(begin_cell_centroids, dimensions - 1);
+            const double ref_z = UgGridHelpers::getCoordinate(begin_cell_centroids, dimensions - 1);
             initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
                                     dens, ref_z, gravity, ref_z, ref_p, state);
         }
