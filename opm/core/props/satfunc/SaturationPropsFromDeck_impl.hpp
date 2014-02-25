@@ -25,6 +25,7 @@
 #include <opm/core/utility/NonuniformTableLinear.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/parser/eclipse/Utility/EndscaleWrapper.hpp>
 #include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
@@ -469,36 +470,6 @@ namespace Opm
     {
         return cell_to_func_.empty() ? satfuncset_[0] : satfuncset_[cell_to_func_[cell]];
     }
-
-namespace
-{
-
-    template<class T>
-    const T* increment(T* cc, int i, int dim)
-    {
-        return cc+(i*dim);
-    }
-
-    template<class T>
-    T increment(const T& t, int i, int)
-    {
-        return t+i;
-    }
-
-    template<class T>
-    double getCoordinate(T* cc, int i)
-    {
-        return cc[i];
-    }
-
-    template<class T>
-    double getCoordinate(T t, int i)
-    {
-        return (*t)[i];
-    }
-
-
-}
 
 
     // Initialize saturation scaling parameter
@@ -1002,7 +973,9 @@ namespace
                 if (table[itab][jtab][0] != -1.0) {
                     std::vector<double>& depth = table[0][jtab];
                     std::vector<double>& val = table[itab][jtab];
-                    double zc = getCoordinate(increment(begin_cell_centroid, cell, dimensions),
+                    double zc = UgGridHelpers
+                        ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell,
+                                                                 dimensions),
                                               dimensions-1);
                     if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
                         scaleparam[cell] = linearInterpolation(depth, val, zc);
