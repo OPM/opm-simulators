@@ -41,6 +41,16 @@ namespace Opm
                            const double* porosity,
 			   std::vector<double>& porevol);
 
+    /// @brief Computes pore volume of all cells in a grid.
+    /// @param[in]  number_of_cells The number of cells of the grid.
+    /// @param[in]  begin_cell_volume Iterator to the volume of the first cell.
+    /// @param[in]  porosity  array of grid.number_of_cells porosity values
+    /// @param[out] porevol   the pore volume by cell.
+    template<class T>
+    void computePorevolume(int number_of_cells,
+                           T begin_cell_volume,
+                           const double* porosity,
+                           std::vector<double>& porevol);
 
     /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
     /// @param[in]  grid      a grid
@@ -49,6 +59,21 @@ namespace Opm
     /// @param[in]  pressure  pressure by cell
     /// @param[out] porevol   the pore volume by cell.
     void computePorevolume(const UnstructuredGrid& grid,
+                           const double* porosity,
+                           const RockCompressibility& rock_comp,
+                           const std::vector<double>& pressure,
+                           std::vector<double>& porevol);
+
+    /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
+    /// @param[in]  number_of_cells The number of cells of the grid.
+    /// @param[in]  Pointer to/ Iterator at the first cell volume.
+    /// @param[in]  porosity  array of grid.number_of_cells porosity values
+    /// @param[in]  rock_comp rock compressibility properties
+    /// @param[in]  pressure  pressure by cell
+    /// @param[out] porevol   the pore volume by cell.
+    template<class T>
+    void computePorevolume(int number_of_cells,
+                           T begin_cell_volume,
                            const double* porosity,
                            const RockCompressibility& rock_comp,
                            const std::vector<double>& pressure,
@@ -235,6 +260,24 @@ namespace Opm
     /// \param[in] per_grid_cell Whether or not the saturations are per grid cell or per
     ///                          well cell.
     void computeWDP(const Wells& wells, const UnstructuredGrid& grid, const std::vector<double>& saturations,
+                    const double* densities, const double gravity, const bool per_grid_cell,
+                    std::vector<double>& wdp);
+
+    /// Computes the WDP for each well.
+    /// \param[in] wells        Wells that need their wdp calculated.
+    /// \param[in] number_of_cells The number of cells in the grid.
+    /// \param[in] begin_cell_centroids Pointer/Iterator to the first cell centroid. 
+    /// \param[in] saturations  A vector of weights for each cell for each phase
+    ///                         in the grid (or well, see per_grid_cell parameter). So for cell i,
+    ///                         saturations[i*densities.size() + p] should give the weight
+    ///                         of phase p in cell i.
+    /// \param[in] densities    Density for each phase.
+    /// \param[out] wdp         Will contain, for each well, the wdp of the well.
+    /// \param[in] per_grid_cell Whether or not the saturations are per grid cell or per
+    ///                          well cell.
+    template<class T>
+    void computeWDP(const Wells& wells, int number_of_cells, T begin_cell_centroids,
+                    const std::vector<double>& saturations,
                     const double* densities, const double gravity, const bool per_grid_cell,
                     std::vector<double>& wdp);
 

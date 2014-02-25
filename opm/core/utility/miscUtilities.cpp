@@ -45,14 +45,9 @@ namespace Opm
                            const double* porosity,
                            std::vector<double>& porevol)
     {
-        int num_cells = grid.number_of_cells;
-        porevol.resize(num_cells);
-        std::transform(porosity, porosity + num_cells,
-                       grid.cell_volumes,
-                       porevol.begin(),
-                       std::multiplies<double>());
+        computePorevolume(grid.number_of_cells, grid.cell_volumes,
+                          porosity, porevol);
     }
-
 
     /// @brief Computes pore volume of all cells in a grid, with rock compressibility effects.
     /// @param[in]  grid      a grid
@@ -66,12 +61,10 @@ namespace Opm
                            const std::vector<double>& pressure,
                            std::vector<double>& porevol)
     {
-        int num_cells = grid.number_of_cells;
-        porevol.resize(num_cells);
-        for (int i = 0; i < num_cells; ++i) {
-            porevol[i] = porosity[i]*grid.cell_volumes[i]*rock_comp.poroMult(pressure[i]);
-        }
+        computePorevolume(grid.number_of_cells, grid.cell_volumes, porosity, rock_comp, pressure,
+                          porevol);
     }
+
 
     /// @brief Computes porosity of all cells in a grid, with rock compressibility effects.
     /// @param[in]  grid               a grid
@@ -482,44 +475,8 @@ namespace Opm
                     const double* densities, const double gravity, const bool per_grid_cell,
                     std::vector<double>& wdp)
     {
-        const int nw = wells.number_of_wells;
-        const size_t np = per_grid_cell ?
-            saturations.size()/grid.number_of_cells
-            : saturations.size()/wells.well_connpos[nw];
-        // Simple for now:
-        for (int i = 0; i < nw; i++) {
-            double depth_ref = wells.depth_ref[i];
-            for (int j = wells.well_connpos[i]; j < wells.well_connpos[i + 1]; j++) {
-                int cell = wells.well_cells[j];
-
-                // Is this correct wrt. depth_ref?
-                double cell_depth = grid.cell_centroids[3 * cell + 2];
-
-                double saturation_sum = 0.0;
-                for (size_t p = 0; p < np; p++) {
-                    if (!per_grid_cell) {
-                        saturation_sum += saturations[j * np + p];
-                    } else {
-                        saturation_sum += saturations[np * cell + p];
-                    }
-                }
-                if (saturation_sum == 0) {
-                    saturation_sum = 1.0;
-                }
-                double density = 0.0;
-                for (size_t p = 0; p < np; p++) {
-                    if (!per_grid_cell) {
-                        density += saturations[j * np + p] * densities[p] / saturation_sum;
-                    } else {
-                        // Is this a smart way of doing it?
-                        density += saturations[np * cell + p] * densities[p] / saturation_sum;
-                    }
-                }
-
-                // Is the sign correct?
-                wdp.push_back(density * (cell_depth - depth_ref) * gravity);
-            }
-        }
+        computeWDP(wells, grid.number_of_cells, grid.cell_centroids, saturations, densities,
+                   gravity, per_grid_cell, wdp);
     }
 
 
