@@ -26,6 +26,8 @@
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/RootFinders.hpp>
 
+#include <memory>
+
 
 /*
 ---- synopsis of EquilibrationHelpers.hpp ----
@@ -41,6 +43,7 @@ namespace Opm
         class DensityCalculator< BlackoilPropertiesInterface >;
 
         namespace Miscibility {
+            class RsFunction;
             class NoMixing;
             class RsVD;
             class RsSatAtContact;
@@ -48,9 +51,7 @@ namespace Opm
 
         struct EquilRecord;
 
-        template <class DensCalc,
-                  class RS = Miscibility::NoMixing,
-                  class RV = Miscibility::NoMixing>
+        template <class DensCalc>
         class EquilReg;
 
 
@@ -148,15 +149,40 @@ namespace Opm
             const std::vector<int>             c_;
         };
 
+
         /**
          * Types and routines relating to phase mixing in
          * equilibration calculations.
          */
         namespace Miscibility {
+
+            /**
+             * Base class for phase mixing functions.
+             */
+            class RsFunction
+            {
+            public:
+                /**
+                 * Function call operator.
+                 *
+                 * \param[in] depth Depth at which to calculate RS
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RS
+                 * value.
+                 *
+                 * \return Dissolved gas-oil ratio (RS) at depth @c
+                 * depth and pressure @c press.
+                 */
+                virtual double operator()(const double depth,
+                                          const double press) const = 0;
+            };
+
+
             /**
              * Type that implements "no phase mixing" policy.
              */
-            class NoMixing {
+            class NoMixing : public RsFunction {
             public:
                 /**
                  * Function call.
@@ -179,12 +205,13 @@ namespace Opm
                 }
             };
 
+
             /**
              * Type that implements "dissolved gas-oil ratio"
              * tabulated as a function of depth policy.  Data
              * typically taken from keyword 'RSVD'.
              */
-            class RsVD {
+            class RsVD : public RsFunction {
             public:
                 /**
                  * Constructor.
@@ -238,7 +265,7 @@ namespace Opm
              * This should yield Rs-values that are constant below the
              * contact, and decreasing above the contact.
              */
-            class RsSatAtContact {
+            class RsSatAtContact : public RsFunction {
             public:
                 /**
                  * Constructor.
@@ -295,6 +322,7 @@ namespace Opm
                     return A_[np*opos + gpos] / A_[np*opos + opos];
                 }
             };
+
         } // namespace Miscibility
 
 
@@ -347,34 +375,8 @@ namespace Opm
          * </CODE>
          * that calculates the phase densities of all phases in @c
          * svol at fluid pressure @c press.
-         *
-         * \tparam RS Type that provides access to a calculator for
-         * (initial) dissolved gas-oil ratios as a function of depth
-         * and (oil) pressure.  Must implement an operator() declared
-         * as
-         * <CODE>
-         * double
-         * operator()(const double depth,
-         *            const double press)
-         * </CODE>
-         * that calculates the dissolved gas-oil ratio at depth @c
-         * depth and (oil) pressure @c press.
-         *
-         * \tparam RV Type that provides access to a calculator for
-         * (initial) vapourised oil-gas ratios as a function of depth
-         * and (gas) pressure.  Must implement an operator() declared
-         * as
-         * <CODE>
-         * double
-         * operator()(const double depth,
-         *            const double press)
-         * </CODE>
-         * that calculates the vapourised oil-gas ratio at depth @c
-         * depth and (gas) pressure @c press.
          */
-        template <class DensCalc,
-                  class RS = Miscibility::NoMixing,
-                  class RV = Miscibility::NoMixing>
+        template <class DensCalc>
         class EquilReg {
         public:
             /**
@@ -388,8 +390,8 @@ namespace Opm
              */
             EquilReg(const EquilRecord& rec,
                      const DensCalc&    density,
-                     const RS&          rs,
-                     const RV&          rv,
+                     std::shared_ptr<Miscibility::RsFunction> rs,
+                     std::shared_ptr<Miscibility::RsFunction> rv,
                      const PhaseUsage&  pu)
                 : rec_    (rec)
                 , density_(density)
@@ -407,12 +409,12 @@ namespace Opm
             /**
              * Type of dissolved gas-oil ratio calculator.
              */
-            typedef RS CalcDissolution;
+            typedef Miscibility::RsFunction CalcDissolution;
 
             /**
              * Type of vapourised oil-gas ratio calculator.
              */
-            typedef RV CalcEvaporation;
+            typedef Miscibility::RsFunction CalcEvaporation;
 
             /**
              * Datum depth in current region
@@ -459,14 +461,14 @@ namespace Opm
              * region.
              */
             const CalcDissolution&
-            dissolutionCalculator() const { return this->rs_; }
+            dissolutionCalculator() const { return *this->rs_; }
 
             /**
              * Retrieve vapourised oil-gas ratio calculator of current
              * region.
              */
             const CalcEvaporation&
-            evaporationCalculator() const { return this->rv_; }
+            evaporationCalculator() const { return *this->rv_; }
 
             /**
              * Retrieve active fluid phase summary.
@@ -477,8 +479,8 @@ namespace Opm
         private:
             EquilRecord rec_;     /**< Equilibration data */
             DensCalc    density_; /**< Density calculator */
-            RS          rs_;      /**< RS calculator */
-            RV          rv_;      /**< RV calculator */
+            std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
+            std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
             PhaseUsage  pu_;      /**< Active phase summary */
         };
 

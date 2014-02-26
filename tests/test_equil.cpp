@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
 
     Opm::Equil::EquilReg<RhoCalc>
         region(record, calc,
-               Opm::Equil::Miscibility::NoMixing(),
-               Opm::Equil::Miscibility::NoMixing(),
+               std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+               std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                props.phaseUsage());
 
     std::vector<int> cells(G->number_of_cells);
@@ -139,23 +139,23 @@ BOOST_AUTO_TEST_CASE (CellSubset)
     Opm::Equil::EquilReg<RhoCalc> region[] =
         {
             Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
         };
 
@@ -254,23 +254,23 @@ BOOST_AUTO_TEST_CASE (RegMapping)
     Opm::Equil::EquilReg<RhoCalc> region[] =
         {
             Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[0], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
             ,
             Opm::Equil::EquilReg<RhoCalc>(record[1], calc,
-                                          Opm::Equil::Miscibility::NoMixing(),
-                                          Opm::Equil::Miscibility::NoMixing(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
+                                          std::make_shared<Opm::Equil::Miscibility::NoMixing>(),
                                           props.phaseUsage())
         };
 

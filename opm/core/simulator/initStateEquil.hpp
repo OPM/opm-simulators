@@ -296,7 +296,8 @@ namespace Opm
                         const int repcell = *cells.begin();
                         const RhoCalc calc(props, repcell);
 
-                        const EqReg eqreg(rec[r], calc, NoMix(), NoMix(),
+                        const EqReg eqreg(rec[r], calc,
+                                          std::make_shared<NoMix>(), std::make_shared<NoMix>(),
                                           props.phaseUsage());
 
                         const PPress& res = phasePressures(G, eqreg, cells, grav);
@@ -334,7 +335,8 @@ namespace Opm
                         const int repcell = *cells.begin();
                         const RhoCalc calc(props, repcell);
 
-                        const EqReg eqreg(rec[r], calc, NoMix(), NoMix(),
+                        const EqReg eqreg(rec[r], calc,
+                                          std::make_shared<NoMix>(), std::make_shared<NoMix>(),
                                           props.phaseUsage());
 
                         const PPress press = phasePressures(G, eqreg, cells, grav);
