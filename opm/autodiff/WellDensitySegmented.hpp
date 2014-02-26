@@ -28,7 +28,7 @@ namespace Opm
 {
 
     class WellState;
-    class PhaseUsage;
+    struct PhaseUsage;
 
 
     /// A class giving a well model, by which we mean a way to compute

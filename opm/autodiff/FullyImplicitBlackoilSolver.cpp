@@ -211,7 +211,6 @@ namespace {
         , phaseCondition_(grid.number_of_cells)
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
-                        ADB::null(),
                         ADB::null() } )
     {
     }
@@ -1274,9 +1273,6 @@ namespace {
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().norm());
-        }
-        if (active_[Oil] && active_[Gas]) {
-            r = std::max(r, residual_.rs_or_sg_eq.value().matrix().norm());
         }
         r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
         r = std::max(r, residual_.well_eq.value().matrix().norm());
