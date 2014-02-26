@@ -1,5 +1,6 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -25,6 +26,7 @@
 
 struct UnstructuredGrid;
 struct Wells;
+
 namespace Opm
 {
     namespace parameter { class ParameterGroup; }
@@ -58,14 +60,15 @@ namespace Opm
         ///
         /// \param[in] grid          grid data structure
         /// \param[in] props         fluid and rock properties
+        /// \param[in] well_manager  well manager, may manage no (null) wells
         /// \param[in] linsolver     linear solver
+        /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitTwophase(const parameter::ParameterGroup& param,
                                        const UnstructuredGrid& grid,
                                        const IncompPropsAdInterface& props,
                                        WellsManager&        well_manager,
                                        LinearSolverInterface& linsolver,
                                        const double*        gravity);
-                   //                    std::vector<double>& src);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
