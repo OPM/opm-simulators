@@ -259,9 +259,7 @@ namespace Opm
                 {
                     const std::vector<EquilRecord> rec = getEquil(deck);
                     const RegionMapping<> eqlmap(equilnum(deck, G));
-
-                    calcPressII(eqlmap, rec, props, G, grav);
-                    calcSat(eqlmap, rec, props, G, grav);
+                    calcPressSat(eqlmap, rec, props, G, grav);
                 }
 
                 typedef std::vector<double> PVal;
@@ -279,50 +277,11 @@ namespace Opm
 
                 template <class RMap>
                 void
-                calcPressII(const RMap&                             reg  ,
-                            const std::vector< EquilRecord >&       rec  ,
-                            const Opm::BlackoilPropertiesInterface& props,
-                            const UnstructuredGrid&                 G    ,
-                            const double grav)
-                {
-                    typedef Miscibility::NoMixing NoMix;
-
-                    for (typename RMap::RegionId
-                             r = 0, nr = reg.numRegions();
-                         r < nr; ++r)
-                    {
-                        const typename RMap::CellRange cells = reg.cells(r);
-
-                        const int repcell = *cells.begin();
-                        const RhoCalc calc(props, repcell);
-
-                        const EqReg eqreg(rec[r], calc,
-                                          std::make_shared<NoMix>(), std::make_shared<NoMix>(),
-                                          props.phaseUsage());
-
-                        const PPress& res = phasePressures(G, eqreg, cells, grav);
-
-                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
-                            PVal&                d = pp_[p];
-                            PVal::const_iterator s = res[p].begin();
-                            for (typename RMap::CellRange::const_iterator
-                                     c = cells.begin(),
-                                     e = cells.end();
-                                 c != e; ++c, ++s)
-                            {
-                                d[*c] = *s;
-                            }
-                        }
-                    }
-                }
-
-                template <class RMap>
-                void
-                calcSat(const RMap&                             reg  ,
-                        const std::vector< EquilRecord >&       rec  ,
-                        const Opm::BlackoilPropertiesInterface& props,
-                        const UnstructuredGrid&                 G    ,
-                        const double grav)
+                calcPressSat(const RMap&                             reg  ,
+                             const std::vector< EquilRecord >&       rec  ,
+                             const Opm::BlackoilPropertiesInterface& props,
+                             const UnstructuredGrid&                 G    ,
+                             const double grav)
                 {
                     typedef Miscibility::NoMixing NoMix;
 
