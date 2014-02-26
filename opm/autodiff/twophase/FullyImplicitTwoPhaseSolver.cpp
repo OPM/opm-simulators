@@ -1,4 +1,22 @@
-/**/
+/*
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <opm/autodiff/twophase/FullyImplicitTwoPhaseSolver.hpp>
 
@@ -14,6 +32,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -21,10 +40,8 @@
 #include <iomanip>
 #include <Eigen/Eigen>
 #include <algorithm>
+
 namespace Opm {
-
-
-
 
 typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
@@ -33,7 +50,6 @@ typedef Eigen::Array<double,
                      Eigen::Dynamic,
                      Eigen::Dynamic,
                      Eigen::RowMajor> DataBlock;
-
 
 
 
@@ -88,10 +104,6 @@ namespace {
 
 
 
-
-
-
-
     FullyImplicitTwoPhaseSolver::
     FullyImplicitTwoPhaseSolver(const UnstructuredGrid&         grid,
                                 const IncompPropsAdInterface&   fluid,
@@ -110,7 +122,6 @@ namespace {
         , residual_( { std::vector<ADB>(fluid.numPhases(), ADB::null()), ADB::null(), ADB::null()})
      {
      }
-
 
 
 
@@ -146,12 +157,12 @@ namespace {
 
 
 
+
     void
     FullyImplicitTwoPhaseSolver::
     step(const double   dt,
          TwophaseState& x,
          WellState&     xw)
-//         const std::vector<double>& src)
     {
         
         V pvol(grid_.number_of_cells);
@@ -202,6 +213,7 @@ namespace {
 
 
 
+
     FullyImplicitTwoPhaseSolver::SolutionState::SolutionState(const int np)
         : pressure   (    ADB::null())
         , saturation (np, ADB::null())
@@ -244,7 +256,6 @@ namespace {
         const DataBlock s_all = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         for (int phase = 0; phase < np; ++phase) {
             state.saturation[phase] = ADB::constant(s_all.col(phase), bpat);
-   //     state.saturation[1] = ADB::constant(s_all.col(1));
         }
 
         // Well rates.
@@ -342,7 +353,6 @@ namespace {
              const SolutionState& old_state,
              const TwophaseState& x   ,
              const WellState&     xw)
-//             const std::vector<double>&  src)
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
@@ -353,11 +363,9 @@ namespace {
 		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const ADB mflux = computeMassFlux(phase, trans, kr, press[phase], state);
-//            ADB source = accumSource(phase, kr, src);
             residual_.mass_balance[phase] =
                 pvdt * (state.saturation[phase] - old_state.saturation[phase])
                 + ops_.div * mflux;
-  //              + ops_.div*mflux - source;
         }
         // -------- Well equation, and well contributions to the mass balance equations --------
 
@@ -427,8 +435,6 @@ namespace {
         std::vector<ADB> well_contribs(np, ADB::null());
         std::vector<ADB> well_perf_rates(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-//            const ADB& cell_b = rq_[phase].b;
-  //          const ADB perf_b = subset(cell_b, well_cells);
             const ADB& cell_mob = mob_[phase];
             const V well_fraction = compi.col(phase);
             // Using total mobilities for all phases for injection.
@@ -477,19 +483,19 @@ namespace {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
- //       residual_.well_eq = bhp_residual;
 
     }
    
 
 
 
-
-
+	// This function deal with the source term in the mass equation
+	// before we have well. Now we add well controls, so this function
+	// didn't use anymore.
     ADB 
     FullyImplicitTwoPhaseSolver::accumSource(const int phase,
-                                                 const std::vector<ADB>& kr,
-                                                 const std::vector<double>& src) const
+                                             const std::vector<ADB>& kr,
+                                             const std::vector<double>& src) const
     {
         //extract the source to out and in source.
         std::vector<double> outsrc;
@@ -527,10 +533,6 @@ namespace {
 
 
 
-
-
-
-
     V 
     FullyImplicitTwoPhaseSolver::solveJacobianSystem() const
     {
@@ -546,34 +548,29 @@ namespace {
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               total_res.value().data(), dx.data());
-/*        matrix_->m = matr.rows();
-        matrix_->nnz = matr.nonZeros();
-        matrix_->ia = matr.outerIndexPtr();
-        matrix_->ja = matr.innerIndexPtr();
-        matrix_->sa = matr.valuePtr();
-  */     // output CSR matrix.
-       std::ofstream outfile;
-       outfile.open("mat.dat");
+#if 0
+        // The following code used for output the CSR matrix and vector 
+        // for testing some additional linear solvers.
+        std::ofstream outfile;
+        outfile.open("mat.dat");
+    	int col = 0, num = 0;
+    	outfile << matr.rows() << " " << matr.rows() << " " << matr.nonZeros() << std::endl;
+    	for (int k = 0; k < matr.rows(); ++k) {
+        	int count = 0;
+        	while (count < (matr.outerIndexPtr()[num + 1] - matr.outerIndexPtr()[num])) {
+            	++count;
+            	outfile << k << "  " << matr.innerIndexPtr()[col] << "  " << matr.valuePtr()[col] << std::endl;
+            	++col;
+        	}
+        	++num;
+    	}
 
-
-    int col = 0, num = 0;
-    outfile << matr.rows() << " " << matr.rows() << " " << matr.nonZeros() << std::endl;
-    for (int k = 0; k < matr.rows(); ++k) {
-        int count = 0;
-        while (count < (matr.outerIndexPtr()[num + 1] - matr.outerIndexPtr()[num])) {
-            ++count;
-            outfile << k << "  " << matr.innerIndexPtr()[col] << "  " << matr.valuePtr()[col] << std::endl;
-            ++col;
-        }
-        ++num;
-    }
-    std::ofstream rhsfile;
-    rhsfile.open("rhs.dat");
-    for (int k = 0; k < matr.rows(); ++k) {
-        rhsfile << total_res.value()[k] << std::endl;
-    }
-        
+    	std::ofstream rhsfile;
+    	rhsfile.open("rhs.dat");
+    	for (int k = 0; k < matr.rows(); ++k) {
+        	rhsfile << total_res.value()[k] << std::endl;
+    	}
+#endif   
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitTwoPhaseSolver::solveJacobianSystem(): "
@@ -581,6 +578,7 @@ namespace {
         }
         return dx;
     }
+
 
 
 
@@ -610,7 +608,6 @@ namespace {
         const V p = p_old - dp;
         std::copy(&p[0], &p[0] + nc, state.pressure().begin());
 
-
         // Saturation updates.
         const double dsmax = 0.3;
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
@@ -625,6 +622,7 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np+1] = so[c];
         }
+
         // Qs update.
         // Since we need to update the wellrates, that are ordered by wells,
         // from dqs which are ordered by phase, the simplest is to compute
@@ -635,64 +633,14 @@ namespace {
         const V wr = wr_old - dwr;
         std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
 
-
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         const V bhp = bhp_old - dbhp;
         std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }
-#if 0
 
 
-    void FullyImplicitTwoPhaseSolver::updateState(const V& dx,
-                                                  TwophaseState& state,
-                                                  WellState& well_state) const
-    {
-        const int np = fluid_.numPhases();
-        const int nc = grid_.number_of_cells;
-        const int nw = wells_.number_of_wells;
-        assert(null.size() == 0);
-        const V one = V::Constant(nc, 1.0);
-
-        // Extract parts of dx corresponding to each part.
-        const V dp = subset(dx, Span(nc));
-        int varstart = nc;
-        const V dsw = subset(dx, Span(nc, 1, varstart));
-        varstart += dsw.size();
-        const V dbhp = subset(dx, Span(nw, 1, varstart));
-        varstart += dbhp.size();
-        assert(varstart == dx.size());
-
-        // Pressure update.
-        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc);
-        const V p = p_old - dp;
-        std::copy(&p[0], &p[0] + nc, state.pressure().begin());
-
-
-        // Saturation updates.
-        const double dsmax = 0.3;
-        const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        V so = one;
-        const V sw_old = s_old.col(0);
-        const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
-        const V sw = (sw_old - dsw_limited).unaryExpr(Chop01());
-        so -= sw;
-        for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np] = sw[c];
-        }
-        for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + 1] = so[c];
-        }
-
-        // BHP updates.
-        const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        const V bhp = bhp_old - dbhp;
-        std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
-
-    }
-   
-#endif
 
 
 
@@ -740,7 +688,7 @@ namespace {
 												 const ADB&				 phasePress,
                                                  const SolutionState&    state )
     {
-//        const ADB tr_mult = transMult(state.pressure);
+//      const ADB tr_mult = transMult(state.pressure);
         const double* mus = fluid_.viscosity();
         mob_[phase] = kr[phase] / V::Constant(kr[phase].size(), 1, mus[phase]);
         
@@ -748,6 +696,7 @@ namespace {
         const ADB rhoavg = ops_.caver * rho;
         const int nc = grid_.number_of_cells; 
         V z(nc);
+
         // Compute z coordinates
         for (int c = 0; c < nc; ++c){
             z[c] = grid_.cell_centroids[c * 3 + 2];
@@ -801,6 +750,7 @@ namespace {
 
 
    
+
    
     V
     FullyImplicitTwoPhaseSolver::transmissibility() const
@@ -815,9 +765,4 @@ namespace {
         return trans;
     }
 
-
-
-
-
-
-}//namespace Opm
+} //namespace Opm
