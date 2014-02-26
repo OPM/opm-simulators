@@ -41,7 +41,7 @@ namespace Opm
         class DensityCalculator< BlackoilPropertiesInterface >;
 
         namespace Miscibility {
-            struct NoMixing;
+            class NoMixing;
             class RsVD;
             class RsSatAtContact;
         }
@@ -156,7 +156,8 @@ namespace Opm
             /**
              * Type that implements "no phase mixing" policy.
              */
-            struct NoMixing {
+            class NoMixing {
+            public:
                 /**
                  * Function call.
                  *
