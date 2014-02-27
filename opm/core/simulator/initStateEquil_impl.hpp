@@ -485,7 +485,10 @@ namespace Opm
         }
     } // namespace Details
 
+
     namespace Equil {
+
+
         template <class Region,
                   class CellRange>
         std::vector< std::vector<double> >
@@ -568,6 +571,73 @@ namespace Opm
 
             return press;
         }
+
+
+
+
+        template <class Region, class CellRange>
+        std::vector< std::vector<double> >
+        phaseSaturations(const Region&           reg,
+                         const CellRange&        cells,
+                         const BlackoilPropertiesInterface& props,
+                         const std::vector< std::vector<double> >& phase_pressures)
+        {
+            const double z0   = reg.datum();
+            const double zwoc = reg.zwoc ();
+            const double zgoc = reg.zgoc ();
+            if ((zgoc > z0) || (z0 > zwoc)) {
+                OPM_THROW(std::runtime_error, "Cannot initialise: the datum depth must be in the oil zone.");
+            }
+            if (!reg.phaseUsage().phase_used[BlackoilPhases::Liquid]) {
+                OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
+            }
+
+            std::vector< std::vector<double> > phase_saturations = phase_pressures; // Just to get the right size.
+            double smin[BlackoilPhases::MaxNumPhases] = { 0.0 };
+            double smax[BlackoilPhases::MaxNumPhases] = { 0.0 };
+
+            const bool water = reg.phaseUsage().phase_used[BlackoilPhases::Aqua];
+            const bool gas = reg.phaseUsage().phase_used[BlackoilPhases::Vapour];
+            const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+            const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
+            const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+            std::vector<double>::size_type local_index = 0;
+            for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
+                const int cell = *ci;
+                props.satRange(1, &cell, smin, smax);
+                // Find saturations from pressure differences by
+                // inverting capillary pressure functions.
+                double sw = 0.0;
+                if (water) {
+                    const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
+                    sw = satFromPc(props, waterpos, cell, pcov);
+                    phase_saturations[waterpos][local_index] = sw;
+                }
+                double sg = 0.0;
+                if (gas) {
+                    // Note that pcog is defined to be (pg - po), not (po - pg).
+                    const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
+                    const double increasing = true; // pcog(sg) expected to be increasing function
+                    sg = satFromPc(props, gaspos, cell, pcog, increasing);
+                    phase_saturations[gaspos][local_index] = sg;
+                }
+                if (gas && water && (sg + sw > 1.0)) {
+                    // Overlapping gas-oil and oil-water transition
+                    // zones can lead to unphysical saturations when
+                    // treated as above. Must recalculate using gas-water
+                    // capillary pressure.
+                    const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
+                    sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
+                    sg = 1.0 - sw;
+                    phase_saturations[waterpos][local_index] = sw;
+                    phase_saturations[gaspos][local_index] = sg;
+                }
+                phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
+            }
+            return phase_saturations;
+        }
+
+
     } // namespace Equil
 } // namespace Opm
 
