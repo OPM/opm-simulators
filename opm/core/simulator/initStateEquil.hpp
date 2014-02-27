@@ -331,41 +331,27 @@ namespace Opm
                         const PVec sat = phaseSaturations(eqreg, cells, props, press);
                         const Vec rs(cells.size());// = gasOilRatio();
 
-                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
-                            Vec&                 d = pp_[p];
-                            Vec::const_iterator s = press[p].begin();
-                            for (typename RMap::CellRange::const_iterator
-                                     c = cells.begin(),
-                                     e = cells.end();
-                                 c != e; ++c, ++s)
-                            {
-                                d[*c] = *s;
-                            }
+                        const int np = props.numPhases();
+                        for (int p = 0; p < np; ++p) {
+                            copyFromRegion(press[p], cells, pp_[p]);
+                            copyFromRegion(sat[p], cells, sat_[p]);
                         }
-                        for (int p = 0, np = props.numPhases(); p < np; ++p) {
-                            Vec&                 d = sat_[p];
-                            Vec::const_iterator s = sat[p].begin();
-                            for (typename RMap::CellRange::const_iterator
-                                     c = cells.begin(),
-                                     e = cells.end();
-                                 c != e; ++c, ++s)
-                            {
-                                d[*c] = *s;
-                            }
-                        }
-                        Vec::const_iterator s = rs.begin();
-                        Vec& d = rs_;
-                        for (typename RMap::CellRange::const_iterator
-                                 c = cells.begin(),
-                                 e = cells.end();
-                                 c != e; ++c, ++s)
-                            {
-                                d[*c] = *s;
-                            }
-
+                        copyFromRegion(rs, cells, rs_);
                     }
                 }
 
+                template <class CellRangeType>
+                void copyFromRegion(const Vec& source,
+                                    const CellRangeType& cells,
+                                    Vec& destination)
+                {
+                    auto s = source.begin();
+                    auto c = cells.begin();
+                    const auto e = cells.end();
+                    for (; c != e; ++c, ++s) {
+                        destination[*c] = *s;
+                    }
+                }
 
             };
         } // namespace DeckDependent
