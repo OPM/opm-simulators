@@ -15,6 +15,9 @@
 
 #include <boost/filesystem.hpp>
 
+#ifdef HAVE_DUNE_CORNERPOINT
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#endif
 namespace Opm
 {
 
@@ -159,16 +162,35 @@ namespace Opm
                         const int step,
                         const std::string& output_dir)
     {
-        OPM_THROW(std::runtime_error, "outputStateVtk not implemented");
+        // Write data in VTK format.
+        std::ostringstream vtkfilename;
+        std::ostringstream vtkpath;
+        vtkpath << output_dir << "/vtk_files";
+        vtkpath << "/output-" << std::setw(3) << std::setfill('0') << step;
+        boost::filesystem::path fpath(vtkpath.str());
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+        }
+        vtkfilename << "output-" << std::setw(3) << std::setfill('0') << step;
+        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafView(), Dune::VTK::nonconforming);
+        writer.addCellData(state.saturation(), "saturation", state.numPhases());
+        writer.addCellData(state.pressure(), "pressure", 1);
+        
+        std::vector<double> cell_velocity;
+        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
+                                  AutoDiffGrid::numFaces(grid),
+                                  AutoDiffGrid::beginFaceCentroids(grid),
+                                  AutoDiffGrid::faceCells(grid),
+                                  AutoDiffGrid::beginCellCentroids(grid),
+                                  AutoDiffGrid::beginCellVolumes(grid),
+                                  AutoDiffGrid::dimensions(grid),
+                                  state.faceflux(), cell_velocity);
+        writer.addCellData(cell_velocity, "velocity", Dune::CpGrid::dimension);
+        writer.pwrite(vtkfilename.str(), vtkpath.str(), std::string("."), Dune::VTK::ascii);
     }
-    void outputStateMatlab(const Dune::CpGrid& grid,
-                           const Opm::BlackoilState& state,
-                           const int step,
-                           const std::string& output_dir)
-    {
-        OPM_THROW(std::runtime_error, "outputStateMatlab not implemented");
-    }
-
 #endif
 
 }
