@@ -112,10 +112,12 @@ try
     grid.reset(new Dune::CpGrid());
     
     grid->processEclipseFormat(*deck, 2e-12, false);
-    
-    GridAdapter adapter;
-    adapter.init(*grid);
-    Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*adapter.c_grid()));
+
+    Opm::EclipseWriter outputWriter(param, share_obj(*deck),
+                                    Opm::UgGridHelpers::numCells(*grid),
+                                    Opm::UgGridHelpers::globalCell(*grid),
+                                    Opm::UgGridHelpers::cartDims(*grid),
+                                    Opm::UgGridHelpers::dimensions(*grid));
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(*deck, Opm::UgGridHelpers::numCells(*grid),
                                                Opm::UgGridHelpers::globalCell(*grid),
