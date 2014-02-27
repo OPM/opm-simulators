@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,10 +23,14 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
-#include <opm/core/grid/GridManager.hpp>
+//#include <opm/core/grid/GridManager.hpp>
+#include <dune/grid/CpGrid.hpp>
+#include <dune/grid/common/GridAdapter.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -47,6 +52,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -78,6 +84,7 @@ int
 main(int argc, char** argv)
 try
 {
+    Dune::MPIHelper& helper= Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
     std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
@@ -91,23 +98,33 @@ try
                   "Specify the deck with deck_filename=deckname.data (for example).");
     }
     boost::scoped_ptr<EclipseGridParser> deck;
-    boost::scoped_ptr<GridManager> grid;
+    boost::scoped_ptr<Dune::CpGrid> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
     boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
-    // int max_well_control_iterations = 0;
+    // int max_well_control_iterations = 0
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
     deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
-    grid.reset(new GridManager(*deck));
+    grid.reset(new Dune::CpGrid());
+    
+    grid->processEclipseFormat(*deck, 2e-12, false);
 
-    Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
+    Opm::EclipseWriter outputWriter(param, share_obj(*deck),
+                                    Opm::UgGridHelpers::numCells(*grid),
+                                    Opm::UgGridHelpers::globalCell(*grid),
+                                    Opm::UgGridHelpers::cartDims(*grid),
+                                    Opm::UgGridHelpers::dimensions(*grid));
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(*deck, Opm::UgGridHelpers::numCells(*grid),
+                                               Opm::UgGridHelpers::globalCell(*grid),
+                                               Opm::UgGridHelpers::cartDims(*grid),
+                                               Opm::UgGridHelpers::beginCellCentroids(*grid),
+                                               Opm::UgGridHelpers::dimensions(*grid), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
@@ -116,20 +133,29 @@ try
     gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(grid->numCells(), &(grid->globalCell())[0],
+                       &(grid->logicalCartesianSize()[0]),
+                       grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                       grid->beginFaceCentroids(),
+                       grid->beginCellCentroids(), Dune::CpGrid::dimension,
+                       *props, param, gravity[2], state);
+        initBlackoilSurfvol(grid->numCells(), *props, state);
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         const PhaseUsage pu = props->phaseUsage();
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
-            const int nc = grid->c_grid()->number_of_cells;
+            const int nc = grid->numCells();
             for (int c = 0; c < nc; ++c) {
                 state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
                     / state.surfacevol()[c*np + pu.phase_pos[Oil]];
             }
         }
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+        initBlackoilStateFromDeck(grid->numCells(), &(grid->globalCell())[0],
+                                  grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                                  grid->beginFaceCentroids(),
+                                  grid->beginCellCentroids(), Dune::CpGrid::dimension,
+                                  *props, *deck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -197,7 +223,14 @@ try
                   << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
         // Create new wells, well_state
-        WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+        WellsManager wells(*deck, Opm::UgGridHelpers::numCells(*grid), 
+                           Opm::UgGridHelpers::globalCell(*grid),
+                           Opm::UgGridHelpers::cartDims(*grid),
+                           Opm::UgGridHelpers::dimensions(*grid),
+                           Opm::UgGridHelpers::beginCellCentroids(*grid),
+                           Opm::UgGridHelpers::cell2Faces(*grid),
+                           Opm::UgGridHelpers::beginFaceCentroids(*grid),
+                           props->permeability());
         // @@@ HACK: we should really make a new well state and
         // properly transfer old well state to it every epoch,
         // since number of wells may change etc.
@@ -206,14 +239,14 @@ try
         }
 
         // Create and run simulator.
-        SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
-                                                 *grid->c_grid(),
-                                                 *new_props,
-                                                 rock_comp->isActive() ? rock_comp.get() : 0,
-                                                 wells,
-                                                 linsolver,
-                                                 grav,
-                                                 outputWriter);
+        SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
+                                                               *grid,
+                                                               *new_props,
+                                                               rock_comp->isActive() ? rock_comp.get() : 0,
+                                                               wells,
+                                                               linsolver,
+                                                               grav,
+                                                               outputWriter);
         if (epoch == 0) {
             warnIfUnusedParams(param);
         }

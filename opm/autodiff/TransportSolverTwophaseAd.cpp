@@ -51,21 +51,22 @@ namespace Opm
           tol_(param.getDefault("nl_tolerance", 1e-9)),
           maxit_(param.getDefault("nl_maxiter", 30))
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         allcells_.resize(nc);
         for (int i = 0; i < nc; ++i) {
             allcells_[i] = i;
         }
-        if (gravity && gravity[grid_.dimensions - 1] != 0.0) {
-            gravity_ = gravity[grid_.dimensions - 1];
-            for (int dd = 0; dd < grid_.dimensions - 1; ++dd) {
+        if (gravity && gravity[dimensions(grid_) - 1] != 0.0) {
+            gravity_ = gravity[dimensions(grid_) - 1];
+            for (int dd = 0; dd < dimensions(grid_) - 1; ++dd) {
                 if (gravity[dd] != 0.0) {
                     OPM_THROW(std::runtime_error, "TransportSolverTwophaseAd: can only handle gravity aligned with last dimension");
                 }
             }
             V htrans(grid.cell_facepos[grid.number_of_cells]);
             tpfa_htrans_compute(const_cast<UnstructuredGrid*>(&grid), props.permeability(), htrans.data());
-            V trans(grid_.number_of_faces);
+            V trans(numFaces(grid_));
             tpfa_trans_compute(const_cast<UnstructuredGrid*>(&grid), htrans.data(), trans.data());
             transi_ = subset(trans, ops_.internal_faces);
         }
@@ -161,16 +162,17 @@ namespace Opm
                                           const double dt,
                                           TwophaseState& state)
     {
+        using namespace Opm::AutoDiffGrid;
         typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
         typedef Eigen::Map<const V> Vec;
-        const int nc = grid_.number_of_cells;
+        const int nc = numCells(grid_);
         const TwoCol s0 = Eigen::Map<const TwoCol>(state.saturation().data(), nc, 2);
         double res_norm = 1e100;
         const V sw0 = s0.leftCols<1>();
         // sw1 is the object that will be changed every Newton iteration.
         // V sw1 = sw0;
         V sw1 = 0.5*V::Ones(nc,1);
-        const V dflux_all = Vec(state.faceflux().data(), grid_.number_of_faces, 1);
+        const V dflux_all = Vec(state.faceflux().data(), numFaces(grid_), 1);
         const int num_internal = ops_.internal_faces.size();
         V dflux = subset(dflux_all, ops_.internal_faces);
 
@@ -184,7 +186,7 @@ namespace Opm
         const V p1 = Vec(state.pressure().data(), nc, 1);
         const V ndp = (ops_.ngrad * p1.matrix()).array();
         typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DynArr;
-        const V z = Eigen::Map<DynArr>(grid_.cell_centroids, nc, grid_.dimensions).rightCols<1>();
+        const V z = cellCentroidsZ(grid_);
         const V ndz = (ops_.ngrad * z.matrix()).array();
         assert(num_internal == ndp.size());
         const double* density = props_.density();

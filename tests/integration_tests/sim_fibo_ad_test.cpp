@@ -26,7 +26,6 @@
 #define BOOST_TEST_MODULE SimFiboADTest
 
 #include <boost/test/unit_test.hpp>
-#include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
@@ -68,7 +67,8 @@
 
 using namespace Opm;
 
-std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
+std::vector<BlackoilState> runWithOldParser(const parameter::ParameterGroup& param) {
+    
     boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -77,23 +77,12 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
     BlackoilState state;
     std::vector<BlackoilState> state_collection;
 
-    double gravity[3] = {0.0};
-    boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
-    std::string deck_filename = test_data.string();
+    
+    std::string deck_filename = param.get<std::string>("deck_filename");
+    
     deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*deck));
-
-    // use the capitalized part of the deck's filename between the
-    // last '/' and the last '.' character as base name.
-    std::string baseName = deck_filename;
-    auto charPos = baseName.rfind('/');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(charPos + 1);
-    charPos = baseName.rfind('.');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(0, charPos);
-    baseName = boost::to_upper_copy(baseName);
 
     Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
 
@@ -102,16 +91,31 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
     new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid->c_grid()));
 
     rock_comp.reset(new RockCompressibility(*deck));
-
+    double gravity[3] = {0.0};
     gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
 
-    initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+
+    // Init state variables (saturation and pressure).
+    if (param.has("init_saturation")) {
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+        const PhaseUsage pu = props->phaseUsage();
+        if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+            const int np = props->numPhases();
+            const int nc = grid->c_grid()->number_of_cells;
+            for (int c = 0; c < nc; ++c) {
+                state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
+                    / state.surfacevol()[c*np + pu.phase_pos[Oil]];
+            }
+        }
+    } else {
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+    }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Boundary conditions.
-    FlowBCManager bcs;
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
@@ -185,14 +189,7 @@ std::vector<BlackoilState> runWithOldParser(parameter::ParameterGroup param) {
 }
 
 
-std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
-    boost::filesystem::path test_data("non_public/SPE1_opm.DATA");
-    std::string deck_filename = test_data.string();
-
-    ParserPtr parser(new Parser());
-    DeckConstPtr deck = parser->parseFile(deck_filename);
-    ScheduleConstPtr schedule_deck(new Schedule(deck));
-
+std::vector<BlackoilState> runWithNewParser(const parameter::ParameterGroup& param) {
     boost::scoped_ptr<EclipseGridParser> old_deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
@@ -200,23 +197,12 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     boost::scoped_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     std::vector<BlackoilState> state_collection;
-
-    double gravity[3] = {0.0};
-
+    
+    std::string deck_filename = param.get<std::string>("deck_filename");
+    
     old_deck.reset(new EclipseGridParser(deck_filename));
     // Grid init
     grid.reset(new GridManager(*old_deck));
-
-    // use the capitalized part of the deck's filename between the
-    // last '/' and the last '.' character as base name.
-    std::string baseName = deck_filename;
-    auto charPos = baseName.rfind('/');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(charPos + 1);
-    charPos = baseName.rfind('.');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(0, charPos);
-    baseName = boost::to_upper_copy(baseName);
 
     Opm::EclipseWriter outputWriter(param, share_obj(*old_deck), share_obj(*grid->c_grid()));
 
@@ -225,16 +211,31 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     new_props.reset(new BlackoilPropsAdFromDeck(*old_deck, *grid->c_grid()));
 
     rock_comp.reset(new RockCompressibility(*old_deck));
-
+    double gravity[3] = {0.0};
     gravity[2] = old_deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
 
-    initBlackoilStateFromDeck(*grid->c_grid(), *props, *old_deck, gravity[2], state);
+
+    // Init state variables (saturation and pressure).
+    if (param.has("init_saturation")) {
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+        const PhaseUsage pu = props->phaseUsage();
+        if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+            const int np = props->numPhases();
+            const int nc = grid->c_grid()->number_of_cells;
+            for (int c = 0; c < nc; ++c) {
+                state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
+                    / state.surfacevol()[c*np + pu.phase_pos[Oil]];
+            }
+        }
+    } else {
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, *old_deck, gravity[2], state);
+    }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Boundary conditions.
-    FlowBCManager bcs;
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
@@ -252,6 +253,11 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
     old_deck->setCurrentEpoch(old_deck->numberOfEpochs() - 1);
     simtimer.init(*old_deck);
     const double total_time = simtimer.totalTime();
+
+
+    ParserPtr parser(new Parser());
+    DeckConstPtr deck = parser->parseFile(deck_filename);
+    ScheduleConstPtr schedule_deck(new Schedule(deck));
 
     //In the Schedule Deck, we have the start data as the 0th element.
     for (size_t epoch = 0; epoch < schedule_deck->getTimeMap()->size() - 1; ++epoch) {
@@ -311,14 +317,17 @@ std::vector<BlackoilState> runWithNewParser(parameter::ParameterGroup param) {
 
 
 BOOST_AUTO_TEST_CASE(SPE1_runWithOldAndNewParser_BlackOilStateEqual) {
-    boost::filesystem::path test_data("non_public/spe1.xml");
-    std::string deck_filename = test_data.string();
-    const char * argv[] = { "", deck_filename.c_str(), static_cast<const char*>(0)};
+    const char* null = 0;
+    const char * argv[] = {"", "deck_filename=non_public/SPE1_opm.DATA", null};
+
     parameter::ParameterGroup param(2, argv, false);
-    
+  
+    BOOST_ASSERT(param.has("deck_filename"));
+
     std::vector<BlackoilState> runWithOldParserStates = runWithOldParser(param);
     std::vector<BlackoilState> runWithNewParserStates = runWithNewParser(param);
     
+    std::cout << "========    Checking old parser vs new parser BlackoilState ==========\n\n"; 
     for(size_t i=0; i<runWithOldParserStates.size(); i++) {
         BOOST_CHECK(runWithOldParserStates[i].equals(runWithNewParserStates[i]));
     }

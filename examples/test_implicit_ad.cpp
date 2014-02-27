@@ -104,7 +104,7 @@ try
 
     Opm::LinearSolverFactory linsolver(param);
 
-    Opm::FullyImplicitBlackoilSolver solver(*g, props, geo, 0, *wells, linsolver);
+    Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(*g, props, geo, 0, *wells, linsolver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);

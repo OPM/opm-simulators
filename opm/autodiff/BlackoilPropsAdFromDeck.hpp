@@ -30,6 +30,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#ifdef HAVE_DUNE_CORNERPOINT
+#include <dune/grid/CpGrid.hpp>
+#endif
+
 namespace Opm
 {
 
@@ -51,6 +55,25 @@ namespace Opm
         BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
+
+#ifdef HAVE_DUNE_CORNERPOINT
+        
+        /// Constructor wrapping an opm-core black oil interface.
+        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                const Dune::CpGrid& grid,
+                                const bool init_rock = true );
+
+#endif
+
+        /// Constructor taking not a grid but only the needed information
+        template<class T>
+        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                int number_of_cells,
+                                const int* global_cell,
+                                const int* cart_dims,
+                                T begin_cell_centroids,
+                                int dimensions,
+                                const bool init_rock);
 
         ////////////////////////////
         //      Rock interface    //
@@ -316,6 +339,15 @@ namespace Opm
                                   const Cells& cells) const;
 
     private:
+        /// Initializes the properties.
+        template<class T>
+        void init(const EclipseGridParser& deck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  const bool init_rock);
         RockFromDeck rock_;
         boost::scoped_ptr<SaturationPropsInterface> satprops_;
         PhaseUsage phase_usage_;

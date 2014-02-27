@@ -23,6 +23,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -400,7 +401,7 @@ namespace Opm
         num_transport_substeps_ = param.getDefault("num_transport_substeps", 1);
 
         // Misc init.
-        const int num_cells = grid.number_of_cells;
+        const int num_cells = Opm::AutoDiffGrid::numCells(grid);
         allcells_.resize(num_cells);
         for (int cell = 0; cell < num_cells; ++cell) {
             allcells_[cell] = cell;
@@ -498,11 +499,13 @@ namespace Opm
                     double av_prev_press = 0.0;
                     double av_press = 0.0;
                     double tot_vol = 0.0;
-                    const int num_cells = grid_.number_of_cells;
+                    const int num_cells = Opm::AutoDiffGrid::numCells(grid_);
                     for (int cell = 0; cell < num_cells; ++cell) {
-                        av_prev_press += initial_pressure[cell]*grid_.cell_volumes[cell];
-                        av_press      += state.pressure()[cell]*grid_.cell_volumes[cell];
-                        tot_vol       += grid_.cell_volumes[cell];
+                        av_prev_press += initial_pressure[cell]*
+                            Opm::AutoDiffGrid::cellVolume(grid_, cell);
+                        av_press      += state.pressure()[cell]*
+                            Opm::AutoDiffGrid::cellVolume(grid_, cell);
+                        tot_vol       += Opm::AutoDiffGrid::cellVolume(grid_, cell);
                     }
                     // Renormalization constant
                     const double ren_const = (av_prev_press - av_press)/tot_vol;
