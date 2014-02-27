@@ -639,6 +639,64 @@ namespace Opm
 
 
     } // namespace Equil
+
+
+    namespace
+    {
+        /// Convert saturations from a vector of individual phase saturation vectors
+        /// to an interleaved format where all values for a given cell come before all
+        /// values for the next cell, all in a single vector.
+        std::vector<double> convertSats(const std::vector< std::vector<double> >& sat)
+        {
+            const int np = sat.size();
+            const int nc = sat[0].size();
+            std::vector<double> s(np * nc);
+            for (int c = 0; c < nc; ++c) {
+                for (int p = 0; p < np; ++p) {
+                    s[np*c + p] = sat[p][c];
+                }
+            }
+            return s;
+        }
+    }
+
+
+    /**
+     * Compute initial state by an equilibration procedure.
+     *
+     * The following state fields are modified:
+     *   pressure(),
+     *   saturation(),
+     *   surfacevol(),
+     *   gasoilratio(),
+     *   rv().
+     *
+     * \param[in] grid     Grid.
+     * \param[in] props    Property object, pvt and capillary properties are used.
+     * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
+     * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
+     */
+    void initStateEquil(const UnstructuredGrid& grid,
+                        const BlackoilPropertiesInterface& props,
+                        const EclipseGridParser& deck,
+                        const double gravity,
+                        BlackoilState& state)
+    {
+        typedef Equil::DeckDependent::InitialStateComputer<EclipseGridParser> ISC;
+        ISC isc(props, deck, grid, gravity);
+        const auto pu = props.phaseUsage();
+        const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
+            ? pu.phase_pos[BlackoilPhases::Liquid]
+            : pu.phase_pos[BlackoilPhases::Aqua];
+        state.pressure() = isc.press()[ref_phase];
+        state.saturation() = convertSats(isc.saturation());
+        state.gasoilratio() = isc.rs();
+        state.rv() = isc.rv();
+        // TODO: state.surfacevol() must be computed from s, rs, rv.
+    }
+
+
+
 } // namespace Opm
 
 #endif // OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
