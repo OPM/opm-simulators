@@ -154,6 +154,28 @@ namespace Opm
 
 
 
+        /**
+         * Compute initial Rs values.
+         *
+         * \tparam CellRangeType Type of cell range that demarcates the
+         *                cells pertaining to the current
+         *                equilibration region.  Must implement
+         *                methods begin() and end() to bound the range
+         *                as well as provide an inner type,
+         *                const_iterator, to traverse the range.
+         *
+         * \param[in] grid            Grid.
+         * \param[in] cells           Range that spans the cells of the current
+         *                            equilibration region.
+         * \param[in] oil_pressure    Oil pressure for each cell in range.
+         * \param[in] rs_func         Rs as function of pressure and depth.
+         * \return                    Rs values, one for each cell in the 'cells' range.
+         */
+        template <class CellRangeType>
+        std::vector<double> computeRs(const UnstructuredGrid& grid,
+                                      const CellRangeType& cells,
+                                      const std::vector<double> oil_pressure,
+                                      const Miscibility::RsFunction& rs_func);
 
 
         namespace DeckDependent {
@@ -314,16 +336,20 @@ namespace Opm
 
                         const PVec press = phasePressures(G, eqreg, cells, grav);
                         const PVec sat = phaseSaturations(eqreg, cells, props, press);
-                        const Vec rs(cells.size());
-                        const Vec rv(cells.size());
-
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
                             copyFromRegion(press[p], cells, pp_[p]);
                             copyFromRegion(sat[p], cells, sat_[p]);
                         }
-                        copyFromRegion(rs, cells, rs_);
-                        copyFromRegion(rv, cells, rv_);
+                        if (props.phaseUsage().phase_used[BlackoilPhases::Liquid]
+                            && props.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
+                            const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                            const Vec rs = computeRs(G, cells, press[oilpos], *(rs_func_[r]));
+                            const Vec rv(cells.size(), 0.0);
+                            std::cout << "rs.size() = " << rs.size() << std::endl;
+                            copyFromRegion(rs, cells, rs_);
+                            copyFromRegion(rv, cells, rv_);
+                        }
                     }
                 }
 
