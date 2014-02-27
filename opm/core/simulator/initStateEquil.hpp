@@ -346,7 +346,6 @@ namespace Opm
                             const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
                             const Vec rs = computeRs(G, cells, press[oilpos], *(rs_func_[r]));
                             const Vec rv(cells.size(), 0.0);
-                            std::cout << "rs.size() = " << rs.size() << std::endl;
                             copyFromRegion(rs, cells, rs_);
                             copyFromRegion(rv, cells, rv_);
                         }
