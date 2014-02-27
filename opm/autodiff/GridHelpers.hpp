@@ -382,6 +382,8 @@ FaceCellTraits<Dune::CpGrid>::Type
 faceCells(const Dune::CpGrid& grid);
 
 const double* faceNormal(const Dune::CpGrid& grid, int face_index);
+
+double faceArea(const Dune::CpGrid& grid, int face_index);
 } // end namespace UgGridHelperHelpers
 
 namespace AutoDiffGrid

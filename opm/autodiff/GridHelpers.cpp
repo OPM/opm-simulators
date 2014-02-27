@@ -192,6 +192,10 @@ const double* faceNormal(const Dune::CpGrid& grid, int face_index)
     return &(grid.faceNormal(face_index)[0]);
 }
 
+double faceArea(const Dune::CpGrid& grid, int face_index)
+{
+    return grid.faceArea(face_index);
+}
 } // end namespace UgGridHelpers
 
 namespace AutoDiffGrid
