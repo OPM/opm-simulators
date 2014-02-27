@@ -243,19 +243,20 @@ namespace Opm
             }
 
             template <class InputDeck>
-            class PhasePressureSaturationComputer;
+            class InitialStateComputer;
 
             template <>
-            class PhasePressureSaturationComputer<Opm::EclipseGridParser> {
+            class InitialStateComputer<Opm::EclipseGridParser> {
             public:
-                PhasePressureSaturationComputer(const BlackoilPropertiesInterface& props,
-                                                const EclipseGridParser&           deck ,
-                                                const UnstructuredGrid&            G    ,
-                                                const double                       grav = unit::gravity)
+                InitialStateComputer(const BlackoilPropertiesInterface& props,
+                                     const EclipseGridParser&           deck ,
+                                     const UnstructuredGrid&            G    ,
+                                     const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
                           std::vector<double>(G.number_of_cells)),
                       sat_(props.numPhases(),
-                          std::vector<double>(G.number_of_cells))
+                          std::vector<double>(G.number_of_cells)),
+                      rs_(G.number_of_cells)
                 {
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(deck);
@@ -287,11 +288,11 @@ namespace Opm
                     calcPressSat(eqlmap, rec, props, G, grav);
                 }
 
-                typedef std::vector<double> PVal;
-                typedef std::vector<PVal>   PPress;
+                typedef std::vector<double> Vec;
+                typedef std::vector<Vec>    PVec; // One per phase.
 
-                const PPress& press() const { return pp_; }
-                const PPress& saturation() const { return sat_; }
+                const PVec& press() const { return pp_; }
+                const PVec& saturation() const { return sat_; }
 
             private:
                 typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
@@ -299,8 +300,9 @@ namespace Opm
 
                 std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
 
-                PPress pp_;
-                PPress sat_;
+                PVec pp_;
+                PVec sat_;
+                Vec rs_;
 
                 template <class RMap>
                 void
@@ -325,12 +327,13 @@ namespace Opm
                                           rs_func_[r], std::make_shared<NoMix>(),
                                           props.phaseUsage());
 
-                        const PPress press = phasePressures(G, eqreg, cells, grav);
-                        const PPress sat = phaseSaturations(eqreg, cells, props, press);
+                        const PVec press = phasePressures(G, eqreg, cells, grav);
+                        const PVec sat = phaseSaturations(eqreg, cells, props, press);
+                        const Vec rs(cells.size());// = gasOilRatio();
 
                         for (int p = 0, np = props.numPhases(); p < np; ++p) {
-                            PVal&                d = pp_[p];
-                            PVal::const_iterator s = press[p].begin();
+                            Vec&                 d = pp_[p];
+                            Vec::const_iterator s = press[p].begin();
                             for (typename RMap::CellRange::const_iterator
                                      c = cells.begin(),
                                      e = cells.end();
@@ -340,8 +343,8 @@ namespace Opm
                             }
                         }
                         for (int p = 0, np = props.numPhases(); p < np; ++p) {
-                            PVal&                d = sat_[p];
-                            PVal::const_iterator s = sat[p].begin();
+                            Vec&                 d = sat_[p];
+                            Vec::const_iterator s = sat[p].begin();
                             for (typename RMap::CellRange::const_iterator
                                      c = cells.begin(),
                                      e = cells.end();
@@ -350,6 +353,16 @@ namespace Opm
                                 d[*c] = *s;
                             }
                         }
+                        Vec::const_iterator s = rs.begin();
+                        Vec& d = rs_;
+                        for (typename RMap::CellRange::const_iterator
+                                 c = cells.begin(),
+                                 e = cells.end();
+                                 c != e; ++c, ++s)
+                            {
+                                d[*c] = *s;
+                            }
+
                     }
                 }
 
