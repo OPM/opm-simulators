@@ -300,7 +300,7 @@ namespace Opm
                 operator()(const double /* depth */,
                            const double press) const
                 {
-                    return std::max(satRs(press), rs_sat_contact_);
+                    return std::min(satRs(press), rs_sat_contact_);
                 }
 
             private:
