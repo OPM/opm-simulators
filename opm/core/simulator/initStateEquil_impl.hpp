@@ -638,6 +638,41 @@ namespace Opm
         }
 
 
+        /**
+         * Compute initial Rs values.
+         *
+         * \tparam CellRangeType Type of cell range that demarcates the
+         *                cells pertaining to the current
+         *                equilibration region.  Must implement
+         *                methods begin() and end() to bound the range
+         *                as well as provide an inner type,
+         *                const_iterator, to traverse the range.
+         *
+         * \param[in] grid            Grid.
+         * \param[in] cells           Range that spans the cells of the current
+         *                            equilibration region.
+         * \param[in] oil_pressure    Oil pressure for each cell in range.
+         * \param[in] rs_func         Rs as function of pressure and depth.
+         * \return                    Rs values, one for each cell in the 'cells' range.
+         */
+        template <class CellRangeType>
+        std::vector<double> computeRs(const UnstructuredGrid& grid,
+                                      const CellRangeType& cells,
+                                      const std::vector<double> oil_pressure,
+                                      const Miscibility::RsFunction& rs_func)
+        {
+            assert(grid.dimensions == 3);
+            std::vector<double> rs(cells.size());
+            int count = 0;
+            for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
+                const double depth = grid.cell_centroids[3*(*it) + 2];
+                rs[count] = rs_func(depth, oil_pressure[count]);
+            }
+            return rs;
+        }
+
+
+
     } // namespace Equil
 
 
