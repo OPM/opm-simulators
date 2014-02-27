@@ -257,8 +257,33 @@ namespace Opm
                       sat_(props.numPhases(),
                           std::vector<double>(G.number_of_cells))
                 {
+                    // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(deck);
+
+                    // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(deck, G));
+
+                    // Create Rs functions.
+                    rs_func_.reserve(rec.size());
+                    if (deck.hasField("DISGAS")) {
+                        if (deck.hasField("RSVD")) {
+                            // Rs has been specified as a function of depth.
+                            OPM_THROW(std::runtime_error, "Cannot initialise: RSVD field not read by EclipseGridParser class.");
+                        } else {
+                            // Default initialisation: constant Rs below contact, saturated above.
+                            for (size_t i = 0; i < rec.size(); ++i) {
+                                const int cell = *(eqlmap.cells(i + 1).begin());
+                                const double p_contact = rec[i].goc.press;
+                                rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact));
+                            }
+                        }
+                    } else {
+                        for (size_t i = 0; i < rec.size(); ++i) {
+                            rs_func_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        }
+                    }
+
+                    // Compute phase pressures and saturations.
                     calcPressSat(eqlmap, rec, props, G, grav);
                 }
 
@@ -271,6 +296,8 @@ namespace Opm
             private:
                 typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
                 typedef EquilReg<RhoCalc> EqReg;
+
+                std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
 
                 PPress pp_;
                 PPress sat_;
@@ -295,7 +322,7 @@ namespace Opm
                         const RhoCalc calc(props, repcell);
 
                         const EqReg eqreg(rec[r], calc,
-                                          std::make_shared<NoMix>(), std::make_shared<NoMix>(),
+                                          rs_func_[r], std::make_shared<NoMix>(),
                                           props.phaseUsage());
 
                         const PPress press = phasePressures(G, eqreg, cells, grav);
