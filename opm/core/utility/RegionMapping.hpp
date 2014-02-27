@@ -93,6 +93,11 @@ namespace Opm
             typedef CellIter const_iterator;
 
             /**
+             * Size type for this range.
+             */
+            typedef typename std::vector<CellId>::size_type size_type;
+
+            /**
              * Beginning of cell range.
              */
             const_iterator begin() const { return b_; }
@@ -101,6 +106,11 @@ namespace Opm
              * One past end of cell range.
              */
             const_iterator end()   const { return e_; }
+
+            /**
+             * Number of elements in the range.
+             */
+            size_type size() const { return e_ - b_; }
 
         private:
             const_iterator b_;
