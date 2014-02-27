@@ -21,6 +21,7 @@
 #define OPM_INITSTATEEQUIL_HEADER_INCLUDED
 
 #include <opm/core/simulator/EquilibrationHelpers.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -41,6 +42,29 @@ struct UnstructuredGrid;
 
 namespace Opm
 {
+
+    /**
+     * Compute initial state by an equilibration procedure.
+     *
+     * The following state fields are modified:
+     *   pressure(),
+     *   saturation(),
+     *   surfacevol(),
+     *   gasoilratio(),
+     *   rv().
+     *
+     * \param[in] grid     Grid.
+     * \param[in] props    Property object, pvt and capillary properties are used.
+     * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
+     * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
+     */
+    void initStateEquil(const UnstructuredGrid& grid,
+                        const BlackoilPropertiesInterface& props,
+                        const EclipseGridParser& deck,
+                        const double gravity,
+                        BlackoilState& state);
+
+
     /**
      * Types and routines that collectively implement a basic
      * ECLIPSE-style equilibration-based initialisation scheme.
