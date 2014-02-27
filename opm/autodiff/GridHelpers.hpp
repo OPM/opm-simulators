@@ -289,7 +289,7 @@ public:
     }
     const Dune::FieldVector<double, 3>& elementAt(int n) const
     {
-        return  std::mem_fn(Method)(*grid_, cell_index_);
+        return  std::mem_fn(Method)(*grid_, n);
     }
     void advance(int n)
     {
