@@ -365,6 +365,7 @@ namespace Opm
             //                           fractional_flows);
             //     wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
             // }
+
             bool well_control_passed = !check_well_controls_;
             int well_control_iteration = 0;
             do {
@@ -420,13 +421,13 @@ namespace Opm
                 tstep_os.close();
             }
 
-            // advance to next timestep before reporting at this location
-            ++timer;
-
             // write an output file for later inspection
             if (output_) {
                 eclipseWriter_.writeTimeStep(timer, state, well_state);
             }
+
+            // advance to next timestep before reporting at this location
+            ++timer;
         }
 
         total_timer.stop();

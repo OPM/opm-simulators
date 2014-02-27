@@ -32,9 +32,13 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Utility/PvdoTable.hpp>
+#include <opm/parser/eclipse/Utility/PvtgTable.hpp>
+#include <opm/parser/eclipse/Utility/PvdcoTable.hpp>
+
 namespace Opm
 {
-
     // Making these typedef to make the code more readable.
     typedef BlackoilPropsAdFromDeck::ADB ADB;
     typedef BlackoilPropsAdFromDeck::V V;
@@ -106,7 +110,8 @@ namespace Opm
             if (deck.hasField("PVDG")) {
                 if (samples > 0) {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(deck.getPVDG().pvdg_, samples));
-                } else {
+                }
+                else {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(deck.getPVDG().pvdg_));
                 }
              } else if (deck.hasField("PVTG")) {
@@ -120,6 +125,99 @@ namespace Opm
             = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
         satprops_.reset(ptr);
         ptr->init(deck, grid, -1);
+
+        if (phase_usage_.num_phases != satprops_->numPhases()) {
+            OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "
+                  "Inconsistent number of phases in pvt data (" << phase_usage_.num_phases
+                  << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
+        }
+    }
+
+
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+                                                     const UnstructuredGrid& grid,
+                                                     const bool init_rock)
+    {
+        if (init_rock){
+            rock_.init(newParserDeck, grid);
+        }
+
+        const int region_number = 0;
+
+        phase_usage_ = phaseUsageFromDeck(newParserDeck);
+
+        // Surface densities. Accounting for different orders in eclipse and our code.
+        if (newParserDeck->hasKeyword("DENSITY")) {
+            const auto keyword = newParserDeck->getKeyword("DENSITY");
+            const auto record = keyword->getRecord(region_number);
+            enum { ECL_oil = 0, ECL_water = 1, ECL_gas = 2 };
+            if (phase_usage_.phase_used[Aqua]) {
+                densities_[phase_usage_.phase_pos[Aqua]]   = record->getItem("WATER")->getSIDouble(0);
+            }
+            if (phase_usage_.phase_used[Vapour]) {
+                densities_[phase_usage_.phase_pos[Vapour]] = record->getItem("GAS")->getSIDouble(0);
+            }
+            if (phase_usage_.phase_used[Liquid]) {
+                densities_[phase_usage_.phase_pos[Liquid]] = record->getItem("OIL")->getSIDouble(0);
+            }
+        } else {
+            OPM_THROW(std::runtime_error, "Input is missing DENSITY\n");
+        }
+
+        // Set the properties.
+        props_.resize(phase_usage_.num_phases);
+        // Water PVT
+        if (phase_usage_.phase_used[Aqua]) {
+            if (newParserDeck->hasKeyword("PVTW")) {
+                Opm::PvtwTable pvtwTable(newParserDeck->getKeyword("PVTW"), region_number);
+
+                props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(pvtwTable));
+            } else {
+                // Eclipse 100 default.
+                props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(0.5*Opm::prefix::centi*Opm::unit::Poise));
+            }
+        }
+
+        // Oil PVT
+        if (phase_usage_.phase_used[Liquid]) {
+            if (newParserDeck->hasKeyword("PVDO")) {
+                Opm::PvdoTable pvdoTable(newParserDeck->getKeyword("PVDO"), region_number);
+
+                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
+            }
+            else if (newParserDeck->hasKeyword("PVTO")) {
+                Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"), /*tableIdx=*/0);
+
+                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
+            } else if (newParserDeck->hasKeyword("PVCDO")) {
+                Opm::PvdcoTable pvdcoTable(newParserDeck->getKeyword("PVDCO"), region_number);
+
+                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvdcoTable));
+            } else {
+                OPM_THROW(std::runtime_error, "Input is missing PVDO or PVTO\n");
+            }
+        }
+
+        // Gas PVT
+        if (phase_usage_.phase_used[Vapour]) {
+            if (newParserDeck->hasKeyword("PVDG")) {
+                Opm::PvdoTable pvdgTable(newParserDeck->getKeyword("PVDG"), region_number);
+
+                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
+            } else if (newParserDeck->hasKeyword("PVTG")) {
+                Opm::PvtgTable pvtgTable(newParserDeck->getKeyword("PVTG"), /*tableIdx=*/0);
+
+                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(pvtgTable));
+            } else {
+                OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
+            }
+        }
+
+        SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
+            = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
+        satprops_.reset(ptr);
+        ptr->init(newParserDeck, grid, -1);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "

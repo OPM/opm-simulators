@@ -22,10 +22,13 @@
 
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
+
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -49,6 +52,11 @@ namespace Opm
     public:
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
+
+        /// Constructor wrapping an opm-core black oil interface.
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
