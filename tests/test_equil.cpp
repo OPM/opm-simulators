@@ -499,9 +499,9 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    BOOST_CHECK_CLOSE(pressures[0][first] , 1.4551328443106037e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.5501328443106037e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.5541598197355453e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][first], 1.4551302072306179e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last],  1.5501302072306179e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last],  1.5538684664272346e7, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
