@@ -275,7 +275,13 @@ namespace Opm
                             // Default initialisation: constant Rs below contact, saturated above.
                             for (size_t i = 0; i < rec.size(); ++i) {
                                 const int cell = *(eqlmap.cells(i + 1).begin());
-                                const double p_contact = rec[i].goc.press;
+                                if (rec[i].goc.depth != rec[i].main.depth) {
+                                    OPM_THROW(std::runtime_error,
+                                              "Cannot initialise: when no explicit RSVD table is given, \n"
+                                              "datum depth must be at the gas-oil-contact. "
+                                              "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
+                                }
+                                const double p_contact = rec[i].main.press;
                                 rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact));
                             }
                         }
