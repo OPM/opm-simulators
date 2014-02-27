@@ -129,7 +129,11 @@ namespace Opm
                          const std::vector< std::vector<double> >& phase_pressures);
 
 
+
+
+
         namespace DeckDependent {
+
             inline
             std::vector<EquilRecord>
             getEquil(const EclipseGridParser& deck)
@@ -168,6 +172,9 @@ namespace Opm
                 }
             }
 
+
+
+
             inline
             std::vector<int>
             equilnum(const EclipseGridParser& deck,
@@ -186,6 +193,9 @@ namespace Opm
                 return eqlnum;
             }
 
+
+
+
             template <class InputDeck>
             class InitialStateComputer;
 
@@ -200,7 +210,8 @@ namespace Opm
                           std::vector<double>(G.number_of_cells)),
                       sat_(props.numPhases(),
                           std::vector<double>(G.number_of_cells)),
-                      rs_(G.number_of_cells)
+                      rs_(G.number_of_cells),
+                      rv_(G.number_of_cells)
                 {
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(deck);
@@ -228,8 +239,11 @@ namespace Opm
                         }
                     }
 
-                    // Compute phase pressures and saturations.
-                    calcPressSat(eqlmap, rec, props, G, grav);
+                    // Compute pressures, saturations, rs and rv factors.
+                    calcPressSatRsRv(eqlmap, rec, props, G, grav);
+
+                    // Modify oil pressure in no-oil regions so that the pressures of present phases can
+                    // be recovered from the oil pressure and capillary relations.
                 }
 
                 typedef std::vector<double> Vec;
@@ -237,6 +251,8 @@ namespace Opm
 
                 const PVec& press() const { return pp_; }
                 const PVec& saturation() const { return sat_; }
+                const Vec& rs() const { return rs_; }
+                const Vec& rv() const { return rv_; }
 
             private:
                 typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
@@ -247,14 +263,15 @@ namespace Opm
                 PVec pp_;
                 PVec sat_;
                 Vec rs_;
+                Vec rv_;
 
                 template <class RMap>
                 void
-                calcPressSat(const RMap&                             reg  ,
-                             const std::vector< EquilRecord >&       rec  ,
-                             const Opm::BlackoilPropertiesInterface& props,
-                             const UnstructuredGrid&                 G    ,
-                             const double grav)
+                calcPressSatRsRv(const RMap&                             reg  ,
+                                 const std::vector< EquilRecord >&       rec  ,
+                                 const Opm::BlackoilPropertiesInterface& props,
+                                 const UnstructuredGrid&                 G    ,
+                                 const double grav)
                 {
                     typedef Miscibility::NoMixing NoMix;
 
@@ -273,7 +290,8 @@ namespace Opm
 
                         const PVec press = phasePressures(G, eqreg, cells, grav);
                         const PVec sat = phaseSaturations(eqreg, cells, props, press);
-                        const Vec rs(cells.size());// = gasOilRatio();
+                        const Vec rs(cells.size());
+                        const Vec rv(cells.size());
 
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
@@ -281,6 +299,7 @@ namespace Opm
                             copyFromRegion(sat[p], cells, sat_[p]);
                         }
                         copyFromRegion(rs, cells, rs_);
+                        copyFromRegion(rv, cells, rv_);
                     }
                 }
 
