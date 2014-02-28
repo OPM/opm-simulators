@@ -14,6 +14,6 @@ set (opm-parser_DEPS
 	"CXX10Features REQUIRED"
 	# various runtime library enhancements
 	"Boost 1.44.0
-		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
+		COMPONENTS date_time filesystem system iostream unit_test_framework REQUIRED"
 	"cJSON"
 	)
