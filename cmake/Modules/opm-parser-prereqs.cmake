@@ -3,16 +3,17 @@
 
 # defines that must be present in config.h for our headers
 set (opm-parser_CONFIG_VAR
-        HAVE_ERT
-        )
+	HAVE_ERT
+	)
 
 # dependencies
 set (opm-parser_DEPS
-        # compile with C99 support if available
-        "C99"
-        # compile with C++0x/11 support if available
-        "CXX11Features REQUIRED"
-        # various runtime library enhancements
-        "Boost 1.44.0 COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
-        "cJSON"
-     )
+	# compile with C99 support if available
+	"C99"
+	# compile with C++0x/11 support if available
+	"CXX10Features REQUIRED"
+	# various runtime library enhancements
+	"Boost 1.44.0
+		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
+	"cJSON"
+	)
