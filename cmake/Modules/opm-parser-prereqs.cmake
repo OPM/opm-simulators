@@ -11,7 +11,7 @@ set (opm-parser_DEPS
 	# compile with C99 support if available
 	"C99"
 	# compile with C++0x/11 support if available
-	"CXX10Features REQUIRED"
+	"CXX11Features REQUIRED"
 	# various runtime library enhancements
 	"Boost 1.44.0
 		COMPONENTS date_time filesystem system iostream unit_test_framework REQUIRED"
