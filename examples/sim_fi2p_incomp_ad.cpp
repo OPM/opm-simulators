@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -42,10 +43,10 @@
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 
-#include <opm/autodiff/twophase/SimulatorFullyImplicitTwophase.hpp>
-#include <opm/autodiff/twophase/IncompPropsAdInterface.hpp>
-#include <opm/autodiff/twophase/IncompPropsAdBasic.hpp>
-#include <opm/autodiff/twophase/IncompPropsAdFromDeck.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitTwophase.hpp>
+#include <opm/autodiff/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/IncompPropsAdBasic.hpp>
+#include <opm/autodiff/IncompPropsAdFromDeck.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <boost/scoped_ptr.hpp>
