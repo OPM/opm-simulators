@@ -141,6 +141,7 @@ namespace Opm
             rock_.init(newParserDeck, grid);
         }
 
+        const int samples = 0;
         const int region_number = 0;
 
         phase_usage_ = phaseUsageFromDeck(newParserDeck);
@@ -180,8 +181,11 @@ namespace Opm
         if (phase_usage_.phase_used[Liquid]) {
             if (newParserDeck->hasKeyword("PVDO")) {
                 Opm::PvdoTable pvdoTable(newParserDeck->getKeyword("PVDO"), region_number);
-
-                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
+                if (samples > 0) {
+                    props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDeadSpline(pvdoTable, samples));
+                } else {
+                    props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
+                }
             }
             else if (newParserDeck->hasKeyword("PVTO")) {
                 Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"), /*tableIdx=*/0);
@@ -198,11 +202,13 @@ namespace Opm
         if (phase_usage_.phase_used[Vapour]) {
             if (newParserDeck->hasKeyword("PVDG")) {
                 Opm::PvdoTable pvdgTable(newParserDeck->getKeyword("PVDG"), region_number);
-
-                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
+                if (samples > 0) {
+                    props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(pvdgTable, samples));
+                } else {
+                    props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
+                }
             } else if (newParserDeck->hasKeyword("PVTG")) {
                 Opm::PvtgTable pvtgTable(newParserDeck->getKeyword("PVTG"), /*tableIdx=*/0);
-
                 props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(pvtgTable));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
