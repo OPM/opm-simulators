@@ -187,8 +187,7 @@ namespace Opm
                 Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"), /*tableIdx=*/0);
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
             } else if (newParserDeck->hasKeyword("PVCDO")) {
-                Opm::PvdcoTable pvdcoTable(newParserDeck->getKeyword("PVDCO"), region_number);
-
+                Opm::PvdcoTable pvdcoTable(newParserDeck->getKeyword("PVCDO"), region_number);
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvdcoTable));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDO, PVTO or PVCDO\n");
