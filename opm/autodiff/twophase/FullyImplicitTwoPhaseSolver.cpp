@@ -548,6 +548,7 @@ namespace {
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
+                               total_res.value().data(), dx.data());
 #if 0
         // The following code used for output the CSR matrix and vector 
         // for testing some additional linear solvers.
