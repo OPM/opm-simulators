@@ -89,6 +89,9 @@ endif (COMMAND prereqs_hook)
 include (OpmFind)
 find_and_append_package_list_to (${project} ${${project}_DEPS})
 
+# set aliases to probed variables
+include (OpmAliases)
+
 # remove the dependency on the testing framework from the main library;
 # it is not possible to query for Boost twice with different components.
 list (REMOVE_ITEM "${project}_LIBRARIES" "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}")

@@ -31,13 +31,14 @@ if (CMAKE_SIZEOF_VOID_P)
   math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 endif (CMAKE_SIZEOF_VOID_P)
 
+string(REGEX REPLACE "${PROJECT_SOURCE_DIR}/?(.*)" "\\1"  BUILD_DIR_SUFFIX "${PROJECT_BINARY_DIR}")
+
 find_library (CJSON_LIBRARY
   NAMES "cjson"
   HINTS "${CJSON_ROOT}"
   PATHS "${PROJECT_BINARY_DIR}/../opm-parser"
-        "${PROJECT_BINARY_DIR}/../opm-parser-build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/build"
-        "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build"
+        "${PROJECT_BINARY_DIR}/../opm-parser${BUILD_DIR_SUFFIX}"
+        "${PROJECT_BINARY_DIR}/../../opm-parser/${BUILD_DIR_SUFFIX}"
   PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
                 "opm/json"
   DOC "Path to cjson library archive/shared object files"

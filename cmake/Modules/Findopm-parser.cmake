@@ -31,6 +31,9 @@ if ((NOT OPM_PARSER_ROOT) AND OPM_ROOT)
   set (OPM_PARSER_ROOT "${OPM_ROOT}/opm-parser")
 endif ()
 
+# Detect the build dir suffix or subdirectory
+string(REGEX REPLACE "${PROJECT_SOURCE_DIR}/?(.*)" "\\1"  BUILD_DIR_SUFFIX "${PROJECT_BINARY_DIR}")
+
 # if a root is specified, then don't search in system directories
 # or in relative directories to this one
 if (OPM_PARSER_ROOT)
@@ -43,9 +46,8 @@ else ()
     "${PROJECT_SOURCE_DIR}/../opm-parser")
   set (_opm_parser_build
     "${PROJECT_BINARY_DIR}/../opm-parser"
-    "${PROJECT_BINARY_DIR}/../opm-parser-build"
-    "${PROJECT_BINARY_DIR}/../../opm-parser/build"
-    "${PROJECT_BINARY_DIR}/../../opm-parser/cmake-build")
+    "${PROJECT_BINARY_DIR}/../opm-parser${BUILD_DIR_SUFFIX}"
+    "${PROJECT_BINARY_DIR}/../../opm-parser/${BUILD_DIR_SUFFIX}")
 endif ()
 
 # use this header as signature

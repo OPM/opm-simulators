@@ -59,6 +59,7 @@ set (_opm_proj_exemptions
   dune-istl
   dune-grid
   dune-geometry
+  opm-parser
   )
 
 # although a DUNE module, it is delivered in the OPM suite
@@ -137,16 +138,22 @@ macro (find_and_append_package_to prefix name)
 	# using config mode is better than using module (aka. find) mode
 	# because then the package has already done all its probes and
 	# stored them in the config file for us
-	if (NOT (${name}_FOUND OR ${NAME}_FOUND))
+	if (NOT DEFINED ${name}_FOUND AND NOT DEFINED ${NAME}_FOUND)
 	  if (${name}_DIR)
 		message (STATUS "Finding package ${name} using config mode")
 		find_package (${name} ${ARGN} NO_MODULE PATHS ${${name}_DIR} NO_DEFAULT_PATH)
-	  else (${name}_DIR)
+	  else ()
 		message (STATUS "Finding package ${name} using module mode")
 		find_package (${name} ${ARGN})
-	  endif (${name}_DIR)
-	endif (NOT (${name}_FOUND OR ${NAME}_FOUND))
-  endif (CMAKE_DISABLE_FIND_PACKAGE_${name})
+	  endif ()
+	endif ()
+	if (NOT DEFINED ${name}_FOUND)
+	  set (${name}_FOUND "${${NAME}_FOUND}")
+	endif ()
+	if (NOT DEFINED ${NAME}_FOUND)
+	  set (${NAME}_FOUND "${${name}_FOUND}")
+	endif ()
+  endif ()
 
   # the variable "NAME" may be replaced during find_package (as this is
   # now a macro, and not a function anymore), so we must reinitialize

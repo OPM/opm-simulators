@@ -13,8 +13,8 @@ set (opm-upscaling_DEPS
 	# compile with C++0x/11 support if available
 	"CXX11Features"
 	# various runtime library enhancements
-	"Boost 1.39.0
-		COMPONENTS date_time filesystem system unit_test_framework REQUIRED"
+	"Boost 1.44.0
+		COMPONENTS date_time filesystem system iostreams unit_test_framework REQUIRED"
 	# matrix library
 	"BLAS REQUIRED"
 	"LAPACK REQUIRED"
