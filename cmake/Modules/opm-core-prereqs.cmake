@@ -30,6 +30,6 @@ set (opm-core_DEPS
 	# DUNE dependency
 	"dune-common"
 	"dune-istl"
-	#Parser library
+	# Parser library for ECL-type simulation models
 	"opm-parser REQUIRED"
 	)
