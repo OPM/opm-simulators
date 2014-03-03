@@ -97,12 +97,11 @@ namespace Opm
                     props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(deck.getPVDO().pvdo_));
                 }
             } else if (deck.hasField("PVTO")) {
-
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(deck.getPVTO().pvto_));
             } else if (deck.hasField("PVCDO")) {
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(deck.getPVCDO().pvcdo_));
             } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDO or PVTO\n");
+                OPM_THROW(std::runtime_error, "Input is missing PVDO, PVTO or PVCDO\n");
             }
         }
         // Gas PVT
@@ -110,8 +109,7 @@ namespace Opm
             if (deck.hasField("PVDG")) {
                 if (samples > 0) {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(deck.getPVDG().pvdg_, samples));
-                }
-                else {
+                } else {
                     props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(deck.getPVDG().pvdg_));
                 }
              } else if (deck.hasField("PVTG")) {
@@ -171,7 +169,6 @@ namespace Opm
         if (phase_usage_.phase_used[Aqua]) {
             if (newParserDeck->hasKeyword("PVTW")) {
                 Opm::PvtwTable pvtwTable(newParserDeck->getKeyword("PVTW"), region_number);
-
                 props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(pvtwTable));
             } else {
                 // Eclipse 100 default.
@@ -188,14 +185,13 @@ namespace Opm
             }
             else if (newParserDeck->hasKeyword("PVTO")) {
                 Opm::PvtoTable pvtoTable(newParserDeck->getKeyword("PVTO"), /*tableIdx=*/0);
-
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
             } else if (newParserDeck->hasKeyword("PVCDO")) {
                 Opm::PvdcoTable pvdcoTable(newParserDeck->getKeyword("PVDCO"), region_number);
 
                 props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvdcoTable));
             } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDO or PVTO\n");
+                OPM_THROW(std::runtime_error, "Input is missing PVDO, PVTO or PVCDO\n");
             }
         }
 
