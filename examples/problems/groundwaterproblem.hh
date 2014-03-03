@@ -86,7 +86,7 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, PermeabilityLens, 1e-12);
 SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
               Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
 SET_TYPE_PROP(GroundWaterBaseProblem, PreconditionerWrapper,
-              Ewoms::Linear::PreconditionerWrapperILU<TypeTag>);
+              Ewoms::Linear::PreconditionerWrapperILU0<TypeTag>);
 SET_INT_PROP(GroundWaterBaseProblem, LinearSolverVerbosity, 0);
 
 // Enable gravity
