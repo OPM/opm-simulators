@@ -45,11 +45,6 @@ BOOST_AUTO_TEST_CASE(Construction)
     well_controls_set_current( ctrls , 2 );
     BOOST_CHECK_EQUAL( 2 , well_controls_get_current( ctrls ));
     
-    well_controls_invert_current( ctrls );
-    BOOST_CHECK( well_controls_get_current( ctrls ) < 0 );
-    well_controls_invert_current( ctrls );
-    BOOST_CHECK_EQUAL( 2 , well_controls_get_current( ctrls ));
-
     {
         enum WellControlType type1 = BHP;
         enum WellControlType type2 = SURFACE_RATE;
@@ -102,4 +97,22 @@ BOOST_AUTO_TEST_CASE(Construction)
     well_controls_destroy( ctrls );
 }
 
+
+BOOST_AUTO_TEST_CASE(OpenClose)
+{
+    struct WellControls * ctrls = well_controls_create();
+
+    BOOST_CHECK_EQUAL( true , well_controls_well_is_open(ctrls) );
+    BOOST_CHECK_EQUAL( false , well_controls_well_is_shut(ctrls) );
+
+    well_controls_open_well( ctrls );
+    BOOST_CHECK_EQUAL( true   , well_controls_well_is_open(ctrls) );
+    BOOST_CHECK_EQUAL( false  , well_controls_well_is_shut(ctrls) );
+
+    well_controls_shut_well( ctrls );
+    BOOST_CHECK_EQUAL( false   , well_controls_well_is_open(ctrls) );
+    BOOST_CHECK_EQUAL( true    , well_controls_well_is_shut(ctrls) );
+    
+    well_controls_destroy( ctrls );
+}
 

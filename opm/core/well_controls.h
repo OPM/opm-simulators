@@ -55,8 +55,18 @@ well_controls_get_current( const struct WellControls * ctrl);
 void
 well_controls_set_current( struct WellControls * ctrl, int current);
 
-void
-well_controls_invert_current( struct WellControls * ctrl );
+
+bool 
+well_controls_well_is_shut(const struct WellControls * ctrl);
+
+bool 
+well_controls_well_is_open(const struct WellControls * ctrl);
+
+void 
+well_controls_open_well( struct WellControls * ctrl);
+
+void 
+well_controls_shut_well( struct WellControls * ctrl);
 
 int
 well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl);

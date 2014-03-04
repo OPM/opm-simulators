@@ -869,17 +869,9 @@ namespace Opm
                 }
                 const int index = it->second;
                 if (line.openshutflag_ == "SHUT") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl >= 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) < 0);
+                    well_controls_shut_well( w_->ctrls[index] );
                 } else if (line.openshutflag_ == "OPEN") {
-                    int cur_ctrl = well_controls_get_current(w_->ctrls[index]);
-                    if (cur_ctrl < 0) {
-                        well_controls_invert_current(w_->ctrls[index]);
-                    }
-                    assert(well_controls_get_current(w_->ctrls[index]) >= 0);
+                    well_controls_open_well( w_->ctrls[index] );
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown Open/close keyword: \"" << line.openshutflag_<< "\". Allowed values: OPEN, SHUT.");
                 }

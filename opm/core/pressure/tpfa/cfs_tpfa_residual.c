@@ -869,7 +869,7 @@ assemble_completion_to_well(int i, int w, int c, int nc, int np,
     W    = wells->W;
     ctrl = W->ctrls[ w ];
 
-    if (well_controls_get_current(ctrl) < 0) {
+    if (well_controls_well_is_shut( ctrl )) {
         /* Interpreting a negative current control index to mean a shut well */
         welleq_coeff_shut(np, h, &res, &w2c, &w2w);
     }
@@ -933,7 +933,7 @@ assemble_well_contrib(struct cfs_tpfa_res_wells   *wells ,
 
     for (w = i = 0; w < W->number_of_wells; w++) {
         pw = wpress[ w ];
-        is_open = (well_controls_get_current(W->ctrls[w]) >= 0);
+        is_open = well_controls_well_is_open(W->ctrls[w]);
 
         for (; i < W->well_connpos[w + 1]; i++, pmobp += np) {
 

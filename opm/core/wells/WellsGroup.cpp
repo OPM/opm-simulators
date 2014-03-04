@@ -747,9 +747,7 @@ namespace Opm
     void WellNode::shutWell()
     {
         if (shut_well_) {
-            // We set the tilde of the current control
-            // set_current_control(self_index_, -1, wells_);
-            well_controls_invert_current(wells_->ctrls[self_index_]);
+            well_controls_shut_well( wells_->ctrls[self_index_]);
         }
         else {
             const double target = 0.0;
@@ -767,7 +765,7 @@ namespace Opm
                 well_controls_iset_target( wells_->ctrls[self_index_] , group_control_index_ , target);
                 well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
             }
-            well_controls_invert_current(wells_->ctrls[self_index_]);
+            well_controls_open_well( wells_->ctrls[self_index_]);
         }
     }
 

@@ -98,6 +98,8 @@ struct WellControls
      */
     int current;
 
+    bool well_is_open;
+
     /* 
        The capacity allocated.
     */
@@ -130,7 +132,7 @@ well_controls_create(void)
     ctrl = malloc(1 * sizeof *ctrl);
 
     if (ctrl != NULL) {
-        /* Initialise empty control set */
+        /* Initialise empty control set; the well is created open. */
         ctrl->num               = 0;
         ctrl->number_of_phases  = 0;
         ctrl->type              = NULL;
@@ -138,6 +140,7 @@ well_controls_create(void)
         ctrl->distr             = NULL;
         ctrl->current           = -1;
         ctrl->cpty              = 0;         
+        ctrl->well_is_open      = true;  
     }
 
     return ctrl;
@@ -192,10 +195,22 @@ well_controls_set_current( struct WellControls * ctrl, int current) {
     ctrl->current = current;
 }
 
-void 
-well_controls_invert_current( struct WellControls * ctrl ) {
-    ctrl->current = ~ctrl->current;
+bool well_controls_well_is_shut(const struct WellControls * ctrl) {
+    return !ctrl->well_is_open;
 }
+
+bool well_controls_well_is_open(const struct WellControls * ctrl) {
+    return ctrl->well_is_open;
+}
+
+void well_controls_open_well( struct WellControls * ctrl) {
+    ctrl->well_is_open = true;
+}
+
+void well_controls_shut_well( struct WellControls * ctrl) {
+    ctrl->well_is_open = false;
+}
+
 
 
 enum WellControlType 
