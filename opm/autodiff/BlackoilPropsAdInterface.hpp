@@ -320,7 +320,7 @@ namespace Opm
         /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
         virtual
         void updateSatHyst(const std::vector<double>& saturation,
-                           const std::vector<int>& cells) {assert(false); } // Please implement me ...
+                           const std::vector<int>& cells) = 0;
     };
 
 } // namespace Opm
