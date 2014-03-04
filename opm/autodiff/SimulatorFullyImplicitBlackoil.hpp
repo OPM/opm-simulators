@@ -68,7 +68,7 @@ namespace Opm
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                        const UnstructuredGrid& grid,
-                                       const BlackoilPropsAdInterface& props,
+                                       BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
                                        LinearSolverInterface& linsolver,

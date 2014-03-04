@@ -1004,6 +1004,15 @@ namespace Opm
         }
         return adbCapPressures;
     }
+                                  
+    /// Saturation update for hysteresis behavior.
+    /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
+    void BlackoilPropsAdFromDeck::updateSatHyst(const std::vector<double>& saturation,
+                                                const std::vector<int>& cells)
+    {
+        const int n = cells.size();
+        satprops_->updateSatHyst(n, cells.data(), saturation.data());
+    }
 
 } // namespace Opm
 
