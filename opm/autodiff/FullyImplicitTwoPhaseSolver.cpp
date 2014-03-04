@@ -475,7 +475,7 @@ namespace {
                     }
                 }
             } else {
-                OPM_THROW(std::runtime_error, "Can only handle BHP type controls.");
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
         }
         const ADB bhp_residual = bhp - bhp_targets;
