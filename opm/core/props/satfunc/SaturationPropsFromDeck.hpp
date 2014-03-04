@@ -173,8 +173,8 @@ namespace Opm
                           const std::vector<double>& krmax);
 
         bool columnIsMasked_(Opm::DeckConstPtr newParserDeck,
-                             const std::string &keywordName,
-                             int columnIdx)
+                             const std::string& keywordName,
+                             int /* columnIdx */)
         { return newParserDeck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
     };
 
