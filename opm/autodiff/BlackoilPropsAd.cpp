@@ -817,5 +817,16 @@ namespace Opm
         return adbCapPressures;
     }
 
+
+
+    /// Saturation update for hysteresis behavior.
+    /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
+    void BlackoilPropsAd::updateSatHyst(const std::vector<double>& /* saturation */,
+                                        const std::vector<int>& /* cells */)
+    {
+        OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support hysteresis.");
+    }
+
+
 } // namespace Opm
 
