@@ -310,7 +310,7 @@ namespace Opm
         const int nw = wells->number_of_wells;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells->ctrls[w];
-            if (well_controls_get_current(wc) >= 0) {
+            if (well_controls_well_is_open( wc )) {
                 if (well_controls_get_current_type(wc) == BHP) {
                     return false;
                 }
