@@ -28,6 +28,8 @@
 // the deprecated member anyway (in this compilation unit)
 #define DUNE_COMMON_FIELDVECTOR_SIZE_IS_METHOD 1
 
+#include "dune_disable_pragmas.h"
+
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
 #include <dune/istl/bvector.hh>
@@ -38,6 +40,8 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
+
+#include "dune_reenable_pragmas.h"
 
 #include <stdexcept>
 #include <iostream>
