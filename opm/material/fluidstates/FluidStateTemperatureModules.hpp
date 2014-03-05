@@ -127,9 +127,11 @@ public:
     {
         temperature_ = fs.temperature(/*phaseIdx=*/0);
 
+#ifndef NDEBUG
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            assert(fs.temperature(phaseIdx) == temperature_);
+            assert(std::abs(fs.temperature(phaseIdx) - temperature_) < 1e-30);
         }
+#endif
     }
 
     /*!

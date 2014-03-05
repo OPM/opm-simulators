@@ -72,7 +72,7 @@ template <class T>
 inline bool CheckDefined(const T &value)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    unsigned int tmp = VALGRIND_CHECK_MEM_IS_DEFINED(&value, sizeof(T));
+    auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(&value, sizeof(T));
     return tmp == 0;
 #else
     return true;
@@ -108,7 +108,7 @@ template <class T>
 inline bool CheckDefined(const T *value, int size)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    unsigned int tmp = VALGRIND_CHECK_MEM_IS_DEFINED(value, size*sizeof(T));
+    auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(value, size*sizeof(T));
     return tmp == 0;
 #else
     return true;
@@ -255,8 +255,6 @@ inline void SetNoAccess(const T &value)
  *
  * \param value Pointer to the first object of the array.
  * \param size The size of the array in number of objects
- *
- * \param value The object which's memory valgrind should complain if accessed
  */
 template <class T>
 inline void SetNoAccess(const T *value, int size)

@@ -173,7 +173,7 @@ public:
     }
 
     /*!
-     * \brief
+     * \brief The density of pure mesitylene vapor at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$

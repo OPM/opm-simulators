@@ -650,9 +650,9 @@ protected:
             // if the phase's fugacity coefficients are composition
             // dependent, update them as well.
             if (!FluidSystem::isIdealMixture(phaseIdx)) {
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                    Scalar phi = FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx);
-                    fluidState.setFugacityCoefficient(phaseIdx, compIdx, phi);
+                for (int fugCompIdx = 0; fugCompIdx < numComponents; ++fugCompIdx) {
+                    Scalar phi = FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, fugCompIdx);
+                    fluidState.setFugacityCoefficient(phaseIdx, fugCompIdx, phi);
                 }
             }
         }

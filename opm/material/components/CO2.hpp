@@ -146,13 +146,13 @@ public:
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static const bool gasIsCompressible()
+    static bool gasIsCompressible()
     { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static const bool gasIsIdeal()
+    static bool gasIsIdeal()
     { return false; }
 
     /*!
@@ -241,7 +241,7 @@ public:
         visco_CO2 = (mu0 + dmu)/1.0E6;   /* conversion to [Pa s] */
 
         return visco_CO2;
-    };
+    }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg]

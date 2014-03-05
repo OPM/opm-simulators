@@ -52,7 +52,7 @@ public:
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
      */
     static Scalar molarMass()
-    { return 131.39e-3; /* [kg/mol] */ };
+    { return 131.39e-3; /* [kg/mol] */ }
 
     /*!
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
@@ -61,7 +61,7 @@ public:
      * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
     static Scalar vaporPressure(Scalar T)
-    { return 3900; /* [Pa] (at 20C) */ };
+    { return 3900; /* [Pa] (at 20C) */ }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
@@ -86,7 +86,7 @@ public:
         return IdealGas<Scalar>::density(molarMass(),
                                          temperature,
                                          pressure);
-    };
+    }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be ideal
@@ -110,7 +110,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { return 5.7e-4; /* [Pa s] */ };
+    { return 5.7e-4; /* [Pa s] */ }
 
     /*!
      * \brief The enthalpy of pure TCE at a given pressure and temperature \f$\mathrm{[J/kg]}\f$.

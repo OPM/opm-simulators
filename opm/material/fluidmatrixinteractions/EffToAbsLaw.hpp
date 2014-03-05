@@ -277,10 +277,6 @@ public:
      * \brief The capillary pressure-saturation curve.
      *
      *
-     * \param Sw Absolute saturation of the wetting phase
-     *           \f$\overline{S}_w\f$. It is converted to effective
-     *           saturation and then handed over to the material law
-     *           actually used for calculation.
      * \param params A object that stores the appropriate coefficients
      *                for the respective law.
      *
@@ -411,8 +407,6 @@ public:
     /*!
      * \brief The relative permeability for the wetting phase.
      *
-     * \param Sw        Absolute saturation of the wetting phase \f$\overline{S}_w\f$. It is converted to effective saturation
-     *                  and then handed over to the material law actually used for calculation.
      * \param params    A container object that is populated with the appropriate coefficients for the respective law.
      *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
      *                  is constructed accordingly. Afterwards the values are set there, too.

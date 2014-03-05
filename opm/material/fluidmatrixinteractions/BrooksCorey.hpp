@@ -260,7 +260,6 @@ public:
      * p_C = p_e\overline{S}_w^{-1/\lambda}
      * \f]
      *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
@@ -287,7 +286,6 @@ public:
      \overline{S}_w = (\frac{p_C}{p_e})^{-\lambda}
      \f]
      *
-     * \param pc Capillary pressure \f$[Pa]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
@@ -326,7 +324,6 @@ public:
      -\frac{p_e}{\lambda} \overline{S}_w^{-1/\lambda - 1}
      \f]
      *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
     */
@@ -348,7 +345,6 @@ public:
      *        regard to the capillary pressure according to Brooks and
      *        Corey.
      *
-     * \param pcnw Capillary pressure \f$[Pa]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
@@ -370,7 +366,6 @@ public:
      *        the medium implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
@@ -406,7 +401,6 @@ public:
      *        the medium as implied by the Brooks-Corey
      *        parameterization.
      *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */

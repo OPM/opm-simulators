@@ -239,8 +239,8 @@ private:
      * \brief Returns the equilibrium molality of CO2 (mol CO2 / kg water) for a
      * CO2-water mixture at a given pressure and temperature
      *
-     * \param T the temperature [K]
-     * \param pg the gas phase pressure [Pa]
+     * \param temperature The temperature [K]
+     * \param pg The gas phase pressure [Pa]
      */
     static Scalar molalityCO2inPureWater_(Scalar temperature, Scalar pg) {
         Scalar A = computeA_(temperature, pg); // according to Spycher, Pruess and Ennis-King (2003)

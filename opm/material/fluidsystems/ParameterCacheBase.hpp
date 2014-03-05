@@ -38,10 +38,17 @@ public:
      * \brief Constants for ORing the quantities of the fluid state that have not changed since the last update.
      */
     enum ExceptQuantities {
-        None = 0, //!< All quantities have been (potentially) modified.
-        Temperature = 1, //< The temperature has not been modified
-        Pressure = 2, //< The pressures have not been modified
-        Composition = 4  //< The compositions have not been modified
+        //! All quantities have been (potentially) modified.
+        None = 0,
+
+        //! The temperature has not been modified
+        Temperature = 1,
+
+        //! The pressures have not been modified
+        Pressure = 2,
+
+        //! The compositions have not been modified
+        Composition = 4
     };
 
     ParameterCacheBase()

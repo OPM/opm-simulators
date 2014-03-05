@@ -44,10 +44,11 @@ namespace Opm
  * At the moment, this class can only handle the sub-critical fluids
  * since it tabulates along the vapor pressure curve.
  *
- * \tparam Scalar  The type used for scalar values
- * \tparam Scalar  The component which ought to be tabulated
+ * \tparam Scalar The type used for scalar values
+ * \tparam RawComponent The component which ought to be tabulated
  * \tparam useVaporPressure If true, tabulate all quantities along the
- *                          vapor pressure curve, if false use the pressure range [p_min, p_max]
+ *                          vapor pressure curve, if false use the
+ *                          pressure range [p_min, p_max]
  */
 template <class Scalar, class RawComponent, bool useVaporPressure=true>
 class TabulatedComponent

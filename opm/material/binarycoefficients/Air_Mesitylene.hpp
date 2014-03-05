@@ -88,8 +88,6 @@ public:
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular mesitylene in liquid water.
-     *
-     * \todo
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)

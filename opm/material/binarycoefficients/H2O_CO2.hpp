@@ -82,8 +82,6 @@ public:
 
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular CO2 in liquid water.
-     *
-     * \todo
      */
     template <class Scalar>
     static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)

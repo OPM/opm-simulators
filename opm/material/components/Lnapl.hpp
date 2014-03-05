@@ -67,7 +67,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { return 8e-3; };
+    { return 8e-3; }
 };
 
 } // namespace Opm
