@@ -1,15 +1,18 @@
 DGF
+
 Interval
-0 0   % first corner 
+0 0   % first corner
 60 40   % second corner
-48 32   % 24 cells in x and 16 in y direction
+48 32   % cells in x and in y direction
 #
+
 GridParameter
-overlap 0 
-periodic 
+overlap 1
 closure green
-#GridParameter 
+#
+
 BOUNDARYDOMAIN
 default 1    % all boundaries have id 1
-#BOUNDARYDOMAIN
-# unitcube.dgf 
+#
+
+#

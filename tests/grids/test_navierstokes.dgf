@@ -1,4 +1,5 @@
 DGF
+
 %%%
 % grid with 86 times 86 rectangular cells, [0,1] times [0,1]
 % refined towards the boundaries, 6 time finer compared to the middle
@@ -7401,6 +7402,7 @@ Vertex
 0.994736842105263 1.000000000000000
 1.000000000000000 1.000000000000000
 #
+
 CUBE
 0 1 86 87
 1 2 87 88
@@ -14628,6 +14630,14 @@ CUBE
 7307 7308 7393 7394
 7308 7309 7394 7395
 #
+
+GridParameter
+overlap 1
+closure green
+#
+
 BOUNDARYDOMAIN
 default 1
+#
+
 #
