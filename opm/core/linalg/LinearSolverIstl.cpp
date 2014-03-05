@@ -28,13 +28,6 @@
 // the deprecated member anyway (in this compilation unit)
 #define DUNE_COMMON_FIELDVECTOR_SIZE_IS_METHOD 1
 
-// Silence warnings from Dune.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#pragma GCC diagnostic ignored "-Wmismatched-tags"
-
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
 #include <dune/istl/bvector.hh>
@@ -45,9 +38,6 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
-
-// Reinstate warnings.
-#pragma GCC diagnostic pop
 
 #include <stdexcept>
 #include <iostream>
