@@ -1,10 +1,18 @@
 DGF
+
 Interval
-0 0   % first corner 
+0 0   % first corner
 6000 20   % second corner
-100 10   % 24 cells in x and 16 in y direction
+100 10   % 100 cells in x and 10 in y direction
 #
+
+GridParameter
+overlap 1
+closure green
+#
+
 BOUNDARYDOMAIN
 default 1    % all boundaries have id 1
-#BOUNDARYDOMAIN
+#
+
 #
