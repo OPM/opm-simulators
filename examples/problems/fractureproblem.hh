@@ -292,7 +292,7 @@ public:
         // Process with rank 0 informs about the total masses of all
         // components inside the domain
         if (this->gridView().comm().rank() == 0) {
-            std::cout << "Mass in domain: " << storage << std::endl;
+            std::cout << "Mass in domain: " << storage << std::endl << std::flush;
         }
     }
 

@@ -377,7 +377,7 @@ public:
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
-            std::cout << "Storage: " << storage << std::endl;
+            std::cout << "Storage: " << storage << std::endl << std::flush;
         }
     }
 
