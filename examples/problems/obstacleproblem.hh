@@ -250,7 +250,7 @@ public:
             if (this->gridView().comm().rank() == 0) {
                 std::cout << "Storage in " << FluidSystem::phaseName(phaseIdx)
                           << "Phase: [" << phaseStorage << "]"
-                          << "\n";
+                          << "\n"  << std::flush;
             }
         }
 
@@ -261,7 +261,7 @@ public:
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
             std::cout << "Storage total: [" << storage << "]"
-                      << "\n";
+                      << "\n"  << std::flush;
         }
     }
 

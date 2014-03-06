@@ -357,7 +357,7 @@ public:
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
             std::cout << "Storage: liquid=[" << storageL << "]"
-                      << " gas=[" << storageG << "]\n";
+                      << " gas=[" << storageG << "]\n" << std::flush;
         }
     }
 
