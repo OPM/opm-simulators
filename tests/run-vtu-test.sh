@@ -16,8 +16,8 @@ usage() {
 };
 
 validateResults() {
-    OUTPUT_FILE="$1"
-    SIM_NAME="$2"
+    local OUTPUT_FILE="$1"
+    local SIM_NAME="$2"
 
     for REFERENCE_RESULT in ${MY_DIR}/../tests/referencesolutions/$SIM_NAME*; do
         echo "Comparing with \"$REFERENCE_RESULT\"... "
@@ -108,55 +108,37 @@ case "$TEST_TYPE" in
         exit 0
         ;;
 
-    "--simulation-diffusion")
-        if ! "$TEST_BINARY" $TEST_ARGS ; then
-            echo "Executing the binary failed!"
-            exit 1
-        fi
-        validateResults mimeticdiffusion-00001.vtu mimeticdiffusion
-        exit 0
-        ;;
-    
     "--parallel-simulation")
-        mpirun -np 4 "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
+        NUM_PROCS=4
+        mpirun -np "$NUM_PROCS" "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
             echo "Executing the binary failed!"
             rm "test-$RND.log"
             exit 1
         fi
+
+        grep "Initializing problem" "test-$RND.log"
+        SIM_NAME=$(grep "Initializing problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
         rm "test-$RND.log"
 
-        # # compare the results
-        # echo "######################"
-        # echo "# Comparing results"
-        # echo "######################"
-        # SIM_NAME=$(grep "Writing result file for" test-$RND.log | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        # TEST_RESULT=$(ls $SIM_NAME*.vtu $SIM_NAME*.vtp 2> /dev/null | sort | tail -n 1)
-        # rm "test-$RND.log"
-        # if ! test -r "$TEST_RESULT"; then
-        #     echo "File $TEST_RESULT does not exist or is not readable"
-        #     exit 1
-        # fi
+        echo "Simulation name: '$SIM_NAME'"
+        echo "Number of timesteps: '$NUM_TIMESTEPS'"
+        for PROC_NUM in 0 1 2 3; do
+            REF_FILE=$(printf "s%04d-p%04d-%s" "$NUM_PROCS" "$PROC_NUM" "$SIM_NAME")
+            TEST_RESULT=$(printf "s%04d-p%04d-%s-%05i" "$NUM_PROCS" "$PROC_NUM" "$SIM_NAME" "$NUM_TIMESTEPS")
+            TEST_RESULT=$(ls "$TEST_RESULT".*)
+            if ! test -r "$TEST_RESULT"; then
+                echo "File $TEST_RESULT does not exist or is not readable"
+                exit 1
+            fi
 
-        # REFERENCE_RESULT="referencesolutions/$TEST_RESULT"
-        # if ! test -r "$REFERENCE_RESULT"; then
-        #     echo "File $REFERENCE_RESULT does not exist or is not readable"
-        #     exit 1
-        # fi
-        
+            echo "Validate result for process $PROC_NUM (file: $TEST_RESULT)"
 
-        # if ! python bin/fuzzycomparevtu.py "$REFERENCE_RESULT" "$TEST_RESULT"; then
-        #     echo "The files \"$TEST_RESULT\" and \"$REFERENCE_RESULT\" are different."
-        #     echo "Make sure the contents of \"$TEST_RESULT\" are still valid and "
-        #     echo "make it the reference result if necessary."
-        #     exit 1
-        # fi
-        
-        # # SUCCESS!!!!!!
-        # echo "Result and reference result are identical" 
+            validateResults "$TEST_RESULT" "$REF_FILE"
+        done
         exit 0
-
         ;;
 
     "--restart")
