@@ -12,7 +12,7 @@ usage() {
     echo "Usage:"
     echo
     echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
-    echo "where TEST_TYPE can either be --plain or --simulation (is '$TEST_TYPE')."
+    echo "where TEST_TYPE can either be --plain or --simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
 validateResults() {
@@ -108,8 +108,9 @@ case "$TEST_TYPE" in
         exit 0
         ;;
 
-    "--parallel-simulation")
-        NUM_PROCS=4
+    "--parallel-simulation="*)
+        NUM_PROCS="${TEST_TYPE/--parallel-simulation=/}"
+
         mpirun -np "$NUM_PROCS" "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
