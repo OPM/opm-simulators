@@ -369,6 +369,16 @@ public:
 
             // impose an forced inflow boundary condition on the inlet
             values.setMassRate(massRate);
+
+            if (enableEnergy) {
+                Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
+                initialFluidState_(fs, context, spaceIdx, timeIdx);
+
+                Scalar hl = fs.enthalpy(lPhaseIdx);
+                Scalar hg = fs.enthalpy(gPhaseIdx);
+                values.setEnthalpyRate(values[conti0EqIdx + AirIdx] * hg +
+                                       values[conti0EqIdx + H2OIdx] * hl);
+            }
         }
         else if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
@@ -398,8 +408,6 @@ public:
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
-        //int globalIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         initialFluidState_(fs, context, spaceIdx, timeIdx);
 
@@ -421,7 +429,7 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onInlet_(pos)) {
-            constraints.setConstraint(temperatureIdx, energyEqIdx, 380);;
+            constraints.setConstraint(temperatureIdx, energyEqIdx, 380);
         }
     }
 
