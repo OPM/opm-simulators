@@ -103,20 +103,11 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
     typedef ParkerLenhard type;
 };
 
-// Enable partial reassembly of the jacobian matrix?
-// SET_BOOL_PROP(FingerBaseProblem, EnablePartialReassemble, true);
-
-// Enable reuse of jacobian matrices?
-// SET_BOOL_PROP(FingerBaseProblem, EnableJacobianRecycling, true);
-
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(FingerBaseProblem, NewtonWriteConvergence, false);
 
 // Use forward differences instead of central differences
 SET_INT_PROP(FingerBaseProblem, NumericDifferenceMethod, +1);
-
-// Enable smooth upwinding
-SET_INT_PROP(FingerBaseProblem, EnableSmoothUpwinding, true);
 
 // Enable constraints
 SET_INT_PROP(FingerBaseProblem, EnableConstraints, true);

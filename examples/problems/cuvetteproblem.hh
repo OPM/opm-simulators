@@ -55,9 +55,6 @@ namespace Properties {
 // create a new type tag for the cuvette steam injection problem
 NEW_TYPE_TAG(CuvetteBaseProblem);
 
-SET_BOOL_PROP(CuvetteBaseProblem, EnablePartialReassemble, true);
-SET_BOOL_PROP(CuvetteBaseProblem, EnableJacobianRecycling, true);
-
 // Set the grid type
 SET_TYPE_PROP(CuvetteBaseProblem, Grid, Dune::YaspGrid<2>);
 

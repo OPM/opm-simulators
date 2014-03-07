@@ -93,15 +93,15 @@ public:
 // Enable gravitational acceleration
 SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 
-// Enable partial reassembly of the Jacobian matrix
+// Enable partial reassembly of the linearization
 SET_BOOL_PROP(RichardsLensProblem, EnablePartialReassemble, true);
 
-// Enable re-use of the Jacobian matrix of the last iteration of the
+// Enable re-use of the linearization of the last iteration of the
 // previous for the first iteration of the current time step?
-SET_BOOL_PROP(RichardsLensProblem, EnableJacobianRecycling, true);
+SET_BOOL_PROP(RichardsLensProblem, EnableLinearizationRecycling, true);
 
-// Use forward differences to approximate the Jacobian matrix
-SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, +1);
+// Use central differences to approximate the Jacobian matrix
+SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
 
 // Set the maximum number of newton iterations of a time step
 SET_INT_PROP(RichardsLensProblem, NewtonMaxIterations, 28);
