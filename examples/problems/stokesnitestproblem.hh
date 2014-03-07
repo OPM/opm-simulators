@@ -100,10 +100,10 @@ class StokesNiTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum { // Number of equations and grid dimension
         numEq = GET_PROP_VALUE(TypeTag, NumEq),
@@ -156,7 +156,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const char *name() const
+    static std::string name()
     { return "stokestest_ni"; }
 
     //! \}

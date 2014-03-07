@@ -174,6 +174,7 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // number of phases
@@ -192,11 +193,9 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP(TypeTag, MaterialLaw)::ParkerLenhard ParkerLenhard;
-
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -233,8 +232,8 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    std::string name() const
-    { return std::string("finger_") + this->model().name(); }
+    static std::string name()
+    { return std::string("finger_") + Model::name(); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::registerParameters

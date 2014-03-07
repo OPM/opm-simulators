@@ -12,7 +12,7 @@ usage() {
     echo "Usage:"
     echo
     echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
-    echo "where TEST_TYPE can either be --plain or --simulation=\$NUM_CORES (is '$TEST_TYPE')."
+    echo "where TEST_TYPE can either be --plain,  --simulation or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
 validateResults() {
@@ -90,7 +90,7 @@ case "$TEST_TYPE" in
         echo "######################"
         echo "RND: '$RND'"
 
-        SIM_NAME=$(grep "Initializing problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        SIM_NAME=$(grep "Initializing the problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
         TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
         TEST_RESULT=$(ls "$TEST_RESULT".*)
@@ -119,8 +119,8 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        grep "Initializing problem" "test-$RND.log"
-        SIM_NAME=$(grep "Initializing problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        grep "Initializing the problem" "test-$RND.log"
+        SIM_NAME=$(grep "Initializing the problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
         NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
         rm "test-$RND.log"
 

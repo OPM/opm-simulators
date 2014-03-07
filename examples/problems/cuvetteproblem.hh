@@ -162,9 +162,9 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         HeatConductionLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // copy some indices for convenience
@@ -288,11 +288,8 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const char *name() const
-    {
-        static std::string tmp = std::string("cuvette_") + this->model().name();
-        return tmp.c_str();
-    }
+    static std::string name()
+    { return std::string("cuvette_") + Model::name(); }
 
     //! \}
 

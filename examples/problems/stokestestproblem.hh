@@ -100,12 +100,12 @@ class StokesTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Fluid) Fluid;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // Number of equations and grid dimension
@@ -146,7 +146,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const char *name() const
+    static std::string name()
     { return "stokestest"; }
 
     /*!

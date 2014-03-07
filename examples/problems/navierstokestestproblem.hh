@@ -106,8 +106,7 @@ class NavierStokesTestProblem : public StokesProblem<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
 
@@ -147,7 +146,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const char *name() const
+    static std::string name()
     { return "navierstokes"; }
 
     /*!

@@ -155,14 +155,13 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BlackOilFluidState) BlackOilFluidState;
+    typedef typename GET_PROP_TYPE(TypeTag, BlackOilFluidState) BlackOilFluidState;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
@@ -186,7 +185,6 @@ public:
 
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
-        name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         FluidSystem::initBegin();
         std::vector<std::pair<Scalar, Scalar> > Bg
@@ -354,8 +352,8 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const std::string name() const
-    { return name_; }
+    static std::string name()
+    { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
@@ -588,8 +586,6 @@ private:
     Scalar temperature_;
     Scalar maxDepth_;
     Scalar eps_;
-
-    std::string name_;
 };
 } // namespace Ewoms
 
