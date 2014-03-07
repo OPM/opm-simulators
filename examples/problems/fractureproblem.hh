@@ -169,15 +169,14 @@ class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams)
-        HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // phase indices
@@ -273,10 +272,10 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    std::string name() const
+    static std::string name()
     {
         std::ostringstream oss;
-        oss << "fracture_" << this->model().name();
+        oss << "fracture_" << Model::name();
         return oss.str();
     }
 

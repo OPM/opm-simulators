@@ -212,11 +212,11 @@ class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
     typedef typename HeatConductionLaw::Params HeatConductionLawParams;
 
@@ -249,7 +249,6 @@ public:
 
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
-        name_ = EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
 
         // initialize the tables of the fluid system
         // FluidSystem::init();
@@ -334,13 +333,14 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    std::string name() const
+    static std::string name()
     {
         std::ostringstream oss;
-        oss << name_ << "_" << this->model().name();
+        oss << EWOMS_GET_PARAM(TypeTag, std::string, SimulationName)
+            << "_" << Model::name();
         if (GET_PROP_VALUE(TypeTag, EnableEnergy))
             oss << "_ni";
-        oss << "_" << this->model().discretizationName();
+        oss << "_" << Model::discretizationName();
         return oss.str();
     }
 
@@ -616,8 +616,6 @@ private:
 
     int nTemperature_;
     int nPressure_;
-
-    std::string name_;
 
     Scalar pressureLow_, pressureHigh_;
     Scalar temperatureLow_, temperatureHigh_;

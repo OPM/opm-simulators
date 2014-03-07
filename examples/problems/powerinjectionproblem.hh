@@ -156,7 +156,10 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // number of phases
@@ -172,10 +175,6 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld
     };
-
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -222,7 +221,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    std::string name() const
+    static std::string name()
     {
         std::ostringstream oss;
         oss << "powerinjection_";

@@ -133,6 +133,7 @@ class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // number of phases
@@ -152,8 +153,7 @@ class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -195,12 +195,8 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const std::string name() const
-    {
-        std::ostringstream oss;
-        oss << "diffusion_" << this->model().name();
-        return oss.str();
-    }
+    static std::string name()
+    { return std::string("diffusion_") + Model::name(); }
 
     //! \}
 

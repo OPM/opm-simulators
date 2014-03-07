@@ -142,11 +142,9 @@ class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag,
-                                   BoundaryRateVector) BoundaryRateVector;
+    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -168,6 +166,7 @@ class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
 public:
     /*!
@@ -273,11 +272,11 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    const std::string name() const
+    static std::string name()
     {
         std::ostringstream oss;
         oss << "obstacle"
-            << "_" << this->model().name();
+            << "_" << Model::name();
         return oss.str();
     }
 

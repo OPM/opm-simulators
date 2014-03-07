@@ -185,15 +185,16 @@ class WaterAirProblem
         dimWorld = GridView::dimensionworld
     };
 
+    static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
-
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLawParams) HeatConductionLawParams;
 
@@ -257,10 +258,10 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    std::string name() const
+    static std::string name()
     {
         std::ostringstream oss;
-        oss << "waterair_" << this->model().name();
+        oss << "waterair_" << Model::name();
         if (GET_PROP_VALUE(TypeTag, EnableEnergy))
             oss << "_ni";
 
