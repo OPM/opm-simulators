@@ -119,12 +119,6 @@ public:
 // Use the algebraic multi-grid linear solver for this problem
 SET_TAG_PROP(LensBaseProblem, LinearSolverSplice, ParallelAmgBackend);
 
-// Enable partial reassembly of the jacobian matrix?
-// SET_BOOL_PROP(LensBaseProblem, EnablePartialReassemble, true);
-
-// Enable reuse of jacobian matrices?
-// SET_BOOL_PROP(LensBaseProblem, EnableJacobianRecycling, true);
-
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(LensBaseProblem, NewtonWriteConvergence, false);
 

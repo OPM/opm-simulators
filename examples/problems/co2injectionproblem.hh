@@ -136,11 +136,8 @@ SET_BOOL_PROP(Co2InjectionBaseProblem, NewtonWriteConvergence, false);
 // Enable gravity
 SET_BOOL_PROP(Co2InjectionBaseProblem, EnableGravity, true);
 
-// Reuse Jacobian matrices if possible?
-SET_BOOL_PROP(Co2InjectionBaseProblem, EnableJacobianRecycling, true);
-
-// Smoothen the upwinding method?
-SET_BOOL_PROP(Co2InjectionBaseProblem, EnableSmoothUpwinding, false);
+// Reuse linearizations if possible?
+SET_BOOL_PROP(Co2InjectionBaseProblem, EnableLinearizationRecycling, true);
 
 // set the defaults for the problem specific properties
 SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureLow, 3e7);
