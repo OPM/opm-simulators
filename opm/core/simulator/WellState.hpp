@@ -59,12 +59,19 @@ namespace Opm
                         bhp_[w] = well_controls_get_current_target( ctrl );
                     }
 
-                    // Initialize well rates to match controls if type is SURFACE_RATE
+                    // Initialize well rates to match controls if type is SURFACE_RATE,
+                    // otherwise set to a small rate with the correct sign.
                     if (well_controls_well_is_open( ctrl ) || (well_controls_get_current_type(ctrl) == SURFACE_RATE)) {
                         const double rate_target = well_controls_get_current_target(ctrl);
                         const double * distr = well_controls_get_current_distr( ctrl );
                         for (int p = 0; p < np; ++p) {
                             wellrates_[np*w + p] = rate_target * distr[p];
+                        }
+                    } else {
+                        const double small_rate = 1e-14;
+                        const double sign = (wells->type[w] == INJECTOR) ? 1.0 : -1.0;
+                        for (int p = 0; p < np; ++p) {
+                            wellrates_[np*w + p] = small_rate * sign;
                         }
                     }
                 }
