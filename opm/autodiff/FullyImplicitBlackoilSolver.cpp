@@ -410,6 +410,7 @@ namespace {
         const int nw = wells_.number_of_wells;
         // The transpose() below switches the ordering.
         const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+
         const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
         state.qs = ADB::constant(qs, bpat);
 
@@ -676,6 +677,228 @@ namespace {
 
         }
 
+        addWellEq(state);
+        addWellControlEq(state);
+
+
+    }
+
+
+    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state){
+
+        const int nc = grid_.number_of_cells;
+        const int np = wells_.number_of_phases;
+        const int nw = wells_.number_of_wells;
+        const int nperf = wells_.well_connpos[nw];
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        V Tw = Eigen::Map<const V>(wells_.WI, nperf);
+        const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
+
+        // pressure drop from solution
+        double tmp[2] = {-1.1319e-09, -2.0926e-09 };
+        V cdp = Eigen::Map<const V>(tmp, 2);
+
+        // Extract variables for perforation cell pressures
+        // and corresponding perforation well pressures.
+        const ADB p_perfcell = subset(state.pressure, well_cells);
+
+        // Pressure drawdown (also used to determine direction of flow)
+        const ADB drawdown =  p_perfcell - (wops_.w2p * state.bhp + cdp);
+
+        // current injecting connections
+        auto connInjInx = drawdown.value() < 0;
+
+        // injector == 1, producer == 0
+        V isInj = V::Zero(nw);
+        for (int w = 0; w < nw; ++w) {
+            if (wells_.type[w] == INJECTOR) {
+                isInj[w] = 1;
+            }
+        }
+
+//        // A cross-flow connection is defined as a connection which has opposite
+//        // flow-direction to the well total flow
+//         V isInjPerf = (wops_.w2p * isInj);
+//        auto crossFlowConns = (connInjInx != isInjPerf);
+
+//        bool allowCrossFlow = true;
+
+//        if (not allowCrossFlow) {
+//            auto closedConns = crossFlowConns;
+//            for (int c = 0; c < nperf; ++c) {
+//                if (closedConns[c]) {
+//                    Tw[c] = 0;
+//                }
+//            }
+//            connInjInx = !closedConns;
+//        }
+//        TODO: not allow for crossflow
+
+
+        V isInjInx = V::Zero(nperf);
+        V isNotInjInx = V::Zero(nperf);
+        for (int c = 0; c < nperf; ++c){
+            if (connInjInx[c])
+                isInjInx[c] = 1;
+            else
+                isNotInjInx[c] = 1;
+        }
+
+
+        // HANDLE FLOW INTO WELLBORE
+
+        // compute phase volumerates standard conditions
+        std::vector<ADB> cq_ps(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB& wellcell_mob = subset ( rq_[phase].mob, well_cells);
+            const ADB cq_p = -(isNotInjInx * Tw) * (wellcell_mob * drawdown);
+            cq_ps[phase] = subset(rq_[phase].b,well_cells) * cq_p;
+        }
+        if (active_[Oil] && active_[Gas]) {
+            const int oilpos = pu.phase_pos[Oil];
+            const int gaspos = pu.phase_pos[Gas];
+            ADB cq_psOil = cq_ps[oilpos];
+            ADB cq_psGas = cq_ps[gaspos];
+            cq_ps[gaspos] += subset(state.rs,well_cells) * cq_psOil;
+            cq_ps[oilpos] += subset(state.rv,well_cells) * cq_psGas;
+        }
+
+        // phase rates at std. condtions
+        std::vector<ADB> q_ps(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            q_ps[phase] = wops_.w2p * cq_ps[phase];
+        }
+
+        // total rates at std
+        ADB qt_s = ADB::constant(V::Zero(nw), state.bhp.blockPattern());
+        for (int phase = 0; phase < np; ++phase) {
+            qt_s += subset(state.qs, Span(nw, 1, phase*nw));
+        }
+
+        // compute avg. and total wellbore phase volumetric rates at std. conds
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
+        std::vector<ADB> wbq(np, ADB::null());
+        ADB wbqt = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        for (int phase = 0; phase < np; ++phase) {
+            const int pos = pu.phase_pos[phase];
+            wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
+            wbqt += wbq[phase];
+        }
+
+        // check for dead wells
+        V isNotDeadWells = V::Constant(nperf,1.0);
+        for (int c = 0; c < nperf; ++c){
+            if (wbqt.value()[c] == 0)
+                isNotDeadWells[c] = 0;
+        }
+        // compute wellbore mixture at std conds
+        std::vector<ADB> mix_s(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            mix_s[phase] = isNotDeadWells * wbq[phase]/wbqt;
+        }
+
+
+        // HANDLE FLOW OUT FROM WELLBORE
+
+        // Total mobilities
+        ADB mt = subset(rq_[0].mob,well_cells);
+        for (int phase = 1; phase < np; ++phase) {
+            mt += subset(rq_[phase].mob,well_cells);
+
+        }
+
+        // injection connections total volumerates
+        ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
+
+
+        // compute volume ratio between connection at standard conditions
+        ADB volRat = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        std::vector<ADB> cmix_s(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            cmix_s[phase] = wops_.w2p * mix_s[phase];
+        }
+
+        ADB well_rv = subset(state.rv,well_cells);
+        ADB well_rs = subset(state.rs,well_cells);
+        ADB d = V::Constant(nperf,1.0) -  well_rv * well_rs;
+
+        for (int phase = 0; phase < np; ++phase) {
+            ADB tmp = cmix_s[phase];
+
+            if (phase == Oil && active_[Gas]) {
+                const int gaspos = pu.phase_pos[Gas];
+                tmp = tmp - subset(state.rv,well_cells) * cmix_s[gaspos] / d;
+            }
+            if (phase == Gas && active_[Oil]) {
+                const int oilpos = pu.phase_pos[Oil];
+                tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
+            }
+            volRat += tmp / subset(rq_[phase].b,well_cells);
+
+        }
+
+        // injecting connections total volumerates at std cond
+        ADB cqt_is = cqt_i/volRat;
+
+
+        // connection phase volumerates at std cond
+        std::vector<ADB> cq_s(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            cq_s[phase] = cq_ps[phase] + (wops_.w2p * mix_s[phase])*cqt_is;
+        }
+
+        // Add well contributions to mass balance equations
+        for (int phase = 0; phase < np; ++phase) {
+            residual_.mass_balance[phase] += superset(cq_s[phase],well_cells,nc);
+        }
+
+        // Add WELL EQUATIONS
+        ADB qs = state.qs;
+        for (int phase = 0; phase < np; ++phase) {
+            qs -= superset(wops_.w2p * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+
+        }
+        residual_.well_flux_eq = qs;
+
+    }
+
+    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state){
+        // Handling BHP and SURFACE_RATE wells.
+
+        const int np = wells_.number_of_phases;
+        const int nw = wells_.number_of_wells;
+
+        V bhp_targets(nw);
+        V rate_targets(nw);
+        M rate_distr(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells_.ctrls[w];
+            if (well_controls_get_current_type(wc) == BHP) {
+                bhp_targets[w] = well_controls_get_current_target(wc);
+                rate_targets[w] = -1e100;
+            } else if (well_controls_get_current_type( wc ) == SURFACE_RATE) {
+                bhp_targets[w] = -1e100;
+                rate_targets[w] = well_controls_get_current_target(wc);
+                {
+                    const double * distr = well_controls_get_current_distr( wc );
+                    for (int phase = 0; phase < np; ++phase) {
+                        rate_distr.insert(w, phase*nw + w) = distr[phase];
+                    }
+                }
+            } else {
+                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
+            }
+        }
+        const ADB bhp_residual = state.bhp - bhp_targets;
+        const ADB rate_residual = rate_distr * state.qs - rate_targets;
+        // Choose bhp residual for positive bhp targets.
+        Selector<double> bhp_selector(bhp_targets);
+        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        // DUMP(residual_.well_eq);
+    }
+
+    void FullyImplicitBlackoilSolver::addOldWellEq(const SolutionState& state)
+    {
         // -------- Well equation, and well contributions to the mass balance equations --------
 
         // Contribution to mass balance will have to wait.
@@ -790,37 +1013,8 @@ namespace {
         residual_.well_flux_eq = state.qs + well_rates_all;
         // DUMP(residual_.well_flux_eq);
 
-        // Handling BHP and SURFACE_RATE wells.
-        V bhp_targets(nw);
-        V rate_targets(nw);
-        M rate_distr(nw, np*nw);
-        for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells_.ctrls[w];
-            if (well_controls_get_current_type(wc) == BHP) {
-                bhp_targets[w] = well_controls_get_current_target(wc);
-                rate_targets[w] = -1e100;
-            } else if (well_controls_get_current_type( wc ) == SURFACE_RATE) {
-                bhp_targets[w] = -1e100;
-                rate_targets[w] = well_controls_get_current_target(wc);
-                {
-                    const double * distr = well_controls_get_current_distr( wc );
-                    for (int phase = 0; phase < np; ++phase) {
-                        rate_distr.insert(w, phase*nw + w) = distr[phase];
-                    }
-                }
-            } else {
-                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
-            }
-        }
-        const ADB bhp_residual = bhp - bhp_targets;
-        const ADB rate_residual = rate_distr * state.qs - rate_targets;
-        // Choose bhp residual for positive bhp targets.
-        Selector<double> bhp_selector(bhp_targets);
-        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
-        // DUMP(residual_.well_eq);
+
     }
-
-
 
 
 
