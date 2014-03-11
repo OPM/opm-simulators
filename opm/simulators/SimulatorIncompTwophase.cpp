@@ -578,12 +578,12 @@ namespace Opm
                     dynamic_cast<TransportSolverTwophaseReorder&>(*tsolver_)
                         .solveGravity(&initial_porevol[0], stepsize, state);
                 }
-                watercut.push(timer.currentTime() + timer.currentStepLength(),
+                watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
                               produced[0]/(produced[0] + produced[1]),
                               tot_produced[0]/tot_porevol_init);
                 if (wells_) {
                     wellreport.push(props_, *wells_, state.saturation(),
-                                    timer.currentTime() + timer.currentStepLength(),
+                                    timer.simulationTimeElapsed() + timer.currentStepLength(),
                                     well_state.bhp(), well_state.perfRates());
                 }
             }
