@@ -65,7 +65,7 @@ namespace Opm
                     // Otherwise, we cannot set the correct value here, so we assign
                     // a small rate with the correct sign so that any logic depending on
                     // that sign will work as expected.
-                    if (well_controls_well_is_open( ctrl ) || (well_controls_get_current_type(ctrl) == SURFACE_RATE)) {
+                    if (well_controls_well_is_open( ctrl ) && (well_controls_get_current_type(ctrl) == SURFACE_RATE)) {
                         const double rate_target = well_controls_get_current_target(ctrl);
                         const double * distr = well_controls_get_current_distr( ctrl );
                         for (int p = 0; p < np; ++p) {
