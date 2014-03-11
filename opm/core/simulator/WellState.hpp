@@ -23,6 +23,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <vector>
+#include <cassert>
 
 namespace Opm
 {
@@ -45,6 +46,7 @@ namespace Opm
                 bhp_.resize(nw);
                 wellrates_.resize(nw * np, 0.0);
                 for (int w = 0; w < nw; ++w) {
+                    assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                     const WellControls* ctrl = wells->ctrls[w];
                     // Initialize bhp to be target pressure if
                     // bhp-controlled well, otherwise set to a little
