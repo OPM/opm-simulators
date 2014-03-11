@@ -25,11 +25,11 @@ set (opm-core_DEPS
 	"SuperLU"
 	# xml processing (for config parsing)
 	"TinyXML"
-	#Parser library
-	"opm-parser REQUIRED"
 	# Ensembles-based Reservoir Tools (ERT)
 	"ERT"
 	# DUNE dependency
 	"dune-common"
 	"dune-istl"
+	# Parser library for ECL-type simulation models
+	"opm-parser REQUIRED"
 	)
