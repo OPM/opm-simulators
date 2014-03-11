@@ -113,8 +113,8 @@ namespace Opm
             return timesteps_[current_step_ - 1];
     }
 
-    /// Current time.
-    double SimulatorTimer::currentTime() const
+    /// time elapsed since the start of the simulation [s].
+    double SimulatorTimer::simulationTimeElapsed() const
     {
         if (timeMap_)
             return timeMap_->getTimePassedUntil(current_step_);
@@ -122,6 +122,12 @@ namespace Opm
             return current_time_;
     }
 
+    /// time elapsed since the start of the POSIX epoch (Jan 1st, 1970) [s].
+    time_t SimulatorTimer::currentPosixTime() const
+    {
+        tm t = boost::posix_time::to_tm(currentDateTime());
+        return std::mktime(&t);
+    }
 
     boost::posix_time::ptime SimulatorTimer::currentDateTime() const
     {
@@ -161,7 +167,7 @@ namespace Opm
     void SimulatorTimer::report(std::ostream& os) const
     {
         os << "\n\n---------------    Simulation step number " << currentStepNum() << "    ---------------"
-           << "\n      Current time (days)     " << Opm::unit::convert::to(currentTime(), Opm::unit::day)
+           << "\n      Current time (days)     " << Opm::unit::convert::to(simulationTimeElapsed(), Opm::unit::day)
            << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day)
            << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
            << "\n" << std::endl;

@@ -79,8 +79,13 @@ namespace Opm
         /// it is an error to call stepLengthTaken().
         double stepLengthTaken () const;
 
-        /// Current time.
-        double currentTime() const;
+        /// Time elapsed since the start of the POSIX epoch (Jan 1st,
+        /// 1970) until the current time step begins [s].
+        time_t currentPosixTime() const;
+
+        /// Time elapsed since the start of the simulation until the
+        /// beginning of the current time step [s].
+        double simulationTimeElapsed() const;
 
         /// Return the current time as a posix time object.
         boost::posix_time::ptime currentDateTime() const;
