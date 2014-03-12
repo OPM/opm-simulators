@@ -669,7 +669,7 @@ namespace Opm
                         }
                         // We need to check if the well is shut or not
                         if (wci_line.open_shut_flag_ == "SHUT") {
-                        	cpos = ~cpos;
+                            well_controls_shut_well( w_->ctrls[wix]);
                         }
                         set_current_control(wix, cpos, w_);
 
@@ -797,7 +797,7 @@ namespace Opm
                         }
                         // If it's shut, we complement the cpos
                         if (wcp_line.open_shut_flag_ == "SHUT") {
-                        	cpos = ~cpos; // So we can easily retrieve the cpos later
+                            well_controls_shut_well( w_->ctrls[wix] );
                         }
                         set_current_control(wix, cpos, w_);
                     }
@@ -1204,7 +1204,7 @@ namespace Opm
 
                     // We need to check if the well is shut or not
                     if (well->getStatus( timeStep ) == WellCommon::SHUT) {
-                        cpos = ~cpos;
+                        well_controls_shut_well( w_->ctrls[well_index] );
                     }
                     set_current_control(well_index, cpos, w_);
                 }
@@ -1334,7 +1334,7 @@ namespace Opm
                 }
                 // If it's shut, we complement the cpos
                 if (well->getStatus(timeStep) == WellCommon::SHUT) {
-                    cpos = ~cpos; // So we can easily retrieve the cpos later
+                    well_controls_shut_well( w_->ctrls[well_index] );
                 }
                 set_current_control(well_index, cpos, w_);
             }
