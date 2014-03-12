@@ -664,12 +664,11 @@ namespace Opm
                         }
                         InjectionControl::Mode mode = InjectionControl::mode(wci_line.control_mode_);
                         int cpos = control_pos[mode];
-                        if (cpos == -1 && mode != InjectionControl::GRUP) {
-                            OPM_THROW(std::runtime_error, "Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
-                        }
                         // We need to check if the well is shut or not
                         if (wci_line.open_shut_flag_ == "SHUT") {
                             well_controls_shut_well( w_->ctrls[wix]);
+                        } else if (cpos == -1 && mode != InjectionControl::GRUP) {
+                            OPM_THROW(std::runtime_error, "Control for " << wci_line.control_mode_ << " not specified in well " << well_names[wix]);
                         }
                         set_current_control(wix, cpos, w_);
 
@@ -1329,12 +1328,10 @@ namespace Opm
 
                 ProductionControl::Mode mode = ProductionControl::mode(well->getProducerControlMode(timeStep));
                 int cpos = control_pos[mode];
-                if (cpos == -1 && mode != ProductionControl::GRUP) {
-                    OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
-                }
-                // If it's shut, we complement the cpos
                 if (well->getStatus(timeStep) == WellCommon::SHUT) {
                     well_controls_shut_well( w_->ctrls[well_index] );
+                } else if (cpos == -1 && mode != ProductionControl::GRUP) {
+                    OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
                 }
                 set_current_control(well_index, cpos, w_);
             }
