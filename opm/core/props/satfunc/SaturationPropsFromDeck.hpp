@@ -64,7 +64,29 @@ namespace Opm
                   const int samples);
 
         /// Initialize from deck and grid.
-        /// \param[in]  deck     Deck input parser
+        /// \param[in]  deck            Deck input parser
+        /// \param[in]  number_of_cells The number of cells of the grid to which property
+        ///                             object applies, needed for the
+        ///                             mapping from cell indices (typically from a processed
+        ///                             grid) to logical cartesian indices consistent with the
+        ///                             deck.
+        /// \param[in]  global_cell     The mapping from local cell indices of the grid to
+        ///                             global cell indices used in the deck.
+        /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
+        /// \param[in]  dimensions      The dimensions of the grid. 
+        /// \param[in]  samples         Number of uniform sample points for saturation tables.
+        /// \tparam     T               The iterator Type for the cell centroids.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        template<class T>
+        void init(const EclipseGridParser& deck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const T& begin_cell_centroids,
+                  int dimensions,
+                  const int samples);
+        
+        /// Initialize from deck and grid.
+        /// \param[in]  newParserDeck     Deck input parser
         /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
@@ -72,6 +94,27 @@ namespace Opm
         /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         void init(Opm::DeckConstPtr newParserDeck,
                   const UnstructuredGrid& grid,
+                  const int samples);
+
+        /// Initialize from deck and grid.
+        /// \param[in]  newParserDeck     Deck input parser
+        /// \param[in]  number_of_cells The number of cells of the grid to which property
+        ///                             object applies, needed for the
+        ///                             mapping from cell indices (typically from a processed
+        ///                             grid) to logical cartesian indices consistent with the
+        ///                             deck.
+        /// \param[in]  global_cell     The mapping from local cell indices of the grid to
+        ///                             global cell indices used in the deck.
+        /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
+        /// \param[in]  dimensions      The dimensions of the grid. 
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        template<class T>
+        void init(Opm::DeckConstPtr newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const T& begin_cell_centroids,
+                  int dimensions,
                   const int samples);
 
         /// \return   P, the number of phases.
@@ -138,20 +181,45 @@ namespace Opm
         typedef SatFuncSet Funcs;
 
         const Funcs& funcForCell(const int cell) const;
+
+        template<class T>
         void initEPS(const EclipseGridParser& deck,
-                     const UnstructuredGrid& grid);
+                     int number_of_cells,
+                     const int* global_cell,
+                     const T& begin_cell_centroids,
+                     int dimensions);
+        template<class T>
         void initEPSHyst(const EclipseGridParser& deck,
-                         const UnstructuredGrid& grid);
+                         int number_of_cells,
+                         const int* global_cell,
+                         const T& begin_cell_centroids,
+                         int dimensions);
+        template<class T>
         void initEPSKey(const EclipseGridParser& deck,
-                        const UnstructuredGrid& grid,
+                        int number_of_cells,
+                        const int* global_cell,
+                        const T& begin_cell_centroids,
+                        int dimensions,
                         const std::string& keyword,
                         std::vector<double>& scaleparam);
+        template<class T>
         void initEPS(Opm::DeckConstPtr newParserDeck,
-                     const UnstructuredGrid& grid);
+                     int number_of_cells,
+                     const int* global_cell,
+                     const T& begin_cell_centroids,
+                     int dimensions);
+        template<class T>
         void initEPSHyst(Opm::DeckConstPtr newParserDeck,
-                         const UnstructuredGrid& grid);
+                         int number_of_cells,
+                         const int* global_cell,
+                         const T& begin_cell_centroids,
+                         int dimensions);
+        template<class T>
         void initEPSKey(Opm::DeckConstPtr newParserDeck,
-                        const UnstructuredGrid& grid,
+                        int number_of_cells,
+                        const int* global_cell,
+                        const T& begin_cell_centroids,
+                        int dimensions,
                         const std::string& keyword,
                         std::vector<double>& scaleparam);
         void initEPSParam(const int cell, 

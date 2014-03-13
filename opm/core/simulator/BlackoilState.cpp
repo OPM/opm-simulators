@@ -4,13 +4,18 @@
 using namespace Opm;
 
 void
-BlackoilState::init(const UnstructuredGrid& g, int num_phases) {
-   SimulatorState::init(g, num_phases);
-   gor_.resize(g.number_of_cells, 0.) ;
-   rv_.resize(g.number_of_cells,0.);
+BlackoilState::init(int number_of_cells, int number_of_phases, int num_phases) {
+    SimulatorState::init(number_of_cells, number_of_phases, num_phases);
+   gor_.resize(number_of_cells, 0.) ;
+   rv_.resize(number_of_cells,0.);
    // surfvol_ intentionally empty, left to initBlackoilSurfvol
 }
 
+void
+BlackoilState::init(const UnstructuredGrid& g, int num_phases)
+{
+    init(g.number_of_cells, g.number_of_faces, num_phases);
+}
 /// Set the first saturation to either its min or max value in
 /// the indicated cells. The second saturation value s2 is set
 /// to (1.0 - s1) for each cell. Any further saturation values

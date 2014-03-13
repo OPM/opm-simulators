@@ -90,6 +90,45 @@ namespace Opm
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
+        template<class T>
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   bool init_rock=true);
+
+
+        template<class T>
+        BlackoilPropertiesFromDeck(const EclipseGridParser& deck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
+        template<class T>
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  newParserDeck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   bool init_rock=true);
+
+        template<class T>
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  newParserDeck,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   T begin_cell_centroids,
+                                   int dimension,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
         /// Destructor.
         virtual ~BlackoilPropertiesFromDeck();
 
@@ -211,6 +250,41 @@ namespace Opm
                               double* smax) const;
 
     private:
+        template<class T>
+        void init(const EclipseGridParser& deck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  bool init_rock);
+        template<class T>
+        void init(const EclipseGridParser& deck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  const parameter::ParameterGroup& param,
+                  bool init_rock);
+
+        template<class T>
+        void init(Opm::DeckConstPtr  newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  bool init_rock);
+        template<class T>
+        void init(Opm::DeckConstPtr  newParserDeck,
+                  int number_of_cells,
+                  const int* global_cell,
+                  const int* cart_dims,
+                  T begin_cell_centroids,
+                  int dimension,
+                  const parameter::ParameterGroup& param,
+                  bool init_rock);
         RockFromDeck rock_;
         BlackoilPvtProperties pvt_;
         std::unique_ptr<SaturationPropsInterface> satprops_;
@@ -224,5 +298,6 @@ namespace Opm
 
 } // namespace Opm
 
+#include "BlackoilPropertiesFromDeck_impl.hpp"
 
 #endif // OPM_BLACKOILPROPERTIESFROMDECK_HEADER_INCLUDED

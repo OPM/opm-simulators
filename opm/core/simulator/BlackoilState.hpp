@@ -32,7 +32,9 @@ namespace Opm
     class BlackoilState : public SimulatorState
     {
     public:
-        virtual void init(const UnstructuredGrid& g, int num_phases);
+        virtual void init(const UnstructuredGrid& grid, int num_phases);
+        
+        virtual void init(int number_of_cells, int number_of_faces, int num_phases);
 
         /// Set the first saturation to either its min or max value in
         /// the indicated cells. The second saturation value s2 is set
