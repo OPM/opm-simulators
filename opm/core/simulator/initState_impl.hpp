@@ -557,13 +557,33 @@ namespace Opm
                            const double gravity,
                            State& state)
     {
+        initStateFromDeck(grid.number_of_cells, grid.global_cell, grid.cartdims,
+                          grid.number_of_faces, UgGridHelpers::faceCells(grid),
+                          grid.face_centroids, grid.cell_centroids, grid.dimensions,
+                          props, newParserDeck, gravity, state);
+    }
+    /// Initialize a state from input deck.
+    template <class FaceCells, class FCI, class CCI, class Props, class State>
+    void initStateFromDeck(int number_of_cells,
+                           const int* global_cell,
+                           const int* cartdims,
+                           int number_of_faces,
+                           FaceCells face_cells,
+                           FCI begin_face_centroids,
+                           CCI begin_cell_centroids,
+                           int dimensions,
+                           const Props& props,
+                           Opm::DeckConstPtr newParserDeck,
+                           const double gravity,
+                           State& state)
+    {
         const int num_phases = props.numPhases();
         const PhaseUsage pu = phaseUsageFromDeck(newParserDeck);
         if (num_phases != pu.num_phases) {
             OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
-        state.init(grid, num_phases);
+        state.init(number_of_cells, number_of_faces, num_phases);
         if (newParserDeck->hasKeyword("EQUIL")) {
             if (num_phases != 2) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
@@ -577,17 +597,19 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
             }
             const double woc = equil.waterOilContactDepth(0);
-            initWaterOilContact(grid, props, woc, WaterBelow, state);
+            initWaterOilContact(number_of_cells, begin_cell_centroids, dimensions,
+                                props, woc, WaterBelow, state);
             // Set pressure depending on densities and depths.
             const double datum_z = equil.datumDepth(0);
             const double datum_p = equil.datumDepthPressure(0);
-            initHydrostaticPressure(grid, props, woc, gravity, datum_z, datum_p, state);
+            initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
+                                    props, woc, gravity, datum_z, datum_p, state);
         } else if (newParserDeck->hasKeyword("PRESSURE")) {
             // Set saturations from SWAT/SGAS, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
             std::vector<double>& p = state.pressure();
             const std::vector<double>& p_deck = newParserDeck->getKeyword("PRESSURE")->getSIDoubleData();
-            const int num_cells = grid.number_of_cells;
+            const int num_cells = number_of_cells;
             if (num_phases == 2) {
                 if (!pu.phase_used[BlackoilPhases::Aqua]) {
                     // oil-gas: we require SGAS
@@ -598,7 +620,7 @@ namespace Opm
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                     const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     for (int c = 0; c < num_cells; ++c) {
-                        int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                        int c_deck = (global_cell == NULL) ? c : global_cell[c];
                         s[2*c + gpos] = sg_deck[c_deck];
                         s[2*c + opos] = 1.0 - sg_deck[c_deck];
                         p[c] = p_deck[c_deck];
@@ -612,7 +634,7 @@ namespace Opm
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                     const int nwpos = (wpos + 1) % 2;
                     for (int c = 0; c < num_cells; ++c) {
-                        int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                        int c_deck = (global_cell == NULL) ? c : global_cell[c];
                         s[2*c + wpos] = sw_deck[c_deck];
                         s[2*c + nwpos] = 1.0 - sw_deck[c_deck];
                         p[c] = p_deck[c_deck];
@@ -629,7 +651,7 @@ namespace Opm
                 const std::vector<double>& sw_deck = newParserDeck->getKeyword("SWAT")->getSIDoubleData();
                 const std::vector<double>& sg_deck = newParserDeck->getKeyword("SGAS")->getSIDoubleData();
                 for (int c = 0; c < num_cells; ++c) {
-                    int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                    int c_deck = (global_cell == NULL) ? c : global_cell[c];
                     s[3*c + wpos] = sw_deck[c_deck];
                     s[3*c + opos] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
                     s[3*c + gpos] = sg_deck[c_deck];
@@ -643,7 +665,8 @@ namespace Opm
         }
 
         // Finally, init face pressures.
-        initFacePressure(grid, state);
+        initFacePressure(dimensions, number_of_faces, face_cells, begin_face_centroids,
+                         begin_cell_centroids, state);
     }
 
     /// Initialize a state from input deck.
