@@ -488,6 +488,11 @@ namespace Opm
                   "found " << pu.num_phases << " phases in deck.");
         }
         state.init(grid, num_phases);
+        if (newParserDeck->hasKeyword("EQUIL") && newParserDeck->hasKeyword("PRESSURE")) {
+            OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
+                      "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");
+        }
+
         if (newParserDeck->hasKeyword("EQUIL")) {
             if (num_phases != 2) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
@@ -583,6 +588,10 @@ namespace Opm
         if (num_phases != pu.num_phases) {
             OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
+        }
+        if (deck.hasField("EQUIL") && deck.hasField("PRESSURE")) {
+            OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
+                      "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");
         }
         state.init(grid, num_phases);
         if (deck.hasField("EQUIL")) {
