@@ -1180,14 +1180,15 @@ namespace Opm
             else
                 newParserDeck.getENKRVD().write(std::cout);
             */
-            const double* cc = begin_cell_centroid;
             const int dim = dimensions;
             for (int cell = 0; cell < number_of_cells; ++cell) {
                 int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
                 if (table[itab][jtab][0] != -1.0) {
                     std::vector<double>& depth = table[0][jtab];
                     std::vector<double>& val = table[itab][jtab];
-                    double zc = cc[dim*cell+dim-1];
+                    double zc = UgGridHelpers
+                        ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
+                                       dim-1);
                     if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
                         scaleparam[cell] = linearInterpolation(depth, val, zc);
                     }
