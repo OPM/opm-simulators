@@ -1,6 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 STATOIL
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,16 +22,16 @@
 #include <opm/core/wells.h>
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
-#include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
-#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
-#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
-#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/polymer/fullyimplicit/utilities.hpp>
 #include <algorithm>
@@ -45,13 +45,13 @@
 namespace Opm
 {
 
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
+    typedef AutoDiffBlock<double> ADB;
+    typedef ADB::V V;
+    typedef ADB::M M;
+    typedef Eigen::Array<double,
+                         Eigen::Dynamic,
+                         Eigen::Dynamic,
+                         Eigen::RowMajor> DataBlock;
     /// Compute two-phase transport source terms from well terms.
     /// Note: Unlike the incompressible version of this function,
     ///       this version computes surface volume injection rates,

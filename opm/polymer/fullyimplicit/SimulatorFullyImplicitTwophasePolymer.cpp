@@ -1,5 +1,6 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,7 +23,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
-#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/IncompPropsAdInterface.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/polymer/fullyimplicit/utilities.hpp>
 #include <opm/core/grid.h>

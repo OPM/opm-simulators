@@ -1,6 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 STATOIL
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -24,8 +24,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
-#include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
-#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -46,13 +46,13 @@
 namespace Opm
 {
 
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
+    typedef AutoDiffBlock<double> ADB;
+    typedef ADB::V V;
+    typedef ADB::M M;
+    typedef Eigen::Array<double,
+                         Eigen::Dynamic,
+                         Eigen::Dynamic,
+                         Eigen::RowMajor> DataBlock;
     /// Compute two-phase transport source terms from well terms.
     /// Note: Unlike the incompressible version of this function,
     ///       this version computes surface volume injection rates,
@@ -96,7 +96,6 @@ namespace Opm
                                  double* produced,
                                  double& polyinj,
                                  double& polyprod);
-
 
     /// @brief Computes injected and produced volumes of all phases,
     ///        and injected and produced polymer mass - in the compressible case.

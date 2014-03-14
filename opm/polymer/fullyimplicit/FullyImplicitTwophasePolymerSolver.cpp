@@ -21,9 +21,9 @@
 #include <opm/polymer/fullyimplicit/FullyImplicitTwophasePolymerSolver.hpp>
 
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
-#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
-#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
-#include <opm/polymer/fullyimplicit/IncompPropsAdInterface.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>

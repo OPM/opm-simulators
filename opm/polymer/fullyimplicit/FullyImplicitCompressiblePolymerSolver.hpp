@@ -21,9 +21,9 @@
 #ifndef OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
 
-#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
-#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
-#include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 

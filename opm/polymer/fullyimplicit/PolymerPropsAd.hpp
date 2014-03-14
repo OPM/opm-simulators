@@ -23,8 +23,8 @@
 
 #include <cmath>
 #include <vector>
-#include <opm/polymer/fullyimplicit/AutoDiffBlock.hpp>
-#include <opm/polymer/fullyimplicit/AutoDiffHelpers.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 
 namespace Opm {

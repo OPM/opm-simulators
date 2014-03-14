@@ -1,5 +1,6 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -26,9 +27,9 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
-#include <opm/polymer/fullyimplicit/GeoProps.hpp>
+#include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
-#include <opm/polymer/fullyimplicit/BlackoilPropsAdInterface.hpp>
 #include <opm/polymer/fullyimplicit/utilities.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
