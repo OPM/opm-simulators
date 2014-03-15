@@ -23,6 +23,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <vector>
+#include <cassert>
 
 namespace Opm
 {
@@ -45,26 +46,55 @@ namespace Opm
                 bhp_.resize(nw);
                 wellrates_.resize(nw * np, 0.0);
                 for (int w = 0; w < nw; ++w) {
+                    assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                     const WellControls* ctrl = wells->ctrls[w];
-                    // Initialize bhp to be target pressure if
-                    // bhp-controlled well, otherwise set to a little
-                    // above or below (depending on if the well is an
-                    // injector or producer) pressure in first perforation
-                    // cell.
-                    if (well_controls_well_is_shut(ctrl) || (well_controls_get_current_type(ctrl) != BHP)) {
-                        const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                        const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
-                        bhp_[w] = safety_factor*state.pressure()[first_cell];
-                    } else {
-                        bhp_[w] = well_controls_get_current_target( ctrl );
-                    }
-
-                    // Initialize well rates to match controls if type is SURFACE_RATE
-                    if (well_controls_well_is_open( ctrl ) || (well_controls_get_current_type(ctrl) == SURFACE_RATE)) {
-                        const double rate_target = well_controls_get_current_target(ctrl);
-                        const double * distr = well_controls_get_current_distr( ctrl );
+                    if (well_controls_well_is_shut(ctrl)) {
+                        // Shut well:
+                        // 1. Assign zero well rates.
                         for (int p = 0; p < np; ++p) {
-                            wellrates_[np*w + p] = rate_target * distr[p];
+                            wellrates_[np*w + p] = 0.0;
+                        }
+                        // 2. Assign bhp equal to bhp control, if
+                        //    applicable, otherwise assign equal to
+                        //    first perforation cell pressure.
+                        if (well_controls_get_current_type(ctrl) == BHP) {
+                            bhp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                            bhp_[w] = state.pressure()[first_cell];
+                        }
+                    } else {
+                        // Open well:
+                        // 1. Initialize well rates to match controls
+                        //    if type is SURFACE_RATE.  Otherwise, we
+                        //    cannot set the correct value here, so we
+                        //    assign a small rate with the correct
+                        //    sign so that any logic depending on that
+                        //    sign will work as expected.
+                        if (well_controls_get_current_type(ctrl) == SURFACE_RATE) {
+                            const double rate_target = well_controls_get_current_target(ctrl);
+                            const double * distr = well_controls_get_current_distr( ctrl );
+                            for (int p = 0; p < np; ++p) {
+                                wellrates_[np*w + p] = rate_target * distr[p];
+                            }
+                        } else {
+                            const double small_rate = 1e-14;
+                            const double sign = (wells->type[w] == INJECTOR) ? 1.0 : -1.0;
+                            for (int p = 0; p < np; ++p) {
+                                wellrates_[np*w + p] = small_rate * sign;
+                            }
+                        }
+                        // 2. Initialize bhp to be target pressure if
+                        //    bhp-controlled well, otherwise set to a
+                        //    little above or below (depending on if
+                        //    the well is an injector or producer)
+                        //    pressure in first perforation cell.
+                        if (well_controls_get_current_type(ctrl) == BHP) {
+                            bhp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                            const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                            bhp_[w] = safety_factor*state.pressure()[first_cell];
                         }
                     }
                 }
