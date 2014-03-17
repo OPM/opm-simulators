@@ -684,6 +684,9 @@ namespace {
     }
 
 
+
+
+
     void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state){
 
         const int nc = grid_.number_of_cells;
@@ -862,6 +865,10 @@ namespace {
 
     }
 
+
+
+
+
     void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state){
         // Handling BHP and SURFACE_RATE wells.
 
@@ -896,6 +903,10 @@ namespace {
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
         // DUMP(residual_.well_eq);
     }
+
+
+
+
 
     void FullyImplicitBlackoilSolver::addOldWellEq(const SolutionState& state)
     {
@@ -1018,6 +1029,8 @@ namespace {
 
 
 
+
+
     V FullyImplicitBlackoilSolver::solveJacobianSystem() const
     {
         const int np = fluid_.numPhases();
@@ -1088,7 +1101,7 @@ namespace {
         V isSg = V::Zero(nc,1);
 
         bool disgas = false;
-        bool vapoil = false;       
+        bool vapoil = false;
 
         // this is a temporary hack to find if vapoil or disgas
         // is a active component. Should be given directly from
