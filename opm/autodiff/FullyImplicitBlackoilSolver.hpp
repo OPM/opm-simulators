@@ -159,6 +159,15 @@ namespace Opm {
                      const int            aix  );
 
         void
+        addOldWellEq(const SolutionState& state);
+
+        void
+        addWellControlEq(const SolutionState& state);
+
+        void
+        addWellEq(const SolutionState& state);
+
+        void
         assemble(const V&             dtpv,
                  const BlackoilState& x   ,
                  const WellState&     xw  );
