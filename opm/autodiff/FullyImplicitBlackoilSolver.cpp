@@ -679,16 +679,14 @@ namespace {
 
         addWellEq(state);
         addWellControlEq(state);
-
-
     }
 
 
 
 
 
-    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state){
-
+    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state)
+    {
         const int nc = grid_.number_of_cells;
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
@@ -813,7 +811,6 @@ namespace {
         // injection connections total volumerates
         ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
 
-
         // compute volume ratio between connection at standard conditions
         ADB volRat = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
         std::vector<ADB> cmix_s(np, ADB::null());
@@ -843,7 +840,6 @@ namespace {
         // injecting connections total volumerates at std cond
         ADB cqt_is = cqt_i/volRat;
 
-
         // connection phase volumerates at std cond
         std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
@@ -862,14 +858,14 @@ namespace {
 
         }
         residual_.well_flux_eq = qs;
-
     }
 
 
 
 
 
-    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state){
+    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state)
+    {
         // Handling BHP and SURFACE_RATE wells.
 
         const int np = wells_.number_of_phases;
@@ -1023,8 +1019,6 @@ namespace {
         // Set the well flux equation
         residual_.well_flux_eq = state.qs + well_rates_all;
         // DUMP(residual_.well_flux_eq);
-
-
     }
 
 
