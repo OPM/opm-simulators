@@ -51,10 +51,17 @@ namespace Opm
 
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
         void init(TimeMapConstPtr timeMap,
-                  int timeStepIdx = 0);
+                  size_t beginReportStepIdx = 0,
+                  size_t endReportStepIdx = std::numeric_limits<size_t>::max());
 
         /// Total number of steps.
         int numSteps() const;
+
+        /// Index of the first report step considered
+        size_t beginReportStepIndex() const;
+
+        /// Index of the next-after-last report step to be considered
+        size_t endReportStepIndex() const;
 
         /// Current step number. This is the number of timesteps that
         /// has been completed from the start of the run. The time
@@ -112,6 +119,8 @@ namespace Opm
     private:
         Opm::TimeMapConstPtr timeMap_;
         std::vector<double> timesteps_;
+        size_t beginReportStepIdx_;
+        size_t endReportStepIdx_;
         int current_step_;
         double current_time_;
         double total_time_;
