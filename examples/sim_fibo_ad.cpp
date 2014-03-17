@@ -200,7 +200,6 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-#warning "TODO: convert the well handling code to the new parser"
 #if USE_NEW_PARSER
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
@@ -210,36 +209,48 @@ try
     SimulatorTimer simtimer;
 
     // Create new wells, well_state
-    WellsManager wells(*deck, *grid->c_grid(), props->permeability());
-    // @@@ HACK: we should really make a new well state and
-    // properly transfer old well state to it every epoch,
-    // since number of wells may change etc.
-    well_state.init(wells.c_wells(), state);
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
-    // Create and run simulator.
-    SimulatorFullyImplicitBlackoil simulator(param,
-                                             *grid->c_grid(),
-                                             *new_props,
-                                             rock_comp->isActive() ? rock_comp.get() : 0,
-                                             wells,
-                                             linsolver,
-                                             grav,
-                                             outputWriter);
-    simtimer.init(timeMap);
-    SimulatorReport report = simulator.run(simtimer, state, well_state);
+    SimulatorReport fullReport;
+    for (size_t episodeIdx = 0; episodeIdx < timeMap->numTimesteps(); ++episodeIdx) {
+        WellsManager wells(eclipseState,
+                           episodeIdx,
+                           *grid->c_grid(),
+                           props->permeability());
 
-    if (output) {
-        report.reportParam(outStream);
-        warnIfUnusedParams(param);
+        // @@@ HACK: we should really make a new well state and
+        // properly transfer old well state to it every epoch,
+        // since number of wells may change etc.
+        well_state.init(wells.c_wells(), state);
+
+        // Create and run simulator.
+        SimulatorFullyImplicitBlackoil simulator(param,
+                                                 *grid->c_grid(),
+                                                 *new_props,
+                                                 rock_comp->isActive() ? rock_comp.get() : 0,
+                                                 wells,
+                                                 linsolver,
+                                                 grav,
+                                                 outputWriter);
+        simtimer.init(timeMap,
+                      /*beginReportStepIdx=*/episodeIdx,
+                      /*endReportStepIdx=*/episodeIdx + 1);
+        SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+        fullReport += episodeReport;
+
+        if (output) {
+            episodeReport.reportParam(outStream);
+        }
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
-    report.report(std::cout);
+    fullReport.report(std::cout);
 
     if (output) {
         std::string filename = output_dir + "/walltime.param";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        report.reportParam(tot_os);
+        fullReport.reportParam(tot_os);
+        warnIfUnusedParams(param);
     }
 #else
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
