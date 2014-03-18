@@ -19,11 +19,11 @@
 
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 
-
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -231,6 +231,7 @@ namespace {
         {
             const SolutionState state = constantState(x, xw);
             computeAccum(state, 0);
+            computeWellConnectionPressures(state, xw);
         }
 
         const double atol  = 1.0e-12;
@@ -613,6 +614,75 @@ namespace {
 
 
 
+    void FullyImplicitBlackoilSolver::computeWellConnectionPressures(const SolutionState& state,
+                                                                     const WellState& xw)
+    {
+        // 1. Compute properties required by computeConnectionPressureDelta().
+        //    Note that some of the complexity of this part is due to the function
+        //    taking std::vector<double> arguments, and not Eigen objects.
+        const int nperf = wells_.well_connpos[wells_.number_of_wells];
+        const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
+        // Compute b, rsmax, rvmax values for perforations.
+        const ADB perf_press = subset(state.pressure, well_cells);
+        std::vector<PhasePresence> perf_cond(nperf);
+        const std::vector<PhasePresence>& pc = phaseCondition();
+        for (int perf = 0; perf < nperf; ++perf) {
+            perf_cond[perf] = pc[well_cells[perf]];
+        }
+        const PhaseUsage& pu = fluid_.phaseUsage();
+        DataBlock b(nperf, pu.num_phases);
+        std::vector<double> rssat_perf(nperf, 0.0);
+        std::vector<double> rvsat_perf(nperf, 0.0);
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const ADB bw = fluid_.bWat(perf_press, well_cells);
+            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw.value();
+        }
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB perf_rs = subset(state.rs, well_cells);
+            const ADB bo = fluid_.bOil(perf_press, perf_rs, perf_cond, well_cells);
+            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo.value();
+            const V rssat = fluidRsSat(perf_press.value(), well_cells);
+            rssat_perf.assign(rssat.data(), rssat.data() + nperf);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB perf_rv = subset(state.rv, well_cells);
+            const ADB bg = fluid_.bGas(perf_press, perf_rv, perf_cond, well_cells);
+            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg.value();
+            const V rvsat = fluidRvSat(perf_press.value(), well_cells);
+            rvsat_perf.assign(rvsat.data(), rvsat.data() + nperf);
+        }
+        // b is row major, so can just copy data.
+        std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);
+        // Extract well connection depths.
+        const V depth = Eigen::Map<DataBlock>(grid_.cell_centroids, grid_.number_of_cells, grid_.dimensions).rightCols<1>();
+        const V pdepth = subset(depth, well_cells);
+        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+        // Surface density.
+        std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
+        // Gravity
+        double grav = 0.0;
+        const double* g = geo_.gravity();
+        const int dim = grid_.dimensions;
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                assert(g[dd] == 0.0);
+            }
+            grav = g[dim - 1];
+        }
+
+        // 2. Compute pressure deltas, and store the results.
+        std::vector<double> cdp = WellDensitySegmented
+            ::computeConnectionPressureDelta(wells_, xw, fluid_.phaseUsage(),
+                                             b_perf, rssat_perf, rvsat_perf, perf_depth,
+                                             surf_dens, grav);
+        well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
+    }
+
+
+
+
+
     void
     FullyImplicitBlackoilSolver::
     assemble(const V&             pvdt,
@@ -695,9 +765,8 @@ namespace {
         V Tw = Eigen::Map<const V>(wells_.WI, nperf);
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
 
-        // pressure drop from solution
-        double tmp[2] = {-1.1319e-09, -2.0926e-09 };
-        V cdp = Eigen::Map<const V>(tmp, 2);
+        // pressure diffs computed already (once per step, not changing per iteration)
+        const V& cdp = well_perforation_pressure_diffs_;
 
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.

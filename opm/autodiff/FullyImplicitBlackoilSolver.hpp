@@ -135,6 +135,7 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
@@ -157,6 +158,9 @@ namespace Opm {
         void
         computeAccum(const SolutionState& state,
                      const int            aix  );
+
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellState& xw);
 
         void
         addOldWellEq(const SolutionState& state);
