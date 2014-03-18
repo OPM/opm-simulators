@@ -71,7 +71,7 @@ namespace Opm
              BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
-             LinearSolverInterface& linsolver,
+             FullyImplicitSystemSolverInterface& linsolver,
              const double* gravity,
              EclipseWriter &writer);
 
@@ -113,7 +113,7 @@ namespace Opm
                                                                    BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
-                                                                   LinearSolverInterface& linsolver,
+                                                                   FullyImplicitSystemSolverInterface& linsolver,
                                                                    const double* gravity,
                                                                    EclipseWriter &eclipseWriter)
 
@@ -261,7 +261,7 @@ namespace Opm
                                                BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
-                                               LinearSolverInterface& linsolver,
+                                               FullyImplicitSystemSolverInterface& linsolver,
                                                const double* gravity,
                                                EclipseWriter &eclipseWriter)
         : grid_(grid),

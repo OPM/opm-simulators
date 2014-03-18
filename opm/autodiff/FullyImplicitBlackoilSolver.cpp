@@ -194,7 +194,7 @@ namespace {
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
                                 const Wells&                    wells,
-                                const LinearSolverInterface&    linsolver)
+                                const FullyImplicitSystemSolverInterface&    linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -643,13 +643,13 @@ namespace {
             // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
             // std::cout << rq_[phase].mflux;
 
-            residual_.mass_balance[ phaseIdx ] =
+            residual_.material_balance_eq[ phaseIdx ] =
                 pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
                 + ops_.div*rq_[phaseIdx].mflux;
 
 
             // DUMP(ops_.div*rq_[phase].mflux);
-            // DUMP(residual_.mass_balance[phase]);
+            // DUMP(residual_.material_balance_eq[phase]);
         }
 
         // -------- Extra (optional) rs and rv contributions to the mass balance equations --------
@@ -663,16 +663,16 @@ namespace {
                                                 rq_[po].head.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
-            residual_.mass_balance[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
+            residual_.material_balance_eq[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
 
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
             const UpwindSelector<double> upwindGas(grid_, ops_,
                                                 rq_[pg].head.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
-            residual_.mass_balance[ Oil ] += ops_.div * (rv_face * rq_[pg].mflux);
+            residual_.material_balance_eq[ Oil ] += ops_.div * (rv_face * rq_[pg].mflux);
 
-            // DUMP(residual_.mass_balance[ Gas ]);
+            // DUMP(residual_.material_balance_eq[ Gas ]);
 
         }
 
@@ -772,7 +772,7 @@ namespace {
             // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
             // DUMP(well_contribs[phase]);
-            residual_.mass_balance[phase] += well_contribs[phase];
+            residual_.material_balance_eq[phase] += well_contribs[phase];
         }
         if (active_[Gas] && active_[Oil]) {
             const int oilpos = pu.phase_pos[Oil];
@@ -782,8 +782,8 @@ namespace {
             well_rates_all += superset(wops_.p2w * (well_perf_rates[oilpos]*rs_perf), Span(nw, 1, gaspos*nw), nw*np);
             well_rates_all += superset(wops_.p2w * (well_perf_rates[gaspos]*rv_perf), Span(nw, 1, oilpos*nw), nw*np);
             // DUMP(well_contribs[gaspos] + well_contribs[oilpos]*state.rs);
-            residual_.mass_balance[gaspos] += well_contribs[oilpos]*state.rs;
-            residual_.mass_balance[oilpos] += well_contribs[gaspos]*state.rv;
+            residual_.material_balance_eq[gaspos] += well_contribs[oilpos]*state.rs;
+            residual_.material_balance_eq[oilpos] += well_contribs[gaspos]*state.rv;
         }
 
         // Set the well flux equation
@@ -826,40 +826,7 @@ namespace {
 
     V FullyImplicitBlackoilSolver::solveJacobianSystem() const
     {
-        const int np = fluid_.numPhases();
-        ADB mass_res = residual_.mass_balance[0];
-        for (int phase = 1; phase < np; ++phase) {
-            mass_res = vertcat(mass_res, residual_.mass_balance[phase]);
-        }
-        const ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
-        const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
-        // DUMP(total_residual);
-
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
-
-        V dx(V::Zero(total_residual.size()));
-        Opm::LinearSolverInterface::LinearSolverReport rep
-            = linsolver_.solve(matr.rows(), matr.nonZeros(),
-                               matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               total_residual.value().data(), dx.data());
-        /*
-        std::ofstream filestream("matrix.out");
-        filestream << matr;
-        filestream.close();
-        std::ofstream filestream2("sol.out");
-        filestream2 << dx;
-        filestream2.close();
-        std::ofstream filestream3("r.out");
-        filestream3 << total_residual.value();
-        filestream3.close(); */
-
-
-        if (!rep.converged) {
-            OPM_THROW(std::runtime_error,
-                      "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
-                      "Linear solver convergence failure.");
-        }
-        return dx;
+        return linsolver_.linearSolve(residual_);
     }
 
 
@@ -1268,8 +1235,8 @@ namespace {
     {
         double r = 0;
         for (std::vector<ADB>::const_iterator
-                 b = residual_.mass_balance.begin(),
-                 e = residual_.mass_balance.end();
+                 b = residual_.material_balance_eq.begin(),
+                 e = residual_.material_balance_eq.end();
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().norm());
