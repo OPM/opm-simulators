@@ -29,6 +29,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -48,7 +49,6 @@
 
 #include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <boost/filesystem.hpp>
@@ -77,7 +77,7 @@ namespace Opm
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
-                            WellState& well_state);
+                            WellStateFullyImplicitBlackoil& well_state);
 
     private:
         // Data.
@@ -127,7 +127,7 @@ namespace Opm
 
     SimulatorReport SimulatorFullyImplicitBlackoil::run(SimulatorTimer& timer,
                                                         BlackoilState& state,
-                                                        WellState& well_state)
+                                                        WellStateFullyImplicitBlackoil& well_state)
     {
         return pimpl_->run(timer, state, well_state);
     }
@@ -198,7 +198,7 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
-    static void outputWellStateMatlab(const Opm::WellState& well_state,
+    static void outputWellStateMatlab(const Opm::WellStateFullyImplicitBlackoil& well_state,
                                   const int step,
                                   const std::string& output_dir)
     {
@@ -312,10 +312,10 @@ namespace Opm
 
     SimulatorReport SimulatorFullyImplicitBlackoil::Impl::run(SimulatorTimer& timer,
                                                               BlackoilState& state,
-                                                              WellState& well_state)
+                                                              WellStateFullyImplicitBlackoil& well_state)
     {
-        eclipseWriter_.writeInit(timer, state, well_state);
-        eclipseWriter_.writeTimeStep(timer, state, well_state);
+        eclipseWriter_.writeInit(timer, state, well_state.basicWellState());
+        eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
 
         // Initialisation.
         std::vector<double> porevol;
@@ -384,13 +384,9 @@ namespace Opm
 
                 // Optionally, check if well controls are satisfied.
                 if (check_well_controls_) {
-                    Opm::computePhaseFlowRatesPerWell(*wells_,
-                                                      well_state.perfRates(),
-                                                      fractional_flows,
-                                                      well_resflows_phase);
                     std::cout << "Checking well conditions." << std::endl;
                     // For testing we set surface := reservoir
-                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
+                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_state.wellRates(), well_state.wellRates());
                     ++well_control_iteration;
                     if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
                         OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
@@ -426,7 +422,7 @@ namespace Opm
 
             // write an output file for later inspection
             if (output_) {
-                eclipseWriter_.writeTimeStep(timer, state, well_state);
+                eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
             }
 
             // advance to next timestep before reporting at this location

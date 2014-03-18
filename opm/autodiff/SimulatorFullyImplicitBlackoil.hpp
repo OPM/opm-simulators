@@ -37,7 +37,7 @@ namespace Opm
     class LinearSolverInterface;
     class SimulatorTimer;
     class BlackoilState;
-    class WellState;
+    class WellStateFullyImplicitBlackoil;
     struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
@@ -84,7 +84,7 @@ namespace Opm
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
-                            WellState& well_state);
+                            WellStateFullyImplicitBlackoil& well_state);
 
     private:
         class Impl;

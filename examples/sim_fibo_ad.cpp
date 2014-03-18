@@ -39,7 +39,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
@@ -205,7 +205,7 @@ try
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
 
-    WellState well_state;
+    WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
     SimulatorTimer simtimer;
 
@@ -248,7 +248,7 @@ try
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
-    WellState well_state;
+    WellStateFullyImplicitBlackoil well_state;
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
