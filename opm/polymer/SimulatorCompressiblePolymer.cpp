@@ -388,7 +388,7 @@ namespace Opm
             Opm::computeTransportSource(props_, wells_, well_state, transport_src);
 
             // Find inflow rate.
-            const double current_time = timer.currentTime();
+            const double current_time = timer.simulationTimeElapsed();
             double stepsize = timer.currentStepLength();
             polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
 
@@ -488,12 +488,12 @@ namespace Opm
                       << std::endl;
             std::cout.precision(8);
 
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
+            watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
                           produced[0]/(produced[0] + produced[1]),
                           tot_produced[0]/tot_porevol_init);
             if (wells_) {
             wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
-                            state.saturation(), timer.currentTime() + timer.currentStepLength(),
+                            state.saturation(), timer.simulationTimeElapsed() + timer.currentStepLength(),
                             well_state.bhp(), well_state.perfRates());
             }
         }
