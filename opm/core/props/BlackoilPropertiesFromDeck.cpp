@@ -139,9 +139,9 @@ namespace Opm
 
         // Unfortunate lack of pointer smartness here...
         const int sat_samples = param.getDefault("sat_tab_size", 0);
-        std::string threephase_model = param.getDefault<std::string>("threephase_model", "simple");
-        if (newParserDeck->hasKeyword("ENDSCALE") && threephase_model != "simple") {
-            OPM_THROW(std::runtime_error, "Sorry, end point scaling currently available for the 'simple' model only.");
+        std::string threephase_model = param.getDefault<std::string>("threephase_model", "gwseg");
+        if (newParserDeck->hasKeyword("ENDSCALE") && threephase_model != "gwseg") {
+            OPM_THROW(std::runtime_error, "Sorry, end point scaling currently available for the 'gwseg' model only.");
         }
         if (sat_samples > 1) {
             if (threephase_model == "stone2") {
