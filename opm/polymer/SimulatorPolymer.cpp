@@ -203,7 +203,6 @@ namespace Opm
           polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
-          gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),

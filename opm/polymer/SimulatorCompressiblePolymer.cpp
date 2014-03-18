@@ -126,8 +126,6 @@ namespace Opm
         WellsManager& wells_manager_;
         const Wells* wells_;
         const PolymerInflowInterface& polymer_inflow_;
-        const std::vector<double>& src_;
-        const FlowBoundaryConditions* bcs_;
         const double* gravity_;
         // Solvers
         CompressibleTpfaPolymer psolver_;
@@ -190,8 +188,6 @@ namespace Opm
           wells_manager_(wells_manager),
           wells_(wells_manager.c_wells()),
           polymer_inflow_(polymer_inflow),
-          src_(src),
-          bcs_(bcs),
           gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
