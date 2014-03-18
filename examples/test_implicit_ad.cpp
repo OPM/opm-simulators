@@ -23,6 +23,7 @@
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -37,7 +38,6 @@
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
 #include <boost/shared_ptr.hpp>
@@ -110,7 +110,7 @@ try
     initStateBasic(*g, props0, param, 0.0, state);
     initBlackoilSurfvol(*g, props0, state);
 
-    Opm::WellState well_state;
+    Opm::WellStateFullyImplicitBlackoil well_state;
     well_state.init(wells.get(), state);
 
     solver.step(1.0, state, well_state);

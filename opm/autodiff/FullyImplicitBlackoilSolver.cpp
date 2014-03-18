@@ -24,12 +24,12 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
 
@@ -223,7 +223,7 @@ namespace {
     FullyImplicitBlackoilSolver::
     step(const double   dt,
          BlackoilState& x ,
-         WellState&     xw)
+         WellStateFullyImplicitBlackoil& xw)
     {
         const V pvdt = geo_.poreVolume() / dt;
 
@@ -331,7 +331,7 @@ namespace {
 
     FullyImplicitBlackoilSolver::SolutionState
     FullyImplicitBlackoilSolver::constantState(const BlackoilState& x,
-                                               const WellState&     xw)
+                                               const WellStateFullyImplicitBlackoil& xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -427,7 +427,7 @@ namespace {
 
     FullyImplicitBlackoilSolver::SolutionState
     FullyImplicitBlackoilSolver::variableState(const BlackoilState& x,
-                                               const WellState&     xw)
+                                               const WellStateFullyImplicitBlackoil& xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -616,7 +616,7 @@ namespace {
     FullyImplicitBlackoilSolver::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
-             const WellState&     xw  )
+             const WellStateFullyImplicitBlackoil& xw  )
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
@@ -878,7 +878,7 @@ namespace {
 
     void FullyImplicitBlackoilSolver::updateState(const V& dx,
                                                   BlackoilState& state,
-                                                  WellState& well_state)
+                                                  WellStateFullyImplicitBlackoil& well_state)
     {
         const int np = fluid_.numPhases();
         const int nc = grid_.number_of_cells;
