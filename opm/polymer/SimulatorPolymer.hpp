@@ -39,7 +39,7 @@ namespace Opm
     class SimulatorTimer;
     class PolymerState;
     class WellState;
-    class SimulatorReport;
+    struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
     class SimulatorPolymer

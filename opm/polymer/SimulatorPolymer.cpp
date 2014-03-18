@@ -140,7 +140,6 @@ namespace Opm
         const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
-        const double* gravity_;
         // Solvers
         IncompTpfaPolymer psolver_;
         TransportSolverTwophasePolymer tsolver_;
