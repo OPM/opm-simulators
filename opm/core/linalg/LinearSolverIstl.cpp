@@ -30,6 +30,7 @@
 
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
+#include <dune/common/version.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
@@ -61,7 +62,7 @@ namespace Opm
         solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
                     double prolongateFactor, int smoothsteps);
 
-#ifdef HAS_DUNE_FAST_AMG
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
         LinearSolverInterface::LinearSolverReport
         solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
                   double prolongateFactor, int smoothsteps);
