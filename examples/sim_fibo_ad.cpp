@@ -207,9 +207,10 @@ try
     WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
     SimulatorTimer simtimer;
-
-    // Create new wells, well_state
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
+
+    // initialize variables
+    simtimer.init(timeMap, /*beginReportStepIdx=*/0, /*endReportStepIdx=*/0);
 
     SimulatorReport fullReport;
     for (size_t episodeIdx = 0; episodeIdx < timeMap->numTimesteps(); ++episodeIdx) {
@@ -218,10 +219,19 @@ try
                            *grid->c_grid(),
                            props->permeability());
 
-        // @@@ HACK: we should really make a new well state and
-        // properly transfer old well state to it every epoch,
-        // since number of wells may change etc.
-        well_state.init(wells.c_wells(), state);
+        if (episodeIdx == 0) {
+            // @@@ HACK: we should really make a new well state and
+            // properly transfer old well state to it every epoch,
+            // since number of wells may change etc.
+            well_state.init(wells.c_wells(), state);
+        }
+
+        simtimer.init(timeMap,
+                      /*beginReportStepIdx=*/episodeIdx,
+                      /*endReportStepIdx=*/episodeIdx + 1);
+
+        if (episodeIdx == 0)
+            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil simulator(param,
@@ -232,10 +242,9 @@ try
                                                  linsolver,
                                                  grav,
                                                  outputWriter);
-        simtimer.init(timeMap,
-                      /*beginReportStepIdx=*/episodeIdx,
-                      /*endReportStepIdx=*/episodeIdx + 1);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+
+        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;
 
         if (output) {
@@ -265,6 +274,7 @@ try
     // Use timer for last epoch to obtain total time.
     deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
     simtimer.init(*deck);
+
     const double total_time = simtimer.totalTime();
     for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
         // Set epoch index.
@@ -296,6 +306,9 @@ try
             well_state.init(wells.c_wells(), state);
         }
 
+        if (epoch == 0)
+            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil simulator(param,
                                                  *grid->c_grid(),
@@ -305,6 +318,8 @@ try
                                                  linsolver,
                                                  grav,
                                                  outputWriter);
+        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+
         if (epoch == 0) {
             warnIfUnusedParams(param);
         }
