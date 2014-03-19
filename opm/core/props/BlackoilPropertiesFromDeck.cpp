@@ -50,7 +50,7 @@ namespace Opm
            rock_.init(newParserDeck, grid);
         }
         pvt_.init(newParserDeck, /*numSamples=*/0);
-        SaturationPropsFromDeck<SatFuncSimpleUniform>* ptr
+        SaturationPropsFromDeck<SatFuncSimpleNonuniform>* ptr
             = new SaturationPropsFromDeck<SatFuncSimpleNonuniform>();
         satprops_.reset(ptr);
         ptr->init(newParserDeck, grid, /*numSamples=*/0);
