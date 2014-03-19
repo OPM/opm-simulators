@@ -86,6 +86,19 @@ namespace Opm
         virtual double getTolerance() const;
 
     private:
+        /// \brief Solve the linear system using ISTL
+        /// \param[in] opA The linear operator of the system to solve.
+        /// \param[in,out] x The vector with the initial guess that will store
+        ///                 the computed solution
+        /// \param[out]    solution C array for storing the solution vector.
+        /// \param[in]     b The vector containing the right hand side of the system.
+        /// \param[in]     sp The scalar product to use.
+        /// \param[in]     comm The information about the parallel domain decomposition.
+        /// \param[in]     maxit The maximum number of iterations allowed.
+        template<class O, class V, class S, class C>
+        LinearSolverReport solveSystem(O& opA, V& x, double* solution,
+                                       V& b, S& sp, const C& comm, int maxit) const;
+
         double linsolver_residual_tolerance_;
         int linsolver_verbosity_;
         enum LinsolverType { CG_ILU0 = 0, CG_AMG = 1, BiCGStab_ILU0 = 2, FastAMG=3, KAMG=4 };
