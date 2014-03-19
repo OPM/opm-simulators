@@ -59,13 +59,13 @@ namespace Opm
         return ads_index_;
     }
     
-    std::vector<double>
+    const std::vector<double>&
     PolymerProperties::shearWaterVelocity() const
     {
         return water_vel_vals_;
     } 
 
-    std::vector<double>
+    const std::vector<double>&
     PolymerProperties::shearVrf() const
     {
         return shear_vrf_vals_;

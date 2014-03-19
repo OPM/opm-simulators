@@ -164,9 +164,9 @@ namespace Opm
 
         int adsIndex() const;
         
-        std::vector<double> shearWaterVelocity() const;
+        const std::vector<double>& shearWaterVelocity() const;
 
-        std::vector<double> shearVrf() const;
+        const std::vector<double>& shearVrf() const;
 
         double viscMult(double c) const;
 
