@@ -24,11 +24,10 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <string>
-
+#include <boost/any.hpp>
 
 namespace Opm
 {
-
 
     /// Concrete class encapsulating some dune-istl linear solvers.
     class LinearSolverIstl : public LinearSolverInterface
@@ -75,7 +74,8 @@ namespace Opm
                                          const int* ja,
                                          const double* sa,
                                          const double* rhs,
-                                         double* solution) const;
+                                         double* solution,
+                                         const boost::any& comm=boost::any()) const;
 
         /// Set tolerance for the residual in dune istl linear solver.
         /// \param[in] tol         tolerance value

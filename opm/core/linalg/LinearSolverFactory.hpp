@@ -74,7 +74,8 @@ namespace Opm
                                          const int* ja,
                                          const double* sa,
                                          const double* rhs,
-                                         double* solution) const;
+                                         double* solution,
+                                         const boost::any& add=boost::any()) const;
 
         /// Set tolerance for the linear solver.
         /// \param[in] tol         tolerance value

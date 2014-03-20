@@ -97,9 +97,10 @@ namespace Opm
                                const int* ja,
                                const double* sa,
                                const double* rhs,
-                               double* solution) const
+                               double* solution,
+                               const boost::any& add) const
     {
-        return solver_->solve(size, nonzeros, ia, ja, sa, rhs, solution);
+        return solver_->solve(size, nonzeros, ia, ja, sa, rhs, solution, add);
     }
 
     void LinearSolverFactory::setTolerance(const double tol)
