@@ -314,9 +314,6 @@ namespace Opm
                                                               BlackoilState& state,
                                                               WellStateFullyImplicitBlackoil& well_state)
     {
-        eclipseWriter_.writeInit(timer, state, well_state.basicWellState());
-        eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
-
         // Initialisation.
         std::vector<double> porevol;
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
