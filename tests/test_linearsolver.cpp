@@ -30,6 +30,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <dune/common/version.hh>
 #include <memory>
 #include <cstdlib>
 #include <string>
@@ -161,6 +162,7 @@ BOOST_AUTO_TEST_CASE(BiCGILUTest)
     run_test(param);
 }
 
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
 BOOST_AUTO_TEST_CASE(FastAMGTest)
 {
     Opm::parameter::ParameterGroup param;
@@ -178,5 +180,5 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
     run_test(param);
 }
-
+#endif
 #endif
