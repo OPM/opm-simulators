@@ -213,13 +213,20 @@ try
     simtimer.init(timeMap, /*beginReportStepIdx=*/0, /*endReportStepIdx=*/0);
 
     SimulatorReport fullReport;
-    for (size_t episodeIdx = 0; episodeIdx < timeMap->numTimesteps(); ++episodeIdx) {
+    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        // Report on start of a report step.
+        std::cout << "\n"
+                  << "---------------------------------------------------------------\n"
+                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
+                  << "---------------------------------------------------------------\n"
+                  << "\n";
+
         WellsManager wells(eclipseState,
-                           episodeIdx,
+                           reportStepIdx,
                            *grid->c_grid(),
                            props->permeability());
 
-        if (episodeIdx == 0) {
+        if (reportStepIdx == 0) {
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
@@ -227,10 +234,10 @@ try
         }
 
         simtimer.init(timeMap,
-                      /*beginReportStepIdx=*/episodeIdx,
-                      /*endReportStepIdx=*/episodeIdx + 1);
+                      /*beginReportStepIdx=*/reportStepIdx,
+                      /*endReportStepIdx=*/reportStepIdx + 1);
 
-        if (episodeIdx == 0)
+        if (reportStepIdx == 0)
             outputWriter.writeInit(simtimer, state, well_state.basicWellState());
 
         // Create and run simulator.
