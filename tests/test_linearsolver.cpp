@@ -128,6 +128,7 @@ BOOST_AUTO_TEST_CASE(DefaultTest)
 {
     Opm::parameter::ParameterGroup param;
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -138,6 +139,7 @@ BOOST_AUTO_TEST_CASE(CGAMGTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("1"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -147,6 +149,7 @@ BOOST_AUTO_TEST_CASE(CGILUTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("0"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -156,6 +159,7 @@ BOOST_AUTO_TEST_CASE(BiCGILUTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("2"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -166,6 +170,7 @@ BOOST_AUTO_TEST_CASE(FastAMGTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("3"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
