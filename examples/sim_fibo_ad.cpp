@@ -242,16 +242,11 @@ try
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  linsolver,
-                                                 grav,
-                                                 outputWriter);
+                                                 grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;
-
-        if (output) {
-            episodeReport.reportParam(outStream);
-        }
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
@@ -318,8 +313,7 @@ try
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  linsolver,
-                                                 grav,
-                                                 outputWriter);
+                                                 grav);
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
 
         if (epoch == 0) {
