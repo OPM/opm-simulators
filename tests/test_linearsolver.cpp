@@ -60,21 +60,18 @@ std::shared_ptr<MyMatrix> createLaplacian(int N)
 
         int x=row%N;
         int y=row/N;
-        double dval=0;
         if(y>0)
         {
             mm->colIndex[nnz]=row-N;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         if(x>0)
         {
             mm->colIndex[nnz]=row-1;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         mm->colIndex[nnz]=row;
-        mm->data[nnz++]=dval+(x<N-1)+(y<N-1);
+        mm->data[nnz++]=4;
         if(x<N-1)
         {
             mm->colIndex[nnz]=row+1;
