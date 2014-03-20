@@ -420,13 +420,13 @@ namespace Opm
                 tstep_os.close();
             }
 
+            // advance to next timestep before reporting at this location
+            ++timer;
+
             // write an output file for later inspection
             if (output_) {
                 eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
             }
-
-            // advance to next timestep before reporting at this location
-            ++timer;
         }
 
         total_timer.stop();
