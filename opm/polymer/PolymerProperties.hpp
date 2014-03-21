@@ -166,7 +166,7 @@ namespace Opm
         
         const std::vector<double>& shearWaterVelocity() const;
 
-        const std::vector<double>& shearVrf() const;
+        double shearVrf(const double velocity) const;
 
         double viscMult(double c) const;
 

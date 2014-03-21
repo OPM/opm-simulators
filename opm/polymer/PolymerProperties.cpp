@@ -65,10 +65,10 @@ namespace Opm
         return water_vel_vals_;
     } 
 
-    const std::vector<double>&
-    PolymerProperties::shearVrf() const
+    double
+    PolymerProperties::shearVrf(const double velocity) const
     {
-        return shear_vrf_vals_;
+        return Opm::linearInterpolation(water_vel_vals_, shear_vrf_vals_, velocity);
     }
 
     double PolymerProperties::viscMult(double c) const
