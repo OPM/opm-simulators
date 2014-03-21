@@ -103,10 +103,6 @@ try
 #if USE_NEW_PARSER
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-    std::shared_ptr<EclipseGridParser> deck;
-    deck.reset(new EclipseGridParser(deck_filename));
 #else
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
@@ -119,8 +115,7 @@ try
     grid.reset(new GridManager(*deck));
 #endif
 
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-#if 0 // USE_NEW_PARSER
+#if USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 #else
     Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
