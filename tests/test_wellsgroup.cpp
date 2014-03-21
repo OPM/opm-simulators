@@ -59,16 +59,18 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
         std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
         BOOST_CHECK_EQUAL(well->name(), wellsGroup->name());
         if (well->isInjector(2)) {
-            BOOST_CHECK_EQUAL(well->getSurfaceInjectionRate(2), wellsGroup->injSpec().surface_flow_max_rate_);
-            BOOST_CHECK_EQUAL(well->getBHPLimit(2), wellsGroup->injSpec().BHP_limit_);
-            BOOST_CHECK_EQUAL(well->getReservoirInjectionRate(2), wellsGroup->injSpec().reservoir_flow_max_rate_);
+            const WellInjectionProperties& properties = well->getInjectionProperties(2);
+            BOOST_CHECK_EQUAL(properties.surfaceInjectionRate, wellsGroup->injSpec().surface_flow_max_rate_);
+            BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->injSpec().BHP_limit_);
+            BOOST_CHECK_EQUAL(properties.reservoirInjectionRate, wellsGroup->injSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->prodSpec().guide_rate_);
         }
         if (well->isProducer(2)) {
-            BOOST_CHECK_EQUAL(well->getResVRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(well->getBHPLimit(2), wellsGroup->prodSpec().BHP_limit_);
-            BOOST_CHECK_EQUAL(well->getOilRate(2), wellsGroup->prodSpec().oil_max_rate_);
-            BOOST_CHECK_EQUAL(well->getWaterRate(2), wellsGroup->prodSpec().water_max_rate_);
+            const WellProductionProperties& properties = well->getProductionProperties(2);
+            BOOST_CHECK_EQUAL(properties.ResVRate, wellsGroup->prodSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(properties.BHPLimit, wellsGroup->prodSpec().BHP_limit_);
+            BOOST_CHECK_EQUAL(properties.OilRate, wellsGroup->prodSpec().oil_max_rate_);
+            BOOST_CHECK_EQUAL(properties.WaterRate, wellsGroup->prodSpec().water_max_rate_);
             BOOST_CHECK_EQUAL(0.0, wellsGroup->injSpec().guide_rate_);
         }
     }
