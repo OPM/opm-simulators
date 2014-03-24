@@ -917,7 +917,7 @@ namespace {
 
         // Add well contributions to mass balance equations
         for (int phase = 0; phase < np; ++phase) {
-            residual_.mass_balance[phase] += superset(cq_s[phase],well_cells,nc);
+            residual_.mass_balance[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
         // Add WELL EQUATIONS
