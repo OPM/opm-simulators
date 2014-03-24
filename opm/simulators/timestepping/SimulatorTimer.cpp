@@ -102,7 +102,7 @@ namespace Opm
     /// Current step number.
     int SimulatorTimer::currentStepNum() const
     {
-        return current_step_;
+        return current_step_ + beginReportStepIdx_;
     }
 
     /// Set current step number.
@@ -143,8 +143,7 @@ namespace Opm
     {
         if (timeMap_)
             return
-                timeMap_->getTimePassedUntil(beginReportStepIdx_ + current_step_)
-                - timeMap_->getTimePassedUntil(beginReportStepIdx_);
+                timeMap_->getTimePassedUntil(beginReportStepIdx_ + current_step_);
         else
             return current_time_;
     }
@@ -171,8 +170,7 @@ namespace Opm
     {
         if (timeMap_)
             return
-                timeMap_->getTimePassedUntil(endReportStepIdx_) -
-                timeMap_->getTimePassedUntil(beginReportStepIdx_);
+                timeMap_->getTotalTime();
         else
             return total_time_;
     }
