@@ -103,10 +103,6 @@ try
 #if USE_NEW_PARSER
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-    std::shared_ptr<EclipseGridParser> deck;
-    deck.reset(new EclipseGridParser(deck_filename));
 #else
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
@@ -119,8 +115,7 @@ try
     grid.reset(new GridManager(*deck));
 #endif
 
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-#if 0 // USE_NEW_PARSER
+#if USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 #else
     Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
@@ -213,13 +208,20 @@ try
     simtimer.init(timeMap, /*beginReportStepIdx=*/0, /*endReportStepIdx=*/0);
 
     SimulatorReport fullReport;
-    for (size_t episodeIdx = 0; episodeIdx < timeMap->numTimesteps(); ++episodeIdx) {
+    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        // Report on start of a report step.
+        std::cout << "\n"
+                  << "---------------------------------------------------------------\n"
+                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
+                  << "---------------------------------------------------------------\n"
+                  << "\n";
+
         WellsManager wells(eclipseState,
-                           episodeIdx,
+                           reportStepIdx,
                            *grid->c_grid(),
                            props->permeability());
 
-        if (episodeIdx == 0) {
+        if (reportStepIdx == 0) {
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
@@ -227,10 +229,10 @@ try
         }
 
         simtimer.init(timeMap,
-                      /*beginReportStepIdx=*/episodeIdx,
-                      /*endReportStepIdx=*/episodeIdx + 1);
+                      /*beginReportStepIdx=*/reportStepIdx,
+                      /*endReportStepIdx=*/reportStepIdx + 1);
 
-        if (episodeIdx == 0)
+        if (reportStepIdx == 0)
             outputWriter.writeInit(simtimer, state, well_state.basicWellState());
 
         // Create and run simulator.
