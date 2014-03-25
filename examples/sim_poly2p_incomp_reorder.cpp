@@ -47,6 +47,9 @@
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
@@ -87,6 +90,7 @@ try
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
+    EclipseStateConstPtr eclipseState;
     PolymerState state;
     Opm::PolymerProperties poly_props;
     // bool check_well_controls = false;
@@ -94,6 +98,9 @@ try
     double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
+        ParserPtr parser(new Opm::Parser());
+        eclipseState.reset(new Opm::EclipseState(parser->parseFile(deck_filename)));
+
         deck.reset(new EclipseGridParser(deck_filename));
         // Grid init
         grid.reset(new GridManager(*deck));
@@ -266,6 +273,7 @@ try
         rep = simulator.run(simtimer, state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
+
         WellState well_state;
         int step = 0;
         SimulatorTimer simtimer;
@@ -304,7 +312,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
