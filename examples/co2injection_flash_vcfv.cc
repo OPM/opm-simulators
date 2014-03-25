@@ -39,11 +39,6 @@ namespace Properties {
 NEW_TYPE_TAG(Co2InjectionFlashVcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionFlashVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
-// for the flash model we want to use thermodynamic hints or it will
-// get _very_ slow.
-SET_BOOL_PROP(Co2InjectionFlashVcfvProblem, EnableVolumeVariablesCache, true);
-SET_BOOL_PROP(Co2InjectionFlashVcfvProblem, EnableThermodynamicHints, true);
-
 // use the flash solver adapted to the CO2 injection problem
 SET_TYPE_PROP(
     Co2InjectionFlashVcfvProblem, FlashSolver,
