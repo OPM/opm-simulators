@@ -1045,7 +1045,7 @@ namespace {
                 // Constraint number ctrl_index was broken, switch to it.
                 std::cout << "Switching control mode for well " << wells_.name[w]
                           << " from " << modestring[well_controls_iget_type(wc, current)]
-                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)];
+                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 xw.currentControls()[w] = ctrl_index;
             }
         }
