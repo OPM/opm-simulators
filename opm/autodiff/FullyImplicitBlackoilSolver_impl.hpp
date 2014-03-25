@@ -25,12 +25,12 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
 
@@ -231,7 +231,7 @@ namespace {
     FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
-         WellState&     xw)
+         WellStateFullyImplicitBlackoil& xw)
     {
         const V pvdt = geo_.poreVolume() / dt;
 
@@ -343,7 +343,7 @@ namespace {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::constantState(const BlackoilState& x,
-                                               const WellState&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -441,7 +441,7 @@ namespace {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::variableState(const BlackoilState& x,
-                                               const WellState&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -633,7 +633,7 @@ namespace {
     FullyImplicitBlackoilSolver<T>::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
-             const WellState&     xw  )
+             const WellStateFullyImplicitBlackoil& xw  )
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
@@ -898,7 +898,7 @@ namespace {
     template<class T>
     void FullyImplicitBlackoilSolver<T>::updateState(const V& dx,
                                                   BlackoilState& state,
-                                                  WellState& well_state)
+                                                  WellStateFullyImplicitBlackoil& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();

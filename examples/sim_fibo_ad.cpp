@@ -39,7 +39,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
@@ -103,10 +103,6 @@ try
 #if USE_NEW_PARSER
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-    std::shared_ptr<EclipseGridParser> deck;
-    deck.reset(new EclipseGridParser(deck_filename));
 #else
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
@@ -119,8 +115,7 @@ try
     grid.reset(new GridManager(*deck));
 #endif
 
-#warning "HACK: required until the WellsManager and the EclipseWriter don't require the old parser anymore"
-#if 0 // USE_NEW_PARSER
+#if USE_NEW_PARSER
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 #else
     Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
@@ -200,23 +195,47 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-#warning "TODO: convert the well handling code to the new parser"
 #if USE_NEW_PARSER
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
 
-    WellState well_state;
+    WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
     SimulatorTimer simtimer;
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
-    // Create new wells, well_state
-    WellsManager wells(*deck, *grid->c_grid(), props->permeability());
-    // @@@ HACK: we should really make a new well state and
-    // properly transfer old well state to it every epoch,
-    // since number of wells may change etc.
-    well_state.init(wells.c_wells(), state);
+    // initialize variables
+    simtimer.init(timeMap, /*beginReportStepIdx=*/0, /*endReportStepIdx=*/0);
 
-    // Create and run simulator.
+    SimulatorReport fullReport;
+    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        // Report on start of a report step.
+        std::cout << "\n"
+                  << "---------------------------------------------------------------\n"
+                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
+                  << "---------------------------------------------------------------\n"
+                  << "\n";
+
+        WellsManager wells(eclipseState,
+                           reportStepIdx,
+                           *grid->c_grid(),
+                           props->permeability());
+
+        if (reportStepIdx == 0) {
+            // @@@ HACK: we should really make a new well state and
+            // properly transfer old well state to it every epoch,
+            // since number of wells may change etc.
+            well_state.init(wells.c_wells(), state);
+        }
+
+        simtimer.init(timeMap,
+                      /*beginReportStepIdx=*/reportStepIdx,
+                      /*endReportStepIdx=*/reportStepIdx + 1);
+
+        if (reportStepIdx == 0)
+            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+
+        // Create and run simulator.
     SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
                                                                *grid->c_grid(),
                                                                *new_props,
@@ -225,21 +244,24 @@ try
                                                                linsolver,
                                                                grav,
                                                                outputWriter);
-    simtimer.init(timeMap);
-    SimulatorReport report = simulator.run(simtimer, state, well_state);
+        SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
-    if (output) {
-        report.reportParam(outStream);
-        warnIfUnusedParams(param);
+        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+        fullReport += episodeReport;
+
+        if (output) {
+            episodeReport.reportParam(outStream);
+        }
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
-    report.report(std::cout);
+    fullReport.report(std::cout);
 
     if (output) {
         std::string filename = output_dir + "/walltime.param";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        report.reportParam(tot_os);
+        fullReport.reportParam(tot_os);
+        warnIfUnusedParams(param);
     }
 #else
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
@@ -248,12 +270,13 @@ try
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
-    WellState well_state;
+    WellStateFullyImplicitBlackoil well_state;
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
     deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
     simtimer.init(*deck);
+
     const double total_time = simtimer.totalTime();
     for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
         // Set epoch index.
@@ -285,6 +308,9 @@ try
             well_state.init(wells.c_wells(), state);
         }
 
+        if (epoch == 0)
+            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
                                                  *grid->c_grid(),
@@ -294,6 +320,8 @@ try
                                                  linsolver,
                                                  grav,
                                                  outputWriter);
+        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+
         if (epoch == 0) {
             warnIfUnusedParams(param);
         }

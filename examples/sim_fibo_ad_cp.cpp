@@ -48,17 +48,20 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
-#include <boost/scoped_ptr.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <memory>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -97,23 +100,24 @@ try
         OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
                   "Specify the deck with deck_filename=deckname.data (for example).");
     }
-    boost::scoped_ptr<EclipseGridParser> deck;
-    boost::scoped_ptr<Dune::CpGrid> grid;
-    boost::scoped_ptr<BlackoilPropertiesInterface> props;
-    boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::shared_ptr<Dune::CpGrid> grid;
+    std::shared_ptr<BlackoilPropertiesInterface> props;
+    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
-    // int max_well_control_iterations = 0
+    // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
+    std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
+    std::shared_ptr<const EclipseGridParser> cdeck(deck);
     // Grid init
     grid.reset(new Dune::CpGrid());
     
     grid->processEclipseFormat(*deck, 2e-12, false);
 
-    Opm::EclipseWriter outputWriter(param, share_obj(*deck),
+    Opm::EclipseWriter outputWriter(param, cdeck,
                                     Opm::UgGridHelpers::numCells(*grid),
                                     Opm::UgGridHelpers::globalCell(*grid),
                                     Opm::UgGridHelpers::cartDims(*grid),
@@ -194,12 +198,13 @@ try
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
-    WellState well_state;
+    WellStateFullyImplicitBlackoil well_state;
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
     deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
     simtimer.init(*deck);
+
     const double total_time = simtimer.totalTime();
     for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
         // Set epoch index.

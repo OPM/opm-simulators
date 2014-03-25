@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include  <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -24,7 +25,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
@@ -33,6 +34,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
@@ -42,7 +44,6 @@
 
 #include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <boost/filesystem.hpp>
@@ -71,7 +72,7 @@ namespace Opm
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
-                            WellState& well_state);
+                            WellStateFullyImplicitBlackoil& well_state);
 
     private:
         // Data.
@@ -123,12 +124,68 @@ namespace Opm
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::run(SimulatorTimer& timer,
                                                         BlackoilState& state,
-                                                        WellState& well_state)
+                                                        WellStateFullyImplicitBlackoil& well_state)
     {
         return pimpl_->run(timer, state, well_state);
     }
 
 
+
+    static void outputWellStateMatlab(const Opm::WellStateFullyImplicitBlackoil& well_state,
+                                  const int step,
+                                  const std::string& output_dir)
+    {
+        Opm::DataMap dm;
+        dm["bhp"] = &well_state.bhp();
+        dm["wellrates"] = &well_state.wellRates();
+
+        // Write data (not grid) in Matlab format
+        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+            std::ostringstream fname;
+            fname << output_dir << "/" << it->first;
+            boost::filesystem::path fpath = fname.str();
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
+            }
+            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+            std::ofstream file(fname.str().c_str());
+            if (!file) {
+                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
+            }
+            file.precision(15);
+            const std::vector<double>& d = *(it->second);
+            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+        }
+    }
+
+#if 0
+    static void outputWaterCut(const Opm::Watercut& watercut,
+                               const std::string& output_dir)
+    {
+        // Write water cut curve.
+        std::string fname = output_dir  + "/watercut.txt";
+        std::ofstream os(fname.c_str());
+        if (!os) {
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
+        }
+        watercut.write(os);
+    }
+
+    static void outputWellReport(const Opm::WellReport& wellreport,
+                                 const std::string& output_dir)
+    {
+        // Write well report.
+        std::string fname = output_dir  + "/wellreport.txt";
+        std::ofstream os(fname.c_str());
+        if (!os) {
+            OPM_THROW(std::runtime_error, "Failed to open " << fname);
+        }
+        wellreport.write(os);
+    }
+#endif
 
 
     // \TODO: Treat bcs.
@@ -187,11 +244,8 @@ namespace Opm
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
                                                               BlackoilState& state,
-                                                              WellState& well_state)
+                                                              WellStateFullyImplicitBlackoil& well_state)
     {
-        eclipseWriter_.writeInit(timer, state, well_state);
-        eclipseWriter_.writeTimeStep(timer, state, well_state);
-
         // Initialisation.
         std::vector<double> porevol;
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -259,13 +313,9 @@ namespace Opm
 
                 // Optionally, check if well controls are satisfied.
                 if (check_well_controls_) {
-                    Opm::computePhaseFlowRatesPerWell(*wells_,
-                                                      well_state.perfRates(),
-                                                      fractional_flows,
-                                                      well_resflows_phase);
                     std::cout << "Checking well conditions." << std::endl;
                     // For testing we set surface := reservoir
-                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
+                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_state.wellRates(), well_state.wellRates());
                     ++well_control_iteration;
                     if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
                         OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
@@ -299,13 +349,13 @@ namespace Opm
                 tstep_os.close();
             }
 
-            // write an output file for later inspection
-            if (output_) {
-                eclipseWriter_.writeTimeStep(timer, state, well_state);
-            }
-
             // advance to next timestep before reporting at this location
             ++timer;
+
+            // write an output file for later inspection
+            if (output_) {
+                eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
+            }
         }
 
         total_timer.stop();

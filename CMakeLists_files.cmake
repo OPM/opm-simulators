@@ -109,4 +109,5 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
+	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
 	)

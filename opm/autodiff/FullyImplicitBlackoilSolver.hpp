@@ -33,7 +33,7 @@ namespace Opm {
     class RockCompressibility;
     class LinearSolverInterface;
     class BlackoilState;
-    class WellState;
+    class WellStateFullyImplicitBlackoil;
 
 
     /// A fully implicit solver for the black-oil problem.
@@ -79,7 +79,7 @@ namespace Opm {
         void
         step(const double   dt    ,
              BlackoilState& state ,
-             WellState&     wstate);
+             WellStateFullyImplicitBlackoil&     wstate);
 
     private:
         // Types and enums
@@ -151,11 +151,11 @@ namespace Opm {
         // Private methods.
         SolutionState
         constantState(const BlackoilState& x,
-                      const WellState&     xw);
+                      const WellStateFullyImplicitBlackoil& xw);
 
         SolutionState
         variableState(const BlackoilState& x,
-                      const WellState&     xw);
+                      const WellStateFullyImplicitBlackoil& xw);
 
         void
         computeAccum(const SolutionState& state,
@@ -163,14 +163,14 @@ namespace Opm {
 
         void
         assemble(const V&             dtpv,
-                 const BlackoilState& x   ,
-                 const WellState&     xw  );
+                 const BlackoilState& x,
+                 const WellStateFullyImplicitBlackoil& xw);
 
         V solveJacobianSystem() const;
 
         void updateState(const V& dx,
                          BlackoilState& state,
-                         WellState& well_state);
+                         WellStateFullyImplicitBlackoil& well_state);
 
         std::vector<ADB>
         computePressures(const SolutionState& state) const;
