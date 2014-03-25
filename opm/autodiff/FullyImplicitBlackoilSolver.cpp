@@ -945,9 +945,12 @@ namespace {
                              const int num_phases,
                              const double* distr)
         {
+            const int num_wells = well_phase_flow_rate.size() / num_phases;
             double rate = 0.0;
             for (int phase = 0; phase < num_phases; ++phase) {
-                rate += well_phase_flow_rate.value()[well*num_phases + phase] * distr[phase];
+                // Important: well_phase_flow_rate is ordered with all rates for first
+                // phase coming first, then all for second phase etc.
+                rate += well_phase_flow_rate.value()[well + phase*num_wells] * distr[phase];
             }
             return rate;
         }
