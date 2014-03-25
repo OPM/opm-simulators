@@ -747,8 +747,7 @@ namespace {
 
         }
 
-        addWellEq(state);
-        updateWellControls(xw);
+        addWellEq(state, xw); // Note: this can change xw (switching well controls).
         addWellControlEq(state, xw);
     }
 
@@ -756,7 +755,8 @@ namespace {
 
 
 
-    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state)
+    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state,
+                                                WellStateFullyImplicitBlackoil& xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = wells_.number_of_phases;
@@ -928,15 +928,127 @@ namespace {
 
         }
         residual_.well_flux_eq = qs;
+
+        // Updating the well controls is done from here, since we have
+        // access to the necessary bhp and rate data in this method.
+        updateWellControls(state.bhp, state.qs, xw);
     }
 
 
 
 
 
-    void FullyImplicitBlackoilSolver::updateWellControls(WellStateFullyImplicitBlackoil& /*xw*/) const
+    namespace
     {
-        // Do stuff.
+        double rateToCompare(const ADB& well_phase_flow_rate,
+                             const int well,
+                             const int num_phases,
+                             const double* distr)
+        {
+            double rate = 0.0;
+            for (int phase = 0; phase < num_phases; ++phase) {
+                rate += well_phase_flow_rate.value()[well*num_phases + phase] * distr[phase];
+            }
+            return rate;
+        }
+
+        bool constraintBroken(const ADB& bhp,
+                              const ADB& well_phase_flow_rate,
+                              const int well,
+                              const int num_phases,
+                              const WellType& well_type,
+                              const WellControls* wc,
+                              const int ctrl_index)
+        {
+            const WellControlType ctrl_type = well_controls_iget_type(wc, ctrl_index);
+            const double target = well_controls_iget_target(wc, ctrl_index);
+            const double* distr = well_controls_iget_distr(wc, ctrl_index);
+            switch (well_type) {
+            case INJECTOR:
+                switch (ctrl_type) {
+                case BHP:
+                    return bhp.value()[well] > target;
+                case SURFACE_RATE:
+                    return rateToCompare(well_phase_flow_rate, well, num_phases, distr) > target;
+                case RESERVOIR_RATE:
+                    // Intentional fall-through.
+                default:
+                    OPM_THROW(std::logic_error, "Can only handle BHP and SURFACE_RATE controls.");
+                }
+                break;
+            case PRODUCER:
+                switch (ctrl_type) {
+                case BHP:
+                    return bhp.value()[well] < target;
+                case SURFACE_RATE:
+                    // Note that the rates compared below are negative,
+                    // so breaking the constraints means: too high flow rate
+                    // (as for injection).
+                    return rateToCompare(well_phase_flow_rate, well, num_phases, distr) < target;
+                case RESERVOIR_RATE:
+                    // Intentional fall-through.
+                default:
+                    OPM_THROW(std::logic_error, "Can only handle BHP and SURFACE_RATE controls.");
+                }
+                break;
+            default:
+                OPM_THROW(std::logic_error, "Can only handle INJECTOR and PRODUCER wells.");
+            }
+        }
+    } // anonymous namespace
+
+
+
+
+
+    void FullyImplicitBlackoilSolver::updateWellControls(const ADB& bhp,
+                                                         const ADB& well_phase_flow_rate,
+                                                         WellStateFullyImplicitBlackoil& xw) const
+    {
+        std::string modestring[3] = { "BHP", "RESERVOIR_RATE", "SURFACE_RATE" };
+        // Find, for each well, if any constraints are broken. If so,
+        // switch control to first broken constraint.
+        const int np = wells_.number_of_phases;
+        const int nw = wells_.number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells_.ctrls[w];
+            // The current control in the well state overrides
+            // the current control set in the Wells struct, which
+            // is instead treated as a default.
+            const int current = xw.currentControls()[w];
+            // Loop over all controls except the current one, and also
+            // skip any RESERVOIR_RATE controls, since we cannot
+            // handle those.
+            const int nwc = well_controls_get_num(wc);
+            int ctrl_index = 0;
+            for (; ctrl_index < nwc; ++ctrl_index) {
+                if (ctrl_index == current) {
+                    // This is the currently used control, so it is
+                    // used as an equation. So this is not used as an
+                    // inequality constraint, and therefore skipped.
+                    continue;
+                }
+                if (well_controls_iget_type(wc, ctrl_index) == RESERVOIR_RATE) {
+                    // We cannot handle this yet.
+#ifdef OPM_VERBOSE
+                    std::cout << "Warning: a RESERVOIR_RATE well control exists for well "
+                              << wells_.name[w] << ", but will never be checked." << std::endl;
+#endif
+                    continue;
+                }
+                if (constraintBroken(bhp, well_phase_flow_rate, w, np, wells_.type[w], wc, ctrl_index)) {
+                    // ctrl_index will be the index of the broken constraint after the loop.
+                    break;
+                }
+            }
+            if (ctrl_index != nwc) {
+                // Constraint number ctrl_index was broken, switch to it.
+                std::cout << "Switching control mode for well " << wells_.name[w]
+                          << " from " << modestring[well_controls_iget_type(wc, current)]
+                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)];
+                xw.currentControls()[w] = ctrl_index;
+            }
+        }
     }
 
 
