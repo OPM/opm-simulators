@@ -687,7 +687,7 @@ namespace {
     FullyImplicitBlackoilSolver::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
-             const WellStateFullyImplicitBlackoil& xw  )
+             WellStateFullyImplicitBlackoil& xw  )
     {
         // Create the primary variables.
         const SolutionState state = variableState(x, xw);
@@ -748,7 +748,8 @@ namespace {
         }
 
         addWellEq(state);
-        addWellControlEq(state);
+        updateWellControls(xw);
+        addWellControlEq(state, xw);
     }
 
 
@@ -933,7 +934,17 @@ namespace {
 
 
 
-    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state)
+    void FullyImplicitBlackoilSolver::updateWellControls(WellStateFullyImplicitBlackoil& /*xw*/) const
+    {
+        // Do stuff.
+    }
+
+
+
+
+
+    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state,
+                                                       const WellStateFullyImplicitBlackoil& xw)
     {
         // Handling BHP and SURFACE_RATE wells.
 
@@ -945,14 +956,18 @@ namespace {
         M rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
-            if (well_controls_get_current_type(wc) == BHP) {
-                bhp_targets[w] = well_controls_get_current_target(wc);
+            // The current control in the well state overrides
+            // the current control set in the Wells struct, which
+            // is instead treated as a default.
+            const int current = xw.currentControls()[w];
+            if (well_controls_iget_type(wc, current) == BHP) {
+                bhp_targets[w] = well_controls_iget_target(wc, current);
                 rate_targets[w] = -1e100;
-            } else if (well_controls_get_current_type( wc ) == SURFACE_RATE) {
+            } else if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
-                rate_targets[w] = well_controls_get_current_target(wc);
+                rate_targets[w] = well_controls_iget_target(wc, current);
                 {
-                    const double * distr = well_controls_get_current_distr( wc );
+                    const double * distr = well_controls_iget_distr(wc, current);
                     for (int phase = 0; phase < np; ++phase) {
                         rate_distr.insert(w, phase*nw + w) = distr[phase];
                     }

@@ -166,15 +166,18 @@ namespace Opm {
         addOldWellEq(const SolutionState& state);
 
         void
-        addWellControlEq(const SolutionState& state);
+        addWellControlEq(const SolutionState& state,
+                         const WellStateFullyImplicitBlackoil& xw);
 
         void
         addWellEq(const SolutionState& state);
 
+        void updateWellControls(WellStateFullyImplicitBlackoil& xw) const;
+
         void
         assemble(const V&             dtpv,
                  const BlackoilState& x,
-                 const WellStateFullyImplicitBlackoil& xw);
+                 WellStateFullyImplicitBlackoil& xw);
 
         V solveJacobianSystem() const;
 
