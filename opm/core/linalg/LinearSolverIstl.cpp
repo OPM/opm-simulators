@@ -150,24 +150,6 @@ namespace Opm
                 A[ri][ja[i]] = sa[i];
             }
         }
-        // System RHS
-        Vector b(size);
-        std::copy(rhs, rhs + size, b.begin());
-        // System solution
-        Vector x(size);
-        x = 0.0;
-
-        if (linsolver_save_system_)
-        {
-            // Save system to files.
-            writeMatrixToMatlab(A, linsolver_save_filename_ + "-mat");
-            std::string rhsfile(linsolver_save_filename_ + "-rhs");
-            std::ofstream rhsf(rhsfile.c_str());
-            rhsf.precision(15);
-            rhsf.setf(std::ios::scientific | std::ios::showpos);
-            std::copy(b.begin(), b.end(),
-                      std::ostream_iterator<VectorBlockType>(rhsf, "\n"));
-        }
 
         int maxit = linsolver_max_iterations_;
         if (maxit == 0) {
@@ -176,14 +158,33 @@ namespace Opm
         Dune::SeqScalarProduct<Vector> sp;
         Dune::Amg::SequentialInformation comm;
         Operator opA(A);
-        return solveSystem(opA, x, solution, b, sp, comm, maxit);
+        return solveSystem(opA, solution, rhs, sp, comm, maxit);
     }
 
-template<class O, class V, class S, class C>
+    template<class O, class S, class C>
     LinearSolverInterface::LinearSolverReport
-    LinearSolverIstl::solveSystem (O& opA, V& x, double* solution, V& b,
+    LinearSolverIstl::solveSystem (O& opA, double* solution, const double* rhs,
                                    S& sp, const C& comm, int maxit) const
     {
+                // System RHS
+        Vector b(opA.getmat().N());
+        std::copy(rhs, rhs + size, b.begin());
+        // System solution
+        Vector x(opA.getmat().M());
+        x = 0.0;
+
+        if (linsolver_save_system_)
+        {
+            // Save system to files.
+            writeMatrixToMatlab(opA.getmat(), linsolver_save_filename_ + "-mat");
+            std::string rhsfile(linsolver_save_filename_ + "-rhs");
+            std::ofstream rhsf(rhsfile.c_str());
+            rhsf.precision(15);
+            rhsf.setf(std::ios::scientific | std::ios::showpos);
+            std::copy(b.begin(), b.end(),
+                      std::ostream_iterator<VectorBlockType>(rhsf, "\n"));
+        }
+
         LinearSolverReport res;
         switch (linsolver_type_) {
         case CG_ILU0:
