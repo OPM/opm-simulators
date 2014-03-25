@@ -837,7 +837,7 @@ namespace {
         // phase rates at std. condtions
         std::vector<ADB> q_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            q_ps[phase] = wops_.w2p * cq_ps[phase];
+            q_ps[phase] = wops_.p2w * cq_ps[phase];
         }
 
         // total rates at std
@@ -849,7 +849,7 @@ namespace {
         // compute avg. and total wellbore phase volumetric rates at std. conds
         const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
         std::vector<ADB> wbq(np, ADB::null());
-        ADB wbqt = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        ADB wbqt = ADB::constant(V::Zero(nw), state.pressure.blockPattern());
         for (int phase = 0; phase < np; ++phase) {
             const int pos = pu.phase_pos[phase];
             wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
@@ -857,8 +857,8 @@ namespace {
         }
 
         // check for dead wells
-        V isNotDeadWells = V::Constant(nperf,1.0);
-        for (int c = 0; c < nperf; ++c){
+        V isNotDeadWells = V::Constant(nw,1.0);
+        for (int c = 0; c < nw; ++c){
             if (wbqt.value()[c] == 0)
                 isNotDeadWells[c] = 0;
         }
@@ -924,7 +924,7 @@ namespace {
         // Add WELL EQUATIONS
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
-            qs -= superset(wops_.w2p * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+            qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
         residual_.well_flux_eq = qs;
