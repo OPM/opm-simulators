@@ -19,6 +19,9 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+
 int main(int argc, char** argv)
 try
 {
@@ -39,9 +42,11 @@ try
     // Define rock and fluid properties
     IncompPropertiesFromDeck incomp_properties(parser, *grid.c_grid());
     RockCompressibility rock_comp(parser);
+    ParserPtr newParser(new Opm::Parser());
+    EclipseStateConstPtr eclipseState(new Opm::EclipseState(newParser->parseFile(file_name)));
 
     // Finally handle the wells
-    WellsManager wells(parser, *grid.c_grid(), incomp_properties.permeability());
+    WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
 
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     Opm::LinearSolverFactory linsolver(parameters);
