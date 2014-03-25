@@ -44,6 +44,10 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
+
 #include <memory>
 #include <boost/filesystem.hpp>
 
@@ -80,6 +84,7 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
+    EclipseStateConstPtr eclipseState;
     std::unique_ptr<EclipseGridParser> deck;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<BlackoilPropertiesInterface> props;
@@ -89,7 +94,10 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
+        ParserPtr parser(new Opm::Parser());
         std::string deck_filename = param.get<std::string>("deck_filename");
+
+        eclipseState.reset( new EclipseState(parser->parseFile(deck_filename)));
         deck.reset(new EclipseGridParser(deck_filename));
         // Grid init
         grid.reset(new GridManager(*deck));
@@ -242,7 +250,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
