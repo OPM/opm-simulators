@@ -38,11 +38,6 @@ SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, SpatialDiscretizationSplice, EcfvDi
 
 SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableEnergy, true);
 
-// for the flash model we want to use thermodynamic hints or it will
-// get _very_ slow.
-SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableVolumeVariablesCache, true);
-SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableThermodynamicHints, true);
-
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
     Co2InjectionFlashNiEcfvProblem, FlashSolver,

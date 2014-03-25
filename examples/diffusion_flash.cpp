@@ -30,8 +30,7 @@
 namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(FlashModel, DiffusionBaseProblem));
-}
-}
+}}
 
 int main(int argc, char **argv)
 {
