@@ -72,11 +72,6 @@ namespace Opm
         /// The permeability argument may be zero if the input contain
         /// well productivity indices, otherwise it must be given in
         /// order to approximate these by the Peaceman formula.
-        WellsManager(const Opm::EclipseGridParser& deck,
-                     const UnstructuredGrid& grid,
-                     const double* permeability);
-
-
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
                      const UnstructuredGrid& grid,
