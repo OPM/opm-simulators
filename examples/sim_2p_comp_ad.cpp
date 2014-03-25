@@ -48,6 +48,8 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
@@ -94,6 +96,7 @@ try
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
+    EclipseStateConstPtr eclipseState;
     BlackoilState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
@@ -103,6 +106,8 @@ try
         deck.reset(new EclipseGridParser(deck_filename));
         Opm::ParserPtr newParser(new Opm::Parser() );
         Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
+        eclipseState.reset( new EclipseState(newParserDeck ));
+
 
         // Grid init
         grid.reset(new GridManager(newParserDeck));
@@ -255,7 +260,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
