@@ -41,7 +41,8 @@ SET_TAG_PROP(Co2InjectionFlashVcfvProblem, SpatialDiscretizationSplice, VcfvDisc
 
 // for the flash model we want to use thermodynamic hints or it will
 // get _very_ slow.
-SET_BOOL_PROP(Co2InjectionFlashVcfvProblem, EnableHints, true);
+SET_BOOL_PROP(Co2InjectionFlashVcfvProblem, EnableVolumeVariablesCache, true);
+SET_BOOL_PROP(Co2InjectionFlashVcfvProblem, EnableThermodynamicHints, true);
 
 // use the flash solver adapted to the CO2 injection problem
 SET_TYPE_PROP(

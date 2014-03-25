@@ -40,7 +40,8 @@ SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableEnergy, true);
 
 // for the flash model we want to use thermodynamic hints or it will
 // get _very_ slow.
-SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableHints, true);
+SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableVolumeVariablesCache, true);
+SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableThermodynamicHints, true);
 
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
