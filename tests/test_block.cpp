@@ -190,3 +190,32 @@ BOOST_AUTO_TEST_CASE(Addition)
         BOOST_CHECK(*j3b == ADB::M((*j1b) * 2));
     }
 }
+
+BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    ADB::V vx(3);
+    vx << 0.2, 1.2, 13.4;
+
+    ADB::V vy(3);
+    vy << 1.0, 2.2, 3.4;
+
+    std::vector<ADB::V> vals{ vx, vy };
+    std::vector<ADB> vars = ADB::variables(vals);
+
+    const ADB x = vars[0];
+    const ADB y = vars[1];
+
+    ADB z = x;
+    z += y;
+    ADB sum = x + y;
+    const double tolerance = 1e-14;
+    BOOST_CHECK(z.value().isApprox(sum.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(sum.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(sum.derivative()[1], tolerance));
+    z -= y;
+    BOOST_CHECK(z.value().isApprox(x.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(x.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(x.derivative()[1], tolerance));
+}
