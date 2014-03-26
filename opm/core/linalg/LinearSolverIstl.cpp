@@ -168,7 +168,7 @@ namespace Opm
     {
                 // System RHS
         Vector b(opA.getmat().N());
-        std::copy(rhs, rhs + size, b.begin());
+        std::copy(rhs, rhs+b.size(), b.begin());
         // System solution
         Vector x(opA.getmat().M());
         x = 0.0;
