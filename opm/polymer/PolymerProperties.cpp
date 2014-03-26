@@ -71,6 +71,13 @@ namespace Opm
         return Opm::linearInterpolation(water_vel_vals_, shear_vrf_vals_, velocity);
     }
 
+    double
+    PolymerProperties::shearVrfWithDer(const double velocity, double& der) const
+    {
+        der =  Opm::linearInterpolationDerivative(water_vel_vals_, shear_vrf_vals_, velocity);
+        return Opm::linearInterpolation(water_vel_vals_, shear_vrf_vals_, velocity);
+    }
+
     double PolymerProperties::viscMult(double c) const
     {
         return Opm::linearInterpolation(c_vals_visc_, visc_mult_vals_, c);

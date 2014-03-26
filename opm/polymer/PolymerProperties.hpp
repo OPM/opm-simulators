@@ -168,6 +168,8 @@ namespace Opm
 
         double shearVrf(const double velocity) const;
 
+        double shearVrfWithDer(const double velocity, double& der) const;
+
         double viscMult(double c) const;
 
         double viscMultWithDer(double c, double* der) const;
