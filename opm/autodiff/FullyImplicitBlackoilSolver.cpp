@@ -31,6 +31,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/well_controls.h>
 
 #include <cassert>
@@ -1195,18 +1196,22 @@ namespace {
     double
     FullyImplicitBlackoilSolver::residualNorm() const
     {
-        double r = 0;
-        for (std::vector<ADB>::const_iterator
-                 b = residual_.mass_balance.begin(),
-                 e = residual_.mass_balance.end();
-             b != e; ++b)
+        double globalNorm = 0;
+        std::vector<ADB>::const_iterator quantityIt = residual_.mass_balance.begin();
+        const std::vector<ADB>::const_iterator endQuantityIt = residual_.mass_balance.end();
+        for (; quantityIt != endQuantityIt; ++quantityIt)
         {
-            r = std::max(r, (*b).value().matrix().norm());
+            const double quantityResid = (*quantityIt).value().matrix().norm();
+            if (!std::isfinite(quantityResid)) {
+                OPM_THROW(Opm::NumericalProblem,
+                          "Encountered a non-finite residual");
+            }
+            globalNorm = std::max(globalNorm, quantityResid);
         }
-        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
-        r = std::max(r, residual_.well_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
 
-        return r;
+        return globalNorm;
     }
 
 
