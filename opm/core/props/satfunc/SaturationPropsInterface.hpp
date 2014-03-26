@@ -73,6 +73,14 @@ namespace Opm
                               const int* cells,
                               double* smin,
                               double* smax) const = 0;
+                                           
+        /// Update saturation state for the hysteresis tracking 
+        /// \param[in]  n      Number of data points. 
+        /// \param[in]  s      Array of nP saturation values.             
+        virtual void updateSatHyst(const int n,
+                                   const int* cells,
+                                   const double* s) = 0;
+
 
     };
 

@@ -74,7 +74,7 @@ namespace Opm
     {
         return parent_;
     }
-    const std::string& WellsGroupInterface::name()
+    const std::string& WellsGroupInterface::name() const
     {
         return name_;
     }
@@ -747,9 +747,7 @@ namespace Opm
     void WellNode::shutWell()
     {
         if (shut_well_) {
-            // We set the tilde of the current control
-            // set_current_control(self_index_, -1, wells_);
-            well_controls_invert_current(wells_->ctrls[self_index_]);
+            well_controls_shut_well( wells_->ctrls[self_index_]);
         }
         else {
             const double target = 0.0;
@@ -767,7 +765,7 @@ namespace Opm
                 well_controls_iset_target( wells_->ctrls[self_index_] , group_control_index_ , target);
                 well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
             }
-            well_controls_invert_current(wells_->ctrls[self_index_]);
+            well_controls_open_well( wells_->ctrls[self_index_]);
         }
     }
 
@@ -1140,5 +1138,57 @@ namespace Opm
         }
 
         return return_value;
+    }
+
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(GroupConstPtr group, size_t timeStep, const PhaseUsage& phase_usage )
+    {
+        InjectionSpecification injection_specification;
+        ProductionSpecification production_specification;
+        if (group->isInjectionGroup(timeStep)) {
+            injection_specification.injector_type_ = toInjectorType(Phase::PhaseEnum2String(group->getInjectionPhase(timeStep)));
+            injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(group->getInjectionControlMode(timeStep)));
+            injection_specification.surface_flow_max_rate_ = group->getSurfaceMaxRate(timeStep);
+            injection_specification.reservoir_flow_max_rate_ = group->getReservoirMaxRate(timeStep);
+            injection_specification.reinjection_fraction_target_ = group->getTargetReinjectFraction(timeStep);
+            injection_specification.voidage_replacment_fraction_ = group->getTargetVoidReplacementFraction(timeStep);
+        }
+        else if (group->isProductionGroup(timeStep)) {
+            production_specification.oil_max_rate_ = group->getOilTargetRate(timeStep);
+            production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group->getProductionControlMode(timeStep)));
+            production_specification.water_max_rate_ = group->getWaterTargetRate(timeStep);
+            production_specification.gas_max_rate_ = group->getGasTargetRate(timeStep);
+            production_specification.liquid_max_rate_ = group->getLiquidTargetRate(timeStep);
+            production_specification.procedure_ = toProductionProcedure(GroupProductionExceedLimit::ActionEnum2String(group->getProductionExceedLimitAction(timeStep)));
+            production_specification.reservoir_flow_max_rate_ = group->getReservoirMaxRate(timeStep);
+        }
+
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group->name(), production_specification, injection_specification, phase_usage));
+        return wells_group;
+    }
+
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(WellConstPtr well, size_t timeStep, const PhaseUsage& phase_usage )
+    {
+        InjectionSpecification injection_specification;
+        ProductionSpecification production_specification;
+        if (well->isInjector(timeStep)) {
+            const WellInjectionProperties& properties = well->getInjectionProperties(timeStep);
+            injection_specification.BHP_limit_ = properties.BHPLimit;
+            injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(properties.injectorType));
+            injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(properties.controlMode));
+            injection_specification.surface_flow_max_rate_ = properties.surfaceInjectionRate;
+            injection_specification.reservoir_flow_max_rate_ = properties.reservoirInjectionRate;
+            production_specification.guide_rate_ = 0.0; // We know we're not a producer
+        }
+        else if (well->isProducer(timeStep)) {
+            const WellProductionProperties& properties = well->getProductionProperties(timeStep);
+            production_specification.BHP_limit_ = properties.BHPLimit;
+            production_specification.reservoir_flow_max_rate_ = properties.ResVRate;
+            production_specification.oil_max_rate_ = properties.OilRate;
+            production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
+            production_specification.water_max_rate_ = properties.WaterRate;
+            injection_specification.guide_rate_ = 0.0; // we know we're not an injector
+        }
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), production_specification, injection_specification, phase_usage));
+        return wells_group;
     }
 }

@@ -541,7 +541,7 @@ clone_wells(const struct Wells *W)
 
 /* ---------------------------------------------------------------------- */
 bool
-wells_equal(const struct Wells *W1, const struct Wells *W2)
+wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
 /* ---------------------------------------------------------------------- */
 {
     bool are_equal = true;
@@ -567,10 +567,25 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
                 are_equal = are_equal && (strcmp(W1->name[i], W2->name[i]) == 0);
             else 
                 are_equal = are_equal && (W1->name[i] == W2->name[i]);  
+
+            if (verbose && !are_equal) 
+                printf("Well name[%d] %s and %s are different \n",  i , W1->name[i] ,  W2->name[i]);
         }
-        are_equal = are_equal && (W1->type[i] == W2->type[i]);
-        are_equal = are_equal && (W1->depth_ref[i] == W2->depth_ref[i]);
-        are_equal = are_equal && (well_controls_equal(W1->ctrls[i], W2->ctrls[i]));
+        if (W1->type[i] != W2->type[i]) {
+            are_equal = false;
+            if (verbose)
+                printf("Well->type[%d] different %d %d \n",i , W1->type[i] , W2->type[i] );
+        }
+        if (W1->depth_ref[i] != W2->depth_ref[i]) {
+            are_equal = false;
+            if (verbose)
+                printf("Well->depth_ref[%d] different %g %g \n",i , W1->depth_ref[i] , W2->depth_ref[i] );
+        }
+        if (!well_controls_equal(W1->ctrls[i], W2->ctrls[i],verbose)) {
+            are_equal = false;
+            if (verbose)
+                printf("Well controls are different for well[%d]:%s \n",i,W1->name[i]);
+        }
     }
 
 
@@ -581,10 +596,16 @@ wells_equal(const struct Wells *W1, const struct Wells *W2)
         are_equal = are_equal && (mgmt1->well_cpty == mgmt2->well_cpty);
     }
 
-    are_equal = are_equal && (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) == 0);
-    are_equal = are_equal && (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) == 0);
-    if (!are_equal) {
-        return are_equal;
+    if (memcmp(W1->comp_frac, W2->comp_frac, W1->number_of_wells * W1->number_of_phases * sizeof *W1->comp_frac ) != 0) {
+        are_equal = false;
+        if (verbose)
+            printf("Component fractions different \n");
+    }
+    
+    if (memcmp(W1->well_connpos, W2->well_connpos, (1 + W1->number_of_wells) * sizeof *W1->well_connpos ) != 0) {
+        are_equal = false;
+        if (verbose)
+            printf("perforation position map difference \n");
     }
 
     {

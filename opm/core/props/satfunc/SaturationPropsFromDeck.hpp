@@ -27,6 +27,9 @@
 #include <opm/core/props/satfunc/SatFuncStone2.hpp>
 #include <opm/core/props/satfunc/SatFuncSimple.hpp>
 #include <opm/core/props/satfunc/SatFuncGwseg.hpp>
+
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <vector>
 
 struct UnstructuredGrid;
@@ -57,6 +60,17 @@ namespace Opm
         /// \param[in]  samples  Number of uniform sample points for saturation tables.
         /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         void init(const EclipseGridParser& deck,
+                  const UnstructuredGrid& grid,
+                  const int samples);
+
+        /// Initialize from deck and grid.
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        void init(Opm::DeckConstPtr newParserDeck,
                   const UnstructuredGrid& grid,
                   const int samples);
 
@@ -132,6 +146,14 @@ namespace Opm
                         const UnstructuredGrid& grid,
                         const std::string& keyword,
                         std::vector<double>& scaleparam);
+        void initEPS(Opm::DeckConstPtr newParserDeck,
+                     const UnstructuredGrid& grid);
+        void initEPSHyst(Opm::DeckConstPtr newParserDeck,
+                         const UnstructuredGrid& grid);
+        void initEPSKey(Opm::DeckConstPtr newParserDeck,
+                        const UnstructuredGrid& grid,
+                        const std::string& keyword,
+                        std::vector<double>& scaleparam);
         void initEPSParam(const int cell, 
                           EPSTransforms::Transform& data,
                           const bool oil,
@@ -149,6 +171,11 @@ namespace Opm
                           const std::vector<double>& s0,
                           const std::vector<double>& krsr,
                           const std::vector<double>& krmax);
+
+        bool columnIsMasked_(Opm::DeckConstPtr newParserDeck,
+                             const std::string& keywordName,
+                             int /* columnIdx */)
+        { return newParserDeck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
     };
 
 

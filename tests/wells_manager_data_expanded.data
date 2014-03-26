@@ -16,6 +16,8 @@ DYV
 DZV
 10.0 20.0 30.0 10.0 5.0 /
 
+-- The DEPTHZ keyword is only here to satisfy the old parser; content might
+-- completely bogus.
 DEPTHZ
 121*2000 /
 
@@ -28,7 +30,9 @@ WELSPECS
 /
 
 COMPDAT
-    'INJ1'   1  1 1  1 'OPEN' 1   10.6092   0.5  /
+    'INJ1'   1  1 1  2 'OPEN' 1   10.6092   0.5  /
+    'INJ1'   1  1 3  5 'OPEN' 1   12.6092   0.5  /
+    'INJ1'   2  2 1  1 'OPEN' 1   14.6092   0.5  /
     'PROD1'  10 3 3  3 'OPEN' 0   10.6092   0.5  /
 /
 
@@ -45,34 +49,38 @@ DATES
  1 'FEB' 2000 /
 /
 
+WELSPECS
+    'INJ1' 'G3'    1  1    8335 'GAS'  /
+    'QNJ2' 'G3'    1  1    8335 'GAS'  /
+/
+
+
+COMPDAT
+    'QNJ2'   3  4 1  2 'OPEN' 1   10.6092   0.5  /
+    'QNJ2'   4  4 3  5 'OPEN' 1   12.6092   0.5  /
+/
+
 WCONPROD
    'PROD1' 'OPEN' 'RESV' 999  3* 123 100 /
 /
 
 WCONINJE
    'INJ1' 'WATER' 'OPEN' 'RESV' 10 20 40 /
+   'QNJ2' 'WATER' 'OPEN' 'RESV' 7 33 39 /
 /
 
-END
+
 
 TSTEP
-  14.0 /
+14.0 /
 /
 
-
-WELSPECS
-    'TEST1' 'G1'    1  1    8335 'GAS'  /
-    'TEST2' 'G2'   10 10    8400 'OIL'  /
-/
-
-GRUPTREE
- 'G1' 'SHIP' /
- 'G2' 'SHIP' /
+WELOPEN
+   'INJ1' 'SHUT' 5* /
 /
 
 TSTEP
-  3 /
+14.0 /
 /
-
 
 END

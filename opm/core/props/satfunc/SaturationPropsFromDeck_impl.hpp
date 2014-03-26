@@ -26,6 +26,11 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/grid.h>
 
+#include <opm/parser/eclipse/Utility/EndscaleWrapper.hpp>
+#include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
+#include <opm/parser/eclipse/Utility/EnptvdTable.hpp>
+#include <opm/parser/eclipse/Utility/EnkrvdTable.hpp>
+
 #include <iostream>
 
 namespace Opm
@@ -139,6 +144,123 @@ namespace Opm
         }
     }
 
+
+    /// Initialize from deck.
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr newParserDeck,
+                                                   const UnstructuredGrid& grid,
+                                                   const int samples)
+    {
+        phase_usage_ = phaseUsageFromDeck(newParserDeck);
+
+        // Extract input data.
+        // Oil phase should be active.
+        if (!phase_usage_.phase_used[Liquid]) {
+            OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  oil phase must be active.");
+        }
+
+        // Obtain SATNUM, if it exists, and create cell_to_func_.
+        // Otherwise, let the cell_to_func_ mapping be just empty.
+        int satfuncs_expected = 1;
+        if (newParserDeck->hasKeyword("SATNUM")) {
+            const std::vector<int>& satnum = newParserDeck->getKeyword("SATNUM")->getIntData();
+            satfuncs_expected = *std::max_element(satnum.begin(), satnum.end());
+            const int num_cells = grid.number_of_cells;
+            cell_to_func_.resize(num_cells);
+            const int* gc = grid.global_cell;
+            for (int cell = 0; cell < num_cells; ++cell) {
+                const int newParserDeck_pos = (gc == NULL) ? cell : gc[cell];
+                cell_to_func_[cell] = satnum[newParserDeck_pos] - 1;
+            }
+        }
+
+        // Find number of tables, check for consistency.
+        enum { Uninitialized = -1 };
+        int num_tables = Uninitialized;
+        if (phase_usage_.phase_used[Aqua]) {
+            num_tables = newParserDeck->getKeyword("SWOF")->size();
+            if (num_tables < satfuncs_expected) {
+                OPM_THROW(std::runtime_error, "Found " << num_tables << " SWOF tables, SATNUM specifies at least " << satfuncs_expected);
+            }
+        }
+        if (phase_usage_.phase_used[Vapour]) {
+            int num_sgof_tables = newParserDeck->getKeyword("SGOF")->size();
+            if (num_sgof_tables < satfuncs_expected) {
+                OPM_THROW(std::runtime_error, "Found " << num_tables << " SGOF tables, SATNUM specifies at least " << satfuncs_expected);
+            }
+            if (num_tables == Uninitialized) {
+                num_tables = num_sgof_tables;
+            } else if (num_tables != num_sgof_tables) {
+                OPM_THROW(std::runtime_error, "Inconsistent number of tables in SWOF and SGOF.");
+            }
+        }
+
+        // Initialize tables.
+        satfuncset_.resize(num_tables);
+        for (int table = 0; table < num_tables; ++table) {
+            satfuncset_[table].init(newParserDeck, table, phase_usage_, samples);
+        }
+
+        // Saturation table scaling
+        do_hyst_ = false;
+        do_eps_ = false;
+        do_3pt_ = false;
+        if (newParserDeck->hasKeyword("ENDSCALE")) {
+            Opm::EndscaleWrapper endscale(newParserDeck->getKeyword("ENDSCALE"));
+            if (endscale.directionSwitch() != std::string("NODIR")) {
+                OPM_THROW(std::runtime_error,
+                          "SaturationPropsFromDeck::init()   --  ENDSCALE: "
+                          "Currently only 'NODIR' accepted.");
+            }
+            if (!endscale.isReversible()) {
+                OPM_THROW(std::runtime_error,
+                          "SaturationPropsFromDeck::init()   --  ENDSCALE: "
+                          "Currently only 'REVERS' accepted.");
+            }
+            if (newParserDeck->hasKeyword("SCALECRS")) {
+                Opm::ScalecrsWrapper scalecrs(newParserDeck->getKeyword("SCALECRS"));
+                if (scalecrs.isEnabled()) {
+                    do_3pt_ = true;
+                }
+            }
+            do_eps_ = true;
+
+            initEPS(newParserDeck, grid);
+
+            // For now, a primitive detection of hysteresis. TODO: SATOPTS HYSTER/ and EHYSTR
+            do_hyst_ =
+                newParserDeck->hasKeyword("ISWL")
+                || newParserDeck->hasKeyword("ISWU")
+                || newParserDeck->hasKeyword("ISWCR")
+                || newParserDeck->hasKeyword("ISGL")
+                || newParserDeck->hasKeyword("ISGU")
+                || newParserDeck->hasKeyword("ISGCR")
+                ||  newParserDeck->hasKeyword("ISOWCR")
+                || newParserDeck->hasKeyword("ISOGCR");
+            if (do_hyst_) {
+                if (newParserDeck->hasKeyword("KRW")
+                    || newParserDeck->hasKeyword("KRG")
+                    || newParserDeck->hasKeyword("KRO")
+                    || newParserDeck->hasKeyword("KRWR")
+                    || newParserDeck->hasKeyword("KRGR")
+                    || newParserDeck->hasKeyword("KRORW")
+                    || newParserDeck->hasKeyword("KRORG")
+                    || newParserDeck->hasKeyword("IKRW")
+                    || newParserDeck->hasKeyword("IKRG")
+                    || newParserDeck->hasKeyword("IKRO")
+                    || newParserDeck->hasKeyword("IKRWR")
+                    || newParserDeck->hasKeyword("IKRGR")
+                    || newParserDeck->hasKeyword("IKRORW")
+                    || newParserDeck->hasKeyword("IKRORG") ) {
+                    OPM_THROW(std::runtime_error,
+                              "SaturationPropsFromDeck::init()   --  ENDSCALE: "
+                              "Currently hysteresis and relperm value scaling "
+                              "cannot be combined.");
+                }
+                initEPSHyst(newParserDeck, grid);
+            }
+        }
+    }
 
 
 
@@ -383,6 +505,69 @@ namespace Opm
         }
     }
 
+    // Initialize saturation scaling parameters
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::initEPS(Opm::DeckConstPtr newParserDeck,
+                                                      const UnstructuredGrid& grid)
+    {
+        std::vector<double> swl, swcr, swu, sgl, sgcr, sgu, sowcr, sogcr;
+        std::vector<double> krw, krg, kro, krwr, krgr, krorw, krorg;
+        // Initialize saturation scaling parameter
+        initEPSKey(newParserDeck, grid, std::string("SWL"),   swl);
+        initEPSKey(newParserDeck, grid, std::string("SWU"),   swu);
+        initEPSKey(newParserDeck, grid, std::string("SWCR"),  swcr);
+        initEPSKey(newParserDeck, grid, std::string("SGL"),   sgl);
+        initEPSKey(newParserDeck, grid, std::string("SGU"),   sgu);
+        initEPSKey(newParserDeck, grid, std::string("SGCR"),  sgcr);
+        initEPSKey(newParserDeck, grid, std::string("SOWCR"), sowcr);
+        initEPSKey(newParserDeck, grid, std::string("SOGCR"), sogcr);
+        initEPSKey(newParserDeck, grid, std::string("KRW"),   krw);
+        initEPSKey(newParserDeck, grid, std::string("KRG"),   krg);
+        initEPSKey(newParserDeck, grid, std::string("KRO"),   kro);
+        initEPSKey(newParserDeck, grid, std::string("KRWR"),  krwr);
+        initEPSKey(newParserDeck, grid, std::string("KRGR"),  krgr);
+        initEPSKey(newParserDeck, grid, std::string("KRORW"), krorw);
+        initEPSKey(newParserDeck, grid, std::string("KRORG"), krorg);
+
+        eps_transf_.resize(grid.number_of_cells);
+
+        const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+        const int gpos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+        const bool oilWater = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && !phase_usage_.phase_used[Vapour];
+        const bool oilGas = !phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
+        const bool threephase = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
+
+        for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+            if (oilWater) {
+                // ### krw
+                initEPSParam(cell, eps_transf_[cell].wat, false, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_, funcForCell(cell).smax_[wpos],
+                  funcForCell(cell).sowcr_, -1.0, funcForCell(cell).krwr_, funcForCell(cell).krwmax_, swl, swcr, swu, sowcr, sgl, krwr, krw);
+                // ### krow
+                initEPSParam(cell, eps_transf_[cell].watoil, true, 0.0, funcForCell(cell).sowcr_, funcForCell(cell).smin_[wpos],
+                  funcForCell(cell).swcr_, -1.0, funcForCell(cell).krorw_, funcForCell(cell).kromax_, swl, sowcr, swl, swcr, sgl, krorw, kro);
+            } else if (oilGas) {
+                // ### krg
+                initEPSParam(cell, eps_transf_[cell].gas, false, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_, funcForCell(cell).smax_[gpos],
+                  funcForCell(cell).sogcr_, -1.0, funcForCell(cell).krgr_, funcForCell(cell).krgmax_, sgl, sgcr, sgu, sogcr, swl, krgr, krg);
+                // ### krog
+                initEPSParam(cell, eps_transf_[cell].gasoil, true, 0.0, funcForCell(cell).sogcr_, funcForCell(cell).smin_[gpos],
+                  funcForCell(cell).sgcr_, -1.0, funcForCell(cell).krorg_, funcForCell(cell).kromax_, sgl, sogcr, sgl, sgcr, swl, krorg, kro);
+            } else if (threephase) {
+                // ### krw
+                initEPSParam(cell, eps_transf_[cell].wat, false, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_, funcForCell(cell).smax_[wpos], funcForCell(cell).sowcr_,
+                  funcForCell(cell).smin_[gpos], funcForCell(cell).krwr_, funcForCell(cell).krwmax_, swl, swcr, swu, sowcr, sgl, krwr, krw);
+                // ### krow
+                initEPSParam(cell, eps_transf_[cell].watoil, true, 0.0, funcForCell(cell).sowcr_, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_,
+                  funcForCell(cell).smin_[gpos], funcForCell(cell).krorw_, funcForCell(cell).kromax_, swl, sowcr, swl, swcr, sgl, krorw, kro);
+                // ### krg
+                initEPSParam(cell, eps_transf_[cell].gas, false, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_, funcForCell(cell).smax_[gpos], funcForCell(cell).sogcr_,
+                  funcForCell(cell).smin_[wpos], funcForCell(cell).krgr_, funcForCell(cell).krgmax_, sgl, sgcr, sgu, sogcr, swl, krgr, krg);
+                // ### krog
+                initEPSParam(cell, eps_transf_[cell].gasoil, true, 0.0, funcForCell(cell).sogcr_, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_,
+                  funcForCell(cell).smin_[wpos], funcForCell(cell).krorg_, funcForCell(cell).kromax_, sgl, sogcr, sgl, sgcr, swl, krorg, kro);
+            }
+        }
+    }
 
     // Initialize hysteresis saturation scaling parameters
     template <class SatFuncSet>
@@ -408,6 +593,71 @@ namespace Opm
         initEPSKey(deck, grid, std::string("IKRORW"), ikrorw);
         initEPSKey(deck, grid, std::string("IKRORG"), ikrorg);
         
+
+        eps_transf_hyst_.resize(grid.number_of_cells);
+        sat_hyst_.resize(grid.number_of_cells);
+
+        const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+        const int gpos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+        const bool oilWater = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && !phase_usage_.phase_used[Vapour];
+        const bool oilGas = !phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
+        const bool threephase = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
+
+        for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+            if (oilWater) {
+                // ### krw
+                initEPSParam(cell, eps_transf_hyst_[cell].wat, false, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_, funcForCell(cell).smax_[wpos],
+                  funcForCell(cell).sowcr_, -1.0, funcForCell(cell).krwr_, funcForCell(cell).krwmax_, iswl, iswcr, iswu, isowcr, isgl, ikrwr, ikrw);
+                // ### krow
+                initEPSParam(cell, eps_transf_hyst_[cell].watoil, true, 0.0, funcForCell(cell).sowcr_, funcForCell(cell).smin_[wpos],
+                  funcForCell(cell).swcr_, -1.0, funcForCell(cell).krorw_, funcForCell(cell).kromax_, iswl, isowcr, iswl, iswcr, isgl, ikrorw, ikro);
+            } else if (oilGas) {
+                // ### krg
+                initEPSParam(cell, eps_transf_hyst_[cell].gas, false, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_, funcForCell(cell).smax_[gpos],
+                  funcForCell(cell).sogcr_, -1.0, funcForCell(cell).krgr_, funcForCell(cell).krgmax_, isgl, isgcr, isgu, isogcr, iswl, ikrgr, ikrg);
+                // ### krog
+                initEPSParam(cell, eps_transf_hyst_[cell].gasoil, true, 0.0, funcForCell(cell).sogcr_, funcForCell(cell).smin_[gpos],
+                  funcForCell(cell).sgcr_, -1.0, funcForCell(cell).krorg_, funcForCell(cell).kromax_, isgl, isogcr, isgl, isgcr, iswl, ikrorg, ikro);
+            } else if (threephase) {
+                // ### krw
+                initEPSParam(cell, eps_transf_hyst_[cell].wat, false, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_, funcForCell(cell).smax_[wpos], funcForCell(cell).sowcr_,
+                  funcForCell(cell).smin_[gpos], funcForCell(cell).krwr_, funcForCell(cell).krwmax_, iswl, iswcr, iswu, isowcr, isgl, ikrwr, ikrw);
+                // ### krow
+                initEPSParam(cell, eps_transf_hyst_[cell].watoil, true, 0.0, funcForCell(cell).sowcr_, funcForCell(cell).smin_[wpos], funcForCell(cell).swcr_,
+                  funcForCell(cell).smin_[gpos], funcForCell(cell).krorw_, funcForCell(cell).kromax_, iswl, isowcr, iswl, iswcr, isgl, ikrorw, ikro);
+                // ### krg
+                initEPSParam(cell, eps_transf_hyst_[cell].gas, false, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_, funcForCell(cell).smax_[gpos], funcForCell(cell).sogcr_,
+                  funcForCell(cell).smin_[wpos], funcForCell(cell).krgr_, funcForCell(cell).krgmax_, isgl, isgcr, isgu, isogcr, iswl, ikrgr, ikrg);
+                // ### krog
+                initEPSParam(cell, eps_transf_hyst_[cell].gasoil, true, 0.0, funcForCell(cell).sogcr_, funcForCell(cell).smin_[gpos], funcForCell(cell).sgcr_,
+                  funcForCell(cell).smin_[wpos], funcForCell(cell).krorg_, funcForCell(cell).kromax_, isgl, isogcr, isgl, isgcr, iswl, ikrorg, ikro);
+            }
+        }
+    }
+
+    // Initialize hysteresis saturation scaling parameters
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::initEPSHyst(Opm::DeckConstPtr newParserDeck,
+                                                          const UnstructuredGrid& grid)
+    {
+        std::vector<double> iswl, iswcr, iswu, isgl, isgcr, isgu, isowcr, isogcr;
+        std::vector<double> ikrw, ikrg, ikro, ikrwr, ikrgr, ikrorw, ikrorg;
+        // Initialize hysteresis saturation scaling parameters
+        initEPSKey(newParserDeck, grid, std::string("ISWL"),   iswl);
+        initEPSKey(newParserDeck, grid, std::string("ISWU"),   iswu);
+        initEPSKey(newParserDeck, grid, std::string("ISWCR"),  iswcr);
+        initEPSKey(newParserDeck, grid, std::string("ISGL"),   isgl);
+        initEPSKey(newParserDeck, grid, std::string("ISGU"),   isgu);
+        initEPSKey(newParserDeck, grid, std::string("ISGCR"),  isgcr);
+        initEPSKey(newParserDeck, grid, std::string("ISOWCR"), isowcr);
+        initEPSKey(newParserDeck, grid, std::string("ISOGCR"), isogcr);
+        initEPSKey(newParserDeck, grid, std::string("IKRW"),   ikrw);
+        initEPSKey(newParserDeck, grid, std::string("IKRG"),   ikrg);
+        initEPSKey(newParserDeck, grid, std::string("IKRO"),   ikro);
+        initEPSKey(newParserDeck, grid, std::string("IKRWR"),  ikrwr);
+        initEPSKey(newParserDeck, grid, std::string("IKRGR"),  ikrgr);
+        initEPSKey(newParserDeck, grid, std::string("IKRORW"), ikrorw);
+        initEPSKey(newParserDeck, grid, std::string("IKRORG"), ikrorg);
 
         eps_transf_hyst_.resize(grid.number_of_cells);
         sat_hyst_.resize(grid.number_of_cells);
@@ -624,6 +874,213 @@ namespace Opm
         }
     }
 
+    // Initialize saturation scaling parameter
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::initEPSKey(Opm::DeckConstPtr newParserDeck,
+                                                         const UnstructuredGrid& grid,
+                                                         const std::string& keyword,
+                                                         std::vector<double>& scaleparam)
+    { 
+        const bool useAqua = phase_usage_.phase_used[Aqua];
+        const bool useLiquid = phase_usage_.phase_used[Liquid];
+        const bool useVapour = phase_usage_.phase_used[Vapour];
+        bool useKeyword = newParserDeck->hasKeyword(keyword);
+        bool hasENPTVD = newParserDeck->hasKeyword("ENPTVD");
+        bool hasENKRVD = newParserDeck->hasKeyword("ENKRVD");
+        int itab = 0;
+        std::vector<std::vector<std::vector<double> > > table_dummy;
+        std::vector<std::vector<std::vector<double> > >& table = table_dummy;
+
+        // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
+        int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+        int phase_pos_vapour = phase_usage_.phase_pos[BlackoilPhases::Vapour];
+        if ((keyword[0] == 'S' && (useKeyword || hasENPTVD)) || (keyword[1] == 'S' && useKeyword) ) {
+            if (keyword == std::string("SWL") || keyword == std::string("ISWL") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 0))) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
+                }
+            } else if (keyword == std::string("SWCR") || keyword == std::string("ISWCR") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 1))) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).swcr_;
+                }
+            } else if (keyword == std::string("SWU") || keyword == std::string("ISWU") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 2))) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
+                }
+            } else if (keyword == std::string("SGL") || keyword == std::string("ISGL") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 3))) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smin_[phase_pos_vapour];
+                }
+            } else if (keyword == std::string("SGCR") || keyword == std::string("ISGCR") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 4))) {
+                    itab = 5;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).sgcr_;
+                }
+            } else if (keyword == std::string("SGU") || keyword == std::string("ISGU") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 5))) {
+                    itab = 6;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).smax_[phase_pos_vapour];
+                }
+            } else if (keyword == std::string("SOWCR") || keyword == std::string("ISOWCR") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 6))) {
+                    itab = 7;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).sowcr_;
+                }
+            } else if (keyword == std::string("SOGCR") || keyword == std::string("ISOGCR") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENPTVD", 7))) {
+                    itab = 8;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).sogcr_;
+                }
+            } else {
+                OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
+            }
+            if (!useKeyword && itab > 0) {
+                Opm::EnptvdTable enptvd(newParserDeck->getKeyword("ENPTVD"));
+                table.resize(1); // only one region supported so far
+                for (unsigned i = 0; i < table.size(); ++i) {
+                    table[i].resize(9);
+
+                    for (int k = 0; k < enptvd.numRows(); ++k) {
+                        table[i][0] = enptvd.getDepthColumn();
+                        table[i][1] = enptvd.getSwcoColumn();
+                        table[i][2] = enptvd.getSwcritColumn();
+                        table[i][3] = enptvd.getSwmaxColumn();
+                        table[i][4] = enptvd.getSgcoColumn();
+                        table[i][5] = enptvd.getSgcritColumn();
+                        table[i][6] = enptvd.getSgmaxColumn();
+                        table[i][7] = enptvd.getSowcritColumn();
+                        table[i][8] = enptvd.getSogcritColumn();
+                    }
+                }
+            }
+        } else if ((keyword[0] == 'K' && (useKeyword || hasENKRVD)) || (keyword[1] == 'K' && useKeyword) ) {
+            if (keyword == std::string("KRW") || keyword == std::string("IKRW") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 0))) {
+                    itab = 1;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwmax_;
+                }
+            } else if (keyword == std::string("KRG") || keyword == std::string("IKRG") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 1))) {
+                    itab = 2;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krgmax_;
+                }
+                if (useLiquid && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 2))) {
+                    itab = 3;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).kromax_;
+                }
+            } else if (keyword == std::string("KRWR") || keyword == std::string("IKRWR") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 3))) {
+                    itab = 4;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krwr_;
+                }
+            } else if (keyword == std::string("KRGR") || keyword == std::string("IKRGR") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 4))) {
+                    itab = 5;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krgr_;
+                }
+            } else if (keyword == std::string("KRORW") || keyword == std::string("IKRORW") ) {
+                if (useAqua && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 5))) {
+                    itab = 6;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krorw_;
+                }
+            } else if (keyword == std::string("KRORG") || keyword == std::string("IKRORG") ) {
+                if (useVapour && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 6))) {
+                    itab = 7;
+                    scaleparam.resize(grid.number_of_cells);
+                    for (int i=0; i<grid.number_of_cells; ++i)
+                        scaleparam[i] = funcForCell(i).krorg_;
+                }
+            } else {
+                OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
+            }
+            if (!useKeyword && itab > 0) {
+                Opm::EnkrvdTable enkrvd(newParserDeck->getKeyword("ENKRVD"));
+                table.resize(1); // only one region supported so far
+                for (unsigned i = 0; i < table.size(); ++i) {
+                    table[i].resize(8);
+
+                    for (int k = 0; k < enkrvd.numRows(); ++k) {
+                        table[i][0] = enkrvd.getDepthColumn();
+                        table[i][1] = enkrvd.getKrwmaxColumn();
+                        table[i][2] = enkrvd.getKrgmaxColumn();
+                        table[i][3] = enkrvd.getKromaxColumn();
+                        table[i][4] = enkrvd.getKrwcritColumn();
+                        table[i][5] = enkrvd.getKrgcritColumn();
+                        table[i][6] = enkrvd.getKrocritgColumn();
+                        table[i][7] = enkrvd.getKrocritwColumn();
+                    }
+                }
+            }
+        }
+
+        if (scaleparam.empty()) {
+            return;
+        } else if (useKeyword) {
+            // Keyword values from deck
+            std::cout << "--- Scaling parameter '" << keyword << "' assigned." << std::endl;
+            const int* gc = grid.global_cell;
+            const std::vector<double>& val = newParserDeck->getKeyword(keyword)->getSIDoubleData();
+            for (int c = 0; c < int(scaleparam.size()); ++c) {
+                const int deck_pos = (gc == NULL) ? c : gc[c];
+                scaleparam[c] = val[deck_pos];
+            }
+        } else {
+            // TODO for new parser
+            /*
+            std::cout << "--- Scaling parameter '" << keyword << "' assigned via ";
+            if (keyword[0] == 'S')
+                newParserDeck.getENPTVD().write(std::cout);
+            else
+                newParserDeck.getENKRVD().write(std::cout);
+            */
+            const double* cc = grid.cell_centroids;
+            const int dim = grid.dimensions;
+            for (int cell = 0; cell < grid.number_of_cells; ++cell) {
+                int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
+                if (table[itab][jtab][0] != -1.0) {
+                    std::vector<double>& depth = table[0][jtab];
+                    std::vector<double>& val = table[itab][jtab];
+                    double zc = cc[dim*cell+dim-1];
+                    if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth, val, zc);
+                    }
+                }
+            }
+        }
+    }
+
     // Saturation scaling
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::initEPSParam(const int cell,
@@ -646,6 +1103,13 @@ namespace Opm
     {
         if (scr.empty() && su.empty() && (sxcr.empty() || !do_3pt_) && s0.empty()) {
             data.doNotScale = true;
+            data.smin = sl_tab;
+            if (oil) {
+                data.smax = (s0_tab < 0.0) ? 1.0 - su_tab : 1.0 - su_tab - s0_tab;
+            } else {
+                data.smax = su_tab;
+            }
+            data.scr = scr_tab;
         } else {
             data.doNotScale = false;
             data.do_3pt = do_3pt_;

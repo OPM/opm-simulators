@@ -23,10 +23,15 @@
 #define	OPM_WELLCOLLECTION_HPP
 
 #include <vector>
+#include <memory>
+
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <memory>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 
 namespace Opm
 {
@@ -34,6 +39,14 @@ namespace Opm
     class WellCollection
     {
     public:
+
+        void addField(GroupConstPtr fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage);
+
+        void addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage);
+
+        void addGroup(GroupConstPtr groupChild, std::string parent_name,
+                      size_t timeStep, const PhaseUsage& phaseUsage);
+
         /// Adds and creates if necessary the child to the collection
         /// and appends it to parent's children. Also adds and creates the parent
         /// if necessary.

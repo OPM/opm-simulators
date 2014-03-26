@@ -263,7 +263,7 @@ struct Wells *
 clone_wells(const struct Wells *W);
 
 bool
-wells_equal(const struct Wells *W1, const struct Wells *W2);
+wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose);
 
 
 

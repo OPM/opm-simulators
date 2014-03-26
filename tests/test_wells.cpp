@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(Copy)
                         BOOST_CHECK_EQUAL( dist1[p] , dist2[p]);
                 }
             }
-            BOOST_CHECK( well_controls_equal( c1 , c2 ));
+            BOOST_CHECK( well_controls_equal( c1 , c2 , false) );
         }
     }
 }
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(Equals_WellsEqual_ReturnsTrue) {
     std::shared_ptr<Wells> W2(create_wells(nphases, nwells, nperfs),
                                 destroy_wells);
 
-    BOOST_CHECK(wells_equal(W1.get(), W2.get()));
+    BOOST_CHECK(wells_equal(W1.get(), W2.get() , false));
 }
 
 
@@ -232,5 +232,5 @@ BOOST_AUTO_TEST_CASE(Equals_WellsDiffer_ReturnsFalse) {
     std::shared_ptr<Wells> W2(create_wells(nphases, 3, nperfs),
                                 destroy_wells);
 
-    BOOST_CHECK(!wells_equal(W1.get(), W2.get()));
+    BOOST_CHECK(!wells_equal(W1.get(), W2.get() , false ));
 }

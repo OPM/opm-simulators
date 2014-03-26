@@ -98,6 +98,8 @@ struct WellControls
      */
     int current;
 
+    bool well_is_open;
+
     /* 
        The capacity allocated.
     */
@@ -130,7 +132,7 @@ well_controls_create(void)
     ctrl = malloc(1 * sizeof *ctrl);
 
     if (ctrl != NULL) {
-        /* Initialise empty control set */
+        /* Initialise empty control set; the well is created open. */
         ctrl->num               = 0;
         ctrl->number_of_phases  = 0;
         ctrl->type              = NULL;
@@ -138,6 +140,7 @@ well_controls_create(void)
         ctrl->distr             = NULL;
         ctrl->current           = -1;
         ctrl->cpty              = 0;         
+        ctrl->well_is_open      = true;  
     }
 
     return ctrl;
@@ -192,10 +195,22 @@ well_controls_set_current( struct WellControls * ctrl, int current) {
     ctrl->current = current;
 }
 
-void 
-well_controls_invert_current( struct WellControls * ctrl ) {
-    ctrl->current = ~ctrl->current;
+bool well_controls_well_is_shut(const struct WellControls * ctrl) {
+    return !ctrl->well_is_open;
 }
+
+bool well_controls_well_is_open(const struct WellControls * ctrl) {
+    return ctrl->well_is_open;
+}
+
+void well_controls_open_well( struct WellControls * ctrl) {
+    ctrl->well_is_open = true;
+}
+
+void well_controls_shut_well( struct WellControls * ctrl) {
+    ctrl->well_is_open = false;
+}
+
 
 
 enum WellControlType 
@@ -293,19 +308,38 @@ well_controls_add_new(enum WellControlType type , double target , const double *
 
 
 bool
-well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2)
+well_controls_equal(const struct WellControls *ctrls1, const struct WellControls *ctrls2 , bool verbose)
 /* ---------------------------------------------------------------------- */
 {
     bool are_equal = true;
-    are_equal = (ctrls1->num == ctrls2->num);
-    are_equal = are_equal && (ctrls1->number_of_phases == ctrls2->number_of_phases);
+
+    if (ctrls1->num !=  ctrls2->num) {
+        are_equal = false;
+        if (verbose)
+            printf("ctrls1->num:%d    ctrls2->num:%d \n",ctrls1->num , ctrls2->num);
+    }
+
+    if (ctrls1->number_of_phases !=  ctrls2->number_of_phases) {
+        are_equal = false;
+        if (verbose)
+            printf("ctrls1->number_of_phases:%d    ctrls2->number_of_phases:%d \n",ctrls1->number_of_phases , ctrls2->number_of_phases);
+    }
+
     if (!are_equal) {
         return are_equal;
     }
 
-    are_equal = are_equal && (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) == 0);
-    are_equal = are_equal && (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) == 0);
-    are_equal = are_equal && (memcmp(ctrls1->distr, ctrls2->distr, ctrls1->num * ctrls1->number_of_phases * sizeof *ctrls1->distr ) == 0);
+    if (memcmp(ctrls1->type, ctrls2->type, ctrls1->num * sizeof *ctrls1->type ) != 0) {
+        are_equal = false;
+        if (verbose) 
+            printf("The ->type vectors are different \n");
+    }
+
+    if (memcmp(ctrls1->target, ctrls2->target, ctrls1->num * sizeof *ctrls1->target ) != 0) {
+        are_equal = false;
+        if (verbose) 
+            printf("The ->target vectors are different \n");
+    }
     are_equal = are_equal && (ctrls1->cpty == ctrls2->cpty);
 
     return are_equal;
