@@ -31,6 +31,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/well_controls.h>
 
 #include <cassert>
@@ -1272,7 +1273,12 @@ namespace {
                  e = residual_.mass_balance.end();
              b != e; ++b)
         {
-            r = std::max(r, (*b).value().matrix().norm());
+            const double rowResid = (*b).value().matrix().norm();
+            if (!std::isfinite(rowResid)) {
+                OPM_THROW(Opm::NumericalProblem,
+                          "Encountered a non-finite residual");
+            }
+            r = std::max(r, rowResid);
         }
         r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
         r = std::max(r, residual_.well_eq.value().matrix().norm());
