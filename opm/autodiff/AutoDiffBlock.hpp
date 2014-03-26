@@ -198,7 +198,11 @@ namespace Opm
         AutoDiffBlock& operator-=(const AutoDiffBlock& rhs)
         {
             if (jac_.empty()) {
-                jac_ = rhs.jac_;
+                const int num_blocks = rhs.numBlocks();
+                jac_.resize(num_blocks);
+                for (int block = 0; block < num_blocks; ++block) {
+                    jac_[block] = -rhs.jac_[block];
+                }
             } else if (!rhs.jac_.empty()) {
                 assert (numBlocks()    == rhs.numBlocks());
                 assert (value().size() == rhs.value().size());
