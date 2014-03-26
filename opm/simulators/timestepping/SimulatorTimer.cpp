@@ -58,64 +58,35 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(Opm::TimeMapConstPtr timeMap,
-                              size_t beginReportStepIdx,
-                              size_t endReportStepIdx)
+    void SimulatorTimer::init(Opm::TimeMapConstPtr timeMap)
     {
-        timeMap_ = timeMap;
         current_step_ = 0;
-        beginReportStepIdx_ = beginReportStepIdx;
-        endReportStepIdx_ = std::min(timeMap_->numTimesteps() + 1, endReportStepIdx);
+        total_time_ = timeMap->getTotalTime();
+        timesteps_.resize(timeMap->numTimesteps());
+        for ( size_t i = 0; i < timeMap->numTimesteps(); ++i ) {
+            timesteps_[i] = timeMap->getTimeStepLength(i);
+        }
+        boost::posix_time::ptime start_time = timeMap->getStartTime(0);
+        start_date_ = start_time.date();
     }
 
     /// Total number of steps.
     int SimulatorTimer::numSteps() const
     {
-        if (timeMap_)
-            return endReportStepIdx_ - beginReportStepIdx_;
-        else
-            return timesteps_.size();
-    }
-
-    /// Index of the first considered simulation episode
-    size_t SimulatorTimer::beginReportStepIndex() const
-    {
-        if (!timeMap_) {
-            OPM_THROW(std::runtime_error, "indexFirstEpisode() is only implemented "
-                      "for simulation timers which are based on Opm::TimeMap");
-        }
-
-        return beginReportStepIdx_;
-    }
-
-    /// Index of the last considered simulation episode
-    size_t SimulatorTimer::endReportStepIndex() const
-    {
-        if (!timeMap_) {
-            OPM_THROW(std::runtime_error, "indexLastEpisode() is only implemented "
-                      "for simulation timers which are based on Opm::TimeMap");
-        }
-
-        return endReportStepIdx_;
+        return timesteps_.size();
     }
 
     /// Current step number.
     int SimulatorTimer::currentStepNum() const
     {
-        return current_step_ + beginReportStepIdx_;
+        return current_step_;
     }
 
     /// Set current step number.
     void SimulatorTimer::setCurrentStepNum(int step)
     {
-        if (current_step_ < 0 || current_step_ > int(numSteps())) {
-            // Note that we do allow current_step_ == timesteps_.size(),
-            // that is the done() state.
-            OPM_THROW(std::runtime_error, "Trying to set invalid step number: " << step);
-        }
         current_step_ = step;
-        if (timeMap_)
-            current_time_ = std::accumulate(timesteps_.begin(), timesteps_.begin() + step, 0.0);
+        current_time_ = std::accumulate(timesteps_.begin(), timesteps_.begin() + step, 0.0);
     }
 
 
@@ -123,29 +94,19 @@ namespace Opm
     double SimulatorTimer::currentStepLength() const
     {
         assert(!done());
-        if (timeMap_)
-            return timeMap_->getTimeStepLength(beginReportStepIdx_ + current_step_);
-        else
-            return timesteps_[current_step_];
+        return timesteps_[current_step_];
     }
 
     double SimulatorTimer::stepLengthTaken() const
     {
         assert(current_step_ > 0);
-        if (timeMap_)
-            return timeMap_->getTimeStepLength(beginReportStepIdx_ + current_step_ - 1);
-        else
-            return timesteps_[current_step_ - 1];
+        return timesteps_[current_step_ - 1];
     }
 
     /// time elapsed since the start of the simulation [s].
     double SimulatorTimer::simulationTimeElapsed() const
     {
-        if (timeMap_)
-            return
-                timeMap_->getTimePassedUntil(beginReportStepIdx_ + current_step_);
-        else
-            return current_time_;
+        return current_time_;
     }
 
     /// time elapsed since the start of the POSIX epoch (Jan 1st, 1970) [s].
@@ -157,10 +118,7 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::currentDateTime() const
     {
-        if (timeMap_)
-            return timeMap_->getStartTime(beginReportStepIdx_ + current_step_);
-        else
-            return boost::posix_time::ptime(start_date_) + boost::posix_time::seconds( (int) current_time_ );
+        return boost::posix_time::ptime(start_date_) + boost::posix_time::seconds( (int) current_time_ );
     }
 
 
@@ -168,11 +126,7 @@ namespace Opm
     /// Total time.
     double SimulatorTimer::totalTime() const
     {
-        if (timeMap_)
-            return
-                timeMap_->getTotalTime();
-        else
-            return total_time_;
+        return total_time_;
     }
 
     /// Set total time.
@@ -181,13 +135,7 @@ namespace Opm
     /// access to later timesteps.
     void SimulatorTimer::setTotalTime(double time)
     {
-        if (timeMap_) {
-            // well, what can we do if we use opm-parser's TimeMap?
-            OPM_THROW(std::logic_error,
-                      "Not implemented: SimulatorTimer::setTotalTime() if using a TimeMap.");
-        }
-        else
-            total_time_ = time;
+        total_time_ = time;
     }
 
     /// Print a report with current and total time etc.
@@ -204,8 +152,7 @@ namespace Opm
     SimulatorTimer& SimulatorTimer::operator++()
     {
         assert(!done());
-        if (!timeMap_)
-            current_time_ += timesteps_[current_step_];
+        current_time_ += timesteps_[current_step_];
         ++current_step_;
         return *this;
     }
@@ -213,10 +160,7 @@ namespace Opm
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
     {
-        if (timeMap_)
-            return current_step_ > int(endReportStepIdx_ - beginReportStepIdx_ - 1);
-        else
-            return int(timesteps_.size()) == current_step_;
+        return int(timesteps_.size()) == current_step_;
     }
 
 
