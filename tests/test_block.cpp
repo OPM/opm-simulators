@@ -195,6 +195,7 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
 {
     typedef AutoDiffBlock<double> ADB;
 
+    // Basic testing of += and -=.
     ADB::V vx(3);
     vx << 0.2, 1.2, 13.4;
 
@@ -218,4 +219,17 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
     BOOST_CHECK(z.value().isApprox(x.value(), tolerance));
     BOOST_CHECK(z.derivative()[0].isApprox(x.derivative()[0], tolerance));
     BOOST_CHECK(z.derivative()[1].isApprox(x.derivative()[1], tolerance));
+
+    // Testing the case when the left hand side has empty() jacobian.
+    ADB yconst = ADB::constant(vy);
+    z = yconst;
+    z -= x;
+    ADB diff = yconst - x;
+    BOOST_CHECK(z.value().isApprox(diff.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(diff.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(diff.derivative()[1], tolerance));
+    z += x;
+    BOOST_CHECK(z.value().isApprox(yconst.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
+    BOOST_CHECK(z.derivative()[1].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
 }
