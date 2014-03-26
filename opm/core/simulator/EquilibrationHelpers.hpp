@@ -175,7 +175,8 @@ namespace Opm
                  * depth and pressure @c press.
                  */
                 virtual double operator()(const double depth,
-                                          const double press) const = 0;
+                                          const double press,
+                                          const double sat = 0.0) const = 0;
             };
 
 
@@ -199,7 +200,8 @@ namespace Opm
                  */
                 double
                 operator()(const double /* depth */,
-                           const double /* press */) const
+                           const double /* press */,
+                           const double sat = 0.0) const
                 {
                     return 0.0;
                 }
@@ -216,14 +218,24 @@ namespace Opm
                 /**
                  * Constructor.
                  *
+                 * \param[in] props      property object
+                 * \param[in] cell       any cell in the pvt region
                  * \param[in] depth Depth nodes.
                  * \param[in] rs Dissolved gas-oil ratio at @c depth.
                  */
-                RsVD(const std::vector<double>& depth,
+                RsVD(const BlackoilPropertiesInterface& props,
+                     const int cell,
+                     const std::vector<double>& depth,
                      const std::vector<double>& rs)
-                    : depth_(depth)
+                    : props_(props) 
+                    , cell_(cell)
+                    , depth_(depth)
                     , rs_(rs)
                 {
+                    auto pu = props_.phaseUsage();
+                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
+                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1e100;
+                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
                 }
 
                 /**
@@ -240,14 +252,111 @@ namespace Opm
                  */
                 double
                 operator()(const double depth,
-                           const double /* press */) const
+                           const double press,
+                           const double sat_gas = 0.0) const
                 {
-                    return linearInterpolation(depth_, rs_, depth);
+                    if (sat_gas > 0.0) {
+                        return satRs(press);
+                    } else {
+                        return std::min(satRs(press), linearInterpolation(depth_, rs_, depth));
+                    }
                 }
 
             private:
+                const BlackoilPropertiesInterface& props_;
+                const int cell_;
                 std::vector<double> depth_; /**< Depth nodes */
                 std::vector<double> rs_;    /**< Dissolved gas-oil ratio */
+                double z_[BlackoilPhases::MaxNumPhases];
+                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
+
+                double satRs(const double press) const
+                {
+                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    // Rs/Bo is in the gas row and oil column of A_.
+                    // 1/Bo is in the oil row and column.
+                    // Recall also that it is stored in column-major order.
+                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    const int np = props_.numPhases();
+                    return A_[np*opos + gpos] / A_[np*opos + opos];
+                }
+            };
+
+
+            /**
+             * Type that implements "vaporized oil-gas ratio"
+             * tabulated as a function of depth policy.  Data
+             * typically taken from keyword 'RVVD'.
+             */
+            class RvVD : public RsFunction {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * \param[in] props      property object
+                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] depth Depth nodes.
+                 * \param[in] rv Dissolved gas-oil ratio at @c depth.
+                 */
+                RvVD(const BlackoilPropertiesInterface& props,
+                     const int cell,
+                     const std::vector<double>& depth,
+                     const std::vector<double>& rv)
+                    : props_(props) 
+                    , cell_(cell)
+                    , depth_(depth)
+                    , rv_(rv)
+                {
+                    auto pu = props_.phaseUsage();
+                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
+                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1e100;
+                }
+
+                /**
+                 * Function call.
+                 *
+                 * \param[in] depth Depth at which to calculate RV
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RV
+                 * value.
+                 *
+                 * \return Vaporized oil-gas ratio (RV) at depth @c
+                 * depth and pressure @c press.
+                 */
+                double
+                operator()(const double depth,
+                           const double press,
+                           const double sat_oil = 0.0 ) const
+                {
+                    if (sat_oil > 0.0) {
+                        return satRv(press);
+                    } else {
+                        return std::min(satRv(press), linearInterpolation(depth_, rv_, depth));
+                    }
+                }
+
+            private:
+                const BlackoilPropertiesInterface& props_;
+                const int cell_;
+                std::vector<double> depth_; /**< Depth nodes */
+                std::vector<double> rv_;    /**< Vaporized oil-gas ratio */
+                double z_[BlackoilPhases::MaxNumPhases];
+                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
+
+                double satRv(const double press) const
+                {
+                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    // Rv/Bg is in the oil row and gas column of A_.
+                    // 1/Bg is in the gas row and column.
+                    // Recall also that it is stored in column-major order.
+                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    const int np = props_.numPhases();
+                    return A_[np*gpos + opos] / A_[np*gpos + gpos];
+                }
             };
 
 
@@ -298,9 +407,14 @@ namespace Opm
                  */
                 double
                 operator()(const double /* depth */,
-                           const double press) const
-                {
-                    return std::min(satRs(press), rs_sat_contact_);
+                           const double press,
+                           const double sat_gas = 0.0) const
+                {                     
+                    if (sat_gas > 0.0) {
+                        return satRs(press);
+                    } else {
+                        return std::min(satRs(press), rs_sat_contact_);
+                    }
                 }
 
             private:
@@ -320,6 +434,84 @@ namespace Opm
                     const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
                     const int np = props_.numPhases();
                     return A_[np*opos + gpos] / A_[np*opos + opos];
+                }
+            };
+
+
+            /**
+             * Class that implements "vaporized oil-gas ratio" (Rv)
+             * as function of depth and pressure as follows:
+             *
+             *   1. The Rv at the gas-oil contact is equal to the
+             *      saturated Rv value, Rv_sat_contact.
+             *
+             *   2. The Rv elsewhere is equal to Rv_sat_contact, but
+             *      constrained to the saturated value as given by the
+             *      local pressure.
+             *
+             * This should yield Rv-values that are constant below the
+             * contact, and decreasing above the contact.
+             */
+            class RvSatAtContact : public RsFunction {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * \param[in] props      property object
+                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] p_contact  oil pressure at the contact
+                 */
+                RvSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact)
+                    : props_(props), cell_(cell)
+                {
+                    auto pu = props_.phaseUsage();
+                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
+                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1e100;
+                    rv_sat_contact_ = satRv(p_contact);
+                }
+
+                /**
+                 * Function call.
+                 *
+                 * \param[in] depth Depth at which to calculate RV
+                 * value.
+                 *
+                 * \param[in] press Pressure at which to calculate RV
+                 * value.
+                 *
+                 * \return Dissolved oil-gas ratio (RV) at depth @c
+                 * depth and pressure @c press.
+                 */
+                double
+                operator()(const double /*depth*/,
+                           const double press,
+                           const double sat_oil = 0.0) const
+                {
+                    if (sat_oil > 0.0) {
+                        return satRv(press);
+                    } else {
+                        return std::min(satRv(press), rv_sat_contact_);
+                    }
+                }
+
+            private:
+                const BlackoilPropertiesInterface& props_;
+                const int cell_;
+                double z_[BlackoilPhases::MaxNumPhases];
+                double rv_sat_contact_;
+                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
+
+                double satRv(const double press) const
+                {
+                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    // Rv/Bg is in the oil row and gas column of A_.
+                    // 1/Bg is in the gas row and column.
+                    // Recall also that it is stored in column-major order.
+                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                    const int np = props_.numPhases();
+                    return A_[np*gpos + opos] / A_[np*gpos + gpos];
                 }
             };
 
@@ -355,6 +547,9 @@ namespace Opm
                 double depth;
                 double press;
             } main, woc, goc;
+            int live_oil_table_index;
+            int wet_gas_table_index;
+            int N;
         };
 
         /**
