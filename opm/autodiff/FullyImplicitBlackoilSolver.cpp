@@ -1267,23 +1267,22 @@ namespace {
     double
     FullyImplicitBlackoilSolver::residualNorm() const
     {
-        double r = 0;
-        for (std::vector<ADB>::const_iterator
-                 b = residual_.mass_balance.begin(),
-                 e = residual_.mass_balance.end();
-             b != e; ++b)
+        double globalNorm = 0;
+        std::vector<ADB>::const_iterator quantityIt = residual_.mass_balance.begin();
+        const std::vector<ADB>::const_iterator endQuantityIt = residual_.mass_balance.end();
+        for (; quantityIt != endQuantityIt; ++quantityIt)
         {
-            const double rowResid = (*b).value().matrix().norm();
-            if (!std::isfinite(rowResid)) {
+            const double quantityResid = (*quantityIt).value().matrix().norm();
+            if (!std::isfinite(quantityResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
             }
-            r = std::max(r, rowResid);
+            globalNorm = std::max(globalNorm, quantityResid);
         }
-        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
-        r = std::max(r, residual_.well_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
 
-        return r;
+        return globalNorm;
     }
 
 
