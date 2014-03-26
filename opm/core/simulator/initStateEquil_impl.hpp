@@ -580,7 +580,7 @@ namespace Opm
         phaseSaturations(const Region&           reg,
                          const CellRange&        cells,
                          const BlackoilPropertiesInterface& props,
-                         const std::vector< std::vector<double> >& phase_pressures)
+                         std::vector< std::vector<double> >& phase_pressures)
         {
             const double z0   = reg.datum();
             const double zwoc = reg.zwoc ();
@@ -621,6 +621,7 @@ namespace Opm
                     sg = satFromPc(props, gaspos, cell, pcog, increasing);
                     phase_saturations[gaspos][local_index] = sg;
                 }
+                bool overlap = false;
                 if (gas && water && (sg + sw > 1.0)) {
                     // Overlapping gas-oil and oil-water transition
                     // zones can lead to unphysical saturations when
@@ -631,8 +632,32 @@ namespace Opm
                     sg = 1.0 - sw;
                     phase_saturations[waterpos][local_index] = sw;
                     phase_saturations[gaspos][local_index] = sg;
+                    overlap = true;
                 }
                 phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
+                
+                // Adjust phase pressures for max and min saturation ...
+                double pc[BlackoilPhases::MaxNumPhases];
+                double sat[BlackoilPhases::MaxNumPhases];
+                if (sw > smax[waterpos]-1.0e-6) {
+                    sat[waterpos] = smax[waterpos];
+                    props.capPress(1, sat, &cell, pc, 0);                   
+                    phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
+                } else if (overlap || sg > smax[gaspos]-1.0e-6) {
+                    sat[gaspos] = smax[gaspos];
+                    props.capPress(1, sat, &cell, pc, 0);                   
+                    phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
+                }
+                if (sg < smin[gaspos]+1.0e-6) {
+                    sat[gaspos] = smin[gaspos];
+                    props.capPress(1, sat, &cell, pc, 0);
+                    phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pc[gaspos];
+                }
+                if (sw < smin[waterpos]+1.0e-6) {
+                    sat[waterpos] = smin[waterpos];
+                    props.capPress(1, sat, &cell, pc, 0);
+                    phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pc[waterpos];
+                }
             }
             return phase_saturations;
         }
@@ -659,19 +684,18 @@ namespace Opm
         std::vector<double> computeRs(const UnstructuredGrid& grid,
                                       const CellRangeType& cells,
                                       const std::vector<double> oil_pressure,
-                                      const Miscibility::RsFunction& rs_func)
+                                      const Miscibility::RsFunction& rs_func,
+                                      const std::vector<double> gas_saturation)
         {
             assert(grid.dimensions == 3);
             std::vector<double> rs(cells.size());
             int count = 0;
             for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
                 const double depth = grid.cell_centroids[3*(*it) + 2];
-                rs[count] = rs_func(depth, oil_pressure[count]);
+                rs[count] = rs_func(depth, oil_pressure[count], gas_saturation[count]);
             }
             return rs;
         }
-
-
 
     } // namespace Equil
 
