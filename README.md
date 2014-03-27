@@ -5,10 +5,14 @@ CONTENT
 -------
 
 opm-material is an infrastructural OPM module for code related with
-constitutive relations, such as relative-permeability/capillary
-pressure laws, fluid systems, flash solvers, heat conduction laws, et
-cetera. It is a "library-less" module and requires dune-common and
-dune-istl.
+material properties like relative-permeability/capillary pressure
+laws, thermodynamic relations, flash solvers, empirical heat
+conduction laws, et cetera. It is a "library-less" module and only
+requires the availability of the DUNE module "dune-common" as well as
+the OPM modules "opm-core" and "opm-parser". Historically,
+opm-material emerged as a spin-off of OPM's eWoms module [1], which in
+turn is a heavily modified version of the Dumux [2] simulation toolkit
+for flow and transport in porous media.
 
 LICENSE
 -------
@@ -86,14 +90,24 @@ sudo yum-config-manager --add-repo \
     http://www.opm-project.org/packages/current/redhat/6/opm.repo
 sudo yum install dune-common-devel dune-istl-devel
 
-DOWNLOADING
------------
+DOWNLOADING FROM GIT
+--------------------
 
-For a read-only download:
+The prerequisite "dune-common" module can be downloaded like this:
+
+git clone git://github.com/dune-project/dune-common.git
+
+The prerequisite OPM modules are available using the following commands:
+
+git clone git://github.com/OPM/opm-parser.git
+git clone git://github.com/OPM/opm-core.git
+
+For a read-only download of the actual opm-material module use:
+
 git clone git://github.com/OPM/opm-material.git
 
-If you want to contribute, fork OPM/opm-material on github and open pull
-requests.
+If you want to contribute to the opm-material development, fork
+OPM/opm-material on github and open pull requests.
 
 BUILDING
 --------
@@ -159,13 +173,11 @@ system-wide location (often in "/usr/local") through the command
 
 
 2. As a dune module.
- - Put the opm-material directory in the same directory
-   as the other dune modules to be built (e.g. dune-commmon,
-   dune-grid). Note that for Ubuntu you can install Dune
-   from the ppa as outlined above.
- - Run dunecontrol as normal. For more information on
-   the dune build system, see
-   http://www.dune-project.org/doc/installation-notes.html
+ - Put the opm-material directory in the same directory as the other
+   dune modules to be built (e.g. dune-commmon, dune-grid). Note that
+   for Ubuntu you can install Dune from the ppa as outlined above.
+ - Run dunecontrol normally. For more information on the dune build
+   system, see http://www.dune-project.org/doc/installation-notes.html
 
 
 DOCUMENTATION
@@ -198,3 +210,6 @@ You can capture such a log from the build using the `script' utility, e.g.:
     cat CMakeCache.txt CMakeFiles/CMake*.log >> $LOGFILE
 
 The resulting file can be uploaded to for instance gist.github.com.
+
+[1] http://opm-project.org/ewoms
+[2] http://dumux.org
