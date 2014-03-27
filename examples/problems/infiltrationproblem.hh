@@ -27,8 +27,7 @@
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
-#include <opm/material/fluidmatrixinteractions/3p/3pParkerVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/3pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 
@@ -81,17 +80,14 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
-
-    // define the three-phase material law
-    typedef Opm::ThreePParkerVanGenuchten<Scalar> ThreePLaw;
+    typedef Opm::ThreePhaseMaterialTraits<
+        Scalar,
+        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx,
+        /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
 
 public:
-    // wrap the three-phase law in an adaptor to make use the generic
-    // material law API
-    typedef Opm::ThreePAdapter<wPhaseIdx, nPhaseIdx, gPhaseIdx, ThreePLaw> type;
+    typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
 };
 
 // Set the heat conduction law
@@ -220,15 +216,12 @@ public:
         materialParams_.setSnr(0.07);
         materialParams_.setSgr(0.03);
 
-        // parameters for the 3phase van Genuchten law
+        // parameters for the three-phase van Genuchten law
         materialParams_.setVgAlpha(0.0005);
         materialParams_.setVgN(4.);
         materialParams_.setkrRegardsSnr(false);
 
-        // parameters for adsorption
-        materialParams_.setKdNAPL(0.);
-        materialParams_.setRhoBulk(1500.);
-
+        materialParams_.finalize();
         materialParams_.checkDefined();
     }
 
@@ -280,14 +273,7 @@ public:
      */
     template <class Context>
     Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
-    {
-        // const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
-        // if (isFineMaterial_(pos))
-        //     return finePorosity_;
-        // else
-        //     return coarsePorosity_;
-        return porosity_;
-    }
+    { return porosity_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
@@ -411,9 +397,9 @@ private:
 
         // set pressures
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
-        Scalar Sw = invertPCGW_(pc, matParams);
-        Scalar Swr = matParams.satResidual(wPhaseIdx);
-        Scalar Sgr = matParams.satResidual(gPhaseIdx);
+        Scalar Sw = matParams.Swr();
+        Scalar Swr = matParams.Swr();
+        Scalar Sgr = matParams.Sgr();
         if (Sw < Swr)
             Sw = Swr;
         if (Sw > 1 - Sgr)
@@ -455,39 +441,8 @@ private:
                            1 - fs.moleFraction(wPhaseIdx, H2OIdx));
     }
 
-    static Scalar invertPCGW_(Scalar pcIn, const MaterialLawParams &pcParams)
-    {
-        Scalar lower, upper;
-        int k;
-        int maxIt = 50;
-        Scalar bisLimit = 1.;
-        Scalar Sw, pcGW;
-        lower = 0.0;
-        upper = 1.0;
-        for (k = 1; k <= 25; k++) {
-            Sw = 0.5 * (upper + lower);
-            pcGW = MaterialLaw::pCGW(pcParams, Sw);
-            Scalar delta = pcGW - pcIn;
-            if (delta < 0.)
-                delta *= -1.;
-            if (delta < bisLimit) {
-                return (Sw);
-            }
-            if (k == maxIt) {
-                return (Sw);
-            }
-            if (pcGW > pcIn)
-                lower = Sw;
-            else
-                upper = Sw;
-        }
-        return 0;
-    }
-
     bool isFineMaterial_(const GlobalPosition &pos) const
-    {
-        return 70. <= pos[0] && pos[0] <= 85. && 7.0 <= pos[1] && pos[1] <= 7.50;
-    }
+    {  return 70. <= pos[0] && pos[0] <= 85. && 7.0 <= pos[1] && pos[1] <= 7.50; }
 
     DimMatrix fineK_;
     DimMatrix coarseK_;
