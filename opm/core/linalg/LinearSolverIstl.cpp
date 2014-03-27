@@ -24,6 +24,7 @@
 
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 // Silence compatibility warning from DUNE headers since we don't use
 // the deprecated member anyway (in this compilation unit)
@@ -50,7 +51,7 @@
 
 #include <stdexcept>
 #include <iostream>
-
+#include <type_traits>
 
 namespace Opm
 {
@@ -224,6 +225,10 @@ namespace Opm
             break;
         case FastAMG:
 #if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
+            if(std::is_same<C,Dune::OwnerOverlapCopyCommunication<int,int> >::value)
+            {
+                OPM_THROW(std::runtime_error, "Trying to use sequential FastAMG solver for a parallel problem!");
+            }
             res = solveFastAMG(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                                linsolver_prolongate_factor_);
 #else
