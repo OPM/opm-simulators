@@ -236,22 +236,17 @@ try
             outputWriter.writeInit(simtimer, state, well_state.basicWellState());
 
         // Create and run simulator.
-    SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
-                                                               *grid->c_grid(),
-                                                               *new_props,
-                                                               rock_comp->isActive() ? rock_comp.get() : 0,
-                                                               wells,
-                                                               linsolver,
-                                                               grav,
-                                                               outputWriter);
+        SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
+                                                 *grid->c_grid(),
+                                                 *new_props,
+                                                 rock_comp->isActive() ? rock_comp.get() : 0,
+                                                 wells,
+                                                 linsolver,
+                                                 grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;
-
-        if (output) {
-            episodeReport.reportParam(outStream);
-        }
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
@@ -318,8 +313,7 @@ try
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  linsolver,
-                                                 grav,
-                                                 outputWriter);
+                                                 grav);
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
 
         if (epoch == 0) {

@@ -33,7 +33,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
@@ -67,8 +66,7 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              LinearSolverInterface& linsolver,
-             const double* gravity,
-             EclipseWriter &writer);
+             const double* gravity);
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
@@ -97,7 +95,6 @@ namespace Opm
         FullyImplicitBlackoilSolver<Grid> solver_;
         // Misc. data
         std::vector<int> allcells_;
-        EclipseWriter &eclipseWriter_;
     };
 
 
@@ -110,11 +107,10 @@ namespace Opm
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    LinearSolverInterface& linsolver,
-                                                                   const double* gravity,
-                                                                   EclipseWriter &eclipseWriter)
+                                                                   const double* gravity)
 
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity, eclipseWriter));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity));
     }
 
 
@@ -196,8 +192,7 @@ namespace Opm
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
                                                LinearSolverInterface& linsolver,
-                                               const double* gravity,
-                                               EclipseWriter &eclipseWriter)
+                                               const double* gravity)
         : grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -205,9 +200,7 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
-          solver_(grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver),
-          eclipseWriter_(eclipseWriter)
-
+          solver_(grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver)
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),
@@ -351,11 +344,6 @@ namespace Opm
 
             // advance to next timestep before reporting at this location
             ++timer;
-
-            // write an output file for later inspection
-            if (output_) {
-                eclipseWriter_.writeTimeStep(timer, state, well_state.basicWellState());
-            }
         }
 
         total_timer.stop();

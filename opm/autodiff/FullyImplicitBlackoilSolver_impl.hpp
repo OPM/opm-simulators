@@ -33,6 +33,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/well_controls.h>
 
 #ifdef HAVE_DUNE_CORNERPOINT
@@ -351,91 +352,19 @@ namespace {
     FullyImplicitBlackoilSolver<T>::constantState(const BlackoilState& x,
                                                   const WellStateFullyImplicitBlackoil&     xw)
     {
-        using namespace Opm::AutoDiffGrid;
-        const int nc = numCells(grid_);
-        const int np = x.numPhases();
+        auto state = variableState(x, xw);
 
-        // The block pattern assumes the following primary variables:
-        //    pressure
-        //    water saturation (if water present)
-        //    gas saturation, Rv (vapor oil/gas ratio) or Rs (solution gas/oil ratio) depending on hydrocarbon state
-        //      Gas only (undersaturated gas): Rv
-        //      Gas and oil: Sg
-        //      Oil only (undersaturated oil): Rs
-        //    well rates per active phase and well
-        //    well bottom-hole pressure
-        // Note that oil is assumed to always be present, but is never
-        // a primary variable.
-        assert(active_[ Oil ]);
-        std::vector<int> bpat(np, nc);
-        bpat.push_back(xw.bhp().size() * np);
-        bpat.push_back(xw.bhp().size());
-
-        SolutionState state(np);
-
-        // Pressure.
-        assert (not x.pressure().empty());
-        const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
-        state.pressure = ADB::constant(p, bpat);
-
-        // Saturation.
-        assert (not x.saturation().empty());
-        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
-        const Opm::PhaseUsage pu = fluid_.phaseUsage();
-        {
-            V so = V::Ones(nc, 1);
-            if (active_[ Water ]) {
-                const int pos = pu.phase_pos[ Water ];
-                const V   sw  = s.col(pos);
-                so -= sw;
-
-                state.saturation[pos] = ADB::constant(sw, bpat);
-            }
-            if (active_[ Gas ]) {
-                const int pos = pu.phase_pos[ Gas ];
-                const V   sg  = s.col(pos);
-                so -= sg;
-
-                state.saturation[pos] = ADB::constant(sg, bpat);
-            }
-            if (active_[ Oil ]) {
-                const int pos = pu.phase_pos[ Oil ];
-                state.saturation[pos] = ADB::constant(so, bpat);
-            }
-        }
-
-        // Solution Gas-oil ratio (rs).
-        if (active_[ Oil ] && active_[ Gas ]) {
-            const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
-            state.rs = ADB::constant(rs, bpat);
-        } else {
-            const V Rs = V::Zero(nc, 1);
-            state.rs = ADB::constant(Rs, bpat);
-        }
-
-        // Vapor Oil-gas ratio (rv).
-        if (active_[ Oil ] && active_[ Gas ]) {
-            const V rv = Eigen::Map<const V>(& x.rv()[0], x.rv().size());
-            state.rv = ADB::constant(rv, bpat);
-        } else {
-            const V rv = V::Zero(nc, 1);
-            state.rv = ADB::constant(rv, bpat);
-        }
-
-        // Well rates.
-        assert (not xw.wellRates().empty());
-        // Need to reshuffle well rates, from ordered by wells, then phase,
-        // to ordered by phase, then wells.
-        const int nw = wells_.number_of_wells;
-        // The transpose() below switches the ordering.
-        const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-        const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
-        state.qs = ADB::constant(qs, bpat);
-
-        // Well bottom-hole pressure.
-        assert (not xw.bhp().empty());
-        const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
-        state.bhp = ADB::constant(bhp, bpat);
+        // HACK: throw away the derivatives. this may not be the most
+        // performant way to do things, but it will make the state
+        // automatically consistent with variableState() (and doing
+        // things automatically is all the rage in this module ;)
+        state.pressure = ADB::constant(state.pressure.value());
+        state.rs = ADB::constant(state.rs.value());
+        state.rv = ADB::constant(state.rv.value());
+        for (int phaseIdx= 0; phaseIdx < x.numPhases(); ++ phaseIdx)
+            state.saturation[phaseIdx] = ADB::constant(state.saturation[phaseIdx].value());
+        state.qs = ADB::constant(state.qs.value());
+        state.bhp = ADB::constant(state.bhp.value());
 
         return state;
     }
@@ -1335,18 +1264,22 @@ void resetAnyComm(boost::any& anyComm, const Dune::CpGrid& grid)
     double
     FullyImplicitBlackoilSolver<T>::residualNorm() const
     {
-        double r = 0;
-        for (std::vector<ADB>::const_iterator
-                 b = residual_.mass_balance.begin(),
-                 e = residual_.mass_balance.end();
-             b != e; ++b)
+        double globalNorm = 0;
+        std::vector<ADB>::const_iterator quantityIt = residual_.mass_balance.begin();
+        const std::vector<ADB>::const_iterator endQuantityIt = residual_.mass_balance.end();
+        for (; quantityIt != endQuantityIt; ++quantityIt)
         {
-            r = std::max(r, (*b).value().matrix().norm());
+            const double quantityResid = (*quantityIt).value().matrix().norm();
+            if (!std::isfinite(quantityResid)) {
+                OPM_THROW(Opm::NumericalProblem,
+                          "Encountered a non-finite residual");
+            }
+            globalNorm = std::max(globalNorm, quantityResid);
         }
-        r = std::max(r, residual_.well_flux_eq.value().matrix().norm());
-        r = std::max(r, residual_.well_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
 
-        return r;
+        return globalNorm;
     }
 
 
