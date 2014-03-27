@@ -412,6 +412,7 @@ namespace Opm
 
             // advance to next timestep before reporting at this location
             ++timer;
+            break; // this is a temporary measure
         }
 
         total_timer.stop();
