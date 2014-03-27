@@ -30,6 +30,7 @@
 
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
+#include <dune/common/version.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
@@ -38,6 +39,10 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
+#include <dune/istl/paamg/fastamg.hh>
+#endif
 
 #include <stdexcept>
 #include <iostream>
@@ -61,7 +66,7 @@ namespace Opm
         solveCG_AMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
                     double prolongateFactor, int smoothsteps);
 
-#ifdef HAS_DUNE_FAST_AMG
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
         LinearSolverInterface::LinearSolverReport
         solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
                   double prolongateFactor, int smoothsteps);
@@ -173,7 +178,7 @@ namespace Opm
                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
             break;
         case KAMG:
-#ifdef HAS_DUNE_FAST_AMG
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
             res = solveKAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                             linsolver_prolongate_factor_, linsolver_smooth_steps_);
 #else
@@ -181,7 +186,7 @@ namespace Opm
 #endif
             break;
         case FastAMG:
-#ifdef HAS_DUNE_FAST_AMG
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
             res = solveFastAMG(A, x, b, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                                linsolver_prolongate_factor_);
 #else
@@ -311,7 +316,7 @@ namespace Opm
     }
 
 
-#ifdef HAS_DUNE_FAST_AMG
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
     LinearSolverInterface::LinearSolverReport
     solveKAMG(const Mat& A, Vector& x, Vector& b, double tolerance, int maxit, int verbosity,
               double linsolver_prolongate_factor, int linsolver_smooth_steps)

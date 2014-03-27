@@ -66,20 +66,15 @@ namespace Opm
         /// manage control switching does not exist.
         ///
         /// @param[in] W Existing wells object.
-        WellsManager(struct Wells* W, bool checkCellExistence=true);
+        explicit WellsManager(struct Wells* W, bool checkCellExistence=true);
 
         /// Construct from input deck and grid.
         /// The permeability argument may be zero if the input contain
         /// well productivity indices, otherwise it must be given in
         /// order to approximate these by the Peaceman formula.
-        WellsManager(const Opm::EclipseGridParser& deck,
-                     const UnstructuredGrid& grid,
-                     const double* permeability,
-                     bool checkCellExistence=true);
-
-
         template<class CC, class F2C, class FC>
-        WellsManager(const Opm::EclipseGridParser& deck,
+        WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+                     const size_t timeStep,
                      int num_cells,
                      const int* global_cell,
                      const int* cart_dims,
@@ -87,15 +82,12 @@ namespace Opm
                      CC begin_cell_centroids,
                      const F2C& f2c,
                      FC begin_face_centroids,
-                     const double* permeability,
-                     bool checkCellExistence=true);
+                     const double* permeability);
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
                      const UnstructuredGrid& grid,
-                     const double* permeability,
-                     bool checkCellExistence=true);
-
+                     const double* permeability);
         /// Destructor.
         ~WellsManager();
 
@@ -148,25 +140,26 @@ namespace Opm
 
 
     private:
-        template<class CC, class F2C, class FC>
-        void init(const Opm::EclipseGridParser& deck,
+        template<class CC, class C2F, class FC>
+        void init(const Opm::EclipseStateConstPtr eclipseState,
+                  const size_t timeStep,
                   int num_cells,
                   const int* global_cell,
                   const int* cart_dims,
                   int dimensions,
                   CC begin_cell_centroids,
-                  const F2C& f2c,
+                  const C2F& cell_to_faces,
                   FC begin_face_centroids,
                   const double* permeability);
         // Disable copying and assignment.
-        WellsManager(const WellsManager& other, bool checkCellExistence=true);
+        WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
         template<class C2F, class CC, class FC>
         void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
-                                   const C2F& c2f, 
+                                   const C2F& cell_to_faces, 
                                    const int* cart_dims,
                                    FC begin_face_centroids, 
                                    CC begin_cell_centroids,
@@ -185,7 +178,6 @@ namespace Opm
         // Data
         Wells* w_;
         WellCollection well_collection_;
-        bool checkCellExistence_;
     };
 
 } // namespace Opm

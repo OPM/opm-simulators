@@ -240,7 +240,7 @@ namespace Opm
                           "SaturationPropsFromDeck::init()   --  ENDSCALE: "
                           "Currently only 'NODIR' accepted.");
             }
-            if (endscale.isReversible()) {
+            if (!endscale.isReversible()) {
                 OPM_THROW(std::runtime_error,
                           "SaturationPropsFromDeck::init()   --  ENDSCALE: "
                           "Currently only 'REVERS' accepted.");
