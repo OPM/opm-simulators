@@ -28,11 +28,11 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
-#include <opm/material/fluidmatrixinteractions/3p/3pParkerVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/3pAdapter.hpp>
+#include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 #include <ewoms/models/pvs/pvsproperties.hh>
 
@@ -79,19 +79,14 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
-
-    // define the three-phase material law
-    typedef Opm::ThreePParkerVanGenuchten<Scalar> ThreePLaw;
+    typedef Opm::ThreePhaseMaterialTraits<
+        Scalar,
+        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
+        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx,
+        /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
 
 public:
-    // wrap the three-phase law in an adaptor to make use the generic
-    // material law API
-    typedef Opm::ThreePAdapter<wPhaseIdx, nPhaseIdx, gPhaseIdx, ThreePLaw> type;
-
-    // typedef Opm::MpLinearMaterial<FluidSystem::numPhases, Scalar> type;
+    typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
 };
 
 // Set the heat conduction law
@@ -212,9 +207,9 @@ public:
         finePorosity_ = 0.42;
         coarsePorosity_ = 0.42;
 
-// parameters for the capillary pressure law
+        // parameters for the capillary pressure law
 #if 1
-        // three-phase van Genuchten law
+        // three-phase Parker -- van Genuchten law
         fineMaterialParams_.setVgAlpha(0.0005);
         coarseMaterialParams_.setVgAlpha(0.005);
         fineMaterialParams_.setVgN(4.0);
@@ -222,11 +217,6 @@ public:
 
         coarseMaterialParams_.setkrRegardsSnr(true);
         fineMaterialParams_.setkrRegardsSnr(true);
-
-        coarseMaterialParams_.setKdNAPL(0.);
-        coarseMaterialParams_.setRhoBulk(1500.);
-        fineMaterialParams_.setKdNAPL(0.);
-        fineMaterialParams_.setRhoBulk(1500.);
 
         // residual saturations
         fineMaterialParams_.setSwr(0.1201);
@@ -262,6 +252,9 @@ public:
         coarseMaterialParams_.setResidSat(nPhaseIdx, 0.0701);
         coarseMaterialParams_.setResidSat(gPhaseIdx, 0.0101);
 #endif
+
+        fineMaterialParams_.finalize();
+        coarseMaterialParams_.finalize();
 
         // initialize parameters for the heat conduction law
         computeHeatCondParams_(heatCondParams_, finePorosity_);
