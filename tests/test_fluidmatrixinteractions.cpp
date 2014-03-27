@@ -36,6 +36,7 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 
 // include the helper classes to construct traits
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -301,6 +302,12 @@ int main(int argc, char **argv)
         typedef Opm::EclDefaultMaterial<ThreePhaseTraits,
                                         /*GasOilMaterial=*/TwoPhaseMaterial,
                                         /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+        testGenericApi<MaterialLaw, ThreePhaseFluidState>();
+        testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
+        //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
+    }
+    {
+        typedef Opm::ThreePhaseParkerVanGenuchten<ThreePhaseTraits> MaterialLaw;
         testGenericApi<MaterialLaw, ThreePhaseFluidState>();
         testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
         //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();

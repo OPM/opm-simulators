@@ -19,10 +19,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::ParkerVanGen3PParams
+ * \copydoc Opm::ThreePhaseParkerVanGenuchtenParams
  */
-#ifndef OPM_3P_PARKER_VAN_GENUCHTEN_PARAMS_HPP
-#define OPM_3P_PARKER_VAN_GENUCHTEN_PARAMS_HPP
+#ifndef OPM_THREE_PHASE_PARKER_VAN_GENUCHTEN_PARAMS_HPP
+#define OPM_THREE_PHASE_PARKER_VAN_GENUCHTEN_PARAMS_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -42,29 +42,31 @@ namespace Opm {
  * includes the residual saturations, as their handling is very
  * model-specific.
  */
-template<class ScalarT>
-class ParkerVanGen3PParams
+template<class TraitsT>
+class ThreePhaseParkerVanGenuchtenParams
 {
 public:
-    typedef ScalarT Scalar;
+    typedef TraitsT Traits;
+    typedef typename Traits::Scalar Scalar;
 
-    ParkerVanGen3PParams()
-    {betaGW_ = betaNW_ = betaGN_ = 1.;}
-
-    ParkerVanGen3PParams(Scalar vgAlpha, Scalar vgN, Scalar KdNAPL, Scalar rhoBulk, Dune::FieldVector<Scalar, 4> residualSaturation, Scalar betaNW = 1., Scalar betaGN = 1., Scalar betaGW = 1., bool regardSnr=false)
+    ThreePhaseParkerVanGenuchtenParams()
     {
-        setVgAlpha(vgAlpha);
-        setVgN(vgN);
-        setSwr(residualSaturation[0]);
-        setSnr(residualSaturation[1]);
-        setSgr(residualSaturation[2]);
-        setSwrx(residualSaturation[3]);
-        setkrRegardsSnr(regardSnr);
-        setKdNAPL(KdNAPL);
-        setBetaNW(betaNW);
-        setBetaGN(betaGN);
-        setBetaGW(betaGW);
-        setRhoBulk(rhoBulk);
+        betaNW_ = 1.0;
+        betaGN_ = 1.0;
+
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
+    }
+
+    /*!
+     * \brief Finish the initialization of the parameter object.
+     */
+    void finalize()
+    {
+#ifndef NDEBUG
+        finalized_ = true;
+#endif
     }
 
     /*!
@@ -72,7 +74,7 @@ public:
      *        curve.
      */
     Scalar vgAlpha() const
-    { return vgAlpha_; }
+    { assertFinalized_(); return vgAlpha_; }
 
     /*!
      * \brief Set the \f$\alpha\f$ shape parameter of van Genuchten's
@@ -86,7 +88,7 @@ public:
      *        curve.
      */
     Scalar vgM() const
-    { return vgM_; }
+    { assertFinalized_(); return vgM_; }
 
     /*!
      * \brief Set the \f$m\f$ shape parameter of van Genuchten's
@@ -102,7 +104,7 @@ public:
      *        curve.
      */
     Scalar vgN() const
-    { return vgN_; }
+    { assertFinalized_(); return vgN_; }
 
     /*!
      * \brief Set the \f$n\f$ shape parameter of van Genuchten's
@@ -114,41 +116,10 @@ public:
     { vgN_ = n; vgM_ = 1 - 1/vgN_; }
 
     /*!
-     * \brief Return the residual saturation.
-     */
-    Scalar satResidual(int phaseIdx) const
-    {
-        switch (phaseIdx)
-        {
-        case 0:
-            return Swr_;
-            break;
-        case 1:
-            return Snr_;
-            break;
-        case 2:
-            return Sgr_;
-            break;
-        };
-        OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
-    }
-
-    /*!
-     * \brief Set all residual saturations.
-     */
-    void setResiduals(Dune::FieldVector<Scalar, 3> residualSaturation)
-    {
-        setSwr(residualSaturation[0]);
-        setSnr(residualSaturation[1]);
-        setSgr(residualSaturation[2]);
-    }
-
-
-    /*!
      * \brief Return the residual wetting saturation.
      */
     Scalar Swr() const
-    { return Swr_; }
+    { assertFinalized_(); return Swr_; }
 
     /*!
      * \brief Set the residual wetting saturation.
@@ -160,7 +131,7 @@ public:
      * \brief Return the residual non-wetting saturation.
      */
     Scalar Snr() const
-    { return Snr_; }
+    { assertFinalized_(); return Snr_; }
 
     /*!
      * \brief Set the residual non-wetting saturation.
@@ -172,7 +143,7 @@ public:
      * \brief Return the residual gas saturation.
      */
     Scalar Sgr() const
-    { return Sgr_; }
+    { assertFinalized_(); return Sgr_; }
 
     /*!
      * \brief Set the residual gas saturation.
@@ -181,7 +152,7 @@ public:
     { Sgr_ = input; }
 
     Scalar Swrx() const
-    { return Swrx_; }
+    { assertFinalized_(); return Swrx_; }
 
     /*!
      * \brief Set the residual gas saturation.
@@ -198,20 +169,14 @@ public:
     void setBetaGN(Scalar input)
     { betaGN_ = input; }
 
-    void setBetaGW(Scalar input)
-    { betaGW_ = input; }
-
     /*!
      * \brief Return the values for the beta scaling parameters of capillary pressure between the phases
      */
     Scalar betaNW() const
-    { return betaNW_; }
+    { assertFinalized_(); return betaNW_; }
 
     Scalar betaGN() const
-    { return betaGN_; }
-
-    Scalar betaGW() const
-    { return betaGW_; }
+    { assertFinalized_(); return betaGN_; }
 
     /*!
      * \brief defines if residual n-phase saturation should be regarded in its relative permeability.
@@ -222,32 +187,7 @@ public:
      * \brief Calls if residual n-phase saturation should be regarded in its relative permeability.
      */
     bool krRegardsSnr() const
-    { return krRegardsSnr_; }
-
-
-    /*!
-     * \brief Return the bulk density of the porous medium
-     */
-    Scalar rhoBulk() const
-    { return rhoBulk_; }
-
-    /*!
-     * \brief Set the bulk density of the porous medium
-     */
-    void setRhoBulk(Scalar input)
-    { rhoBulk_ = input; }
-
-    /*!
-     * \brief Return the adsorption coefficient
-     */
-    Scalar KdNAPL() const
-    { return KdNAPL_; }
-
-    /*!
-     * \brief Set the adsorption coefficient
-     */
-    void setKdNAPL(Scalar input)
-    { KdNAPL_ = input; }
+    { assertFinalized_(); return krRegardsSnr_; }
 
     void checkDefined() const
     {
@@ -258,26 +198,32 @@ public:
         Valgrind::CheckDefined(Snr_);
         Valgrind::CheckDefined(Sgr_);
         Valgrind::CheckDefined(Swrx_);
-        Valgrind::CheckDefined(KdNAPL_);
-        Valgrind::CheckDefined(rhoBulk_);
+        Valgrind::CheckDefined(betaNW_);
+        Valgrind::CheckDefined(betaGN_);
         Valgrind::CheckDefined(krRegardsSnr_);
     }
 
 private:
+#ifndef NDEBUG
+    void assertFinalized_() const
+    { assert(finalized_); }
+
+    bool finalized_;
+#else
+    void assertFinalized_() const
+    { }
+#endif
+
     Scalar vgAlpha_;
     Scalar vgM_;
     Scalar vgN_;
     Scalar Swr_;
     Scalar Snr_;
     Scalar Sgr_;
-    Scalar Swrx_;     /* (Sw+Sn)_r */
-
-    Scalar KdNAPL_;
-    Scalar rhoBulk_;
+    Scalar Swrx_; // Swr + Snr
 
     Scalar betaNW_;
     Scalar betaGN_;
-    Scalar betaGW_;
 
     bool krRegardsSnr_ ;
 };
