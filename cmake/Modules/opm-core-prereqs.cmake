@@ -5,6 +5,7 @@
 set (opm-core_CONFIG_VAR
 	HAVE_ERT
 	HAVE_SUITESPARSE_UMFPACK_H
+	HAVE_DUNE_ISTL
 	)
 
 # dependencies
