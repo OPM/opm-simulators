@@ -58,7 +58,6 @@ public:
      */
     void finalize()
     {
-        // Do nothing: The two two-phase parameter objects need to be finalized themselfs!
 #ifndef NDEBUG
         finalized_ = true;
 #endif

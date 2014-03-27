@@ -133,7 +133,7 @@ public:
     {
         values[gPhaseIdx] = pcgn(params, state);
         values[oPhaseIdx] = 0;
-        values[wPhaseIdx] = pcnw(params, state);
+        values[wPhaseIdx] = - pcnw(params, state);
     }
 
     /*!
