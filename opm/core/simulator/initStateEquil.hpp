@@ -241,8 +241,8 @@ namespace Opm
                 }
                 else {
                     // No explicit equilibration region.
-                    // All cells in region zero.
-                    eqlnum.assign(G.number_of_cells, 0);
+                    // All cells in region one.
+                    eqlnum.assign(G.number_of_cells, 1);
                 }
 
                 return eqlnum;
@@ -384,7 +384,7 @@ namespace Opm
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)
                     {
-                        const typename RMap::CellRange cells = reg.cells(r);
+                        const typename RMap::CellRange cells = reg.cells(r+1);
 
                         const int repcell = *cells.begin();
                         const RhoCalc calc(props, repcell);
