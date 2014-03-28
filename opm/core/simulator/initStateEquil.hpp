@@ -27,6 +27,8 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
+#include <opm/parser/eclipse/Utility/SimpleTable.hpp>
 
 #include <array>
 #include <cassert>
@@ -61,6 +63,13 @@ namespace Opm
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
                         const EclipseGridParser& deck,
+                        const double gravity,
+                        BlackoilState& state);
+                        
+    
+    void initStateEquil(const UnstructuredGrid& grid,
+                        const BlackoilPropertiesInterface& props,
+                        const Opm::DeckConstPtr newParserDeck,
                         const double gravity,
                         BlackoilState& state);
 
@@ -227,7 +236,51 @@ namespace Opm
                 }
             }
 
+            inline
+            std::vector<EquilRecord>
+            getEquil(const Opm::DeckConstPtr newParserDeck)
+            {
+                if (newParserDeck->hasKeyword("EQUIL")) {
+                
+                    Opm::EquilWrapper eql(newParserDeck->getKeyword("EQUIL"));
 
+                    const int nrec = eql.numRegions();
+
+                    std::vector<EquilRecord> ret;
+                    ret.reserve(nrec);
+                    for (int r = 0; r < nrec; ++r) {
+
+                        EquilRecord record =
+                            {
+                                { eql.datumDepth(r)                        ,
+                                  eql.datumDepthPressure(r)                }
+                                ,
+                                { eql.waterOilContactDepth(r)              ,
+                                  eql.waterOilContactCapillaryPressure(r)  }
+                                ,
+                                { eql.gasOilContactDepth(r)                ,
+                                  eql.gasOilContactCapillaryPressure(r)    }
+                                ,
+                                eql.liveOilInitProceedure(r)
+                                ,
+                                eql.wetGasInitProceedure(r)
+                                ,
+                                eql.initializationTargetAccuracy(r)
+                            };
+                        if (record.N != 0) {
+                            OPM_THROW(std::domain_error,
+                              "kw EQUIL, item 9: Only N=0 supported.");
+                        }
+                        ret.push_back(record);
+                    }
+
+                    return ret;
+                }
+                else {
+                    OPM_THROW(std::domain_error,
+                              "Deck does not provide equilibration data.");
+                }
+            }
 
 
             inline
@@ -249,6 +302,23 @@ namespace Opm
             }
 
 
+            inline
+            std::vector<int>
+            equilnum(const Opm::DeckConstPtr newParserDeck,
+                     const UnstructuredGrid&  G   )
+            {
+                std::vector<int> eqlnum;
+                if (newParserDeck->hasKeyword("EQLNUM")) {
+                    eqlnum = newParserDeck->getKeyword("EQLNUM")->getIntData();
+                }
+                else {
+                    // No explicit equilibration region.
+                    // All cells in region one.
+                    eqlnum.assign(G.number_of_cells, 1);
+                }
+
+                return eqlnum;
+            }
 
 
             template <class InputDeck>
@@ -278,12 +348,7 @@ namespace Opm
                     rs_func_.reserve(rec.size());
                     if (deck.hasField("DISGAS")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());
-                            // TODO Check this ... 
-                            //   The index <cell> is here picked as a representative for its equlibrium region,
-                            //   but is below used to identify PVT region.
-                            //   This assumes that an eq-region has uniform pvt properties, is this always ok?
-                            //   For Norne this is trivial, as there is only one active pvt-region (PVTNUM=1 for all cells):                   
+                            const int cell = *(eqlmap.cells(i + 1).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
                                 if (deck.hasField("RSVD")) { 
                                     // TODO When this kw is actually parsed, also check for proper number of available tables
@@ -314,8 +379,7 @@ namespace Opm
                     rv_func_.reserve(rec.size());
                     if (deck.hasField("VAPOIL")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());
-                            // TODO Similar as above: eq-region vs pvt-region ...                   
+                            const int cell = *(eqlmap.cells(i + 1).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (deck.hasField("RVVD")) { 
                                     // TODO When this kw is actually parsed, also check for proper number of available tables
@@ -396,6 +460,173 @@ namespace Opm
                         
                         const PVec sat = phaseSaturations(eqreg, cells, props, press);
                         
+                        const int np = props.numPhases();
+                        for (int p = 0; p < np; ++p) {
+                            copyFromRegion(press[p], cells, pp_[p]);
+                            copyFromRegion(sat[p], cells, sat_[p]);
+                        }
+                        if (props.phaseUsage().phase_used[BlackoilPhases::Liquid]
+                            && props.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
+                            const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
+                            const int gaspos = props.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+                            const Vec rs = computeRs(G, cells, press[oilpos], *(rs_func_[r]), sat[gaspos]);
+                            const Vec rv = computeRs(G, cells, press[gaspos], *(rv_func_[r]), sat[oilpos]);
+                            copyFromRegion(rs, cells, rs_);
+                            copyFromRegion(rv, cells, rv_);
+                        }
+                    }
+                }
+
+                template <class CellRangeType>
+                void copyFromRegion(const Vec& source,
+                                    const CellRangeType& cells,
+                                    Vec& destination)
+                {
+                    auto s = source.begin();
+                    auto c = cells.begin();
+                    const auto e = cells.end();
+                    for (; c != e; ++c, ++s) {
+                        destination[*c] = *s;
+                    }
+                }
+
+            };
+
+
+            template <>
+            class InitialStateComputer<Opm::DeckConstPtr> {
+            public:
+                InitialStateComputer(const BlackoilPropertiesInterface& props,
+                                     const Opm::DeckConstPtr            newParserDeck,
+                                     const UnstructuredGrid&            G    ,
+                                     const double                       grav = unit::gravity)
+                    : pp_(props.numPhases(),
+                          std::vector<double>(G.number_of_cells)),
+                      sat_(props.numPhases(),
+                          std::vector<double>(G.number_of_cells)),
+                      rs_(G.number_of_cells),
+                      rv_(G.number_of_cells)
+                {
+                    // Get the equilibration records.
+                    const std::vector<EquilRecord> rec = getEquil(newParserDeck);
+
+                    // Create (inverse) region mapping.
+                    const RegionMapping<> eqlmap(equilnum(newParserDeck, G)); 
+
+                    // Create Rs functions.
+                    rs_func_.reserve(rec.size());
+                    if (newParserDeck->hasKeyword("DISGAS")) {                    
+                        for (size_t i = 0; i < rec.size(); ++i) {
+                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            if (rec[i].live_oil_table_index > 0) {
+                                if (newParserDeck->hasKeyword("RSVD") && rec[i].live_oil_table_index <= newParserDeck->getKeyword("RSVD")->size()) { 
+                                    Opm::SimpleTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
+                                    std::vector<double> vd(rsvd.getColumn("vd"));
+                                    std::vector<double> rs(rsvd.getColumn("rs"));
+                                    rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props, cell, vd, rs));
+                                } else {
+                                    OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
+                                }
+                            } else {
+                                if (rec[i].goc.depth != rec[i].main.depth) {
+                                    OPM_THROW(std::runtime_error,
+                                              "Cannot initialise: when no explicit RSVD table is given, \n"
+                                              "datum depth must be at the gas-oil-contact. "
+                                              "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
+                                }
+                                const double p_contact = rec[i].main.press;
+                                rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact));
+                            }
+                        }
+                    } else {
+                        for (size_t i = 0; i < rec.size(); ++i) {
+                            rs_func_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        }
+                    }                    
+
+                    rv_func_.reserve(rec.size());
+                    if (newParserDeck->hasKeyword("VAPOIL")) {                    
+                        for (size_t i = 0; i < rec.size(); ++i) {
+                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            if (rec[i].wet_gas_table_index > 0) {
+                                if (newParserDeck->hasKeyword("RVVD") && rec[i].wet_gas_table_index <= newParserDeck->getKeyword("RVVD")->size()) { 
+                                    Opm::SimpleTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
+                                    std::vector<double> vd(rvvd.getColumn("vd"));
+                                    std::vector<double> rv(rvvd.getColumn("rv"));
+                                    rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props, cell, vd, rv));
+                                } else {
+                                    OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
+                                }
+                            } else {
+                                if (rec[i].goc.depth != rec[i].main.depth) {
+                                    OPM_THROW(std::runtime_error,
+                                              "Cannot initialise: when no explicit RVVD table is given, \n"
+                                              "datum depth must be at the gas-oil-contact. "
+                                              "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
+                                }
+                                const double p_contact = rec[i].main.press + rec[i].goc.press;
+                                rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact>(props, cell, p_contact));
+                            }
+                        }
+                    } else {
+                        for (size_t i = 0; i < rec.size(); ++i) {
+                            rv_func_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        }
+                    }
+
+                    // Compute pressures, saturations, rs and rv factors.
+                    calcPressSatRsRv(eqlmap, rec, props, G, grav);
+
+                    // Modify oil pressure in no-oil regions so that the pressures of present phases can
+                    // be recovered from the oil pressure and capillary relations.
+                }
+
+                typedef std::vector<double> Vec;
+                typedef std::vector<Vec>    PVec; // One per phase.
+
+                const PVec& press() const { return pp_; }
+                const PVec& saturation() const { return sat_; }
+                const Vec& rs() const { return rs_; }
+                const Vec& rv() const { return rv_; }
+
+            private:
+                typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
+                typedef EquilReg<RhoCalc> EqReg;
+
+                std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
+                std::vector< std::shared_ptr<Miscibility::RsFunction> > rv_func_;
+
+                PVec pp_;
+                PVec sat_;
+                Vec rs_;
+                Vec rv_;
+
+                template <class RMap>
+                void
+                calcPressSatRsRv(const RMap&                             reg  ,
+                                 const std::vector< EquilRecord >&       rec  ,
+                                 const Opm::BlackoilPropertiesInterface& props,
+                                 const UnstructuredGrid&                 G    ,
+                                 const double grav)
+                {
+                    typedef Miscibility::NoMixing NoMix;
+
+                    for (typename RMap::RegionId
+                             r = 0, nr = reg.numRegions();
+                         r < nr; ++r)
+                    {
+                        const typename RMap::CellRange cells = reg.cells(r+1);
+
+                        const int repcell = *cells.begin();
+                        const RhoCalc calc(props, repcell);
+                        const EqReg eqreg(rec[r], calc,
+                                          rs_func_[r], rv_func_[r],
+                                          props.phaseUsage());
+                   
+                        PVec press = phasePressures(G, eqreg, cells, grav);
+
+                        const PVec sat = phaseSaturations(eqreg, cells, props, press);
+
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
                             copyFromRegion(press[p], cells, pp_[p]);
