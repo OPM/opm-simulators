@@ -230,8 +230,10 @@ try
 
         simtimer.setCurrentStepNum(reportStepIdx);
 
-        if (reportStepIdx == 0)
+        if (reportStepIdx == 0) {
             outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+            outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+        }
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil simulator(param,
@@ -242,6 +244,8 @@ try
                                                  linsolver,
                                                  grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+
+        ++simtimer;
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;
