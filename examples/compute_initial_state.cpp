@@ -29,6 +29,10 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
+
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <boost/filesystem.hpp>
 
 namespace
@@ -80,8 +84,10 @@ try
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
     const std::string deck_filename = param.get<std::string>("deck_filename");
+    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::DeckConstPtr deck = parser->parseFile(deck_filename);
     const double grav = param.getDefault("gravity", unit::gravity);
-    EclipseGridParser deck(deck_filename);
+    //EclipseGridParser deck(deck_filename);
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
     BlackoilPropertiesFromDeck props(deck, grid, param);
