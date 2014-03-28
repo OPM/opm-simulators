@@ -27,7 +27,7 @@ struct Wells;
 namespace Opm
 {
 
-    class WellState;
+    class WellStateFullyImplicitBlackoil;
     struct PhaseUsage;
 
 
@@ -51,7 +51,7 @@ namespace Opm
         /// \param[in] surf_dens    surface densities for active components, size P
         /// \param[in] gravity      gravity acceleration constant
         static std::vector<double> computeConnectionPressureDelta(const Wells& wells,
-                                                                  const WellState& wstate,
+                                                                  const WellStateFullyImplicitBlackoil& wstate,
                                                                   const PhaseUsage& phase_usage,
                                                                   const std::vector<double>& b_perf,
                                                                   const std::vector<double>& rsmax_perf,

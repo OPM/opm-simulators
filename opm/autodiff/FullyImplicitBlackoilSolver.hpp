@@ -135,6 +135,7 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
@@ -158,10 +159,28 @@ namespace Opm {
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellStateFullyImplicitBlackoil& xw);
+
+        void
+        addOldWellEq(const SolutionState& state);
+
+        void
+        addWellControlEq(const SolutionState& state,
+                         const WellStateFullyImplicitBlackoil& xw);
+
+        void
+        addWellEq(const SolutionState& state,
+                  WellStateFullyImplicitBlackoil& xw);
+
+        void updateWellControls(const ADB& bhp,
+                                const ADB& well_phase_flow_rate,
+                                WellStateFullyImplicitBlackoil& xw) const;
+
         void
         assemble(const V&             dtpv,
                  const BlackoilState& x,
-                 const WellStateFullyImplicitBlackoil& xw);
+                 WellStateFullyImplicitBlackoil& xw);
 
         V solveJacobianSystem() const;
 

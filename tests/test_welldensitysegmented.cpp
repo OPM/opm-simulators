@@ -28,7 +28,7 @@
 
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -65,8 +65,8 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
                                   1.0, 0.0, 0.0,
                                   1.0, 0.0, 0.0,
                                   1.0, 0.0, 0.0 };
-    WellState wellstate;
-    wellstate.perfRates() = rates;
+    WellStateFullyImplicitBlackoil wellstate;
+    wellstate.perfPhaseRates() = rates;
     PhaseUsage pu;
     pu.num_phases = 3;
     pu.phase_used[0] = true;
