@@ -231,6 +231,12 @@ namespace Opm
     {
     }
 
+    /// Construct from existing wells object.
+    WellsManager::WellsManager(struct Wells* W)
+        : w_(clone_wells(W))
+    {
+    }
+
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                                const size_t timeStep,
