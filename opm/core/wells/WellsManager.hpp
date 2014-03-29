@@ -66,7 +66,7 @@ namespace Opm
         /// manage control switching does not exist.
         ///
         /// @param[in] W Existing wells object.
-        explicit WellsManager(struct Wells* W, bool checkCellExistence=true);
+        explicit WellsManager(struct Wells* W);
 
         /// Construct from input deck and grid.
         /// The permeability argument may be zero if the input contain
