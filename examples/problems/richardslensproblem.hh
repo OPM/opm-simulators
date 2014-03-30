@@ -94,7 +94,7 @@ public:
 SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 
 // Enable partial reassembly of the linearization
-SET_BOOL_PROP(RichardsLensProblem, EnablePartialReassemble, true);
+SET_BOOL_PROP(RichardsLensProblem, EnablePartialRelinearization, true);
 
 // Enable re-use of the linearization of the last iteration of the
 // previous for the first iteration of the current time step?
