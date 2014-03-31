@@ -289,13 +289,16 @@ namespace Opm
                      const UnstructuredGrid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (deck.hasField("EQLNUM")) {
-                    eqlnum = deck.getIntegerValue("EQLNUM");
+                if (deck.hasField("EQLNUM")) {        
+                    const std::vector<int>& e = deck.getIntegerValue("EQLNUM");
+                    eqlnum.reserve(e.size());
+                    std::transform(e.begin(), e.end(), std::back_inserter(eqlnum),
+                                   std::bind2nd(std::minus<int>(), 1));
                 }
                 else {
                     // No explicit equilibration region.
-                    // All cells in region one.
-                    eqlnum.assign(G.number_of_cells, 1);
+                    // All cells in region zero.
+                    eqlnum.assign(G.number_of_cells, 0);
                 }
 
                 return eqlnum;
@@ -308,13 +311,16 @@ namespace Opm
                      const UnstructuredGrid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (newParserDeck->hasKeyword("EQLNUM")) {
-                    eqlnum = newParserDeck->getKeyword("EQLNUM")->getIntData();
+                if (newParserDeck->hasKeyword("EQLNUM")) {        
+                    const std::vector<int>& e = newParserDeck->getKeyword("EQLNUM")->getIntData();
+                    eqlnum.reserve(e.size());
+                    std::transform(e.begin(), e.end(), std::back_inserter(eqlnum),
+                                   std::bind2nd(std::minus<int>(), 1));
                 }
                 else {
                     // No explicit equilibration region.
-                    // All cells in region one.
-                    eqlnum.assign(G.number_of_cells, 1);
+                    // All cells in region zero.
+                    eqlnum.assign(G.number_of_cells, 0);
                 }
 
                 return eqlnum;
@@ -348,7 +354,7 @@ namespace Opm
                     rs_func_.reserve(rec.size());
                     if (deck.hasField("DISGAS")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
                                 if (deck.hasField("RSVD")) { 
                                     // TODO When this kw is actually parsed, also check for proper number of available tables
@@ -379,7 +385,7 @@ namespace Opm
                     rv_func_.reserve(rec.size());
                     if (deck.hasField("VAPOIL")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (deck.hasField("RVVD")) { 
                                     // TODO When this kw is actually parsed, also check for proper number of available tables
@@ -448,7 +454,7 @@ namespace Opm
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)
                     {
-                        const typename RMap::CellRange cells = reg.cells(r+1);
+                        const typename RMap::CellRange cells = reg.cells(r);
 
                         const int repcell = *cells.begin();
                         const RhoCalc calc(props, repcell);
@@ -517,7 +523,7 @@ namespace Opm
                     rs_func_.reserve(rec.size());
                     if (newParserDeck->hasKeyword("DISGAS")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
                                 if (newParserDeck->hasKeyword("RSVD") && rec[i].live_oil_table_index <= newParserDeck->getKeyword("RSVD")->size()) { 
                                     Opm::SimpleTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
@@ -547,7 +553,7 @@ namespace Opm
                     rv_func_.reserve(rec.size());
                     if (newParserDeck->hasKeyword("VAPOIL")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i + 1).begin());                   
+                            const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (newParserDeck->hasKeyword("RVVD") && rec[i].wet_gas_table_index <= newParserDeck->getKeyword("RVVD")->size()) { 
                                     Opm::SimpleTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
@@ -615,7 +621,7 @@ namespace Opm
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)
                     {
-                        const typename RMap::CellRange cells = reg.cells(r+1);
+                        const typename RMap::CellRange cells = reg.cells(r);
 
                         const int repcell = *cells.begin();
                         const RhoCalc calc(props, repcell);
