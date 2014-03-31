@@ -27,6 +27,9 @@
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <opm/core/pressure/msmfem/partition.h>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -339,9 +342,9 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-3;
-    BOOST_CHECK_CLOSE(pressures[0][first] , 14955e3   , reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last ] , 15045e3   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.50473e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][first] , 1.496329839e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.50473245e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 1.50473245e7   , reltol);
 }
 
 
@@ -416,9 +419,9 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    BOOST_CHECK_CLOSE(pressures[0][first] , 1.45e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][first] , 1.469769063e7   , reltol);
     BOOST_CHECK_CLOSE(pressures[0][last ] , 1.545e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.5351621345e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 1.546e7   , reltol);
 
     const auto& sats = comp.saturation();
     const std::vector<double> s[3]{
@@ -443,7 +446,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     Opm::EclipseGridParser deck("capillary_overlap.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
+    Opm::Equil::DeckDependent::InitialStateComputer<Opm::EclipseGridParser> comp(props, deck, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -454,9 +457,15 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    BOOST_CHECK_CLOSE(pressures[0][first] , 1.45e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.545e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.5351621345e7   , reltol);
+    const double reltol_ecl = 1.0;
+    BOOST_CHECK_CLOSE(pressures[0][first], 1.48324e+07, reltol_ecl);  // eclipse 
+    BOOST_CHECK_CLOSE(pressures[0][last],  1.54801e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[1][first], 1.49224e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[1][last],  1.54901e+07, reltol_ecl);
+    
+    BOOST_CHECK_CLOSE(pressures[0][first] , 14832467.14, reltol); // opm
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 15479883.47, reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last ] , 15489883.47, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -466,15 +475,24 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     //     }
     //     std::cout << std::endl;
     // }
-    const std::vector<double> s[3]{
-        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.223141818182, 0.532269090909, 0.78471, 0.91526, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.207743333333, 0.08474, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.776858181818, 0.467730909091, 0.0075466666666, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+   
+    const std::vector<double> s_ecl[3]{// eclipse
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.22874042, 0.53397995, 0.78454906,  0.91542006, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0,   0,   0,   0,   0,   0,   0,   0,          0,          0.20039,     0.08458,    0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.77125955, 0.46602005, 0.015063271, 0,          0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+
+    const std::vector<double> s_opm[3]{ // opm 
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2289309090909091,  0.53406545454545451, 0.78458,              0.9154, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0,   0,   0,   0,   0,   0,   0,   0,                   0,                   0.2002466666666666,   0.0846, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.77106909090909093, 0.46593454545454549, 0.015173333333333336, 0,      0, 0, 0, 0, 0, 0, 0, 0, 0 }
     };
     for (int phase = 0; phase < 3; ++phase) {
-        BOOST_REQUIRE(sats[phase].size() == s[phase].size());
-        for (size_t i = 0; i < s[phase].size(); ++i) {
-            BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
+        BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
+        for (size_t i = 0; i < s_opm[phase].size(); ++i) {
+            //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
         }
     }
 }
@@ -485,10 +503,12 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::EclipseGridParser deck("equil_liveoil.DATA");
+    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::DeckConstPtr deck = parser->parseFile("equil_liveoil.DATA");
+    //Opm::EclipseGridParser deck("equil_liveoil.DATA");
     Opm::BlackoilPropertiesFromDeck props(deck, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer<Opm::EclipseGridParser> comp(props, deck, grid, 10.0);
+    Opm::Equil::DeckDependent::InitialStateComputer<Opm::DeckConstPtr> comp(props, deck, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -499,9 +519,16 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    BOOST_CHECK_CLOSE(pressures[0][first], 1.4551302072306179e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last],  1.5501302072306179e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last],  1.5538684664272346e7, reltol);
+    const double reltol_ecl = 1.0;
+    BOOST_CHECK_CLOSE(pressures[0][first], 1.48324e+07, reltol_ecl);  // eclipse
+    BOOST_CHECK_CLOSE(pressures[0][last],  1.54801e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[1][first], 1.49224e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[1][last],  1.54901e+07, reltol_ecl);
+    
+    BOOST_CHECK_CLOSE(pressures[0][first], 1.483246714e7, reltol);  // opm
+    BOOST_CHECK_CLOSE(pressures[0][last],  1.547991652e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[1][first], 1.492246714e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last],  1.548991652e7, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -511,16 +538,24 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     //     }
     //     std::cout << std::endl;
     // }
-    const std::vector<double> s[3]{
-        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.223141818182, 0.532269090909, 0.78471, 0.91526, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.207743333333, 0.08474, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.776858181818, 0.467730909091, 0.0075466666666, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    const std::vector<double> s_ecl[3]{ // eclipse
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.22898, 0.53422, 0.78470, 0.91531, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0,   0,   0,   0,   0,   0,   0,   0,       0,       0.20073, 0.08469, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.77102, 0.46578, 0.01458, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 }
     };
+
+    const std::vector<double> s_opm[3]{ // opm 
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2291709091, 0.5343054545, 0.78472,        0.91529, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0,   0,   0,   0,   0,   0,   0,   0,            0,            0.2005866667,   0.08471, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7708290909, 0.4656945455, 0.01469333333,  0,       0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+
     for (int phase = 0; phase < 3; ++phase) {
-        BOOST_REQUIRE(sats[phase].size() == s[phase].size());
-        for (size_t i = 0; i < s[phase].size(); ++i) {
-            std::cout << sats[phase][i] << '\n';
-            //BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
+        BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
+        for (size_t i = 0; i < s_opm[phase].size(); ++i) {
+            //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
