@@ -485,7 +485,7 @@ namespace Opm
                         }
                         std::array<double, 3> cubical = getCubeDim(grid, cell);
                         const double* cell_perm = &permeability[grid.dimensions*grid.dimensions*cell];
-                        pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
+                        pd.well_index = computeWellIndex(radius, cubical, cell_perm, completion->getSkinFactor());
                     }
                     wellperf_data[well_index].push_back(pd);
                 }
