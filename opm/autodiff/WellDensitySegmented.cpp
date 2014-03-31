@@ -19,22 +19,23 @@
 
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <numeric>
 #include <cmath>
 
 
-std::vector<double> Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
-                                                                              const WellState& wstate,
-                                                                              const PhaseUsage& phase_usage,
-                                                                              const std::vector<double>& b_perf,
-                                                                              const std::vector<double>& rsmax_perf,
-                                                                              const std::vector<double>& rvmax_perf,
-                                                                              const std::vector<double>& z_perf,
-                                                                              const std::vector<double>& surf_dens,
-                                                                              const double gravity)
+std::vector<double>
+Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
+                                                          const WellStateFullyImplicitBlackoil& wstate,
+                                                          const PhaseUsage& phase_usage,
+                                                          const std::vector<double>& b_perf,
+                                                          const std::vector<double>& rsmax_perf,
+                                                          const std::vector<double>& rvmax_perf,
+                                                          const std::vector<double>& z_perf,
+                                                          const std::vector<double>& surf_dens,
+                                                          const double gravity)
 {
     // Verify that we have consistent input.
     const int np = wells.number_of_phases;
@@ -46,7 +47,7 @@ std::vector<double> Opm::WellDensitySegmented::computeConnectionPressureDelta(co
     if (surf_dens.size() != size_t(wells.number_of_phases)) {
         OPM_THROW(std::logic_error, "Inconsistent input: surf_dens vs. phase_usage.");
     }
-    if (nperf*np != int(wstate.perfRates().size())) {
+    if (nperf*np != int(wstate.perfPhaseRates().size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. wstate.");
     }
     if (nperf*np != int(b_perf.size())) {
@@ -90,7 +91,7 @@ std::vector<double> Opm::WellDensitySegmented::computeConnectionPressureDelta(co
                     q_out_perf[perf*np + phase] = q_out_perf[(perf+1)*np + phase];
                 }
                 // Subtract outflow through perforation.
-                q_out_perf[perf*np + phase] -= wstate.perfRates()[perf*np + phase];
+                q_out_perf[perf*np + phase] -= wstate.perfPhaseRates()[perf*np + phase];
             }
         }
     }

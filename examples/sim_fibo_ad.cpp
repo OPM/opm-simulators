@@ -205,7 +205,7 @@ try
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
     // initialize variables
-    simtimer.init(timeMap, /*beginReportStepIdx=*/0, /*endReportStepIdx=*/0);
+    simtimer.init(timeMap);
 
     SimulatorReport fullReport;
     for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
@@ -228,12 +228,12 @@ try
             well_state.init(wells.c_wells(), state);
         }
 
-        simtimer.init(timeMap,
-                      /*beginReportStepIdx=*/reportStepIdx,
-                      /*endReportStepIdx=*/reportStepIdx + 1);
+        simtimer.setCurrentStepNum(reportStepIdx);
 
-        if (reportStepIdx == 0)
+        if (reportStepIdx == 0) {
             outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+            outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+        }
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
@@ -244,6 +244,8 @@ try
                                                  linsolver,
                                                  grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+
+        ++simtimer;
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;

@@ -343,7 +343,8 @@ namespace Opm
             }
 
             // advance to next timestep before reporting at this location
-            ++timer;
+            // ++timer; // Commented out since this has temporarily moved to the main() function.
+            break; // this is a temporary measure
         }
 
         total_timer.stop();
