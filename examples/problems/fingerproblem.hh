@@ -96,7 +96,7 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
-    Traits;
+        Traits;
 
     // use the parker-lenhard hysteresis law
     typedef Opm::ParkerLenhard<Traits> ParkerLenhard;
