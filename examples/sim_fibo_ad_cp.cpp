@@ -109,19 +109,34 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
+
+    Opm::ParserPtr newParser(new Opm::Parser() );
+    Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
     std::shared_ptr<const EclipseGridParser> cdeck(deck);
     // Grid init
+#if USE_NEW_PARSER
+	OPM_THROW(std::runtime_exception, 'New parser not supported yet');
+#else
     grid.reset(new Dune::CpGrid());
-    
     grid->processEclipseFormat(*deck, 2e-12, false);
+#endif
 
+#if USE_NEW_PARSER
+	OPM_THROW(std::runtime_exception, 'New parser not supported yet');
     Opm::EclipseWriter outputWriter(param, cdeck,
                                     Opm::UgGridHelpers::numCells(*grid),
                                     Opm::UgGridHelpers::globalCell(*grid),
                                     Opm::UgGridHelpers::cartDims(*grid),
                                     Opm::UgGridHelpers::dimensions(*grid));
+#else
+    Opm::EclipseWriter outputWriter(param, cdeck,
+                                    Opm::UgGridHelpers::numCells(*grid),
+                                    Opm::UgGridHelpers::globalCell(*grid),
+                                    Opm::UgGridHelpers::cartDims(*grid),
+                                    Opm::UgGridHelpers::dimensions(*grid));
+#endif
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(*deck, Opm::UgGridHelpers::numCells(*grid),
                                                Opm::UgGridHelpers::globalCell(*grid),
@@ -170,7 +185,7 @@ try
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
-    std::ofstream epoch_os;
+    std::ofstream outStream;
     std::string output_dir;
     if (output) {
         output_dir =
@@ -182,8 +197,8 @@ try
         catch (...) {
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
-        std::string filename = output_dir + "/epoch_timing.param";
-        epoch_os.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
+        std::string filename = output_dir + "/timing.param";
+        outStream.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
         // open file to clean it. The file is appended to in SimulatorTwophase
         filename = output_dir + "/step_timing.param";
         std::fstream step_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
@@ -191,7 +206,9 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
+#if USE_NEW_PARSER
 
+#else
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << "                        (number of epochs: "
               << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
@@ -199,36 +216,28 @@ try
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
     WellStateFullyImplicitBlackoil well_state;
+    Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
     int step = 0;
     SimulatorTimer simtimer;
     // Use timer for last epoch to obtain total time.
     deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
     simtimer.init(*deck);
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
-    const double total_time = simtimer.totalTime();
-    for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
-        // Set epoch index.
-        deck->setCurrentEpoch(epoch);
+    // initialize variables
+    simtimer.init(timeMap);
 
-        // Update the timer.
-        if (deck->hasField("TSTEP")) {
-            simtimer.init(*deck);
-        } else {
-            if (epoch != 0) {
-                OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
-            }
-            simtimer.init(param);
-        }
-        simtimer.setCurrentStepNum(step);
-        simtimer.setTotalTime(total_time);
-
-        // Report on start of epoch.
-        std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                  << "\n                  (number of steps: "
-                  << simtimer.numSteps() - step << ")\n\n" << std::flush;
+    SimulatorReport fullReport;
+    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        // Report on start of a report step.
+        std::cout << "\n"
+                  << "---------------------------------------------------------------\n"
+                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
+                  << "---------------------------------------------------------------\n"
+                  << "\n";
 
         // Create new wells, well_state
-        WellsManager wells(*deck, Opm::UgGridHelpers::numCells(*grid), 
+        WellsManager wells(eclipseState, reportStepIdx, Opm::UgGridHelpers::numCells(*grid), 
                            Opm::UgGridHelpers::globalCell(*grid),
                            Opm::UgGridHelpers::cartDims(*grid),
                            Opm::UgGridHelpers::dimensions(*grid),
@@ -236,11 +245,19 @@ try
                            Opm::UgGridHelpers::cell2Faces(*grid),
                            Opm::UgGridHelpers::beginFaceCentroids(*grid),
                            props->permeability());
-        // @@@ HACK: we should really make a new well state and
-        // properly transfer old well state to it every epoch,
-        // since number of wells may change etc.
-        if (epoch == 0) {
+
+        if (reportStepIdx == 0) {
+            // @@@ HACK: we should really make a new well state and
+            // properly transfer old well state to it every epoch,
+            // since number of wells may change etc.
             well_state.init(wells.c_wells(), state);
+        }
+
+        simtimer.setCurrentStepNum(reportStepIdx);
+
+        if (reportStepIdx == 0) {
+            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+            outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
 
         // Create and run simulator.
@@ -250,29 +267,24 @@ try
                                                                rock_comp->isActive() ? rock_comp.get() : 0,
                                                                wells,
                                                                linsolver,
-                                                               grav,
-                                                               outputWriter);
-        if (epoch == 0) {
-            warnIfUnusedParams(param);
-        }
-        SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
-        if (output) {
-            epoch_rep.reportParam(epoch_os);
-        }
-        // Update total timing report and remember step number.
-        rep += epoch_rep;
-        step = simtimer.currentStepNum();
+                                                               grav);
+        SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+
+        ++simtimer;
+
+        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+        fullReport += episodeReport;
     }
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
-    rep.report(std::cout);
+    fullReport.report(std::cout);
 
     if (output) {
         std::string filename = output_dir + "/walltime.param";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
         rep.reportParam(tot_os);
     }
-
+#endif
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
