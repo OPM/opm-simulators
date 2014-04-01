@@ -36,6 +36,7 @@ Optional Features:
   --config-cache          Reuse build configuration cache from a previous run
 
 Optional Packages:
+  --with-ug=PATH          use the UG libraries from a specified location
   --with-alugrid=PATH     use the ALUGrid library from a specified location
   --with-metis=PATH       use the METIS graph partitioning library from a specified location
   --with-boost=PATH       use Boost library from a specified location
@@ -256,6 +257,7 @@ for OPT in "$@"; do
             superlu     |\
             SuiteSparse |\
             TinyXML     |\
+            ug          |\
             opm         |\
             opm-*       |\
             dune        |\
