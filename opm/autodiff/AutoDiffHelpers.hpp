@@ -292,7 +292,10 @@ spdiag(const AutoDiffBlock<double>::V& d)
     public:
         typedef AutoDiffBlock<Scalar> ADB;
 
-        Selector(const typename ADB::V& selection_basis)
+        enum CriterionForLeftElement { GreaterEqualZero, GreaterZero, Zero, NotEqualZero, LessZero, LessEqualZero };
+
+        Selector(const typename ADB::V& selection_basis,
+                 CriterionForLeftElement crit = GreaterEqualZero)
         {
             // Define selector structure.
             const int n = selection_basis.size();
@@ -300,10 +303,33 @@ spdiag(const AutoDiffBlock<double>::V& d)
             left_elems_.reserve(n);
             right_elems_.reserve(n);
             for (int i = 0; i < n; ++i) {
-                if (selection_basis[i] < 0.0) {
-                    right_elems_.push_back(i);
-                } else {
+                bool chooseleft = false;
+                switch (crit) {
+                case GreaterEqualZero:
+                    chooseleft = selection_basis[i] >= 0.0;
+                    break;
+                case GreaterZero:
+                    chooseleft = selection_basis[i] > 0.0;
+                    break;
+                case Zero:
+                    chooseleft = selection_basis[i] == 0.0;
+                    break;
+                case NotEqualZero:
+                    chooseleft = selection_basis[i] != 0.0;
+                    break;
+                case LessZero:
+                    chooseleft = selection_basis[i] < 0.0;
+                    break;
+                case LessEqualZero:
+                    chooseleft = selection_basis[i] <= 0.0;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "No such criterion: " << crit);
+                }
+                if (chooseleft) {
                     left_elems_.push_back(i);
+                } else {
+                    right_elems_.push_back(i);
                 }
             }
         }
