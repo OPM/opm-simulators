@@ -72,14 +72,14 @@ SET_PROP(RichardsLensProblem, MaterialLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+    enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
+    enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
-    Traits;
+                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
+        Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -158,8 +158,8 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
         contiWEqIdx = Indices::contiWEqIdx,
-        wPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex),
-        nPhaseIdx = 1 - wPhaseIdx,
+        wettingPhaseIdx = FluidSystem::wettingPhaseIdx,
+        nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx,
         numPhases = FluidSystem::numPhases,
 
         // Grid and world dimension
@@ -303,13 +303,13 @@ public:
 
             Scalar Sw = 0.0;
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
-            fs.setSaturation(wPhaseIdx, Sw);
-            fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+            fs.setSaturation(wettingPhaseIdx, Sw);
+            fs.setSaturation(nonWettingPhaseIdx, 1.0 - Sw);
 
             PhaseVector pC;
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
-            fs.setPressure(wPhaseIdx, pnRef_ + pC[wPhaseIdx] - pC[nPhaseIdx]);
-            fs.setPressure(nPhaseIdx, pnRef_);
+            fs.setPressure(wettingPhaseIdx, pnRef_ + pC[wettingPhaseIdx] - pC[nonWettingPhaseIdx]);
+            fs.setPressure(nonWettingPhaseIdx, pnRef_);
 
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
@@ -344,12 +344,12 @@ public:
 
         Scalar Sw = 0.0;
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
-        fs.setSaturation(wPhaseIdx, Sw);
-        fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+        fs.setSaturation(wettingPhaseIdx, Sw);
+        fs.setSaturation(nonWettingPhaseIdx, 1.0 - Sw);
 
         PhaseVector pC;
         MaterialLaw::capillaryPressures(pC, materialParams, fs);
-        values[pressureWIdx] = pnRef_ + (pC[wPhaseIdx] - pC[nPhaseIdx]);
+        values[pressureWIdx] = pnRef_ + (pC[wettingPhaseIdx] - pC[nonWettingPhaseIdx]);
     }
 
     /*!

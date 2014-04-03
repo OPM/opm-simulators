@@ -90,14 +90,14 @@ SET_PROP(PowerInjectionBaseProblem, MaterialLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+    enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
+    enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
-    Traits;
+                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
+        Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -165,11 +165,11 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         // number of phases
 
         // phase indices
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        nPhaseIdx = FluidSystem::nPhaseIdx,
+        wettingPhaseIdx = FluidSystem::wettingPhaseIdx,
+        nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx,
 
         // equation indices
-        contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx,
+        contiNEqIdx = Indices::conti0EqIdx + nonWettingPhaseIdx,
 
         // Grid and world dimension
         dim = GridView::dimension,
@@ -368,12 +368,12 @@ private:
         initialFluidState_.setTemperature(temperature_);
 
         Scalar Sw = 1.0;
-        initialFluidState_.setSaturation(wPhaseIdx, Sw);
-        initialFluidState_.setSaturation(nPhaseIdx, 1 - Sw);
+        initialFluidState_.setSaturation(wettingPhaseIdx, Sw);
+        initialFluidState_.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 
         Scalar p = 1e5;
-        initialFluidState_.setPressure(wPhaseIdx, p);
-        initialFluidState_.setPressure(nPhaseIdx, p);
+        initialFluidState_.setPressure(wettingPhaseIdx, p);
+        initialFluidState_.setPressure(nonWettingPhaseIdx, p);
     }
 
     DimMatrix K_;

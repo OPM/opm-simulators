@@ -95,13 +95,13 @@ SET_PROP(FractureProblem, MaterialLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+    enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
+    enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
     Traits;
 
     // define the material law which is parameterized by effective
@@ -180,8 +180,8 @@ class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     enum {
         // phase indices
-        wPhaseIdx = MaterialLaw::wPhaseIdx,
-        nPhaseIdx = MaterialLaw::nPhaseIdx,
+        wettingPhaseIdx = MaterialLaw::wettingPhaseIdx,
+        nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx,
 
         // number of phases
         numPhases = FluidSystem::numPhases,
@@ -222,10 +222,10 @@ public:
         eps_ = 3e-6;
         temperature_ = 273.15 + 20; // -> 20°C
 
-        matrixMaterialParams_.setResidualSaturation(wPhaseIdx, 0.0);
-        matrixMaterialParams_.setResidualSaturation(nPhaseIdx, 0.0);
-        fractureMaterialParams_.setResidualSaturation(wPhaseIdx, 0.0);
-        fractureMaterialParams_.setResidualSaturation(nPhaseIdx, 0.0);
+        matrixMaterialParams_.setResidualSaturation(wettingPhaseIdx, 0.0);
+        matrixMaterialParams_.setResidualSaturation(nonWettingPhaseIdx, 0.0);
+        fractureMaterialParams_.setResidualSaturation(wettingPhaseIdx, 0.0);
+        fractureMaterialParams_.setResidualSaturation(nonWettingPhaseIdx, 0.0);
 
 #if 0 // linear
         matrixMaterialParams_.setEntryPC(0.0);
@@ -430,12 +430,12 @@ public:
             FluidState fluidState;
             fluidState.setTemperature(temperature_);
 
-            fluidState.setSaturation(wPhaseIdx, 0.0);
-            fluidState.setSaturation(nPhaseIdx,
-                                     1.0 - fluidState.saturation(wPhaseIdx));
+            fluidState.setSaturation(wettingPhaseIdx, 0.0);
+            fluidState.setSaturation(nonWettingPhaseIdx,
+                                     1.0 - fluidState.saturation(wettingPhaseIdx));
 
-            fluidState.setPressure(wPhaseIdx, 1e5);
-            fluidState.setPressure(nPhaseIdx, fluidState.pressure(wPhaseIdx));
+            fluidState.setPressure(wettingPhaseIdx, 1e5);
+            fluidState.setPressure(nonWettingPhaseIdx, fluidState.pressure(wettingPhaseIdx));
 
             // set a free flow (i.e. Dirichlet) boundary
             values.setFreeFlow(context, spaceIdx, timeIdx, fluidState);
@@ -479,20 +479,20 @@ public:
         FluidState fractureFluidState;
         fractureFluidState.setTemperature(temperature_ + 10);
 
-        fractureFluidState.setSaturation(wPhaseIdx, 1.0);
-        fractureFluidState.setSaturation(nPhaseIdx,
+        fractureFluidState.setSaturation(wettingPhaseIdx, 1.0);
+        fractureFluidState.setSaturation(nonWettingPhaseIdx,
                                          1.0 - fractureFluidState.saturation(
-                                                   wPhaseIdx));
+                                                   wettingPhaseIdx));
 
         Scalar pCFracture[numPhases];
         MaterialLaw::capillaryPressures(pCFracture, fractureMaterialParams_,
                                         fractureFluidState);
 
-        fractureFluidState.setPressure(wPhaseIdx, /*pressure=*/1.0e5);
-        fractureFluidState.setPressure(nPhaseIdx,
-                                       fractureFluidState.pressure(wPhaseIdx)
-                                       + (pCFracture[nPhaseIdx]
-                                          - pCFracture[wPhaseIdx]));
+        fractureFluidState.setPressure(wettingPhaseIdx, /*pressure=*/1.0e5);
+        fractureFluidState.setPressure(nonWettingPhaseIdx,
+                                       fractureFluidState.pressure(wettingPhaseIdx)
+                                       + (pCFracture[nonWettingPhaseIdx]
+                                          - pCFracture[wettingPhaseIdx]));
 
         constraints.setAllConstraint();
         constraints.assignNaiveFromFracture(fractureFluidState,
@@ -508,12 +508,12 @@ public:
     {
         FluidState fluidState;
         fluidState.setTemperature(temperature_);
-        fluidState.setPressure(FluidSystem::wPhaseIdx, /*pressure=*/1e5);
-        fluidState.setPressure(nPhaseIdx, fluidState.pressure(wPhaseIdx));
+        fluidState.setPressure(FluidSystem::wettingPhaseIdx, /*pressure=*/1e5);
+        fluidState.setPressure(nonWettingPhaseIdx, fluidState.pressure(wettingPhaseIdx));
 
-        fluidState.setSaturation(wPhaseIdx, 0.0);
-        fluidState.setSaturation(nPhaseIdx,
-                                 1.0 - fluidState.saturation(wPhaseIdx));
+        fluidState.setSaturation(wettingPhaseIdx, 0.0);
+        fluidState.setSaturation(nonWettingPhaseIdx,
+                                 1.0 - fluidState.saturation(wettingPhaseIdx));
 
         values.assignNaive(fluidState);
     }

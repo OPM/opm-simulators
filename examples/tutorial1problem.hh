@@ -92,11 +92,9 @@ private:
     // two-phase capillary pressure law
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx> Traits;
+    enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
+    enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
+    typedef Opm::TwoPhaseMaterialTraits<Scalar, wettingPhaseIdx, nonWettingPhaseIdx> Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -157,12 +155,12 @@ class Tutorial1Problem
 
     // phase indices
     enum { numPhases = FluidSystem::numPhases };
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
+    enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
+    enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
     // Indices of the conservation equations
-    enum { contiWEqIdx = Indices::conti0EqIdx + wPhaseIdx };
-    enum { contiNEqIdx = Indices::conti0EqIdx + nPhaseIdx };
+    enum { contiWettingEqIdx = Indices::conti0EqIdx + wettingPhaseIdx };
+    enum { contiNonWettingEqIdx = Indices::conti0EqIdx + nonWettingPhaseIdx };
 
 public:
     //! The constructor of the problem
@@ -184,8 +182,8 @@ public:
         materialParams_.setLambda(2); // shape parameter
 
         // Set the residual saturations
-        materialParams_.setResidualSaturation(wPhaseIdx, 0.0);
-        materialParams_.setResidualSaturation(nPhaseIdx, 0.0);
+        materialParams_.setResidualSaturation(wettingPhaseIdx, 0.0);
+        materialParams_.setResidualSaturation(nonWettingPhaseIdx, 0.0);
 
         // wrap up the initialization of the material law's parameters
         materialParams_.finalize();
@@ -231,14 +229,14 @@ public:
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             Scalar Sw = 1.0;
-            fs.setSaturation(wPhaseIdx, Sw);
-            fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+            fs.setSaturation(wettingPhaseIdx, Sw);
+            fs.setSaturation(nonWettingPhaseIdx, 1.0 - Sw);
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
 
             Scalar pC[numPhases];
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
-            fs.setPressure(wPhaseIdx, 200e3);
-            fs.setPressure(nPhaseIdx, 200e3 + pC[nPhaseIdx] - pC[nPhaseIdx]);
+            fs.setPressure(wettingPhaseIdx, 200e3);
+            fs.setPressure(nonWettingPhaseIdx, 200e3 + pC[nonWettingPhaseIdx] - pC[nonWettingPhaseIdx]);
 
             values.setFreeFlow(context, spaceIdx, timeIdx, fs);
         }
@@ -246,8 +244,8 @@ public:
             // forced outflow at the right boundary
             RateVector massRate(0.0);
 
-            massRate[contiWEqIdx] = 0.0;  // [kg / (s m^2)]
-            massRate[contiNEqIdx] = 3e-2; // [kg / (s m^2)]
+            massRate[contiWettingEqIdx] = 0.0;  // [kg / (s m^2)]
+            massRate[contiNonWettingEqIdx] = 3e-2; // [kg / (s m^2)]
 
             values.setMassRate(massRate);
         }
@@ -262,8 +260,8 @@ public:
     void source(RateVector &source, const Context &context, int spaceIdx,
                 int timeIdx) const
     {
-        source[contiWEqIdx] = 0.0;
-        source[contiNEqIdx] = 0.0;
+        source[contiWettingEqIdx] = 0.0;
+        source[contiNonWettingEqIdx] = 0.0;
     }
 
     //! Evaluates the initial value at a given position in the domain.
@@ -275,8 +273,8 @@ public:
 
         // the domain is initially fully saturated by LNAPL
         Scalar Sw = 0.0;
-        fs.setSaturation(wPhaseIdx, Sw);
-        fs.setSaturation(nPhaseIdx, 1.0 - Sw);
+        fs.setSaturation(wettingPhaseIdx, Sw);
+        fs.setSaturation(nonWettingPhaseIdx, 1.0 - Sw);
 
         // the temperature is given by the temperature() method
         fs.setTemperature(temperature(context, spaceIdx, timeIdx));
@@ -286,8 +284,8 @@ public:
         MaterialLaw::capillaryPressures(pC, materialLawParams(context, spaceIdx,
                                                               timeIdx),
                                         fs);
-        fs.setPressure(wPhaseIdx, 200e3);
-        fs.setPressure(nPhaseIdx, 200e3 + pC[nPhaseIdx] - pC[nPhaseIdx]);
+        fs.setPressure(wettingPhaseIdx, 200e3);
+        fs.setPressure(nonWettingPhaseIdx, 200e3 + pC[nonWettingPhaseIdx] - pC[nonWettingPhaseIdx]);
 
         values.assignNaive(fs);
     }

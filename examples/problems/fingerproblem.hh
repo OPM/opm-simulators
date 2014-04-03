@@ -94,8 +94,8 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx>
+                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
         Traits;
 
     // use the parker-lenhard hysteresis law
@@ -171,11 +171,11 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         // number of phases
 
         // phase indices
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        nPhaseIdx = FluidSystem::nPhaseIdx,
+        wettingPhaseIdx = FluidSystem::wettingPhaseIdx,
+        nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx,
 
         // equation indices
-        contiWEqIdx = Indices::conti0EqIdx + wPhaseIdx,
+        contiWettingEqIdx = Indices::conti0EqIdx + wettingPhaseIdx,
 
         // Grid and world dimension
         dim = GridView::dimension,
@@ -364,7 +364,7 @@ public:
         // override the value for the liquid phase by forced
         // imbibition of water on inlet boundary segments
         if (onInlet_(pos)) {
-            values[contiWEqIdx] = -0.001; // [kg/(m^2 s)]
+            values[contiWettingEqIdx] = -0.001; // [kg/(m^2 s)]
         }
     }
 
@@ -451,18 +451,18 @@ private:
     void setupInitialFluidState_()
     {
         auto &fs = initialFluidState_;
-        fs.setPressure(wPhaseIdx, /*pressure=*/1e5);
+        fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
         Scalar Sw = EWOMS_GET_PARAM(TypeTag, Scalar, InitialWaterSaturation);
-        fs.setSaturation(wPhaseIdx, Sw);
-        fs.setSaturation(nPhaseIdx, 1 - Sw);
+        fs.setSaturation(wettingPhaseIdx, Sw);
+        fs.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 
         fs.setTemperature(temperature_);
 
         // set the absolute pressures
         Scalar pn = 1e5;
-        fs.setPressure(nPhaseIdx, pn);
-        fs.setPressure(wPhaseIdx, pn);
+        fs.setPressure(nonWettingPhaseIdx, pn);
+        fs.setPressure(wettingPhaseIdx, pn);
     }
 
     DimMatrix K_;

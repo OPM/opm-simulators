@@ -100,13 +100,13 @@ SET_PROP(Co2InjectionBaseProblem, MaterialLaw)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    enum { lPhaseIdx = FluidSystem::lPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
     Traits;
 
     // define the material law which is parameterized by effective
@@ -200,8 +200,8 @@ class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     // copy some indices for convenience
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     enum { numPhases = FluidSystem::numPhases };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
-    enum { lPhaseIdx = FluidSystem::lPhaseIdx };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
+    enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
     enum { CO2Idx = FluidSystem::CO2Idx };
     enum { BrineIdx = FluidSystem::BrineIdx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
@@ -267,10 +267,10 @@ public:
         coarsePorosity_ = 0.3;
 
         // residual saturations
-        fineMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
-        fineMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
-        coarseMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
-        coarseMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
+        fineMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.2);
+        fineMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.2);
+        coarseMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
 
         // parameters for the Brooks-Corey law
         fineMaterialParams_.setEntryPressure(1e4);
@@ -463,14 +463,14 @@ public:
             massRate[contiCO2EqIdx] = -1e-3; // [kg/(m^3 s)]
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
-            fs.setSaturation(gPhaseIdx, 1.0);
-            fs.setPressure(gPhaseIdx,
+            fs.setSaturation(gasPhaseIdx, 1.0);
+            fs.setPressure(gasPhaseIdx,
                            context.volVars(spaceIdx, timeIdx).fluidState().pressure(
-                               gPhaseIdx));
+                               gasPhaseIdx));
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
             typename FluidSystem::ParameterCache paramCache;
-            paramCache.updatePhase(fs, gPhaseIdx);
-            Scalar h = FluidSystem::enthalpy(fs, paramCache, gPhaseIdx);
+            paramCache.updatePhase(fs, gasPhaseIdx);
+            Scalar h = FluidSystem::enthalpy(fs, paramCache, gasPhaseIdx);
 
             // impose an forced inflow boundary condition
             values.setMassRate(massRate);
@@ -532,8 +532,8 @@ private:
         //////
         // set saturations
         //////
-        fs.setSaturation(FluidSystem::lPhaseIdx, 1.0);
-        fs.setSaturation(FluidSystem::gPhaseIdx, 0.0);
+        fs.setSaturation(FluidSystem::liquidPhaseIdx, 1.0);
+        fs.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
 
         //////
         // set pressures
@@ -547,20 +547,20 @@ private:
             = this->materialLawParams(context, spaceIdx, timeIdx);
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
-        fs.setPressure(lPhaseIdx, pl + (pC[lPhaseIdx] - pC[lPhaseIdx]));
-        fs.setPressure(gPhaseIdx, pl + (pC[gPhaseIdx] - pC[lPhaseIdx]));
+        fs.setPressure(liquidPhaseIdx, pl + (pC[liquidPhaseIdx] - pC[liquidPhaseIdx]));
+        fs.setPressure(gasPhaseIdx, pl + (pC[gasPhaseIdx] - pC[liquidPhaseIdx]));
 
         //////
         // set composition of the liquid phase
         //////
-        fs.setMoleFraction(lPhaseIdx, CO2Idx, 0.005);
-        fs.setMoleFraction(lPhaseIdx, BrineIdx,
-                           1.0 - fs.moleFraction(lPhaseIdx, CO2Idx));
+        fs.setMoleFraction(liquidPhaseIdx, CO2Idx, 0.005);
+        fs.setMoleFraction(liquidPhaseIdx, BrineIdx,
+                           1.0 - fs.moleFraction(liquidPhaseIdx, CO2Idx));
 
         typename FluidSystem::ParameterCache paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         CFRP::solve(fs, paramCache,
-                    /*refPhaseIdx=*/lPhaseIdx,
+                    /*refPhaseIdx=*/liquidPhaseIdx,
                     /*setViscosity=*/true,
                     /*setEnthalpy=*/true);
     }
@@ -586,8 +586,8 @@ private:
                            * std::pow(lambdaWater, poro);
         Scalar lambdaDry = std::pow(lambdaGranite, (1 - poro));
 
-        params.setFullySaturatedLambda(gPhaseIdx, lambdaDry);
-        params.setFullySaturatedLambda(lPhaseIdx, lambdaWet);
+        params.setFullySaturatedLambda(gasPhaseIdx, lambdaDry);
+        params.setFullySaturatedLambda(liquidPhaseIdx, lambdaWet);
         params.setVacuumLambda(lambdaDry);
     }
 
