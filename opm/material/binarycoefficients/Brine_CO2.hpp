@@ -41,8 +41,8 @@ class Brine_CO2 {
     typedef Opm::H2O<Scalar> H2O;
     typedef Opm::CO2<Scalar, CO2Tables> CO2;
     typedef Opm::IdealGas<Scalar> IdealGas;
-    static const int lPhaseIdx = 0; // index of the liquid phase
-    static const int gPhaseIdx = 1; // index of the gas phase
+    static const int liquidPhaseIdx = 0; // index of the liquid phase
+    static const int gasPhaseIdx = 1; // index of the gas phase
 
 public:
     /*!
@@ -119,7 +119,7 @@ public:
         // if only liquid phase is present the mole fraction of CO2 in brine is given and
         // and the virtual equilibrium mole fraction of water in the non-existing gas phase can be estimated
         // with the mutual solubility function
-        if (knownPhaseIdx == lPhaseIdx) {
+        if (knownPhaseIdx == liquidPhaseIdx) {
             ygH2O = A * (1 - xlCO2 - x_NaCl);
 
         }
@@ -127,7 +127,7 @@ public:
         // if only gas phase is present the mole fraction of water in the gas phase is given and
         // and the virtual equilibrium mole fraction of CO2 in the non-existing liquid phase can be estimated
         // with the mutual solubility function
-        if (knownPhaseIdx == gPhaseIdx) {
+        if (knownPhaseIdx == gasPhaseIdx) {
             //y_H2o = fluidstate.
             xlCO2 = 1 - x_NaCl - ygH2O / A;
         }

@@ -63,11 +63,11 @@ public:
     static const int numPhases = 3;
 
     //! Index of the oil phase
-    static const int oPhaseIdx = 0;
+    static const int oilPhaseIdx = 0;
     //! Index of the water phase
-    static const int wPhaseIdx = 1;
+    static const int waterPhaseIdx = 1;
     //! Index of the gas phase
-    static const int gPhaseIdx = 2;
+    static const int gasPhaseIdx = 2;
 
     /*!
      * \copydoc BaseFluidSystem::init
@@ -113,9 +113,9 @@ public:
                                     Scalar rhoWater,
                                     Scalar rhoGas)
     {
-        surfaceDensity_[oPhaseIdx] = rhoOil;
-        surfaceDensity_[wPhaseIdx] = rhoWater;
-        surfaceDensity_[gPhaseIdx] = rhoGas;
+        surfaceDensity_[oilPhaseIdx] = rhoOil;
+        surfaceDensity_[waterPhaseIdx] = rhoWater;
+        surfaceDensity_[gasPhaseIdx] = rhoGas;
     }
 
     /*!
@@ -223,18 +223,18 @@ public:
         // calculate molar masses
 
         // water is simple: 18 g/mol
-        molarMass_[wCompIdx] = 18e-3;
+        molarMass_[waterCompIdx] = 18e-3;
 
         // for gas, we take the density at surface pressure and assume
         // it to be ideal
         Scalar p = 1.0135e5;
-        Scalar rho_g = surfaceDensity_[gPhaseIdx];
+        Scalar rho_g = surfaceDensity_[gasPhaseIdx];
         Scalar T = 311;
-        molarMass_[gCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
+        molarMass_[gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
 
         // finally, for oil phase, we take the molar mass from the
         // spe9 paper
-        molarMass_[oCompIdx] = 175e-3; // kg/mol
+        molarMass_[oilCompIdx] = 175e-3; // kg/mol
 
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
@@ -290,7 +290,7 @@ public:
     static bool isLiquid(const int phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return phaseIdx != gPhaseIdx;
+        return phaseIdx != gasPhaseIdx;
     }
 
     /****************************************
@@ -301,11 +301,11 @@ public:
     static const int numComponents = 3;
 
     //! Index of the oil component
-    static const int oCompIdx = 0;
+    static const int oilCompIdx = 0;
     //! Index of the water component
-    static const int wCompIdx = 1;
+    static const int waterCompIdx = 1;
     //! Index of the gas component
-    static const int gCompIdx = 2;
+    static const int gasCompIdx = 2;
 
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(const int compIdx)
@@ -350,10 +350,10 @@ public:
         Scalar p = fluidState.pressure(phaseIdx);
 
         switch (phaseIdx) {
-        case wPhaseIdx: return waterDensity_(p);
-        case gPhaseIdx: return gasDensity_(p);
-        case oPhaseIdx: {
-            Scalar pSat = oilSaturationPressure(fluidState.massFraction(oPhaseIdx, gCompIdx));
+        case waterPhaseIdx: return waterDensity_(p);
+        case gasPhaseIdx: return gasDensity_(p);
+        case oilPhaseIdx: {
+            Scalar pSat = oilSaturationPressure(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
 
             // retrieve the gas formation factor and the oil formation volume factor
             Scalar Rs = gasDissolutionFactorSpline_.eval(pSat, /*extrapolate=*/true);
@@ -367,19 +367,19 @@ public:
             // define the derivatives of oil regarding oil component
             // mass fraction and pressure
             Scalar drhoo_dXoO =
-                surfaceDensity_[oPhaseIdx]*
+                surfaceDensity_[oilPhaseIdx]*
                 (1 + oilCompressibility()*(p - 1.0135e5));
             Scalar drhoo_dp =
                 oilCompressibility();
 
             // Calculate the derivative of the density of saturated
             // oil regarding pressure
-            Scalar drhoosat_dp = - surfaceDensity_[oPhaseIdx]*dBo_dp / (Bo * Bo);
+            Scalar drhoosat_dp = - surfaceDensity_[oilPhaseIdx]*dBo_dp / (Bo * Bo);
 
             // calculate the derivative of the gas component mass
             // fraction regarding pressure in saturated oil
             Scalar dXoOsat_dp =
-                - surfaceDensity_[gPhaseIdx]/surfaceDensity_[oPhaseIdx]
+                - surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx]
                 *(Bo * dRs_dp + Rs * dBo_dp);
 
             // Using the previous derivatives, define a derivative
@@ -388,13 +388,13 @@ public:
                 drhoo_dXoO + (drhoo_dp - drhoosat_dp) / dXoOsat_dp;
 
             // calculate the composition of saturated oil.
-            Scalar XoGsat = surfaceDensity_[gPhaseIdx]/surfaceDensity_[oPhaseIdx] * Rs * Bo;
+            Scalar XoGsat = surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx] * Rs * Bo;
             Scalar XoOsat = 1.0 - XoGsat;
 
             Scalar rhoo =
-                surfaceDensity_[oPhaseIdx]/Bo*(1 + drhoo_dp*(p - pSat))
-                + (XoOsat - fluidState.massFraction(oPhaseIdx, oCompIdx))*drhoo_dXoO
-                + (XoGsat - fluidState.massFraction(oPhaseIdx, gCompIdx))*drhoo_dXoG;
+                surfaceDensity_[oilPhaseIdx]/Bo*(1 + drhoo_dp*(p - pSat))
+                + (XoOsat - fluidState.massFraction(oilPhaseIdx, oilCompIdx))*drhoo_dXoO
+                + (XoGsat - fluidState.massFraction(oilPhaseIdx, gasCompIdx))*drhoo_dXoG;
 
             return rhoo;
         }
@@ -415,9 +415,9 @@ public:
 
         Scalar p = fluidState.pressure(phaseIdx);
         switch (phaseIdx) {
-        case wPhaseIdx: return fugCoefficientInWater(compIdx, p);
-        case gPhaseIdx: return fugCoefficientInGas(compIdx, p);
-        case oPhaseIdx: return fugCoefficientInOil(compIdx, p);
+        case waterPhaseIdx: return fugCoefficientInWater(compIdx, p);
+        case gasPhaseIdx: return fugCoefficientInGas(compIdx, p);
+        case oilPhaseIdx: return fugCoefficientInOil(compIdx, p);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase or component index");
@@ -434,9 +434,9 @@ public:
         Scalar p = fluidState.pressure(phaseIdx);
 
         switch (phaseIdx) {
-        case oPhaseIdx: return oilViscositySpline_.eval(p, /*extrapolate=*/true);
-        case wPhaseIdx: return waterViscosity_(p);
-        case gPhaseIdx: return gasViscosity_(p);
+        case oilPhaseIdx: return oilViscositySpline_.eval(p, /*extrapolate=*/true);
+        case waterPhaseIdx: return waterViscosity_(p);
+        case gasPhaseIdx: return gasViscosity_(p);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -501,9 +501,9 @@ public:
         // pressure of water as a starting point. (we just set it to
         // 30 kPa to ease interpreting the results.)
         const Scalar pvWater = 30e3;
-        if (compIdx == oCompIdx)
+        if (compIdx == oilCompIdx)
             return 1e3*pvWater / pressure;
-        else if (compIdx == gCompIdx)
+        else if (compIdx == gasCompIdx)
             return 1e6*pvWater / pressure;
 
         return pvWater / pressure;
@@ -534,9 +534,9 @@ public:
         // pressure to ease physical interpretation of the results
         Scalar phi_oO = 20e3/pressure;
 
-        if (compIdx == oCompIdx)
+        if (compIdx == oilCompIdx)
             return phi_oO;
-        else if (compIdx == wCompIdx)
+        else if (compIdx == waterCompIdx)
             // assume that the affinity of the water component to the
             // oil phase is one million times smaller than that of the
             // oil component
@@ -553,7 +553,7 @@ public:
         // then, scale the gas component's gas phase fugacity
         // coefficient, so that the oil phase ends up at the right
         // composition if we were doing a flash experiment
-        Scalar phi_gG = fugCoefficientInGas(gCompIdx, pressure);
+        Scalar phi_gG = fugCoefficientInGas(gasCompIdx, pressure);
         return phi_gG / x_oGf;
     }
 
@@ -603,10 +603,10 @@ public:
     {
         // first, we calculate the total reservoir oil phase density
         // [kg/m^3]
-        Scalar rho_gRef = surfaceDensity_[gPhaseIdx];
+        Scalar rho_gRef = surfaceDensity_[gasPhaseIdx];
 
         Scalar B_o = oilFormationVolumeFactor(pressure);
-        Scalar rho_o = surfaceDensity(oPhaseIdx)/B_o;
+        Scalar rho_o = surfaceDensity(oilPhaseIdx)/B_o;
 
         // then, we calculate the mass of the gas component [kg/m^3]
         // in the oil phase. This is equivalent to the gas formation
@@ -629,8 +629,8 @@ public:
 
         // which can be converted to mole fractions, given the
         // components' molar masses
-        Scalar MG = molarMass(gCompIdx);
-        Scalar MO = molarMass(oCompIdx);
+        Scalar MG = molarMass(gasCompIdx);
+        Scalar MO = molarMass(oilCompIdx);
 
         Scalar avgMolarMass = MO/(1 + XoG*(MO/MG - 1));
         Scalar xoG = XoG*avgMolarMass/MG;
@@ -645,10 +645,10 @@ public:
         Scalar Bo = oilFormationVolumeFactor(pressure);
 
         // oil formation volume factor at standard pressure
-        Scalar BoRef  = refFormationVolumeFactor_[oPhaseIdx];
+        Scalar BoRef  = refFormationVolumeFactor_[oilPhaseIdx];
 
         // surface density of oil
-        Scalar rhoRef = surfaceDensity_[oPhaseIdx];
+        Scalar rhoRef = surfaceDensity_[oilPhaseIdx];
 
         // reservoir density is surface density scaled by the ratio of
         // the volume formation factors
@@ -663,10 +663,10 @@ private:
 
 
         // gas formation volume factor at standard pressure
-        Scalar BgRef = refFormationVolumeFactor_[gPhaseIdx];
+        Scalar BgRef = refFormationVolumeFactor_[gasPhaseIdx];
 
         // surface density of gas
-        Scalar rhoRef = surfaceDensity_[gPhaseIdx];
+        Scalar rhoRef = surfaceDensity_[gasPhaseIdx];
 
         // reservoir density is surface density scaled by the ratio of
         // the volume formation factors
@@ -676,7 +676,7 @@ private:
     static Scalar waterDensity_(Scalar pressure)
     {
         // compressibility of water times standard density
-        Scalar rhoRef = surfaceDensity_[wPhaseIdx];
+        Scalar rhoRef = surfaceDensity_[waterPhaseIdx];
         return rhoRef *
             (1 +
              waterCompressibilityScalar_

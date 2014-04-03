@@ -267,19 +267,19 @@ public:
     template <class FluidState>
     static Scalar pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar S = fs.saturation(Traits::wPhaseIdx);
+        Scalar S = fs.saturation(Traits::wettingPhaseIdx);
         Valgrind::CheckDefined(S);
 
         Scalar wPhasePressure =
-            S*params.pcMaxSat(Traits::wPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::wPhaseIdx);
+            S*params.pcMaxSat(Traits::wettingPhaseIdx) +
+            (1.0 - S)*params.pcMinSat(Traits::wettingPhaseIdx);
 
-        S = fs.saturation(Traits::nPhaseIdx);
+        S = fs.saturation(Traits::nonWettingPhaseIdx);
         Valgrind::CheckDefined(S);
 
         Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nPhaseIdx);
+            S*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
+            (1.0 - S)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
         return nPhasePressure - wPhasePressure;
     }
@@ -290,12 +290,12 @@ public:
     twoPhaseSatPcnw(const Params &params, Scalar Sw)
     {
         Scalar wPhasePressure =
-            Sw*params.pcMaxSat(Traits::wPhaseIdx) +
-            (1.0 - Sw)*params.pcMinSat(Traits::wPhaseIdx);
+            Sw*params.pcMaxSat(Traits::wettingPhaseIdx) +
+            (1.0 - Sw)*params.pcMinSat(Traits::wettingPhaseIdx);
 
         Scalar nPhasePressure =
-            (1.0 - Sw)*params.pcMaxSat(Traits::nPhaseIdx) +
-            Sw*params.pcMinSat(Traits::nPhaseIdx);
+            (1.0 - Sw)*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
+            Sw*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
         return nPhasePressure - wPhasePressure;
     }
@@ -342,7 +342,7 @@ public:
      */
     template <class FluidState>
     static Scalar krw(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wettingPhaseIdx))); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
@@ -354,7 +354,7 @@ public:
      */
     template <class FluidState>
     static Scalar krn(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nonWettingPhaseIdx))); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
@@ -369,7 +369,7 @@ public:
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
     krg(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gasPhaseIdx))); }
 
     /*!
      * \brief The difference between the pressures of the gas and the non-wetting phase.
@@ -380,19 +380,19 @@ public:
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
     pcgn(const Params &params, const FluidState &fs)
     {
-        Scalar S = fs.saturation(Traits::nPhaseIdx);
+        Scalar S = fs.saturation(Traits::nonWettingPhaseIdx);
         Valgrind::CheckDefined(S);
 
         Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nPhaseIdx);
+            S*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
+            (1.0 - S)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
-        S = fs.saturation(Traits::gPhaseIdx);
+        S = fs.saturation(Traits::gasPhaseIdx);
         Valgrind::CheckDefined(S);
 
         Scalar gPhasePressure =
-            S*params.pcMaxSat(Traits::gPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::gPhaseIdx);
+            S*params.pcMaxSat(Traits::gasPhaseIdx) +
+            (1.0 - S)*params.pcMinSat(Traits::gasPhaseIdx);
 
         return gPhasePressure - nPhasePressure;
     }

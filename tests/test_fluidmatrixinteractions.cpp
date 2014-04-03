@@ -158,8 +158,8 @@ void testTwoPhaseApi()
                       "This material law is expected to implement "
                       "the two-phase API!");
 
-        OPM_UNUSED static const int wPhaseIdx = MaterialLaw::wPhaseIdx;
-        OPM_UNUSED static const int nPhaseIdx = MaterialLaw::nPhaseIdx;
+        OPM_UNUSED static const int wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
+        OPM_UNUSED static const int nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
 
         // make sure the two-phase specific methods are present
         const FluidState fs;
@@ -219,9 +219,9 @@ void testThreePhaseApi()
                       "The number of fluid phases for a threephase "
                       "capillary pressure law must be 3");
 
-        OPM_UNUSED static const int wPhaseIdx = MaterialLaw::wPhaseIdx;
-        OPM_UNUSED static const int nPhaseIdx = MaterialLaw::nPhaseIdx;
-        OPM_UNUSED static const int gPhaseIdx = MaterialLaw::gPhaseIdx;
+        OPM_UNUSED static const int wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
+        OPM_UNUSED static const int nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
+        OPM_UNUSED static const int gasPhaseIdx = MaterialLaw::gasPhaseIdx;
 
         // make sure the two-phase specific methods are present
         const FluidState fs;
@@ -256,13 +256,13 @@ int main(int argc, char **argv)
     typedef Opm::FluidSystems::BlackOil<Scalar> ThreePFluidSystem;
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        TwoPFluidSystem::wPhaseIdx,
-                                        TwoPFluidSystem::nPhaseIdx> TwoPhaseTraits;
+                                        TwoPFluidSystem::wettingPhaseIdx,
+                                        TwoPFluidSystem::nonWettingPhaseIdx> TwoPhaseTraits;
 
     typedef Opm::ThreePhaseMaterialTraits<Scalar,
-                                          ThreePFluidSystem::wPhaseIdx,
-                                          ThreePFluidSystem::oPhaseIdx,
-                                          ThreePFluidSystem::gPhaseIdx> ThreePhaseTraits;
+                                          ThreePFluidSystem::waterPhaseIdx,
+                                          ThreePFluidSystem::oilPhaseIdx,
+                                          ThreePFluidSystem::gasPhaseIdx> ThreePhaseTraits;
 
     typedef Opm::ImmiscibleFluidState<Scalar, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Scalar, ThreePFluidSystem> ThreePhaseFluidState;

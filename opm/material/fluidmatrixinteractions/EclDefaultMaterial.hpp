@@ -1,6 +1,5 @@
 /*
   Copyright (C) 2008-2013 by Andreas Lauser
-  Copyright (C) 2011 by Bernd Flemisch
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -83,10 +82,10 @@ public:
     typedef typename Traits::Scalar Scalar;
 
     static const int numPhases = 3;
-    static const int wPhaseIdx = Traits::wPhaseIdx;
-    static const int nPhaseIdx = Traits::nPhaseIdx;
-    static const int oPhaseIdx = Traits::nPhaseIdx;
-    static const int gPhaseIdx = Traits::gPhaseIdx;
+    static const int waterPhaseIdx = Traits::wettingPhaseIdx;
+    static const int nonWettingPhaseIdx = Traits::nonWettingPhaseIdx;
+    static const int oilPhaseIdx = Traits::nonWettingPhaseIdx;
+    static const int gasPhaseIdx = Traits::gasPhaseIdx;
 
     //! Specify whether this material law implements the two-phase
     //! convenience API
@@ -131,9 +130,9 @@ public:
                                    const Params &params,
                                    const FluidState &state)
     {
-        values[gPhaseIdx] = pcgn(params, state);
-        values[oPhaseIdx] = 0;
-        values[wPhaseIdx] = - pcnw(params, state);
+        values[gasPhaseIdx] = pcgn(params, state);
+        values[oilPhaseIdx] = 0;
+        values[waterPhaseIdx] = - pcnw(params, state);
     }
 
     /*!
@@ -149,7 +148,7 @@ public:
     static Scalar pcgn(const Params &params,
                        const FluidState &fs)
     {
-        Scalar Sw = 1 - fs.saturation(gPhaseIdx);
+        Scalar Sw = 1 - fs.saturation(gasPhaseIdx);
         return GasOilMaterial::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -166,7 +165,7 @@ public:
     static Scalar pcnw(const Params &params,
                        const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(wPhaseIdx);
+        Scalar Sw = fs.saturation(waterPhaseIdx);
         return OilWaterMaterial::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
@@ -231,9 +230,9 @@ public:
                                        const Params &params,
                                        const FluidState &fluidState)
     {
-        values[wPhaseIdx] = krw(params, fluidState);
-        values[nPhaseIdx] = krn(params, fluidState);
-        values[gPhaseIdx] = krg(params, fluidState);
+        values[waterPhaseIdx] = krw(params, fluidState);
+        values[nonWettingPhaseIdx] = krn(params, fluidState);
+        values[gasPhaseIdx] = krg(params, fluidState);
     }
 
     /*!
@@ -243,7 +242,7 @@ public:
     static Scalar krg(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sw = 1 - fluidState.saturation(gPhaseIdx);
+        Scalar Sw = 1 - fluidState.saturation(gasPhaseIdx);
         return GasOilMaterial::twoPhaseSatKrn(params.oilWaterParams(), Sw);
     }
 
@@ -254,7 +253,7 @@ public:
     static Scalar krw(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sw = fluidState.saturation(wPhaseIdx);
+        Scalar Sw = fluidState.saturation(waterPhaseIdx);
         return OilWaterMaterial::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -265,9 +264,9 @@ public:
     static Scalar krn(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sw = std::min(1.0, std::max(0.0, fluidState.saturation(wPhaseIdx)));
-        Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oPhaseIdx)));
-        Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gPhaseIdx)));
+        Scalar Sw = std::min(1.0, std::max(0.0, fluidState.saturation(waterPhaseIdx)));
+        Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oilPhaseIdx)));
+        Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gasPhaseIdx)));
 
         // connate water. According to the Eclipse TD, this is
         // probably only relevant if hysteresis is enabled...

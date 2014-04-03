@@ -296,7 +296,7 @@ public:
     template <class FluidState, class ScalarT = Scalar>
     static typename std::enable_if<(numPhases > 1), ScalarT>::type
     krw(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wettingPhaseIdx))); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<numPhases == 2, ScalarT>::type
@@ -309,7 +309,7 @@ public:
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if<(numPhases > 1), ScalarT>::type
     krn(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nonWettingPhaseIdx))); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<numPhases == 2, ScalarT>::type
@@ -324,7 +324,7 @@ public:
     template <class FluidState, class ScalarT=Scalar>
     static typename std::enable_if< (numPhases > 2), ScalarT>::type
     krg(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gPhaseIdx))); }
+    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gasPhaseIdx))); }
 
     /*!
      * \brief The difference between the pressures of the gas and the non-wetting phase.

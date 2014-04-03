@@ -55,9 +55,9 @@ public:
     typedef typename Traits::Scalar Scalar;
 
     static const int numPhases = 3;
-    static const int wPhaseIdx = Traits::wPhaseIdx;
-    static const int nPhaseIdx = Traits::nPhaseIdx;
-    static const int gPhaseIdx = Traits::gPhaseIdx;
+    static const int wettingPhaseIdx = Traits::wettingPhaseIdx;
+    static const int nonWettingPhaseIdx = Traits::nonWettingPhaseIdx;
+    static const int gasPhaseIdx = Traits::gasPhaseIdx;
 
     //! Specify whether this material law implements the two-phase
     //! convenience API
@@ -99,9 +99,9 @@ public:
                                    const Params &params,
                                    const FluidState &fluidState)
     {
-        values[gPhaseIdx] = pcgn(params, fluidState);
-        values[nPhaseIdx] = 0;
-        values[wPhaseIdx] = - pcnw(params, fluidState);
+        values[gasPhaseIdx] = pcgn(params, fluidState);
+        values[nonWettingPhaseIdx] = 0;
+        values[wettingPhaseIdx] = - pcnw(params, fluidState);
     }
 
     /*!
@@ -121,8 +121,8 @@ public:
 
         // sum of liquid saturations
         Scalar St =
-            fluidState.saturation(wPhaseIdx)
-            + fluidState.saturation(nPhaseIdx);
+            fluidState.saturation(wettingPhaseIdx)
+            + fluidState.saturation(nonWettingPhaseIdx);
 
         Scalar Se = (St - params.Swrx())/(1. - params.Swrx());
 
@@ -171,7 +171,7 @@ public:
     static Scalar pcnw(const Params &params,
                        const FluidState &fluidState)
     {
-        Scalar Sw = fluidState.saturation(wPhaseIdx);
+        Scalar Sw = fluidState.saturation(wettingPhaseIdx);
         Scalar Se = (Sw-params.Swr())/(1.-params.Snr());
 
         Scalar PC_VG_REG = 0.01;
@@ -251,9 +251,9 @@ public:
                                        const Params &params,
                                        const FluidState &fluidState)
     {
-        values[wPhaseIdx] = krw(params, fluidState);
-        values[nPhaseIdx] = krn(params, fluidState);
-        values[gPhaseIdx] = krg(params, fluidState);
+        values[wettingPhaseIdx] = krw(params, fluidState);
+        values[nonWettingPhaseIdx] = krn(params, fluidState);
+        values[gasPhaseIdx] = krg(params, fluidState);
     }
 
     /*!
@@ -270,7 +270,7 @@ public:
     {
 
         // transformation to effective saturation
-        Scalar Se = (fluidState.saturation(wPhaseIdx) - params.Swr()) / (1-params.Swr());
+        Scalar Se = (fluidState.saturation(wettingPhaseIdx) - params.Swr()) / (1-params.Swr());
 
         // regularization
         if(Se > 1.0) return 1.;
@@ -296,8 +296,8 @@ public:
     static Scalar krn(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sn = fluidState.saturation(nPhaseIdx);
-        Scalar Sw = fluidState.saturation(wPhaseIdx);
+        Scalar Sn = fluidState.saturation(nonWettingPhaseIdx);
+        Scalar Sw = fluidState.saturation(wettingPhaseIdx);
         Scalar Swe = std::min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
         Scalar Ste = std::min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
 
@@ -341,7 +341,7 @@ public:
     static Scalar krg(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sg = fluidState.saturation(gPhaseIdx);
+        Scalar Sg = fluidState.saturation(gasPhaseIdx);
         Scalar Se = std::min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
 
         // regularization

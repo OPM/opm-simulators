@@ -308,7 +308,7 @@ public:
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
     twoPhaseSatPcnw(const Params &params, Scalar SwAbs)
     {
-        Scalar SwEff = effectiveSaturation(params, SwAbs, Traits::wPhaseIdx);
+        Scalar SwEff = effectiveSaturation(params, SwAbs, Traits::wettingPhaseIdx);
 
         return EffLaw::twoPhaseSatPcnw(params, SwEff);
     }
@@ -331,12 +331,12 @@ public:
      */
     template <class FluidState>
     static Scalar Sw(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sw(params, fs), Traits::wPhaseIdx); }
+    { return absoluteSaturation(params, EffLaw::Sw(params, fs), Traits::wettingPhaseIdx); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
     twoPhaseSatSw(const Params &params, Scalar Sw)
-    { return absoluteSaturation(params, EffLaw::twoPhaseSatSw(params, Sw), Traits::wPhaseIdx); }
+    { return absoluteSaturation(params, EffLaw::twoPhaseSatSw(params, Sw), Traits::wettingPhaseIdx); }
 
     /*!
      * \brief Calculate non-wetting liquid phase saturation given that
@@ -344,12 +344,12 @@ public:
      */
     template <class FluidState>
     static Scalar Sn(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sn(params, fs), Traits::nPhaseIdx); }
+    { return absoluteSaturation(params, EffLaw::Sn(params, fs), Traits::nonWettingPhaseIdx); }
 
     template <class ScalarT = Scalar>
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
     twoPhaseSatSn(const Params &params, Scalar Sw)
-    { return absoluteSaturation(params, EffLaw::twoPhaseSatSn(params, Sw), Traits::nPhaseIdx); }
+    { return absoluteSaturation(params, EffLaw::twoPhaseSatSn(params, Sw), Traits::nonWettingPhaseIdx); }
 
     /*!
      * \brief Calculate gas phase saturation given that the rest of
@@ -360,7 +360,7 @@ public:
     template <class FluidState, class ScalarT = Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
     Sg(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sg(params, fs), Traits::gPhaseIdx); }
+    { return absoluteSaturation(params, EffLaw::Sg(params, fs), Traits::gasPhaseIdx); }
 
     /*!
      * \brief Returns the partial derivative of the capillary
@@ -436,7 +436,7 @@ public:
     template <class ScalarT = Scalar>
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
     twoPhaseSatKrw(const Params &params, Scalar Sw)
-    { return EffLaw::twoPhaseSatKrw(params, effectiveSaturation(params, Sw, Traits::nPhaseIdx)); }
+    { return EffLaw::twoPhaseSatKrw(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
 
     /*!
      * \brief The relative permeability of the non-wetting phase.
@@ -464,7 +464,7 @@ public:
     template <class ScalarT = Scalar>
     static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
     twoPhaseSatKrn(const Params &params, Scalar Sw)
-    { return EffLaw::twoPhaseSatKrn(params, effectiveSaturation(params, Sw, Traits::nPhaseIdx)); }
+    { return EffLaw::twoPhaseSatKrn(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
 
     /*!
      * \brief The relative permability of the gas phase

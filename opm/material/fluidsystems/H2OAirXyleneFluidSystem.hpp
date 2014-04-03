@@ -69,11 +69,11 @@ public:
     static const int numComponents = 3;
 
     //! The index of the water phase
-    static const int wPhaseIdx = 0;
+    static const int waterPhaseIdx = 0;
     //! The index of the NAPL phase
-    static const int nPhaseIdx = 1;
+    static const int naplPhaseIdx = 1;
     //! The index of the gas phase
-    static const int gPhaseIdx = 2;
+    static const int gasPhaseIdx = 2;
 
     //! The index of the water component
     static const int H2OIdx = 0;
@@ -90,12 +90,12 @@ public:
     static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return phaseIdx != gPhaseIdx;
+        return phaseIdx != gasPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
     static bool isIdealGas(int phaseIdx)
-    { return phaseIdx == gPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
+    { return phaseIdx == gasPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
     static bool isIdealMixture(int phaseIdx)
@@ -112,10 +112,10 @@ public:
     static bool isCompressible(int phaseIdx)
     {
         return
-            (phaseIdx == gPhaseIdx)
+            (phaseIdx == gasPhaseIdx)
             // gases are always compressible
             ? true
-            : (phaseIdx == wPhaseIdx)
+            : (phaseIdx == waterPhaseIdx)
             // the water component decides for the water phase...
             ? H2O::liquidIsCompressible()
             // the NAPL component decides for the napl phase...
@@ -126,9 +126,9 @@ public:
     static const char *phaseName(int phaseIdx)
     {
         switch (phaseIdx) {
-        case wPhaseIdx: return "w";
-        case nPhaseIdx: return "n";
-        case gPhaseIdx: return "g";;
+        case waterPhaseIdx: return "w";
+        case naplPhaseIdx: return "n";
+        case gasPhaseIdx: return "g";;
         };
         OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }
@@ -166,7 +166,7 @@ public:
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
-        if (phaseIdx == wPhaseIdx) {
+        if (phaseIdx == waterPhaseIdx) {
             // See: Ochs 2008
             // \todo: proper citation
             Scalar rholH2O = H2O::liquidDensity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
@@ -175,28 +175,28 @@ public:
             // this assumes each dissolved molecule displaces exactly one
             // water molecule in the liquid
             return
-                clH2O*(H2O::molarMass()*fluidState.moleFraction(wPhaseIdx, H2OIdx)
+                clH2O*(H2O::molarMass()*fluidState.moleFraction(waterPhaseIdx, H2OIdx)
                        +
-                       Air::molarMass()*fluidState.moleFraction(wPhaseIdx, airIdx)
+                       Air::molarMass()*fluidState.moleFraction(waterPhaseIdx, airIdx)
                        +
-                       NAPL::molarMass()*fluidState.moleFraction(wPhaseIdx, NAPLIdx));
+                       NAPL::molarMass()*fluidState.moleFraction(waterPhaseIdx, NAPLIdx));
         }
-        else if (phaseIdx == nPhaseIdx) {
+        else if (phaseIdx == naplPhaseIdx) {
             // assume pure NAPL for the NAPL phase
             Scalar pressure = NAPL::liquidIsCompressible()?fluidState.pressure(phaseIdx):1e100;
             return NAPL::liquidDensity(fluidState.temperature(phaseIdx), pressure);
         }
 
-        assert (phaseIdx == gPhaseIdx);
+        assert (phaseIdx == gasPhaseIdx);
         Scalar pH2O =
-            fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
-            fluidState.pressure(gPhaseIdx);
+            fluidState.moleFraction(gasPhaseIdx, H2OIdx)  *
+            fluidState.pressure(gasPhaseIdx);
         Scalar pAir =
-            fluidState.moleFraction(gPhaseIdx, airIdx)  *
-            fluidState.pressure(gPhaseIdx);
+            fluidState.moleFraction(gasPhaseIdx, airIdx)  *
+            fluidState.pressure(gasPhaseIdx);
         Scalar pNAPL =
-            fluidState.moleFraction(gPhaseIdx, NAPLIdx)  *
-            fluidState.pressure(gPhaseIdx);
+            fluidState.moleFraction(gasPhaseIdx, NAPLIdx)  *
+            fluidState.pressure(gasPhaseIdx);
         return
             H2O::gasDensity(fluidState.temperature(phaseIdx), pH2O) +
             Air::gasDensity(fluidState.temperature(phaseIdx), pAir) +
@@ -209,17 +209,17 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        if (phaseIdx == wPhaseIdx) {
+        if (phaseIdx == waterPhaseIdx) {
             // assume pure water viscosity
             return H2O::liquidViscosity(fluidState.temperature(phaseIdx),
                                         fluidState.pressure(phaseIdx));
         }
-        else if (phaseIdx == nPhaseIdx) {
+        else if (phaseIdx == naplPhaseIdx) {
             // assume pure NAPL viscosity
             return NAPL::liquidViscosity(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
         }
 
-        assert (phaseIdx == gPhaseIdx);
+        assert (phaseIdx == gasPhaseIdx);
 
         /* Wilke method. See:
          *
@@ -245,15 +245,15 @@ public:
             NAPL::molarMass()
         };
 
-        Scalar muAW = mu[airIdx]*fluidState.moleFraction(gPhaseIdx, airIdx)
-            + mu[H2OIdx]*fluidState.moleFraction(gPhaseIdx, H2OIdx)
-            / (fluidState.moleFraction(gPhaseIdx, airIdx)
-               + fluidState.moleFraction(gPhaseIdx, H2OIdx));
-        Scalar xAW = fluidState.moleFraction(gPhaseIdx, airIdx)
-            + fluidState.moleFraction(gPhaseIdx, H2OIdx);
+        Scalar muAW = mu[airIdx]*fluidState.moleFraction(gasPhaseIdx, airIdx)
+            + mu[H2OIdx]*fluidState.moleFraction(gasPhaseIdx, H2OIdx)
+            / (fluidState.moleFraction(gasPhaseIdx, airIdx)
+               + fluidState.moleFraction(gasPhaseIdx, H2OIdx));
+        Scalar xAW = fluidState.moleFraction(gasPhaseIdx, airIdx)
+            + fluidState.moleFraction(gasPhaseIdx, H2OIdx);
 
-        Scalar MAW = (fluidState.moleFraction(gPhaseIdx, airIdx)*Air::molarMass()
-                      + fluidState.moleFraction(gPhaseIdx, H2OIdx)*H2O::molarMass())
+        Scalar MAW = (fluidState.moleFraction(gasPhaseIdx, airIdx)*Air::molarMass()
+                      + fluidState.moleFraction(gasPhaseIdx, H2OIdx)*H2O::molarMass())
             / xAW;
 
             /* TODO, please check phiCAW for the Xylene case here */
@@ -266,9 +266,9 @@ public:
          */
         Scalar phiAWC = phiCAW * muAW*M[NAPLIdx]/(mu[NAPLIdx]*MAW);
 
-        muResult = (xAW*muAW)/(xAW+fluidState.moleFraction(gPhaseIdx, NAPLIdx)*phiAWC)
-            + (fluidState.moleFraction(gPhaseIdx, NAPLIdx) * mu[NAPLIdx])
-            / (fluidState.moleFraction(gPhaseIdx, NAPLIdx) + xAW*phiCAW);
+        muResult = (xAW*muAW)/(xAW+fluidState.moleFraction(gasPhaseIdx, NAPLIdx)*phiAWC)
+            + (fluidState.moleFraction(gasPhaseIdx, NAPLIdx) * mu[NAPLIdx])
+            / (fluidState.moleFraction(gasPhaseIdx, NAPLIdx) + xAW*phiCAW);
         return muResult;
     }
 
@@ -281,28 +281,28 @@ public:
     {
         Scalar diffCont;
 
-        if (phaseIdx==gPhaseIdx) {
+        if (phaseIdx==gasPhaseIdx) {
             Scalar diffAC = Opm::BinaryCoeff::Air_Xylene::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
             Scalar diffWC = Opm::BinaryCoeff::H2O_Xylene::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
             Scalar diffAW = Opm::BinaryCoeff::H2O_Air::gasDiffCoeff(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
 
-            const Scalar xga = fluidState.moleFraction(gPhaseIdx, airIdx);
-            const Scalar xgw = fluidState.moleFraction(gPhaseIdx, H2OIdx);
-            const Scalar xgc = fluidState.moleFraction(gPhaseIdx, NAPLIdx);
+            const Scalar xga = fluidState.moleFraction(gasPhaseIdx, airIdx);
+            const Scalar xgw = fluidState.moleFraction(gasPhaseIdx, H2OIdx);
+            const Scalar xgc = fluidState.moleFraction(gasPhaseIdx, NAPLIdx);
 
             if (compIdx==NAPLIdx) return (1.- xgw)/(xga/diffAW + xgc/diffWC);
             else if (compIdx==H2OIdx) return (1.- xgc)/(xgw/diffWC + xga/diffAC);
             else if (compIdx==airIdx) OPM_THROW(std::logic_error,
                                                  "Diffusivity of air in the gas phase "
                                                  "is constraint by sum of diffusive fluxes = 0 !\n");
-        } else if (phaseIdx==wPhaseIdx){
+        } else if (phaseIdx==waterPhaseIdx){
             Scalar diffACl = 1.e-9; // BinaryCoeff::Air_Xylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffWCl = 1.e-9; // BinaryCoeff::H2O_Xylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffAWl = 1.e-9; // BinaryCoeff::H2O_Air::liquidDiffCoeff(temperature, pressure);
 
-            Scalar xwa = fluidState.moleFraction(wPhaseIdx, airIdx);
-            Scalar xww = fluidState.moleFraction(wPhaseIdx, H2OIdx);
-            Scalar xwc = fluidState.moleFraction(wPhaseIdx, NAPLIdx);
+            Scalar xwa = fluidState.moleFraction(waterPhaseIdx, airIdx);
+            Scalar xww = fluidState.moleFraction(waterPhaseIdx, H2OIdx);
+            Scalar xwc = fluidState.moleFraction(waterPhaseIdx, NAPLIdx);
 
             switch (compIdx) {
             case NAPLIdx:
@@ -316,7 +316,7 @@ public:
                            "Diffusivity of water in the water phase "
                            "is constraint by sum of diffusive fluxes = 0 !\n");
             };
-        } else if (phaseIdx==nPhaseIdx) {
+        } else if (phaseIdx==naplPhaseIdx) {
 
             OPM_THROW(std::logic_error,
                        "Diffusion coefficients of "
@@ -338,7 +338,7 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == wPhaseIdx) {
+        if (phaseIdx == waterPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
             else if (compIdx == airIdx)
@@ -352,7 +352,7 @@ public:
         // component to the NAPL phase is much higher than for the
         // other components, i.e. the fugacity cofficient is much
         // smaller.
-        if (phaseIdx == nPhaseIdx) {
+        if (phaseIdx == naplPhaseIdx) {
             Scalar phiNapl = NAPL::vaporPressure(T)/p;
             if (compIdx == NAPLIdx)
                 return phiNapl;
@@ -364,7 +364,7 @@ public:
 
         // for the gas phase, assume an ideal gas when it comes to
         // fugacity (-> fugacity == partial pressure)
-        assert(phaseIdx == gPhaseIdx);
+        assert(phaseIdx == gasPhaseIdx);
         return 1.0;
     }
 
@@ -374,13 +374,13 @@ public:
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
-        if (phaseIdx == wPhaseIdx) {
+        if (phaseIdx == waterPhaseIdx) {
             return H2O::liquidEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
         }
-        else if (phaseIdx == nPhaseIdx) {
+        else if (phaseIdx == naplPhaseIdx) {
             return NAPL::liquidEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx));
         }
-        else if (phaseIdx == gPhaseIdx) {  // gas phase enthalpy depends strongly on composition
+        else if (phaseIdx == gasPhaseIdx) {  // gas phase enthalpy depends strongly on composition
             Scalar hgc = NAPL::gasEnthalpy(fluidState.temperature(phaseIdx),
                                            fluidState.pressure(phaseIdx));
             Scalar hgw = H2O::gasEnthalpy(fluidState.temperature(phaseIdx),
@@ -388,9 +388,9 @@ public:
             Scalar hga = Air::gasEnthalpy(fluidState.temperature(phaseIdx), fluidState.pressure(phaseIdx)); // pressure is only a dummy here (not dependent on pressure, just temperature)
 
             Scalar result = 0;
-            result += hgw * fluidState.massFraction(gPhaseIdx, H2OIdx);
-            result += hga * fluidState.massFraction(gPhaseIdx, airIdx);
-            result += hgc * fluidState.massFraction(gPhaseIdx, NAPLIdx);
+            result += hgw * fluidState.massFraction(gasPhaseIdx, H2OIdx);
+            result += hga * fluidState.massFraction(gasPhaseIdx, airIdx);
+            result += hgc * fluidState.massFraction(gasPhaseIdx, NAPLIdx);
 
             return result;
         }

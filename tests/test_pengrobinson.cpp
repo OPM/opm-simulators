@@ -35,7 +35,7 @@ template <class FluidSystem, class FluidState>
 void guessInitial(FluidState &fluidState,
                   int phaseIdx)
 {
-    if (phaseIdx == FluidSystem::gPhaseIdx) {
+    if (phaseIdx == FluidSystem::gasPhaseIdx) {
         fluidState.setMoleFraction(phaseIdx, FluidSystem::H2OIdx, 0.0);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C1Idx, 0.74785);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C3Idx, 0.0121364);
@@ -44,7 +44,7 @@ void guessInitial(FluidState &fluidState,
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C15Idx, 0.000204256);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C20Idx, 8.78291e-06);
     }
-    else if (phaseIdx == FluidSystem::oPhaseIdx) {
+    else if (phaseIdx == FluidSystem::oilPhaseIdx) {
         fluidState.setMoleFraction(phaseIdx, FluidSystem::H2OIdx, 0.0);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C1Idx, 0.50);
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C3Idx, 0.03);
@@ -54,7 +54,7 @@ void guessInitial(FluidState &fluidState,
         fluidState.setMoleFraction(phaseIdx, FluidSystem::C20Idx, 0.05);
     }
     else {
-        assert(phaseIdx == FluidSystem::wPhaseIdx);
+        assert(phaseIdx == FluidSystem::waterPhaseIdx);
     }
 }
 
@@ -63,15 +63,15 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
 {
     enum {
         numPhases = FluidSystem::numPhases,
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        oPhaseIdx = FluidSystem::oPhaseIdx,
+        waterPhaseIdx = FluidSystem::waterPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
+        oilPhaseIdx = FluidSystem::oilPhaseIdx,
 
         numComponents = FluidSystem::numComponents
     };
 
     typedef Opm::NcpFlash<Scalar, FluidSystem> Flash;
-    typedef Opm::ThreePhaseMaterialTraits<Scalar, wPhaseIdx, oPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::ThreePhaseMaterialTraits<Scalar, waterPhaseIdx, oilPhaseIdx, gasPhaseIdx> MaterialTraits;
     typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
@@ -91,7 +91,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
 
     ComponentVector molarities;
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-        molarities[compIdx] = reservoirFluidState.molarity(oPhaseIdx, compIdx);
+        molarities[compIdx] = reservoirFluidState.molarity(oilPhaseIdx, compIdx);
 
     if (guessInitial) {
         // we start at a fluid state with reservoir oil.
@@ -105,7 +105,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
             surfaceFluidState.setPressure(phaseIdx, reservoirFluidState.pressure(phaseIdx));
             surfaceFluidState.setSaturation(phaseIdx, 0.0);
         }
-        surfaceFluidState.setSaturation(oPhaseIdx, 1.0);
+        surfaceFluidState.setSaturation(oilPhaseIdx, 1.0);
     }
 
     typename FluidSystem::ParameterCache paramCache;
@@ -123,7 +123,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         tmpMolarities = molarities;
         tmpMolarities /= alpha;
         Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
-        Scalar f = surfaceFluidState.pressure(gPhaseIdx) - refPressure;
+        Scalar f = surfaceFluidState.pressure(gasPhaseIdx) - refPressure;
 
         // calculate the derivative of the deviation from the standard
         // pressure
@@ -131,7 +131,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         tmpMolarities = molarities;
         tmpMolarities /= alpha + eps;
         Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
-        Scalar fStar = surfaceFluidState.pressure(gPhaseIdx) - refPressure;
+        Scalar fStar = surfaceFluidState.pressure(gasPhaseIdx) - refPressure;
         Scalar fPrime = (fStar - f)/eps;
 
         // newton update
@@ -156,9 +156,9 @@ int main(int argc, char** argv)
 
     enum {
         numPhases = FluidSystem::numPhases,
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        oPhaseIdx = FluidSystem::oPhaseIdx,
+        waterPhaseIdx = FluidSystem::waterPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
+        oilPhaseIdx = FluidSystem::oilPhaseIdx,
 
         numComponents = FluidSystem::numComponents,
         H2OIdx = FluidSystem::H2OIdx,
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> FluidState;
 
-    typedef Opm::ThreePhaseMaterialTraits<Scalar, wPhaseIdx, oPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::ThreePhaseMaterialTraits<Scalar, waterPhaseIdx, oilPhaseIdx, gasPhaseIdx> MaterialTraits;
     typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
 
@@ -208,52 +208,52 @@ int main(int argc, char** argv)
     fluidState.setTemperature(T);
 
     // oil pressure
-    fluidState.setPressure(oPhaseIdx, 4000 * 6894.7573); // 4000 PSI
+    fluidState.setPressure(oilPhaseIdx, 4000 * 6894.7573); // 4000 PSI
 
     // oil saturation
-    fluidState.setSaturation(oPhaseIdx, 1.0);
+    fluidState.setSaturation(oilPhaseIdx, 1.0);
 
     // composition: SPE-5 reservoir oil
-    fluidState.setMoleFraction(oPhaseIdx, H2OIdx, 0.0);
-    fluidState.setMoleFraction(oPhaseIdx, C1Idx, 0.50);
-    fluidState.setMoleFraction(oPhaseIdx, C3Idx, 0.03);
-    fluidState.setMoleFraction(oPhaseIdx, C6Idx, 0.07);
-    fluidState.setMoleFraction(oPhaseIdx, C10Idx, 0.20);
-    fluidState.setMoleFraction(oPhaseIdx, C15Idx, 0.15);
-    fluidState.setMoleFraction(oPhaseIdx, C20Idx, 0.05);
+    fluidState.setMoleFraction(oilPhaseIdx, H2OIdx, 0.0);
+    fluidState.setMoleFraction(oilPhaseIdx, C1Idx, 0.50);
+    fluidState.setMoleFraction(oilPhaseIdx, C3Idx, 0.03);
+    fluidState.setMoleFraction(oilPhaseIdx, C6Idx, 0.07);
+    fluidState.setMoleFraction(oilPhaseIdx, C10Idx, 0.20);
+    fluidState.setMoleFraction(oilPhaseIdx, C15Idx, 0.15);
+    fluidState.setMoleFraction(oilPhaseIdx, C20Idx, 0.05);
 
     // set the fugacities in the oil phase
-    paramCache.updatePhase(fluidState, oPhaseIdx);
+    paramCache.updatePhase(fluidState, oilPhaseIdx);
     ComponentVector fugVec;
     for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
         Scalar Phi =
-            FluidSystem::fugacityCoefficient(fluidState, paramCache, oPhaseIdx, compIdx);
-        fluidState.setFugacityCoefficient(oPhaseIdx, compIdx, Phi);
-        fugVec[compIdx] = fluidState.fugacity(oPhaseIdx, compIdx);
+            FluidSystem::fugacityCoefficient(fluidState, paramCache, oilPhaseIdx, compIdx);
+        fluidState.setFugacityCoefficient(oilPhaseIdx, compIdx, Phi);
+        fugVec[compIdx] = fluidState.fugacity(oilPhaseIdx, compIdx);
 
-        fluidState.setMoleFraction(gPhaseIdx, compIdx, fluidState.moleFraction(oPhaseIdx, compIdx));
+        fluidState.setMoleFraction(gasPhaseIdx, compIdx, fluidState.moleFraction(oilPhaseIdx, compIdx));
     }
 
 /*
-    fluidState.setPressure(gPhaseIdx, fluidState.pressure(oPhaseIdx)); // 4000 PSI
+    fluidState.setPressure(gasPhaseIdx, fluidState.pressure(oilPhaseIdx)); // 4000 PSI
     {
-    Scalar TMin = fluidState.temperature(oPhaseIdx)/2;
-    Scalar TMax = fluidState.temperature(oPhaseIdx)*2;
+    Scalar TMin = fluidState.temperature(oilPhaseIdx)/2;
+    Scalar TMax = fluidState.temperature(oilPhaseIdx)*2;
     int n = 1000;
     for (int i = 0; i < n; ++i) {
         Scalar T = TMin + (TMax - TMin)*i/(n - 1);
 
         fluidState.setTemperature(T);
-        paramCache.updatePhase(fluidState, oPhaseIdx);
-        paramCache.updatePhase(fluidState, gPhaseIdx);
+        paramCache.updatePhase(fluidState, oilPhaseIdx);
+        paramCache.updatePhase(fluidState, gasPhaseIdx);
 
-        Scalar rhoO = FluidSystem::density(fluidState, paramCache, oPhaseIdx);
-        Scalar rhoG = FluidSystem::density(fluidState, paramCache, gPhaseIdx);
-        fluidState.setDensity(oPhaseIdx, rhoO);
-        fluidState.setDensity(gPhaseIdx, rhoG);
+        Scalar rhoO = FluidSystem::density(fluidState, paramCache, oilPhaseIdx);
+        Scalar rhoG = FluidSystem::density(fluidState, paramCache, gasPhaseIdx);
+        fluidState.setDensity(oilPhaseIdx, rhoO);
+        fluidState.setDensity(gasPhaseIdx, rhoG);
         std::cout << T << " "
-                  << fluidState.density(oPhaseIdx) << " "
-                  << fluidState.density(gPhaseIdx) << " "
+                  << fluidState.density(oilPhaseIdx) << " "
+                  << fluidState.density(gasPhaseIdx) << " "
                   << paramCache.gasPhaseParams().a() << " "
                   << paramCache.gasPhaseParams().b() << " "
                   << "\n";
@@ -263,9 +263,9 @@ int main(int argc, char** argv)
 */
 
     for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-        if (phaseIdx != oPhaseIdx) {
+        if (phaseIdx != oilPhaseIdx) {
             fluidState.setSaturation(phaseIdx, 0.0);
-            fluidState.setPressure(phaseIdx, fluidState.pressure(oPhaseIdx));
+            fluidState.setPressure(phaseIdx, fluidState.pressure(oilPhaseIdx));
         }
 
         // initial guess for the composition
@@ -275,7 +275,7 @@ int main(int argc, char** argv)
     typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
     CFRP::solve(fluidState,
                 paramCache,
-                /*refPhaseIdx=*/oPhaseIdx,
+                /*refPhaseIdx=*/oilPhaseIdx,
                 /*setViscosity=*/false,
                 /*setEnthalpy=*/false);
 
@@ -284,7 +284,7 @@ int main(int argc, char** argv)
     ////////////
     ComponentVector molarities;
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-        molarities[compIdx] = fluidState.saturation(oPhaseIdx)*fluidState.molarity(oPhaseIdx, compIdx);
+        molarities[compIdx] = fluidState.saturation(oilPhaseIdx)*fluidState.molarity(oilPhaseIdx, compIdx);
 
     ////////////
     // Gradually increase the volume for and calculate the gas
@@ -299,8 +299,8 @@ int main(int argc, char** argv)
 
     Scalar surfaceAlpha = 1;
     surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, surfaceAlpha, flashFluidState, /*guessInitial=*/true);
-    Scalar rho_gRef = surfaceFluidState.density(gPhaseIdx);
-    Scalar rho_oRef = surfaceFluidState.density(oPhaseIdx);
+    Scalar rho_gRef = surfaceFluidState.density(gasPhaseIdx);
+    Scalar rho_oRef = surfaceFluidState.density(oilPhaseIdx);
 
     std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
     int n = 1000;
@@ -323,15 +323,15 @@ int main(int argc, char** argv)
                                                               flashFluidState,
                                                               /*guessInitial=*/false);
         std::cout << alpha << " "
-                  << flashFluidState.pressure(oPhaseIdx) << " "
-                  << flashFluidState.saturation(gPhaseIdx) << " "
-                  << flashFluidState.density(oPhaseIdx) << " "
-                  << flashFluidState.density(gPhaseIdx) << " "
-                  << flashFluidState.averageMolarMass(oPhaseIdx) << " "
-                  << flashFluidState.averageMolarMass(gPhaseIdx) << " "
-                  << surfaceFluidState.saturation(gPhaseIdx)*surfaceAlpha << " "
-                  << rho_gRef/flashFluidState.density(gPhaseIdx) << " "
-                  << rho_oRef/flashFluidState.density(oPhaseIdx) << " "
+                  << flashFluidState.pressure(oilPhaseIdx) << " "
+                  << flashFluidState.saturation(gasPhaseIdx) << " "
+                  << flashFluidState.density(oilPhaseIdx) << " "
+                  << flashFluidState.density(gasPhaseIdx) << " "
+                  << flashFluidState.averageMolarMass(oilPhaseIdx) << " "
+                  << flashFluidState.averageMolarMass(gasPhaseIdx) << " "
+                  << surfaceFluidState.saturation(gasPhaseIdx)*surfaceAlpha << " "
+                  << rho_gRef/flashFluidState.density(gasPhaseIdx) << " "
+                  << rho_oRef/flashFluidState.density(oilPhaseIdx) << " "
                   << "\n";
     }
 

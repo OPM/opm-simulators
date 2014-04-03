@@ -13,7 +13,7 @@
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy o2f the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*!
@@ -48,15 +48,15 @@ class Spe5ParameterCache
 
     enum { numPhases = FluidSystem::numPhases };
 
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { oPhaseIdx = FluidSystem::oPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
 public:
     //! The cached parameters for the oil phase
-    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, oPhaseIdx, /*useSpe5=*/true> OilPhaseParams;
+    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, oilPhaseIdx, /*useSpe5=*/true> OilPhaseParams;
     //! The cached parameters for the gas phase
-    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, gPhaseIdx, /*useSpe5=*/true> GasPhaseParams;
+    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, gasPhaseIdx, /*useSpe5=*/true> GasPhaseParams;
 
     Spe5ParameterCache()
     {
@@ -89,9 +89,9 @@ public:
                                   int phaseIdx,
                                   int compIdx)
     {
-        if (phaseIdx == oPhaseIdx)
+        if (phaseIdx == oilPhaseIdx)
             oilPhaseParams_.updateSingleMoleFraction(fluidState, compIdx);
-        else if (phaseIdx == gPhaseIdx)
+        else if (phaseIdx == gasPhaseIdx)
             gasPhaseParams_.updateSingleMoleFraction(fluidState, compIdx);
 
         // update the phase's molar volume
@@ -107,8 +107,8 @@ public:
     {
         switch (phaseIdx)
         {
-        case oPhaseIdx: return oilPhaseParams_.a();
-        case gPhaseIdx: return gasPhaseParams_.a();
+        case oilPhaseIdx: return oilPhaseParams_.a();
+        case gasPhaseIdx: return gasPhaseParams_.a();
         default:
             OPM_THROW(std::logic_error,
                        "The a() parameter is only defined for "
@@ -125,8 +125,8 @@ public:
     {
         switch (phaseIdx)
         {
-        case oPhaseIdx: return oilPhaseParams_.b();
-        case gPhaseIdx: return gasPhaseParams_.b();
+        case oilPhaseIdx: return oilPhaseParams_.b();
+        case gasPhaseIdx: return gasPhaseParams_.b();
         default:
             OPM_THROW(std::logic_error,
                        "The b() parameter is only defined for "
@@ -146,8 +146,8 @@ public:
     {
         switch (phaseIdx)
         {
-        case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).a();
-        case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).a();
+        case oilPhaseIdx: return oilPhaseParams_.pureParams(compIdx).a();
+        case gasPhaseIdx: return gasPhaseParams_.pureParams(compIdx).a();
         default:
             OPM_THROW(std::logic_error,
                        "The a() parameter is only defined for "
@@ -166,8 +166,8 @@ public:
     {
         switch (phaseIdx)
         {
-        case oPhaseIdx: return oilPhaseParams_.pureParams(compIdx).b();
-        case gPhaseIdx: return gasPhaseParams_.pureParams(compIdx).b();
+        case oilPhaseIdx: return oilPhaseParams_.pureParams(compIdx).b();
+        case gasPhaseIdx: return gasPhaseParams_.pureParams(compIdx).b();
         default:
             OPM_THROW(std::logic_error,
                        "The b() parameter is only defined for "
@@ -242,9 +242,9 @@ protected:
 
         switch (phaseIdx)
         {
-        case oPhaseIdx: oilPhaseParams_.updatePure(T, p); break;
-        case gPhaseIdx: gasPhaseParams_.updatePure(T, p); break;
-            //case wPhaseIdx: waterPhaseParams_.updatePure(phaseIdx, temperature, pressure);break;
+        case oilPhaseIdx: oilPhaseParams_.updatePure(T, p); break;
+        case gasPhaseIdx: gasPhaseParams_.updatePure(T, p); break;
+            //case waterPhaseIdx: waterPhaseParams_.updatePure(phaseIdx, temperature, pressure);break;
         }
     }
 
@@ -261,13 +261,13 @@ protected:
         Valgrind::CheckDefined(fluidState.averageMolarMass(phaseIdx));
         switch (phaseIdx)
         {
-        case oPhaseIdx:
+        case oilPhaseIdx:
             oilPhaseParams_.updateMix(fluidState);
             break;
-        case gPhaseIdx:
+        case gasPhaseIdx:
             gasPhaseParams_.updateMix(fluidState);
             break;
-        case wPhaseIdx:
+        case waterPhaseIdx:
             break;
         }
     }
@@ -281,44 +281,44 @@ protected:
         // calculate molar volume of the phase (we will need this for the
         // fugacity coefficients and the density anyway)
         switch (phaseIdx) {
-        case gPhaseIdx: {
+        case gasPhaseIdx: {
             // calculate molar volumes for the given composition. although
             // this isn't a Peng-Robinson parameter strictly speaking, the
             // molar volume appears in basically every quantity the fluid
             // system can get queried, so it is okay to calculate it
             // here...
-            Vm_[gPhaseIdx] =
+            Vm_[gasPhaseIdx] =
                 PengRobinson::computeMolarVolume(fluidState,
                                                  *this,
                                                  phaseIdx,
                                                  /*isGasPhase=*/true);
         }
-        case oPhaseIdx: {
+        case oilPhaseIdx: {
             // calculate molar volumes for the given composition. although
             // this isn't a Peng-Robinson parameter strictly speaking, the
             // molar volume appears in basically every quantity the fluid
             // system can get queried, so it is okay to calculate it
             // here...
-            Vm_[oPhaseIdx] =
+            Vm_[oilPhaseIdx] =
                 PengRobinson::computeMolarVolume(fluidState,
                                                  *this,
                                                  phaseIdx,
                                                  /*isGasPhase=*/false);
 
         }
-        case wPhaseIdx: {
+        case waterPhaseIdx: {
             // Density of water in the stock tank (i.e. atmospheric
             // pressure) is specified as 62.4 lb/ft^3 by the SPE-5
             // paper. Also 1 lb = 0.4535923 and 1 ft = 0.3048 m.
             const Scalar stockTankWaterDensity = 62.4 * 0.45359237 / 0.028316847;
             // Water compressibility is specified as 3.3e-6 per psi
             // overpressure, where 1 psi = 6894.7573 Pa
-            Scalar overPressure = fluidState.pressure(wPhaseIdx) - 1.013e5; // [Pa]
+            Scalar overPressure = fluidState.pressure(waterPhaseIdx) - 1.013e5; // [Pa]
             Scalar waterDensity =
                 stockTankWaterDensity * (1 + 3.3e-6*overPressure/6894.7573);
 
             // convert water density [kg/m^3] to molar volume [m^3/mol]
-            Vm_[wPhaseIdx] = fluidState.averageMolarMass(wPhaseIdx)/waterDensity;
+            Vm_[waterPhaseIdx] = fluidState.averageMolarMass(waterPhaseIdx)/waterDensity;
         };
         };
     }

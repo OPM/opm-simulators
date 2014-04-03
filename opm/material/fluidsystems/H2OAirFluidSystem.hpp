@@ -75,16 +75,16 @@ public:
     static const int numPhases = 2;
 
     //! The index of the liquid phase
-    static const int lPhaseIdx = 0;
+    static const int liquidPhaseIdx = 0;
     //! The index of the gas phase
-    static const int gPhaseIdx = 1;
+    static const int gasPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
         switch (phaseIdx) {
-        case lPhaseIdx: return "liquid";
-        case gPhaseIdx: return "gas";
+        case liquidPhaseIdx: return "liquid";
+        case gasPhaseIdx: return "gas";
         };
         OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }
@@ -93,14 +93,14 @@ public:
     static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return phaseIdx != gPhaseIdx;
+        return phaseIdx != gasPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
     static bool isCompressible(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (phaseIdx == gPhaseIdx)
+        return (phaseIdx == gasPhaseIdx)
             // ideal gases are always compressible
             ? true
             :
@@ -112,7 +112,7 @@ public:
     static bool isIdealGas(int phaseIdx)
     {
         return
-            (phaseIdx == gPhaseIdx)
+            (phaseIdx == gasPhaseIdx)
             ? H2O::gasIsIdeal() && Air::gasIsIdeal()
             : false;
     }
@@ -272,7 +272,7 @@ public:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
 
-        if (phaseIdx == lPhaseIdx)
+        if (phaseIdx == liquidPhaseIdx)
         {
             if (!useComplexRelations)
                 // assume pure water
@@ -285,28 +285,28 @@ public:
 
                 return
                     clH2O
-                    * (H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
+                    * (H2O::molarMass()*fluidState.moleFraction(liquidPhaseIdx, H2OIdx)
                            +
-                           Air::molarMass()*fluidState.moleFraction(lPhaseIdx, AirIdx))
+                           Air::molarMass()*fluidState.moleFraction(liquidPhaseIdx, AirIdx))
                    / sumMoleFrac;
             }
         }
-        else if (phaseIdx == gPhaseIdx)
+        else if (phaseIdx == gasPhaseIdx)
         {
             if (!useComplexRelations)
                 // for the gas phase assume an ideal gas
                 return
                     IdealGas::molarDensity(T, p)
-                    * fluidState.averageMolarMass(gPhaseIdx)
+                    * fluidState.averageMolarMass(gasPhaseIdx)
                     / std::max(1e-5, sumMoleFrac);
 
             Scalar partialPressureH2O =
-                fluidState.moleFraction(gPhaseIdx, H2OIdx)  *
-                fluidState.pressure(gPhaseIdx);
+                fluidState.moleFraction(gasPhaseIdx, H2OIdx)  *
+                fluidState.pressure(gasPhaseIdx);
 
             Scalar partialPressureAir =
-                fluidState.moleFraction(gPhaseIdx, AirIdx)  *
-                fluidState.pressure(gPhaseIdx);
+                fluidState.moleFraction(gasPhaseIdx, AirIdx)  *
+                fluidState.pressure(gasPhaseIdx);
 
             return
                 H2O::gasDensity(T, partialPressureH2O) +
@@ -326,14 +326,14 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == lPhaseIdx)
+        if (phaseIdx == liquidPhaseIdx)
         {
             // assume pure water for the liquid phase
             // TODO: viscosity of mixture
             // couldn't find a way to solve the mixture problem
             return H2O::liquidViscosity(T, p);
         }
-        else if (phaseIdx == gPhaseIdx)
+        else if (phaseIdx == gasPhaseIdx)
         {
             if(!useComplexRelations){
                 return Air::gasViscosity(T, p);
@@ -394,7 +394,7 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == lPhaseIdx) {
+        if (phaseIdx == liquidPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
             return Opm::BinaryCoeff::H2O_Air::henry(T)/p;
@@ -415,10 +415,10 @@ public:
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == lPhaseIdx)
+        if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeff::H2O_Air::liquidDiffCoeff(T, p);
 
-        assert(phaseIdx == gPhaseIdx);
+        assert(phaseIdx == gasPhaseIdx);
         return BinaryCoeff::H2O_Air::gasDiffCoeff(T, p);
     }
 
@@ -433,22 +433,22 @@ public:
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
-        if (phaseIdx == lPhaseIdx)
+        if (phaseIdx == liquidPhaseIdx)
         {
             // TODO: correct way to deal with the solutes???
             return H2O::liquidEnthalpy(T, p);
         }
 
-        else if (phaseIdx == gPhaseIdx)
+        else if (phaseIdx == gasPhaseIdx)
         {
             Scalar result = 0.0;
             result +=
                 H2O::gasEnthalpy(T, p) *
-                fluidState.massFraction(gPhaseIdx, H2OIdx);
+                fluidState.massFraction(gasPhaseIdx, H2OIdx);
 
             result +=
                 Air::gasEnthalpy(T, p) *
-                fluidState.massFraction(gPhaseIdx, AirIdx);
+                fluidState.massFraction(gasPhaseIdx, AirIdx);
             return result;
         }
         OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
@@ -465,7 +465,7 @@ public:
         Scalar temperature  = fluidState.temperature(phaseIdx) ;
         Scalar pressure = fluidState.pressure(phaseIdx);
 
-        if (phaseIdx == lPhaseIdx){// liquid phase
+        if (phaseIdx == liquidPhaseIdx){// liquid phase
             return H2O::liquidThermalConductivity(temperature, pressure);
         }
         else{// gas phase

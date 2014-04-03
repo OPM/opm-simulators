@@ -51,7 +51,7 @@ public:
  *
  * \brief A generic traits class for two-phase material laws.
  */
-template <class ScalarT, int wettingPhaseIdxV, int nonWettingPhaseIdxV>
+template <class ScalarT, int wettinPhaseIdxV, int nonWettingasPhaseIdxV>
 class TwoPhaseMaterialTraits
 {
 public:
@@ -62,19 +62,19 @@ public:
     static const int numPhases = 2;
 
     //! The index of the wetting phase
-    static const int  wPhaseIdx = wettingPhaseIdxV;
+    static const int  wettingPhaseIdx = wettinPhaseIdxV;
 
     //! The index of the non-wetting phase
-    static const int nPhaseIdx = nonWettingPhaseIdxV;
+    static const int nonWettingPhaseIdx = nonWettingasPhaseIdxV;
 
     // some safety checks...
-    static_assert(0 <= wPhaseIdx && wPhaseIdx < numPhases,
-                  "wPhaseIdx is out of range");
-    static_assert(0 <= nPhaseIdx && nPhaseIdx < numPhases,
-                  "nPhaseIdx is out of range");
+    static_assert(0 <= wettingPhaseIdx && wettingPhaseIdx < numPhases,
+                  "wettingPhaseIdx is out of range");
+    static_assert(0 <= nonWettingPhaseIdx && nonWettingPhaseIdx < numPhases,
+                  "nonWettingPhaseIdx is out of range");
 
-    static_assert(wPhaseIdx != nPhaseIdx,
-                  "wPhaseIdx and nPhaseIdx must be different");
+    static_assert(wettingPhaseIdx != nonWettingPhaseIdx,
+                  "wettingPhaseIdx and nonWettingPhaseIdx must be different");
 };
 
 /*!
@@ -82,7 +82,7 @@ public:
  *
  * \brief A generic traits class for three-phase material laws.
  */
-template <class ScalarT, int wettingPhaseIdxV, int nonWettingPhaseIdxV, int gasPhaseIdxV>
+template <class ScalarT, int wettingPhaseIdxV, int nonWettingasPhaseIdxV, int gasPhaseIdxV>
 class ThreePhaseMaterialTraits
 {
 public:
@@ -93,28 +93,28 @@ public:
     static const int numPhases = 3;
 
     //! The index of the wetting liquid phase
-    static const int wPhaseIdx = wettingPhaseIdxV;
+    static const int wettingPhaseIdx = wettingPhaseIdxV;
 
     //! The index of the non-wetting liquid phase
-    static const int nPhaseIdx = nonWettingPhaseIdxV;
+    static const int nonWettingPhaseIdx = nonWettingasPhaseIdxV;
 
     //! The index of the gas phase (i.e., the least wetting phase)
-    static const int gPhaseIdx = gasPhaseIdxV;
+    static const int gasPhaseIdx = gasPhaseIdxV;
 
     // some safety checks...
-    static_assert(0 <= wPhaseIdx && wPhaseIdx < numPhases,
-                  "wPhaseIdx is out of range");
-    static_assert(0 <= nPhaseIdx && nPhaseIdx < numPhases,
-                  "nPhaseIdx is out of range");
-    static_assert(0 <= gPhaseIdx && gPhaseIdx < numPhases,
-                  "gPhaseIdx is out of range");
+    static_assert(0 <= wettingPhaseIdx && wettingPhaseIdx < numPhases,
+                  "wettingPhaseIdx is out of range");
+    static_assert(0 <= nonWettingPhaseIdx && nonWettingPhaseIdx < numPhases,
+                  "nonWettingPhaseIdx is out of range");
+    static_assert(0 <= gasPhaseIdx && gasPhaseIdx < numPhases,
+                  "gasPhaseIdx is out of range");
 
-    static_assert(wPhaseIdx != nPhaseIdx,
-                  "wPhaseIdx and nPhaseIdx must be different");
-    static_assert(wPhaseIdx != gPhaseIdx,
-                  "wPhaseIdx and gPhaseIdx must be different");
-    static_assert(nPhaseIdx != gPhaseIdx,
-                  "nPhaseIdx and gPhaseIdx must be different");
+    static_assert(wettingPhaseIdx != nonWettingPhaseIdx,
+                  "wettingPhaseIdx and nonWettingPhaseIdx must be different");
+    static_assert(wettingPhaseIdx != gasPhaseIdx,
+                  "wettingPhaseIdx and gasPhaseIdx must be different");
+    static_assert(nonWettingPhaseIdx != gasPhaseIdx,
+                  "nonWettingPhaseIdx and gasPhaseIdx must be different");
 };
 } // namespace Opm
 

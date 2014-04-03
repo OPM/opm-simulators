@@ -70,11 +70,11 @@ public:
     static const int numPhases = 3;
 
     //! Index of the gas phase
-    static const int gPhaseIdx = 0;
+    static const int gasPhaseIdx = 0;
     //! Index of the water phase
-    static const int wPhaseIdx = 1;
+    static const int waterPhaseIdx = 1;
     //! Index of the oil phase
-    static const int oPhaseIdx = 2;
+    static const int oilPhaseIdx = 2;
 
     //! The component for pure water to be used
     typedef Opm::H2O<Scalar> H2O;
@@ -96,7 +96,7 @@ public:
     static bool isLiquid(int phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return phaseIdx != gPhaseIdx;
+        return phaseIdx != gasPhaseIdx;
     }
 
     /*!
@@ -123,7 +123,7 @@ public:
         // always use the reference oil for the fugacity coefficents,
         // so they cannot be dependent on composition and they the
         // phases thus always an ideal mixture
-        return phaseIdx == wPhaseIdx;
+        return phaseIdx == waterPhaseIdx;
     }
 
     /****************************************
@@ -304,7 +304,7 @@ public:
                      Scalar minP = 1e4,
                      Scalar maxP = 100e6)
     {
-        Opm::PengRobinsonParamsMixture<Scalar, ThisType, gPhaseIdx, /*useSpe5=*/true> prParams;
+        Opm::PengRobinsonParamsMixture<Scalar, ThisType, gasPhaseIdx, /*useSpe5=*/true> prParams;
 
         // find envelopes of the 'a' and 'b' parameters for the range
         // minT <= T <= maxT and minP <= p <= maxP. For
@@ -370,16 +370,16 @@ public:
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
 
-        if (phaseIdx == gPhaseIdx) {
+        if (phaseIdx == gasPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
             // viscosity, though...
             return 0.0170e-2 * 0.1;
         }
-        else if (phaseIdx == wPhaseIdx)
+        else if (phaseIdx == waterPhaseIdx)
             // given by SPE-5: 0.7 centi-Poise  = 0.0007 Pa s
             return 0.7e-2 * 0.1;
         else {
-            assert(phaseIdx == oPhaseIdx);
+            assert(phaseIdx == oilPhaseIdx);
             // given by SPE-5 in table on page 64. we use a constant
             // viscosity, though...
             return 0.208e-2 * 0.1;
@@ -396,16 +396,16 @@ public:
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
 
-        if (phaseIdx == oPhaseIdx || phaseIdx == gPhaseIdx)
+        if (phaseIdx == oilPhaseIdx || phaseIdx == gasPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fluidState,
                                                                    paramCache,
                                                                    phaseIdx,
                                                                    compIdx);
         else {
-            assert(phaseIdx == wPhaseIdx);
+            assert(phaseIdx == waterPhaseIdx);
             return
-                henryCoeffWater_(compIdx, fluidState.temperature(wPhaseIdx))
-                / fluidState.pressure(wPhaseIdx);
+                henryCoeffWater_(compIdx, fluidState.temperature(waterPhaseIdx))
+                / fluidState.pressure(waterPhaseIdx);
         }
     }
 

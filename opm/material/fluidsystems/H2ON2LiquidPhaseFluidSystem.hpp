@@ -74,12 +74,12 @@ public:
     static const int numPhases = 1;
 
     //! Index of the liquid phase
-    static const int lPhaseIdx = 0;
+    static const int liquidPhaseIdx = 0;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(int phaseIdx)
     {
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
 
         return "l";
     }
@@ -87,7 +87,7 @@ public:
     //! \copydoc BaseFluidSystem::isLiquid
     static bool isLiquid(int phaseIdx)
     {
-        //assert(phaseIdx == lPhaseIdx);
+        //assert(phaseIdx == liquidPhaseIdx);
         return true; //only water phase present
     }
 
@@ -259,7 +259,7 @@ public:
         for (int compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoleFrac += fluidState.moleFraction(phaseIdx, compIdx);
 
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
 
         if (!useComplexRelations)
             // assume pure water
@@ -274,9 +274,9 @@ public:
             // water molecule in the liquid
             return
                 clH2O
-                * (H2O::molarMass()*fluidState.moleFraction(lPhaseIdx, H2OIdx)
+                * (H2O::molarMass()*fluidState.moleFraction(liquidPhaseIdx, H2OIdx)
                    +
-                   N2::molarMass()*fluidState.moleFraction(lPhaseIdx, N2Idx))
+                   N2::molarMass()*fluidState.moleFraction(liquidPhaseIdx, N2Idx))
                 / sumMoleFrac;
         }
     }
@@ -287,7 +287,7 @@ public:
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -303,7 +303,7 @@ public:
                                       int phaseIdx,
                                       int compIdx)
     {
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
         assert(0 <= compIdx  && compIdx < numComponents);
 
         Scalar T = fluidState.temperature(phaseIdx);
@@ -322,7 +322,7 @@ public:
                                        int compIdx)
 
     {
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -336,7 +336,7 @@ public:
                            const ParameterCache &paramCache,
                            int phaseIdx)
     {
-        assert (phaseIdx == lPhaseIdx);
+        assert (phaseIdx == liquidPhaseIdx);
 
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -353,7 +353,7 @@ public:
                                       const ParameterCache &paramCache,
                                       const int phaseIdx)
     {
-        assert(phaseIdx == lPhaseIdx);
+        assert(phaseIdx == liquidPhaseIdx);
 
         if(useComplexRelations){
             Scalar temperature  = fluidState.temperature(phaseIdx) ;
@@ -370,7 +370,7 @@ public:
                                const ParameterCache &paramCache,
                                int phaseIdx)
     {
-        assert (phaseIdx == lPhaseIdx);
+        assert (phaseIdx == liquidPhaseIdx);
 
         return H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
                                        fluidState.pressure(phaseIdx));

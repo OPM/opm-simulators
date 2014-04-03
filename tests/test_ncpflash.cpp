@@ -154,13 +154,13 @@ int main()
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { lPhaseIdx = FluidSystem::lPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
     enum { H2OIdx = FluidSystem::H2OIdx };
     enum { N2Idx = FluidSystem::N2Idx };
 
-    typedef Opm::TwoPhaseMaterialTraits<Scalar, lPhaseIdx, gPhaseIdx> MaterialTraits;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar, liquidPhaseIdx, gasPhaseIdx> MaterialTraits;
     typedef Opm::RegularizedBrooksCorey<MaterialTraits> EffMaterialLaw;
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
     typedef MaterialLaw::Params MaterialLawParams;
@@ -180,8 +180,8 @@ int main()
 
     // set the parameters for the capillary pressure law
     MaterialLawParams matParams;
-    matParams.setResidualSaturation(MaterialLaw::wPhaseIdx, 0.0);
-    matParams.setResidualSaturation(MaterialLaw::nPhaseIdx, 0.0);
+    matParams.setResidualSaturation(MaterialLaw::wettingPhaseIdx, 0.0);
+    matParams.setResidualSaturation(MaterialLaw::nonWettingPhaseIdx, 0.0);
     matParams.setEntryPressure(0);
     matParams.setLambda(2.0);
     matParams.finalize();
@@ -199,17 +199,17 @@ int main()
     std::cout << "testing single-phase liquid\n";
 
     // set liquid saturation
-    fsRef.setSaturation(lPhaseIdx, 1.0);
+    fsRef.setSaturation(liquidPhaseIdx, 1.0);
 
     // set pressure of the liquid phase
-    fsRef.setPressure(lPhaseIdx, 2e5);
+    fsRef.setPressure(liquidPhaseIdx, 2e5);
 
     // set the liquid composition to pure water
-    fsRef.setMoleFraction(lPhaseIdx, N2Idx, 0.0);
-    fsRef.setMoleFraction(lPhaseIdx, H2OIdx, 1.0 - fsRef.moleFraction(lPhaseIdx, N2Idx));
+    fsRef.setMoleFraction(liquidPhaseIdx, N2Idx, 0.0);
+    fsRef.setMoleFraction(liquidPhaseIdx, H2OIdx, 1.0 - fsRef.moleFraction(liquidPhaseIdx, N2Idx));
 
     // "complete" the fluid state
-    completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, lPhaseIdx);
+    completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, liquidPhaseIdx);
 
     // check the flash calculation
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams);
@@ -219,17 +219,17 @@ int main()
     ////////////////
     std::cout << "testing single-phase gas\n";
     // set gas saturation
-    fsRef.setSaturation(gPhaseIdx, 1.0);
+    fsRef.setSaturation(gasPhaseIdx, 1.0);
 
     // set pressure of the gas phase
-    fsRef.setPressure(gPhaseIdx, 1e6);
+    fsRef.setPressure(gasPhaseIdx, 1e6);
 
     // set the gas composition to 99.9% nitrogen and 0.1% water
-    fsRef.setMoleFraction(gPhaseIdx, N2Idx, 0.999);
-    fsRef.setMoleFraction(gPhaseIdx, H2OIdx, 0.001);
+    fsRef.setMoleFraction(gasPhaseIdx, N2Idx, 0.999);
+    fsRef.setMoleFraction(gasPhaseIdx, H2OIdx, 0.001);
 
     // "complete" the fluid state
-    completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, gPhaseIdx);
+    completeReferenceFluidState<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams, gasPhaseIdx);
 
     // check the flash calculation
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams);
@@ -240,12 +240,12 @@ int main()
     std::cout << "testing two-phase\n";
 
     // set saturations
-    fsRef.setSaturation(lPhaseIdx, 0.5);
-    fsRef.setSaturation(gPhaseIdx, 0.5);
+    fsRef.setSaturation(liquidPhaseIdx, 0.5);
+    fsRef.setSaturation(gasPhaseIdx, 0.5);
 
     // set pressures
-    fsRef.setPressure(lPhaseIdx, 1e6);
-    fsRef.setPressure(gPhaseIdx, 1e6);
+    fsRef.setPressure(liquidPhaseIdx, 1e6);
+    fsRef.setPressure(gasPhaseIdx, 1e6);
 
     FluidSystem::ParameterCache paramCache;
     typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
@@ -260,26 +260,26 @@ int main()
     // with capillary pressure
     ////////////////
     MaterialLawParams matParams2;
-    matParams2.setResidualSaturation(MaterialLaw::wPhaseIdx, 0.0);
-    matParams2.setResidualSaturation(MaterialLaw::nPhaseIdx, 0.0);
+    matParams2.setResidualSaturation(MaterialLaw::wettingPhaseIdx, 0.0);
+    matParams2.setResidualSaturation(MaterialLaw::nonWettingPhaseIdx, 0.0);
     matParams2.setEntryPressure(1e3);
     matParams2.setLambda(2.0);
     matParams2.finalize();
 
     // set gas saturation
-    fsRef.setSaturation(gPhaseIdx, 0.5);
-    fsRef.setSaturation(lPhaseIdx, 0.5);
+    fsRef.setSaturation(gasPhaseIdx, 0.5);
+    fsRef.setSaturation(liquidPhaseIdx, 0.5);
 
     // set pressure of the liquid phase
-    fsRef.setPressure(lPhaseIdx, 1e6);
+    fsRef.setPressure(liquidPhaseIdx, 1e6);
 
     // calulate the capillary pressure
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
     PhaseVector pC;
     MaterialLaw::capillaryPressures(pC, matParams2, fsRef);
-    fsRef.setPressure(gPhaseIdx,
-                      fsRef.pressure(lPhaseIdx)
-                      + (pC[gPhaseIdx] - pC[lPhaseIdx]));
+    fsRef.setPressure(gasPhaseIdx,
+                      fsRef.pressure(liquidPhaseIdx)
+                      + (pC[gasPhaseIdx] - pC[liquidPhaseIdx]));
 
     typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,

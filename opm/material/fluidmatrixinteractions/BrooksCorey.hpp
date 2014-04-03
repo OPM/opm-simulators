@@ -92,8 +92,8 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wPhaseIdx] = 0.0; // reference phase
-        values[Traits::nPhaseIdx] = pcnw(params, fs);
+        values[Traits::wettingPhaseIdx] = 0.0; // reference phase
+        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
     }
 
     /*!
@@ -103,8 +103,8 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wPhaseIdx] = Sw(params, fs);
-        values[Traits::nPhaseIdx] = 1 - values[Traits::wPhaseIdx];
+        values[Traits::wettingPhaseIdx] = Sw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
     }
 
     /*!
@@ -120,8 +120,8 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wPhaseIdx] = krw(params, fs);
-        values[Traits::nPhaseIdx] = krn(params, fs);
+        values[Traits::wettingPhaseIdx] = krw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
     }
 
     /*!
@@ -134,10 +134,10 @@ public:
                                                 const FluidState &state,
                                                 int satPhaseIdx)
     {
-        values[Traits::wPhaseIdx] = 0;
-        values[Traits::nPhaseIdx] = 0;
-        if (satPhaseIdx == Traits::wPhaseIdx)
-            values[Traits::nPhaseIdx] = dPcnw_dSw(params, state);
+        values[Traits::wettingPhaseIdx] = 0;
+        values[Traits::nonWettingPhaseIdx] = 0;
+        if (satPhaseIdx == Traits::wettingPhaseIdx)
+            values[Traits::nonWettingPhaseIdx] = dPcnw_dSw(params, state);
     }
 
     /*!
@@ -195,13 +195,13 @@ public:
                                                     const FluidState &state,
                                                     int satPhaseIdx)
     {
-        if (satPhaseIdx == Traits::wPhaseIdx) {
-            values[Traits::wPhaseIdx] = twoPhaseSatDKrw_dSw(params, state.saturation(Traits::wPhaseIdx));
-            values[Traits::nPhaseIdx] = 0;
+        if (satPhaseIdx == Traits::wettingPhaseIdx) {
+            values[Traits::wettingPhaseIdx] = twoPhaseSatDKrw_dSw(params, state.saturation(Traits::wettingPhaseIdx));
+            values[Traits::nonWettingPhaseIdx] = 0;
         }
         else {
-            values[Traits::wPhaseIdx] = 0;
-            values[Traits::nPhaseIdx] = - twoPhaseSatDKrn_dSw(params, 1 - state.saturation(Traits::nPhaseIdx));
+            values[Traits::wettingPhaseIdx] = 0;
+            values[Traits::nonWettingPhaseIdx] = - twoPhaseSatDKrn_dSw(params, 1 - state.saturation(Traits::nonWettingPhaseIdx));
         }
     }
 
@@ -266,7 +266,7 @@ public:
     template <class FluidState>
     static Scalar pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wPhaseIdx);
+        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
         return twoPhaseSatPcnw(params, Sw);
     }
 
@@ -292,7 +292,7 @@ public:
     template <class FluidState>
     static Scalar Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pc = fs.pressure(Traits::nPhaseIdx) - fs.pressure(Traits::wPhaseIdx);
+        Scalar pc = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
         return twoPhaseSatSw(params, pc);
     }
 
@@ -330,7 +330,7 @@ public:
     template <class FluidState>
     static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wPhaseIdx);
+        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
         return twoPhaseSatDPcnw_dSw(params, Sw);
     }
 
@@ -351,7 +351,7 @@ public:
     template <class FluidState>
     static Scalar dSw_dpcnw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wPhaseIdx);
+        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
         return twoPhaseSatDSw_dpcnw(params, Sw);
     }
 
@@ -371,7 +371,7 @@ public:
      */
     template <class FluidState>
     static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wPhaseIdx)); }
+    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
 
     static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
     {
@@ -406,7 +406,7 @@ public:
      */
     template <class FluidState>
     static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nPhaseIdx)); }
+    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
 
     static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
     {
