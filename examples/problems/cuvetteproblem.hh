@@ -81,9 +81,9 @@ private:
 
     typedef Opm::ThreePhaseMaterialTraits<
         Scalar,
-        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx,
-        /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+        /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+        /*nonWettingPhaseIdx=*/FluidSystem::naplPhaseIdx,
+        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
 public:
     typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
@@ -163,9 +163,9 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { wPhaseIdx = FluidSystem::wPhaseIdx };
-    enum { nPhaseIdx = FluidSystem::nPhaseIdx };
-    enum { gPhaseIdx = FluidSystem::gPhaseIdx };
+    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    enum { naplPhaseIdx = FluidSystem::naplPhaseIdx };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { H2OIdx = FluidSystem::H2OIdx };
     enum { airIdx = FluidSystem::airIdx };
     enum { NAPLIdx = FluidSystem::NAPLIdx };
@@ -229,28 +229,28 @@ public:
         coarseMaterialParams_.setSgr(0.0101);
 #else
         // linear material law
-        fineMaterialParams_.setPcMinSat(gPhaseIdx, 0);
-        fineMaterialParams_.setPcMaxSat(gPhaseIdx, 0);
-        fineMaterialParams_.setPcMinSat(nPhaseIdx, 0);
-        fineMaterialParams_.setPcMaxSat(nPhaseIdx, -1000);
-        fineMaterialParams_.setPcMinSat(wPhaseIdx, 0);
-        fineMaterialParams_.setPcMaxSat(wPhaseIdx, -10000);
+        fineMaterialParams_.setPcMinSat(gasPhaseIdx, 0);
+        fineMaterialParams_.setPcMaxSat(gasPhaseIdx, 0);
+        fineMaterialParams_.setPcMinSat(naplPhaseIdx, 0);
+        fineMaterialParams_.setPcMaxSat(naplPhaseIdx, -1000);
+        fineMaterialParams_.setPcMinSat(waterPhaseIdx, 0);
+        fineMaterialParams_.setPcMaxSat(waterPhaseIdx, -10000);
 
-        coarseMaterialParams_.setPcMinSat(gPhaseIdx, 0);
-        coarseMaterialParams_.setPcMaxSat(gPhaseIdx, 0);
-        coarseMaterialParams_.setPcMinSat(nPhaseIdx, 0);
-        coarseMaterialParams_.setPcMaxSat(nPhaseIdx, -100);
-        coarseMaterialParams_.setPcMinSat(wPhaseIdx, 0);
-        coarseMaterialParams_.setPcMaxSat(wPhaseIdx, -1000);
+        coarseMaterialParams_.setPcMinSat(gasPhaseIdx, 0);
+        coarseMaterialParams_.setPcMaxSat(gasPhaseIdx, 0);
+        coarseMaterialParams_.setPcMinSat(naplPhaseIdx, 0);
+        coarseMaterialParams_.setPcMaxSat(naplPhaseIdx, -100);
+        coarseMaterialParams_.setPcMinSat(waterPhaseIdx, 0);
+        coarseMaterialParams_.setPcMaxSat(waterPhaseIdx, -1000);
 
         // residual saturations
-        fineMaterialParams_.setResidSat(wPhaseIdx, 0.1201);
-        fineMaterialParams_.setResidSat(nPhaseIdx, 0.0701);
-        fineMaterialParams_.setResidSat(gPhaseIdx, 0.0101);
+        fineMaterialParams_.setResidSat(waterPhaseIdx, 0.1201);
+        fineMaterialParams_.setResidSat(naplPhaseIdx, 0.0701);
+        fineMaterialParams_.setResidSat(gasPhaseIdx, 0.0101);
 
-        coarseMaterialParams_.setResidSat(wPhaseIdx, 0.1201);
-        coarseMaterialParams_.setResidSat(nPhaseIdx, 0.0701);
-        coarseMaterialParams_.setResidSat(gPhaseIdx, 0.0101);
+        coarseMaterialParams_.setResidSat(waterPhaseIdx, 0.1201);
+        coarseMaterialParams_.setResidSat(naplPhaseIdx, 0.0701);
+        coarseMaterialParams_.setResidSat(gasPhaseIdx, 0.0101);
 #endif
 
         fineMaterialParams_.finalize();
@@ -388,16 +388,16 @@ public:
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
                 molarRate[conti0EqIdx + compIdx]
                     = -molarInjectionRate
-                      * injectFluidState_.moleFraction(gPhaseIdx, compIdx);
+                      * injectFluidState_.moleFraction(gasPhaseIdx, compIdx);
 
             // calculate the total mass injection rate [kg / (m^2 s)
             Scalar massInjectionRate
                 = molarInjectionRate
-                  * injectFluidState_.averageMolarMass(gPhaseIdx);
+                  * injectFluidState_.averageMolarMass(gasPhaseIdx);
 
             // set the boundary rate vector
             values.setMolarRate(molarRate);
-            values.setEnthalpyRate(-injectFluidState_.enthalpy(gPhaseIdx)
+            values.setEnthalpyRate(-injectFluidState_.enthalpy(gasPhaseIdx)
                                    * massInjectionRate); // [J / (m^2 s)]
         }
         else
@@ -479,9 +479,9 @@ private:
         Scalar pw = 1e5;
 
         if (isContaminated_(pos)) {
-            fs.setSaturation(wPhaseIdx, 0.12);
-            fs.setSaturation(nPhaseIdx, 0.07);
-            fs.setSaturation(gPhaseIdx, 1 - 0.12 - 0.07);
+            fs.setSaturation(waterPhaseIdx, 0.12);
+            fs.setSaturation(naplPhaseIdx, 0.07);
+            fs.setSaturation(gasPhaseIdx, 1 - 0.12 - 0.07);
 
             // set the capillary pressures
             const auto &matParams
@@ -489,7 +489,7 @@ private:
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[wPhaseIdx]));
+                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
@@ -498,9 +498,9 @@ private:
                         /*setEnthalpy=*/true);
         }
         else {
-            fs.setSaturation(wPhaseIdx, 0.12);
-            fs.setSaturation(gPhaseIdx, 1 - fs.saturation(wPhaseIdx));
-            fs.setSaturation(nPhaseIdx, 0);
+            fs.setSaturation(waterPhaseIdx, 0.12);
+            fs.setSaturation(gasPhaseIdx, 1 - fs.saturation(waterPhaseIdx));
+            fs.setSaturation(naplPhaseIdx, 0);
 
             // set the capillary pressures
             const auto &matParams
@@ -508,7 +508,7 @@ private:
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[wPhaseIdx]));
+                fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
@@ -521,7 +521,7 @@ private:
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fs.setMoleFraction(phaseIdx, NAPLIdx, 0.0);
 
-                if (phaseIdx == nPhaseIdx)
+                if (phaseIdx == naplPhaseIdx)
                     continue;
 
                 Scalar sumx = 0;
@@ -573,21 +573,21 @@ private:
     void initInjectFluidState_()
     {
         injectFluidState_.setTemperature(383.0);         // [K]
-        injectFluidState_.setPressure(gPhaseIdx, 1e5);   // [Pa]
-        injectFluidState_.setSaturation(gPhaseIdx, 1.0); // [-]
+        injectFluidState_.setPressure(gasPhaseIdx, 1e5);   // [Pa]
+        injectFluidState_.setSaturation(gasPhaseIdx, 1.0); // [-]
 
         Scalar xgH2O = 0.417;
-        injectFluidState_.setMoleFraction(gPhaseIdx, H2OIdx, xgH2O);     // [-]
-        injectFluidState_.setMoleFraction(gPhaseIdx, airIdx, 1 - xgH2O); // [-]
-        injectFluidState_.setMoleFraction(gPhaseIdx, NAPLIdx, 0.0);      // [-]
+        injectFluidState_.setMoleFraction(gasPhaseIdx, H2OIdx, xgH2O);     // [-]
+        injectFluidState_.setMoleFraction(gasPhaseIdx, airIdx, 1 - xgH2O); // [-]
+        injectFluidState_.setMoleFraction(gasPhaseIdx, NAPLIdx, 0.0);      // [-]
 
         // set the specific enthalpy of the gas phase
         typename FluidSystem::ParameterCache paramCache;
-        paramCache.updatePhase(injectFluidState_, gPhaseIdx);
+        paramCache.updatePhase(injectFluidState_, gasPhaseIdx);
 
         Scalar h
-            = FluidSystem::enthalpy(injectFluidState_, paramCache, gPhaseIdx);
-        injectFluidState_.setEnthalpy(gPhaseIdx, h);
+            = FluidSystem::enthalpy(injectFluidState_, paramCache, gasPhaseIdx);
+        injectFluidState_.setEnthalpy(gasPhaseIdx, h);
     }
 
     DimMatrix fineK_;

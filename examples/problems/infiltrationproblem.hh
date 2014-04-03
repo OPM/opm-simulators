@@ -82,9 +82,9 @@ private:
 
     typedef Opm::ThreePhaseMaterialTraits<
         Scalar,
-        /*wettingPhaseIdx=*/FluidSystem::wPhaseIdx,
-        /*nonWettingPhaseIdx=*/FluidSystem::nPhaseIdx,
-        /*gasPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+        /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+        /*nonWettingPhaseIdx=*/FluidSystem::naplPhaseIdx,
+        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
 public:
     typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
@@ -168,9 +168,9 @@ class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         airIdx = FluidSystem::airIdx,
 
         // phase indices
-        wPhaseIdx = FluidSystem::wPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        nPhaseIdx = FluidSystem::nPhaseIdx,
+        waterPhaseIdx = FluidSystem::waterPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
+        naplPhaseIdx = FluidSystem::naplPhaseIdx,
 
         // Grid and world dimension
         dim = GridView::dimension,
@@ -409,9 +409,9 @@ private:
         Valgrind::CheckDefined(Sw);
         Valgrind::CheckDefined(Sg);
 
-        fs.setSaturation(wPhaseIdx, Sw);
-        fs.setSaturation(gPhaseIdx, Sg);
-        fs.setSaturation(nPhaseIdx, 0);
+        fs.setSaturation(waterPhaseIdx, Sw);
+        fs.setSaturation(gasPhaseIdx, Sg);
+        fs.setSaturation(naplPhaseIdx, 0);
 
         // set temperature of all phases
         fs.setTemperature(temperature_);
@@ -423,22 +423,22 @@ private:
             pg += 10e3;
         MaterialLaw::capillaryPressures(pcAll, matParams, fs);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            fs.setPressure(phaseIdx, pg + (pcAll[phaseIdx] - pcAll[gPhaseIdx]));
+            fs.setPressure(phaseIdx, pg + (pcAll[phaseIdx] - pcAll[gasPhaseIdx]));
 
         // set composition of gas phase
-        fs.setMoleFraction(gPhaseIdx, H2OIdx, 1e-6);
-        fs.setMoleFraction(gPhaseIdx, airIdx,
-                           1 - fs.moleFraction(gPhaseIdx, H2OIdx));
-        fs.setMoleFraction(gPhaseIdx, NAPLIdx, 0);
+        fs.setMoleFraction(gasPhaseIdx, H2OIdx, 1e-6);
+        fs.setMoleFraction(gasPhaseIdx, airIdx,
+                           1 - fs.moleFraction(gasPhaseIdx, H2OIdx));
+        fs.setMoleFraction(gasPhaseIdx, NAPLIdx, 0);
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         typename FluidSystem::ParameterCache paramCache;
-        CFRP::solve(fs, paramCache, gPhaseIdx,
+        CFRP::solve(fs, paramCache, gasPhaseIdx,
                     /*setViscosity=*/false,
                     /*setEnthalpy=*/false);
 
-        fs.setMoleFraction(wPhaseIdx, H2OIdx,
-                           1 - fs.moleFraction(wPhaseIdx, H2OIdx));
+        fs.setMoleFraction(waterPhaseIdx, H2OIdx,
+                           1 - fs.moleFraction(waterPhaseIdx, H2OIdx));
     }
 
     bool isFineMaterial_(const GlobalPosition &pos) const

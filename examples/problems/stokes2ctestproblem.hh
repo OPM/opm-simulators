@@ -55,7 +55,7 @@ SET_TYPE_PROP(Stokes2cTestProblem, FluidSystem,
 
 //! Select the phase to be considered
 SET_INT_PROP(Stokes2cTestProblem, StokesPhaseIndex,
-             GET_PROP_TYPE(TypeTag, FluidSystem)::gPhaseIdx);
+             GET_PROP_TYPE(TypeTag, FluidSystem)::gasPhaseIdx);
 
 // Disable gravity
 SET_BOOL_PROP(Stokes2cTestProblem, EnableGravity, false);

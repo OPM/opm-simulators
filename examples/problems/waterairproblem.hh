@@ -67,8 +67,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx> Traits;
+                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -174,8 +174,8 @@ class WaterAirProblem
         AirIdx = FluidSystem::AirIdx,
 
         // phase indices
-        lPhaseIdx = FluidSystem::lPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
+        liquidPhaseIdx = FluidSystem::liquidPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
 
         // equation indices
         conti0EqIdx = Indices::conti0EqIdx,
@@ -231,10 +231,10 @@ public:
         coarsePorosity_ = 0.3;
 
         // residual saturations
-        fineMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
-        fineMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
-        coarseMaterialParams_.setResidualSaturation(lPhaseIdx, 0.2);
-        coarseMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
+        fineMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.2);
+        fineMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.2);
+        coarseMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
 
         // parameters for the Brooks-Corey law
         fineMaterialParams_.setEntryPressure(1e4);
@@ -374,8 +374,8 @@ public:
                 Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
                 initialFluidState_(fs, context, spaceIdx, timeIdx);
 
-                Scalar hl = fs.enthalpy(lPhaseIdx);
-                Scalar hg = fs.enthalpy(gPhaseIdx);
+                Scalar hl = fs.enthalpy(liquidPhaseIdx);
+                Scalar hg = fs.enthalpy(gasPhaseIdx);
                 values.setEnthalpyRate(values[conti0EqIdx + AirIdx] * hg +
                                        values[conti0EqIdx + H2OIdx] * hl);
             }
@@ -474,10 +474,10 @@ private:
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
         Scalar densityW = 1000.0;
-        fs.setPressure(lPhaseIdx, 1e5 + (maxDepth_ - pos[1])*densityW*9.81);
-        fs.setSaturation(lPhaseIdx, 1.0);
-        fs.setMoleFraction(lPhaseIdx, H2OIdx, 1.0);
-        fs.setMoleFraction(lPhaseIdx, AirIdx, 0.0);
+        fs.setPressure(liquidPhaseIdx, 1e5 + (maxDepth_ - pos[1])*densityW*9.81);
+        fs.setSaturation(liquidPhaseIdx, 1.0);
+        fs.setMoleFraction(liquidPhaseIdx, H2OIdx, 1.0);
+        fs.setMoleFraction(liquidPhaseIdx, AirIdx, 0.0);
 
         if (inHighTemperatureRegion_(pos))
             fs.setTemperature(380);
@@ -485,15 +485,15 @@ private:
             fs.setTemperature(283.0 + (maxDepth_ - pos[1])*0.03);
 
         // set the gas saturation and pressure
-        fs.setSaturation(gPhaseIdx, 0);
+        fs.setSaturation(gasPhaseIdx, 0);
         Scalar pc[numPhases];
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
         MaterialLaw::capillaryPressures(pc, matParams, fs);
-        fs.setPressure(gPhaseIdx, fs.pressure(lPhaseIdx) + (pc[gPhaseIdx] - pc[lPhaseIdx]));
+        fs.setPressure(gasPhaseIdx, fs.pressure(liquidPhaseIdx) + (pc[gasPhaseIdx] - pc[liquidPhaseIdx]));
 
         typename FluidSystem::ParameterCache paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
-        CFRP::solve(fs, paramCache, lPhaseIdx, /*setViscosity=*/false,  /*setEnthalpy=*/true);
+        CFRP::solve(fs, paramCache, liquidPhaseIdx, /*setViscosity=*/false,  /*setEnthalpy=*/true);
     }
 
     void computeHeatCondParams_(HeatConductionLawParams &params, Scalar poro)

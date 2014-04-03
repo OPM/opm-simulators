@@ -53,7 +53,7 @@ SET_TYPE_PROP(StokesNiTestProblem, FluidSystem,
 
 //! Select the phase to be considered
 SET_INT_PROP(StokesNiTestProblem, StokesPhaseIndex,
-             GET_PROP_TYPE(TypeTag, FluidSystem)::gPhaseIdx);
+             GET_PROP_TYPE(TypeTag, FluidSystem)::gasPhaseIdx);
 
 // Enable gravity
 SET_BOOL_PROP(StokesNiTestProblem, EnableGravity, true);

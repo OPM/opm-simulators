@@ -81,8 +81,8 @@ private:
                   "for this problem!");
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
     Traits;
 
 public:
@@ -140,8 +140,8 @@ class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         numPhases = FluidSystem::numPhases,
 
         // phase indices
-        lPhaseIdx = FluidSystem::lPhaseIdx,
-        gPhaseIdx = FluidSystem::gPhaseIdx,
+        liquidPhaseIdx = FluidSystem::liquidPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
 
         // component indices
         H2OIdx = FluidSystem::H2OIdx,
@@ -296,28 +296,28 @@ private:
         leftInitialFluidState_.setTemperature(temperature_);
 
         Scalar Sl = 0.0;
-        leftInitialFluidState_.setSaturation(lPhaseIdx, Sl);
-        leftInitialFluidState_.setSaturation(gPhaseIdx, 1 - Sl);
+        leftInitialFluidState_.setSaturation(liquidPhaseIdx, Sl);
+        leftInitialFluidState_.setSaturation(gasPhaseIdx, 1 - Sl);
 
         Scalar p = 1e5;
-        leftInitialFluidState_.setPressure(lPhaseIdx, p);
-        leftInitialFluidState_.setPressure(gPhaseIdx, p);
+        leftInitialFluidState_.setPressure(liquidPhaseIdx, p);
+        leftInitialFluidState_.setPressure(gasPhaseIdx, p);
 
         Scalar xH2O = 0.01;
-        leftInitialFluidState_.setMoleFraction(gPhaseIdx, H2OIdx, xH2O);
-        leftInitialFluidState_.setMoleFraction(gPhaseIdx, N2Idx, 1 - xH2O);
+        leftInitialFluidState_.setMoleFraction(gasPhaseIdx, H2OIdx, xH2O);
+        leftInitialFluidState_.setMoleFraction(gasPhaseIdx, N2Idx, 1 - xH2O);
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         typename FluidSystem::ParameterCache paramCache;
-        CFRP::solve(leftInitialFluidState_, paramCache, gPhaseIdx,
+        CFRP::solve(leftInitialFluidState_, paramCache, gasPhaseIdx,
                     /*setViscosity=*/false, /*setEnthalpy=*/false);
 
         // create the initial fluid state for the right half of the domain
         rightInitialFluidState_.assign(leftInitialFluidState_);
         xH2O = 0.0;
-        rightInitialFluidState_.setMoleFraction(gPhaseIdx, H2OIdx, xH2O);
-        rightInitialFluidState_.setMoleFraction(gPhaseIdx, N2Idx, 1 - xH2O);
-        CFRP::solve(rightInitialFluidState_, paramCache, gPhaseIdx,
+        rightInitialFluidState_.setMoleFraction(gasPhaseIdx, H2OIdx, xH2O);
+        rightInitialFluidState_.setMoleFraction(gasPhaseIdx, N2Idx, 1 - xH2O);
+        CFRP::solve(rightInitialFluidState_, paramCache, gasPhaseIdx,
                     /*setViscosity=*/false, /*setEnthalpy=*/false);
     }
 

@@ -72,8 +72,8 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::lPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gPhaseIdx>
+                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
     MaterialTraits;
 
     typedef Opm::LinearMaterial<MaterialTraits> EffMaterialLaw;
@@ -156,8 +156,8 @@ class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld,
         numPhases = GET_PROP_VALUE(TypeTag, NumPhases),
-        gPhaseIdx = FluidSystem::gPhaseIdx,
-        lPhaseIdx = FluidSystem::lPhaseIdx,
+        gasPhaseIdx = FluidSystem::gasPhaseIdx,
+        liquidPhaseIdx = FluidSystem::liquidPhaseIdx,
         H2OIdx = FluidSystem::H2OIdx,
         N2Idx = FluidSystem::N2Idx
     };
@@ -204,17 +204,17 @@ public:
         coarsePorosity_ = 0.3;
 
         // residual saturations
-        fineMaterialParams_.setResidualSaturation(lPhaseIdx, 0.0);
-        fineMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
-        coarseMaterialParams_.setResidualSaturation(lPhaseIdx, 0.0);
-        coarseMaterialParams_.setResidualSaturation(gPhaseIdx, 0.0);
+        fineMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.0);
+        fineMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(liquidPhaseIdx, 0.0);
+        coarseMaterialParams_.setResidualSaturation(gasPhaseIdx, 0.0);
 
         // parameters for the linear law, i.e. minimum and maximum
         // pressures
-        fineMaterialParams_.setPcMinSat(lPhaseIdx, 0.0);
-        fineMaterialParams_.setPcMaxSat(lPhaseIdx, 0.0);
-        coarseMaterialParams_.setPcMinSat(lPhaseIdx, 0.0);
-        coarseMaterialParams_.setPcMaxSat(lPhaseIdx, 0.0);
+        fineMaterialParams_.setPcMinSat(liquidPhaseIdx, 0.0);
+        fineMaterialParams_.setPcMaxSat(liquidPhaseIdx, 0.0);
+        coarseMaterialParams_.setPcMinSat(liquidPhaseIdx, 0.0);
+        coarseMaterialParams_.setPcMaxSat(liquidPhaseIdx, 0.0);
 
         /*
         // entry pressures for Brooks-Corey
@@ -452,33 +452,33 @@ private:
 
         if (isInlet) {
             // only liquid on inlet
-            refPhaseIdx = lPhaseIdx;
-            otherPhaseIdx = gPhaseIdx;
+            refPhaseIdx = liquidPhaseIdx;
+            otherPhaseIdx = gasPhaseIdx;
 
             // set liquid saturation
-            fs.setSaturation(lPhaseIdx, 1.0);
+            fs.setSaturation(liquidPhaseIdx, 1.0);
 
             // set pressure of the liquid phase
-            fs.setPressure(lPhaseIdx, 2e5);
+            fs.setPressure(liquidPhaseIdx, 2e5);
 
             // set the liquid composition to pure water
-            fs.setMoleFraction(lPhaseIdx, N2Idx, 0.0);
-            fs.setMoleFraction(lPhaseIdx, H2OIdx, 1.0);
+            fs.setMoleFraction(liquidPhaseIdx, N2Idx, 0.0);
+            fs.setMoleFraction(liquidPhaseIdx, H2OIdx, 1.0);
         }
         else {
             // elsewhere, only gas
-            refPhaseIdx = gPhaseIdx;
-            otherPhaseIdx = lPhaseIdx;
+            refPhaseIdx = gasPhaseIdx;
+            otherPhaseIdx = liquidPhaseIdx;
 
             // set gas saturation
-            fs.setSaturation(gPhaseIdx, 1.0);
+            fs.setSaturation(gasPhaseIdx, 1.0);
 
             // set pressure of the gas phase
-            fs.setPressure(gPhaseIdx, 1e5);
+            fs.setPressure(gasPhaseIdx, 1e5);
 
             // set the gas composition to 99% nitrogen and 1% steam
-            fs.setMoleFraction(gPhaseIdx, N2Idx, 0.99);
-            fs.setMoleFraction(gPhaseIdx, H2OIdx, 0.01);
+            fs.setMoleFraction(gasPhaseIdx, N2Idx, 0.99);
+            fs.setMoleFraction(gasPhaseIdx, H2OIdx, 0.01);
         };
 
         // set the other saturation
@@ -510,8 +510,8 @@ private:
                            * std::pow(lambdaWater, poro);
         Scalar lambdaDry = std::pow(lambdaGranite, (1 - poro));
 
-        params.setFullySaturatedLambda(gPhaseIdx, lambdaDry);
-        params.setFullySaturatedLambda(lPhaseIdx, lambdaWet);
+        params.setFullySaturatedLambda(gasPhaseIdx, lambdaDry);
+        params.setFullySaturatedLambda(liquidPhaseIdx, lambdaWet);
         params.setVacuumLambda(lambdaDry);
     }
 
