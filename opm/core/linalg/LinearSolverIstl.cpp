@@ -259,8 +259,6 @@ namespace Opm
         return linsolver_residual_tolerance_;
     }
 
-
-
     namespace
     {
     template<class P, class O, class C>
@@ -279,6 +277,7 @@ namespace Opm
         Type;
     };
 #endif
+
 
     template<class P, class O, class C>
     struct PreconditionerTraits

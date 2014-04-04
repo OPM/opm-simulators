@@ -30,6 +30,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <dune/common/version.hh>
 #include <memory>
 #include <cstdlib>
 #include <string>
@@ -59,21 +60,18 @@ std::shared_ptr<MyMatrix> createLaplacian(int N)
 
         int x=row%N;
         int y=row/N;
-        double dval=0;
         if(y>0)
         {
             mm->colIndex[nnz]=row-N;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         if(x>0)
         {
             mm->colIndex[nnz]=row-1;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         mm->colIndex[nnz]=row;
-        mm->data[nnz++]=dval+(x<N-1)+(y<N-1);
+        mm->data[nnz++]=4;
         if(x<N-1)
         {
             mm->colIndex[nnz]=row+1;
@@ -130,6 +128,7 @@ BOOST_AUTO_TEST_CASE(DefaultTest)
 {
     Opm::parameter::ParameterGroup param;
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -140,6 +139,7 @@ BOOST_AUTO_TEST_CASE(CGAMGTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("1"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -149,6 +149,7 @@ BOOST_AUTO_TEST_CASE(CGILUTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("0"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -158,15 +159,18 @@ BOOST_AUTO_TEST_CASE(BiCGILUTest)
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("2"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
+#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
 BOOST_AUTO_TEST_CASE(FastAMGTest)
 {
     Opm::parameter::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("3"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
+    param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
 }
 
@@ -178,5 +182,5 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
     run_test(param);
 }
-
+#endif
 #endif
