@@ -761,6 +761,11 @@ namespace Opm
                     OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
                 }
                 set_current_control(well_index, cpos, w_);
+
+                // Set well component fraction in producers to 1 for all phases. This HACK make sure volrates are nonzero for all perforations.
+                double cf[3] = { 0, 1, 0};
+                std::copy(cf, cf + phaseUsage.num_phases, w_->comp_frac + well_index*phaseUsage.num_phases);
+
             }
             well_index++;
         }
