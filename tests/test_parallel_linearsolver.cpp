@@ -116,10 +116,20 @@ std::shared_ptr<MyMatrix> create1DLaplacian(I& indexset, int N, int start, int e
             // therefore we setup the system such that
             // right hand side will equal the left hand side
             // of the linear system.
+            if(localRow>0)
+            {
+                mm->colIndex[nnz]=localRow-1;
+                mm->data[nnz++]=0;
+            }
             mm->colIndex[nnz]=localRow;
             mm->data[nnz++]=1.0;
             indexset.add(row, LocalIndex(localRow, GridAttributes::copy, true));
-                         mm->rowStart[localRow+1]=nnz;
+            if(localRow<end-1)
+            {
+                mm->colIndex[nnz]=localRow+1;
+                mm->data[nnz++]=0;
+            }
+            mm->rowStart[localRow+1]=nnz;
             continue;
         }
         
@@ -218,7 +228,7 @@ void run_test(const Opm::parameter::ParameterGroup& param)
     std::fill(x.begin(), x.end(), 0.0);
     Opm::LinearSolverFactory ls(param);
     boost::any anyComm(comm);
-    ls.solve(N, mat->data.size(), &(mat->rowStart[0]),
+    ls.solve(b.size(), mat->data.size(), &(mat->rowStart[0]),
              &(mat->colIndex[0]), &(mat->data[0]), &(b[0]),
              &(x[0]), anyComm);
 }
