@@ -200,7 +200,7 @@ try
         simtimer.setCurrentStepNum(reportStepIdx);
 
         if (reportStepIdx == 0) {
-            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+            outputWriter.writeInit(simtimer);
             outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
 
