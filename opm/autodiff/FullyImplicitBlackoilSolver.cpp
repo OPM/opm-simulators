@@ -792,9 +792,11 @@ namespace {
                 isNotDeadWells[c] = 0;
         }
         // compute wellbore mixture at std conds
+        Selector<double> notDeadWells_selector(wbqt.value(),Selector<double>::Zero);
         std::vector<ADB> mix_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            mix_s[phase] = isNotDeadWells * wbq[phase]/wbqt;
+            const int pos = pu.phase_pos[phase];
+            mix_s[phase] = notDeadWells_selector.select(ADB::constant(compi.col(pos), state.bhp.blockPattern()),wbq[phase]/wbqt);
         }
 
 
@@ -832,7 +834,7 @@ namespace {
                 const int oilpos = pu.phase_pos[Oil];
                 tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
             }
-            volRat += tmp / subset(rq_[phase].b,well_cells);
+           volRat += tmp / subset(rq_[phase].b,well_cells);
 
         }
 
