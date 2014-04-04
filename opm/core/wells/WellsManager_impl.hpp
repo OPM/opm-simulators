@@ -144,7 +144,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     std::array<double, 3> cubical = WellsManagerDetail::getCubeDim(c2f, begin_face_centroids,
                                                                                    dimensions, cell);
                     const double* cell_perm = &permeability[dimensions*dimensions*cell];
-                    pd.well_index = WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm, completion->getDiameter());
+                    pd.well_index = WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm, completion->getSkinFactor());
                 }
                 wellperf_data[well_index].push_back(pd);
             }
