@@ -225,10 +225,14 @@ namespace Opm
             break;
         case FastAMG:
 #if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
+
+#if HAVE_MPI
             if(std::is_same<C,Dune::OwnerOverlapCopyCommunication<int,int> >::value)
             {
                 OPM_THROW(std::runtime_error, "Trying to use sequential FastAMG solver for a parallel problem!");
             }
+#endif // HAVE_MPI
+
             res = solveFastAMG(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                                linsolver_prolongate_factor_);
 #else
