@@ -550,6 +550,30 @@ namespace Opm
                     OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
                 }
                 set_current_control(well_index, cpos, w_);
+
+                // Set well component fraction to match preferred phase for the well.
+                double cf[3] = { 0.0, 0.0, 0.0 };
+                {
+                    switch (well->getPreferredPhase()) {
+                    case Phase::WATER:
+                        if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
+                            OPM_THROW(std::runtime_error, "Water phase not used, yet found water-preferring well.");
+                        }
+                        cf[phaseUsage.phase_pos[BlackoilPhases::Aqua]] = 1.0;
+                        break;
+                    case Phase::OIL:
+                        if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
+                            OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-preferring well.");
+                        }
+                        cf[phaseUsage.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                    case Phase::GAS:
+                        if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
+                            OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-preferring well.");
+                        }
+                        cf[phaseUsage.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                    }
+                    std::copy(cf, cf + phaseUsage.num_phases, w_->comp_frac + well_index*phaseUsage.num_phases);
+                }
             }
             well_index++;
         }

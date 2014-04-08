@@ -471,8 +471,7 @@ namespace Opm
         return cell_to_func_.empty() ? satfuncset_[0] : satfuncset_[cell_to_func_[cell]];
     }
 
-
-    // Initialize saturation scaling parameter
+    // Initialize saturation scaling parameters
     template <class SatFuncSet>
     template <class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(const EclipseGridParser& deck,
@@ -1003,8 +1002,9 @@ namespace Opm
         bool hasENPTVD = newParserDeck->hasKeyword("ENPTVD");
         bool hasENKRVD = newParserDeck->hasKeyword("ENKRVD");
         int itab = 0;
-        std::vector<std::vector<std::vector<double> > > table_dummy;
-        std::vector<std::vector<std::vector<double> > >& table = table_dummy;
+        std::vector<std::vector<double> > param_col;
+        std::vector<std::vector<double> > depth_col;
+        std::vector<std::string> col_names;
 
         // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
         int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
@@ -1070,22 +1070,14 @@ namespace Opm
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
-                Opm::EnptvdTable enptvd(newParserDeck->getKeyword("ENPTVD"));
-                table.resize(1); // only one region supported so far
-                for (unsigned i = 0; i < table.size(); ++i) {
-                    table[i].resize(9);
-
-                    for (int k = 0; k < enptvd.numRows(); ++k) {
-                        table[i][0] = enptvd.getDepthColumn();
-                        table[i][1] = enptvd.getSwcoColumn();
-                        table[i][2] = enptvd.getSwcritColumn();
-                        table[i][3] = enptvd.getSwmaxColumn();
-                        table[i][4] = enptvd.getSgcoColumn();
-                        table[i][5] = enptvd.getSgcritColumn();
-                        table[i][6] = enptvd.getSgmaxColumn();
-                        table[i][7] = enptvd.getSowcritColumn();
-                        table[i][8] = enptvd.getSogcritColumn();
-                    }
+                int num_tables = newParserDeck->getKeyword("ENPTVD")->size();
+                param_col.resize(num_tables);
+                depth_col.resize(num_tables);
+                col_names.resize(9);
+                for (int table_num=0; table_num<num_tables; ++table_num) {
+                    Opm::SimpleTable enptvd(newParserDeck->getKeyword("ENPTVD"), col_names, table_num);
+                    depth_col[table_num] = enptvd.getColumn(0); // depth
+                    param_col[table_num] = enptvd.getColumn(itab); // itab=[1-8]: swl swcr swu sgl sgcr sgu sowcr sogcr
                 }
             }
         } else if ((keyword[0] == 'K' && (useKeyword || hasENKRVD)) || (keyword[1] == 'K' && useKeyword) ) {
@@ -1141,21 +1133,14 @@ namespace Opm
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
-                Opm::EnkrvdTable enkrvd(newParserDeck->getKeyword("ENKRVD"));
-                table.resize(1); // only one region supported so far
-                for (unsigned i = 0; i < table.size(); ++i) {
-                    table[i].resize(8);
-
-                    for (int k = 0; k < enkrvd.numRows(); ++k) {
-                        table[i][0] = enkrvd.getDepthColumn();
-                        table[i][1] = enkrvd.getKrwmaxColumn();
-                        table[i][2] = enkrvd.getKrgmaxColumn();
-                        table[i][3] = enkrvd.getKromaxColumn();
-                        table[i][4] = enkrvd.getKrwcritColumn();
-                        table[i][5] = enkrvd.getKrgcritColumn();
-                        table[i][6] = enkrvd.getKrocritgColumn();
-                        table[i][7] = enkrvd.getKrocritwColumn();
-                    }
+                int num_tables = newParserDeck->getKeyword("ENKRVD")->size();
+                param_col.resize(num_tables);
+                depth_col.resize(num_tables);
+                col_names.resize(8);
+                for (int table_num=0; table_num<num_tables; ++table_num) {
+                    Opm::SimpleTable enkrvd(newParserDeck->getKeyword("ENKRVD"), col_names, table_num);
+                    depth_col[table_num] = enkrvd.getColumn(0); // depth
+                    param_col[table_num] = enkrvd.getColumn(itab); // itab=[1-7]: krw krg kro krwr krgr krorw krorg
                 }
             }
         }
@@ -1172,25 +1157,15 @@ namespace Opm
                 scaleparam[c] = val[deck_pos];
             }
         } else {
-            // TODO for new parser
-            /*
-            std::cout << "--- Scaling parameter '" << keyword << "' assigned via ";
-            if (keyword[0] == 'S')
-                newParserDeck.getENPTVD().write(std::cout);
-            else
-                newParserDeck.getENKRVD().write(std::cout);
-            */
             const int dim = dimensions;
             for (int cell = 0; cell < number_of_cells; ++cell) {
                 int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
-                if (table[itab][jtab][0] != -1.0) {
-                    std::vector<double>& depth = table[0][jtab];
-                    std::vector<double>& val = table[itab][jtab];
+                if (param_col[jtab][0] >= 0.0) {
                     double zc = UgGridHelpers
                         ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
                                        dim-1);
-                    if (zc >= depth.front() && zc <= depth.back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth, val, zc);
+                    if (zc >= depth_col[jtab].front() && zc <= depth_col[jtab].back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth_col[jtab], param_col[jtab], zc);
                     }
                 }
             }

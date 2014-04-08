@@ -46,7 +46,8 @@ namespace Opm
                                const int* ja,
                                const double* sa,
                                const double* rhs,
-                               double* solution) const
+                               double* solution,
+                               const boost::any&) const
     {
         CSRMatrix A  = {
             (size_t)size,

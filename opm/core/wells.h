@@ -65,8 +65,10 @@ struct Wells
     /**
      * Component fractions for each well.  Array of size
      * <CODE>number_of_wells * number_of_phases</CODE>.
-     * This is intended to be used for injection wells. For production wells
-     * the component fractions will vary and cannot be specified a priori.
+     * For injection wells, this gives the injected component mix.
+     * For production wells the component fractions of the wellbore
+     * will vary and cannot be specified a priori, the component mix
+     * given here should be considered a default or preferred mix.
      */
     double *comp_frac;
 
