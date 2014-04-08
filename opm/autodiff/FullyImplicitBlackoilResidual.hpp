@@ -38,7 +38,7 @@ namespace Opm
     /// meaning from cell to cell, corresponding to the state in
     /// that cell (saturated, undersaturated oil or undersaturated
     /// gas). In a two-phase simulation, either sw or xvar is not
-    /// used, depending on which face is missing.
+    /// used, depending on which phase is missing.
     ///
     /// Note: this class is strongly coupled to the class
     /// FullyImplicitBlackoilSolver, and is separated from that
@@ -50,7 +50,7 @@ namespace Opm
         /// The material_balance_eq vector has one element for each
         /// active phase, each of which has size equal to the number
         /// of cells. Each material balance equation is given in terms
-        /// of surface volumes.
+        /// of surface volumes (in SI units, that is standard m^3).
         std::vector<ADB> material_balance_eq;
         /// The well_flux_eq has size equal to the number of wells
         /// times the number of phases. It contains the well flow

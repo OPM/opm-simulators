@@ -38,7 +38,7 @@ namespace Opm
         /// \param[in] linsolver   linear solver to use
         FullyImplicitSystemSolverSimple(const LinearSolverInterface& linsolver);
 
-        /// Solve the linear system Ax = b, with A being the
+        /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
         /// being the residual itself.
         /// \param[in] residual   residual object containing A and b.
