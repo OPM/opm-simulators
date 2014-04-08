@@ -23,6 +23,8 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/FullyImplicitBlackoilResidual.hpp>
+#include <opm/autodiff/FullyImplicitSystemSolverInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -31,7 +33,7 @@ namespace Opm {
 
     class DerivedGeology;
     class RockCompressibility;
-    class LinearSolverInterface;
+    class FullyImplicitSystemSolverInterface;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
 
@@ -62,7 +64,7 @@ namespace Opm {
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const LinearSolverInterface&    linsolver);
+                                    const FullyImplicitSystemSolverInterface& linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -123,7 +125,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells&                    wells_;
-        const LinearSolverInterface&    linsolver_;
+        const FullyImplicitSystemSolverInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -137,14 +139,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
-        // The mass_balance vector has one element for each active phase,
-        // each of which has size equal to the number of cells.
-        // The well_eq has size equal to the number of wells.
-        struct {
-            std::vector<ADB> mass_balance;
-            ADB well_flux_eq;
-            ADB well_eq;
-        } residual_;
+        FullyImplicitBlackoilResidual residual_;
 
         // Private methods.
         SolutionState
