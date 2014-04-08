@@ -195,7 +195,7 @@ namespace {
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
                                 const Wells&                    wells,
-                                const FullyImplicitSystemSolverInterface&    linsolver)
+                                const NewtonIterationBlackoilInterface&    linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)

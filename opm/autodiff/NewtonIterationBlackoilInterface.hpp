@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITSYSTEMSOLVERINTERFACE_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITSYSTEMSOLVERINTERFACE_HEADER_INCLUDED
+#ifndef OPM_NEWTONITERATIONBLACKOILINTERFACE_HEADER_INCLUDED
+#define OPM_NEWTONITERATIONBLACKOILINTERFACE_HEADER_INCLUDED
 
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 
@@ -26,7 +26,7 @@ namespace Opm
 {
 
     /// Interface class for (linear) solvers for the fully implicit black-oil system.
-    class FullyImplicitSystemSolverInterface
+    class NewtonIterationBlackoilInterface
     {
     public:
         /// Return type for linearSolve(). A simple, non-ad vector type.
@@ -43,4 +43,4 @@ namespace Opm
 } // namespace Opm
 
 
-#endif // OPM_FULLYIMPLICITSYSTEMSOLVERINTERFACE_HEADER_INCLUDED
+#endif // OPM_NEWTONITERATIONBLACKOILINTERFACE_HEADER_INCLUDED

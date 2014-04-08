@@ -17,11 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITSYSTEMSOLVERSIMPLE_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITSYSTEMSOLVERSIMPLE_HEADER_INCLUDED
+#ifndef OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED
+#define OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED
 
 
-#include <opm/autodiff/FullyImplicitSystemSolverInterface.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 
 namespace Opm
@@ -31,12 +31,12 @@ namespace Opm
     /// simply concatenating the Jacobian matrices and passing the
     /// resulting system to a linear solver. The linear solver used
     /// can be passed in as a constructor argument.
-    class FullyImplicitSystemSolverSimple : public FullyImplicitSystemSolverInterface
+    class NewtonIterationBlackoilSimple : public NewtonIterationBlackoilInterface
     {
     public:
         /// Construct a system solver.
         /// \param[in] linsolver   linear solver to use
-        FullyImplicitSystemSolverSimple(const LinearSolverInterface& linsolver);
+        NewtonIterationBlackoilSimple(const LinearSolverInterface& linsolver);
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -52,4 +52,4 @@ namespace Opm
 } // namespace Opm
 
 
-#endif // OPM_FULLYIMPLICITSYSTEMSOLVERSIMPLE_HEADER_INCLUDED
+#endif // OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED

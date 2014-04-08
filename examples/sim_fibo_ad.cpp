@@ -37,7 +37,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
-#include <opm/autodiff/FullyImplicitSystemSolverSimple.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -142,7 +142,7 @@ try
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
-    FullyImplicitSystemSolverSimple fis_solver(linsolver);
+    NewtonIterationBlackoilSimple fis_solver(linsolver);
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);

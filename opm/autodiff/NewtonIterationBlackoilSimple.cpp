@@ -18,7 +18,7 @@
 */
 
 
-#include <opm/autodiff/FullyImplicitSystemSolverSimple.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/AutodiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -27,7 +27,7 @@ namespace Opm
 
     /// Construct a system solver.
     /// \param[in] linsolver   linear solver to use
-    FullyImplicitSystemSolverSimple::FullyImplicitSystemSolverSimple(const LinearSolverInterface& linsolver)
+    NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const LinearSolverInterface& linsolver)
         : linsolver_(linsolver)
     {
     }
@@ -37,8 +37,8 @@ namespace Opm
     /// being the residual itself.
     /// \param[in] residual   residual object containing A and b.
     /// \return               the solution x
-    FullyImplicitSystemSolverSimple::SolutionVector
-    FullyImplicitSystemSolverSimple::linearSolve(const LinearisedBlackoilResidual& residual) const
+    NewtonIterationBlackoilSimple::SolutionVector
+    NewtonIterationBlackoilSimple::linearSolve(const LinearisedBlackoilResidual& residual) const
     {
         typedef LinearisedBlackoilResidual::ADB ADB;
         const int np = residual.material_balance_eq.size();

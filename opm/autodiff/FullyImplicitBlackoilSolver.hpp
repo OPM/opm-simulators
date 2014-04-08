@@ -24,7 +24,7 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-#include <opm/autodiff/FullyImplicitSystemSolverInterface.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -33,7 +33,7 @@ namespace Opm {
 
     class DerivedGeology;
     class RockCompressibility;
-    class FullyImplicitSystemSolverInterface;
+    class NewtonIterationBlackoilInterface;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
 
@@ -64,7 +64,7 @@ namespace Opm {
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const FullyImplicitSystemSolverInterface& linsolver);
+                                    const NewtonIterationBlackoilInterface& linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -125,7 +125,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells&                    wells_;
-        const FullyImplicitSystemSolverInterface&    linsolver_;
+        const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.

@@ -70,7 +70,7 @@ namespace Opm
              BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
-             FullyImplicitSystemSolverInterface& linsolver,
+             NewtonIterationBlackoilInterface& linsolver,
              const double* gravity);
 
         SimulatorReport run(SimulatorTimer& timer,
@@ -110,7 +110,7 @@ namespace Opm
                                                                    BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
-                                                                   FullyImplicitSystemSolverInterface& linsolver,
+                                                                   NewtonIterationBlackoilInterface& linsolver,
                                                                    const double* gravity)
 
     {
@@ -257,7 +257,7 @@ namespace Opm
                                                BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
-                                               FullyImplicitSystemSolverInterface& linsolver,
+                                               NewtonIterationBlackoilInterface& linsolver,
                                                const double* gravity)
         : grid_(grid),
           props_(props),

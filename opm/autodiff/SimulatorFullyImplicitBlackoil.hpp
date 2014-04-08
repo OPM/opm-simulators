@@ -33,7 +33,7 @@ namespace Opm
     class BlackoilPropsAdInterface;
     class RockCompressibility;
     class WellsManager;
-    class FullyImplicitSystemSolverInterface;
+    class NewtonIterationBlackoilInterface;
     class SimulatorTimer;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
@@ -70,7 +70,7 @@ namespace Opm
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
-                                       FullyImplicitSystemSolverInterface& linsolver,
+                                       NewtonIterationBlackoilInterface& linsolver,
                                        const double* gravity);
 
         /// Run the simulation.
