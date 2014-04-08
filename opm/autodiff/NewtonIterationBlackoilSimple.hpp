@@ -43,7 +43,7 @@ namespace Opm
         /// being the residual itself.
         /// \param[in] residual   residual object containing A and b.
         /// \return               the solution x
-        virtual SolutionVector linearSolve(const LinearisedBlackoilResidual& residual) const;
+        virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
 
     private:
         const LinearSolverInterface& linsolver_;

@@ -38,7 +38,7 @@ namespace Opm
     /// \param[in] residual   residual object containing A and b.
     /// \return               the solution x
     NewtonIterationBlackoilSimple::SolutionVector
-    NewtonIterationBlackoilSimple::linearSolve(const LinearisedBlackoilResidual& residual) const
+    NewtonIterationBlackoilSimple::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
         typedef LinearisedBlackoilResidual::ADB ADB;
         const int np = residual.material_balance_eq.size();

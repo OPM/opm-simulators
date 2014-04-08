@@ -1158,7 +1158,7 @@ namespace {
 
     V FullyImplicitBlackoilSolver::solveJacobianSystem() const
     {
-        return linsolver_.linearSolve(residual_);
+        return linsolver_.computeNewtonIncrement(residual_);
     }
 
 
