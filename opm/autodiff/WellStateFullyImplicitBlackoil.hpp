@@ -70,6 +70,14 @@ namespace Opm
                     }
                 }
             }
+
+            // Initialize current_controls_.
+            // The controls set in the Wells object are treated as defaults,
+            // and also used for initial values.
+            current_controls_.resize(nw);
+            for (int w = 0; w < nw; ++w) {
+                current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
+            }
         }
 
         /// One bhp pressure per well.
@@ -84,6 +92,10 @@ namespace Opm
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
+        /// One current control per well.
+        std::vector<int>& currentControls() { return current_controls_; }
+        const std::vector<int>& currentControls() const { return current_controls_; }
+
         /// For interfacing with functions that take a WellState.
         const WellState& basicWellState() const
         {
@@ -93,6 +105,7 @@ namespace Opm
     private:
         WellState basic_well_state_;
         std::vector<double> perfphaserates_;
+        std::vector<int> current_controls_;
     };
 
 } // namespace Opm

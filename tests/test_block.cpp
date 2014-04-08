@@ -191,53 +191,45 @@ BOOST_AUTO_TEST_CASE(Addition)
     }
 }
 
-#if 0
-#include <iostream>
-
-int main()
-try
+BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
 {
     typedef AutoDiffBlock<double> ADB;
-    std::vector<int> blocksizes = { 3, 1, 2 };
-    int num_blocks = blocksizes.size();
-    ADB::V v1(3);
-    v1 << 0.2, 1.2, 13.4;
-    ADB::V v2(3);
-    v2 << 1.0, 2.2, 3.4;
-    enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
-    ADB a = ADB::constant(v1, blocksizes);
-    ADB x = ADB::variable(FirstVar, v2, blocksizes);
-    std::vector<ADB::M> jacs(num_blocks);
-    for (int i = 0; i < num_blocks; ++i) {
-        jacs[i] = ADB::M(blocksizes[FirstVar], blocksizes[i]);
-        jacs[i].insert(0,0) = -1.0;
-    }
-    ADB f = ADB::function(v2, jacs);
 
-    ADB xpx = x + x;
-    std::cout << xpx;
-    ADB xpxpa = x + x + a;
-    std::cout << xpxpa;
+    // Basic testing of += and -=.
+    ADB::V vx(3);
+    vx << 0.2, 1.2, 13.4;
 
+    ADB::V vy(3);
+    vy << 1.0, 2.2, 3.4;
 
-    std::cout << xpxpa - xpx;
+    std::vector<ADB::V> vals{ vx, vy };
+    std::vector<ADB> vars = ADB::variables(vals);
 
-    ADB sqx = x * x;
+    const ADB x = vars[0];
+    const ADB y = vars[1];
 
-    std::cout << sqx;
+    ADB z = x;
+    z += y;
+    ADB sum = x + y;
+    const double tolerance = 1e-14;
+    BOOST_CHECK(z.value().isApprox(sum.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(sum.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(sum.derivative()[1], tolerance));
+    z -= y;
+    BOOST_CHECK(z.value().isApprox(x.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(x.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(x.derivative()[1], tolerance));
 
-    ADB sqxdx = sqx / x;
-
-    std::cout << sqxdx;
-
-    ADB::M m(2,3);
-    m.insert(0,0) = 4;
-    m.insert(0,1) = 3;
-    m.insert(1,1) = 1;
-    std::cout << m*sqx;
+    // Testing the case when the left hand side has empty() jacobian.
+    ADB yconst = ADB::constant(vy);
+    z = yconst;
+    z -= x;
+    ADB diff = yconst - x;
+    BOOST_CHECK(z.value().isApprox(diff.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(diff.derivative()[0], tolerance));
+    BOOST_CHECK(z.derivative()[1].isApprox(diff.derivative()[1], tolerance));
+    z += x;
+    BOOST_CHECK(z.value().isApprox(yconst.value(), tolerance));
+    BOOST_CHECK(z.derivative()[0].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
+    BOOST_CHECK(z.derivative()[1].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
 }
-catch (const std::exception &e) {
-    std::cerr << "Program threw an exception: " << e.what() << "\n";
-    throw;
-}
-#endif

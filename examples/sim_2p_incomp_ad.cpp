@@ -46,6 +46,9 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
@@ -100,12 +103,16 @@ try
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
+    EclipseStateConstPtr eclipseState;
     TwophaseState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
+        ParserPtr parser(new Opm::Parser());
+        eclipseState.reset( new EclipseState(parser->parseFile(deck_filename)));
+
         deck.reset(new EclipseGridParser(deck_filename));
         // Grid init
         grid.reset(new GridManager(*deck));
@@ -262,7 +269,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*deck, *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every epoch,
             // since number of wells may change etc.
