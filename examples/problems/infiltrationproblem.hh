@@ -28,6 +28,7 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 
