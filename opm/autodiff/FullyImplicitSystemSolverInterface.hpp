@@ -20,7 +20,7 @@
 #ifndef OPM_FULLYIMPLICITSYSTEMSOLVERINTERFACE_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITSYSTEMSOLVERINTERFACE_HEADER_INCLUDED
 
-#include <opm/autodiff/FullyImplicitBlackoilResidual.hpp>
+#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 
 namespace Opm
 {
@@ -30,14 +30,14 @@ namespace Opm
     {
     public:
         /// Return type for linearSolve(). A simple, non-ad vector type.
-        typedef FullyImplicitBlackoilResidual::ADB::V SolutionVector;
+        typedef LinearisedBlackoilResidual::ADB::V SolutionVector;
 
         /// Solve the linear system Ax = b, with A being the
         /// combined derivative matrix of the residual and b
         /// being the residual itself.
         /// \param[in] residual   residual object containing A and b.
         /// \return               the solution x
-        virtual SolutionVector linearSolve(const FullyImplicitBlackoilResidual& residual) const = 0;
+        virtual SolutionVector linearSolve(const LinearisedBlackoilResidual& residual) const = 0;
     };
 
 } // namespace Opm

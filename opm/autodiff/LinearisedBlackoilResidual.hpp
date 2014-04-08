@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITBLACKOILRESIDUAL_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITBLACKOILRESIDUAL_HEADER_INCLUDED
+#ifndef OPM_LINEARISEDBLACKOILRESIDUAL_HEADER_INCLUDED
+#define OPM_LINEARISEDBLACKOILRESIDUAL_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
@@ -44,7 +44,7 @@ namespace Opm
     /// FullyImplicitBlackoilSolver, and is separated from that
     /// class to facilitate the development of linear solver
     /// strategies outside that class.
-    struct FullyImplicitBlackoilResidual {
+    struct LinearisedBlackoilResidual {
         /// A type alias for the automatic differentiation type.
         typedef AutoDiffBlock<double> ADB;
         /// The material_balance_eq vector has one element for each
@@ -67,4 +67,4 @@ namespace Opm
 } // namespace Opm
 
 
-#endif // OPM_FULLYIMPLICITBLACKOILRESIDUAL_HEADER_INCLUDED
+#endif // OPM_LINEARISEDBLACKOILRESIDUAL_HEADER_INCLUDED

@@ -38,9 +38,9 @@ namespace Opm
     /// \param[in] residual   residual object containing A and b.
     /// \return               the solution x
     FullyImplicitSystemSolverSimple::SolutionVector
-    FullyImplicitSystemSolverSimple::linearSolve(const FullyImplicitBlackoilResidual& residual) const
+    FullyImplicitSystemSolverSimple::linearSolve(const LinearisedBlackoilResidual& residual) const
     {
-        typedef FullyImplicitBlackoilResidual::ADB ADB;
+        typedef LinearisedBlackoilResidual::ADB ADB;
         const int np = residual.material_balance_eq.size();
         ADB mass_res = residual.material_balance_eq[0];
         for (int phase = 1; phase < np; ++phase) {

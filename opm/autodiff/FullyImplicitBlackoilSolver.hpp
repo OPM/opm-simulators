@@ -23,7 +23,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/FullyImplicitBlackoilResidual.hpp>
+#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/FullyImplicitSystemSolverInterface.hpp>
 
 struct UnstructuredGrid;
@@ -139,7 +139,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
-        FullyImplicitBlackoilResidual residual_;
+        LinearisedBlackoilResidual residual_;
 
         // Private methods.
         SolutionState
