@@ -345,6 +345,10 @@ namespace Opm
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 
             }
+            // added by Paean
+            // std::cout << " output in simulator 1 " << std::endl;
+            // std::cin.ignore();
+            // added by Paean end
 
             SimulatorReport sreport;
 
@@ -409,6 +413,10 @@ namespace Opm
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
                 tstep_os.close();
             }
+            // added by Paean
+            // std::cout << " output in simulator 2 " << std::endl;
+            // std::cin.ignore();
+            // added by Paean end
 
             // advance to next timestep before reporting at this location
             // ++timer; // Commented out since this has temporarily moved to the main() function.
