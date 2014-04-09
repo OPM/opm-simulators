@@ -203,6 +203,10 @@ try
             outputWriter.writeInit(simtimer);
             outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
+        // added by Paean
+        // std::cout << " output in sim_fibo 1 " << std::endl;
+        // std::cin.ignore();
+        // added by Paean end
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil simulator(param,
@@ -217,6 +221,10 @@ try
         ++simtimer;
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
+        // added by Paean
+        // std::cout << " output in sim_fibo 2 " << std::endl;
+        // std::cin.ignore();
+        // added by Paean end
         fullReport += episodeReport;
     }
 
