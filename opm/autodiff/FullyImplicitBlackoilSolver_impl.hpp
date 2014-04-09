@@ -562,6 +562,7 @@ namespace {
     void FullyImplicitBlackoilSolver<T>::computeWellConnectionPressures(const SolutionState& state,
                                                                         const WellStateFullyImplicitBlackoil& xw)
     {
+        using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
         //    Note that some of the complexity of this part is due to the function
         //    taking std::vector<double> arguments, and not Eigen objects.
@@ -599,7 +600,7 @@ namespace {
         // b is row major, so can just copy data.
         std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);
         // Extract well connection depths.
-        const V depth = Eigen::Map<DataBlock>(grid_.cell_centroids, grid_.number_of_cells, grid_.dimensions).rightCols<1>();
+        const V depth = cellCentroidsZ(grid_);
         const V pdepth = subset(depth, well_cells);
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
         // Surface density.
@@ -607,7 +608,7 @@ namespace {
         // Gravity
         double grav = 0.0;
         const double* g = geo_.gravity();
-        const int dim = grid_.dimensions;
+        const int dim = dimensions(grid_);
         if (g) {
             // Guard against gravity in anything but last dimension.
             for (int dd = 0; dd < dim - 1; ++dd) {
@@ -702,10 +703,12 @@ namespace {
 
 
 
-    void FullyImplicitBlackoilSolver::addWellEq(const SolutionState& state,
+    template <class T>
+    void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
                                                 WellStateFullyImplicitBlackoil& xw)
     {
-        const int nc = grid_.number_of_cells;
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
@@ -953,8 +956,8 @@ namespace {
 
 
 
-
-    void FullyImplicitBlackoilSolver::updateWellControls(const ADB& bhp,
+    template<class T>
+    void FullyImplicitBlackoilSolver<T>::updateWellControls(const ADB& bhp,
                                                          const ADB& well_phase_flow_rate,
                                                          WellStateFullyImplicitBlackoil& xw) const
     {
@@ -1007,8 +1010,8 @@ namespace {
 
 
 
-
-    void FullyImplicitBlackoilSolver::addWellControlEq(const SolutionState& state,
+    template<class T>
+    void FullyImplicitBlackoilSolver<T>::addWellControlEq(const SolutionState& state,
                                                        const WellStateFullyImplicitBlackoil& xw)
     {
         // Handling BHP and SURFACE_RATE wells.
@@ -1052,8 +1055,8 @@ namespace {
 
 
 
-
-    void FullyImplicitBlackoilSolver::addOldWellEq(const SolutionState& state)
+    template<class T>
+    void FullyImplicitBlackoilSolver<T>::addOldWellEq(const SolutionState& state)
     {
         // -------- Well equation, and well contributions to the mass balance equations --------
 
