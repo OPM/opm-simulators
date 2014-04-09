@@ -1037,24 +1037,46 @@ namespace Opm
                                    const double gravity,
                                    State& state)
     {
-        initStateFromDeck(grid, props, newParserDeck, gravity, state);
+        initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell,
+                                  grid.number_of_faces, UgGridHelpers::faceCells(grid),
+                                  grid.face_centroids, grid.cell_centroids,grid.dimensions,
+                                  props, newParserDeck, gravity, state);
+    }
+
+    /// Initialize a blackoil state from input deck.
+    template <class FaceCells, class FCI, class CCI, class Props, class State>
+    void initBlackoilStateFromDeck(int number_of_cells,
+                                   const int* global_cell,
+                                   int number_of_faces,
+                                   FaceCells face_cells,
+                                   FCI begin_face_centroids,
+                                   CCI begin_cell_centroids,
+                                   int dimensions,
+                                   const Props& props,
+                                   Opm::DeckConstPtr newParserDeck,
+                                   const double gravity,
+                                   State& state)
+    {
+        initStateFromDeck(number_of_cells, global_cell, number_of_faces,
+                          face_cells, begin_face_centroids, begin_cell_centroids,
+                          dimensions, props, newParserDeck, gravity, state);
         if (newParserDeck->hasKeyword("RS")) {
             const std::vector<double>& rs_deck = newParserDeck->getKeyword("RS")->getSIDoubleData();
-            const int num_cells = grid.number_of_cells;
+            const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
-                int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                int c_deck = (global_cell == NULL) ? c : global_cell[c];
                 state.gasoilratio()[c] = rs_deck[c_deck];
             }
-            initBlackoilSurfvolUsingRSorRV(grid, props, state);
+            initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
             computeSaturation(props,state);
         } else if (newParserDeck->hasKeyword("RV")){
             const std::vector<double>& rv_deck = newParserDeck->getKeyword("RV")->getSIDoubleData();
-            const int num_cells = grid.number_of_cells;
+            const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
-                int c_deck = (grid.global_cell == NULL) ? c : grid.global_cell[c];
+                int c_deck = (global_cell == NULL) ? c : global_cell[c];
                 state.rv()[c] = rv_deck[c_deck];
             }
-            initBlackoilSurfvolUsingRSorRV(grid, props, state);
+            initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
             computeSaturation(props,state);
         }
         else {
