@@ -20,6 +20,8 @@
 #ifndef OPM_INITSTATE_HEADER_INCLUDED
 #define OPM_INITSTATE_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/Deck/Deck.hpp> // DeckConstPtr
+
 struct UnstructuredGrid;
 
 namespace Opm
@@ -223,6 +225,20 @@ namespace Opm
                                    int dimensions,
                                    const Props& props,
                                    const EclipseGridParser& deck,
+                                   const double gravity,
+                                   State& state);
+
+    /// Initialize a blackoil state from input deck.
+    template <class FaceCells, class FCI, class CCI, class Props, class State>
+    void initBlackoilStateFromDeck(int number_of_cells,
+                                   const int* global_cell,
+                                   int number_of_faces,
+                                   FaceCells face_cells,
+                                   FCI begin_face_centroids,
+                                   CCI begin_cell_centroids,
+                                   int dimensions,
+                                   const Props& props,
+                                   Opm::DeckConstPtr newParserDeck,
                                    const double gravity,
                                    State& state);
 } // namespace Opm
