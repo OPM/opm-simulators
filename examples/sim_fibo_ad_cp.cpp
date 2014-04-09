@@ -115,41 +115,33 @@ try
     std::shared_ptr<EclipseGridParser> deck;
     deck.reset(new EclipseGridParser(deck_filename));
     std::shared_ptr<const EclipseGridParser> cdeck(deck);
+
     // Grid init
-#if USE_NEW_PARSER
-	OPM_THROW(std::runtime_exception, 'New parser not supported yet');
-#else
     grid.reset(new Dune::CpGrid());
     grid->processEclipseFormat(*deck, 2e-12, false);
-#endif
 
-#if USE_NEW_PARSER
-	OPM_THROW(std::runtime_exception, 'New parser not supported yet');
-    Opm::EclipseWriter outputWriter(param, cdeck,
+
+    Opm::EclipseWriter outputWriter(param, newParserDeck,
                                     Opm::UgGridHelpers::numCells(*grid),
                                     Opm::UgGridHelpers::globalCell(*grid),
                                     Opm::UgGridHelpers::cartDims(*grid),
                                     Opm::UgGridHelpers::dimensions(*grid));
-#else
-    Opm::EclipseWriter outputWriter(param, cdeck,
-                                    Opm::UgGridHelpers::numCells(*grid),
-                                    Opm::UgGridHelpers::globalCell(*grid),
-                                    Opm::UgGridHelpers::cartDims(*grid),
-                                    Opm::UgGridHelpers::dimensions(*grid));
-#endif
+
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(*deck, Opm::UgGridHelpers::numCells(*grid),
+    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, Opm::UgGridHelpers::numCells(*grid),
                                                Opm::UgGridHelpers::globalCell(*grid),
                                                Opm::UgGridHelpers::cartDims(*grid),
                                                Opm::UgGridHelpers::beginCellCentroids(*grid),
                                                Opm::UgGridHelpers::dimensions(*grid), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *grid));
+    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(*deck));
+    rock_comp.reset(new RockCompressibility(newParserDeck));
+
     // Gravity.
-    gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(grid->numCells(), &(grid->globalCell())[0],
@@ -174,7 +166,7 @@ try
                                   grid->numFaces(), AutoDiffGrid::faceCells(*grid),
                                   grid->beginFaceCentroids(),
                                   grid->beginCellCentroids(), Dune::CpGrid::dimension,
-                                  *props, *deck, gravity[2], state);
+                                  *props, newParserDeck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -206,22 +198,12 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-#if USE_NEW_PARSER
-
-#else
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << "                        (number of epochs: "
-              << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
+              << std::flush;
 
-    SimulatorReport rep;
-    // With a deck, we may have more epochs etc.
     WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
-    int step = 0;
     SimulatorTimer simtimer;
-    // Use timer for last epoch to obtain total time.
-    deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-    simtimer.init(*deck);
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
     // initialize variables
@@ -256,7 +238,7 @@ try
         simtimer.setCurrentStepNum(reportStepIdx);
 
         if (reportStepIdx == 0) {
-            outputWriter.writeInit(simtimer, state, well_state.basicWellState());
+            outputWriter.writeInit(simtimer);
             outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
 
@@ -282,9 +264,9 @@ try
     if (output) {
         std::string filename = output_dir + "/walltime.param";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        rep.reportParam(tot_os);
+        fullReport.reportParam(tot_os);
+        warnIfUnusedParams(param);
     }
-#endif
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
