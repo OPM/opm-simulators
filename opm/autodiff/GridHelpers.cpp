@@ -114,7 +114,7 @@ void extractInternalFaces(const UnstructuredGrid& grid,
         }
     }
 }
-} // end namespace AutoDiffHelpers
+} // end namespace AutoDiffGrid
 
 #ifdef HAVE_DUNE_CORNERPOINT
 // Interface functions using CpGrid
@@ -273,6 +273,6 @@ CellVolumeIterator endCellVolumes(const Dune::CpGrid& grid)
 {
     return CellVolumeIterator(grid, numCells(grid));
 }
-}
-#endif
-}
+}       // end namespace AutoDiffGrid
+#endif  // HAVE_DUNE_CORNERPOINT
+}       // end namespace Opm
