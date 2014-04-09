@@ -273,6 +273,6 @@ CellVolumeIterator endCellVolumes(const Dune::CpGrid& grid)
 {
     return CellVolumeIterator(grid, numCells(grid));
 }
-#endif
 }
+#endif
 }
