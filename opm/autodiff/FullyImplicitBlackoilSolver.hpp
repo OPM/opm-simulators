@@ -24,8 +24,6 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
-#include <boost/any.hpp>
-
 struct UnstructuredGrid;
 struct Wells;
 
@@ -62,8 +60,6 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        /// \param[in] anyComm          A boost any parameter to use for passing information
-        ///                             about the parallelization to the linear solver.
         FullyImplicitBlackoilSolver(const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,

@@ -29,22 +29,16 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/well_controls.h>
 
-#ifdef HAVE_DUNE_CORNERPOINT
-#include <dune/grid/CpGrid.hpp>
-#endif
-
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-#include <type_traits>
 //#include <fstream>
 
 // A debugging utility.
@@ -1176,39 +1170,7 @@ namespace {
     }
 
 
-namespace
-{
 
-void resetAnyComm(boost::any&, const UnstructuredGrid&)
-{}
-
-struct NullDeleter
-{
-    void operator()(void*)
-    {}
-};
-
-#ifdef HAVE_DUNE_CORNERPOINT
-void resetAnyComm(boost::any& anyComm, const Dune::CpGrid& grid)
-{
-#if HAVE_MPI && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
-    if(grid.comm().size()>1)
-    {
-        NullDeleter null_delete;
-        Dune::CpGrid mgrid=const_cast<Dune::CpGrid&>(grid);
-        Dune::CpGrid::ParallelIndexSet* idx=&(mgrid.getCellIndexSet());
-        Dune::CpGrid::RemoteIndices* ridx=&(mgrid.getCellRemoteIndices());
-        anyComm=boost::any(Opm::ParallelISTLInformation(std::shared_ptr<Dune::CpGrid::ParallelIndexSet>(idx, null_delete),
-                                                        std::shared_ptr<Dune::CpGrid::RemoteIndices>(ridx, null_delete),
-                                                        grid.comm()));
-    }
-#else
-    (void*)(&anyComm);
-    (void*)(&grid);
-#endif
-}
-#endif
-}
 
 
     template<class T>
@@ -1224,15 +1186,12 @@ void resetAnyComm(boost::any& anyComm, const Dune::CpGrid& grid)
         // DUMP(total_residual);
 
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
-        boost::any anyComm;
-#if HAVE_MPI && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
-        resetAnyComm(anyComm, grid_);
-#endif
+
         V dx(V::Zero(total_residual.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               total_residual.value().data(), dx.data(), anyComm);
+                               total_residual.value().data(), dx.data());
         /*
         std::ofstream filestream("matrix.out");
         filestream << matr;
