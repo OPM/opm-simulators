@@ -73,6 +73,7 @@
 
 #include <memory>
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -130,6 +131,8 @@ try
         GridManager::createGrdecl(newParserDeck, g);
 
         grid->processEclipseFormat(g, 2e-12, false);
+
+        std::free(const_cast<double*>(g.mapaxes));
     }
 
 
