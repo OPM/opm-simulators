@@ -19,7 +19,7 @@
 
 
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
-#include <opm/autodiff/AutodiffHelpers.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
