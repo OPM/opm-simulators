@@ -1095,6 +1095,7 @@ namespace Opm
                     for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).krgmax_;
                 }
+            } else if (keyword == std::string("KRO") || keyword == std::string("IKRO") ) {
                 if (useLiquid && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 2))) {
                     itab = 3;
                     scaleparam.resize(number_of_cells);
