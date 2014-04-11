@@ -102,7 +102,7 @@ try
 
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // Grid init
     grid.reset(new GridManager(eclipseState->getEclipseGrid()));

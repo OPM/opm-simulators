@@ -99,7 +99,8 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    boost::scoped_ptr<EclipseGridParser> deck;
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr newParserDeck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
@@ -110,25 +111,24 @@ try
     double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
-        ParserPtr parser(new Opm::Parser());
-        eclipseState.reset( new EclipseState(parser->parseFile(deck_filename)));
+        newParserDeck = parser->parseFile(deck_filename);
+        eclipseState.reset(new EclipseState(newParserDeck));
 
-        deck.reset(new EclipseGridParser(deck_filename));
         // Grid init
-        grid.reset(new GridManager(*deck));
+        grid.reset(new GridManager(newParserDeck));
         // Rock and fluid init
-        props.reset(new IncompPropertiesFromDeck(*deck, *grid->c_grid()));
+        props.reset(new IncompPropertiesFromDeck(newParserDeck, *grid->c_grid()));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(*deck));
+        rock_comp.reset(new RockCompressibility(newParserDeck));
         // Gravity.
-        gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+        gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).
         if (param.has("init_saturation")) {
             initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         } else {
-            initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+            initStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
         }
     } else {
         // Grid init.
@@ -215,9 +215,7 @@ try
     }
 
 
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << "                        (number of epochs: "
-              << (use_deck ? deck->numberOfEpochs() : 1) << ")\n\n" << std::flush;
+    std::cout << "\n\n================    Starting main simulation loop     ===============\n";
 
     SimulatorReport rep;
     if (!use_deck) {
@@ -239,43 +237,26 @@ try
         well_state.init(0, state);
         rep = simulator.run(simtimer, state, well_state);
     } else {
-        // With a deck, we may have more epochs etc.
+        // With a deck, we may have more report steps etc.
         WellState well_state;
-        int step = 0;
+        Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
         SimulatorTimer simtimer;
-        // Use timer for last epoch to obtain total time.
-        deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-        simtimer.init(*deck);
-        const double total_time = simtimer.totalTime();
-        for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
-            // Set epoch index.
-            deck->setCurrentEpoch(epoch);
-
-            // Update the timer.
-            if (deck->hasField("TSTEP")) {
-                simtimer.init(*deck);
-            } else {
-                if (epoch != 0) {
-                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
-                }
-                simtimer.init(param);
-            }
-            simtimer.setCurrentStepNum(step);
-            simtimer.setTotalTime(total_time);
-
-            // Report on start of epoch.
-            std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                      << "\n                  (number of steps: "
-                      << simtimer.numSteps() - step << ")\n\n" << std::flush;
+        for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+            // Report on start of report step.
+            std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
+                      << "\n                  (number of steps left: "
+                      << timeMap->numTimesteps() - reportStepIdx << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
-            // properly transfer old well state to it every epoch,
+            // properly transfer old well state to it every report step,
             // since number of wells may change etc.
-            if (epoch == 0) {
+            if (reportStepIdx == 0) {
                 well_state.init(wells.c_wells(), state);
             }
+
+            simtimer.setCurrentStepNum(reportStepIdx);
 
             // Create and run simulator.
             SimulatorIncompTwophaseAd simulator(param,
@@ -287,7 +268,7 @@ try
                                                 bcs.c_bcs(),
                                                 linsolver,
                                                 grav);
-            if (epoch == 0) {
+            if (reportStepIdx == 0) {
                 warnIfUnusedParams(param);
             }
             SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
@@ -296,7 +277,6 @@ try
             }
             // Update total timing report and remember step number.
             rep += epoch_rep;
-            step = simtimer.currentStepNum();
         }
     }
 

@@ -30,11 +30,13 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -42,11 +44,9 @@
 
 struct SetupSimple {
     SetupSimple()
-        : param()
-        , deck()
     {
-        std::ifstream str("fluid.data");
-        deck.read(str);
+        Opm::ParserPtr parser(new Opm::Parser());
+        newParserDeck = parser->parseFile("fluid.data");
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
@@ -56,7 +56,7 @@ struct SetupSimple {
     }
 
     Opm::parameter::ParameterGroup  param;
-    Opm::EclipseGridParser          deck;
+    Opm::DeckConstPtr               newParserDeck;
 };
 
 
@@ -65,14 +65,14 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (deck)
-        , props(deck, *grid.c_grid(), param,
+        , grid (newParserDeck)
+        , props(newParserDeck, *grid.c_grid(), param,
                 param.getDefault("init_rock", false))
     {
     }
 
     using Setup::param;
-    using Setup::deck;
+    using Setup::newParserDeck;
 
     Opm::GridManager                grid;
     Opm::BlackoilPropertiesFromDeck props;
