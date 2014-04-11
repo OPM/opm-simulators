@@ -252,6 +252,20 @@ namespace Opm
                 }
             }
             do_eps_ = true;
+                 
+            // Make a consistency check of ENDNUM: #regions = NTENDP (ENDSCALE::3, TABDIMS::8)...      
+            if (newParserDeck->hasKeyword("ENDNUM")) {
+                const std::vector<int>& endnum = newParserDeck->getKeyword("ENDNUM")->getIntData();
+                int endnum_regions = *std::max_element(endnum.begin(), endnum.end());
+                if (endnum_regions > endscale.numEndscaleTables()) {
+                    OPM_THROW(std::runtime_error,
+                        "ENDNUM:  Found " << endnum_regions << 
+                         " regions.  Maximum allowed is " << endscale.numEndscaleTables() <<
+                         " (confer item 3 of keyword ENDSCALE).");  // TODO  See also item 8 of TABDIMS ...
+                }
+            }
+            // TODO: ENPTVD/ENKRVD: Too few tables gives a cryptical message from parser, 
+            //       superfluous tables are ignored by the parser without any warning ...
 
             initEPS(newParserDeck, number_of_cells, global_cell, begin_cell_centroids,
                     dimensions);
@@ -286,6 +300,20 @@ namespace Opm
                               "Currently hysteresis and relperm value scaling "
                               "cannot be combined.");
                 }
+                
+                if (newParserDeck->hasKeyword("IMBNUM")) {
+                    const std::vector<int>& imbnum = newParserDeck->getKeyword("IMBNUM")->getIntData();
+                    int imbnum_regions = *std::max_element(imbnum.begin(), imbnum.end());
+                    if (imbnum_regions > num_tables) {
+                        OPM_THROW(std::runtime_error,
+                            "IMBNUM:  Found " << imbnum_regions << 
+                            " regions.  Maximum allowed is " << num_tables <<
+                            " (number of tables provided by SWOF/SGOF).");
+                    }
+                    // TODO: Make actual use of IMBNUM.  For now we just consider the imbibition curve
+                    //       to be a scaled version of the drainage curve (confer Norne model).
+                }
+                
                 initEPSHyst(newParserDeck, number_of_cells, global_cell, begin_cell_centroids,
                             dimensions);
             }
@@ -1159,14 +1187,18 @@ namespace Opm
             }
         } else {
             const int dim = dimensions;
+            std::vector<int> endnum;
+            if ( newParserDeck->hasKeyword("ENDNUM")) {
+                endnum = newParserDeck->getKeyword("ENDNUM")->getIntData();
+            }
             for (int cell = 0; cell < number_of_cells; ++cell) {
-                int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
-                if (param_col[jtab][0] >= 0.0) {
+                int jtab = endnum.empty() ? 0 : endnum[cell];
+                if (jtab > 0 && param_col[jtab-1][0] >= 0.0) {
                     double zc = UgGridHelpers
                         ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
                                        dim-1);
-                    if (zc >= depth_col[jtab].front() && zc <= depth_col[jtab].back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth_col[jtab], param_col[jtab], zc);
+                    if (zc >= depth_col[jtab-1].front() && zc <= depth_col[jtab-1].back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth_col[jtab-1], param_col[jtab-1], zc);
                     }
                 }
             }
