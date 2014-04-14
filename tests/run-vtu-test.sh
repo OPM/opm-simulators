@@ -90,10 +90,10 @@ case "$TEST_TYPE" in
         echo "######################"
         echo "RND: '$RND'"
 
-        SIM_NAME=$(grep "Initializing the problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
+        SIM_NAME=$(grep "Applying the initial solution of the" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        NUM_TIMESTEPS=$(grep "Time step [0-9]* done" "test-$RND.log" | wc -l)
         TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
-        TEST_RESULT=$(ls "$TEST_RESULT".*)
+        TEST_RESULT=$(ls -- "$TEST_RESULT".*)
         rm "test-$RND.log"
         if ! test -r "$TEST_RESULT"; then
             echo "File $TEST_RESULT does not exist or is not readable"
@@ -119,9 +119,8 @@ case "$TEST_TYPE" in
             exit 1
         fi
 
-        grep "Initializing the problem" "test-$RND.log"
-        SIM_NAME=$(grep "Initializing the problem" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        NUM_TIMESTEPS=$(grep "Writing result" "test-$RND.log" | wc -l)
+        SIM_NAME=$(grep "Applying the initial solution of the" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
+        NUM_TIMESTEPS=$(grep "Time step [0-9]* done" "test-$RND.log" | wc -l)
         rm "test-$RND.log"
 
         echo "Simulation name: '$SIM_NAME'"
@@ -129,7 +128,7 @@ case "$TEST_TYPE" in
         for PROC_NUM in 0 1 2 3; do
             REF_FILE=$(printf "s%04d-p%04d-%s" "$NUM_PROCS" "$PROC_NUM" "$SIM_NAME")
             TEST_RESULT=$(printf "s%04d-p%04d-%s-%05i" "$NUM_PROCS" "$PROC_NUM" "$SIM_NAME" "$NUM_TIMESTEPS")
-            TEST_RESULT=$(ls "$TEST_RESULT".*)
+            TEST_RESULT=$(ls -- "$TEST_RESULT".*)
             if ! test -r "$TEST_RESULT"; then
                 echo "File $TEST_RESULT does not exist or is not readable"
                 exit 1

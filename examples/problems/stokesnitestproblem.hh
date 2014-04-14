@@ -95,7 +95,7 @@ class StokesNiTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
@@ -105,10 +105,12 @@ class StokesNiTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
-    enum { // Number of equations and grid dimension
-        numEq = GET_PROP_VALUE(TypeTag, NumEq),
-        dimWorld = GridView::dimensionworld };
     enum {
+        // Number of equations and grid dimension
+        numEq = GET_PROP_VALUE(TypeTag, NumEq),
+
+        dimWorld = GridView::dimensionworld,
+
         // primary variable indices
         pressureIdx = Indices::pressureIdx,
         moleFrac1Idx = Indices::moleFrac1Idx,
@@ -132,14 +134,8 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    StokesNiTestProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
-#endif
+    StokesNiTestProblem(Simulator &simulator)
+        : ParentType(simulator)
     {
         eps_ = 1e-6;
 

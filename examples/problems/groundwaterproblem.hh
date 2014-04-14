@@ -135,7 +135,7 @@ class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         pressure0Idx = Indices::pressure0Idx
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
@@ -151,14 +151,8 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    GroundWaterProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
-#endif
+    GroundWaterProblem(Simulator &simulator)
+        : ParentType(simulator)
     {
         eps_ = 1.0e-3;
 

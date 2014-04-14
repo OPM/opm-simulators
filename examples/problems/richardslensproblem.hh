@@ -52,10 +52,7 @@ NEW_TYPE_TAG(RichardsLensProblem, Richards);
 SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
 
 // Set the physical problem to be solved
-SET_PROP(RichardsLensProblem, Problem)
-{
-    typedef Ewoms::RichardsLensProblem<TypeTag> type;
-};
+SET_TYPE_PROP(RichardsLensProblem, Problem, Ewoms::RichardsLensProblem<TypeTag>);
 
 // Set the wetting phase
 SET_PROP(RichardsLensProblem, WettingPhase)
@@ -148,7 +145,7 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
@@ -180,15 +177,9 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    RichardsLensProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
-#endif
-          pnRef_(1e5)
+    RichardsLensProblem(Simulator &simulator)
+        : ParentType(simulator)
+        , pnRef_(1e5)
     {
         eps_ = 3e-6;
         pnRef_ = 1e5;

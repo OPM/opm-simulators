@@ -144,7 +144,7 @@ class Tutorial1Problem
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     // eWoms specific types are specified via the property system
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
@@ -164,15 +164,9 @@ class Tutorial1Problem
 
 public:
     //! The constructor of the problem
-    Tutorial1Problem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView()),
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView()),
-#endif
-          eps_(3e-6)
+    Tutorial1Problem(Simulator &simulator)
+        : ParentType(simulator)
+        , eps_(3e-6)
     {
         // Use an isotropic and homogeneous intrinsic permeability
         K_ = this->toDimMatrix_(1e-7);
