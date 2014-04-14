@@ -46,13 +46,18 @@ include (${project}-prereqs)
 include (CMakeLists_files.cmake)
 
 macro (config_hook)
-#	opm_need_version_of ("dune-common")
+	opm_need_version_of ("dune-common")
 endmacro (config_hook)
 
 macro (prereqs_hook)
 endmacro (prereqs_hook)
 
 macro (sources_hook)
+	if(DUNE_CORNERPOINT_FOUND OR dune-cornerpoint_FOUND)
+		list (APPEND examples_SOURCES
+			${PROJECT_SOURCE_DIR}/examples/sim_fibo_ad_cp.cpp
+			)
+	endif()
 endmacro (sources_hook)
 
 macro (fortran_hook)

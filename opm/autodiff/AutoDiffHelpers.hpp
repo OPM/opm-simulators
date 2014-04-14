@@ -21,6 +21,7 @@
 #define OPM_AUTODIFFHELPERS_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -58,30 +59,20 @@ struct HelperOps
     M fulldiv;
 
     /// Constructs all helper vectors and matrices.
-    HelperOps(const UnstructuredGrid& grid)
+    template<class Grid>
+    HelperOps(const Grid& grid)
     {
-        const int nc = grid.number_of_cells;
-        const int nf = grid.number_of_faces;
+        using namespace AutoDiffGrid;
+        const int nc = numCells(grid);
+        const int nf = numFaces(grid);
         // Define some neighbourhood-derived helper arrays.
         typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
         typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
         typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
-        TwoColInt nb = Eigen::Map<TwoColInt>(grid.face_cells, nf, 2);
-        // std::cout << "nb = \n" << nb << std::endl;
-        TwoColBool nbib = nb >= 0;
-        OneColBool ifaces = nbib.rowwise().all();
-        const int num_internal = ifaces.cast<int>().sum();
-        // std::cout << num_internal << " internal faces." << std::endl;
-        TwoColInt nbi(num_internal, 2);
-        internal_faces.resize(num_internal);
-        int fi = 0;
-        for (int f = 0; f < nf; ++f) {
-            if (ifaces[f]) {
-                internal_faces[fi] = f;
-                nbi.row(fi) = nb.row(f);
-                ++fi;
-            }
-        }
+        TwoColInt nbi;
+        extractInternalFaces(grid, internal_faces, nbi);
+        int num_internal=internal_faces.size();
+        
         // std::cout << "nbi = \n" << nbi << std::endl;
         // Create matrices.
         ngrad.resize(num_internal, nc);
@@ -103,6 +94,7 @@ struct HelperOps
         div = ngrad.transpose();
         std::vector<Tri> fullngrad_tri;
         fullngrad_tri.reserve(2*nf);
+        typename ADFaceCellTraits<Grid>::Type nb=faceCells(grid);
         for (int i = 0; i < nf; ++i) {
             if (nb(i,0) >= 0) {
                 fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
@@ -127,12 +119,16 @@ struct HelperOps
     public:
         typedef AutoDiffBlock<Scalar> ADB;
 
-        UpwindSelector(const UnstructuredGrid& g,
+        template<class Grid>
+        UpwindSelector(const Grid& g,
                        const HelperOps&        h,
                        const typename ADB::V&  ifaceflux)
         {
+            using namespace AutoDiffGrid;
             typedef HelperOps::IFaces::Index IFIndex;
             const IFIndex nif = h.internal_faces.size();
+            typename ADFaceCellTraits<Grid>::Type
+                face_cells = faceCells(g);
             assert(nif == ifaceflux.size());
 
             // Define selector structure.
@@ -140,8 +136,8 @@ struct HelperOps
             std::vector<Triplet> s;  s.reserve(nif);
             for (IFIndex iface = 0; iface < nif; ++iface) {
                 const int f  = h.internal_faces[iface];
-                const int c1 = g.face_cells[2*f + 0];
-                const int c2 = g.face_cells[2*f + 1];
+                const int c1 = face_cells(f,0);
+                const int c2 = face_cells(f,1);
 
                 assert ((c1 >= 0) && (c2 >= 0));
 
@@ -152,7 +148,7 @@ struct HelperOps
             }
 
             // Assemble explicit selector operator.
-            select_.resize(nif, g.number_of_cells);
+            select_.resize(nif, numCells(g));
             select_.setFromTriplets(s.begin(), s.end());
         }
 

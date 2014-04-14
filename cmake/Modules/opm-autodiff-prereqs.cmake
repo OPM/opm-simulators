@@ -3,6 +3,7 @@
 
 # defines that must be present in config.h for our headers
 set (opm-autodiff_CONFIG_VAR
+  HAVE_DUNE_CORNERPOINT
 	)
 
 # dependencies
@@ -17,6 +18,7 @@ set (opm-autodiff_DEPS
 	# DUNE prerequisites
 	"dune-common REQUIRED;
 	dune-istl REQUIRED;
+        dune-cornerpoint;
 	opm-core REQUIRED"
 	# Eigen
 	"Eigen3 3.1.2 "
