@@ -53,16 +53,9 @@ class FingerProblem;
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(FingerBaseProblem);
+NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(FingerGridCreator));
 
-// set the GridCreator property
-SET_TYPE_PROP(FingerBaseProblem, GridCreator, Ewoms::FingerGridCreator<TypeTag>);
-
-// Retrieve the grid type from the grid creator
-SET_TYPE_PROP(FingerBaseProblem, Grid,
-              typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
-
-// declare the properties specific for the finger problem
+// declare the properties used by the finger problem
 NEW_PROP_TAG(InitialWaterSaturation);
 
 // Set the problem property
@@ -95,8 +88,7 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
-        Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx> Traits;
 
     // use the parker-lenhard hysteresis law
     typedef Opm::ParkerLenhard<Traits> ParkerLenhard;
@@ -131,12 +123,11 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 1e3);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
-} // namespace Properties
-} // namespace Opm
+}} // namespace Opm, Properties
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Two-phase problem featuring some gravity-driven saturation
  *        fingers.
@@ -163,7 +154,7 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
@@ -192,7 +183,6 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
     //!\endcond
 
@@ -200,14 +190,8 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    FingerProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
-#endif
+    FingerProblem(Simulator &simulator)
+        : ParentType(simulator)
     {
         eps_ = 3e-6;
         FluidSystem::init();
@@ -280,7 +264,7 @@ public:
     void postTimeStep()
     {
         // update the history of the hysteresis law
-        ElementContext elemCtx(*this);
+        ElementContext elemCtx(this->simulator());
 
         auto elemIt = this->gridView().template begin<0>();
         const auto &elemEndIt = this->gridView().template end<0>();

@@ -24,6 +24,7 @@
 #define EWOMS_LENS_GRID_CREATOR_HH
 
 #include <ewoms/parallel/mpihelper.hh>
+#include <ewoms/io/basegridcreator.hh>
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
@@ -36,10 +37,15 @@
 namespace Ewoms {
 template <class TypeTag>
 class LensProblem;
+
+template <class TypeTag>
+class LensGridCreator;
 } // namespace Ewoms
 
 namespace Opm {
 namespace Properties {
+NEW_TYPE_TAG(LensGridCreator);
+
 // declare the properties required by the for the lens grid creator
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
@@ -53,6 +59,10 @@ NEW_PROP_TAG(CellsY);
 NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
+
+// set the Grid and GridCreator properties
+SET_TYPE_PROP(LensGridCreator, Grid, Dune::YaspGrid<2>);
+SET_TYPE_PROP(LensGridCreator, GridCreator, Ewoms::LensGridCreator<TypeTag>);
 }} // namespace Opm, Properties
 
 namespace Ewoms {
@@ -62,15 +72,17 @@ namespace Ewoms {
  * \brief Helper class for grid instantiation of the lens problem.
  */
 template <class TypeTag>
-class LensGridCreator
+class LensGridCreator : public BaseGridCreator<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
-    static const int dim = 2;
+public:
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+
+private:
+    static const int dim = Grid::dimension;
 
 public:
-    typedef Dune::YaspGrid<dim> Grid;
-
     /*!
      * \brief Register all run-time parameters for the grid creator.
      */
@@ -142,8 +154,8 @@ public:
     /*!
      * \brief Return a reference to the grid.
      */
-    static Grid &grid()
-    { return *grid_; }
+    static Grid* gridPointer()
+    { return grid_; }
 
     /*!
      * \brief Distribute the grid (and attached data) over all

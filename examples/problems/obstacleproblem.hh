@@ -162,24 +162,18 @@ class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         N2Idx = FluidSystem::N2Idx
     };
 
-    typedef Dune::FieldVector<typename GridView::Grid::ctype, dimWorld> GlobalPosition;
+    typedef Dune::FieldVector<typename GridView::ctype, dimWorld> GlobalPosition;
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
 public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    ObstacleProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
-#endif
+    ObstacleProblem(Simulator &simulator)
+        : ParentType(simulator)
     {
         eps_ = 1e-6;
         temperature_ = 273.15 + 25; // -> 25°C

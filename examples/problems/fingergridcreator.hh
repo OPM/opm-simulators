@@ -24,6 +24,7 @@
 #define EWOMS_FINGER_GRID_CREATOR_HH
 
 #include <ewoms/parallel/mpihelper.hh>
+#include <ewoms/io/basegridcreator.hh>
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
@@ -33,21 +34,23 @@
 
 #include <vector>
 
-namespace Ewoms {
 // some hacky defines for the grid creator
 #define FINGER_DIM 2
 #define FINGER_CUBES 1
+
+namespace Ewoms {
+template <class TypeTag>
+class FingerGridCreator;
 
 template <class TypeTag>
 class FingerProblem;
 } // namespace Ewoms
 
 namespace Opm {
-//////////
-// Specify the properties for the finger problem
-//////////
 namespace Properties {
 // declare the properties required by the for the finger grid creator
+NEW_TYPE_TAG(FingerGridCreator);
+
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
 
@@ -60,22 +63,25 @@ NEW_PROP_TAG(CellsY);
 NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
-} // namespace Properties
-} // namespace Opm
+
+SET_TYPE_PROP(FingerGridCreator, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
+SET_TYPE_PROP(FingerGridCreator, GridCreator, Ewoms::FingerGridCreator<TypeTag>);
+
+}} // namespace Opm, Properties
 
 namespace Ewoms {
 /*!
  * \brief Helper class for grid instantiation of the finger problem.
  */
 template <class TypeTag>
-class FingerGridCreator
+class FingerGridCreator : public BaseGridCreator<TypeTag>
 {
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
     enum { dim = FINGER_DIM };
 
 public:
-    typedef Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming> Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
 
     /*!
      * \brief Register all run-time parameters for the grid creator.
@@ -187,57 +193,44 @@ public:
                         v[5] = i5;
                         v[6] = i6;
                         v[7] = i7;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::cube, 3), v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube, 3), v);
 
 #else
                         v[0] = i0;
                         v[1] = i1;
                         v[2] = i2;
                         v[3] = i4;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 
                         v[0] = i4;
                         v[1] = i5;
                         v[2] = i6;
                         v[3] = i2;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 
                         v[0] = i2;
                         v[1] = i5;
                         v[2] = i4;
                         v[3] = i1;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 
                         v[0] = i2;
                         v[1] = i3;
                         v[2] = i7;
                         v[3] = i5;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 
                         v[0] = i5;
                         v[1] = i7;
                         v[2] = i6;
                         v[3] = i2;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 
                         v[0] = i1;
                         v[1] = i3;
                         v[2] = i5;
                         v[3] = i2;
-                        factory.insertElement(
-                            Dune::GeometryType(Dune::GeometryType::simplex, 3),
-                            v);
+                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
 #endif
                     }
                 }
@@ -254,20 +247,17 @@ public:
                     v[1] = i1;
                     v[2] = i2;
                     v[3] = i3;
-                    factory.insertElement(
-                        Dune::GeometryType(Dune::GeometryType::cube, 2), v);
+                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube, 2), v);
 #else
                     v[0] = i0;
                     v[1] = i1;
                     v[2] = i2;
-                    factory.insertElement(
-                        Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
+                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
 
                     v[0] = i1;
                     v[1] = i3;
                     v[2] = i2;
-                    factory.insertElement(
-                        Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
+                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
 #endif
                 }
             }
@@ -280,8 +270,8 @@ public:
     /*!
      * \brief Return a reference to the grid.
      */
-    static Grid &grid()
-    { return *grid_; }
+    static Grid* gridPointer()
+    { return grid_; }
 
     /*!
      * \brief Distribute the grid (and attached data) over all

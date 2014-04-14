@@ -53,7 +53,7 @@ class LensProblem;
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(LensBaseProblem);
+NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridCreator));
 
 // declare the properties specific for the lens problem
 NEW_PROP_TAG(LensLowerLeftX);
@@ -62,13 +62,6 @@ NEW_PROP_TAG(LensLowerLeftZ);
 NEW_PROP_TAG(LensUpperRightX);
 NEW_PROP_TAG(LensUpperRightY);
 NEW_PROP_TAG(LensUpperRightZ);
-
-// set the GridCreator property
-SET_TYPE_PROP(LensBaseProblem, GridCreator, Ewoms::LensGridCreator<TypeTag>);
-
-// Retrieve the grid type from the grid creator
-SET_TYPE_PROP(LensBaseProblem, Grid,
-              typename GET_PROP_TYPE(TypeTag, GridCreator)::Grid);
 
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Ewoms::LensProblem<TypeTag>);
@@ -189,7 +182,7 @@ class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, TimeManager) TimeManager;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
@@ -223,14 +216,8 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    LensProblem(TimeManager &timeManager)
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafGridView())
-#else
-        : ParentType(timeManager,
-                     GET_PROP_TYPE(TypeTag, GridCreator)::grid().leafView())
-#endif
+    LensProblem(Simulator &simulator)
+        : ParentType(simulator)
     {
         eps_ = 3e-6;
         FluidSystem::init();
