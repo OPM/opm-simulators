@@ -211,6 +211,7 @@ try
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  linsolver,
+                                                 grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         ++simtimer;

@@ -23,14 +23,24 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpihelper.hh>
+#else
+#include <dune/common/mpihelper.hh>
+#endif
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
-//#include <opm/core/grid/GridManager.hpp>
+#include <opm/core/grid/cornerpoint_grid.h>
+
+#include <opm/core/grid/GridManager.hpp>
+
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/common/GridAdapter.hpp>
+
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -63,6 +73,7 @@
 
 #include <memory>
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -112,13 +123,17 @@ try
 
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-    std::shared_ptr<EclipseGridParser> deck;
-    deck.reset(new EclipseGridParser(deck_filename));
-    std::shared_ptr<const EclipseGridParser> cdeck(deck);
 
     // Grid init
     grid.reset(new Dune::CpGrid());
-    grid->processEclipseFormat(*deck, 2e-12, false);
+    {
+        grdecl g = {};
+        GridManager::createGrdecl(newParserDeck, g);
+
+        grid->processEclipseFormat(g, 2e-12, false);
+
+        std::free(const_cast<double*>(g.mapaxes));
+    }
 
 
     Opm::EclipseWriter outputWriter(param, newParserDeck,

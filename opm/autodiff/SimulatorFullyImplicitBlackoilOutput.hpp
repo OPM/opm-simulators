@@ -4,6 +4,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/DataMap.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
