@@ -201,7 +201,7 @@ namespace Opm
                 double
                 operator()(const double /* depth */,
                            const double /* press */,
-                           const double sat = 0.0) const
+                           const double /* sat */ = 0.0) const
                 {
                     return 0.0;
                 }
