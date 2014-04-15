@@ -105,60 +105,75 @@ find_library (OPM_JSON_LIBRARY
 
 # get the prerequisite CJSON library
 if (NOT CJSON_FOUND)
-  find_package (cjson REQUIRED ${OPM_PARSER_QUIET})
+  find_package (cjson ${OPM_PARSER_QUIET})
 endif ()
 
-# get the prerequisite Boost libraries
-if (NOT Boost_FOUND)
-  find_package(Boost 1.44.0
-        COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
-endif ()
+if (NOT CJSON_FOUND)
+  set(opm-parser_FOUND "0")
+else()
+  # get the prerequisite Boost libraries
+  if (NOT Boost_FOUND)
+    find_package(Boost 1.44.0
+      COMPONENTS filesystem date_time system unit_test_framework ${OPM_PARSER_QUIET})
+  endif ()
 
-# setup list of all required libraries to link with opm-parser. notice that
-# we use the plural form to get *all* the libraries needed by cjson
-set (OPM_PARSER_INCLUDE_DIRS
-  ${OPM_PARSER_INCLUDE_DIR}
-  ${CJSON_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS})
+  if (NOT Boost_FOUND)
+    set(opm-parser_FOUND "0")
+  else()
+    # setup list of all required libraries to link with opm-parser. notice that
+    # we use the plural form to get *all* the libraries needed by cjson
+    set (OPM_PARSER_INCLUDE_DIRS
+      ${OPM_PARSER_INCLUDE_DIR}
+      ${CJSON_INCLUDE_DIRS}
+      ${Boost_INCLUDE_DIRS})
 
-set (OPM_PARSER_LIBRARIES
-  ${OPM_PARSER_LIBRARY}
-  ${OPM_JSON_LIBRARY}
-  ${CJSON_LIBRARIES}
-  ${Boost_LIBRARIES})
+    set (OPM_PARSER_LIBRARIES
+      ${OPM_PARSER_LIBRARY}
+      ${OPM_JSON_LIBRARY}
+      ${CJSON_LIBRARIES}
+      ${Boost_LIBRARIES})
 
-# see if we can compile a minimum example
-# CMake logical test doesn't handle lists (sic)
-if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
+    # see if we can compile a minimum example
+    # CMake logical test doesn't handle lists (sic)
+    if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
           OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
-  include (CMakePushCheckState)
-  include (CheckCSourceCompiles)
-  cmake_push_check_state ()
-  set (CMAKE_REQUIRED_INCLUDES ${OPM_PARSER_INCLUDE_DIRS})
-  set (CMAKE_REQUIRED_LIBRARIES ${OPM_PARSER_LIBRARIES})
+      include (CMakePushCheckState)
+      include (CheckCSourceCompiles)
+      cmake_push_check_state ()
+      set (CMAKE_REQUIRED_INCLUDES ${OPM_PARSER_INCLUDE_DIRS})
+      set (CMAKE_REQUIRED_LIBRARIES ${OPM_PARSER_LIBRARIES})
 
-  check_cxx_source_compiles (
-"#include <cstdlib>
+      check_cxx_source_compiles (
+        "#include <cstdlib>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 int main (void) {
    return EXIT_SUCCESS;
 }" HAVE_OPM_PARSER)
-  cmake_pop_check_state ()
-else ()
-  # clear the cache so the find probe is attempted again if files becomes
-  # available (only upon a unsuccessful *compile* should we disable further
-  # probing)
-  set (HAVE_OPM_PARSER)
-  unset (HAVE_OPM_PARSER CACHE)
-endif ()
+      cmake_pop_check_state ()
+    else ()
+      # clear the cache so the find probe is attempted again if files becomes
+      # available (only upon a unsuccessful *compile* should we disable further
+      # probing)
+      set (HAVE_OPM_PARSER)
+      unset (HAVE_OPM_PARSER CACHE)
+    endif ()
 
-# if the test program didn't compile, but was required to do so, bail
-# out now and display an error; otherwise limp on
-set (OPM_PARSER_FIND_REQUIRED ${opm-parser_FIND_REQUIRED})
-set (OPM_PARSER_FIND_QUIETLY ${opm-parser_FIND_QUIETLY})
-find_package_handle_standard_args (OPM_PARSER
-  DEFAULT_MSG
-  OPM_PARSER_INCLUDE_DIRS OPM_PARSER_LIBRARIES HAVE_OPM_PARSER
-  )
+    # if the test program didn't compile, but was required to do so, bail
+    # out now and display an error; otherwise limp on
+    set (OPM_PARSER_FIND_REQUIRED ${opm-parser_FIND_REQUIRED})
+    set (OPM_PARSER_FIND_QUIETLY ${opm-parser_FIND_QUIETLY})
+    find_package_handle_standard_args (OPM_PARSER
+      DEFAULT_MSG
+      OPM_PARSER_INCLUDE_DIRS OPM_PARSER_LIBRARIES HAVE_OPM_PARSER
+      )
+  endif() # BOOST
+endif() # cJSON
+
 set (opm-parser_FOUND ${OPM_PARSER_FOUND})
+if(OPM_PARSER_FOUND)
+  set (HAVE_OPM_PARSER "1")
+else()
+  set (HAVE_OPM_PARSER "0")
+endif()
+set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER")
