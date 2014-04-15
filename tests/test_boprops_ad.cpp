@@ -46,7 +46,7 @@ struct SetupSimple {
     SetupSimple()
     {
         Opm::ParserPtr parser(new Opm::Parser());
-        newParserDeck = parser->parseFile("fluid.data");
+        deck = parser->parseFile("fluid.data");
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
@@ -56,7 +56,7 @@ struct SetupSimple {
     }
 
     Opm::parameter::ParameterGroup  param;
-    Opm::DeckConstPtr               newParserDeck;
+    Opm::DeckConstPtr               deck;
 };
 
 
@@ -65,14 +65,14 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (newParserDeck)
-        , props(newParserDeck, *grid.c_grid(), param,
+        , grid (deck)
+        , props(deck, *grid.c_grid(), param,
                 param.getDefault("init_rock", false))
     {
     }
 
     using Setup::param;
-    using Setup::newParserDeck;
+    using Setup::deck;
 
     Opm::GridManager                grid;
     Opm::BlackoilPropertiesFromDeck props;

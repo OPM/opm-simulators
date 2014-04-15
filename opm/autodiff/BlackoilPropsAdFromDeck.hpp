@@ -54,13 +54,13 @@ namespace Opm
     {
     public:
         /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
         /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
 #endif

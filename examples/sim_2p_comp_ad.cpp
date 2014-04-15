@@ -92,7 +92,7 @@ try
         // The current code for the non-deck case fails for unknown reasons.
         OPM_THROW(std::runtime_error, "This simulator cannot run without a deck with wells. Use deck_filename to specify deck.");
     }
-    Opm::DeckConstPtr newParserDeck;
+    Opm::DeckConstPtr deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
@@ -104,24 +104,24 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::ParserPtr parser(new Opm::Parser());
-        Opm::DeckConstPtr newParserDeck = parser->parseFile( deck_filename );
-        eclipseState.reset(new EclipseState(newParserDeck));
+        Opm::DeckConstPtr deck = parser->parseFile( deck_filename );
+        eclipseState.reset(new EclipseState(deck));
 
         // Grid init
-        grid.reset(new GridManager(newParserDeck));
+        grid.reset(new GridManager(deck));
         // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
+        props.reset(new BlackoilPropertiesFromDeck(deck, *grid->c_grid(), param));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(newParserDeck));
+        rock_comp.reset(new RockCompressibility(deck));
         // Gravity.
-        gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+        gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).
         if (param.has("init_saturation")) {
             initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         } else {
-            initStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
+            initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
         }
         initBlackoilSurfvol(*grid->c_grid(), *props, state);
     } else {
@@ -227,7 +227,7 @@ try
     } else {
         // With a deck, we may have more epochs etc.
         WellState well_state;
-        Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
+        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
         SimulatorTimer simtimer;
 
         for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
