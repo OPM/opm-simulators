@@ -30,7 +30,7 @@
 // the deprecated member anyway (in this compilation unit)
 #define DUNE_COMMON_FIELDVECTOR_SIZE_IS_METHOD 1
 
-#include "dune_disable_pragmas.h"
+#include "disable_warning_pragmas.h"
 
 // TODO: clean up includes.
 #include <dune/common/deprecated.hh>
@@ -51,7 +51,7 @@
 #include <dune/istl/paamg/fastamg.hh>
 #endif
 
-#include "dune_reenable_pragmas.h"
+#include "reenable_warning_pragmas.h"
 
 #include <stdexcept>
 #include <iostream>
