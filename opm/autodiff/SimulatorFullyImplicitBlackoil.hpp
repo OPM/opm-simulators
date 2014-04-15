@@ -40,9 +40,12 @@ namespace Opm
     struct SimulatorReport;
 
     /// Class collecting all necessary components for a two-phase simulation.
+    template<class T>
     class SimulatorFullyImplicitBlackoil
     {
     public:
+        /// \brief The type of the grid that we use.
+        typedef T Grid;
         /// Initialise from parameters and objects to observe.
         /// \param[in] param       parameters, this class accepts the following:
         ///     parameter (default)            effect
@@ -66,7 +69,7 @@ namespace Opm
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                       const UnstructuredGrid& grid,
+                                       const Grid& grid,
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
@@ -92,4 +95,5 @@ namespace Opm
 
 } // namespace Opm
 
+#include "SimulatorFullyImplicitBlackoil_impl.hpp"
 #endif // OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED

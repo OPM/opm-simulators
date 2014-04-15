@@ -47,9 +47,12 @@ namespace Opm {
     ///
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
+    template<class T>
     class FullyImplicitBlackoilSolver
     {
     public:
+        /// \brief The type of the grid that we use.
+        typedef T Grid;
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -59,7 +62,7 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+        FullyImplicitBlackoilSolver(const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
@@ -120,7 +123,7 @@ namespace Opm {
                Gas   = BlackoilPropsAdInterface::Gas  };
 
         // Member data
-        const UnstructuredGrid&         grid_;
+        const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
@@ -264,5 +267,6 @@ namespace Opm {
     };
 } // namespace Opm
 
+#include "FullyImplicitBlackoilSolver_impl.hpp"
 
 #endif // OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED

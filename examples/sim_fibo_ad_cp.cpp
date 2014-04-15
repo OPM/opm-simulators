@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,12 +17,30 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+
+#if HAVE_CONFIG_H
 #include "config.h"
+#endif // HAVE_CONFIG_H
+
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
+#include <dune/common/parallel/mpihelper.hh>
+#else
+#include <dune/common/mpihelper.hh>
+#endif
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
+#include <opm/core/grid/cornerpoint_grid.h>
+
 #include <opm/core/grid/GridManager.hpp>
+
+#include <dune/grid/CpGrid.hpp>
+#include <dune/grid/common/GridAdapter.hpp>
+
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -37,13 +56,13 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -54,6 +73,7 @@
 
 #include <memory>
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -78,6 +98,7 @@ int
 main(int argc, char** argv)
 try
 {
+    Dune::MPIHelper& helper= Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
     std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
@@ -90,7 +111,7 @@ try
         OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
                   "Specify the deck with deck_filename=deckname.data (for example).");
     }
-    std::shared_ptr<GridManager> grid;
+    std::shared_ptr<Dune::CpGrid> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
     std::shared_ptr<BlackoilPropsAdInterface> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
@@ -104,13 +125,30 @@ try
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
 
     // Grid init
-    grid.reset(new GridManager(newParserDeck));
-    Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
+    grid.reset(new Dune::CpGrid());
+    {
+        grdecl g = {};
+        GridManager::createGrdecl(newParserDeck, g);
+
+        grid->processEclipseFormat(g, 2e-12, false);
+
+        std::free(const_cast<double*>(g.mapaxes));
+    }
+
+
+    Opm::EclipseWriter outputWriter(param, newParserDeck,
+                                    Opm::UgGridHelpers::numCells(*grid),
+                                    Opm::UgGridHelpers::globalCell(*grid),
+                                    Opm::UgGridHelpers::cartDims(*grid),
+                                    Opm::UgGridHelpers::dimensions(*grid));
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid->c_grid()));
-
+    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, Opm::UgGridHelpers::numCells(*grid),
+                                               Opm::UgGridHelpers::globalCell(*grid),
+                                               Opm::UgGridHelpers::cartDims(*grid),
+                                               Opm::UgGridHelpers::beginCellCentroids(*grid),
+                                               Opm::UgGridHelpers::dimensions(*grid), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
@@ -121,20 +159,29 @@ try
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(grid->numCells(), &(grid->globalCell())[0],
+                       &(grid->logicalCartesianSize()[0]),
+                       grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                       grid->beginFaceCentroids(),
+                       grid->beginCellCentroids(), Dune::CpGrid::dimension,
+                       *props, param, gravity[2], state);
+        initBlackoilSurfvol(grid->numCells(), *props, state);
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         const PhaseUsage pu = props->phaseUsage();
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
-            const int nc = grid->c_grid()->number_of_cells;
+            const int nc = grid->numCells();
             for (int c = 0; c < nc; ++c) {
                 state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
                     / state.surfacevol()[c*np + pu.phase_pos[Oil]];
             }
         }
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
+        initBlackoilStateFromDeck(grid->numCells(), &(grid->globalCell())[0],
+                                  grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                                  grid->beginFaceCentroids(),
+                                  grid->beginCellCentroids(), Dune::CpGrid::dimension,
+                                  *props, newParserDeck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -142,7 +189,6 @@ try
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
-    NewtonIterationBlackoilSimple fis_solver(linsolver);
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
@@ -187,9 +233,14 @@ try
                   << "---------------------------------------------------------------\n"
                   << "\n";
 
-        WellsManager wells(eclipseState,
-                           reportStepIdx,
-                           *grid->c_grid(),
+        // Create new wells, well_state
+        WellsManager wells(eclipseState, reportStepIdx, Opm::UgGridHelpers::numCells(*grid), 
+                           Opm::UgGridHelpers::globalCell(*grid),
+                           Opm::UgGridHelpers::cartDims(*grid),
+                           Opm::UgGridHelpers::dimensions(*grid),
+                           Opm::UgGridHelpers::beginCellCentroids(*grid),
+                           Opm::UgGridHelpers::cell2Faces(*grid),
+                           Opm::UgGridHelpers::beginFaceCentroids(*grid),
                            props->permeability());
 
         if (reportStepIdx == 0) {
@@ -207,13 +258,13 @@ try
         }
 
         // Create and run simulator.
-        SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
-                                                 *grid->c_grid(),
-                                                 *new_props,
-                                                 rock_comp->isActive() ? rock_comp.get() : 0,
-                                                 wells,
-                                                 fis_solver,
-                                                 grav);
+        SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
+                                                               *grid,
+                                                               *new_props,
+                                                               rock_comp->isActive() ? rock_comp.get() : 0,
+                                                               wells,
+                                                               linsolver,
+                                                               grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         ++simtimer;
