@@ -525,8 +525,8 @@ namespace Opm
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
-                                const int tab_size = newParserDeck->getKeyword("RSVD")->size();
-                                if (newParserDeck->hasKeyword("RSVD") && rec[i].live_oil_table_index <= tab_size) { 
+                                if (newParserDeck->hasKeyword("RSVD") &&
+                                    size_t(rec[i].live_oil_table_index) <= newParserDeck->getKeyword("RSVD")->size()) { 
                                     Opm::SimpleTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
                                     std::vector<double> vd(rsvd.getColumn("vd"));
                                     std::vector<double> rs(rsvd.getColumn("rs"));
@@ -556,8 +556,8 @@ namespace Opm
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
-                                const int tab_size = newParserDeck->getKeyword("RVVD")->size();
-                                if (newParserDeck->hasKeyword("RVVD") && rec[i].wet_gas_table_index <= tab_size) { 
+                                if (newParserDeck->hasKeyword("RVVD") &&
+                                    size_t(rec[i].wet_gas_table_index) <= newParserDeck->getKeyword("RVVD")->size()) { 
                                     Opm::SimpleTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
                                     std::vector<double> vd(rvvd.getColumn("vd"));
                                     std::vector<double> rv(rvvd.getColumn("rv"));
