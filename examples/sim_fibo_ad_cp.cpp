@@ -101,7 +101,10 @@ int
 main(int argc, char** argv)
 try
 {
-    Dune::MPIHelper& helper= Dune::MPIHelper::instance(argc, argv);
+    // Must ensure an instance of the helper is created to initialise MPI,
+    // but we don't use the helper here.
+    // Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
+    Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
     std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
