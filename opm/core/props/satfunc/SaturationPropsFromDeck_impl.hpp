@@ -186,6 +186,19 @@ namespace Opm
         if (!phase_usage_.phase_used[Liquid]) {
             OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  oil phase must be active.");
         }
+        
+        // Check SATOPTS status
+        bool hysteresis_switch = false;
+        if (newParserDeck->hasKeyword("SATOPTS")) {
+            const std::vector<std::string>& satopts = newParserDeck->getKeyword("SATOPTS")->getStringData();
+            for (int i = 0; i < satopts.size(); ++i) {
+                if (satopts[i] == std::string("HYSTER")) {
+                    hysteresis_switch = true;
+                } else {
+                    OPM_THROW(std::runtime_error, "Keyword SATOPTS:  Switch " << satopts[i] << " not supported. ");
+                }
+            }
+        }
 
         // Obtain SATNUM, if it exists, and create cell_to_func_.
         // Otherwise, let the cell_to_func_ mapping be just empty.
@@ -228,9 +241,30 @@ namespace Opm
         for (int table = 0; table < num_tables; ++table) {
             satfuncset_[table].init(newParserDeck, table, phase_usage_, samples);
         }
+        
+        // Check EHYSTR status
+        do_hyst_ = false;
+        if (hysteresis_switch && newParserDeck->hasKeyword("EHYSTR")) {
+           const int& relative_perm_hyst = newParserDeck->getKeyword("EHYSTR")->getRecord(0)->getItem(1)->getInt(0);
+           const std::string& limiting_hyst_flag = newParserDeck->getKeyword("EHYSTR")->getRecord(0)->getItem(4)->getString(0);
+           if (relative_perm_hyst != int(0)) {
+               OPM_THROW(std::runtime_error, "Keyword EHYSTR, item 2: Flag '" << relative_perm_hyst << "' found, only '0' is supported. ");
+           }          
+           if (limiting_hyst_flag != std::string("KR")) {
+               OPM_THROW(std::runtime_error, "Keyword EHYSTR, item 5: Flag '" << limiting_hyst_flag << "' found, only 'KR' is supported. ");
+           }                   
+           if ( ! newParserDeck->hasKeyword("ENDSCALE")) {
+               // TODO When use of IMBNUM is implemented, this constraint will be lifted.
+               OPM_THROW(std::runtime_error, "Currently hysteris effects is only available through endpoint scaling.");
+           }
+           do_hyst_ = true;
+        } else if (hysteresis_switch) {
+           OPM_THROW(std::runtime_error, "Switch HYSTER of keyword SATOPTS is active, but keyword EHYSTR not found.");
+        } else if (newParserDeck->hasKeyword("EHYSTR")) {
+           OPM_THROW(std::runtime_error, "Found keyword EHYSTR, but switch HYSTER of keyword SATOPTS is not set.");
+        }
 
         // Saturation table scaling
-        do_hyst_ = false;
         do_eps_ = false;
         do_3pt_ = false;
         if (newParserDeck->hasKeyword("ENDSCALE")) {
@@ -270,16 +304,6 @@ namespace Opm
             initEPS(newParserDeck, number_of_cells, global_cell, begin_cell_centroids,
                     dimensions);
 
-            // For now, a primitive detection of hysteresis. TODO: SATOPTS HYSTER/ and EHYSTR
-            do_hyst_ =
-                newParserDeck->hasKeyword("ISWL")
-                || newParserDeck->hasKeyword("ISWU")
-                || newParserDeck->hasKeyword("ISWCR")
-                || newParserDeck->hasKeyword("ISGL")
-                || newParserDeck->hasKeyword("ISGU")
-                || newParserDeck->hasKeyword("ISGCR")
-                ||  newParserDeck->hasKeyword("ISOWCR")
-                || newParserDeck->hasKeyword("ISOGCR");
             if (do_hyst_) {
                 if (newParserDeck->hasKeyword("KRW")
                     || newParserDeck->hasKeyword("KRG")
@@ -288,6 +312,7 @@ namespace Opm
                     || newParserDeck->hasKeyword("KRGR")
                     || newParserDeck->hasKeyword("KRORW")
                     || newParserDeck->hasKeyword("KRORG")
+                    || newParserDeck->hasKeyword("ENKRVD")
                     || newParserDeck->hasKeyword("IKRW")
                     || newParserDeck->hasKeyword("IKRG")
                     || newParserDeck->hasKeyword("IKRO")
@@ -295,10 +320,7 @@ namespace Opm
                     || newParserDeck->hasKeyword("IKRGR")
                     || newParserDeck->hasKeyword("IKRORW")
                     || newParserDeck->hasKeyword("IKRORG") ) {
-                    OPM_THROW(std::runtime_error,
-                              "SaturationPropsFromDeck::init()   --  ENDSCALE: "
-                              "Currently hysteresis and relperm value scaling "
-                              "cannot be combined.");
+                    OPM_THROW(std::runtime_error,"Currently hysteresis and relperm value scaling cannot be combined.");
                 }
                 
                 if (newParserDeck->hasKeyword("IMBNUM")) {
