@@ -74,7 +74,8 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
         {
             { 0 , 1e5 } , // Datum depth, pressure
             { 5 , 0   } , // Zwoc       , Pcow_woc
-            { 0 , 0   }   // Zgoc       , Pcgo_goc
+            { 0 , 0   } , // Zgoc       , Pcgo_goc
+            0, 0, 0
         };
 
     Opm::Equil::EquilReg<RhoCalc>
@@ -129,13 +130,15 @@ BOOST_AUTO_TEST_CASE (CellSubset)
             {
                 { 0   ,  1e5     } , // Datum depth, pressure
                 { 2.5 , -0.075e5 } , // Zwoc       , Pcow_woc
-                { 0   ,  0       }   // Zgoc       , Pcgo_goc
+                { 0   ,  0       } , // Zgoc       , Pcgo_goc
+                0, 0, 0
             }
             ,
             {
                 { 5   ,  1.35e5  } , // Datum depth, pressure
                 { 7.5 , -0.225e5 } , // Zwoc       , Pcow_woc
-                { 5   ,  0       }   // Zgoc       , Pcgo_goc
+                { 5   ,  0       } , // Zgoc       , Pcgo_goc
+                0, 0, 0
             }
         };
 
@@ -244,13 +247,15 @@ BOOST_AUTO_TEST_CASE (RegMapping)
             {
                 { 0   ,  1e5     } , // Datum depth, pressure
                 { 2.5 , -0.075e5 } , // Zwoc       , Pcow_woc
-                { 0   ,  0       }   // Zgoc       , Pcgo_goc
+                { 0   ,  0       } , // Zgoc       , Pcgo_goc
+                0, 0, 0
             }
             ,
             {
                 { 5   ,  1.35e5  } , // Datum depth, pressure
                 { 7.5 , -0.225e5 } , // Zwoc       , Pcow_woc
-                { 5   ,  0       }   // Zgoc       , Pcgo_goc
+                { 5   ,  0       } , // Zgoc       , Pcgo_goc
+                0, 0, 0
             }
         };
 
