@@ -177,7 +177,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         vtkfilename << "output-" << std::setw(3) << std::setfill('0') << step;
-        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafView(), Dune::VTK::nonconforming);
+        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafGridView(), Dune::VTK::nonconforming);
         writer.addCellData(state.saturation(), "saturation", state.numPhases());
         writer.addCellData(state.pressure(), "pressure", 1);
         
