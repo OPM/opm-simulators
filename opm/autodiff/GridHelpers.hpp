@@ -25,12 +25,18 @@
 #include <boost/range/iterator_range.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
+
+#include "disable_warning_pragmas.h"
+
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
 #ifdef HAVE_DUNE_CORNERPOINT
 #include <dune/grid/CpGrid.hpp>
 #endif
+
+#include "reenable_warning_pragmas.h"
+
 
 namespace Opm
 {
