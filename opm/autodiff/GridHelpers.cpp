@@ -236,8 +236,6 @@ void extractInternalFaces(const Dune::CpGrid& grid,
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
     typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
     typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
-    ADFaceCellTraits<Dune::CpGrid>::Type nb = faceCells(grid);
-    // std::cout << "nb = \n" << nb << std::endl;
     // Extracts the internal faces of the grid.
     // These are stored in internal_faces.
     int nf=numFaces(grid);
