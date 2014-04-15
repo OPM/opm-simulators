@@ -160,7 +160,7 @@ namespace Opm
         if (maxit == 0) {
             maxit = 5000;
         }
-        #if HAVE_MPI
+#if HAVE_MPI
         if(comm.type()==typeid(ParallelISTLInformation))
         {
             typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
@@ -175,10 +175,11 @@ namespace Opm
         else
 #endif
         {
+            (void) comm; // Avoid warning for unused argument if no MPI.
             Dune::SeqScalarProduct<Vector> sp;
-            Dune::Amg::SequentialInformation comm;
+            Dune::Amg::SequentialInformation seq_comm;
             Operator opA(A);
-            return solveSystem(opA, solution, rhs, sp, comm, maxit);
+            return solveSystem(opA, solution, rhs, sp, seq_comm, maxit);
         }
     }
 
@@ -405,7 +406,7 @@ namespace Opm
 #if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
     template<class O, class S, class C>
     LinearSolverInterface::LinearSolverReport
-    solveKAMG(O& opA, Vector& x, Vector& b, S& sp, const C& comm, double tolerance, int maxit, int verbosity,
+    solveKAMG(O& opA, Vector& x, Vector& b, S& /* sp */, const C& /* comm */, double tolerance, int maxit, int verbosity,
               double linsolver_prolongate_factor, int linsolver_smooth_steps)
     {
         // Solve with AMG solver.
@@ -455,7 +456,7 @@ namespace Opm
 
     template<class O, class S, class C>
     LinearSolverInterface::LinearSolverReport
-    solveFastAMG(O& opA, Vector& x, Vector& b, S& sp, const C& comm, double tolerance, int maxit, int verbosity,
+    solveFastAMG(O& opA, Vector& x, Vector& b, S& /* sp */, const C& /* comm */, double tolerance, int maxit, int verbosity,
                  double linsolver_prolongate_factor)
     {
         // Solve with AMG solver.
