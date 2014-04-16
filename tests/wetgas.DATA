@@ -1,3 +1,8 @@
+TABDIMS
+-- use the defaults of TABDIMS but the keyword must be present in the deck
+-- for it to be usable
+/
+
 WATER
 OIL
 GAS
