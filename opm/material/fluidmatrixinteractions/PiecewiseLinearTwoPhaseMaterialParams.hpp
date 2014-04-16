@@ -23,7 +23,8 @@
 #ifndef OPM_PIECEWISE_LINEAR_TWO_PHASE_MATERIAL_PARAMS_HPP
 #define OPM_PIECEWISE_LINEAR_TWO_PHASE_MATERIAL_PARAMS_HPP
 
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
+#include <opm/parser/eclipse/Utility/SwofTable.hpp>
+#include <opm/parser/eclipse/Utility/SgofTable.hpp>
 
 namespace Opm {
 /*!
@@ -66,32 +67,48 @@ public:
     }
 
     /*!
-     * \brief Read the relevant curves from an ECLIPSE input file
-     *
-     * The relevant keywords for this are "SWOF" and "SGOF".
+     * \brief Read the relevant curves from the table specified by the
+     *        SWOF keyword of an ECLIPSE input file
      */
-    template <class FieldType>
-    void readFromEclipse(const FieldType& table)
+    void readFromSwof(const Opm::SwofTable &swofTable)
     {
-        int numSamples = table[0].size();
-        pcwnSamples_.resize(numSamples);
-        krwSamples_.resize(numSamples);
-        krnSamples_.resize(numSamples);
+        const std::vector<double> &SwColumn = swofTable.getSwColumn();
+        const std::vector<double> &krwColumn = swofTable.getKrwColumn();
+        const std::vector<double> &krowColumn = swofTable.getKrowColumn();
+        const std::vector<double> &pcowColumn = swofTable.getPcowColumn();
+        int numRows = swofTable.numRows();
+        for (int rowIdx = 0; rowIdx < numRows; ++rowIdx) {
+            pcwnSamples_[rowIdx].first = SwColumn[rowIdx];
+            pcwnSamples_[rowIdx].second = - pcowColumn[rowIdx];
 
-        for (int sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx) {
-            Scalar Sw = table[0][sampleIdx];
-            Scalar krw = table[1][sampleIdx];
-            Scalar krn = table[2][sampleIdx];
-            Scalar pcnw = table[3][sampleIdx];
+            krwSamples_[rowIdx].first = SwColumn[rowIdx];
+            krwSamples_[rowIdx].second = krwColumn[rowIdx];
 
-            pcwnSamples_[sampleIdx].first = Sw;
-            pcwnSamples_[sampleIdx].second = pcnw;
+            krnSamples_[rowIdx].first = SwColumn[rowIdx];
+            krnSamples_[rowIdx].second = krowColumn[rowIdx];
+        }
+    }
 
-            krwSamples_[sampleIdx].first = Sw;
-            krwSamples_[sampleIdx].second = krw;
+    /*!
+     * \brief Read the relevant curves from the table specified by the
+     *        SGOF keyword of an ECLIPSE input file
+     */
+    void readFromSgof(const Opm::SgofTable &sgofTable)
+    {
+        const std::vector<double> &SgColumn = sgofTable.getSgColumn();
+        const std::vector<double> &krgColumn = sgofTable.getKrgColumn();
+        const std::vector<double> &krogColumn = sgofTable.getKrogColumn();
+        const std::vector<double> &pcogColumn = sgofTable.getPcogColumn();
+        int numRows = sgofTable.numRows();
+        for (int rowIdx = 0; rowIdx < numRows; ++rowIdx) {
+            pcwnSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
+            pcwnSamples_[rowIdx].second = pcogColumn[rowIdx];
 
-            krnSamples_[sampleIdx].first = Sw;
-            krnSamples_[sampleIdx].second = krn;
+            krwSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
+            krwSamples_[rowIdx].second = krogColumn[rowIdx];
+
+            krnSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
+            krnSamples_[rowIdx].second = krgColumn[rowIdx];
         }
     }
 
