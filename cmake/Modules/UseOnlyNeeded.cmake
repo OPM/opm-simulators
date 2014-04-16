@@ -23,9 +23,11 @@ function (prepend var_name value)
   endif (NOT ("${_var_pre}" STREQUAL "${value}"))
 endfunction (prepend var_name value)
 
+option (ONLY_NEEDED_LIBRARIES "Instruct the linker to not use libraries which are unused" OFF)
+
 # only ELF shared objects can be underlinked, and only GNU will accept
 # these parameters; otherwise just leave it to the defaults
-if ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
+if ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC AND ONLY_NEEDED_LIBRARIES)
   # these are the modules whose probes will turn up incompatible
   # flags on some systems
   set (_maybe_underlinked
@@ -45,4 +47,4 @@ if ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
 	prepend (CMAKE_MODULE_LINKER_FLAGS "-Wl,--as-needed")
 	prepend (CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
   endif (NOT _underlinked)
-endif ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux")  AND CMAKE_COMPILER_IS_GNUCC)
+endif ((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux")  AND CMAKE_COMPILER_IS_GNUCC AND ONLY_NEEDED_LIBRARIES)
