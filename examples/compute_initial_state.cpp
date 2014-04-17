@@ -87,7 +87,6 @@ try
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::DeckConstPtr deck = parser->parseFile(deck_filename);
     const double grav = param.getDefault("gravity", unit::gravity);
-    //EclipseGridParser deck(deck_filename);
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
     BlackoilPropertiesFromDeck props(deck, grid, param);
