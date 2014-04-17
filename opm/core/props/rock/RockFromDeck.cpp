@@ -21,6 +21,7 @@
 #include "config.h"
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -34,12 +35,8 @@ namespace Opm
     {
         enum PermeabilityKind { ScalarPerm, DiagonalPerm, TensorPerm, None, Invalid };
 
-        PermeabilityKind classifyPermeability(const EclipseGridParser& parser);
         void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k);
-        PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
-                                    std::vector<const std::vector<double>*>& tensor,
-                                    std::array<int,9>&                     kmap);
         PermeabilityKind fillTensor(Opm::DeckConstPtr newParserDeck,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::array<int,9>&                     kmap);
@@ -56,34 +53,6 @@ namespace Opm
     {
     }
 
-
-    /// Initialize from deck and cell mapping.
-    /// \param  deck         Deck input parser
-    /// \param  grid         grid to which property object applies, needed for the
-    ///                      mapping from cell indices (typically from a processed grid)
-    ///                      to logical cartesian indices consistent with the deck.
-    void RockFromDeck::init(const EclipseGridParser& deck,
-                            const UnstructuredGrid& grid)
-    {
-        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims);
-    }
-
-    /// Initialize from deck and cell mapping.
-    /// \param  deck            Deck input parser
-    /// \param  number_of_cells The number of cells in the grid.
-    /// \param  global_cell     The mapping fom local to global cell indices.
-    ///                         global_cell[i] is the corresponding global index of i.
-    /// \param  cart_dims       The size of the underlying cartesian grid.
-    void RockFromDeck::init(const EclipseGridParser& deck,
-                            int number_of_cells, const int* global_cell,
-                            const int* cart_dims)
-    {
-        assignPorosity(deck, number_of_cells, global_cell);
-        permfield_valid_.assign(number_of_cells, false);
-        const double perm_threshold = 0.0; // Maybe turn into parameter?
-        assignPermeability(deck, number_of_cells, global_cell, cart_dims, perm_threshold);
-    }
-
     void RockFromDeck::init(Opm::DeckConstPtr newParserDeck,
                             int number_of_cells, const int* global_cell,
                             const int* cart_dims)
@@ -93,20 +62,6 @@ namespace Opm
         const double perm_threshold = 0.0; // Maybe turn into parameter?
         assignPermeability(newParserDeck, number_of_cells, global_cell, cart_dims,
                            perm_threshold);
-    }
-
-
-    void RockFromDeck::assignPorosity(const EclipseGridParser& parser,
-                                      int number_of_cells, const int* global_cell)
-    {
-        porosity_.assign(number_of_cells, 1.0);
-        if (parser.hasField("PORO")) {
-            const std::vector<double>& poro = parser.getFloatingPointValue("PORO");
-            for (int c = 0; c < int(porosity_.size()); ++c) {
-                const int deck_pos = (global_cell == NULL) ? c : global_cell[c];
-                porosity_[c] = poro[deck_pos];
-            }
-        }
     }
 
     void RockFromDeck::assignPorosity(Opm::DeckConstPtr newParserDeck,
@@ -120,61 +75,6 @@ namespace Opm
                 assert(0 <= c && c < (int) porosity_.size());
                 assert(0 <= deck_pos && deck_pos < (int) poro.size());
                 porosity_[c] = poro[deck_pos];
-            }
-        }
-    }
-
-
-    void RockFromDeck::assignPermeability(const EclipseGridParser& parser,
-                                          int number_of_cells,
-                                          const int* global_cell,
-                                          const int* cartdims,
-                                          double perm_threshold)
-    {
-        const int dim              = 3;
-        const int num_global_cells = cartdims[0]*cartdims[1]*cartdims[2];
-
-        assert(num_global_cells > 0);
-
-        permeability_.assign(dim * dim * number_of_cells, 0.0);
-
-        std::vector<const std::vector<double>*> tensor;
-        tensor.reserve(10);
-
-        const std::vector<double> zero(num_global_cells, 0.0);
-        tensor.push_back(&zero);
-
-        std::array<int,9> kmap;
-        PermeabilityKind pkind = fillTensor(parser, tensor, kmap);
-        if (pkind == Invalid) {
-            OPM_THROW(std::runtime_error, "Invalid permeability field.");
-        }
-
-        // Assign permeability values only if such values are
-        // given in the input deck represented by 'parser'.  In
-        // other words: Don't set any (arbitrary) default values.
-        // It is infinitely better to experience a reproducible
-        // crash than subtle errors resulting from a (poorly
-        // chosen) default value...
-        //
-        if (tensor.size() > 1) {
-            int off = 0;
-
-            for (int c = 0; c < number_of_cells; ++c, off += dim*dim) {
-                // SharedPermTensor K(dim, dim, &permeability_[off]);
-                int       kix  = 0;
-                const int glob = (global_cell == NULL) ? c : global_cell[c];
-
-                for (int i = 0; i < dim; ++i) {
-                    for (int j = 0; j < dim; ++j, ++kix) {
-                        // K(i,j) = (*tensor[kmap[kix]])[glob];
-                        permeability_[off + kix] = (*tensor[kmap[kix]])[glob];
-                    }
-                    // K(i,i) = std::max(K(i,i), perm_threshold);
-                    permeability_[off + 3*i + i] = std::max(permeability_[off + 3*i + i], perm_threshold);
-                }
-
-                permfield_valid_[c] = std::vector<unsigned char>::value_type(1);
             }
         }
     }
@@ -236,73 +136,6 @@ namespace Opm
     }
 
     namespace {
-
-        /// @brief
-        ///    Classify and verify a given permeability specification
-        ///    from a structural point of view.  In particular, we
-        ///    verify that there are no off-diagonal permeability
-        ///    components such as @f$k_{xy}@f$ unless the
-        ///    corresponding diagonal components are known as well.
-        ///
-        /// @param parser [in]
-        ///    An Eclipse data parser capable of answering which
-        ///    permeability components are present in a given input
-        ///    deck.
-        ///
-        /// @return
-        ///    An enum value with the following possible values:
-        ///        ScalarPerm     only one component was given.
-        ///        DiagonalPerm   more than one component given.
-        ///        TensorPerm     at least one cross-component given.
-        ///        None           no components given.
-        ///        Invalid        invalid set of components given.
-        PermeabilityKind classifyPermeability(const EclipseGridParser& parser)
-        {
-            const bool xx = parser.hasField("PERMX" );
-            const bool xy = parser.hasField("PERMXY");
-            const bool xz = parser.hasField("PERMXZ");
-
-            const bool yx = parser.hasField("PERMYX");
-            const bool yy = parser.hasField("PERMY" );
-            const bool yz = parser.hasField("PERMYZ");
-
-            const bool zx = parser.hasField("PERMZX");
-            const bool zy = parser.hasField("PERMZY");
-            const bool zz = parser.hasField("PERMZ" );
-
-            int num_cross_comp = xy + xz + yx + yz + zx + zy;
-            int num_comp       = xx + yy + zz + num_cross_comp;
-            PermeabilityKind retval = None;
-            if (num_cross_comp > 0) {
-                retval = TensorPerm;
-            } else {
-                if (num_comp == 1) {
-                    retval = ScalarPerm;
-                } else if (num_comp >= 2) {
-                    retval = DiagonalPerm;
-                }
-            }
-
-            bool ok = true;
-            if (num_comp > 0) {
-                // At least one tensor component specified on input.
-                // Verify that any remaining components are OK from a
-                // structural point of view.  In particular, there
-                // must not be any cross-components (e.g., k_{xy})
-                // unless the corresponding diagonal component (e.g.,
-                // k_{xx}) is present as well...
-                //
-                ok =        xx || !(xy || xz || yx || zx) ;
-                ok = ok && (yy || !(yx || yz || xy || zy));
-                ok = ok && (zz || !(zx || zy || xz || yz));
-            }
-            if (!ok) {
-                retval = Invalid;
-            }
-
-            return retval;
-        }
-
         /// @brief
         ///    Classify and verify a given permeability specification
         ///    from a structural point of view.  In particular, we
@@ -395,107 +228,6 @@ namespace Opm
         {
             if (kmap[j] == 0) { kmap[j] = kmap[i]; }
             if (kmap[k] == 0) { kmap[k] = kmap[i]; }
-        }
-
-
-        /// @brief
-        ///   Extract pointers to appropriate tensor components from
-        ///   input deck.  The permeability tensor is, generally,
-        ///   @code
-        ///        [ kxx  kxy  kxz ]
-        ///    K = [ kyx  kyy  kyz ]
-        ///        [ kzx  kzy  kzz ]
-        ///   @endcode
-        ///   We store these values in a linear array using natural
-        ///   ordering with the column index cycling the most rapidly.
-        ///   In particular we use the representation
-        ///   @code
-        ///        [  0    1    2    3    4    5    6    7    8  ]
-        ///    K = [ kxx, kxy, kxz, kyx, kyy, kyz, kzx, kzy, kzz ]
-        ///   @endcode
-        ///   Moreover, we explicitly enforce symmetric tensors by
-        ///   assigning
-        ///   @code
-        ///     3     1       6     2       7     5
-        ///    kyx = kxy,    kzx = kxz,    kzy = kyz
-        ///   @endcode
-        ///   However, we make no attempt at enforcing positive
-        ///   definite tensors.
-        ///
-        /// @param [in]  parser
-        ///    An Eclipse data parser capable of answering which
-        ///    permeability components are present in a given input
-        ///    deck as well as retrieving the numerical value of each
-        ///    permeability component in each grid cell.
-        ///
-        /// @param [out] tensor
-        /// @param [out] kmap
-        PermeabilityKind fillTensor(const EclipseGridParser&                 parser,
-                                    std::vector<const std::vector<double>*>& tensor,
-                                    std::array<int,9>&                     kmap)
-        {
-            PermeabilityKind kind = classifyPermeability(parser);
-            if (kind == Invalid) {
-                OPM_THROW(std::runtime_error, "Invalid set of permeability fields given.");
-            }
-            assert(tensor.size() == 1);
-            for (int i = 0; i < 9; ++i) { kmap[i] = 0; }
-
-            enum { xx, xy, xz,    // 0, 1, 2
-                   yx, yy, yz,    // 3, 4, 5
-                   zx, zy, zz };  // 6, 7, 8
-
-            // -----------------------------------------------------------
-            // 1st row: [kxx, kxy, kxz]
-            if (parser.hasField("PERMX" )) {
-                kmap[xx] = tensor.size();
-                tensor.push_back(&parser.getFloatingPointValue("PERMX" ));
-
-                setScalarPermIfNeeded(kmap, xx, yy, zz);
-            }
-            if (parser.hasField("PERMXY")) {
-                kmap[xy] = kmap[yx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMXY"));
-            }
-            if (parser.hasField("PERMXZ")) {
-                kmap[xz] = kmap[zx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMXZ"));
-            }
-
-            // -----------------------------------------------------------
-            // 2nd row: [kyx, kyy, kyz]
-            if (parser.hasField("PERMYX")) {
-                kmap[yx] = kmap[xy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMYX"));
-            }
-            if (parser.hasField("PERMY" )) {
-                kmap[yy] = tensor.size();
-                tensor.push_back(&parser.getFloatingPointValue("PERMY" ));
-
-                setScalarPermIfNeeded(kmap, yy, zz, xx);
-            }
-            if (parser.hasField("PERMYZ")) {
-                kmap[yz] = kmap[zy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMYZ"));
-            }
-
-            // -----------------------------------------------------------
-            // 3rd row: [kzx, kzy, kzz]
-            if (parser.hasField("PERMZX")) {
-                kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMZX"));
-            }
-            if (parser.hasField("PERMZY")) {
-                kmap[zy] = kmap[yz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&parser.getFloatingPointValue("PERMZY"));
-            }
-            if (parser.hasField("PERMZ" )) {
-                kmap[zz] = tensor.size();
-                tensor.push_back(&parser.getFloatingPointValue("PERMZ" ));
-
-                setScalarPermIfNeeded(kmap, zz, xx, yy);
-            }
-            return kind;
         }
 
         /// @brief

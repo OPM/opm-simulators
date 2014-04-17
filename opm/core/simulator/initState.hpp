@@ -20,7 +20,7 @@
 #ifndef OPM_INITSTATE_HEADER_INCLUDED
 #define OPM_INITSTATE_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/Deck/Deck.hpp> // DeckConstPtr
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 struct UnstructuredGrid;
 
@@ -28,7 +28,6 @@ namespace Opm
 {
 
     namespace parameter { class ParameterGroup; }
-    class EclipseGridParser;
     class IncompPropertiesInterface;
     class BlackoilPropertiesInterface;
 
@@ -168,27 +167,7 @@ namespace Opm
     template <class Props, class State>
     void initStateFromDeck(const UnstructuredGrid& grid,
                            const Props& props,
-                           const EclipseGridParser& deck,
-                           const double gravity,
-                           State& state);
-
-    /// Initialize a two-phase state from input deck.
-    /// If EQUIL is present:
-    ///   - saturation is set according to the water-oil contact,
-    ///   - pressure is set to hydrostatic equilibrium.
-    /// Otherwise:
-    ///   - saturation is set according to SWAT,
-    ///   - pressure is set according to PRESSURE.
-    template <class FaceCells, class FCI, class CCI, class Props, class State>
-    void initStateFromDeck(int number_of_cells,
-                           const int* global_cell,
-                           int number_of_faces,
-                           FaceCells face_cells,
-                           FCI begin_face_centroids,
-                           CCI begin_cell_centroids,
-                           int dimensions,
-                           const Props& props,
-                           const EclipseGridParser& deck,
+                           Opm::DeckConstPtr newParserDeck,
                            const double gravity,
                            State& state);
 
@@ -203,31 +182,9 @@ namespace Opm
     template <class Props, class State>
     void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
                                    const Props& props,
-                                   const EclipseGridParser& deck,
+                                   Opm::DeckConstPtr newParserDeck,
                                    const double gravity,
                                    State& state);
-
-    /// Initialize a two-phase water-oil blackoil state from input deck.
-    /// If EQUIL is present:
-    ///   - saturation is set according to the water-oil contact,
-    ///   - pressure is set to hydrostatic equilibrium.
-    /// Otherwise:
-    ///   - saturation is set according to SWAT,
-    ///   - pressure is set according to PRESSURE.
-    /// In addition, this function sets surfacevol.
-    template <class FaceCells, class FCI, class CCI, class Props, class State>
-    void initBlackoilStateFromDeck(int number_of_cells,
-                                   const int* global_cell,
-                                   int number_of_faces,
-                                   FaceCells face_cells,
-                                   FCI begin_face_centroids,
-                                   CCI begin_cell_centroids,
-                                   int dimensions,
-                                   const Props& props,
-                                   const EclipseGridParser& deck,
-                                   const double gravity,
-                                   State& state);
-
     /// Initialize a blackoil state from input deck.
     template <class FaceCells, class FCI, class CCI, class Props, class State>
     void initBlackoilStateFromDeck(int number_of_cells,

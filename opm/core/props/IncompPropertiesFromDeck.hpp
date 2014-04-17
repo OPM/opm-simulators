@@ -50,14 +50,6 @@ namespace Opm
         /// \param  grid         Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        IncompPropertiesFromDeck(const EclipseGridParser& deck,
-                                 const UnstructuredGrid& grid);
-
-        /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the
-        ///                      mapping from cell indices (typically from a processed grid)
-        ///                      to logical cartesian indices consistent with the deck.
         IncompPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
                                  const UnstructuredGrid& grid);
 

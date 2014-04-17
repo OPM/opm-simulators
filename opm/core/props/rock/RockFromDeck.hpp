@@ -20,9 +20,6 @@
 #ifndef OPM_ROCKFROMDECK_HEADER_INCLUDED
 #define OPM_ROCKFROMDECK_HEADER_INCLUDED
 
-
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
-
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <vector>
@@ -38,24 +35,7 @@ namespace Opm
         /// Default constructor.
         RockFromDeck();
 
-        /// Initialize from deck and grid.
-        /// \param  deck         Deck input parser
-        /// \param  grid         Grid to which property object applies, needed for the
-        ///                      mapping from cell indices (typically from a processed grid)
-        ///                      to logical cartesian indices consistent with the deck.
-        void init(const EclipseGridParser& deck,
-                  const UnstructuredGrid& grid);
-
         /// Initialize from deck and cell mapping.
-        /// \param  deck            Deck input parser
-        /// \param  number_of_cells The number of cells in the grid.
-        /// \param  global_cell     The mapping fom local to global cell indices.
-        ///                         global_cell[i] is the corresponding global index of i.
-        /// \param  cart_dims       The size of the underlying cartesian grid.
-        void init(const EclipseGridParser& deck,
-                  int number_of_cells, const int* global_cell,
-                  const int* cart_dims);
-         /// Initialize from deck and cell mapping.
         /// \param  newParserDeck            Deck produced by the opm-parser code
         /// \param  number_of_cells The number of cells in the grid.
         /// \param  global_cell     The mapping fom local to global cell indices.
@@ -92,17 +72,9 @@ namespace Opm
         }
 
     private:
-        void assignPorosity(const EclipseGridParser& parser,
-                            int number_of_cells,
-                            const int* global_cell);
         void assignPorosity(Opm::DeckConstPtr newParserDeck,
                             int number_of_cells,
                             const int* global_cell);
-        void assignPermeability(const EclipseGridParser& parser,
-                                int number_of_cells,
-                                const int* global_cell,
-                                const int* cart_dims,
-                                const double perm_threshold);
         void assignPermeability(Opm::DeckConstPtr newParserDeck,
                                 int number_of_cells,
                                 const int* global_cell,

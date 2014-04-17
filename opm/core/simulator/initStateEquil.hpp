@@ -22,7 +22,6 @@
 
 #include <opm/core/simulator/EquilibrationHelpers.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
@@ -60,13 +59,6 @@ namespace Opm
      * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
      */
-    void initStateEquil(const UnstructuredGrid& grid,
-                        const BlackoilPropertiesInterface& props,
-                        const EclipseGridParser& deck,
-                        const double gravity,
-                        BlackoilState& state);
-                        
-    
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr newParserDeck,
@@ -188,54 +180,6 @@ namespace Opm
                                       const std::vector<double> gas_saturation);
 
         namespace DeckDependent {
-
-            inline
-            std::vector<EquilRecord>
-            getEquil(const EclipseGridParser& deck)
-            {
-                if (deck.hasField("EQUIL")) {
-                    const EQUIL& eql = deck.getEQUIL();
-
-                    typedef std::vector<EquilLine>::size_type sz_t;
-                    const sz_t nrec = eql.equil.size();
-
-                    std::vector<EquilRecord> ret;
-                    ret.reserve(nrec);
-                    for (sz_t r = 0; r < nrec; ++r) {
-                        const EquilLine& rec = eql.equil[r];
-
-                        EquilRecord record =
-                            {
-                                { rec.datum_depth_             ,
-                                  rec.datum_depth_pressure_    }
-                                ,
-                                { rec.water_oil_contact_depth_ ,
-                                  rec.oil_water_cap_pressure_  }
-                                ,
-                                { rec.gas_oil_contact_depth_   ,
-                                  rec.gas_oil_cap_pressure_    }
-                                ,
-                                rec.live_oil_table_index_
-                                ,
-                                rec.wet_gas_table_index_
-                                ,
-                                rec.N_
-                            };
-                        if (record.N != 0) {
-                            OPM_THROW(std::domain_error,
-                              "kw EQUIL, item 9: Only N=0 supported.");
-                        }
-                        ret.push_back(record);
-                    }
-
-                    return ret;
-                }
-                else {
-                    OPM_THROW(std::domain_error,
-                              "Deck does not provide equilibration data.");
-                }
-            }
-
             inline
             std::vector<EquilRecord>
             getEquil(const Opm::DeckConstPtr newParserDeck)
@@ -282,29 +226,6 @@ namespace Opm
                 }
             }
 
-
-            inline
-            std::vector<int>
-            equilnum(const EclipseGridParser& deck,
-                     const UnstructuredGrid&  G   )
-            {
-                std::vector<int> eqlnum;
-                if (deck.hasField("EQLNUM")) {        
-                    const std::vector<int>& e = deck.getIntegerValue("EQLNUM");
-                    eqlnum.reserve(e.size());
-                    std::transform(e.begin(), e.end(), std::back_inserter(eqlnum),
-                                   std::bind2nd(std::minus<int>(), 1));
-                }
-                else {
-                    // No explicit equilibration region.
-                    // All cells in region zero.
-                    eqlnum.assign(G.number_of_cells, 0);
-                }
-
-                return eqlnum;
-            }
-
-
             inline
             std::vector<int>
             equilnum(const Opm::DeckConstPtr newParserDeck,
@@ -331,180 +252,7 @@ namespace Opm
             }
 
 
-            template <class InputDeck>
-            class InitialStateComputer;
-
-            template <>
-            class InitialStateComputer<Opm::EclipseGridParser> {
-            public:
-                InitialStateComputer(const BlackoilPropertiesInterface& props,
-                                     const EclipseGridParser&           deck ,
-                                     const UnstructuredGrid&            G    ,
-                                     const double                       grav = unit::gravity)
-                    : pp_(props.numPhases(),
-                          std::vector<double>(G.number_of_cells)),
-                      sat_(props.numPhases(),
-                          std::vector<double>(G.number_of_cells)),
-                      rs_(G.number_of_cells),
-                      rv_(G.number_of_cells)
-                {
-                    // Get the equilibration records.
-                    const std::vector<EquilRecord> rec = getEquil(deck);
-
-                    // Create (inverse) region mapping.
-                    const RegionMapping<> eqlmap(equilnum(deck, G));
-
-                    // Create Rs functions.
-                    rs_func_.reserve(rec.size());
-                    if (deck.hasField("DISGAS")) {                    
-                        for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i).begin());                   
-                            if (rec[i].live_oil_table_index > 0) {
-                                if (deck.hasField("RSVD")) { 
-                                    // TODO When this kw is actually parsed, also check for proper number of available tables
-                                    // For now, just use dummy ...
-                                    std::vector<double> depth; depth.push_back(0.0); depth.push_back(100.0);
-                                    std::vector<double> rs; rs.push_back(0.0); rs.push_back(100.0);
-                                    rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props, cell, depth, rs));
-                                } else {
-                                    OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
-                                }
-                            } else {
-                                if (rec[i].goc.depth != rec[i].main.depth) {
-                                    OPM_THROW(std::runtime_error,
-                                              "Cannot initialise: when no explicit RSVD table is given, \n"
-                                              "datum depth must be at the gas-oil-contact. "
-                                              "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
-                                }
-                                const double p_contact = rec[i].main.press;
-                                rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact));
-                            }
-                        }
-                    } else {
-                        for (size_t i = 0; i < rec.size(); ++i) {
-                            rs_func_.push_back(std::make_shared<Miscibility::NoMixing>());
-                        }
-                    }                    
-
-                    rv_func_.reserve(rec.size());
-                    if (deck.hasField("VAPOIL")) {                    
-                        for (size_t i = 0; i < rec.size(); ++i) {
-                            const int cell = *(eqlmap.cells(i).begin());                   
-                            if (rec[i].wet_gas_table_index > 0) {
-                                if (deck.hasField("RVVD")) { 
-                                    // TODO When this kw is actually parsed, also check for proper number of available tables
-                                    // For now, just use dummy ...
-                                    std::vector<double> depth; depth.push_back(0.0); depth.push_back(100.0);
-                                    std::vector<double> rv; rv.push_back(0.0); rv.push_back(0.0001);
-                                    rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props, cell, depth, rv));
-                                } else {
-                                    OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
-                                }
-                            } else {
-                                if (rec[i].goc.depth != rec[i].main.depth) {
-                                    OPM_THROW(std::runtime_error,
-                                              "Cannot initialise: when no explicit RVVD table is given, \n"
-                                              "datum depth must be at the gas-oil-contact. "
-                                              "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
-                                }
-                                const double p_contact = rec[i].main.press + rec[i].goc.press;
-                                rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact>(props, cell, p_contact));
-                            }
-                        }
-                    } else {
-                        for (size_t i = 0; i < rec.size(); ++i) {
-                            rv_func_.push_back(std::make_shared<Miscibility::NoMixing>());
-                        }
-                    }
-                    
-                    // Compute pressures, saturations, rs and rv factors.
-                    calcPressSatRsRv(eqlmap, rec, props, G, grav);
-
-                    // Modify oil pressure in no-oil regions so that the pressures of present phases can
-                    // be recovered from the oil pressure and capillary relations.
-                }
-
-                typedef std::vector<double> Vec;
-                typedef std::vector<Vec>    PVec; // One per phase.
-
-                const PVec& press() const { return pp_; }
-                const PVec& saturation() const { return sat_; }
-                const Vec& rs() const { return rs_; }
-                const Vec& rv() const { return rv_; }
-
-            private:
-                typedef DensityCalculator<BlackoilPropertiesInterface> RhoCalc;
-                typedef EquilReg<RhoCalc> EqReg;
-
-                std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
-                std::vector< std::shared_ptr<Miscibility::RsFunction> > rv_func_;
-
-                PVec pp_;
-                PVec sat_;
-                Vec rs_;
-                Vec rv_;
-
-                template <class RMap>
-                void
-                calcPressSatRsRv(const RMap&                             reg  ,
-                                 const std::vector< EquilRecord >&       rec  ,
-                                 const Opm::BlackoilPropertiesInterface& props,
-                                 const UnstructuredGrid&                 G    ,
-                                 const double grav)
-                {
-                    typedef Miscibility::NoMixing NoMix;
-
-                    for (typename RMap::RegionId
-                             r = 0, nr = reg.numRegions();
-                         r < nr; ++r)
-                    {
-                        const typename RMap::CellRange cells = reg.cells(r);
-
-                        const int repcell = *cells.begin();
-                        const RhoCalc calc(props, repcell);
-                        const EqReg eqreg(rec[r], calc,
-                                          rs_func_[r], rv_func_[r],
-                                          props.phaseUsage());
-                                          
-                        PVec press = phasePressures(G, eqreg, cells, grav);
-                        
-                        const PVec sat = phaseSaturations(eqreg, cells, props, press);
-                        
-                        const int np = props.numPhases();
-                        for (int p = 0; p < np; ++p) {
-                            copyFromRegion(press[p], cells, pp_[p]);
-                            copyFromRegion(sat[p], cells, sat_[p]);
-                        }
-                        if (props.phaseUsage().phase_used[BlackoilPhases::Liquid]
-                            && props.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
-                            const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-                            const int gaspos = props.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                            const Vec rs = computeRs(G, cells, press[oilpos], *(rs_func_[r]), sat[gaspos]);
-                            const Vec rv = computeRs(G, cells, press[gaspos], *(rv_func_[r]), sat[oilpos]);
-                            copyFromRegion(rs, cells, rs_);
-                            copyFromRegion(rv, cells, rv_);
-                        }
-                    }
-                }
-
-                template <class CellRangeType>
-                void copyFromRegion(const Vec& source,
-                                    const CellRangeType& cells,
-                                    Vec& destination)
-                {
-                    auto s = source.begin();
-                    auto c = cells.begin();
-                    const auto e = cells.end();
-                    for (; c != e; ++c, ++s) {
-                        destination[*c] = *s;
-                    }
-                }
-
-            };
-
-
-            template <>
-            class InitialStateComputer<Opm::DeckConstPtr> {
+            class InitialStateComputer {
             public:
                 InitialStateComputer(const BlackoilPropertiesInterface& props,
                                      const Opm::DeckConstPtr            newParserDeck,

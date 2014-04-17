@@ -16,9 +16,6 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-
 #ifndef OPM_WELLCOLLECTION_HPP
 #define	OPM_WELLCOLLECTION_HPP
 
@@ -27,7 +24,6 @@
 
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
@@ -46,16 +42,6 @@ namespace Opm
 
         void addGroup(GroupConstPtr groupChild, std::string parent_name,
                       size_t timeStep, const PhaseUsage& phaseUsage);
-
-        /// Adds and creates if necessary the child to the collection
-        /// and appends it to parent's children. Also adds and creates the parent
-        /// if necessary.
-        /// \param[in] child   name of child node
-        /// \param[in] parent  name of parent node
-        /// \param[in] deck    deck from which we will extract group control data
-        void addChild(const std::string& child,
-                      const std::string& parent,
-                      const EclipseGridParser& deck);
 
         /// Adds the child to the collection
         /// and appends it to parent's children.

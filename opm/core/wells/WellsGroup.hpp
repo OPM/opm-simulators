@@ -22,7 +22,6 @@
 
 #include <opm/core/wells/InjectionSpecification.hpp>
 #include <opm/core/wells/ProductionSpecification.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
 
@@ -402,12 +401,6 @@ namespace Opm
         int group_control_index_;
         bool shut_well_;
     };
-
-    /// Creates the WellsGroupInterface for the given name
-    /// \param[in] name the name of the wells group.
-    /// \param[in] deck the deck from which to fetch information.
-    std::shared_ptr<WellsGroupInterface> createWellsGroup(const std::string& name,
-                                                          const EclipseGridParser& deck);
 
     /// Creates the WellsGroupInterface for the given well
     /// \param[in] well the Well to construct object for

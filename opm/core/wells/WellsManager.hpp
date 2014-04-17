@@ -33,8 +33,6 @@ struct UnstructuredGrid;
 
 namespace Opm
 {
-
-    class EclipseGridParser;
     struct WellData
     {
         WellType type;

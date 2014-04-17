@@ -24,7 +24,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/MonotCubicInterpolator.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -673,129 +672,6 @@ namespace Opm
                          begin_cell_centroids, state);
     }
 
-    /// Initialize a state from input deck.
-    template <class Props, class State>
-    void initStateFromDeck(const UnstructuredGrid& grid,
-                           const Props& props,
-                           const EclipseGridParser& deck,
-                           const double gravity,
-                           State& state)
-    {
-        initStateFromDeck(grid.number_of_cells, grid.global_cell,
-                          grid.number_of_faces, UgGridHelpers::faceCells(grid),
-                          grid.face_centroids, grid.cell_centroids,
-                          grid.dimensions, props, deck,
-                          gravity, state);
-    }
-
-    template <class FaceCells, class FCI, class CCI, class Props, class State>
-    void initStateFromDeck(int number_of_cells,
-                           const int* global_cell,
-                           int number_of_faces,
-                           FaceCells face_cells,
-                           FCI begin_face_centroids,
-                           CCI begin_cell_centroids,
-                           int dimensions,
-                           const Props& props,
-                           const EclipseGridParser& deck,
-                           const double gravity,
-                           State& state)
-    {
-        const int num_phases = props.numPhases();
-        const PhaseUsage pu = phaseUsageFromDeck(deck);
-        if (num_phases != pu.num_phases) {
-            OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
-                  "found " << pu.num_phases << " phases in deck.");
-        }
-        if (deck.hasField("EQUIL") && deck.hasField("PRESSURE")) {
-            OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
-                      "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");
-        }
-        state.init(number_of_cells, number_of_faces, num_phases);
-        if (deck.hasField("EQUIL")) {
-            if (num_phases != 2) {
-                OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
-            }
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
-            }
-            // Set saturations depending on oil-water contact.
-            const EQUIL& equil= deck.getEQUIL();
-            if (equil.equil.size() != 1) {
-                OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
-            }
-            const double woc = equil.equil[0].water_oil_contact_depth_;
-            initWaterOilContact(number_of_cells, begin_cell_centroids, dimensions,
-                                props, woc, WaterBelow, state);
-            // Set pressure depending on densities and depths.
-            const double datum_z = equil.equil[0].datum_depth_;
-            const double datum_p = equil.equil[0].datum_depth_pressure_;
-            initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
-                                    props, woc, gravity, datum_z, datum_p, state);
-        } else if (deck.hasField("PRESSURE")) {
-            // Set saturations from SWAT/SGAS, pressure from PRESSURE.
-            std::vector<double>& s = state.saturation();
-            std::vector<double>& p = state.pressure();
-            const std::vector<double>& p_deck = deck.getFloatingPointValue("PRESSURE");
-            if (num_phases == 2) {
-                if (!pu.phase_used[BlackoilPhases::Aqua]) {
-                    // oil-gas: we require SGAS
-                    if (!deck.hasField("SGAS")) {
-                        OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS keyword in 2-phase init");
-                    }
-                    const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
-                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                    for (int c = 0; c < number_of_cells; ++c) {
-                        int c_deck = (global_cell == NULL) ? c : global_cell[c];
-                        s[2*c + gpos] = sg_deck[c_deck];
-                        s[2*c + opos] = 1.0 - sg_deck[c_deck];
-                        p[c] = p_deck[c_deck];
-                    }
-                } else {
-                    // water-oil or water-gas: we require SWAT
-                    if (!deck.hasField("SWAT")) {
-                        OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SWAT keyword in 2-phase init");
-                    }
-                    const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
-                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                    const int nwpos = (wpos + 1) % 2;
-                    for (int c = 0; c < number_of_cells; ++c) {
-                        int c_deck = (global_cell == NULL) ? c : global_cell[c];
-                        s[2*c + wpos] = sw_deck[c_deck];
-                        s[2*c + nwpos] = 1.0 - sw_deck[c_deck];
-                        p[c] = p_deck[c_deck];
-                    }
-                }
-            } else if (num_phases == 3) {
-                const bool has_swat_sgas = deck.hasField("SWAT") && deck.hasField("SGAS");
-                if (!has_swat_sgas) {
-                    OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
-                }
-                const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                const std::vector<double>& sw_deck = deck.getFloatingPointValue("SWAT");
-                const std::vector<double>& sg_deck = deck.getFloatingPointValue("SGAS");
-                for (int c = 0; c < number_of_cells; ++c) {
-                    int c_deck = (global_cell == NULL) ? c : global_cell[c];
-                    s[3*c + wpos] = sw_deck[c_deck];
-                    s[3*c + opos] = 1.0 - (sw_deck[c_deck] + sg_deck[c_deck]);
-                    s[3*c + gpos] = sg_deck[c_deck];
-                    p[c] = p_deck[c_deck];
-                 }
-            } else {
-                OPM_THROW(std::runtime_error, "initStateFromDeck(): init with SWAT etc. only available with 2 or 3 phases.");
-            }
-        } else {
-            OPM_THROW(std::runtime_error, "initStateFromDeck(): we must either have EQUIL, or PRESSURE and SWAT/SOIL/SGAS.");
-        }
-
-        // Finally, init face pressures.
-        initFacePressure(dimensions, number_of_faces, face_cells, begin_face_centroids,
-                         begin_cell_centroids, state);
-    }
-
     /// Initialize surface volume from pressure and saturation by z = As.
     /// Here  saturation is used as an intial guess for z in the
     /// computation of A.
@@ -975,60 +851,6 @@ namespace Opm
         }
     }
 
-
-    /// Initialize a blackoil state from input deck.
-    template <class Props, class State>
-    void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
-                                   const Props& props,
-                                   const EclipseGridParser& deck,
-                                   const double gravity,
-                                   State& state)
-    {
-        initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell,
-                                  grid.number_of_faces, UgGridHelpers::faceCells(grid),
-                                  grid.face_centroids, grid.cell_centroids,grid.dimensions,
-                                  props, deck, gravity, state);
-    }
-
-    template <class FaceCells, class FCI, class CCI, class Props, class State>
-    void initBlackoilStateFromDeck(int number_of_cells,
-                                   const int* global_cell,
-                                   int number_of_faces,
-                                   FaceCells face_cells,
-                                   FCI begin_face_centroids,
-                                   CCI begin_cell_centroids,
-                                   int dimensions,
-                                   const Props& props,
-                                   const EclipseGridParser& deck,
-                                   const double gravity,
-                                   State& state)
-    {
-        initStateFromDeck(number_of_cells, global_cell, number_of_faces,
-                          face_cells, begin_face_centroids, begin_cell_centroids,
-                          dimensions, props, deck, gravity, state);
-        if (deck.hasField("RS")) {
-            const std::vector<double>& rs_deck = deck.getFloatingPointValue("RS");
-            for (int c = 0; c < number_of_cells; ++c) {
-                int c_deck = (global_cell == NULL) ? c : global_cell[c];
-                state.gasoilratio()[c] = rs_deck[c_deck];
-            }
-            initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
-            computeSaturation(props,state);
-        } else if (deck.hasField("RV")){
-            const std::vector<double>& rv_deck = deck.getFloatingPointValue("RV");
-            for (int c = 0; c < number_of_cells; ++c) {
-                int c_deck = (global_cell == NULL) ? c : global_cell[c];
-                state.rv()[c] = rv_deck[c_deck];
-            }
-            initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
-            computeSaturation(props,state);
-        }
-
-        else {
-            OPM_THROW(std::runtime_error, "Temporarily, we require the RS or the RV field.");
-        }
-    }
-
     /// Initialize a blackoil state from input deck.
     template <class Props, class State>
     void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
@@ -1083,7 +905,6 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Temporarily, we require the RS or the RV field.");
         }
     }
-
 
 } // namespace Opm
 

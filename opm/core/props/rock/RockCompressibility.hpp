@@ -27,16 +27,11 @@
 namespace Opm
 {
 
-    class EclipseGridParser;
     namespace parameter { class ParameterGroup; }
 
     class RockCompressibility
     {
     public:
-        /// Construct from input deck.
-        /// Looks for the keywords ROCK and ROCKTAB.
-        RockCompressibility(const EclipseGridParser& deck);
-
         /// Construct from input deck.
         /// Looks for the keywords ROCK and ROCKTAB.
         RockCompressibility(Opm::DeckConstPtr newParserDeck);

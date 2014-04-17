@@ -79,50 +79,6 @@ namespace Opm
         child->setParent(parent);
     }
 
-
-    void WellCollection::addChild(const std::string& child_name,
-                                  const std::string& parent_name,
-                                  const EclipseGridParser& deck)
-    {
-        WellsGroupInterface* parent = findNode(parent_name);
-        if (!parent) {
-            roots_.push_back(createWellsGroup(parent_name, deck));
-            parent = roots_[roots_.size() - 1].get();
-        }
-
-        std::shared_ptr<WellsGroupInterface> child;
-
-        for (size_t i = 0; i < roots_.size(); ++i) {
-            if (roots_[i]->name() == child_name) {
-                child = roots_[i];
-                // We've found a new parent to the previously thought root, need to remove it
-                for(size_t j = i; j < roots_.size() - 1; ++j) {
-                    roots_[j] = roots_[j+1];
-                }
-
-                roots_.resize(roots_.size()-1);
-                break;
-            }
-        }
-
-        if (!child.get()) {
-            child = createWellsGroup(child_name, deck);
-        }
-
-        WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
-        if (!parent_as_group) {
-            OPM_THROW(std::runtime_error, "Trying to add child to group named " << parent_name << ", but it's not a group.");
-        }
-        parent_as_group->addChild(child);
-
-        if(child->isLeafNode()) {
-            leaf_nodes_.push_back(static_cast<WellNode*>(child.get()));
-        }
-
-        child->setParent(parent);
-    }
-
-
     const std::vector<WellNode*>& WellCollection::getLeafNodes() const {
         return leaf_nodes_;
     }

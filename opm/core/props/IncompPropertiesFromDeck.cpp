@@ -26,18 +26,6 @@
 
 namespace Opm
 {
-    IncompPropertiesFromDeck::IncompPropertiesFromDeck(const EclipseGridParser& deck,
-                                                       const UnstructuredGrid& grid)
-    {
-        rock_.init(deck, grid);
-        pvt_.init(deck);
-        satprops_.init(deck, grid, 200);
-        if (pvt_.numPhases() != satprops_.numPhases()) {
-            OPM_THROW(std::runtime_error, "IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
-                  << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
-        }
-    }
-
     IncompPropertiesFromDeck::IncompPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
                                                        const UnstructuredGrid& grid)
     {

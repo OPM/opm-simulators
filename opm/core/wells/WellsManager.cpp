@@ -21,7 +21,6 @@
 
 
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
