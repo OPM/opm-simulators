@@ -1,8 +1,7 @@
 #include "config.h"
-#include <iostream>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <iostream>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/core/simulator/initState.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
@@ -20,6 +19,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 int main(int argc, char** argv)
@@ -34,16 +34,17 @@ try
     simtimer.init(parameters);
 
     // Read input file
-    EclipseGridParser parser(file_name);
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr newParserDeck = parser->parseFile(file_name);
     std::cout << "Done!" << std::endl;
+
     // Setup grid
-    GridManager grid(parser);
+    GridManager grid(newParserDeck);
 
     // Define rock and fluid properties
-    IncompPropertiesFromDeck incomp_properties(parser, *grid.c_grid());
-    RockCompressibility rock_comp(parser);
-    ParserPtr newParser(new Opm::Parser());
-    EclipseStateConstPtr eclipseState(new Opm::EclipseState(newParser->parseFile(file_name)));
+    IncompPropertiesFromDeck incomp_properties(newParserDeck, *grid.c_grid());
+    RockCompressibility rock_comp(newParserDeck);
+    EclipseStateConstPtr eclipseState(new Opm::EclipseState(newParserDeck));
 
     // Finally handle the wells
     WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
@@ -75,7 +76,7 @@ try
 
     Opm::TwophaseState state;
 
-    initStateFromDeck(*grid.c_grid(), incomp_properties, parser, gravity[2], state);
+    initStateFromDeck(*grid.c_grid(), incomp_properties, newParserDeck, gravity[2], state);
 
     Opm::WellState well_state;
     well_state.init(wells.c_wells(), state);
