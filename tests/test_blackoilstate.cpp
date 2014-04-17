@@ -1,9 +1,11 @@
 #include <config.h>
 
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/grid/GridManager.hpp>
-
 #include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #if HAVE_DYNAMIC_BOOST_TEST
 #define BOOST_TEST_DYN_LINK
 #endif
@@ -29,12 +31,13 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 
     const string filename1 = "testBlackoilState1.DATA";
     const string filename2 = "testBlackoilState2.DATA";
-    const EclipseGridParser deck1 (filename1);
-    const EclipseGridParser deck2 (filename2);
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr newParserDeck1(parser->parseFile(filename1));
+    Opm::DeckConstPtr newParserDeck2(parser->parseFile(filename2));
 
-    GridManager gridManager1(deck1);
+    GridManager gridManager1(newParserDeck1);
     const UnstructuredGrid* grid1 = gridManager1.c_grid();
-    GridManager gridManager2(deck2);
+    GridManager gridManager2(newParserDeck2);
     const UnstructuredGrid* grid2 = gridManager2.c_grid();
     
     BlackoilState state1;
@@ -51,9 +54,10 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
-    const EclipseGridParser deck (filename);
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr newParserDeck(parser->parseFile(filename));
 
-    GridManager gridManager(deck);
+    GridManager gridManager(newParserDeck);
     const UnstructuredGrid* grid = gridManager.c_grid();
     
     BlackoilState state1;
@@ -70,9 +74,10 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
-    const EclipseGridParser deck (filename);
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr newParserDeck(parser->parseFile(filename));
 
-    GridManager gridManager(deck);
+    GridManager gridManager(newParserDeck);
     const UnstructuredGrid* grid = gridManager.c_grid();
     
     BlackoilState state1;
