@@ -737,31 +737,11 @@ namespace Opm
      */
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
-                        const EclipseGridParser& deck,
-                        const double gravity,
-                        BlackoilState& state)
-    {
-        typedef Equil::DeckDependent::InitialStateComputer<EclipseGridParser> ISC;
-        ISC isc(props, deck, grid, gravity);
-        const auto pu = props.phaseUsage();
-        const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
-            ? pu.phase_pos[BlackoilPhases::Liquid]
-            : pu.phase_pos[BlackoilPhases::Aqua];
-        state.pressure() = isc.press()[ref_phase];
-        state.saturation() = convertSats(isc.saturation());
-        state.gasoilratio() = isc.rs();
-        state.rv() = isc.rv();
-        // TODO: state.surfacevol() must be computed from s, rs, rv.
-    }
-    
-    
-    void initStateEquil(const UnstructuredGrid& grid,
-                        const BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr newParserDeck,
                         const double gravity,
                         BlackoilState& state)
     {
-        typedef Equil::DeckDependent::InitialStateComputer<Opm::DeckConstPtr> ISC;
+        typedef Equil::DeckDependent::InitialStateComputer ISC;
         ISC isc(props, newParserDeck, grid, gravity);
         const auto pu = props.phaseUsage();
         const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
