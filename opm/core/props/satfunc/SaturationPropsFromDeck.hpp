@@ -64,6 +64,18 @@ namespace Opm
                   const int samples);
 
         /// Initialize from deck and grid.
+        /// \param[in]  deck     Deck input parser
+        /// \param[in]  grid     Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        /// \param[in]  samples  Number of uniform sample points for saturation tables.
+        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
+        void init(Opm::DeckConstPtr newParserDeck,
+                  const UnstructuredGrid& grid,
+                  const int samples);
+
+
+        /// Initialize from deck and grid.
         /// \param[in]  deck            Deck input parser
         /// \param[in]  number_of_cells The number of cells of the grid to which property
         ///                             object applies, needed for the
@@ -84,23 +96,7 @@ namespace Opm
                   const T& begin_cell_centroids,
                   int dimensions,
                   const int samples);
-        
-        /// Initialize from deck and grid.
-        /// \param[in]  newParserDeck     Deck input parser
-        /// \param[in]  grid     Grid to which property object applies, needed for the
-        ///                      mapping from cell indices (typically from a processed grid)
-        ///                      to logical cartesian indices consistent with the deck.
-        /// \param[in]  samples  Number of uniform sample points for saturation tables.
-        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
-        void init(Opm::DeckConstPtr newParserDeck,
-                  const UnstructuredGrid& grid,
-                  const int samples);
 
-        /// Initialize from deck and grid.
-        /// \param[in]  newParserDeck     Deck input parser
-        /// \param[in]  number_of_cells The number of cells of the grid to which property
-        ///                             object applies, needed for the
-        ///                             mapping from cell indices (typically from a processed
         ///                             grid) to logical cartesian indices consistent with the
         ///                             deck.
         /// \param[in]  global_cell     The mapping from local cell indices of the grid to

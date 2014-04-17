@@ -20,11 +20,11 @@
 #ifndef OPM_INCOMPPROPERTIESFROMDECK_HEADER_INCLUDED
 #define OPM_INCOMPPROPERTIESFROMDECK_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 struct UnstructuredGrid;
 
@@ -51,6 +51,14 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         IncompPropertiesFromDeck(const EclipseGridParser& deck,
+                                 const UnstructuredGrid& grid);
+
+        /// Initialize from deck and grid.
+        /// \param  deck         Deck input parser
+        /// \param  grid         Grid to which property object applies, needed for the
+        ///                      mapping from cell indices (typically from a processed grid)
+        ///                      to logical cartesian indices consistent with the deck.
+        IncompPropertiesFromDeck(Opm::DeckConstPtr newParserDeck,
                                  const UnstructuredGrid& grid);
 
         /// Destructor.

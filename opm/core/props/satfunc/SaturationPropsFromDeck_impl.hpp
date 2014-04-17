@@ -57,6 +57,18 @@ namespace Opm
              grid.dimensions, samples);
     }
 
+
+    /// Initialize from deck.
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr newParserDeck,
+                                                   const UnstructuredGrid& grid,
+                                                   const int samples)
+    {
+        init(newParserDeck, grid.number_of_cells, 
+             grid.global_cell, grid.cell_centroids,
+             grid.dimensions, samples);
+    }
+
     /// Initialize from deck.
     template <class SatFuncSet>
     template< class T>
@@ -155,18 +167,6 @@ namespace Opm
 
             //OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  ENDSCALE: Under construction ...");
         }
-    }
-
-
-    /// Initialize from deck.
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr newParserDeck,
-                                                   const UnstructuredGrid& grid,
-                                                   const int samples)
-    {
-        this->template init<SatFuncSet>(newParserDeck, grid.number_of_cells, 
-                                        grid.global_cell, grid.cell_centroids,
-                                        grid.dimensions, samples);
     }
 
     /// Initialize from deck.
