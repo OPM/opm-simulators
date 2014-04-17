@@ -31,8 +31,6 @@ namespace Opm
 {
 
     namespace parameter { class ParameterGroup; }
-    class EclipseGridParser;
-
 
     class SimulatorTimer
     {
@@ -44,10 +42,6 @@ namespace Opm
         ///    num_psteps    (default 1)
         ///    stepsize_days (default 1)
         void init(const parameter::ParameterGroup& param);
-
-        /// Initialize from TSTEP field.
-        /// Note that DATES are folded into TSTEP by the parser.
-        void init(const EclipseGridParser& deck);
 
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
         void init(TimeMapConstPtr timeMap);

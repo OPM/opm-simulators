@@ -21,7 +21,6 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <ostream>
 #include <numeric>
 
@@ -47,14 +46,6 @@ namespace Opm
         timesteps_.clear();
         timesteps_.resize(num_psteps, stepsize);
         total_time_ = num_psteps*stepsize;
-    }
-
-    /// Initialize from TSTEP field.
-    void SimulatorTimer::init(const EclipseGridParser& deck)
-    {
-        timesteps_  = deck.getTSTEP().tstep_;
-        total_time_ = std::accumulate(timesteps_.begin(), timesteps_.end(), 0.0);
-        start_date_ = deck.getStartDate();
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
