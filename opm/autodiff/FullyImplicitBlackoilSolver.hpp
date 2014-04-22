@@ -23,6 +23,8 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -31,7 +33,7 @@ namespace Opm {
 
     class DerivedGeology;
     class RockCompressibility;
-    class LinearSolverInterface;
+    class NewtonIterationBlackoilInterface;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
 
@@ -45,9 +47,12 @@ namespace Opm {
     ///
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
+    template<class T>
     class FullyImplicitBlackoilSolver
     {
     public:
+        /// \brief The type of the grid that we use.
+        typedef T Grid;
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -57,12 +62,12 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const UnstructuredGrid&         grid ,
+        FullyImplicitBlackoilSolver(const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const LinearSolverInterface&    linsolver);
+                                    const NewtonIterationBlackoilInterface& linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -118,12 +123,12 @@ namespace Opm {
                Gas   = BlackoilPropsAdInterface::Gas  };
 
         // Member data
-        const UnstructuredGrid&         grid_;
+        const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells&                    wells_;
-        const LinearSolverInterface&    linsolver_;
+        const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active faces. Maps active -> canonical phase indices.
@@ -137,14 +142,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
-        // The mass_balance vector has one element for each active phase,
-        // each of which has size equal to the number of cells.
-        // The well_eq has size equal to the number of wells.
-        struct {
-            std::vector<ADB> mass_balance;
-            ADB well_flux_eq;
-            ADB well_eq;
-        } residual_;
+        LinearisedBlackoilResidual residual_;
 
         // Private methods.
         SolutionState
@@ -269,5 +267,6 @@ namespace Opm {
     };
 } // namespace Opm
 
+#include "FullyImplicitBlackoilSolver_impl.hpp"
 
 #endif // OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED

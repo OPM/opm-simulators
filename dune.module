@@ -4,3 +4,4 @@ Version: 0.9
 Label: 2013.10
 Maintainer: atgeirr@sintef.no
 Depends: opm-core
+Suggests: dune-cornerpoint
