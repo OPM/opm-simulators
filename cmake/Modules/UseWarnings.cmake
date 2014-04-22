@@ -13,7 +13,7 @@ if (CXX_COMPAT_GCC)
   endif (_warn_flag)
 endif ()
 
-option(SILENCE_DUNE_WARNINGS "Disable warnings from DUNE?" OFF)
+option(SILENCE_EXTERNAL_WARNINGS "Disable some warnings from external packages (requires GCC 4.6 or newer)" OFF)
 if(SILENCE_EXTERNAL_WARNINGS AND CXX_COMPAT_GCC)
   file(WRITE ${CMAKE_BINARY_DIR}/disable_warning_pragmas.h "
 #pragma GCC diagnostic push
