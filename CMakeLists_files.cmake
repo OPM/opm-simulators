@@ -28,6 +28,7 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
+	opm/autodiff/NewtonIterationBlackoilSimple.cpp
 	opm/autodiff/GridHelpers.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorCompressibleAd.cpp
@@ -103,6 +104,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver_impl.hpp
+	opm/autodiff/NewtonIterationBlackoilInterface.hpp
+	opm/autodiff/NewtonIterationBlackoilSimple.hpp
+	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp

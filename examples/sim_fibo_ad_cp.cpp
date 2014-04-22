@@ -59,6 +59,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -195,6 +196,7 @@ try
 
     // Linear solver.
     LinearSolverFactory linsolver(param);
+    NewtonIterationBlackoilSimple fis_solver(linsolver);
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
@@ -269,7 +271,7 @@ try
                                                                *new_props,
                                                                rock_comp->isActive() ? rock_comp.get() : 0,
                                                                wells,
-                                                               linsolver,
+                                                               fis_solver,
                                                                grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 

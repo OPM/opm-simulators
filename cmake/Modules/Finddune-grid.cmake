@@ -23,7 +23,8 @@ find_opm_package (
   dune-common REQUIRED;
   dune-geometry REQUIRED;
   MPI;
-  ALUGrid
+  ALUGrid;
+  UG
   "
   # header to search for
   "dune/grid/onedgrid.hh"

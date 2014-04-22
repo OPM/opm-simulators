@@ -5,6 +5,8 @@
 set (opm-core_CONFIG_VAR
 	HAVE_ERT
 	HAVE_SUITESPARSE_UMFPACK_H
+	HAVE_DUNE_ISTL
+	HAVE_MPI
 	)
 
 # dependencies
@@ -27,6 +29,8 @@ set (opm-core_DEPS
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)
 	"ERT"
+	# Look for MPI support
+	"MPI"
 	# DUNE dependency
 	"dune-common"
 	"dune-istl"
