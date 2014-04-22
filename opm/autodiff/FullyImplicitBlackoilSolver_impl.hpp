@@ -638,7 +638,7 @@ namespace {
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
-        const SolutionState state = variableState(x, xw);
+        SolutionState state = variableState(x, xw);
 
         // -------- Mass balance equations --------
 
@@ -695,7 +695,10 @@ namespace {
 
         }
 
-        addWellEq(state, xw); // Note: this can change xw (switching well controls).
+        // Note: updateWellControls() can change all its arguments if
+        // a well control is switched.
+        updateWellControls(state.bhp, state.qs, xw);
+        addWellEq(state);
         addWellControlEq(state, xw);
     }
 
@@ -704,8 +707,7 @@ namespace {
 
 
     template <class T>
-    void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
-                                                WellStateFullyImplicitBlackoil& xw)
+    void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells_.number_of_phases;
@@ -880,10 +882,6 @@ namespace {
 
         }
         residual_.well_flux_eq = qs;
-
-        // Updating the well controls is done from here, since we have
-        // access to the necessary bhp and rate data in this method.
-        updateWellControls(state.bhp, state.qs, xw);
     }
 
 
@@ -956,15 +954,17 @@ namespace {
 
 
     template<class T>
-    void FullyImplicitBlackoilSolver<T>::updateWellControls(const ADB& bhp,
-                                                         const ADB& well_phase_flow_rate,
-                                                         WellStateFullyImplicitBlackoil& xw) const
+    void FullyImplicitBlackoilSolver<T>::updateWellControls(ADB& bhp,
+                                                            ADB& well_phase_flow_rate,
+                                                            WellStateFullyImplicitBlackoil& xw) const
     {
         std::string modestring[3] = { "BHP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
+        bool bhp_changed = false;
+        bool rates_changed = false;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
             // The current control in the well state overrides
@@ -1002,7 +1002,37 @@ namespace {
                           << " from " << modestring[well_controls_iget_type(wc, current)]
                           << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 xw.currentControls()[w] = ctrl_index;
+                // Also updating well state and primary variables.
+                // We can only be switching to BHP and SURFACE_RATE
+                // controls since we do not support RESERVOIR_RATE.
+                const double target = well_controls_iget_target(wc, ctrl_index);
+                const double* distr = well_controls_iget_distr(wc, ctrl_index);
+                switch (well_controls_iget_type(wc, ctrl_index)) {
+                case BHP:
+                    xw.bhp()[w] = target;
+                    bhp_changed = true;
+                    break;
+                case SURFACE_RATE:
+                    for (int phase = 0; phase < np; ++phase) {
+                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                    }
+                    rates_changed = true;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Programmer error: should not have switched "
+                                                "to anything but BHP or SURFACE_RATE.");
+                }
             }
+        }
+
+        // Update primary variables, if necessary.
+        if (bhp_changed) {
+            ADB::V new_bhp = Eigen::Map<ADB::V>(&xw.bhp()[0], nw);
+            bhp = ADB::function(new_bhp, bhp.derivative());
+        }
+        if (rates_changed) {
+            ADB::V new_qs = Eigen::Map<ADB::V>(&xw.wellRates()[0], np*nw);
+            well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
         }
     }
 
