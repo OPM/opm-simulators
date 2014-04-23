@@ -1501,7 +1501,7 @@ namespace {
         // convert the pressure offsets to the capillary pressures
         std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-#warning "what's the reference phase??"
+            // The reference pressure is always the liquid phase (oil) pressure.
             if (phaseIdx == BlackoilPhases::Liquid)
                 continue;
             pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];

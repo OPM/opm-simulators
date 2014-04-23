@@ -25,11 +25,17 @@
 
 #include <dune/common/version.hh>
 
+#include "disable_warning_pragmas.h"
+
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpihelper.hh>
 #else
 #include <dune/common/mpihelper.hh>
 #endif
+#include <dune/grid/CpGrid.hpp>
+#include <dune/grid/common/GridAdapter.hpp>
+
+#include "reenable_warning_pragmas.h"
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
@@ -37,9 +43,6 @@
 #include <opm/core/grid/cornerpoint_grid.h>
 
 #include <opm/core/grid/GridManager.hpp>
-
-#include <dune/grid/CpGrid.hpp>
-#include <dune/grid/common/GridAdapter.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -99,7 +102,10 @@ int
 main(int argc, char** argv)
 try
 {
-    Dune::MPIHelper& helper= Dune::MPIHelper::instance(argc, argv);
+    // Must ensure an instance of the helper is created to initialise MPI,
+    // but we don't use the helper here.
+    // Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
+    Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
     std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
