@@ -17,6 +17,7 @@
 
 #ifdef HAVE_DUNE_CORNERPOINT
 #include "disable_warning_pragmas.h"
+#include <dune/common/version.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include "reenable_warning_pragmas.h"
 #endif
