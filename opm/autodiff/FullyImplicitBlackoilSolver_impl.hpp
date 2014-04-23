@@ -1027,11 +1027,11 @@ namespace {
 
         // Update primary variables, if necessary.
         if (bhp_changed) {
-            ADB::V new_bhp = Eigen::Map<ADB::V>(&xw.bhp()[0], nw);
+            ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
             bhp = ADB::function(new_bhp, bhp.derivative());
         }
         if (rates_changed) {
-            ADB::V new_qs = Eigen::Map<ADB::V>(&xw.wellRates()[0], np*nw);
+            ADB::V new_qs = Eigen::Map<ADB::V>(xw.wellRates().data(), np*nw);
             well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
         }
     }
