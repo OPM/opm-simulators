@@ -165,10 +165,12 @@ namespace Opm {
 
         void
         addWellControlEq(const SolutionState& state,
-                         const WellStateFullyImplicitBlackoil& xw);
+                         const WellStateFullyImplicitBlackoil& xw,
+                         const V& aliveWells);
 
         void
-        addWellEq(const SolutionState& state);
+        addWellEq(const SolutionState& state,
+                  V& aliveWells);
 
         void updateWellControls(ADB& bhp,
                                 ADB& well_phase_flow_rate,

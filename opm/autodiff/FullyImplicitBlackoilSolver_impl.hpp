@@ -49,6 +49,13 @@
                   << collapseJacs(foo) << std::endl;                    \
     } while (0)
 
+#define DUMPVAL(foo)                                                    \
+    do {                                                                \
+        std::cout << "==========================================\n"     \
+                  << #foo ":\n"                                         \
+                  << foo.value() << std::endl;                          \
+    } while (0)
+
 
 
 namespace Opm {
@@ -698,8 +705,9 @@ namespace {
         // Note: updateWellControls() can change all its arguments if
         // a well control is switched.
         updateWellControls(state.bhp, state.qs, xw);
-        addWellEq(state);
-        addWellControlEq(state, xw);
+        V aliveWells;
+        addWellEq(state, aliveWells);
+        addWellControlEq(state, xw, aliveWells);
     }
 
 
@@ -707,7 +715,8 @@ namespace {
 
 
     template <class T>
-    void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state)
+    void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
+                                                   V& aliveWells)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells_.number_of_phases;
@@ -723,6 +732,10 @@ namespace {
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(state.pressure, well_cells);
+
+        // DUMPVAL(p_perfcell);
+        // DUMPVAL(state.bhp);
+        // DUMPVAL(ADB::constant(cdp));
 
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcell - (wops_.w2p * state.bhp + cdp);
@@ -806,12 +819,13 @@ namespace {
             wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
             wbqt += wbq[phase];
         }
+        // DUMPVAL(wbqt);
 
         // check for dead wells
-        V isNotDeadWells = V::Constant(nw,1.0);
+        aliveWells = V::Constant(nw, 1.0);
         for (int w = 0; w < nw; ++w) {
             if (wbqt.value()[w] == 0) {
-                isNotDeadWells[w] = 0;
+                aliveWells[w] = 0.0;
             }
         }
         // compute wellbore mixture at std conds
@@ -829,8 +843,12 @@ namespace {
         ADB mt = subset(rq_[0].mob,well_cells);
         for (int phase = 1; phase < np; ++phase) {
             mt += subset(rq_[phase].mob,well_cells);
-
         }
+
+        // DUMPVAL(ADB::constant(isInjInx));
+        // DUMPVAL(ADB::constant(Tw));
+        // DUMPVAL(mt);
+        // DUMPVAL(drawdown);
 
         // injection connections total volumerates
         ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
@@ -858,8 +876,10 @@ namespace {
                 tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
             }
             volRat += tmp / subset(rq_[phase].b,well_cells);
-
         }
+
+        // DUMPVAL(cqt_i);
+        // DUMPVAL(volRat);
 
         // injecting connections total volumerates at std cond
         ADB cqt_is = cqt_i/volRat;
@@ -869,6 +889,9 @@ namespace {
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + (wops_.w2p * mix_s[phase])*cqt_is;
         }
+
+        // DUMPVAL(mix_s[2]);
+        // DUMPVAL(cq_ps[2]);
 
         // Add well contributions to mass balance equations
         for (int phase = 0; phase < np; ++phase) {
@@ -881,6 +904,7 @@ namespace {
             qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
+
         residual_.well_flux_eq = qs;
     }
 
@@ -1041,7 +1065,8 @@ namespace {
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::addWellControlEq(const SolutionState& state,
-                                                       const WellStateFullyImplicitBlackoil& xw)
+                                                          const WellStateFullyImplicitBlackoil& xw,
+                                                          const V& aliveWells)
     {
         // Handling BHP and SURFACE_RATE wells.
 
@@ -1078,6 +1103,17 @@ namespace {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        // For wells that are dead (not flowing), and therefore not communicating
+        // with the reservoir, we set the equation to be equal to the well's total
+        // flow. This will be a solution only if the target rate is also zero.
+        M rate_summer(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            for (int phase = 0; phase < np; ++phase) {
+                rate_summer.insert(w, phase*nw + w) = 1.0;
+            }
+        }
+        Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
+        residual_.well_eq = alive_selector.select(residual_.well_eq, rate_summer * state.qs);
         // DUMP(residual_.well_eq);
     }
 
