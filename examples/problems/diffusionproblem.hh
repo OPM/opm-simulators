@@ -25,7 +25,7 @@
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
 #include <ewoms/models/ncp/ncpproperties.hh>
-#include <ewoms/io/cubegridcreator.hh>
+#include <ewoms/io/cubegridmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -53,8 +53,8 @@ NEW_TYPE_TAG(DiffusionBaseProblem);
 // Set the grid implementation to be used
 SET_TYPE_PROP(DiffusionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
-// set the GridCreator property
-SET_TYPE_PROP(DiffusionBaseProblem, GridCreator, Ewoms::CubeGridCreator<TypeTag>);
+// set the GridManager property
+SET_TYPE_PROP(DiffusionBaseProblem, GridManager, Ewoms::CubeGridManager<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(DiffusionBaseProblem, Problem, Ewoms::DiffusionProblem<TypeTag>);

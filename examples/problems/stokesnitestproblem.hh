@@ -24,7 +24,7 @@
 #define EWOMS_STOKES_NI_TEST_PROBLEM_HH
 
 #include <ewoms/models/stokes/stokesmodel.hh>
-#include <ewoms/io/simplexgridcreator.hh>
+#include <ewoms/io/simplexgridmanager.hh>
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
 
 #include <dune/grid/yaspgrid.hh>

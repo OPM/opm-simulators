@@ -24,7 +24,7 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include "lensgridcreator.hh"
+#include "lensgridmanager.hh"
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 #include <ewoms/linear/parallelamgbackend.hh>
@@ -53,7 +53,7 @@ class LensProblem;
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridCreator));
+NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridManager));
 
 // declare the properties specific for the lens problem
 NEW_PROP_TAG(LensLowerLeftX);

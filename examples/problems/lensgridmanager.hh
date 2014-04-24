@@ -18,13 +18,13 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::LensGridCreator
+ * \copydoc Ewoms::LensGridManager
  */
-#ifndef EWOMS_LENS_GRID_CREATOR_HH
-#define EWOMS_LENS_GRID_CREATOR_HH
+#ifndef EWOMS_LENS_GRID_MANAGER_HH
+#define EWOMS_LENS_GRID_MANAGER_HH
 
 #include <ewoms/parallel/mpihelper.hh>
-#include <ewoms/io/basegridcreator.hh>
+#include <ewoms/io/basegridmanager.hh>
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
@@ -39,14 +39,14 @@ template <class TypeTag>
 class LensProblem;
 
 template <class TypeTag>
-class LensGridCreator;
+class LensGridManager;
 } // namespace Ewoms
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(LensGridCreator);
+NEW_TYPE_TAG(LensGridManager);
 
-// declare the properties required by the for the lens grid creator
+// declare the properties required by the for the lens grid manager
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
 
@@ -60,9 +60,9 @@ NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
 
-// set the Grid and GridCreator properties
-SET_TYPE_PROP(LensGridCreator, Grid, Dune::YaspGrid<2>);
-SET_TYPE_PROP(LensGridCreator, GridCreator, Ewoms::LensGridCreator<TypeTag>);
+// set the Grid and GridManager properties
+SET_TYPE_PROP(LensGridManager, Grid, Dune::YaspGrid<2>);
+SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
 }} // namespace Opm, Properties
 
 namespace Ewoms {
@@ -72,19 +72,18 @@ namespace Ewoms {
  * \brief Helper class for grid instantiation of the lens problem.
  */
 template <class TypeTag>
-class LensGridCreator : public BaseGridCreator<TypeTag>
+class LensGridManager : public BaseGridManager<TypeTag>
 {
+    typedef BaseGridManager<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-
-public:
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
 
-private:
     static const int dim = Grid::dimension;
 
 public:
     /*!
-     * \brief Register all run-time parameters for the grid creator.
+     * \brief Register all run-time parameters for the grid manager.
      */
     static void registerParameters()
     {
@@ -112,7 +111,8 @@ public:
     /*!
      * \brief Create the grid for the lens problem
      */
-    static void makeGrid()
+    LensGridManager(Simulator &simulator)
+        : ParentType(simulator)
     {
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
         std::bitset<dim> isPeriodic(false);
@@ -149,36 +149,31 @@ public:
             /*numCells=*/cellRes, isPeriodic,
             /*overlap=*/1);
         grid_->globalRefine(numRefinements);
+
+        this->finalizeInit_();
     }
 
     /*!
-     * \brief Return a reference to the grid.
+     * \brief Destroy the grid
      */
-    static Grid* gridPointer()
+    ~LensGridManager()
+    { delete grid_; }
+
+    /*!
+     * \brief Return a pointer to the grid object.
+     */
+    Grid* gridPointer()
     { return grid_; }
 
     /*!
-     * \brief Distribute the grid (and attached data) over all
-     *        processes.
+     * \brief Return a constant pointer to the grid object.
      */
-    static void loadBalance()
-    { grid_->loadBalance(); }
-
-    /*!
-     * \brief Destroy the grid
-     *
-     * This is required to guarantee that the grid is deleted before
-     * MPI_Comm_free is called.
-     */
-    static void deleteGrid()
-    { delete grid_; }
+    const Grid* gridPointer() const
+    { return grid_; }
 
 private:
-    static Grid *grid_;
+    Grid *grid_;
 };
-
-template <class TypeTag>
-typename LensGridCreator<TypeTag>::Grid *LensGridCreator<TypeTag>::grid_;
 
 } // namespace Ewoms
 

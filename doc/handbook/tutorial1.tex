@@ -114,10 +114,10 @@ relevant properties for the \eWoms property system:
   used is defined in line \ref{tutorial1:set-grid} -- in this case
   it is \texttt{Dune::YaspGrid}.
 \item Since \Dune does not provide a uniform mechanism to create or
-  load grids, \eWoms features the concept of grid creators. In this
-  case, the generic \texttt{CubeGridCreator} is used. This grid
-  creator constructs a structured rectangular grid with a specified
-  size and resolution. For this grid creator, the physical domain of
+  load grids, \eWoms features the concept of grid managers. In this
+  case, the generic \texttt{CubeGridManager} is used. This grid
+  manager constructs a structured rectangular grid with a specified
+  size and resolution. For this grid manager, the physical domain of
   the grid is specified via the run-time parameters
   \texttt{DomainSizeX} and \texttt{DomainSizeY} and its resolution by
   \texttt{CellsX} and \texttt{CellsY}. These parameters can be
@@ -328,15 +328,15 @@ even not at all.
   not want to go through the trouble of installing this grid manager,
   please skip this exercise.
 
-  Change the grid creator used by the problem to
-  \texttt{SimplexGridCreator<TypeTag>} and the type of the grid to
-  \texttt{Dune::ALUSimplexGrid<2, 2>}. The grid creator is specified
-  on line \ref{tutorial1:set-gridcreator}, whil the type of the
+  Change the grid manager used by the problem to
+  \texttt{SimplexGridManager<TypeTag>} and the type of the grid to
+  \texttt{Dune::ALUSimplexGrid<2, 2>}. The grid manager is specified
+  on line \ref{tutorial1:set-grid-manager}, while the type of the
   \Dune grid manager is set on line
   \ref{tutorial1:set-grid}. You also need to change the include
-  statement of the grid creator from \texttt{cubegridcreator.hh} to
-  \texttt{simplexgridcreator.hh} on line
-  \ref{tutorial1:include-grid-creator} and the one for the grid
+  statement of the grid manager from \texttt{cubegridmanager.hh} to
+  \texttt{simplexgridmanager.hh} on line
+  \ref{tutorial1:include-grid-manager} and the one for the grid
   manager from \texttt{dune/grid/yaspgrid.hh} to
   \texttt{dune/grid/alugrid.hh} on line \ref{tutorial1:include-grid-manager}.
 
