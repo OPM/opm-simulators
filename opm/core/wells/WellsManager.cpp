@@ -566,11 +566,15 @@ namespace Opm
                             OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-preferring well.");
                         }
                         cf[phaseUsage.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+                        break;
                     case Phase::GAS:
                         if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
                             OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-preferring well.");
                         }
                         cf[phaseUsage.phase_pos[BlackoilPhases::Vapour]] = 1.0;
+                        break;
+                    default:
+                        OPM_THROW(std::logic_error, "Unknown preferred phase: " << well->getPreferredPhase());
                     }
                     std::copy(cf, cf + phaseUsage.num_phases, w_->comp_frac + well_index*phaseUsage.num_phases);
                 }
