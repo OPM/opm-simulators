@@ -80,15 +80,6 @@ class EclipseWriterHelper<TypeTag, Dune::CpGrid>
 {
     friend class EclipseWriter<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridCreator) GridCreator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-
-    enum { dim = GridView::dimension };
-
     static void writeHeaders_(EclipseWriter<TypeTag> &writer)
     {
         typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
@@ -101,9 +92,6 @@ class EclipseWriterHelper<TypeTag, Dune::CpGrid>
         OPM_THROW(std::logic_error,
                   "Eclipse binary output requires the ERT libraries");
 #else
-        if (dim != 3)
-            OPM_THROW(std::logic_error,
-                      "Eclipse binary output can only be written for 3D grids");
 
         // set the index of the first time step written to 0...
         writer.reportStepIdx_ = 0;
@@ -116,7 +104,7 @@ class EclipseWriterHelper<TypeTag, Dune::CpGrid>
         std::string egridFileName(egridRawFileName);
         std::free(egridRawFileName);
 
-        ErtGrid ertGrid(GridCreator::eclipseGrid());
+        ErtGrid ertGrid(writer.simulator_.gridManager().eclipseGrid());
         ertGrid.write(egridFileName, writer.reportStepIdx_);
 #endif
     }
@@ -143,7 +131,7 @@ class EclipseWriter : public BaseOutputWriter
     typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridCreator) GridCreator;
+    typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
