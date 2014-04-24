@@ -34,7 +34,7 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
-#include <ewoms/io/cubegridcreator.hh>
+#include <ewoms/io/cubegridmanager.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -57,9 +57,9 @@ NEW_TYPE_TAG(PowerInjectionBaseProblem);
 // Set the grid implementation to be used
 SET_TYPE_PROP(PowerInjectionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
 
-// set the GridCreator property
-SET_TYPE_PROP(PowerInjectionBaseProblem, GridCreator,
-              Ewoms::CubeGridCreator<TypeTag>);
+// set the GridManager property
+SET_TYPE_PROP(PowerInjectionBaseProblem, GridManager,
+              Ewoms::CubeGridManager<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(PowerInjectionBaseProblem, Problem,

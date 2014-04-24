@@ -18,13 +18,13 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::EclGridCreator
+ * \copydoc Ewoms::EclGridManager
  */
-#ifndef EWOMS_ECL_GRID_CREATOR_HH
-#define EWOMS_ECL_GRID_CREATOR_HH
+#ifndef EWOMS_ECL_GRID_MANAGER_HH
+#define EWOMS_ECL_GRID_MANAGER_HH
 
 #include <ewoms/parallel/mpihelper.hh>
-#include <ewoms/io/basegridcreator.hh>
+#include <ewoms/io/basegridmanager.hh>
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
@@ -45,23 +45,23 @@ template <class TypeTag>
 class EclProblem;
 
 template <class TypeTag>
-class EclGridCreator;
+class EclGridManager;
 } // namespace Ewoms
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclGridCreator);
+NEW_TYPE_TAG(EclGridManager);
 
-// declare the properties required by the for the ecl grid creator
+// declare the properties required by the for the ecl grid manager
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclipseDeckFileName);
 
-SET_STRING_PROP(EclGridCreator, EclipseDeckFileName, "grids/ecl.DATA");
+SET_STRING_PROP(EclGridManager, EclipseDeckFileName, "grids/ecl.DATA");
 
-// set the Grid and GridCreator properties
-SET_TYPE_PROP(EclGridCreator, Grid, Dune::CpGrid);
-SET_TYPE_PROP(EclGridCreator, GridCreator, Ewoms::EclGridCreator<TypeTag>);
+// set the Grid and GridManager properties
+SET_TYPE_PROP(EclGridManager, Grid, Dune::CpGrid);
+SET_TYPE_PROP(EclGridManager, GridManager, Ewoms::EclGridManager<TypeTag>);
 }} // namespace Opm, Properties
 
 namespace Ewoms {
@@ -71,20 +71,20 @@ namespace Ewoms {
  * \brief Helper class for grid instantiation of the ecl problem.
  */
 template <class TypeTag>
-class EclGridCreator : public BaseGridCreator<TypeTag>
+class EclGridManager : public BaseGridManager<TypeTag>
 {
+    typedef BaseGridManager<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-
-public:
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef std::shared_ptr<Grid> GridPointer;
 
-private:
+    typedef std::shared_ptr<Grid> GridPointer;
+    typedef std::shared_ptr<const Grid> GridConstPointer;
     static const int dim = Grid::dimension;
 
 public:
     /*!
-     * \brief Register all run-time parameters for the grid creator.
+     * \brief Register all run-time parameters for the grid manager.
      */
     static void registerParameters()
     {
@@ -95,7 +95,11 @@ public:
     /*!
      * \brief Create the grid for the ecl problem
      */
-    static void makeGrid()
+    /*!
+     * \brief Create the grid for the lens problem
+     */
+    EclGridManager(Simulator &simulator)
+        : ParentType(simulator)
     {
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclipseDeckFileName);
 
@@ -112,37 +116,26 @@ public:
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false);
+
+        this->finalizeInit_();
     }
 
     /*!
-     * \brief Return a reference to the grid.
+     * \brief Return a pointer to the grid.
      */
-    static GridPointer gridPointer()
+    GridPointer gridPointer()
     { return grid_; }
 
     /*!
-     * \brief Distribute the grid (and attached data) over all
-     *        processes.
+     * \brief Return a pointer to the grid.
      */
-    static void loadBalance()
-    { grid_->loadBalance(); }
-
-    /*!
-     * \brief Destroy the grid
-     *
-     * This is required to guarantee that the grid is deleted before
-     * MPI_Comm_free is called.
-     */
-    static void deleteGrid()
-    {
-        grid_.reset();
-        deck_.reset();
-    }
+    GridConstPointer gridPointer() const
+    { return grid_; }
 
     /*!
      * \brief Return a pointer to the parsed Eclipse deck
      */
-    static Opm::DeckConstPtr deck()
+    Opm::DeckConstPtr deck() const
     { return deck_; }
 
     /*!
@@ -153,23 +146,14 @@ public:
      * EGRID files (which tends to be difficult with a plain
      * Dune::CpGrid)
      */
-    static Opm::EclipseGridConstPtr eclipseGrid()
+    Opm::EclipseGridConstPtr eclipseGrid() const
     { return eclipseGrid_; }
 
 private:
-    static GridPointer grid_;
-    static Opm::DeckConstPtr deck_;
-    static Opm::EclipseGridConstPtr eclipseGrid_;
+    GridPointer grid_;
+    Opm::DeckConstPtr deck_;
+    Opm::EclipseGridConstPtr eclipseGrid_;
 };
-
-template <class TypeTag>
-typename EclGridCreator<TypeTag>::GridPointer EclGridCreator<TypeTag>::grid_;
-
-template <class TypeTag>
-Opm::DeckConstPtr EclGridCreator<TypeTag>::deck_;
-
-template <class TypeTag>
-Opm::EclipseGridConstPtr EclGridCreator<TypeTag>::eclipseGrid_;
 
 } // namespace Ewoms
 

@@ -18,13 +18,13 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::FingerGridCreator
+ * \copydoc Ewoms::FingerGridManager
  */
-#ifndef EWOMS_FINGER_GRID_CREATOR_HH
-#define EWOMS_FINGER_GRID_CREATOR_HH
+#ifndef EWOMS_FINGER_GRID_MANAGER_HH
+#define EWOMS_FINGER_GRID_MANAGER_HH
 
 #include <ewoms/parallel/mpihelper.hh>
-#include <ewoms/io/basegridcreator.hh>
+#include <ewoms/io/basegridmanager.hh>
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
@@ -34,13 +34,13 @@
 
 #include <vector>
 
-// some hacky defines for the grid creator
+// some hacky defines for the grid manager
 #define FINGER_DIM 2
 #define FINGER_CUBES 1
 
 namespace Ewoms {
 template <class TypeTag>
-class FingerGridCreator;
+class FingerGridManager;
 
 template <class TypeTag>
 class FingerProblem;
@@ -48,8 +48,8 @@ class FingerProblem;
 
 namespace Opm {
 namespace Properties {
-// declare the properties required by the for the finger grid creator
-NEW_TYPE_TAG(FingerGridCreator);
+// declare the properties required by the for the finger grid manager
+NEW_TYPE_TAG(FingerGridManager);
 
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
@@ -64,8 +64,8 @@ NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
 
-SET_TYPE_PROP(FingerGridCreator, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
-SET_TYPE_PROP(FingerGridCreator, GridCreator, Ewoms::FingerGridCreator<TypeTag>);
+SET_TYPE_PROP(FingerGridManager, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
+SET_TYPE_PROP(FingerGridManager, GridManager, Ewoms::FingerGridManager<TypeTag>);
 
 }} // namespace Opm, Properties
 
@@ -74,17 +74,18 @@ namespace Ewoms {
  * \brief Helper class for grid instantiation of the finger problem.
  */
 template <class TypeTag>
-class FingerGridCreator : public BaseGridCreator<TypeTag>
+class FingerGridManager : public BaseGridManager<TypeTag>
 {
+    typedef BaseGridManager<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
 
     enum { dim = FINGER_DIM };
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-
     /*!
-     * \brief Register all run-time parameters for the grid creator.
+     * \brief Register all run-time parameters for the grid manager.
      */
     static void registerParameters()
     {
@@ -112,7 +113,8 @@ public:
     /*!
      * \brief Create the grid for the finger problem
      */
-    static void makeGrid()
+    FingerGridManager(Simulator &simulator)
+        : ParentType(simulator)
     {
         grid_ = new Grid;
 
@@ -268,33 +270,27 @@ public:
     }
 
     /*!
-     * \brief Return a reference to the grid.
+     * \brief Destroy the grid.
      */
-    static Grid* gridPointer()
+    ~FingerGridManager()
+    { delete grid_; }
+
+    /*!
+     * \brief Return a pointer to the grid.
+     */
+    Grid* gridPointer()
     { return grid_; }
 
     /*!
-     * \brief Distribute the grid (and attached data) over all
-     *        processes.
+     * \brief Return a pointer to the grid.
      */
-    static void loadBalance()
-    { grid_->loadBalance(); }
-
-    /*!
-     * \brief Destroy the grid.
-     *
-     * This is required to guarantee that the grid is deleted before
-     * MPI_Comm_free is called.
-     */
-    static void deleteGrid()
-    { delete grid_; }
+    const Grid* gridPointer() const
+    { return grid_; }
 
 private:
-    static Grid *grid_;
+    Grid *grid_;
 };
 
-template <class TypeTag>
-typename FingerGridCreator<TypeTag>::Grid *FingerGridCreator<TypeTag>::grid_;
 } // namespace Ewoms
 
 #endif

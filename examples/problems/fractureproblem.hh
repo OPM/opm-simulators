@@ -37,7 +37,7 @@
 #include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
-#include <ewoms/io/artgridcreator.hh>
+#include <ewoms/io/artgridmanager.hh>
 
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
@@ -59,8 +59,8 @@ namespace Properties {
 // Create a type tag for the problem
 NEW_TYPE_TAG(FractureProblem, INHERITS_FROM(DiscreteFractureModel));
 
-// Set the GridCreator property
-SET_TYPE_PROP(FractureProblem, GridCreator, Ewoms::ArtGridCreator<TypeTag>);
+// Set the GridManager property
+SET_TYPE_PROP(FractureProblem, GridManager, Ewoms::ArtGridManager<TypeTag>);
 
 // Set the grid type
 SET_TYPE_PROP(
@@ -362,7 +362,7 @@ public:
      * \brief Returns the object representating the fracture topology.
      */
     const FractureMapper &fractureMapper() const
-    { return GET_PROP_TYPE(TypeTag, GridCreator)::fractureMapper(); }
+    { return this->simulator().gridManager().fractureMapper(); }
 
     /*!
      * \brief Returns the width of the fracture.

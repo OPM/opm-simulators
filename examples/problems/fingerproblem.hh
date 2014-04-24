@@ -24,7 +24,7 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-#include "fingergridcreator.hh"
+#include "fingergridmanager.hh"
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -53,7 +53,7 @@ class FingerProblem;
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(FingerGridCreator));
+NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(FingerGridManager));
 
 // declare the properties used by the finger problem
 NEW_PROP_TAG(InitialWaterSaturation);
