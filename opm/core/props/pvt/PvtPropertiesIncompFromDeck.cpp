@@ -35,7 +35,7 @@ namespace Opm
 
     void PvtPropertiesIncompFromDeck::init(Opm::DeckConstPtr deck )
     {
-        // If we need multiple regions, this class and the SinglePvt* classes must change.
+        // If we need multiple regions, this class and the Pvt* classes must change.
         int region_number = 0;
 
         PhaseUsage phase_usage = phaseUsageFromDeck(deck);

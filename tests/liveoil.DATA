@@ -9,6 +9,19 @@ WATER
 
 FIELD
 
+-- tests for the PVT functions need a grid because the OPM-API for the
+-- PVT functions assumes the presence of compressed grid cells,
+-- i.e. we need to be able to map from compressed to logical cartesian
+-- cell indices to find out the PVT region of a cell
+DIMENS
+3 3 3 /
+DXV
+1 2 3 /
+DYV
+1 2 3 /
+DZV
+1 2 3 /
+
 PVTO
 --     Rs       Pbub       Bo        Vo
       .0         14.7     1.0000     1.20  /
