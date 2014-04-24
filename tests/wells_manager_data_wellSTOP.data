@@ -1,6 +1,9 @@
+RUNSPEC
+
 OIL
 GAS
 WATER
+
 
 DIMENS
    10 10  5  /
@@ -16,9 +19,8 @@ DYV
 DZV
 10.0 20.0 30.0 10.0 5.0 /
 
-DEPTHZ
-121*2000
-/
+TOPS
+  100*10  /
 
 SCHEDULE
 
