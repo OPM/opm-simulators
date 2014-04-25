@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/common/fvector.hh>
@@ -106,6 +107,8 @@ public:
         Opm::ParserPtr parser(new Opm::Parser());
         deck_ = parser->parseFile(fileName);
 
+        schedule_.reset(new Opm::Schedule(deck_));
+
         std::shared_ptr<Opm::RUNSPECSection> runspecSection(new Opm::RUNSPECSection(deck_) );
         std::shared_ptr<Opm::GRIDSection> gridSection(new Opm::GRIDSection(deck_) );
         eclipseGrid_.reset(new Opm::EclipseGrid(runspecSection, gridSection));
@@ -139,6 +142,13 @@ public:
     { return deck_; }
 
     /*!
+     * \brief Return a pointer to the internalized schedule of the
+     *        Eclipse deck
+     */
+    Opm::ScheduleConstPtr schedule() const
+    { return schedule_; }
+
+    /*!
      * \brief Return a pointer to the EclipseGrid object
      *
      * The EclipseGrid class is used to internalize the cornerpoint
@@ -152,6 +162,7 @@ public:
 private:
     GridPointer grid_;
     Opm::DeckConstPtr deck_;
+    Opm::ScheduleConstPtr schedule_;
     Opm::EclipseGridConstPtr eclipseGrid_;
 };
 
