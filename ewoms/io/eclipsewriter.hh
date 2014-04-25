@@ -152,9 +152,6 @@ public:
         , vertexMapper_(gridView_)
     {
         reportStepIdx_ = 0;
-
-        if (enableEclipseOutput_())
-            EclipseWriterHelper<TypeTag, Grid>::writeHeaders_(*this);
     }
 
     ~EclipseWriter()
@@ -182,11 +179,13 @@ public:
     }
 
     /*!
-     * \brief Called when ever a new time step or a new grid must be
-     *        written.
+     * \brief Called whenever a new time step must be written.
      */
     void beginWrite(double t)
-    {}
+    {
+        if (enableEclipseOutput_() && reportStepIdx_ == 0)
+            EclipseWriterHelper<TypeTag, Grid>::writeHeaders_(*this);
+    }
 
     /*
      * \brief Add a vertex-centered scalar field to the output.
