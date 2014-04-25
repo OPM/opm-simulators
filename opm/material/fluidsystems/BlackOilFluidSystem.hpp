@@ -33,6 +33,10 @@
 #include <opm/material/fluidsystems/BaseFluidSystem.hpp>
 #include <opm/material/fluidsystems/NullParameterCache.hpp>
 
+#include <opm/parser/eclipse/Utility/PvtoTable.hpp>
+#include <opm/parser/eclipse/Utility/PvtwTable.hpp>
+#include <opm/parser/eclipse/Utility/PvdgTable.hpp>
+
 #include <array>
 #include <vector>
 #include <iostream>
@@ -103,6 +107,76 @@ public:
     {}
 
     /*!
+     * \brief Sets the pressure-dependent oil viscosity, density and
+     *        gas content using a table stemming from the Eclipse PVTO
+     *        keyword.
+     */
+    static void setPvtoTable(const PvtoTable &pvtoTable)
+    {
+        const auto saturatedTable = pvtoTable.getOuterTable();
+
+        int numSamples = saturatedTable->numRows();
+        assert(numSamples > 1);
+
+        gasDissolutionFactorSpline_.setXYArrays(numSamples,
+                                                saturatedTable->getPressureColumn(),
+                                                saturatedTable->getGasSolubilityColumn(),
+                                                /*type=*/Spline::Monotonic);
+        oilFormationVolumeFactorSpline_.setXYArrays(numSamples,
+                                                    saturatedTable->getPressureColumn(),
+                                                    saturatedTable->getOilFormationFactorColumn(),
+                                                    /*type=*/Spline::Monotonic);
+
+        oilViscositySpline_.setXYArrays(numSamples,
+                                        saturatedTable->getPressureColumn(),
+                                        saturatedTable->getOilViscosityColumn(),
+                                        /*type=*/Spline::Monotonic);
+
+        // we don't properly deal with undersaturated oil yet
+    }
+
+    /*!
+     * \brief Sets the pressure-dependent water viscosity and density
+     *        using a table stemming from the Eclipse PVTW keyword.
+     *
+     * This function also sets the surface viscosity and the surface
+     * density of water, but these can be overwritten using setSurface*().
+     */
+    static void setPvtwTable(const PvtwTable &pvtwTable)
+    {
+        assert(pvtwTable.numRows() > 0);
+
+        waterCompressibilityScalar_ = pvtwTable.getCompressibilityColumn()[0];
+        waterViscosityScalar_ = pvtwTable.getViscosityColumn()[0];
+    }
+
+    /*!
+     * \brief Sets the pressure-dependent viscosity and density of dry
+     *        gas using a table stemming from the Eclipse PVDG
+     *        keyword.
+     *
+     * This function also sets the surface viscosity and the surface
+     * density of gas, but these can be overwritten using
+     * setSurface*().
+     */
+    static void setPvdgTable(const PvdgTable &pvdgTable)
+    {
+        int numSamples = pvdgTable.numRows();
+
+        assert(numSamples > 1);
+        gasFormationVolumeFactorSpline_.setXYArrays(numSamples,
+                                                    pvdgTable.getPressureColumn(),
+                                                    pvdgTable.getFormationFactorColumn(),
+                                                    /*type=*/Spline::Monotonic);
+
+        gasViscositySpline_.setXYArrays(numSamples,
+                                        pvdgTable.getPressureColumn(),
+                                        pvdgTable.getFormationFactorColumn(),
+                                        /*type=*/Spline::Monotonic);
+
+    }
+
+    /*!
      * \brief Initialize the values of the surface densities
      *
      * \param rhoOil The surface density of (gas saturated) oil phase.
@@ -123,13 +197,10 @@ public:
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
-    static void setGasDissolutionFactor(const SplineSamplingPoints &samplePoints)
+    static void setSaturatedOilGasDissolutionFactor(const SplineSamplingPoints &samplePoints)
     {
-        // we discard the last sample point because that is for
-        // undersaturated oil
-        //SplineSamplingPoints tmp(samplePoints.begin(), --samplePoints.end());
-        SplineSamplingPoints tmp(samplePoints.begin(), samplePoints.end());
-        gasDissolutionFactorSpline_.setContainerOfTuples(tmp, /*type=*/Spline::Monotonic);
+        gasDissolutionFactorSpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        assert(gasDissolutionFactorSpline_.monotonic());
     }
 
     /*!
@@ -137,10 +208,22 @@ public:
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
-    static void setOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
+    static void setSaturatedOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
     {
         oilFormationVolumeFactorSpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(oilFormationVolumeFactorSpline_.monotonic());
+    }
+
+    /*!
+     * \brief Initialize the spline for the viscosity of gas-saturated
+     *        oil.
+     *
+     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
+     */
+    static void setSaturatedOilViscosity(const SplineSamplingPoints &samplePoints)
+    {
+        oilViscositySpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        assert(oilViscositySpline_.monotonic());
     }
 
     /*!
@@ -152,44 +235,22 @@ public:
      * \param phaseIdx The index of the fluid phase.
      * \param val The value of the reference volume factor.
      */
-    static void setReferenceVolumeFactor(int phaseIdx,
-                                         Scalar val)
-    {
-        refFormationVolumeFactor_[phaseIdx] = val;
-    }
+    static void setReferenceVolumeFactor(int phaseIdx, Scalar val)
+    { refFormationVolumeFactor_[phaseIdx] = val; }
 
     /*!
-     * \brief Initialize the spline for the oil viscosity
-     *
-     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
-     */
-    static void setOilViscosity(const SplineSamplingPoints &samplePoints)
-    {
-        oilViscositySpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
-        assert(oilViscositySpline_.monotonic());
-    }
-
-    /*!
-     * \brief Initialize the spline for the gas formation volume factor
+     * \brief Initialize the spline for the formation volume factor of dry gas
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
     static void setGasFormationVolumeFactor(const SplineSamplingPoints &samplePoints)
     {
-        // we use linear interpolation between the first and the
-        // second sampling point to avoid a non-monotonic spline...
-        Bg0_ = samplePoints[0];
-        mBg0_ =
-            (samplePoints[1].second - samplePoints[0].second) /
-            (samplePoints[1].first - samplePoints[0].first);
-
-        SplineSamplingPoints tmp(++samplePoints.begin(), samplePoints.end());
-        gasFormationVolumeFactorSpline_.setContainerOfTuples(tmp);
+        gasFormationVolumeFactorSpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(gasFormationVolumeFactorSpline_.monotonic());
     }
 
     /*!
-     * \brief Initialize the spline for the gas viscosity
+     * \brief Initialize the spline for the viscosity of dry gas
      *
      * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
      */
@@ -225,11 +286,11 @@ public:
         // water is simple: 18 g/mol
         molarMass_[waterCompIdx] = 18e-3;
 
-        // for gas, we take the density at surface pressure and assume
-        // it to be ideal
+        // for gas, we take the density at standard pressure and
+        // temperature and assume it to be ideal
         Scalar p = 1.0135e5;
         Scalar rho_g = surfaceDensity_[gasPhaseIdx];
-        Scalar T = 311;
+        Scalar T = 297.15;
         molarMass_[gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
 
         // finally, for oil phase, we take the molar mass from the
@@ -254,8 +315,8 @@ public:
         };
         saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
 
-#if 0
-        {
+        if (0) {
+            // some output only helpful for debugging
             int n = 1000;
             Scalar pMin = 10e6;
             Scalar pMax = 35e6;
@@ -274,7 +335,6 @@ public:
             };
             exit(1);
         }
-#endif
     }
 
     //! \copydoc BaseFluidSystem::phaseName
