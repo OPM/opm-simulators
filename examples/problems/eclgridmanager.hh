@@ -103,9 +103,11 @@ public:
         : ParentType(simulator)
     {
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclipseDeckFileName);
+        boost::filesystem::path deckPath(fileName);
+        caseName_ = boost::to_upper_copy(deckPath.stem().string());
 
         Opm::ParserPtr parser(new Opm::Parser());
-        deck_ = parser->parseFile(fileName);
+        deck_ = parser->parseFile(deckPath.string());
 
         schedule_.reset(new Opm::Schedule(deck_));
 
@@ -159,7 +161,17 @@ public:
     Opm::EclipseGridConstPtr eclipseGrid() const
     { return eclipseGrid_; }
 
+    /*!
+     * \brief Returns the name of the case.
+     *
+     * i.e., the all-uppercase version of the file name from which the
+     * deck is loaded with the ".DATA" suffix removed.
+     */
+    const std::string &caseName() const
+    { return caseName_; }
+
 private:
+    std::string caseName_;
     GridPointer grid_;
     Opm::DeckConstPtr deck_;
     Opm::ScheduleConstPtr schedule_;
