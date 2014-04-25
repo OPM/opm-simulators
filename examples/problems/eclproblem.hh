@@ -200,7 +200,9 @@ public:
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
 
-        simulator.startNextEpisode(/*startTime=*/std::mktime(&curTime),
+        Scalar startTime = std::mktime(&curTime);
+        simulator.setStartTime(startTime);
+        simulator.startNextEpisode(/*startTime=*/startTime,
                                    /*length=*/timeMap->getTimeStepLength(/*timeStepIdx=*/0));
 
         // we want the episode index to be the same as the report step
