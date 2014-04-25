@@ -31,38 +31,28 @@
 
 #include <opm/material/Valgrind.hpp>
 
-#if HAVE_DUNE_CORNERPOINT
-#include <dune/grid/CpGrid.hpp>
-#endif
-
 #include <boost/algorithm/string.hpp>
 
 #include <list>
+#include <utility>
 #include <string>
 #include <limits>
 #include <sstream>
 #include <fstream>
 #include <type_traits>
 
-// forward declaration of Dune::CpGrid
-namespace Dune {
-class CpGrid;
-}
-
 namespace Ewoms {
 template <class TypeTag>
 class EclipseWriter;
 
+template <class TypeTag>
+class EclGridManager;
+
 // we need to use specialization here because we need to call
-// Dune::CpGrid specific methods (i.e. methods which are not part of
-// the Dune Grid Interface and which never will be). This would cause
-// the compiler to bail out if a grid different than Dune::CpGrid was
-// used. (one could also take advantage of the HAVE_DUNE_CORNERPOINT
-// macro, but even then the compiler would fail if dune-cornerpoint
-// was available but a different grid type was chosen...)
+// EclGridManager-specific methods.
 
 // this is the stub class for non-cornerpoint grids
-template <class TypeTag, class GridType>
+template <class TypeTag, class GridManagerType>
 class EclipseWriterHelper
 {
     friend class EclipseWriter<TypeTag>;
@@ -70,13 +60,14 @@ class EclipseWriterHelper
     static void writeHeaders_(EclipseWriter<TypeTag> &writer)
     {
         OPM_THROW(std::logic_error,
-                  "Eclipse binary output requires to use Dune::CpGrid");
+                  "Eclipse binary output requires to use Dune::EclGridManager (is: "
+                  << Dune::className<GridManagerType>());
     }
 };
 
 // this is the "real" code for cornerpoint grids
 template <class TypeTag>
-class EclipseWriterHelper<TypeTag, Dune::CpGrid>
+class EclipseWriterHelper<TypeTag, Ewoms::EclGridManager<TypeTag> >
 {
     friend class EclipseWriter<TypeTag>;
 
@@ -92,7 +83,6 @@ class EclipseWriterHelper<TypeTag, Dune::CpGrid>
         OPM_THROW(std::logic_error,
                   "Eclipse binary output requires the ERT libraries");
 #else
-
         // set the index of the first time step written to 0...
         writer.reportStepIdx_ = 0;
 
@@ -142,7 +132,7 @@ class EclipseWriter : public BaseOutputWriter
     typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
     typedef BaseOutputWriter::VectorBuffer VectorBuffer;
 
-    friend class EclipseWriterHelper<TypeTag, Grid>;
+    friend class EclipseWriterHelper<TypeTag, GridManager>;
 
 public:
     EclipseWriter(const Simulator &simulator)
@@ -184,7 +174,7 @@ public:
     void beginWrite(double t)
     {
         if (enableEclipseOutput_() && reportStepIdx_ == 0)
-            EclipseWriterHelper<TypeTag, Grid>::writeHeaders_(*this);
+            EclipseWriterHelper<TypeTag, GridManager>::writeHeaders_(*this);
     }
 
     /*
@@ -220,7 +210,7 @@ public:
      */
     void attachScalarElementData(ScalarBuffer &buf, std::string name)
     {
-        attachedBuffers_.push_back(&buf);
+        attachedBuffers_.push_back(std::pair<std::string, ScalarBuffer*>(name, &buf));
     }
 
     /*
@@ -245,19 +235,31 @@ public:
      */
     void endWrite(bool onlyDiscard = false)
     {
-        if (onlyDiscard) {
+        if (onlyDiscard || !enableEclipseOutput_()) {
             // detach all buffers
             attachedBuffers_.resize(0);
-
-            --reportStepIdx_;
-
             return;
         }
 
-#warning "TODO: write the restart file!"
+        ErtRestartFile restartFile(simulator_, reportStepIdx_);
+        restartFile.writeHeader(simulator_, reportStepIdx_);
+
+        ErtSolution solution(restartFile);
+        auto bufIt = attachedBuffers_.begin();
+        const auto &bufEndIt = attachedBuffers_.end();
+        for (; bufIt != bufEndIt; ++ bufIt) {
+            const std::string &name = bufIt->first;
+            const ScalarBuffer &buffer = *bufIt->second;
+
+            ErtKeyword<float> bufKeyword(name, buffer);
+            solution.add(bufKeyword);
+        }
 
         // detach all buffers
         attachedBuffers_.resize(0);
+
+        // next time we take the next report step
+        ++ reportStepIdx_;
     }
 
     /*!
@@ -316,7 +318,7 @@ private:
     double curTime_;
     int reportStepIdx_;
 
-    std::list<ScalarBuffer*> attachedBuffers_;
+    std::list<std::pair<std::string, ScalarBuffer*> > attachedBuffers_;
 };
 } // namespace Ewoms
 
