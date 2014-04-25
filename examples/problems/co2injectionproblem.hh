@@ -324,7 +324,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    static std::string name()
+    std::string name() const
     {
         std::ostringstream oss;
         oss << EWOMS_GET_PARAM(TypeTag, std::string, SimulationName)

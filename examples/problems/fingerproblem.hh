@@ -207,7 +207,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    static std::string name()
+    std::string name() const
     { return std::string("finger_") + Model::name(); }
 
     /*!

@@ -236,7 +236,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    static std::string name()
+    std::string name() const
     {
         std::ostringstream oss;
         oss << "infiltration_" << Model::name();

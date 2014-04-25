@@ -343,7 +343,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    static std::string name()
+    std::string name() const
     { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
 
     /*!

@@ -219,7 +219,7 @@ public:
     /*!
      * \copydoc VcfvProblem::name
      */
-    static std::string name()
+    std::string name() const
     { return "lens_richards"; }
 
     /*!
