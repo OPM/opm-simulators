@@ -63,9 +63,6 @@ NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager));
 // The temperature inside the reservoir
 NEW_PROP_TAG(Temperature);
 
-// The name of the simulation
-NEW_PROP_TAG(SimulationName);
-
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -100,7 +97,6 @@ SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, true);
 
 // set the defaults for some problem specific properties
 SET_SCALAR_PROP(EclBaseProblem, Temperature, 293.15);
-SET_STRING_PROP(EclBaseProblem, SimulationName, "ecl");
 
 // The default for the end time of the simulation [s]
 //
@@ -180,9 +176,6 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
                              "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName,
-                             "The name of the simulation used for the output "
-                             "files");
     }
 
     /*!
@@ -284,7 +277,7 @@ public:
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
+    { return this->simulator().gridManager().caseName(); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
