@@ -245,9 +245,9 @@ public:
                 { 2.482113e+07, 1.700000e-05 },
                 { 2.757903e+07, 1.750000e-05 }, };
         FluidSystem::setGasFormationVolumeFactor(Bg);
-        FluidSystem::setOilFormationVolumeFactor(Bo);
-        FluidSystem::setGasDissolutionFactor(Rs);
-        FluidSystem::setOilViscosity(muo);
+        FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
+        FluidSystem::setSaturatedOilGasDissolutionFactor(Rs);
+        FluidSystem::setSaturatedOilViscosity(muo);
         FluidSystem::setGasViscosity(mug);
         FluidSystem::setWaterViscosity(9.6e-4);
         FluidSystem::setWaterCompressibility(1.450377e-10);
