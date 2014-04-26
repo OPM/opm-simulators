@@ -86,10 +86,10 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<BlackoilPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
+    Opm::DeckConstPtr deck;
     EclipseStateConstPtr eclipseState;
     PolymerBlackoilState state;
     Opm::PolymerProperties poly_props;
@@ -99,28 +99,28 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         ParserPtr parser(new Opm::Parser());
-        eclipseState.reset(new Opm::EclipseState(parser->parseFile(deck_filename)));
+        deck = parser->parseFile(deck_filename);
+        eclipseState.reset(new Opm::EclipseState(deck));
 
-        deck.reset(new EclipseGridParser(deck_filename));
         // Grid init
-        grid.reset(new GridManager(*deck));
+        grid.reset(new GridManager(deck));
         // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(*deck, *grid->c_grid()));
+        props.reset(new BlackoilPropertiesFromDeck(deck, *grid->c_grid()));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(*deck));
+        rock_comp.reset(new RockCompressibility(deck));
         // Gravity.
-        gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+        gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).
         if (param.has("init_saturation")) {
             initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         } else {
-            initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], state);
+            initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
         }
         initBlackoilSurfvol(*grid->c_grid(), *props, state);
         // Init polymer properties.
-        poly_props.readFromDeck(*deck);
+        poly_props.readFromDeck(deck);
     } else {
         // Grid init.
         const int nx = param.getDefault("nx", 100);
@@ -246,8 +246,7 @@ try
 
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << "                        (number of epochs: "
-              << (use_deck ? deck->numberOfEpochs() : 1) << ")\n\n" << std::flush;
+              << std::flush;
 
     SimulatorReport rep;
     if (!use_deck) {
@@ -277,49 +276,34 @@ try
         // With a deck, we may have more epochs etc.
         WellState well_state;
         int step = 0;
+        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
         SimulatorTimer simtimer;
-        // Use timer for last epoch to obtain total time.
-        deck->setCurrentEpoch(deck->numberOfEpochs() - 1);
-        simtimer.init(*deck);
-        const double total_time = simtimer.totalTime();
-        // Check for WPOLYMER presence in last epoch to decide
+        simtimer.init(timeMap);
+        // Check for WPOLYMER presence in last report step to decide
         // polymer injection control type.
-        const bool use_wpolymer = deck->hasField("WPOLYMER");
+        const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
         if (use_wpolymer) {
             if (param.has("poly_start_days")) {
                 OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
                         "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
             }
         }
-        for (int epoch = 0; epoch < deck->numberOfEpochs(); ++epoch) {
-            // Set epoch index.
-            deck->setCurrentEpoch(epoch);
+        for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+            simtimer.setCurrentStepNum(reportStepIdx);
 
-            // Update the timer.
-            if (deck->hasField("TSTEP")) {
-                simtimer.init(*deck);
-            } else {
-                if (epoch != 0) {
-                    OPM_THROW(std::runtime_error, "No TSTEP in deck for epoch " << epoch);
-                }
-                simtimer.init(param);
-            }
-            simtimer.setCurrentStepNum(step);
-            simtimer.setTotalTime(total_time);
-
-            // Report on start of epoch.
-            std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                      << "\n                  (number of steps: "
+            // Report on start of report step.
+            std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
+                      << "\n                  (number of remaining steps: "
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            WellsManager wells(eclipseState , epoch , *grid->c_grid(), props->permeability());
+            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow.reset(new PolymerInflowFromDeck(*deck, *wells.c_wells(), props->numCells()));
+                polymer_inflow.reset(new PolymerInflowFromDeck(deck, *wells.c_wells(), props->numCells()));
             } else {
                 polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                                             param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
@@ -327,9 +311,9 @@ try
             }
 
             // @@@ HACK: we should really make a new well state and
-            // properly transfer old well state to it every epoch,
+            // properly transfer old well state to it every report step,
             // since number of wells may change etc.
-            if (epoch == 0) {
+            if (reportStepIdx == 0) {
                 well_state.init(wells.c_wells(), state);
             }
 
@@ -345,7 +329,7 @@ try
                                                    bcs.c_bcs(),
                                                    linsolver,
                                                    grav);
-            if (epoch == 0) {
+            if (reportStepIdx == 0) {
                 warnIfUnusedParams(param);
             }
             SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);

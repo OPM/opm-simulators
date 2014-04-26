@@ -20,10 +20,15 @@
 #ifndef OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 #define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Utility/PlymaxTable.hpp>
+#include <opm/parser/eclipse/Utility/TlmixparTable.hpp>
+#include <opm/parser/eclipse/Utility/PlyrockTable.hpp>
+#include <opm/parser/eclipse/Utility/PlyviscTable.hpp>
+#include <opm/parser/eclipse/Utility/PlyadsTable.hpp>
 
 #include <cmath>
 #include <vector>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 
 namespace Opm
@@ -81,9 +86,9 @@ namespace Opm
         {
         }
 
-        PolymerProperties(const EclipseGridParser& gridparser)
+        PolymerProperties(Opm::DeckConstPtr deck)
         {
-            readFromDeck(gridparser);
+            readFromDeck(deck);
         }
 
         void set(double c_max,
@@ -116,38 +121,48 @@ namespace Opm
             shear_vrf_vals_ = shear_vrf_vals;
         }
 
-        void readFromDeck(const EclipseGridParser& gridparser)
+        void readFromDeck(Opm::DeckConstPtr deck)
         {
-
             // We assume NTMISC=1
-            const std::vector<double>& plymax = gridparser.getPLYMAX().plymax_;
-            c_max_ = plymax[0];
-            const std::vector<double>& tlmixpar = gridparser.getTLMIXPAR().tlmixpar_;
-            mix_param_ = tlmixpar[0];
+            Opm::PlymaxTable plymaxTable(deck->getKeyword("PLYMAX"), /*tableIdx=*/0);
+            Opm::TlmixparTable tlmixparTable(deck->getKeyword("TLMIXPAR"), /*tableIdx=*/0);
+
+            // We also assume that each table has exactly one row...
+            assert(plymaxTable.numRows() == 1);
+            assert(tlmixparTable.numRows() == 1);
+
+            c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
+            mix_param_ = tlmixparTable.getViscosityParameterColumn()[0];
 
             // We assume NTSFUN=1
-            const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
-            assert(plyrock.size() == 5);
-            dead_pore_vol_ = plyrock[0];
-            res_factor_ = plyrock[1];
-            rock_density_ = plyrock[2];
-            ads_index_ = static_cast<AdsorptionBehaviour>(plyrock[3]);
-            c_max_ads_ = plyrock[4];
+            Opm::PlyrockTable plyrockTable(deck->getKeyword("PLYROCK"), /*tableIdx=*/0);
+
+            // We also assume that each table has exactly one row...
+            assert(plyrockTable.numRows() == 1);
+
+            dead_pore_vol_ = plyrockTable.getDeadPoreVolumeColumn()[0];
+            res_factor_ = plyrockTable.getResidualResistanceFactorColumn()[0];
+            rock_density_ = plyrockTable.getRockDensityFactorColumn()[0];
+            ads_index_ = static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]);
+            c_max_ads_ = plyrockTable.getMaxAdsorbtionColumn()[0];
 
             // We assume NTPVT=1
-            const PLYVISC& plyvisc = gridparser.getPLYVISC();
-            c_vals_visc_ = plyvisc.concentration_;
-            visc_mult_vals_ = plyvisc.factor_;
+            Opm::PlyviscTable plyviscTable(deck->getKeyword("PLYVISC"), /*tableIdx=*/0);
+
+            // We also assume that each table has exactly one row...
+            assert(plyviscTable.numRows() == 1);
+
+            c_vals_visc_[0] = plyviscTable.getPolymerConcentrationColumn()[0];
+            visc_mult_vals_[0] =  plyviscTable.getViscosityMultiplierColumn()[0];
 
             // We assume NTSFUN=1
-            const PLYADS& plyads = gridparser.getPLYADS();
-            c_vals_ads_ = plyads.local_concentration_;
-            ads_vals_ = plyads.adsorbed_concentration_;
-            
-            // We assume NTPVT=1
-            const PLYSHEAR& plyshear = gridparser.getPLYSHEAR();
-            water_vel_vals_ = plyshear.water_velocity_;
-            shear_vrf_vals_ = plyshear.vrf_;
+            Opm::PlyadsTable plyadsTable(deck->getKeyword("PLYADS"), /*tableIdx=*/0);
+
+            // We also assume that each table has exactly one row...
+            assert(plyadsTable.numRows() == 1);
+
+            c_vals_ads_[0] = plyadsTable.getPolymerConcentrationColumn()[0];
+            ads_vals_[0] = plyadsTable.getAdsorbedPolymerColumn()[0];
         }
 
         double cMax() const;

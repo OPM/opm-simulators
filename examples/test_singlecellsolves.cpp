@@ -69,8 +69,6 @@ try
     param.disableOutput();
     // std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
-    // If we have a "deck_filename", grid and props will be read from that.
-    boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     PolymerState state;
