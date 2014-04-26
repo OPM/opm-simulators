@@ -61,7 +61,7 @@ namespace Opm
      */
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
-                        const Opm::DeckConstPtr newParserDeck,
+                        const Opm::DeckConstPtr deck,
                         const double gravity,
                         BlackoilState& state);
 
@@ -182,11 +182,11 @@ namespace Opm
         namespace DeckDependent {
             inline
             std::vector<EquilRecord>
-            getEquil(const Opm::DeckConstPtr newParserDeck)
+            getEquil(const Opm::DeckConstPtr deck)
             {
-                if (newParserDeck->hasKeyword("EQUIL")) {
+                if (deck->hasKeyword("EQUIL")) {
                 
-                    Opm::EquilWrapper eql(newParserDeck->getKeyword("EQUIL"));
+                    Opm::EquilWrapper eql(deck->getKeyword("EQUIL"));
 
                     const int nrec = eql.numRegions();
 
@@ -228,14 +228,14 @@ namespace Opm
 
             inline
             std::vector<int>
-            equilnum(const Opm::DeckConstPtr newParserDeck,
+            equilnum(const Opm::DeckConstPtr deck,
                      const UnstructuredGrid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (newParserDeck->hasKeyword("EQLNUM")) {
+                if (deck->hasKeyword("EQLNUM")) {
                     eqlnum.resize(G.number_of_cells);                   
                     const std::vector<int>& e = 
-                        newParserDeck->getKeyword("EQLNUM")->getIntData();                    
+                        deck->getKeyword("EQLNUM")->getIntData();                    
                     const int* gc = G.global_cell;
                     for (int cell = 0; cell < G.number_of_cells; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -255,7 +255,7 @@ namespace Opm
             class InitialStateComputer {
             public:
                 InitialStateComputer(const BlackoilPropertiesInterface& props,
-                                     const Opm::DeckConstPtr            newParserDeck,
+                                     const Opm::DeckConstPtr            deck,
                                      const UnstructuredGrid&            G    ,
                                      const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
@@ -266,20 +266,20 @@ namespace Opm
                       rv_(G.number_of_cells)
                 {
                     // Get the equilibration records.
-                    const std::vector<EquilRecord> rec = getEquil(newParserDeck);
+                    const std::vector<EquilRecord> rec = getEquil(deck);
 
                     // Create (inverse) region mapping.
-                    const RegionMapping<> eqlmap(equilnum(newParserDeck, G)); 
+                    const RegionMapping<> eqlmap(equilnum(deck, G)); 
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
-                    if (newParserDeck->hasKeyword("DISGAS")) {                    
+                    if (deck->hasKeyword("DISGAS")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
-                                if (newParserDeck->hasKeyword("RSVD") &&
-                                    size_t(rec[i].live_oil_table_index) <= newParserDeck->getKeyword("RSVD")->size()) { 
-                                    Opm::SingleRecordTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
+                                if (deck->hasKeyword("RSVD") &&
+                                    size_t(rec[i].live_oil_table_index) <= deck->getKeyword("RSVD")->size()) { 
+                                    Opm::SingleRecordTable rsvd(deck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
                                     std::vector<double> vd(rsvd.getColumn("vd"));
                                     std::vector<double> rs(rsvd.getColumn("rs"));
                                     rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props, cell, vd, rs));
@@ -304,13 +304,13 @@ namespace Opm
                     }                    
 
                     rv_func_.reserve(rec.size());
-                    if (newParserDeck->hasKeyword("VAPOIL")) {                    
+                    if (deck->hasKeyword("VAPOIL")) {                    
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
-                                if (newParserDeck->hasKeyword("RVVD") &&
-                                    size_t(rec[i].wet_gas_table_index) <= newParserDeck->getKeyword("RVVD")->size()) { 
-                                    Opm::SingleRecordTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
+                                if (deck->hasKeyword("RVVD") &&
+                                    size_t(rec[i].wet_gas_table_index) <= deck->getKeyword("RVVD")->size()) { 
+                                    Opm::SingleRecordTable rvvd(deck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
                                     std::vector<double> vd(rvvd.getColumn("vd"));
                                     std::vector<double> rv(rvvd.getColumn("rv"));
                                     rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props, cell, vd, rv));
