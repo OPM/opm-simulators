@@ -33,12 +33,12 @@ namespace Opm
     {
     }
 
-    void PvtPropertiesIncompFromDeck::init(Opm::DeckConstPtr newParserDeck )
+    void PvtPropertiesIncompFromDeck::init(Opm::DeckConstPtr deck )
     {
         // If we need multiple regions, this class and the SinglePvt* classes must change.
         int region_number = 0;
 
-        PhaseUsage phase_usage = phaseUsageFromDeck(newParserDeck);
+        PhaseUsage phase_usage = phaseUsageFromDeck(deck);
         if (phase_usage.phase_used[PhaseUsage::Vapour] ||
             !phase_usage.phase_used[PhaseUsage::Aqua] ||
             !phase_usage.phase_used[PhaseUsage::Liquid]) {
@@ -46,8 +46,8 @@ namespace Opm
         }
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        if (newParserDeck->hasKeyword("DENSITY")) {
-            Opm::DeckRecordConstPtr densityRecord = newParserDeck->getKeyword("DENSITY")->getRecord(region_number);
+        if (deck->hasKeyword("DENSITY")) {
+            Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(region_number);
             surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densityRecord->getItem("OIL")->getSIDouble(0);
             surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densityRecord->getItem("WATER")->getSIDouble(0);
         } else {
@@ -59,8 +59,8 @@ namespace Opm
         reservoir_density_ = surface_density_;
 
         // Water viscosity.
-        if (newParserDeck->hasKeyword("PVTW")) {
-            Opm::DeckRecordConstPtr pvtwRecord = newParserDeck->getKeyword("PVTW")->getRecord(region_number);
+        if (deck->hasKeyword("PVTW")) {
+            Opm::DeckRecordConstPtr pvtwRecord = deck->getKeyword("PVTW")->getRecord(region_number);
             if (pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0) != 0.0 ||
                 pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0) != 0.0) {
                 OPM_MESSAGE("Compressibility effects in PVTW are ignored.");
@@ -74,8 +74,8 @@ namespace Opm
         }
 
         // Oil viscosity.
-        if (newParserDeck->hasKeyword("PVCDO")) {
-            Opm::DeckRecordConstPtr pvcdoRecord = newParserDeck->getKeyword("PVCDO")->getRecord(region_number);
+        if (deck->hasKeyword("PVCDO")) {
+            Opm::DeckRecordConstPtr pvcdoRecord = deck->getKeyword("PVCDO")->getRecord(region_number);
 
             if (pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0) != 0.0 ||
                 pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0) != 0.0) {

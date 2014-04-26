@@ -58,12 +58,12 @@ namespace Opm
         ///                      to logical cartesian indices consistent with the deck.
         /// \param[in]  samples  Number of uniform sample points for saturation tables.
         /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
-        void init(Opm::DeckConstPtr newParserDeck,
+        void init(Opm::DeckConstPtr deck,
                   const UnstructuredGrid& grid,
                   const int samples);
 
         /// Initialize from deck and grid.
-        /// \param[in]  newParserDeck     Deck input parser
+        /// \param[in]  deck     Deck input parser
         /// \param[in]  number_of_cells The number of cells of the grid to which property
         ///                             object applies, needed for the
         ///                             mapping from cell indices (typically from a processed
@@ -76,7 +76,7 @@ namespace Opm
         /// \param[in]  samples  Number of uniform sample points for saturation tables.
         /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         template<class T>
-        void init(Opm::DeckConstPtr newParserDeck,
+        void init(Opm::DeckConstPtr deck,
                   int number_of_cells,
                   const int* global_cell,
                   const T& begin_cell_centroids,
@@ -149,19 +149,19 @@ namespace Opm
 
         const Funcs& funcForCell(const int cell) const;
         template<class T>
-        void initEPS(Opm::DeckConstPtr newParserDeck,
+        void initEPS(Opm::DeckConstPtr deck,
                      int number_of_cells,
                      const int* global_cell,
                      const T& begin_cell_centroids,
                      int dimensions);
         template<class T>
-        void initEPSHyst(Opm::DeckConstPtr newParserDeck,
+        void initEPSHyst(Opm::DeckConstPtr deck,
                          int number_of_cells,
                          const int* global_cell,
                          const T& begin_cell_centroids,
                          int dimensions);
         template<class T>
-        void initEPSKey(Opm::DeckConstPtr newParserDeck,
+        void initEPSKey(Opm::DeckConstPtr deck,
                         int number_of_cells,
                         const int* global_cell,
                         const T& begin_cell_centroids,
@@ -186,10 +186,10 @@ namespace Opm
                           const std::vector<double>& krsr,
                           const std::vector<double>& krmax);
 
-        bool columnIsMasked_(Opm::DeckConstPtr newParserDeck,
+        bool columnIsMasked_(Opm::DeckConstPtr deck,
                              const std::string& keywordName,
                              int /* columnIdx */)
-        { return newParserDeck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
+        { return deck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
     };
 
 

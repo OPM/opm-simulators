@@ -552,14 +552,14 @@ namespace Opm
     template <class Props, class State>
     void initStateFromDeck(const UnstructuredGrid& grid,
                            const Props& props,
-                           Opm::DeckConstPtr newParserDeck,
+                           Opm::DeckConstPtr deck,
                            const double gravity,
                            State& state)
     {
         initStateFromDeck(grid.number_of_cells, grid.global_cell,
                           grid.number_of_faces, UgGridHelpers::faceCells(grid),
                           grid.face_centroids, grid.cell_centroids, grid.dimensions,
-                          props, newParserDeck, gravity, state);
+                          props, deck, gravity, state);
     }
     /// Initialize a state from input deck.
     template <class FaceCells, class FCI, class CCI, class Props, class State>
@@ -571,23 +571,23 @@ namespace Opm
                            CCI begin_cell_centroids,
                            int dimensions,
                            const Props& props,
-                           Opm::DeckConstPtr newParserDeck,
+                           Opm::DeckConstPtr deck,
                            const double gravity,
                            State& state)
     {
         const int num_phases = props.numPhases();
-        const PhaseUsage pu = phaseUsageFromDeck(newParserDeck);
+        const PhaseUsage pu = phaseUsageFromDeck(deck);
         if (num_phases != pu.num_phases) {
             OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
         state.init(number_of_cells, number_of_faces, num_phases);
-        if (newParserDeck->hasKeyword("EQUIL") && newParserDeck->hasKeyword("PRESSURE")) {
+        if (deck->hasKeyword("EQUIL") && deck->hasKeyword("PRESSURE")) {
             OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
                       "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");
         }
 
-        if (newParserDeck->hasKeyword("EQUIL")) {
+        if (deck->hasKeyword("EQUIL")) {
             if (num_phases != 2) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
             }
@@ -595,7 +595,7 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
             }
             // Set saturations depending on oil-water contact.
-            EquilWrapper equil(newParserDeck->getKeyword("EQUIL"));
+            EquilWrapper equil(deck->getKeyword("EQUIL"));
             if (equil.numRegions() != 1) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
             }
@@ -607,19 +607,19 @@ namespace Opm
             const double datum_p = equil.datumDepthPressure(0);
             initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
                                     props, woc, gravity, datum_z, datum_p, state);
-        } else if (newParserDeck->hasKeyword("PRESSURE")) {
+        } else if (deck->hasKeyword("PRESSURE")) {
             // Set saturations from SWAT/SGAS, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
             std::vector<double>& p = state.pressure();
-            const std::vector<double>& p_deck = newParserDeck->getKeyword("PRESSURE")->getSIDoubleData();
+            const std::vector<double>& p_deck = deck->getKeyword("PRESSURE")->getSIDoubleData();
             const int num_cells = number_of_cells;
             if (num_phases == 2) {
                 if (!pu.phase_used[BlackoilPhases::Aqua]) {
                     // oil-gas: we require SGAS
-                    if (!newParserDeck->hasKeyword("SGAS")) {
+                    if (!deck->hasKeyword("SGAS")) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS keyword in 2-phase init");
                     }
-                    const std::vector<double>& sg_deck = newParserDeck->getKeyword("SGAS")->getSIDoubleData();
+                    const std::vector<double>& sg_deck = deck->getKeyword("SGAS")->getSIDoubleData();
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                     const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     for (int c = 0; c < num_cells; ++c) {
@@ -630,10 +630,10 @@ namespace Opm
                     }
                 } else {
                     // water-oil or water-gas: we require SWAT
-                    if (!newParserDeck->hasKeyword("SWAT")) {
+                    if (!deck->hasKeyword("SWAT")) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SWAT keyword in 2-phase init");
                     }
-                    const std::vector<double>& sw_deck = newParserDeck->getKeyword("SWAT")->getSIDoubleData();
+                    const std::vector<double>& sw_deck = deck->getKeyword("SWAT")->getSIDoubleData();
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                     const int nwpos = (wpos + 1) % 2;
                     for (int c = 0; c < num_cells; ++c) {
@@ -644,15 +644,15 @@ namespace Opm
                     }
                 }
             } else if (num_phases == 3) {
-                const bool has_swat_sgas = newParserDeck->hasKeyword("SWAT") && newParserDeck->hasKeyword("SGAS");
+                const bool has_swat_sgas = deck->hasKeyword("SWAT") && deck->hasKeyword("SGAS");
                 if (!has_swat_sgas) {
                     OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
                 }
                 const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                 const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                 const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                const std::vector<double>& sw_deck = newParserDeck->getKeyword("SWAT")->getSIDoubleData();
-                const std::vector<double>& sg_deck = newParserDeck->getKeyword("SGAS")->getSIDoubleData();
+                const std::vector<double>& sw_deck = deck->getKeyword("SWAT")->getSIDoubleData();
+                const std::vector<double>& sg_deck = deck->getKeyword("SGAS")->getSIDoubleData();
                 for (int c = 0; c < num_cells; ++c) {
                     int c_deck = (global_cell == NULL) ? c : global_cell[c];
                     s[3*c + wpos] = sw_deck[c_deck];
@@ -855,14 +855,14 @@ namespace Opm
     template <class Props, class State>
     void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
                                    const Props& props,
-                                   Opm::DeckConstPtr newParserDeck,
+                                   Opm::DeckConstPtr deck,
                                    const double gravity,
                                    State& state)
     {
         initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell,
                                   grid.number_of_faces, UgGridHelpers::faceCells(grid),
                                   grid.face_centroids, grid.cell_centroids,grid.dimensions,
-                                  props, newParserDeck, gravity, state);
+                                  props, deck, gravity, state);
     }
 
     /// Initialize a blackoil state from input deck.
@@ -875,15 +875,15 @@ namespace Opm
                                    CCI begin_cell_centroids,
                                    int dimensions,
                                    const Props& props,
-                                   Opm::DeckConstPtr newParserDeck,
+                                   Opm::DeckConstPtr deck,
                                    const double gravity,
                                    State& state)
     {
         initStateFromDeck(number_of_cells, global_cell, number_of_faces,
                           face_cells, begin_face_centroids, begin_cell_centroids,
-                          dimensions, props, newParserDeck, gravity, state);
-        if (newParserDeck->hasKeyword("RS")) {
-            const std::vector<double>& rs_deck = newParserDeck->getKeyword("RS")->getSIDoubleData();
+                          dimensions, props, deck, gravity, state);
+        if (deck->hasKeyword("RS")) {
+            const std::vector<double>& rs_deck = deck->getKeyword("RS")->getSIDoubleData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];
@@ -891,8 +891,8 @@ namespace Opm
             }
             initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
             computeSaturation(props,state);
-        } else if (newParserDeck->hasKeyword("RV")){
-            const std::vector<double>& rv_deck = newParserDeck->getKeyword("RV")->getSIDoubleData();
+        } else if (deck->hasKeyword("RV")){
+            const std::vector<double>& rv_deck = deck->getKeyword("RV")->getSIDoubleData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];

@@ -32,12 +32,12 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     const string filename1 = "testBlackoilState1.DATA";
     const string filename2 = "testBlackoilState2.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr newParserDeck1(parser->parseFile(filename1));
-    Opm::DeckConstPtr newParserDeck2(parser->parseFile(filename2));
+    Opm::DeckConstPtr deck1(parser->parseFile(filename1));
+    Opm::DeckConstPtr deck2(parser->parseFile(filename2));
 
-    GridManager gridManager1(newParserDeck1);
+    GridManager gridManager1(deck1);
     const UnstructuredGrid* grid1 = gridManager1.c_grid();
-    GridManager gridManager2(newParserDeck2);
+    GridManager gridManager2(deck2);
     const UnstructuredGrid* grid2 = gridManager2.c_grid();
     
     BlackoilState state1;
@@ -55,9 +55,9 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr newParserDeck(parser->parseFile(filename));
+    Opm::DeckConstPtr deck(parser->parseFile(filename));
 
-    GridManager gridManager(newParserDeck);
+    GridManager gridManager(deck);
     const UnstructuredGrid* grid = gridManager.c_grid();
     
     BlackoilState state1;
@@ -75,9 +75,9 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr newParserDeck(parser->parseFile(filename));
+    Opm::DeckConstPtr deck(parser->parseFile(filename));
 
-    GridManager gridManager(newParserDeck);
+    GridManager gridManager(deck);
     const UnstructuredGrid* grid = gridManager.c_grid();
     
     BlackoilState state1;

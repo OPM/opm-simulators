@@ -38,7 +38,7 @@ namespace Opm
         PvtPropertiesIncompFromDeck();
 
         /// Initialize from deck.
-        void init(Opm::DeckConstPtr newParserDeck);
+        void init(Opm::DeckConstPtr deck);
 
         /// Number of active phases.
         int numPhases() const;

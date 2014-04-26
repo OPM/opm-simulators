@@ -167,7 +167,7 @@ namespace Opm
     template <class Props, class State>
     void initStateFromDeck(const UnstructuredGrid& grid,
                            const Props& props,
-                           Opm::DeckConstPtr newParserDeck,
+                           Opm::DeckConstPtr deck,
                            const double gravity,
                            State& state);
 
@@ -182,7 +182,7 @@ namespace Opm
     template <class Props, class State>
     void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
                                    const Props& props,
-                                   Opm::DeckConstPtr newParserDeck,
+                                   Opm::DeckConstPtr deck,
                                    const double gravity,
                                    State& state);
     /// Initialize a blackoil state from input deck.
@@ -195,7 +195,7 @@ namespace Opm
                                    CCI begin_cell_centroids,
                                    int dimensions,
                                    const Props& props,
-                                   Opm::DeckConstPtr newParserDeck,
+                                   Opm::DeckConstPtr deck,
                                    const double gravity,
                                    State& state);
 } // namespace Opm

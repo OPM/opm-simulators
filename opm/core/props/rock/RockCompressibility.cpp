@@ -40,19 +40,19 @@ namespace Opm
         rock_comp_ = param.getDefault("rock_compressibility", 0.0)/unit::barsa;
     }
 
-    RockCompressibility::RockCompressibility(Opm::DeckConstPtr newParserDeck)
+    RockCompressibility::RockCompressibility(Opm::DeckConstPtr deck)
         : pref_(0.0),
           rock_comp_(0.0)
     {
-        if (newParserDeck->hasKeyword("ROCKTAB")) {
-            Opm::DeckKeywordConstPtr rtKeyword = newParserDeck->getKeyword("ROCKTAB");
+        if (deck->hasKeyword("ROCKTAB")) {
+            Opm::DeckKeywordConstPtr rtKeyword = deck->getKeyword("ROCKTAB");
             if (rtKeyword->size() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
 
             // the number of colums of the "ROCKTAB" keyword
             // depends on the presence of the "RKTRMDIR"
             // keyword. Messy stuff...
-            bool isDirectional = newParserDeck->hasKeyword("RKTRMDIR");
+            bool isDirectional = deck->hasKeyword("RKTRMDIR");
             if (isDirectional)
             {
                 // well, okay. we don't support non-isotropic
@@ -66,8 +66,8 @@ namespace Opm
             p_ = rocktabTable.getPressureColumn();
             poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
             transmult_ =  rocktabTable.getTransmissibilityMultiplierColumn();
-        } else if (newParserDeck->hasKeyword("ROCK")) {
-            Opm::RockTable rockTable(newParserDeck->getKeyword("ROCK"));
+        } else if (deck->hasKeyword("ROCK")) {
+            Opm::RockTable rockTable(deck->getKeyword("ROCK"));
             if (rockTable.numRows() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCK.");
 

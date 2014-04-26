@@ -37,7 +37,7 @@ namespace Opm
 
         void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k);
-        PermeabilityKind fillTensor(Opm::DeckConstPtr newParserDeck,
+        PermeabilityKind fillTensor(Opm::DeckConstPtr deck,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::array<int,9>&                     kmap);
 
@@ -53,23 +53,23 @@ namespace Opm
     {
     }
 
-    void RockFromDeck::init(Opm::DeckConstPtr newParserDeck,
+    void RockFromDeck::init(Opm::DeckConstPtr deck,
                             int number_of_cells, const int* global_cell,
                             const int* cart_dims)
     {
-        assignPorosity(newParserDeck, number_of_cells, global_cell);
+        assignPorosity(deck, number_of_cells, global_cell);
         permfield_valid_.assign(number_of_cells, false);
         const double perm_threshold = 0.0; // Maybe turn into parameter?
-        assignPermeability(newParserDeck, number_of_cells, global_cell, cart_dims,
+        assignPermeability(deck, number_of_cells, global_cell, cart_dims,
                            perm_threshold);
     }
 
-    void RockFromDeck::assignPorosity(Opm::DeckConstPtr newParserDeck,
+    void RockFromDeck::assignPorosity(Opm::DeckConstPtr deck,
                                       int number_of_cells, const int* global_cell)
     {
         porosity_.assign(number_of_cells, 1.0);
-        if (newParserDeck->hasKeyword("PORO")) {
-            const std::vector<double>& poro = newParserDeck->getKeyword("PORO")->getSIDoubleData();
+        if (deck->hasKeyword("PORO")) {
+            const std::vector<double>& poro = deck->getKeyword("PORO")->getSIDoubleData();
             for (int c = 0; c < int(porosity_.size()); ++c) {
                 const int deck_pos = (global_cell == NULL) ? c : global_cell[c];
                 assert(0 <= c && c < (int) porosity_.size());
@@ -79,7 +79,7 @@ namespace Opm
         }
     }
 
-    void RockFromDeck::assignPermeability(Opm::DeckConstPtr newParserDeck,
+    void RockFromDeck::assignPermeability(Opm::DeckConstPtr deck,
                                           int number_of_cells,
                                           const int* global_cell,
                                           const int* cartdims,
@@ -100,13 +100,13 @@ namespace Opm
         tensor.push_back(&zero);
 
         std::array<int,9> kmap;
-        PermeabilityKind pkind = fillTensor(newParserDeck, tensor, kmap);
+        PermeabilityKind pkind = fillTensor(deck, tensor, kmap);
         if (pkind == Invalid) {
             OPM_THROW(std::runtime_error, "Invalid permeability field.");
         }
 
         // Assign permeability values only if such values are
-        // given in the input deck represented by 'newParserDeck'.  In
+        // given in the input deck represented by 'deck'.  In
         // other words: Don't set any (arbitrary) default values.
         // It is infinitely better to experience a reproducible
         // crash than subtle errors resulting from a (poorly
@@ -143,7 +143,7 @@ namespace Opm
         ///    components such as @f$k_{xy}@f$ unless the
         ///    corresponding diagonal components are known as well.
         ///
-        /// @param newParserDeck [in]
+        /// @param deck [in]
         ///    An Eclipse data parser capable of answering which
         ///    permeability components are present in a given input
         ///    deck.
@@ -155,19 +155,19 @@ namespace Opm
         ///        TensorPerm     at least one cross-component given.
         ///        None           no components given.
         ///        Invalid        invalid set of components given.
-        PermeabilityKind classifyPermeability(Opm::DeckConstPtr newParserDeck)
+        PermeabilityKind classifyPermeability(Opm::DeckConstPtr deck)
         {
-            const bool xx = newParserDeck->hasKeyword("PERMX" );
-            const bool xy = newParserDeck->hasKeyword("PERMXY");
-            const bool xz = newParserDeck->hasKeyword("PERMXZ");
+            const bool xx = deck->hasKeyword("PERMX" );
+            const bool xy = deck->hasKeyword("PERMXY");
+            const bool xz = deck->hasKeyword("PERMXZ");
 
-            const bool yx = newParserDeck->hasKeyword("PERMYX");
-            const bool yy = newParserDeck->hasKeyword("PERMY" );
-            const bool yz = newParserDeck->hasKeyword("PERMYZ");
+            const bool yx = deck->hasKeyword("PERMYX");
+            const bool yy = deck->hasKeyword("PERMY" );
+            const bool yz = deck->hasKeyword("PERMYZ");
 
-            const bool zx = newParserDeck->hasKeyword("PERMZX");
-            const bool zy = newParserDeck->hasKeyword("PERMZY");
-            const bool zz = newParserDeck->hasKeyword("PERMZ" );
+            const bool zx = deck->hasKeyword("PERMZX");
+            const bool zy = deck->hasKeyword("PERMZY");
+            const bool zz = deck->hasKeyword("PERMZ" );
 
             int num_cross_comp = xy + xz + yx + yz + zx + zy;
             int num_comp       = xx + yy + zz + num_cross_comp;
@@ -262,11 +262,11 @@ namespace Opm
         ///
         /// @param [out] tensor
         /// @param [out] kmap
-        PermeabilityKind fillTensor(Opm::DeckConstPtr newParserDeck,
+        PermeabilityKind fillTensor(Opm::DeckConstPtr deck,
                                     std::vector<const std::vector<double>*>& tensor,
                                     std::array<int,9>&                     kmap)
         {
-            PermeabilityKind kind = classifyPermeability(newParserDeck);
+            PermeabilityKind kind = classifyPermeability(deck);
             if (kind == Invalid) {
                 OPM_THROW(std::runtime_error, "Invalid set of permeability fields given.");
             }
@@ -279,51 +279,51 @@ namespace Opm
 
             // -----------------------------------------------------------
             // 1st row: [kxx, kxy, kxz]
-            if (newParserDeck->hasKeyword("PERMX" )) {
+            if (deck->hasKeyword("PERMX" )) {
                 kmap[xx] = tensor.size();
-                tensor.push_back(&newParserDeck->getKeyword("PERMX")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMX")->getSIDoubleData());
 
                 setScalarPermIfNeeded(kmap, xx, yy, zz);
             }
-            if (newParserDeck->hasKeyword("PERMXY")) {
+            if (deck->hasKeyword("PERMXY")) {
                 kmap[xy] = kmap[yx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMXY")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMXY")->getSIDoubleData());
             }
-            if (newParserDeck->hasKeyword("PERMXZ")) {
+            if (deck->hasKeyword("PERMXZ")) {
                 kmap[xz] = kmap[zx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMXZ")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMXZ")->getSIDoubleData());
             }
 
             // -----------------------------------------------------------
             // 2nd row: [kyx, kyy, kyz]
-            if (newParserDeck->hasKeyword("PERMYX")) {
+            if (deck->hasKeyword("PERMYX")) {
                 kmap[yx] = kmap[xy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMYX")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMYX")->getSIDoubleData());
             }
-            if (newParserDeck->hasKeyword("PERMY" )) {
+            if (deck->hasKeyword("PERMY" )) {
                 kmap[yy] = tensor.size();
-                tensor.push_back(&newParserDeck->getKeyword("PERMY")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMY")->getSIDoubleData());
 
                 setScalarPermIfNeeded(kmap, yy, zz, xx);
             }
-            if (newParserDeck->hasKeyword("PERMYZ")) {
+            if (deck->hasKeyword("PERMYZ")) {
                 kmap[yz] = kmap[zy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMYZ")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMYZ")->getSIDoubleData());
             }
 
             // -----------------------------------------------------------
             // 3rd row: [kzx, kzy, kzz]
-            if (newParserDeck->hasKeyword("PERMZX")) {
+            if (deck->hasKeyword("PERMZX")) {
                 kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMZX")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMZX")->getSIDoubleData());
             }
-            if (newParserDeck->hasKeyword("PERMZY")) {
+            if (deck->hasKeyword("PERMZY")) {
                 kmap[zy] = kmap[yz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&newParserDeck->getKeyword("PERMZY")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMZY")->getSIDoubleData());
             }
-            if (newParserDeck->hasKeyword("PERMZ" )) {
+            if (deck->hasKeyword("PERMZ" )) {
                 kmap[zz] = tensor.size();
-                tensor.push_back(&newParserDeck->getKeyword("PERMZ")->getSIDoubleData());
+                tensor.push_back(&deck->getKeyword("PERMZ")->getSIDoubleData());
 
                 setScalarPermIfNeeded(kmap, zz, xx, yy);
             }

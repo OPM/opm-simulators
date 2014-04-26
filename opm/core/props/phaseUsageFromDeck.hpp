@@ -69,19 +69,19 @@ namespace Opm
 
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
-    inline PhaseUsage phaseUsageFromDeck(Opm::DeckConstPtr newParserDeck)
+    inline PhaseUsage phaseUsageFromDeck(Opm::DeckConstPtr deck)
     {
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
         // Discover phase usage.
-        if (newParserDeck->hasKeyword("WATER")) {
+        if (deck->hasKeyword("WATER")) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (newParserDeck->hasKeyword("OIL")) {
+        if (deck->hasKeyword("OIL")) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (newParserDeck->hasKeyword("GAS")) {
+        if (deck->hasKeyword("GAS")) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;

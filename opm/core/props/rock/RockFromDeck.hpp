@@ -36,12 +36,12 @@ namespace Opm
         RockFromDeck();
 
         /// Initialize from deck and cell mapping.
-        /// \param  newParserDeck            Deck produced by the opm-parser code
+        /// \param  deck            Deck produced by the opm-parser code
         /// \param  number_of_cells The number of cells in the grid.
         /// \param  global_cell     The mapping fom local to global cell indices.
         ///                         global_cell[i] is the corresponding global index of i.
         /// \param  cart_dims       The size of the underlying cartesian grid.
-        void init(Opm::DeckConstPtr newParserDeck,
+        void init(Opm::DeckConstPtr deck,
                   int number_of_cells, const int* global_cell,
                   const int* cart_dims);
 
@@ -72,10 +72,10 @@ namespace Opm
         }
 
     private:
-        void assignPorosity(Opm::DeckConstPtr newParserDeck,
+        void assignPorosity(Opm::DeckConstPtr deck,
                             int number_of_cells,
                             const int* global_cell);
-        void assignPermeability(Opm::DeckConstPtr newParserDeck,
+        void assignPermeability(Opm::DeckConstPtr deck,
                                 int number_of_cells,
                                 const int* global_cell,
                                 const int* cart_dims,

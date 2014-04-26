@@ -34,7 +34,7 @@ namespace Opm
     public:
         /// Construct from input deck.
         /// Looks for the keywords ROCK and ROCKTAB.
-        RockCompressibility(Opm::DeckConstPtr newParserDeck);
+        RockCompressibility(Opm::DeckConstPtr deck);
 
         /// Construct from parameters.
         /// Accepts the following parameters (with defaults).

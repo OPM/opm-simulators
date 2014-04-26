@@ -737,12 +737,12 @@ namespace Opm
      */
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
-                        const Opm::DeckConstPtr newParserDeck,
+                        const Opm::DeckConstPtr deck,
                         const double gravity,
                         BlackoilState& state)
     {
         typedef Equil::DeckDependent::InitialStateComputer ISC;
-        ISC isc(props, newParserDeck, grid, gravity);
+        ISC isc(props, deck, grid, gravity);
         const auto pu = props.phaseUsage();
         const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
             ? pu.phase_pos[BlackoilPhases::Liquid]
