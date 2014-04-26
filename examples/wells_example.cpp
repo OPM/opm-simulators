@@ -35,16 +35,16 @@ try
 
     // Read input file
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr newParserDeck = parser->parseFile(file_name);
+    Opm::DeckConstPtr deck = parser->parseFile(file_name);
     std::cout << "Done!" << std::endl;
 
     // Setup grid
-    GridManager grid(newParserDeck);
+    GridManager grid(deck);
 
     // Define rock and fluid properties
-    IncompPropertiesFromDeck incomp_properties(newParserDeck, *grid.c_grid());
-    RockCompressibility rock_comp(newParserDeck);
-    EclipseStateConstPtr eclipseState(new Opm::EclipseState(newParserDeck));
+    IncompPropertiesFromDeck incomp_properties(deck, *grid.c_grid());
+    RockCompressibility rock_comp(deck);
+    EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
 
     // Finally handle the wells
     WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
@@ -76,7 +76,7 @@ try
 
     Opm::TwophaseState state;
 
-    initStateFromDeck(*grid.c_grid(), incomp_properties, newParserDeck, gravity[2], state);
+    initStateFromDeck(*grid.c_grid(), incomp_properties, deck, gravity[2], state);
 
     Opm::WellState well_state;
     well_state.init(wells.c_wells(), state);
