@@ -100,7 +100,7 @@ try
     bool use_deck = param.has("deck_filename");
     EclipseStateConstPtr eclipseState;
 
-    Opm::DeckConstPtr newParserDeck;
+    Opm::DeckConstPtr deck;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
@@ -112,23 +112,23 @@ try
         ParserPtr parser(new Opm::Parser());
 
         std::string deck_filename = param.get<std::string>("deck_filename");
-        newParserDeck = parser->parseFile(deck_filename);
-        eclipseState.reset( new EclipseState(newParserDeck));
+        deck = parser->parseFile(deck_filename);
+        eclipseState.reset( new EclipseState(deck));
         // Grid init
-        grid.reset(new GridManager(newParserDeck));
+        grid.reset(new GridManager(deck));
         // Rock and fluid init
-        props.reset(new IncompPropertiesFromDeck(newParserDeck, *grid->c_grid()));
+        props.reset(new IncompPropertiesFromDeck(deck, *grid->c_grid()));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(newParserDeck));
+        rock_comp.reset(new RockCompressibility(deck));
         // Gravity.
-        gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+        gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).
         if (param.has("init_saturation")) {
             initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         } else {
-            initStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
+            initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
         }
     } else {
         // Grid init.
@@ -214,7 +214,7 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
+    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << "                        (number of report steps: "
