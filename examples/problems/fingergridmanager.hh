@@ -267,6 +267,8 @@ public:
 
         grid_ = factory.createGrid();
         grid_->globalRefine(numRefinments);
+
+        this->finalizeInit_();
     }
 
     /*!
