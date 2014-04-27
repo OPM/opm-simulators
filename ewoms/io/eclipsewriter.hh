@@ -241,6 +241,10 @@ public:
             return;
         }
 
+#if !HAVE_ERT
+        OPM_THROW(std::runtime_error,
+                  "The ERT libraries must be available to write Eclipse output!");
+#else
         ErtRestartFile restartFile(simulator_, reportStepIdx_);
         restartFile.writeHeader(simulator_, reportStepIdx_);
 
@@ -260,6 +264,7 @@ public:
 
         // next time we take the next report step
         ++ reportStepIdx_;
+#endif
     }
 
     /*!
