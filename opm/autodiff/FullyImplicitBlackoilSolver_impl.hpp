@@ -56,6 +56,12 @@
                   << foo.value() << std::endl;                          \
     } while (0)
 
+#define DISKVAL(foo)                                                    \
+    do {                                                                \
+        std::ofstream os(#foo);                                         \
+        os.precision(16);                                               \
+        os << foo.value() << std::endl;                                 \
+    } while (0)
 
 
 namespace Opm {
@@ -1573,9 +1579,17 @@ namespace {
             pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
         }
 
-        // add the total pressure to the capillary pressures
+        // Since pcow = po - pw, but pcog = pg - po,
+        // we have
+        //   pw = po - pcow
+        //   pg = po + pcgo
+        // This is an unfortunate inconsistency, but a convention we must handle.
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-            pressure[phaseIdx] += state.pressure;
+            if (phaseIdx == BlackoilPhases::Aqua) {
+                pressure[phaseIdx] = state.pressure - pressure[phaseIdx];
+            } else {
+                pressure[phaseIdx] += state.pressure;
+            }
         }
 
         return pressure;
