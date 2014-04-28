@@ -29,7 +29,8 @@
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 
-#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -37,6 +38,8 @@
 // must be available
 #include <dune/grid/CpGrid.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Utility/SgofTable.hpp>
+#include <opm/parser/eclipse/Utility/SwofTable.hpp>
 #include <opm/parser/eclipse/Utility/PvtoTable.hpp>
 #include <opm/parser/eclipse/Utility/PvtwTable.hpp>
 #include <opm/parser/eclipse/Utility/PvdgTable.hpp>
@@ -76,14 +79,24 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-    typedef Opm::
-        ThreePhaseMaterialTraits<Scalar,
-                                 /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-                                 /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx> OilWaterTraits;
+
+    typedef Opm::TwoPhaseMaterialTraits<Scalar,
+                                        /*wettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> GasOilTraits;
+
+    typedef Opm::ThreePhaseMaterialTraits<Scalar,
+                                          /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                          /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                          /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+
+    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
+    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
 
 public:
-    typedef Opm::LinearMaterial<Traits> type;
+    typedef Opm::EclDefaultMaterial<Traits, GasOilLaw, OilWaterLaw> type;
 };
 
 // Enable gravity
@@ -266,8 +279,12 @@ public:
     const MaterialLawParams &materialLawParams(const Context &context,
                                                int spaceIdx, int timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return materialParams_[globalSpaceIdx];
+        int tableIdx = 0;
+        if (materialParamTableIdx_.size() > 0) {
+            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            tableIdx = materialParamTableIdx_[globalSpaceIdx];
+        }
+        return materialParams_[tableIdx];
     }
 
     /*!
@@ -412,15 +429,69 @@ private:
                       "Can't read the porosity from the deck. "
                       "(The PORO keyword is missing)");
 
-#warning "TODO: read the relperm and pc parameters from the deck"
-        for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-            // parameters of the material law
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                materialParams_[dofIdx].setPcMinSat(phaseIdx, 0.0);
-                materialParams_[dofIdx].setPcMaxSat(phaseIdx, 0.0);
-                materialParams_[dofIdx].finalize();
+        Opm::DeckKeywordConstPtr swofKeyword = deck->getKeyword("SWOF");
+        Opm::DeckKeywordConstPtr sgofKeyword = deck->getKeyword("SGOF");
+
+        // the number of tables for the SWOF and the SGOF keywords
+        // must be identical
+        assert(Opm::SwofTable::numTables(swofKeyword) == Opm::SgofTable::numTables(sgofKeyword));
+
+        typedef typename MaterialLawParams::GasOilParams GasOilParams;
+        typedef typename MaterialLawParams::OilWaterParams OilWaterParams;
+
+        size_t numSatfuncTables = Opm::SwofTable::numTables(swofKeyword);
+        materialParams_.resize(numSatfuncTables);
+        for (size_t tableIdx = 0; tableIdx < numSatfuncTables; ++ tableIdx) {
+            // set the parameters of the material law for a given table
+            OilWaterParams owParams;
+            GasOilParams goParams;
+
+            Opm::SwofTable swofTable(swofKeyword, tableIdx);
+            Opm::SgofTable sgofTable(sgofKeyword, tableIdx);
+
+            owParams.setSwSamples(swofTable.getSwColumn());
+            owParams.setKrwSamples(swofTable.getKrwColumn());
+            owParams.setKrnSamples(swofTable.getKrowColumn());
+            owParams.setPcnwSamples(swofTable.getPcowColumn());
+
+            // convert the saturations from gas to oil saturations
+            auto SoSamples = sgofTable.getSgColumn();
+            for (size_t sampleIdx = 0; sampleIdx < SoSamples.size(); ++ sampleIdx) {
+                SoSamples[sampleIdx] = 1 - SoSamples[sampleIdx];
+            }
+            goParams.setSwSamples(SoSamples);
+            goParams.setKrwSamples(sgofTable.getKrogColumn());
+            goParams.setKrnSamples(sgofTable.getKrgColumn());
+            goParams.setPcnwSamples(sgofTable.getPcogColumn());
+
+            owParams.finalize();
+            goParams.finalize();
+
+            materialParams_[tableIdx].setOilWaterParams(owParams);
+            materialParams_[tableIdx].setGasOilParams(goParams);
+
+            materialParams_[tableIdx].finalize();
+        }
+
+        // set the index of the table to be used
+        if (deck->hasKeyword("SATNUM")) {
+            const std::vector<int> &satnumData =
+                deck->getKeyword("SATNUM")->getRecord(0)->getItem(0)->getIntData();
+            assert(satnumData.size() == numDof);
+
+            materialParamTableIdx_.resize(numDof);
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                // make sure that all values are in the correct range
+                assert(1 <= satnumData[dofIdx]);
+                assert(satnumData[dofIdx] <= static_cast<int>(numSatfuncTables));
+
+                // Eclipse uses Fortran-style indices which start at
+                // 1, but this here is C++...
+                materialParamTableIdx_[dofIdx] = satnumData[dofIdx] - 1;
             }
         }
+        else
+            materialParamTableIdx_.clear();
     }
 
     void initFluidSystem_(Opm::DeckConstPtr deck)
@@ -550,6 +621,8 @@ private:
 
     std::vector<Scalar> porosity_;
     std::vector<DimMatrix> intrinsicPermeability_;
+
+    std::vector<unsigned short> materialParamTableIdx_;
     std::vector<MaterialLawParams> materialParams_;
 
     std::vector<BlackOilFluidState> initialFluidStates_;
