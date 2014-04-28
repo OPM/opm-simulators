@@ -61,7 +61,7 @@ namespace {
 
         std::vector<int> f2hf(2 * numFaces(grid), -1);
         Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
-            face_cells;
+            face_cells = faceCells(grid);
         
         typedef typename Opm::UgGridHelpers::Cell2FacesTraits<UnstructuredGrid>::Type
             Cell2Faces;
@@ -71,7 +71,7 @@ namespace {
                 cell_faces = c2f[c];
             typedef typename Cell2Faces::row_type::iterator Iter;
             for (Iter f=cell_faces.begin(), end=cell_faces.end();
-                 f!=end; ++end) {
+                 f!=end; ++f) {
                 const int p = 0 + (face_cells(*f,0) != c);
                 f2hf[2*(*f) + p] = f-c2f[0].begin();
             }
@@ -89,8 +89,6 @@ namespace {
         std::vector<Tri> grav;  grav.reserve(2 * ni);
         for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
             const int f  = ops.internal_faces[ i ];
-            Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
-                face_cells=faceCells(grid);
             const int c1 = face_cells(f,0);
             const int c2 = face_cells(f,1);
 

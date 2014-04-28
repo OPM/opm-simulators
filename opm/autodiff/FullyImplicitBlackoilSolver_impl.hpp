@@ -49,6 +49,19 @@
                   << collapseJacs(foo) << std::endl;                    \
     } while (0)
 
+#define DUMPVAL(foo)                                                    \
+    do {                                                                \
+        std::cout << "==========================================\n"     \
+                  << #foo ":\n"                                         \
+                  << foo.value() << std::endl;                          \
+    } while (0)
+
+#define DISKVAL(foo)                                                    \
+    do {                                                                \
+        std::ofstream os(#foo);                                         \
+        os.precision(16);                                               \
+        os << foo.value() << std::endl;                                 \
+    } while (0)
 
 
 namespace Opm {
@@ -638,7 +651,7 @@ namespace {
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
-        const SolutionState state = variableState(x, xw);
+        SolutionState state = variableState(x, xw);
 
         // -------- Mass balance equations --------
 
@@ -695,8 +708,12 @@ namespace {
 
         }
 
-        addWellEq(state, xw); // Note: this can change xw (switching well controls).
-        addWellControlEq(state, xw);
+        // Note: updateWellControls() can change all its arguments if
+        // a well control is switched.
+        updateWellControls(state.bhp, state.qs, xw);
+        V aliveWells;
+        addWellEq(state, aliveWells);
+        addWellControlEq(state, xw, aliveWells);
     }
 
 
@@ -705,7 +722,7 @@ namespace {
 
     template <class T>
     void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
-                                                WellStateFullyImplicitBlackoil& xw)
+                                                   V& aliveWells)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells_.number_of_phases;
@@ -721,6 +738,10 @@ namespace {
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(state.pressure, well_cells);
+
+        // DUMPVAL(p_perfcell);
+        // DUMPVAL(state.bhp);
+        // DUMPVAL(ADB::constant(cdp));
 
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcell - (wops_.w2p * state.bhp + cdp);
@@ -804,12 +825,13 @@ namespace {
             wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
             wbqt += wbq[phase];
         }
+        // DUMPVAL(wbqt);
 
         // check for dead wells
-        V isNotDeadWells = V::Constant(nw,1.0);
+        aliveWells = V::Constant(nw, 1.0);
         for (int w = 0; w < nw; ++w) {
             if (wbqt.value()[w] == 0) {
-                isNotDeadWells[w] = 0;
+                aliveWells[w] = 0.0;
             }
         }
         // compute wellbore mixture at std conds
@@ -827,8 +849,12 @@ namespace {
         ADB mt = subset(rq_[0].mob,well_cells);
         for (int phase = 1; phase < np; ++phase) {
             mt += subset(rq_[phase].mob,well_cells);
-
         }
+
+        // DUMPVAL(ADB::constant(isInjInx));
+        // DUMPVAL(ADB::constant(Tw));
+        // DUMPVAL(mt);
+        // DUMPVAL(drawdown);
 
         // injection connections total volumerates
         ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
@@ -856,8 +882,10 @@ namespace {
                 tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
             }
             volRat += tmp / subset(rq_[phase].b,well_cells);
-
         }
+
+        // DUMPVAL(cqt_i);
+        // DUMPVAL(volRat);
 
         // injecting connections total volumerates at std cond
         ADB cqt_is = cqt_i/volRat;
@@ -867,6 +895,9 @@ namespace {
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + (wops_.w2p * mix_s[phase])*cqt_is;
         }
+
+        // DUMPVAL(mix_s[2]);
+        // DUMPVAL(cq_ps[2]);
 
         // Add well contributions to mass balance equations
         for (int phase = 0; phase < np; ++phase) {
@@ -879,11 +910,8 @@ namespace {
             qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
-        residual_.well_flux_eq = qs;
 
-        // Updating the well controls is done from here, since we have
-        // access to the necessary bhp and rate data in this method.
-        updateWellControls(state.bhp, state.qs, xw);
+        residual_.well_flux_eq = qs;
     }
 
 
@@ -956,15 +984,17 @@ namespace {
 
 
     template<class T>
-    void FullyImplicitBlackoilSolver<T>::updateWellControls(const ADB& bhp,
-                                                         const ADB& well_phase_flow_rate,
-                                                         WellStateFullyImplicitBlackoil& xw) const
+    void FullyImplicitBlackoilSolver<T>::updateWellControls(ADB& bhp,
+                                                            ADB& well_phase_flow_rate,
+                                                            WellStateFullyImplicitBlackoil& xw) const
     {
         std::string modestring[3] = { "BHP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
+        bool bhp_changed = false;
+        bool rates_changed = false;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
             // The current control in the well state overrides
@@ -1002,7 +1032,37 @@ namespace {
                           << " from " << modestring[well_controls_iget_type(wc, current)]
                           << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 xw.currentControls()[w] = ctrl_index;
+                // Also updating well state and primary variables.
+                // We can only be switching to BHP and SURFACE_RATE
+                // controls since we do not support RESERVOIR_RATE.
+                const double target = well_controls_iget_target(wc, ctrl_index);
+                const double* distr = well_controls_iget_distr(wc, ctrl_index);
+                switch (well_controls_iget_type(wc, ctrl_index)) {
+                case BHP:
+                    xw.bhp()[w] = target;
+                    bhp_changed = true;
+                    break;
+                case SURFACE_RATE:
+                    for (int phase = 0; phase < np; ++phase) {
+                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                    }
+                    rates_changed = true;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Programmer error: should not have switched "
+                                                "to anything but BHP or SURFACE_RATE.");
+                }
             }
+        }
+
+        // Update primary variables, if necessary.
+        if (bhp_changed) {
+            ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
+            bhp = ADB::function(new_bhp, bhp.derivative());
+        }
+        if (rates_changed) {
+            ADB::V new_qs = Eigen::Map<ADB::V>(xw.wellRates().data(), np*nw);
+            well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
         }
     }
 
@@ -1011,7 +1071,8 @@ namespace {
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::addWellControlEq(const SolutionState& state,
-                                                       const WellStateFullyImplicitBlackoil& xw)
+                                                          const WellStateFullyImplicitBlackoil& xw,
+                                                          const V& aliveWells)
     {
         // Handling BHP and SURFACE_RATE wells.
 
@@ -1048,6 +1109,17 @@ namespace {
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        // For wells that are dead (not flowing), and therefore not communicating
+        // with the reservoir, we set the equation to be equal to the well's total
+        // flow. This will be a solution only if the target rate is also zero.
+        M rate_summer(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            for (int phase = 0; phase < np; ++phase) {
+                rate_summer.insert(w, phase*nw + w) = 1.0;
+            }
+        }
+        Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
+        residual_.well_eq = alive_selector.select(residual_.well_eq, rate_summer * state.qs);
         // DUMP(residual_.well_eq);
     }
 
@@ -1501,15 +1573,23 @@ namespace {
         // convert the pressure offsets to the capillary pressures
         std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-#warning "what's the reference phase??"
+            // The reference pressure is always the liquid phase (oil) pressure.
             if (phaseIdx == BlackoilPhases::Liquid)
                 continue;
             pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
         }
 
-        // add the total pressure to the capillary pressures
+        // Since pcow = po - pw, but pcog = pg - po,
+        // we have
+        //   pw = po - pcow
+        //   pg = po + pcgo
+        // This is an unfortunate inconsistency, but a convention we must handle.
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-            pressure[phaseIdx] += state.pressure;
+            if (phaseIdx == BlackoilPhases::Aqua) {
+                pressure[phaseIdx] = state.pressure - pressure[phaseIdx];
+            } else {
+                pressure[phaseIdx] += state.pressure;
+            }
         }
 
         return pressure;

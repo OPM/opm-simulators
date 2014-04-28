@@ -24,7 +24,13 @@
 #include <opm/autodiff/GridHelpers.hpp>
 //#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
+
+#include "disable_warning_pragmas.h"
+
 #include <Eigen/Eigen>
+
+#include "reenable_warning_pragmas.h"
+
 
 namespace Opm
 {

@@ -34,7 +34,9 @@
 #include <boost/scoped_ptr.hpp>
 
 #ifdef HAVE_DUNE_CORNERPOINT
+#include "disable_warning_pragmas.h"
 #include <dune/grid/CpGrid.hpp>
+#include "reenable_warning_pragmas.h"
 #endif
 
 namespace Opm

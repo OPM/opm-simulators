@@ -16,7 +16,10 @@
 #include <boost/filesystem.hpp>
 
 #ifdef HAVE_DUNE_CORNERPOINT
+#include "disable_warning_pragmas.h"
+#include <dune/common/version.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include "reenable_warning_pragmas.h"
 #endif
 namespace Opm
 {
@@ -175,7 +178,11 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
         vtkfilename << "output-" << std::setw(3) << std::setfill('0') << step;
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
+        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafGridView(), Dune::VTK::nonconforming);
+#else
         Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafView(), Dune::VTK::nonconforming);
+#endif
         writer.addCellData(state.saturation(), "saturation", state.numPhases());
         writer.addCellData(state.pressure(), "pressure", 1);
         
