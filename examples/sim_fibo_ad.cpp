@@ -102,9 +102,10 @@ try
 
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
     // Grid init
-    grid.reset(new GridManager(newParserDeck));
+    grid.reset(new GridManager(eclipseState->getEclipseGrid()));
     Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
 
     // Rock and fluid init
@@ -173,7 +174,6 @@ try
     WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
     SimulatorTimer simtimer;
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
 
     // initialize variables
     simtimer.init(timeMap);
