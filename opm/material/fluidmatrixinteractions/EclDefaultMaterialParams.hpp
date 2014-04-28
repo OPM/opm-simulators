@@ -37,12 +37,15 @@ namespace Opm {
  * Essentially, this class just stores the two parameter objects for
  * the twophase capillary pressure laws.
  */
-template<class Traits, class GasOilParams, class OilWaterParams>
+template<class Traits, class GasOilParamsT, class OilWaterParamsT>
 class EclDefaultMaterialParams
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
 public:
+    typedef GasOilParamsT GasOilParams;
+    typedef OilWaterParamsT OilWaterParams;
+
     /*!
      * \brief The default constructor.
      */
@@ -84,7 +87,7 @@ public:
     /*!
      * \brief The parameter object for the oil-water twophase law.
      */
-    void oilWaterParams(const OilWaterParams& val)
+    void setOilWaterParams(const OilWaterParams& val)
     { oilWaterParams_ = val; }
 
 private:

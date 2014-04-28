@@ -43,8 +43,7 @@ class PiecewiseLinearTwoPhaseMaterialParams
     typedef typename TraitsT::Scalar Scalar;
 
 public:
-    typedef std::pair<Scalar, Scalar> SamplePoint;
-    typedef std::vector<SamplePoint> SamplePoints;
+    typedef std::vector<Scalar> SamplePoints;
 
     typedef TraitsT Traits;
 
@@ -64,53 +63,35 @@ public:
 #ifndef NDEBUG
         finalized_ = true;
 #endif
-    }
 
-    /*!
-     * \brief Read the relevant curves from the table specified by the
-     *        SWOF keyword of an ECLIPSE input file
-     */
-    void readFromSwof(const Opm::SwofTable &swofTable)
-    {
-        const std::vector<double> &SwColumn = swofTable.getSwColumn();
-        const std::vector<double> &krwColumn = swofTable.getKrwColumn();
-        const std::vector<double> &krowColumn = swofTable.getKrowColumn();
-        const std::vector<double> &pcowColumn = swofTable.getPcowColumn();
-        int numRows = swofTable.numRows();
-        for (int rowIdx = 0; rowIdx < numRows; ++rowIdx) {
-            pcwnSamples_[rowIdx].first = SwColumn[rowIdx];
-            pcwnSamples_[rowIdx].second = - pcowColumn[rowIdx];
+        // revert the order of the sampling points if they were given
+        // in reverse direction.
+        if (SwSamples_.front() > SwSamples_.back()) {
+            for (size_t origSampleIdx = 0;
+                 origSampleIdx < SwSamples_.size() / 2;
+                 ++ origSampleIdx)
+            {
+                size_t newSampleIdx = SwSamples_.size() - origSampleIdx;
 
-            krwSamples_[rowIdx].first = SwColumn[rowIdx];
-            krwSamples_[rowIdx].second = krwColumn[rowIdx];
-
-            krnSamples_[rowIdx].first = SwColumn[rowIdx];
-            krnSamples_[rowIdx].second = krowColumn[rowIdx];
+                std::swap(SwSamples_[origSampleIdx], SwSamples_[newSampleIdx]);
+                std::swap(pcwnSamples_[origSampleIdx], pcwnSamples_[newSampleIdx]);
+                std::swap(krwSamples_[origSampleIdx], krwSamples_[newSampleIdx]);
+                std::swap(krnSamples_[origSampleIdx], krnSamples_[newSampleIdx]);
+            }
         }
     }
 
     /*!
-     * \brief Read the relevant curves from the table specified by the
-     *        SGOF keyword of an ECLIPSE input file
+     * \brief Return the wetting-phase saturation values of all sampling points.
      */
-    void readFromSgof(const Opm::SgofTable &sgofTable)
-    {
-        const std::vector<double> &SgColumn = sgofTable.getSgColumn();
-        const std::vector<double> &krgColumn = sgofTable.getKrgColumn();
-        const std::vector<double> &krogColumn = sgofTable.getKrogColumn();
-        const std::vector<double> &pcogColumn = sgofTable.getPcogColumn();
-        int numRows = sgofTable.numRows();
-        for (int rowIdx = 0; rowIdx < numRows; ++rowIdx) {
-            pcwnSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
-            pcwnSamples_[rowIdx].second = pcogColumn[rowIdx];
+    const SamplePoints& SwSamples() const
+    { assertFinalized_(); return SwSamples_; }
 
-            krwSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
-            krwSamples_[rowIdx].second = krogColumn[rowIdx];
-
-            krnSamples_[rowIdx].first = 1 - SgColumn[rowIdx];
-            krnSamples_[rowIdx].second = krgColumn[rowIdx];
-        }
-    }
+    /*!
+     * \brief Set the wetting-phase saturation values of all sampling points.
+     */
+    void setSwSamples(const SamplePoints& samples)
+    { SwSamples_ = samples; }
 
     /*!
      * \brief Return the sampling points for the capillary pressure curve.
@@ -175,6 +156,7 @@ private:
     { }
 #endif
 
+    SamplePoints SwSamples_;
     SamplePoints pcwnSamples_;
     SamplePoints krwSamples_;
     SamplePoints krnSamples_;

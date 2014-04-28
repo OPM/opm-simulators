@@ -68,11 +68,6 @@ public:
     static const int nonWettingPhaseIdx = nonWettingasPhaseIdxV;
 
     // some safety checks...
-    static_assert(0 <= wettingPhaseIdx && wettingPhaseIdx < numPhases,
-                  "wettingPhaseIdx is out of range");
-    static_assert(0 <= nonWettingPhaseIdx && nonWettingPhaseIdx < numPhases,
-                  "nonWettingPhaseIdx is out of range");
-
     static_assert(wettingPhaseIdx != nonWettingPhaseIdx,
                   "wettingPhaseIdx and nonWettingPhaseIdx must be different");
 };

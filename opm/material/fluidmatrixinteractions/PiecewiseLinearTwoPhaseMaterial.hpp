@@ -130,7 +130,10 @@ public:
         values[Traits::wettingPhaseIdx] = 0;
         values[Traits::nonWettingPhaseIdx] = 0;
         if (satPhaseIdx == Traits::wettingPhaseIdx) {
-            values[Traits::nonWettingPhaseIdx] = evalDeriv_(params.pcnwSamples(), state.saturation(Traits::wettingPhaseIdx));
+            values[Traits::nonWettingPhaseIdx] =
+                evalDeriv_(params.SwSamples(),
+                           params.pcnwSamples(),
+                           state.saturation(Traits::wettingPhaseIdx));
         }
     }
 
@@ -190,12 +193,12 @@ public:
                                                     int satPhaseIdx)
     {
         if (satPhaseIdx == Traits::wettingPhaseIdx) {
-            values[Traits::wettingPhaseIdx] = evalDeriv_(params.krwSamples(), state.saturation(Traits::wettingPhaseIdx));
+            values[Traits::wettingPhaseIdx] = evalDeriv_(params.SwSamples(), params.krwSamples(), state.saturation(Traits::wettingPhaseIdx));
             values[Traits::nonWettingPhaseIdx] = 0;
         }
         else {
             values[Traits::wettingPhaseIdx] = 0;
-            values[Traits::nonWettingPhaseIdx] = - evalDeriv_(params.krwSamples(), 1 - state.saturation(Traits::nonWettingPhaseIdx));
+            values[Traits::nonWettingPhaseIdx] = - evalDeriv_(params.SwSamples(), params.krwSamples(), 1 - state.saturation(Traits::nonWettingPhaseIdx));
         }
     }
 
@@ -259,7 +262,7 @@ public:
      * \brief The saturation-capillary pressure curve
      */
     static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
-    { return evalDeriv_(params.pcnwSamples(), Sw); }
+    { return eval_(params.SwSamples(), params.pcnwSamples(), Sw); }
 
     /*!
      * \brief The saturation-capillary pressure curve
@@ -293,7 +296,9 @@ public:
     static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
     {
         assert(0 < Sw && Sw < 1);
-        return evalDeriv_(params.pcnwSamples(), Sw);
+        return evalDeriv_(params.SwSamples(),
+                          params.pcnwSamples(),
+                          Sw);
     }
 
     /*!
@@ -306,12 +311,12 @@ public:
 
     static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
     {
-        if (Sw < params.krwSamples().front().first)
-            return params.krwSamples().front().second;
-        else if (Sw > params.krwSamples().back().first)
-            return params.krwSamples().back().second;
+        if (Sw < params.SwSamples().front())
+            return params.krwSamples().front();
+        else if (Sw > params.SwSamples().back())
+            return params.krwSamples().back();
 
-        return eval_(params.krwSamples(), Sw);
+        return eval_(params.SwSamples(), params.krwSamples(), Sw);
     }
 
     /*!
@@ -325,12 +330,14 @@ public:
 
     static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
     {
-        if (Sw < params.krwSamples().front().first)
+        if (Sw < params.SwSamples().front())
             return 0;
-        else if (Sw > params.krwSamples().back().first)
+        else if (Sw > params.SwSamples().back())
             return 0;
 
-        return evalDeriv_(params.krwSamples(), Sw);
+        return evalDeriv_(params.SwSamples(),
+                          params.krwSamples(),
+                          Sw);
     }
 
     /*!
@@ -343,12 +350,14 @@ public:
 
     static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
     {
-        if (Sw < params.krnSamples().front().first)
-            return params.krnSamples().front().second;
-        else if (Sw > params.krnSamples().back().first)
-            return params.krnSamples().back().second;
+        if (Sw < params.SwSamples().front())
+            return params.krnSamples().front();
+        else if (Sw > params.SwSamples().back())
+            return params.krnSamples().back();
 
-        return eval_(params.krnSamples(), Sw);
+        return eval_(params.SwSamples(),
+                     params.krnSamples(),
+                     Sw);
     }
 
     /*!
@@ -362,52 +371,61 @@ public:
 
     static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
     {
-        if (Sw < params.krwSamples().front().first)
+        if (Sw < params.SwSamples().front())
             return 0;
-        else if (Sw > params.krwSamples().back().first)
+        else if (Sw > params.SwSamples().back())
             return 0;
 
-        return evalDeriv_(params.krnSamples(), Sw);
+        return evalDeriv_(params.SwSamples(),
+                          params.krnSamples(),
+                          Sw);
     }
 
 private:
-    static Scalar eval_(const SamplePoints &samples, Scalar x)
+    static Scalar eval_(const SamplePoints &xSamples,
+                        const SamplePoints &ySamples,
+                        Scalar x)
     {
-        int segIdx = findSegmentIndex_(samples, x);
-        if (x >= samples.front().first && x <= samples.back().first) {
-            assert(samples[segIdx].first <= x);
-            assert(samples[segIdx + 1].first >= x);
-        }
-        Scalar alpha =
-            (x - samples[segIdx].first)
-            / (samples[segIdx + 1].first - samples[segIdx].first);
-        return
-            samples[segIdx].second +
-            (samples[segIdx + 1].second - samples[segIdx].second)*alpha;
+        int segIdx = findSegmentIndex_(xSamples, x);
+
+        Scalar x0 = xSamples[segIdx];
+        Scalar x1 = xSamples[segIdx + 1];
+
+        Scalar y0 = ySamples[segIdx];
+        Scalar y1 = ySamples[segIdx + 1];
+
+        return y0 + (y1 - y0)*(x - x0)/(x1 - x0);
     }
 
-    static Scalar evalDeriv_(const SamplePoints &samples, Scalar x)
+    static Scalar evalDeriv_(const SamplePoints &xSamples,
+                             const SamplePoints &ySamples,
+                             Scalar x)
     {
-        int segIdx = findSegmentIndex_(samples, x);
-        return
-            (samples[segIdx + 1].second - samples[segIdx].second)
-            /(samples[segIdx + 1].first - samples[segIdx].first);
+        int segIdx = findSegmentIndex_(xSamples, x);
+
+        Scalar x0 = xSamples[segIdx];
+        Scalar x1 = xSamples[segIdx + 1];
+
+        Scalar y0 = ySamples[segIdx];
+        Scalar y1 = ySamples[segIdx + 1];
+
+        return (y1 - y0)/(x1 - x0);
     }
 
-    static int findSegmentIndex_(const SamplePoints &samples, Scalar x)
+    static int findSegmentIndex_(const SamplePoints &xSamples, Scalar x)
     {
-        int n = samples.size() - 1;
+        int n = xSamples.size() - 1;
         assert(n >= 1); // we need at least two sampling points!
-        if (samples[n].first < x)
+        if (xSamples[n] < x)
             return n - 1;
-        else if (samples[0].first > x)
+        else if (xSamples[0] > x)
             return 0;
 
         // bisection
         int lowIdx = 0, highIdx = n;
         while (lowIdx + 1 < highIdx) {
             int curIdx = (lowIdx + highIdx)/2;
-            if (samples[curIdx].first < x)
+            if (xSamples[curIdx] < x)
                 lowIdx = curIdx;
             else
                 highIdx = curIdx;

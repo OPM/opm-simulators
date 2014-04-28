@@ -48,32 +48,36 @@ namespace Opm {
  * that these only depend on saturation.)
  */
 template <class TraitsT,
-          class GasOilMaterial,
-          class OilWaterMaterial,
+          class GasOilMaterialLawT,
+          class OilWaterMaterialLawT,
           class ParamsT = EclDefaultMaterialParams<TraitsT,
-                                                   typename GasOilMaterial::Params,
-                                                   typename OilWaterMaterial::Params> >
+                                                   typename GasOilMaterialLawT::Params,
+                                                   typename OilWaterMaterialLawT::Params> >
 class EclDefaultMaterial : public TraitsT
 {
 public:
+    typedef GasOilMaterialLawT GasOilMaterialLaw;
+    typedef OilWaterMaterialLawT OilWaterMaterialLaw;
+
+    // some safety checks
     static_assert(TraitsT::numPhases == 3,
                   "The number of phases considered by this capillary pressure "
                   "law is always three!");
-    static_assert(GasOilMaterial::numPhases == 2,
+    static_assert(GasOilMaterialLaw::numPhases == 2,
                   "The number of phases considered by the gas-oil capillary "
                   "pressure law must be two!");
-    static_assert(OilWaterMaterial::numPhases == 2,
+    static_assert(OilWaterMaterialLaw::numPhases == 2,
                   "The number of phases considered by the oil-water capillary "
                   "pressure law must be two!");
-    static_assert(std::is_same<typename GasOilMaterial::Scalar,
-                               typename OilWaterMaterial::Scalar>::value,
+    static_assert(std::is_same<typename GasOilMaterialLaw::Scalar,
+                               typename OilWaterMaterialLaw::Scalar>::value,
                   "The two two-phase capillary pressure laws must use the same "
                   "type of floating point values.");
 
-    static_assert(GasOilMaterial::implementsTwoPhaseSatApi,
+    static_assert(GasOilMaterialLaw::implementsTwoPhaseSatApi,
                   "The gas-oil material law must implement the two-phase saturation "
                   "only API to for the default Ecl capillary pressure law!");
-    static_assert(OilWaterMaterial::implementsTwoPhaseSatApi,
+    static_assert(OilWaterMaterialLaw::implementsTwoPhaseSatApi,
                   "The oil-water material law must implement the two-phase saturation "
                   "only API to for the default Ecl capillary pressure law!");
 
@@ -149,7 +153,7 @@ public:
                        const FluidState &fs)
     {
         Scalar Sw = 1 - fs.saturation(gasPhaseIdx);
-        return GasOilMaterial::twoPhaseSatPcnw(params.gasOilParams(), Sw);
+        return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
     /*!
@@ -166,7 +170,7 @@ public:
                        const FluidState &fs)
     {
         Scalar Sw = fs.saturation(waterPhaseIdx);
-        return OilWaterMaterial::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
+        return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -243,7 +247,7 @@ public:
                       const FluidState &fluidState)
     {
         Scalar Sw = 1 - fluidState.saturation(gasPhaseIdx);
-        return GasOilMaterial::twoPhaseSatKrn(params.oilWaterParams(), Sw);
+        return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
     /*!
@@ -254,7 +258,7 @@ public:
                       const FluidState &fluidState)
     {
         Scalar Sw = fluidState.saturation(waterPhaseIdx);
-        return OilWaterMaterial::twoPhaseSatKrw(params.oilWaterParams(), Sw);
+        return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -272,8 +276,8 @@ public:
         // probably only relevant if hysteresis is enabled...
         Scalar Swco = 0; // todo!
 
-        Scalar krog = GasOilMaterial::twoPhaseSatKrw(params.oilWaterParams(), So + Swco);
-        Scalar krow = OilWaterMaterial::twoPhaseSatKrn(params.oilWaterParams(), 1 - So);
+        Scalar krog = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So + Swco);
+        Scalar krow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), 1 - So);
 
         if (Sg + Sw - Swco < 1e-30)
             return 1.0; // avoid division by zero
