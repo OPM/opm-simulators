@@ -1075,7 +1075,7 @@ namespace Opm
                 depth_col.resize(num_tables);
                 col_names.resize(9);
                 for (int table_num=0; table_num<num_tables; ++table_num) {
-                    Opm::SimpleTable enptvd(newParserDeck->getKeyword("ENPTVD"), col_names, table_num);
+                    Opm::SingleRecordTable enptvd(newParserDeck->getKeyword("ENPTVD"), col_names, table_num);
                     depth_col[table_num] = enptvd.getColumn(0); // depth
                     param_col[table_num] = enptvd.getColumn(itab); // itab=[1-8]: swl swcr swu sgl sgcr sgu sowcr sogcr
                 }
@@ -1138,7 +1138,7 @@ namespace Opm
                 depth_col.resize(num_tables);
                 col_names.resize(8);
                 for (int table_num=0; table_num<num_tables; ++table_num) {
-                    Opm::SimpleTable enkrvd(newParserDeck->getKeyword("ENKRVD"), col_names, table_num);
+                    Opm::SingleRecordTable enkrvd(newParserDeck->getKeyword("ENKRVD"), col_names, table_num);
                     depth_col[table_num] = enkrvd.getColumn(0); // depth
                     param_col[table_num] = enkrvd.getColumn(itab); // itab=[1-7]: krw krg kro krwr krgr krorw krorg
                 }
