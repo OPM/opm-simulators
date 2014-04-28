@@ -28,7 +28,7 @@
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
-#include <opm/parser/eclipse/Utility/SimpleTable.hpp>
+#include <opm/parser/eclipse/Utility/SingleRecordTable.hpp>
 
 #include <array>
 #include <cassert>
@@ -527,7 +527,7 @@ namespace Opm
                             if (rec[i].live_oil_table_index > 0) {
                                 if (newParserDeck->hasKeyword("RSVD") &&
                                     size_t(rec[i].live_oil_table_index) <= newParserDeck->getKeyword("RSVD")->size()) { 
-                                    Opm::SimpleTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
+                                    Opm::SingleRecordTable rsvd(newParserDeck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);                                
                                     std::vector<double> vd(rsvd.getColumn("vd"));
                                     std::vector<double> rs(rsvd.getColumn("rs"));
                                     rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props, cell, vd, rs));
@@ -558,7 +558,7 @@ namespace Opm
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (newParserDeck->hasKeyword("RVVD") &&
                                     size_t(rec[i].wet_gas_table_index) <= newParserDeck->getKeyword("RVVD")->size()) { 
-                                    Opm::SimpleTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
+                                    Opm::SingleRecordTable rvvd(newParserDeck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
                                     std::vector<double> vd(rvvd.getColumn("vd"));
                                     std::vector<double> rv(rvvd.getColumn("rv"));
                                     rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props, cell, vd, rv));
