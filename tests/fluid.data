@@ -47,6 +47,11 @@ PORO
 -- =====================================================================
 PROPS
 
+TABDIMS
+-- use the default values for TABDIMS, but the keyword must be present
+-- if any tables ought to be specified...
+/
+
 PVTW
 -- Pw Bw(Pw) Cw muw  Cv
     1  1      0 1000  0
