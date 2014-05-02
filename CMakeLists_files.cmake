@@ -50,12 +50,6 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_welldensitysegmented.cpp
 	)
 
-if (INCLUDE_NON_PUBLIC_TESTS)
-	list (APPEND TEST_SOURCE_FILES
-		tests/integration_tests/sim_fibo_ad_test.cpp
-		)
-endif()
-
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
 	)

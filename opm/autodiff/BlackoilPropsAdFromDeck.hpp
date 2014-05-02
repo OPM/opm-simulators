@@ -23,15 +23,12 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 #ifdef HAVE_DUNE_CORNERPOINT
 #include "disable_warning_pragmas.h"
@@ -57,49 +54,17 @@ namespace Opm
     {
     public:
         /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
-                                const UnstructuredGrid& grid,
-                                const bool init_rock = true );
-
-        /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
-        
         /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
-
-        /// Constructor wrapping an opm-core black oil interface.
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
-                                const Dune::CpGrid& grid,
-                                const bool init_rock = true );
-
-
 #endif
 
-        /// Constructor taking not a grid but only the needed information
-        template<class T>
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr newParserDeck,
-                                int number_of_cells,
-                                const int* global_cell,
-                                const int* cart_dims,
-                                T begin_cell_centroids,
-                                int dimensions,
-                                const bool init_rock);
-
-        /// Constructor taking not a grid but only the needed information
-        template<class T>
-        BlackoilPropsAdFromDeck(const EclipseGridParser& deck,
-                                int number_of_cells,
-                                const int* global_cell,
-                                const int* cart_dims,
-                                T begin_cell_centroids,
-                                int dimensions,
-                                const bool init_rock);
 
         ////////////////////////////
         //      Rock interface    //
@@ -371,27 +336,19 @@ namespace Opm
 
     private:
         /// Initializes the properties.
-        template<class T>
-        void init(const EclipseGridParser& deck,
-                  int number_of_cells,
-                  const int* global_cell,
-                  const int* cart_dims,
-                  T begin_cell_centroids,
-                  int dimension,
-                  const bool init_rock);
-        /// Initializes the properties.
-        template<class T>
+        template <class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
-                  T begin_cell_centroids,
+                  const CentroidIterator& begin_cell_centroids,
                   int dimension,
                   const bool init_rock);
+
         RockFromDeck rock_;
-        boost::scoped_ptr<SaturationPropsInterface> satprops_;
+        std::unique_ptr<SaturationPropsInterface> satprops_;
         PhaseUsage phase_usage_;
-        std::vector<boost::shared_ptr<SinglePvtInterface> > props_;
+        std::vector<std::shared_ptr<SinglePvtInterface> > props_;
         double densities_[BlackoilPhases::MaxNumPhases];
     };
 
