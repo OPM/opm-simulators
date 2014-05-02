@@ -66,6 +66,10 @@ NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager));
 // The temperature inside the reservoir
 NEW_PROP_TAG(Temperature);
 
+// Write all solutions for visualization, not just the ones for the
+// report steps...
+NEW_PROP_TAG(EnableWriteAllSolutions);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -107,6 +111,9 @@ SET_BOOL_PROP(EclBaseProblem, EnableLinearizationRecycling, true);
 
 // Re-assemble the linearization only for the cells which have changed?
 SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, true);
+
+// only write the solutions for the report steps to disk
+SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
 
 // set the defaults for some problem specific properties
 SET_SCALAR_PROP(EclBaseProblem, Temperature, 293.15);
@@ -189,6 +196,8 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
                              "The temperature [K] in the reservoir");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
+                             "Write all solutions to disk instead of only the ones for the report steps");
     }
 
     /*!
@@ -221,6 +230,12 @@ public:
         // we want the episode index to be the same as the report step
         // index to make things simpler...
         simulator.setEpisodeIndex(0);
+
+        // the user-specified initial time step can be shorter than
+        // the one given in the deck, but it can't be longer.
+        Scalar dt = simulator.timeStepSize();
+        if (dt > simulator.episodeLength())
+            simulator.setTimeStepSize(dt);
     }
 
     /*!
@@ -245,6 +260,9 @@ public:
     {
         if (this->simulator().timeStepIndex() == 0)
             // always write the initial solution
+            return true;
+
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions))
             return true;
 
         return this->simulator().episodeWillBeOver();
