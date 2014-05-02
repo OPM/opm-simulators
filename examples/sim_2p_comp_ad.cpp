@@ -51,9 +51,9 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 
-#include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
+#include <memory>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -93,9 +93,9 @@ try
         OPM_THROW(std::runtime_error, "This simulator cannot run without a deck with wells. Use deck_filename to specify deck.");
     }
     Opm::DeckConstPtr deck;
-    boost::scoped_ptr<GridManager> grid;
-    boost::scoped_ptr<BlackoilPropertiesInterface> props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::unique_ptr<GridManager> grid;
+    std::unique_ptr<BlackoilPropertiesInterface> props;
+    std::unique_ptr<RockCompressibility> rock_comp;
     EclipseStateConstPtr eclipseState;
     BlackoilState state;
     // bool check_well_controls = false;

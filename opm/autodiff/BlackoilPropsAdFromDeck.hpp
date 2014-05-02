@@ -348,7 +348,7 @@ namespace Opm
         RockFromDeck rock_;
         std::unique_ptr<SaturationPropsInterface> satprops_;
         PhaseUsage phase_usage_;
-        std::vector<boost::shared_ptr<SinglePvtInterface> > props_;
+        std::vector<std::shared_ptr<SinglePvtInterface> > props_;
         double densities_[BlackoilPhases::MaxNumPhases];
     };
 

@@ -41,17 +41,16 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/initState.hpp>
 
-#include <boost/shared_ptr.hpp>
-
+#include <memory>
 #include <algorithm>
 #include <iostream>
 
 
 namespace {
-    boost::shared_ptr<Wells>
+    std::shared_ptr<Wells>
     createWellConfig()
     {
-        boost::shared_ptr<Wells> wells(create_wells(2, 2, 2),
+        std::shared_ptr<Wells> wells(create_wells(2, 2, 2),
                                        destroy_wells);
 
         const double inj_frac[] = { 1.0, 0.0 };
@@ -98,7 +97,7 @@ try
     const Opm::BlackoilPropertiesBasic   props0(param, 2, nc);
     const Opm::BlackoilPropsAd           props(props0);
 
-    boost::shared_ptr<Wells> wells = createWellConfig();
+    std::shared_ptr<Wells> wells = createWellConfig();
 
     double grav[] = { 0.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);

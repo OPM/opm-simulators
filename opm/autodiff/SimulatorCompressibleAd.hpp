@@ -20,7 +20,7 @@
 #ifndef OPM_SIMULATORCOMPRESSIBLEAD_HEADER_INCLUDED
 #define OPM_SIMULATORCOMPRESSIBLEAD_HEADER_INCLUDED
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <vector>
 
 struct UnstructuredGrid;
@@ -87,7 +87,7 @@ namespace Opm
     private:
         class Impl;
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        boost::shared_ptr<Impl> pimpl_;
+        std::shared_ptr<Impl> pimpl_;
     };
 
 } // namespace Opm

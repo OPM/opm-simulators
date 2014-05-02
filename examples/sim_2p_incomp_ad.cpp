@@ -49,9 +49,9 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
+#include <memory>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -101,9 +101,9 @@ try
     bool use_deck = param.has("deck_filename");
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckConstPtr deck;
-    boost::scoped_ptr<GridManager> grid;
-    boost::scoped_ptr<IncompPropertiesInterface> props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::unique_ptr<GridManager> grid;
+    std::unique_ptr<IncompPropertiesInterface> props;
+    std::unique_ptr<RockCompressibility> rock_comp;
     EclipseStateConstPtr eclipseState;
     TwophaseState state;
     // bool check_well_controls = false;
