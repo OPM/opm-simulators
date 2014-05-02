@@ -76,6 +76,7 @@ echo "######################"
 RND="$(dd if=/dev/urandom bs=20 count=1 2> /dev/null | md5sum | cut -d" " -f1)"
 case "$TEST_TYPE" in
     "--simulation")
+        echo "executing \"$TEST_BINARY $TEST_ARGS\""
         "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -111,6 +112,7 @@ case "$TEST_TYPE" in
     "--parallel-simulation="*)
         NUM_PROCS="${TEST_TYPE/--parallel-simulation=/}"
 
+        echo "executing \"mpirun -np \"$NUM_PROCS\" $TEST_BINARY $TEST_ARGS\""
         mpirun -np "$NUM_PROCS" "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -142,6 +144,7 @@ case "$TEST_TYPE" in
         ;;
 
     "--restart")
+        echo "executing \"$TEST_BINARY $TEST_ARGS\""
         "$TEST_BINARY" $TEST_ARGS | tee "test-$RND.log"
         RET="${PIPESTATUS[0]}"
         if test "$RET" != "0"; then
@@ -200,6 +203,7 @@ EOF
         ;;
 
     "--plain")
+        echo "executing \"$TEST_BINARY $TEST_ARGS\""
         if ! "$TEST_BINARY" $TEST_ARGS; then
             exit 1
         fi
