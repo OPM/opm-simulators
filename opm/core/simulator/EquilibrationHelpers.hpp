@@ -541,6 +541,17 @@ namespace Opm
          *     - @c depth Depth of gas-oil contact
          *     - @c press Gas-oil capillary pressure at gas-oil contact.
          *       Capillary pressure defined as "P_gas - P_oil".
+         *
+         * For the time being, items 7-9 of ECLIPSE's 'EQUIL' records are also 
+         * stored here, but might (should?) eventually be moved elsewhere.
+         * 
+         *   - @c live_oil_table_index Indicates type of initialisation for live oil.
+         *      Positive value points to corresponding Rs vs. depth table.
+         *   - @c wet_gas_table_index Indicates type of initialisation for wet gas.
+         *      Positive value points to corresponding Rv vs. depth table.
+         *   - @c N Defines accuracy of initialisation computations.  Currently
+         *      only @c N=0 is supported.
+         *      
          */
         struct EquilRecord {
             struct {
