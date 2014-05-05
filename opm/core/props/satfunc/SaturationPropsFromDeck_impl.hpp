@@ -1214,13 +1214,13 @@ namespace Opm
                 endnum = newParserDeck->getKeyword("ENDNUM")->getIntData();
             }
             for (int cell = 0; cell < number_of_cells; ++cell) {
-                int jtab = endnum.empty() ? 0 : endnum[cell];
-                if (jtab > 0 && param_col[jtab-1][0] >= 0.0) {
+                int jtab = endnum.empty() ? 0 : endnum[cell] - 1;
+                if (jtab >= 0 && param_col[jtab][0] >= 0.0) {
                     double zc = UgGridHelpers
                         ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
                                        dim-1);
-                    if (zc >= depth_col[jtab-1].front() && zc <= depth_col[jtab-1].back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth_col[jtab-1], param_col[jtab-1], zc);
+                    if (zc >= depth_col[jtab].front() && zc <= depth_col[jtab].back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth_col[jtab], param_col[jtab], zc);
                     }
                 }
             }
