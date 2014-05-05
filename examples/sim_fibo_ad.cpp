@@ -18,6 +18,8 @@
 */
 #include "config.h"
 
+#define PAEANDEBUG 1
+
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
@@ -57,6 +59,9 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
+#if PAEANDEBUG
+#include <fstream>
+#endif
 
 
 namespace
@@ -219,6 +224,21 @@ try
                                                  fis_solver,
                                                  grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
+
+#if PAEANDEBUG
+        std::cout << " output the pressure " << std::endl;
+        std::ofstream pressure_file("pressure.out");
+        std::ostream_iterator <double> pressure_iterator(pressure_file, "\n");
+        std::copy(state.pressure().begin(), state.pressure().end(), pressure_iterator);
+        pressure_file.close();
+
+        std::cout << " output the saturation " << std::endl;
+        std::ofstream saturation_file("saturation.out");
+        std::ostream_iterator <double> saturation_iterator(saturation_file, "\n");
+        std::copy(state.saturation().begin(), state.saturation().end(), saturation_iterator);
+        saturation_file.close();
+        std::cin.ignore();
+#endif
 
         ++simtimer;
 

@@ -70,8 +70,8 @@ namespace Opm
        std::ofstream filestream3("r.out");
        filestream3 << total_residual.value();
        filestream3.close();
-       std::cout << " output the information for the first iteration " << std::endl;
-       std::cin.ignore();
+       std::cout << " output the information for the last iteration " << std::endl;
+//        std::cin.ignore();
 #endif
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,

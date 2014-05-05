@@ -16,7 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#define PAEANDEBUG 1
 #include  <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -293,6 +293,9 @@ namespace Opm
             // }
 
             bool well_control_passed = !check_well_controls_;
+#if PAEANDEBUG
+            std::cout << " well_control_passed " << well_control_passed << std::endl;
+#endif
             int well_control_iteration = 0;
             do {
                 // Run solver.
