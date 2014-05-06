@@ -264,6 +264,10 @@ namespace Opm {
         void
         classifyCondition(const BlackoilState&        state);
 
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        bool getConvergence(const SolutionState& state, const double dt);
+
 
     };
 } // namespace Opm

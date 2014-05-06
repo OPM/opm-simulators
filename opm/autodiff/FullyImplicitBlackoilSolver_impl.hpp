@@ -266,7 +266,10 @@ namespace {
 
         assemble(pvdt, x, xw);
 
+
         const double r0  = residualNorm();
+        const SolutionState state = constantState(x, xw);
+        bool converged = getConvergence(state, dt);
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
@@ -1721,8 +1724,8 @@ namespace {
         std::cout << " Residuals ";
 #endif
         for (; quantityIt != endQuantityIt; ++quantityIt) {
-            // const double quantityResid = (*quantityIt).value().matrix().norm();
-            const double quantityResid = (*quantityIt).value().matrix().lpNorm();
+            const double quantityResid = (*quantityIt).value().matrix().norm();
+            // const double quantityResid = (*quantityIt).value().matrix().lpNorm();
             if (!std::isfinite(quantityResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
@@ -1733,7 +1736,7 @@ namespace {
 #endif
         }
         // globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
-        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().lpnorm());
+        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>());
 #if PAEANDEBUG
         std::cout << " " << residual_.well_flux_eq.value().matrix().norm();
 #endif
@@ -1748,6 +1751,94 @@ namespace {
 
 
 
+    template<class T>
+    bool
+    FullyImplicitBlackoilSolver<T>::getConvergence(const SolutionState& state, const double dt)
+    {
+        const double tol_mb = 1.0e-7;
+        const double tol_cnv = 1.0e-3;
+
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int np = fluid_.numPhases();
+
+        const V pv = geo_.poreVolume();
+        const double pvSum = pv.sum();
+
+
+        const ADB&              press = state.pressure;
+        const std::vector<ADB>& sat   = state.saturation;
+        const ADB&              rs    = state.rs;
+        const ADB&              rv    = state.rv;
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
+        double CNVW = 0.;
+        double CNVO = 0.;
+        double CNVG = 0.;
+
+        double RW_sum = 0.;
+        double RO_sum = 0.;
+        double RG_sum = 0.;
+
+        double BW_avg = 0.;
+        double BO_avg = 0.;
+        double BG_avg = 0.;
+
+        if (active_[Water]) {
+            ADB tempBW = fluidReciprocFVF(Water, press, rs, rv, cond, cells_);
+            V BW = 1./tempBW.value();
+            V RW = residual_.material_balance_eq[Water].value();
+            BW_avg = BW.sum()/nc; 
+            const V tempV = RW.abs()/pv; 
+
+            CNVW = BW_avg * dt * tempV.maxCoeff(); 
+            RW_sum = RW.sum();
+            std::cout << " CNVW " << CNVW << " RW_sum "<< RW_sum << std::endl;
+            // std::cin.ignore();
+        }
+
+        if (active_[Oil]) {
+            // Omit the disgas here. We should add it. 
+            ADB tempBO = fluidReciprocFVF(Oil, press, rs, rv, cond, cells_);
+            V BO = 1./tempBO.value();
+            V RO = residual_.material_balance_eq[Oil].value();
+            BO_avg = BO.sum()/nc; 
+            const V tempV = RO.abs()/pv; 
+
+            CNVO = BO_avg * dt * tempV.maxCoeff(); 
+            RO_sum = RO.sum();
+            std::cout << " CNVO " << CNVO << " RO_sum " << RO_sum << std::endl;
+            // std::cin.ignore();
+        }
+
+        if (active_[Gas]) {
+            // Omit the vapoil here. We should add it.
+            ADB tempBG = fluidReciprocFVF(Gas, press, rs, rv, cond, cells_);
+            V BG = 1./tempBG.value();
+            V RG = residual_.material_balance_eq[Gas].value();
+            BG_avg = BG.sum()/nc; 
+            const V tempV = RG.abs()/pv; 
+
+            CNVG = BG_avg * dt * tempV.maxCoeff(); 
+            RG_sum = RG.sum();
+            std::cout << " CNVG " << CNVG << " RG_sum " << RG_sum << std::endl;
+            // std::cin.ignore();
+        }
+
+        double tempValue = tol_mb * pvSum /dt; 
+
+        bool converged_MB = (fabs(BW_avg*RW_sum) < tempValue)
+                         && (fabs(BO_avg*RO_sum) < tempValue)
+                         && (fabs(BG_avg*RG_sum) < tempValue);
+
+        bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
+
+        bool converged = converged_MB && converged_CNV;
+
+        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV << " converged " << converged << std::endl;
+
+        return converged;
+    }
 
 
     template<class T>
