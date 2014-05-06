@@ -23,12 +23,12 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/pvt/SinglePvtInterface.hpp>
-#include <opm/core/props/pvt/SinglePvtConstCompr.hpp>
-#include <opm/core/props/pvt/SinglePvtDead.hpp>
-#include <opm/core/props/pvt/SinglePvtDeadSpline.hpp>
-#include <opm/core/props/pvt/SinglePvtLiveOil.hpp>
-#include <opm/core/props/pvt/SinglePvtLiveGas.hpp>
+#include <opm/core/props/pvt/PvtInterface.hpp>
+#include <opm/core/props/pvt/PvtConstCompr.hpp>
+#include <opm/core/props/pvt/PvtDead.hpp>
+#include <opm/core/props/pvt/PvtDeadSpline.hpp>
+#include <opm/core/props/pvt/PvtLiveOil.hpp>
+#include <opm/core/props/pvt/PvtLiveGas.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -80,79 +80,104 @@ namespace Opm
                                        int dimension,
                                        const bool init_rock)
     {
+        // retrieve the cell specific PVT table index from the deck
+        // and using the grid...
+        extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
+
         if (init_rock){
             rock_.init(deck, number_of_cells, global_cell, cart_dims);
         }
 
-        const int samples = 0;
-        const int region_number = 0;
-
         phase_usage_ = phaseUsageFromDeck(deck);
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        if (deck->hasKeyword("DENSITY")) {
-            const auto keyword = deck->getKeyword("DENSITY");
-            const auto record = keyword->getRecord(region_number);
-            enum { ECL_oil = 0, ECL_water = 1, ECL_gas = 2 };
+        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        int numRegions = densityKeyword->size();
+
+        densities_.resize(numRegions);
+        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            if (phase_usage_.phase_used[Liquid]) {
+                densities_[regionIdx][phase_usage_.phase_pos[Liquid]]
+                    = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+            }
             if (phase_usage_.phase_used[Aqua]) {
-                densities_[phase_usage_.phase_pos[Aqua]]   = record->getItem("WATER")->getSIDouble(0);
+                densities_[regionIdx][phase_usage_.phase_pos[Aqua]]
+                    = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
             }
             if (phase_usage_.phase_used[Vapour]) {
-                densities_[phase_usage_.phase_pos[Vapour]] = record->getItem("GAS")->getSIDouble(0);
+                densities_[regionIdx][phase_usage_.phase_pos[Vapour]]
+                    = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
             }
-            if (phase_usage_.phase_used[Liquid]) {
-                densities_[phase_usage_.phase_pos[Liquid]] = record->getItem("OIL")->getSIDouble(0);
-            }
-        } else {
-            OPM_THROW(std::runtime_error, "Input is missing DENSITY\n");
         }
 
-        // Set the properties.
+        // first, calculate the PVT table index for each compressed
+        // cell. This array is required to construct the PVT classes
+        // below.
+        Opm::extractPvtTableIndex(pvtTableIdx_,
+                                  deck,
+                                  number_of_cells,
+                                  global_cell);
+
+        const int numSamples = 0;
+
+        // Resize the property objects container
         props_.resize(phase_usage_.num_phases);
+
+
         // Water PVT
         if (phase_usage_.phase_used[Aqua]) {
-            if (deck->hasKeyword("PVTW")) {
-                Opm::PvtwTable pvtwTable(deck->getKeyword("PVTW"), region_number);
-                props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(pvtwTable));
-            } else {
-                // Eclipse 100 default.
-                props_[phase_usage_.phase_pos[Aqua]].reset(new SinglePvtConstCompr(0.5*Opm::prefix::centi*Opm::unit::Poise));
-            }
-        }
+            // if water is used, we require the presence of the "PVTW"
+            // keyword for now...
+            std::shared_ptr<PvtConstCompr> pvtw(new PvtConstCompr);
+            pvtw->initFromWater(deck->getKeyword("PVTW"));
 
+            props_[phase_usage_.phase_pos[Aqua]] = pvtw;
+        }
         // Oil PVT
         if (phase_usage_.phase_used[Liquid]) {
+            // for oil, we support the "PVDO", "PVTO" and "PVCDO"
+            // keywords...
             if (deck->hasKeyword("PVDO")) {
-                Opm::PvdoTable pvdoTable(deck->getKeyword("PVDO"), region_number);
-                if (samples > 0) {
-                    props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDeadSpline(pvdoTable, samples));
+                Opm::DeckKeywordConstPtr pvdoKeyword = deck->getKeyword("PVDO");
+                if (numSamples > 0) {
+                    auto splinePvt = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
+                    splinePvt->initFromOil(pvdoKeyword, numSamples);
+                    props_[phase_usage_.phase_pos[Liquid]] = splinePvt;
                 } else {
-                    props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtDead(pvdoTable));
+                    auto deadPvt = std::shared_ptr<PvtDead>(new PvtDead);
+                    deadPvt->initFromOil(pvdoKeyword);
+                    props_[phase_usage_.phase_pos[Liquid]] = deadPvt;
                 }
-            }
-            else if (deck->hasKeyword("PVTO")) {
-                Opm::PvtoTable pvtoTable(deck->getKeyword("PVTO"), /*tableIdx=*/0);
-                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtLiveOil(pvtoTable));
+            } else if (deck->hasKeyword("PVTO")) {
+                props_[phase_usage_.phase_pos[Liquid]].reset(new PvtLiveOil(deck->getKeyword("PVTO")));
             } else if (deck->hasKeyword("PVCDO")) {
-                Opm::PvcdoTable pvdcoTable(deck->getKeyword("PVCDO"), region_number);
-                props_[phase_usage_.phase_pos[Liquid]].reset(new SinglePvtConstCompr(pvdcoTable));
+                std::shared_ptr<PvtConstCompr> pvcdo(new PvtConstCompr);
+                pvcdo->initFromOil(deck->getKeyword("PVCDO"));
+
+                props_[phase_usage_.phase_pos[Liquid]] = pvcdo;
             } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDO, PVTO or PVCDO\n");
+                OPM_THROW(std::runtime_error, "Input is missing PVDO, PVCDO or PVTO\n");
             }
         }
-
         // Gas PVT
         if (phase_usage_.phase_used[Vapour]) {
+            // gas can be specified using the "PVDG" or "PVTG" keywords...
             if (deck->hasKeyword("PVDG")) {
-                Opm::PvdoTable pvdgTable(deck->getKeyword("PVDG"), region_number);
-                if (samples > 0) {
-                    props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDeadSpline(pvdgTable, samples));
+                Opm::DeckKeywordConstPtr pvdgKeyword = deck->getKeyword("PVDG");
+
+                if (numSamples > 0) {
+                    std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
+                    splinePvt->initFromGas(pvdgKeyword, numSamples);
+
+                    props_[phase_usage_.phase_pos[Vapour]] = splinePvt;
                 } else {
-                    props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtDead(pvdgTable));
+                    std::shared_ptr<PvtDead> deadPvt(new PvtDead);
+                    deadPvt->initFromGas(pvdgKeyword);
+
+                    props_[phase_usage_.phase_pos[Vapour]] = deadPvt;
                 }
             } else if (deck->hasKeyword("PVTG")) {
-                Opm::PvtgTable pvtgTable(deck->getKeyword("PVTG"), /*tableIdx=*/0);
-                props_[phase_usage_.phase_pos[Vapour]].reset(new SinglePvtLiveGas(pvtgTable));
+                props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(deck->getKeyword("PVTG")));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
             }
@@ -221,9 +246,10 @@ namespace Opm
 
     /// Densities of stock components at surface conditions.
     /// \return Array of 3 density values.
-    const double* BlackoilPropsAdFromDeck::surfaceDensity() const
+    const double* BlackoilPropsAdFromDeck::surfaceDensity(const int cellIdx) const
     {
-        return densities_;
+        int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
+        return &densities_[pvtRegionIdx][0];
     }
 
 
@@ -246,7 +272,7 @@ namespace Opm
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->mu(n, pw.data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->mu(n, &pvtTableIdx_[0], pw.data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -271,7 +297,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.data(), rs.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, &pvtTableIdx_[0], po.data(), rs.data(), &cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -293,7 +319,7 @@ namespace Opm
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.data(), rs,
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -316,7 +342,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.data(), rv.data(),&cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.data(), rv.data(),&cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -338,7 +364,7 @@ namespace Opm
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->mu(n, pw.value().data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->mu(n, &pvtTableIdx_[0], pw.value().data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
         ADB::M dmudp_diag = spdiag(dmudp);
         const int num_blocks = pw.numBlocks();
@@ -369,7 +395,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, po.value().data(), rs.value().data(),
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, &pvtTableIdx_[0], po.value().data(), rs.value().data(),
                                                 &cond[0], mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -399,7 +425,7 @@ namespace Opm
         V dmudr(n);
         const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.value().data(), rv,
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.value().data(), rv,
                                                   mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -431,7 +457,7 @@ namespace Opm
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pg.value().data(), rv.value().data(),&cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.value().data(), rv.value().data(),&cond[0],
                                                   mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -480,7 +506,7 @@ namespace Opm
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->b(n, pw.data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->b(n, &pvtTableIdx_[0], pw.data(), rs,
                                                  b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -507,7 +533,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, po.data(), rs.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Oil]]->b(n, &pvtTableIdx_[0], po.data(), rs.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -531,7 +557,7 @@ namespace Opm
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.data(), rs,
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -558,7 +584,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.data(), rv.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.data(), rv.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -582,7 +608,7 @@ namespace Opm
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->b(n, pw.value().data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->b(n, &pvtTableIdx_[0], pw.value().data(), rs,
                                                  b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -615,7 +641,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, po.value().data(), rs.value().data(),
+        props_[phase_usage_.phase_pos[Oil]]->b(n, &pvtTableIdx_[0], po.value().data(), rs.value().data(),
                                                &cond[0], b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -646,7 +672,7 @@ namespace Opm
         V dbdr(n);
         const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.value().data(), rv,
+        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.value().data(), rv,
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -679,7 +705,7 @@ namespace Opm
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pg.value().data(), rv.value().data(), &cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.value().data(), rv.value().data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -710,7 +736,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rsSat(n, po.data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, &pvtTableIdx_[0], po.data(), rbub.data(), drbubdp.data());
         return rbub;
     }
 
@@ -728,7 +754,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rsSat(n, po.value().data(), rbub.data(), drbubdp.data());
+        props_[Oil]->rsSat(n, &pvtTableIdx_[0], po.value().data(), rbub.data(), drbubdp.data());
         ADB::M drbubdp_diag = spdiag(drbubdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -754,7 +780,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Gas]->rvSat(n, po.data(), rv.data(), drvdp.data());
+        props_[Gas]->rvSat(n, &pvtTableIdx_[0], po.data(), rv.data(), drvdp.data());
         return rv;
     }
 
@@ -772,7 +798,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Gas]->rvSat(n, po.value().data(), rv.data(), drvdp.data());
+        props_[Gas]->rvSat(n, &pvtTableIdx_[0], po.value().data(), rv.data(), drvdp.data());
         ADB::M drvdp_diag = spdiag(drvdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);

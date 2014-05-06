@@ -94,7 +94,7 @@ namespace Opm
 
         /// Densities of stock components at surface conditions.
         /// \return Array of 3 density values.
-        const double* surfaceDensity() const;
+        const double* surfaceDensity(int regionIdx = 0) const;
 
 
         // ------ Viscosity ------

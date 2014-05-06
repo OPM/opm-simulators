@@ -23,12 +23,14 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <memory>
+#include <vector>
 
 #ifdef HAVE_DUNE_CORNERPOINT
 #include "disable_warning_pragmas.h"
@@ -38,8 +40,7 @@
 
 namespace Opm
 {
-
-    class SinglePvtInterface;
+    class PvtInterface;
 
     /// This class implements the AD-adapted fluid interface for
     /// three-phase black-oil. It requires an input deck from which it
@@ -76,6 +77,11 @@ namespace Opm
         /// \return   N, the number of cells.
         int numCells() const;
 
+        /// Return an array containing the PVT table index for each
+        /// grid cell
+        virtual const int* cellPvtRegionIndex() const
+        { return &cellPvtRegionIdx_[0]; }
+
         /// \return   Array of N porosity values.
         const double* porosity() const;
 
@@ -109,7 +115,7 @@ namespace Opm
 
         /// Densities of stock components at surface conditions.
         /// \return Array of 3 density values.
-        const double* surfaceDensity() const;
+        const double* surfaceDensity(const int cellIdx = 0) const;
 
 
         // ------ Viscosity ------
@@ -347,12 +353,27 @@ namespace Opm
 
         RockFromDeck rock_;
         std::unique_ptr<SaturationPropsInterface> satprops_;
+
         PhaseUsage phase_usage_;
-        std::vector<std::shared_ptr<SinglePvtInterface> > props_;
-        double densities_[BlackoilPhases::MaxNumPhases];
+
+        // The PVT region which is to be used for each cell
+        std::vector<int> cellPvtRegionIdx_;
+
+        // The PVT properties. One object per PVT region and per
+        // active fluid phase.
+        std::vector<std::shared_ptr<Opm::PvtInterface> > props_;
+
+        // The index of the PVT table which ought to be used for each
+        // cell. Eclipse does not seem to allow specifying fluid-phase
+        // specific table indices, so for the sake of simplicity, we
+        // don't do this either. (if it turns out that Eclipes does in
+        // fact support it or if it by some miracle gains this feature
+        // in the future, this attribute needs to become a vector of
+        // vectors of ints.)
+        std::vector<int> pvtTableIdx_;
+
+        std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
     };
-
-
 } // namespace Opm
 
 #endif // OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED

@@ -91,8 +91,10 @@ namespace Opm
 
     /// Densities of stock components at surface conditions.
     /// \return Array of 3 density values.
-    const double* BlackoilPropsAd::surfaceDensity() const
+    const double* BlackoilPropsAd::surfaceDensity(int regionIdx) const
     {
+        // this class only supports a single PVT region for now...
+        assert(regionIdx == 0);
         return props_.surfaceDensity();
     }
 
