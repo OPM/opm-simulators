@@ -267,15 +267,20 @@ namespace {
         assemble(pvdt, x, xw);
 
 
+        bool converged = false;
         const double r0  = residualNorm();
-        const SolutionState state = constantState(x, xw);
-        bool converged = getConvergence(state, dt);
+        {
+            const SolutionState state = constantState(x, xw);
+            converged = getConvergence(state, dt);
+        }
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
         bool resTooLarge = r0 > atol;
-        while (resTooLarge && (it < maxit)) {
+        converged = false;
+        // while (resTooLarge && (it < maxit)) {
+        while ((!converged) && (it < maxit)) {
 #if PAEANDEBUG
             std::cout << " output the pressure before solveJacobianSystem " << std::endl;
             std::ofstream pressure_prev_file("pressure_prev.out");
@@ -311,21 +316,26 @@ namespace {
             std::ostream_iterator <double> saturation_iterator(saturation_file, "\n");
             std::copy(x.saturation().begin(), x.saturation().end(), saturation_iterator);
             saturation_file.close();
-            std::cin.ignore();
+            // std::cin.ignore();
 #endif
 
             assemble(pvdt, x, xw);
 
             const double r = residualNorm();
 
-            resTooLarge = (r > atol) && (r > rtol*r0);
+            // resTooLarge = (r > atol) && (r > rtol*r0);
+            {
+                const SolutionState state = constantState(x, xw);
+                converged = getConvergence(state, dt);
+            }
 
             it += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
 
-        if (resTooLarge) {
+        // if (resTooLarge) {
+        if (!converged) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
@@ -1833,7 +1843,16 @@ namespace {
 
         bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
 
-        bool converged = converged_MB && converged_CNV;
+
+        double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
+        double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>(); 
+
+        const double day = 24 * 60 * 60;
+        const double barsa = 1.e5;
+
+        bool converged_Well = (residualWellFlux < 1./day) && (residualWell < barsa);
+
+        bool converged = converged_MB && converged_CNV && converged_Well;
 
         std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV << " converged " << converged << std::endl;
 
