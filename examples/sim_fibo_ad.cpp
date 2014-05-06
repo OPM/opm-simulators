@@ -237,7 +237,7 @@ try
         std::ostream_iterator <double> saturation_iterator(saturation_file, "\n");
         std::copy(state.saturation().begin(), state.saturation().end(), saturation_iterator);
         saturation_file.close();
-        std::cin.ignore();
+        // std::cin.ignore();
 #endif
 
         ++simtimer;
