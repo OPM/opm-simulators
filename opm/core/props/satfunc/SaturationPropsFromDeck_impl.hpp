@@ -475,14 +475,18 @@ namespace Opm
                 smin[np*i + opos] = 1.0;
                 smax[np*i + opos] = 1.0;
                 if (phase_usage_.phase_used[Aqua]) {
-                    smin[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].wat.smin: funcForCell(cells[i]).smin_[wpos];
-                    smax[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].wat.smax: funcForCell(cells[i]).smax_[wpos];
+                    smin[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? funcForCell(cells[i]).smin_[wpos]
+                                                                             : eps_transf_[cells[i]].wat.smin;
+                    smax[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? funcForCell(cells[i]).smax_[wpos]
+                                                                             : eps_transf_[cells[i]].wat.smax;
                     smin[np*i + opos] -= smax[np*i + wpos];
                     smax[np*i + opos] -= smin[np*i + wpos];
                 }  
                 if (phase_usage_.phase_used[Vapour]) {
-                    smin[np*i + gpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].gas.smin: funcForCell(cells[i]).smin_[gpos];
-                    smax[np*i + gpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].gas.smax: funcForCell(cells[i]).smax_[gpos];
+                    smin[np*i + gpos] = eps_transf_[cells[i]].gas.doNotScale ? funcForCell(cells[i]).smin_[gpos]
+                                                                             : eps_transf_[cells[i]].gas.smin;
+                    smax[np*i + gpos] = eps_transf_[cells[i]].gas.doNotScale ? funcForCell(cells[i]).smax_[gpos]
+                                                                             : eps_transf_[cells[i]].gas.smax;
                     smin[np*i + opos] -= smax[np*i + gpos];
                     smax[np*i + opos] -= smin[np*i + gpos];
                 }
