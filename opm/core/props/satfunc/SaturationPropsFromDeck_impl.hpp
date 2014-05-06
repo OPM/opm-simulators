@@ -332,6 +332,13 @@ namespace Opm
                             " regions.  Maximum allowed is " << num_tables <<
                             " (number of tables provided by SWOF/SGOF).");
                     }
+                    const int num_cells = number_of_cells;
+                    cell_to_func_imb_.resize(num_cells);
+                    const int* gc = global_cell;
+                    for (int cell = 0; cell < num_cells; ++cell) {
+                        const int deck_pos = (gc == NULL) ? cell : gc[cell];
+                        cell_to_func_imb_[cell] = imbnum[deck_pos] - 1;
+                    }
                     // TODO: Make actual use of IMBNUM.  For now we just consider the imbibition curve
                     //       to be a scaled version of the drainage curve (confer Norne model).
                 }
@@ -1211,16 +1218,26 @@ namespace Opm
             const int dim = dimensions;
             std::vector<int> endnum;
             if ( newParserDeck->hasKeyword("ENDNUM")) {
-                endnum = newParserDeck->getKeyword("ENDNUM")->getIntData();
+                const std::vector<int>& e = 
+                    newParserDeck->getKeyword("ENDNUM")->getIntData();              
+                endnum.resize(number_of_cells);                                   
+                const int* gc = global_cell;
+                for (int cell = 0; cell < number_of_cells; ++cell) {
+                    const int deck_pos = (gc == NULL) ? cell : gc[cell];
+                    endnum[cell] = e[deck_pos] - 1; // Deck value zero prevents scaling via ENPTVD/ENKRVD
+                }
+            }
+            else {
+                // Default deck value is one
+                endnum.assign(number_of_cells, 0);
             }
             for (int cell = 0; cell < number_of_cells; ++cell) {
-                int jtab = endnum.empty() ? 0 : endnum[cell] - 1;
-                if (jtab >= 0 && param_col[jtab][0] >= 0.0) {
+                if (endnum[cell] >= 0 && param_col[endnum[cell]][0] >= 0.0) {
                     double zc = UgGridHelpers
                         ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
                                        dim-1);
-                    if (zc >= depth_col[jtab].front() && zc <= depth_col[jtab].back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth_col[jtab], param_col[jtab], zc);
+                    if (zc >= depth_col[endnum[cell]].front() && zc <= depth_col[endnum[cell]].back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth_col[endnum[cell]], param_col[endnum[cell]], zc);
                     }
                 }
             }
