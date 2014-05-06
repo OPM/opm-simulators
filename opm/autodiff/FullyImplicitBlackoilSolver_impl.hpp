@@ -1769,14 +1769,14 @@ namespace {
         const double tol_cnv = 1.0e-3;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int np = fluid_.numPhases();
+        // const int np = fluid_.numPhases();
 
         const V pv = geo_.poreVolume();
         const double pvSum = pv.sum();
 
 
         const ADB&              press = state.pressure;
-        const std::vector<ADB>& sat   = state.saturation;
+        // const std::vector<ADB>& sat   = state.saturation;
         const ADB&              rs    = state.rs;
         const ADB&              rv    = state.rv;
 
