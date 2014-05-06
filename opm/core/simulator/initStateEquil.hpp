@@ -311,24 +311,15 @@ namespace Opm
                      const UnstructuredGrid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (newParserDeck->hasKeyword("EQLNUM")) {        
-                    const std::vector<int>& e = newParserDeck->getKeyword("EQLNUM")->getIntData();
-                    eqlnum.reserve(e.size());
-                    if (newParserDeck->hasKeyword("ACTNUM")) {
-                        std::vector<int>::const_iterator actnum_begin = 
-                            newParserDeck->getKeyword("ACTNUM")->getIntData().begin();
-                        std::transform(e.begin(), e.end(), actnum_begin, std::back_inserter(eqlnum),
-                                       [](int eql, int act){ return (act == 0) ? -1 : eql-1;});
-                        eqlnum.erase(std::remove_if(eqlnum.begin(), eqlnum.end(), 
-                                                    std::bind2nd(std::less<int>(), 0)), 
-                                     eqlnum.end());
+                if (newParserDeck->hasKeyword("EQLNUM")) {
+                    eqlnum.resize(G.number_of_cells);                   
+                    const std::vector<int>& e = 
+                        newParserDeck->getKeyword("EQLNUM")->getIntData();                    
+                    const int* gc = G.global_cell;
+                    for (int cell = 0; cell < G.number_of_cells; ++cell) {
+                        const int deck_pos = (gc == NULL) ? cell : gc[cell];
+                        eqlnum[cell] = e[deck_pos] - 1;
                     }
-                    else {
-                        std::transform(e.begin(), e.end(), std::back_inserter(eqlnum),
-                                       std::bind2nd(std::minus<int>(), 1));
-                    }
-                    if (eqlnum.size() != G.number_of_cells)
-                        OPM_THROW(std::runtime_error, "Keyword EQLNUM: inconsistent array size.");
                 }
                 else {
                     // No explicit equilibration region.
