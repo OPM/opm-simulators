@@ -106,24 +106,24 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr newParser(new Opm::Parser() );
-    Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
+    Opm::DeckConstPtr deck = newParser->parseFile( deck_filename );
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // Grid init
     grid.reset(new GridManager(eclipseState->getEclipseGrid()));
-    Opm::EclipseWriter outputWriter(param, newParserDeck, share_obj(*grid->c_grid()));
+    Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(deck, *grid->c_grid(), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, *grid->c_grid()));
 
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(newParserDeck));
+    rock_comp.reset(new RockCompressibility(deck));
 
     // Gravity.
-    gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
@@ -140,7 +140,7 @@ try
             }
         }
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, newParserDeck, gravity[2], state);
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -177,7 +177,7 @@ try
               << std::flush;
 
     WellStateFullyImplicitBlackoil well_state;
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
+    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
     SimulatorTimer simtimer;
 
     // initialize variables

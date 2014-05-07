@@ -46,9 +46,9 @@
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <boost/filesystem.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <memory>
 #include <numeric>
 #include <fstream>
 #include <iostream>
