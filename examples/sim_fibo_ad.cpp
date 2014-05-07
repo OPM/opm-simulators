@@ -18,8 +18,6 @@
 */
 #include "config.h"
 
-#define PAEANDEBUG 1
-
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
@@ -59,9 +57,6 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-#if PAEANDEBUG
-#include <fstream>
-#endif
 
 
 namespace
@@ -210,10 +205,6 @@ try
             outputWriter.writeInit(simtimer);
             outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
-        // added by Paean
-        // std::cout << " output in sim_fibo 1 " << std::endl;
-        // std::cin.ignore();
-        // added by Paean end
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
@@ -225,28 +216,9 @@ try
                                                  grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
-#if PAEANDEBUG
-        std::cout << " output the pressure " << std::endl;
-        std::ofstream pressure_file("pressure.out");
-        std::ostream_iterator <double> pressure_iterator(pressure_file, "\n");
-        std::copy(state.pressure().begin(), state.pressure().end(), pressure_iterator);
-        pressure_file.close();
-
-        std::cout << " output the saturation " << std::endl;
-        std::ofstream saturation_file("saturation.out");
-        std::ostream_iterator <double> saturation_iterator(saturation_file, "\n");
-        std::copy(state.saturation().begin(), state.saturation().end(), saturation_iterator);
-        saturation_file.close();
-        // std::cin.ignore();
-#endif
-
         ++simtimer;
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
-        // added by Paean
-        // std::cout << " output in sim_fibo 2 " << std::endl;
-        // std::cin.ignore();
-        // added by Paean end
         fullReport += episodeReport;
     }
 
