@@ -16,15 +16,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define PAEANDEBUG 1
 #include <config.h>
 
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#if PAEANDEBUG
-#include <fstream>
-#endif
 
 namespace Opm
 {
@@ -60,19 +56,6 @@ namespace Opm
             = linsolver_.solve(matr.rows(), matr.nonZeros(),
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual.value().data(), dx.data());
-#if PAEANDEBUG
-       std::ofstream filestream("matrix.out");
-       filestream << matr;
-       filestream.close();
-       std::ofstream filestream2("sol.out");
-       filestream2 << dx;
-       filestream2.close();
-       std::ofstream filestream3("r.out");
-       filestream3 << total_residual.value();
-       filestream3.close();
-       std::cout << " output the information for the last iteration " << std::endl;
-//        std::cin.ignore();
-#endif
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "

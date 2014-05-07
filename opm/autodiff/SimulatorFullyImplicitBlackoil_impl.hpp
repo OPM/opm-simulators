@@ -16,7 +16,6 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define PAEANDEBUG 1
 #include  <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -277,10 +276,6 @@ namespace Opm
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
 
             }
-            // added by Paean
-            // std::cout << " output in simulator 1 " << std::endl;
-            // std::cin.ignore();
-            // added by Paean end
 
             SimulatorReport sreport;
 
@@ -293,9 +288,6 @@ namespace Opm
             // }
 
             bool well_control_passed = !check_well_controls_;
-#if PAEANDEBUG
-            std::cout << " well_control_passed " << well_control_passed << std::endl;
-#endif
             int well_control_iteration = 0;
             do {
                 // Run solver.
@@ -348,10 +340,6 @@ namespace Opm
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
                 tstep_os.close();
             }
-            // added by Paean
-            // std::cout << " output in simulator 2 " << std::endl;
-            // std::cin.ignore();
-            // added by Paean end
 
             // advance to next timestep before reporting at this location
             // ++timer; // Commented out since this has temporarily moved to the main() function.
