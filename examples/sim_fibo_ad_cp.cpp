@@ -129,13 +129,13 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr newParser(new Opm::Parser() );
-    Opm::DeckConstPtr newParserDeck = newParser->parseFile( deck_filename );
+    Opm::DeckConstPtr deck = newParser->parseFile( deck_filename );
 
     // Grid init
     grid.reset(new Dune::CpGrid());
     {
         grdecl g = {};
-        GridManager::createGrdecl(newParserDeck, g);
+        GridManager::createGrdecl(deck, g);
 
         grid->processEclipseFormat(g, 2e-12, false);
 
@@ -143,26 +143,26 @@ try
     }
 
 
-    Opm::EclipseWriter outputWriter(param, newParserDeck,
+    Opm::EclipseWriter outputWriter(param, deck,
                                     Opm::UgGridHelpers::numCells(*grid),
                                     Opm::UgGridHelpers::globalCell(*grid),
                                     Opm::UgGridHelpers::cartDims(*grid),
                                     Opm::UgGridHelpers::dimensions(*grid));
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(newParserDeck, Opm::UgGridHelpers::numCells(*grid),
+    props.reset(new BlackoilPropertiesFromDeck(deck, Opm::UgGridHelpers::numCells(*grid),
                                                Opm::UgGridHelpers::globalCell(*grid),
                                                Opm::UgGridHelpers::cartDims(*grid),
                                                Opm::UgGridHelpers::beginCellCentroids(*grid),
                                                Opm::UgGridHelpers::dimensions(*grid), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(newParserDeck, *grid));
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, *grid));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(newParserDeck));
+    rock_comp.reset(new RockCompressibility(deck));
 
     // Gravity.
-    gravity[2] = newParserDeck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
@@ -188,7 +188,7 @@ try
                                   grid->numFaces(), AutoDiffGrid::faceCells(*grid),
                                   grid->beginFaceCentroids(),
                                   grid->beginCellCentroids(), Dune::CpGrid::dimension,
-                                  *props, newParserDeck, gravity[2], state);
+                                  *props, deck, gravity[2], state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -225,9 +225,9 @@ try
               << std::flush;
 
     WellStateFullyImplicitBlackoil well_state;
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(newParserDeck));
+    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
     SimulatorTimer simtimer;
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(newParserDeck));
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // initialize variables
     simtimer.init(timeMap);

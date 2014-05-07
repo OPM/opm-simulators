@@ -51,9 +51,9 @@
 #include <opm/core/transport/implicit/TransportSolverTwophaseImplicit.hpp>
 #include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <memory>
 #include <numeric>
 #include <fstream>
 #include <iostream>
@@ -103,7 +103,7 @@ namespace Opm
         const FlowBoundaryConditions* bcs_;
         // Solvers
         IncompTpfa psolver_;
-        boost::scoped_ptr<TransportSolverTwophaseInterface> tsolver_;
+        std::unique_ptr<TransportSolverTwophaseInterface> tsolver_;
         // Misc. data
         std::vector<int> allcells_;
     };
