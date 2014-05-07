@@ -1744,23 +1744,23 @@ namespace {
             ADB tempBW = fluidReciprocFVF(Water, press, rs, rv, cond, cells_);
             V BW = 1./tempBW.value();
             V RW = residual_.material_balance_eq[Water].value();
-            BW_avg = BW.sum()/nc; 
-            const V tempV = RW.abs()/pv; 
+            BW_avg = BW.sum()/nc;
+            const V tempV = RW.abs()/pv;
 
-            CNVW = BW_avg * dt * tempV.maxCoeff(); 
+            CNVW = BW_avg * dt * tempV.maxCoeff();
             RW_sum = RW.sum();
             std::cout << " CNVW " << CNVW << " RW_sum "<< RW_sum << std::endl;
         }
 
         if (active_[Oil]) {
-            // Omit the disgas here. We should add it. 
+            // Omit the disgas here. We should add it.
             ADB tempBO = fluidReciprocFVF(Oil, press, rs, rv, cond, cells_);
             V BO = 1./tempBO.value();
             V RO = residual_.material_balance_eq[Oil].value();
-            BO_avg = BO.sum()/nc; 
-            const V tempV = RO.abs()/pv; 
+            BO_avg = BO.sum()/nc;
+            const V tempV = RO.abs()/pv;
 
-            CNVO = BO_avg * dt * tempV.maxCoeff(); 
+            CNVO = BO_avg * dt * tempV.maxCoeff();
             RO_sum = RO.sum();
             std::cout << " CNVO " << CNVO << " RO_sum " << RO_sum << std::endl;
         }
@@ -1770,15 +1770,15 @@ namespace {
             ADB tempBG = fluidReciprocFVF(Gas, press, rs, rv, cond, cells_);
             V BG = 1./tempBG.value();
             V RG = residual_.material_balance_eq[Gas].value();
-            BG_avg = BG.sum()/nc; 
-            const V tempV = RG.abs()/pv; 
+            BG_avg = BG.sum()/nc;
+            const V tempV = RG.abs()/pv;
 
-            CNVG = BG_avg * dt * tempV.maxCoeff(); 
+            CNVG = BG_avg * dt * tempV.maxCoeff();
             RG_sum = RG.sum();
             std::cout << " CNVG " << CNVG << " RG_sum " << RG_sum << std::endl;
         }
 
-        double tempValue = tol_mb * pvSum /dt; 
+        double tempValue = tol_mb * pvSum /dt;
 
         bool converged_MB = (fabs(BW_avg*RW_sum) < tempValue)
                          && (fabs(BO_avg*RO_sum) < tempValue)
@@ -1788,7 +1788,7 @@ namespace {
 
 
         double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
-        double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>(); 
+        double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>();
 
         const double day = 24 * 60 * 60;
         const double barsa = 1.e5;
