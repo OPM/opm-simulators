@@ -270,7 +270,8 @@ namespace {
         bool converged = false;
         const double r0  = residualNorm();
         {
-            const SolutionState state = constantState(x, xw);
+            // const SolutionState state = constantState(x, xw);
+            const SolutionState state = variableState(x, xw);
             converged = getConvergence(state, dt);
         }
         int          it  = 0;
@@ -1734,8 +1735,8 @@ namespace {
         std::cout << " Residuals ";
 #endif
         for (; quantityIt != endQuantityIt; ++quantityIt) {
-            const double quantityResid = (*quantityIt).value().matrix().norm();
-            // const double quantityResid = (*quantityIt).value().matrix().lpNorm();
+            // const double quantityResid = (*quantityIt).value().matrix().norm();
+            const double quantityResid = (*quantityIt).value().matrix().lpNorm<Eigen::Infinity>();
             if (!std::isfinite(quantityResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
@@ -1750,7 +1751,8 @@ namespace {
 #if PAEANDEBUG
         std::cout << " " << residual_.well_flux_eq.value().matrix().norm();
 #endif
-        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
+        // globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>());
 #if PAEANDEBUG
         std::cout << " " << residual_.well_eq.value().matrix().norm() << std::endl;
         std::cout << " globalNorm = " << globalNorm << std::endl;
@@ -1845,6 +1847,8 @@ namespace {
 
 
         double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
+        std::cout << " well_flux_eq " << std::endl;
+        std::cout << residual_.well_flux_eq.value() << std::endl;
         double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>(); 
 
         const double day = 24 * 60 * 60;
@@ -1854,7 +1858,8 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
-        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV << " converged " << converged << std::endl;
+        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
+                  << " converged_Well " << converged_Well << " converged " << converged << std::endl;
 
         return converged;
     }
