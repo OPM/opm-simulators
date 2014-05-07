@@ -28,6 +28,7 @@
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <ewoms/wells/eclwellmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
@@ -62,7 +63,6 @@ class EclProblem;
 
 namespace Opm {
 namespace Properties {
-
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager));
 
 // The temperature inside the reservoir
@@ -202,7 +202,8 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
                              "The temperature [K] in the reservoir");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
-                             "Write all solutions to disk instead of only the ones for the report steps");
+                             "Write all solutions to disk instead of only the ones for the "
+                             "report steps");
     }
 
     /*!
@@ -210,11 +211,14 @@ public:
      */
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
+        , wellManager_(simulator)
     {}
 
     void finishInit()
     {
         ParentType::finishInit();
+
+        auto& simulator = this->simulator();
 
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
 
@@ -226,8 +230,9 @@ public:
         readMaterialParameters_();
         readInitialCondition_();
 
+        wellManager_.init(simulator.gridManager().eclipseState());
+
         // Start the first episode. For this, ask the Eclipse schedule.
-        auto& simulator = this->simulator();
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
 
@@ -252,32 +257,36 @@ public:
      * \brief Called by the simulator before an episode begins.
      */
     void beginEpisode()
-    { }
+    { wellManager_.beginEpisode(this->simulator().gridManager().eclipseState()); }
 
     /*!
      * \brief Called by the simulator before each time integration.
      */
-    void endTimeStep()
-    {
-#ifndef NDEBUG
-        this->model().checkConservativeness();
-
-        // Calculate storage terms
-        EqVector storage;
-        this->model().globalStorage(storage);
-
-        // Write mass balance information for rank 0
-        if (this->gridView().comm().rank() == 0) {
-            std::cout << "Storage: " << storage << std::endl << std::flush;
-        }
-#endif // NDEBUG
-    }
-
+    void beginTimeStep()
+    { wellManager_.beginTimeStep(); }
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
     void beginIteration()
-    { }
+    { wellManager_.beginIteration(); }
+
+    /*!
+     * \brief Called by the simulator after each Newton-Raphson iteration.
+     */
+    void endIteration()
+    { wellManager_.endIteration(); }
+
+    /*!
+     * \brief Called by the simulator after each time integration.
+     */
+    void endTimeStep()
+    {
+        wellManager_.endTimeStep();
+
+#ifndef NDEBUG
+        this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
+#endif // NDEBUG
+    }
 
     /*!
      * \brief Called by the simulator after the end of an episode.
@@ -451,11 +460,18 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
+    void source(RateVector &rate,
+                const Context &context,
+                int spaceIdx,
                 int timeIdx) const
     {
-#warning "TODO: wells"
-        rate = Scalar(0.0);
+        rate = 0;
+        wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+
+        // convert the source term from the total mass rate of the
+        // cell to the one per unit of volume as used by the model.
+        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        rate /= this->model().dofTotalVolume(globalDofIdx);
     }
 
     //! \}
@@ -606,7 +622,8 @@ private:
 
         // set the index of the table to be used
         if (eclipseState->hasIntGridProperty("SATNUM")) {
-            const std::vector<int> &satnumData = eclipseState->getIntGridProperty("SATNUM")->getData();
+            const std::vector<int> &satnumData =
+                eclipseState->getIntGridProperty("SATNUM")->getData();
 
             materialParamTableIdx_.resize(numDof);
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
@@ -673,14 +690,16 @@ private:
                       "keyword");
         if (!deck->hasKeyword("DISGAS"))
             OPM_THROW(std::runtime_error,
-                      "The deck must exhibit gas dissolved in the oil phase (DISGAS keyword is missing)");
+                      "The deck must exhibit gas dissolved in the oil phase"
+                      " (DISGAS keyword is missing)");
         if (!deck->hasKeyword("RS"))
             OPM_THROW(std::runtime_error,
                       "The Eclipse input file requires the presence of the RS keyword");
 
         if (deck->hasKeyword("VAPOIL"))
             OPM_THROW(std::runtime_error,
-                      "The deck must _not_ exhibit vaporized oil (The VAPOIL keyword is unsupported)");
+                      "The deck must _not_ exhibit vaporized oil"
+                      " (The VAPOIL keyword is unsupported)");
         if (deck->hasKeyword("RV"))
             OPM_THROW(std::runtime_error,
                       "The Eclipse input file requires the RV keyword to be non-present");
@@ -758,10 +777,11 @@ private:
                 std::array<int, 3> ijk;
                 grid.getIJK(dofIdx, ijk);
                 std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
-                          <<           " than the maximium\n"
-                          << "         amount which can be dissolved in oil (R_s,max=" << RsSat << ")"
-                          <<           " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                          <<           " Ignoring.\n";
+                          << " than the maximium\n"
+                          << "         amount which can be dissolved in oil"
+                          << " (R_s,max=" << RsSat << ")"
+                          << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
+                          << " Ignoring.\n";
                 RsReal = RsSat;
             }
 
@@ -894,8 +914,8 @@ private:
 
     // the intrinsic permeabilities for interior faces. since grids may be
     // non-conforming, and there does not seem to be a mapper for interfaces in DUNE,
-    // these transmissibilities are accessed via the (elementIndex1,
-    // elementIndex2) pairs of the interfaces where
+    // these transmissibilities are accessed via the (elementIndex1, elementIndex2) pairs
+    // of the interfaces where
     //
     // elementIndex1 = min(interiorElementIndex, exteriorElementIndex)
     //
@@ -916,6 +936,8 @@ private:
     std::vector<BlackOilFluidState> initialFluidStates_;
 
     Scalar temperature_;
+
+    EclWellManager<TypeTag> wellManager_;
 };
 } // namespace Ewoms
 
