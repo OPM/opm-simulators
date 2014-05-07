@@ -17,7 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define PAEANDEBUG 1
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
@@ -41,9 +40,6 @@
 #include <iostream>
 #include <iomanip>
 //#include <fstream>
-#if PAEANDEBUG
-#include <fstream>
-#endif
 
 // A debugging utility.
 #define DUMP(foo)                                                       \
@@ -282,49 +278,15 @@ namespace {
         converged = false;
         // while (resTooLarge && (it < maxit)) {
         while ((!converged) && (it < maxit)) {
-#if PAEANDEBUG
-            std::cout << " output the pressure before solveJacobianSystem " << std::endl;
-            std::ofstream pressure_prev_file("pressure_prev.out");
-            std::ostream_iterator <double> pressure_prev_iterator(pressure_prev_file, "\n");
-            std::copy(x.pressure().begin(), x.pressure().end(), pressure_prev_iterator);
-            pressure_prev_file.close();
-
-            std::cout << " output the saturation before solveJacobianSystem " << std::endl;
-            std::ofstream saturation_prev_file("saturation_prev.out");
-            std::ostream_iterator <double> saturation_prev_iterator(saturation_prev_file, "\n");
-            std::copy(x.saturation().begin(), x.saturation().end(), saturation_prev_iterator);
-            saturation_prev_file.close();
-            // std::cin.ignore();
-#endif
             const V dx = solveJacobianSystem();
-#if PAEANDEBUG
-            std::cout << "output the increment for the Newton iteration " << std::endl;
-            std::ofstream filestream("dx.out");
-            filestream << dx;
-            filestream.close();
-#endif
 
             updateState(dx, x, xw);
-#if PAEANDEBUG
-            std::cout << " output the pressure " << std::endl;
-            std::ofstream pressure_file("pressure.out");
-            std::ostream_iterator <double> pressure_iterator(pressure_file, "\n");
-            std::copy(x.pressure().begin(), x.pressure().end(), pressure_iterator);
-            pressure_file.close();
-
-            std::cout << " output the saturation " << std::endl;
-            std::ofstream saturation_file("saturation.out");
-            std::ostream_iterator <double> saturation_iterator(saturation_file, "\n");
-            std::copy(x.saturation().begin(), x.saturation().end(), saturation_iterator);
-            saturation_file.close();
-            // std::cin.ignore();
-#endif
 
             assemble(pvdt, x, xw);
 
             const double r = residualNorm();
 
-            // resTooLarge = (r > atol) && (r > rtol*r0);
+            resTooLarge = (r > atol) && (r > rtol*r0);
             {
                 const SolutionState state = constantState(x, xw);
                 converged = getConvergence(state, dt);
@@ -1731,32 +1693,16 @@ namespace {
         double globalNorm = 0;
         std::vector<ADB>::const_iterator quantityIt = residual_.material_balance_eq.begin();
         const std::vector<ADB>::const_iterator endQuantityIt = residual_.material_balance_eq.end();
-#if PAEANDEBUG
-        std::cout << " Residuals ";
-#endif
         for (; quantityIt != endQuantityIt; ++quantityIt) {
-            // const double quantityResid = (*quantityIt).value().matrix().norm();
-            const double quantityResid = (*quantityIt).value().matrix().lpNorm<Eigen::Infinity>();
+            const double quantityResid = (*quantityIt).value().matrix().norm();
             if (!std::isfinite(quantityResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
             }
             globalNorm = std::max(globalNorm, quantityResid);
-#if PAEANDEBUG
-            std::cout << " " << quantityResid;
-#endif
         }
-        // globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
-        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>());
-#if PAEANDEBUG
-        std::cout << " " << residual_.well_flux_eq.value().matrix().norm();
-#endif
-        // globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
-        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>());
-#if PAEANDEBUG
-        std::cout << " " << residual_.well_eq.value().matrix().norm() << std::endl;
-        std::cout << " globalNorm = " << globalNorm << std::endl;
-#endif
+        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
+        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
 
         return globalNorm;
     }
@@ -1771,14 +1717,12 @@ namespace {
         const double tol_cnv = 1.0e-3;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        // const int np = fluid_.numPhases();
 
         const V pv = geo_.poreVolume();
         const double pvSum = pv.sum();
 
 
         const ADB&              press = state.pressure;
-        // const std::vector<ADB>& sat   = state.saturation;
         const ADB&              rs    = state.rs;
         const ADB&              rv    = state.rv;
 
@@ -1806,7 +1750,6 @@ namespace {
             CNVW = BW_avg * dt * tempV.maxCoeff(); 
             RW_sum = RW.sum();
             std::cout << " CNVW " << CNVW << " RW_sum "<< RW_sum << std::endl;
-            // std::cin.ignore();
         }
 
         if (active_[Oil]) {
@@ -1820,7 +1763,6 @@ namespace {
             CNVO = BO_avg * dt * tempV.maxCoeff(); 
             RO_sum = RO.sum();
             std::cout << " CNVO " << CNVO << " RO_sum " << RO_sum << std::endl;
-            // std::cin.ignore();
         }
 
         if (active_[Gas]) {
@@ -1834,7 +1776,6 @@ namespace {
             CNVG = BG_avg * dt * tempV.maxCoeff(); 
             RG_sum = RG.sum();
             std::cout << " CNVG " << CNVG << " RG_sum " << RG_sum << std::endl;
-            // std::cin.ignore();
         }
 
         double tempValue = tol_mb * pvSum /dt; 
@@ -1847,8 +1788,6 @@ namespace {
 
 
         double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
-        std::cout << " well_flux_eq " << std::endl;
-        std::cout << residual_.well_flux_eq.value() << std::endl;
         double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>(); 
 
         const double day = 24 * 60 * 60;
