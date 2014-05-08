@@ -34,7 +34,7 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 #include <opm/material/heatconduction/Somerton.hpp>
-#include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
 #include <ewoms/io/artgridmanager.hh>

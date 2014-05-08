@@ -55,7 +55,7 @@ SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
 SET_TYPE_PROP(RichardsLensProblem, Problem, Ewoms::RichardsLensProblem<TypeTag>);
 
 // Set the wetting phase
-SET_PROP(RichardsLensProblem, WettingPhase)
+SET_PROP(RichardsLensProblem, WettingFluid)
 {
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -154,7 +154,7 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum {
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
-        contiWEqIdx = Indices::contiWEqIdx,
+        contiEqIdx = Indices::contiEqIdx,
         wettingPhaseIdx = FluidSystem::wettingPhaseIdx,
         nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx,
         numPhases = FluidSystem::numPhases,
@@ -233,7 +233,8 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
+    const DimMatrix &intrinsicPermeability(const Context &context,
+                                           int spaceIdx,
                                            int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
@@ -254,7 +255,8 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               int spaceIdx,
+                                               int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         if (isInLens_(pos))
@@ -268,7 +270,8 @@ public:
      * \copydetails Doxygen::contextParams
      */
     template <class Context>
-    Scalar referencePressure(const Context &context, int spaceIdx,
+    Scalar referencePressure(const Context &context,
+                             int spaceIdx,
                              int timeIdx) const
     { return pnRef_; }
 
@@ -283,8 +286,10 @@ public:
      * \copydoc VcfvProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values,
+                  const Context &context,
+                  int spaceIdx,
+                  int timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -308,7 +313,7 @@ public:
             RateVector massRate(0.0);
 
             // inflow of water
-            massRate[contiWEqIdx] = -0.04; // kg / (m * s)
+            massRate[contiEqIdx] = -0.04; // kg / (m * s)
 
             values.setMassRate(massRate);
         }
@@ -327,7 +332,9 @@ public:
      * \copydoc VcfvProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
+    void initial(PrimaryVariables &values,
+                 const Context &context,
+                 int spaceIdx,
                  int timeIdx) const
     {
         const auto &materialParams
@@ -350,7 +357,9 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
+    void source(RateVector &rate,
+                const Context &context,
+                int spaceIdx,
                 int timeIdx) const
     { rate = Scalar(0.0); }
 

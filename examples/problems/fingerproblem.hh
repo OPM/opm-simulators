@@ -32,7 +32,7 @@
 #include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
-#include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
