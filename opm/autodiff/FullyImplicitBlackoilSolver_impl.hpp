@@ -266,11 +266,12 @@ namespace {
 
         bool converged = false;
         const double r0  = residualNorm();
-        {
+        // {
             // const SolutionState state = constantState(x, xw);
-            const SolutionState state = variableState(x, xw);
-            converged = getConvergence(state, dt);
-        }
+        //     const SolutionState state = variableState(x, xw);
+            // converged = getConvergence(state, dt);
+            converged = getConvergence(dt);
+        // }
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
@@ -288,10 +289,11 @@ namespace {
             const double r = residualNorm();
 
             resTooLarge = (r > atol) && (r > rtol*r0);
-            {
-                const SolutionState state = constantState(x, xw);
-                converged = getConvergence(state, dt);
-            }
+            // {
+            //     const SolutionState state = constantState(x, xw);
+            //     converged = getConvergence(state, dt);
+            converged = getConvergence(dt);
+            // }
 
             it += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
@@ -1712,7 +1714,7 @@ namespace {
 
     template<class T>
     bool
-    FullyImplicitBlackoilSolver<T>::getConvergence(const SolutionState& state, const double dt)
+    FullyImplicitBlackoilSolver<T>::getConvergence(const double dt)
     {
         const double tol_mb = 1.0e-7;
         const double tol_cnv = 1.0e-3;
@@ -1722,11 +1724,6 @@ namespace {
 
         const V pv = geo_.poreVolume();
         const double pvSum = pv.sum();
-
-
-        const ADB&              press = state.pressure;
-        const ADB&              rs    = state.rs;
-        const ADB&              rv    = state.rv;
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
@@ -1752,7 +1749,6 @@ namespace {
 
             CNVW = BW_avg * dt * tempV.maxCoeff();
             RW_sum = RW.sum();
-            std::cout << " CNVW " << CNVW << " RW_sum "<< RW_sum << std::endl;
         }
 
         if (active_[Oil]) {
@@ -1766,7 +1762,6 @@ namespace {
 
             CNVO = BO_avg * dt * tempV.maxCoeff();
             RO_sum = RO.sum();
-            std::cout << " CNVO " << CNVO << " RO_sum " << RO_sum << std::endl;
         }
 
         if (active_[Gas]) {
@@ -1780,7 +1775,6 @@ namespace {
 
             CNVG = BG_avg * dt * tempV.maxCoeff();
             RG_sum = RG.sum();
-            std::cout << " CNVG " << CNVG << " RG_sum " << RG_sum << std::endl;
         }
 
         double tempValue = tol_mb * pvSum /dt;
@@ -1799,9 +1793,11 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
+#ifdef OPM_VERBOSE
+        std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
         std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
                   << " converged_Well " << converged_Well << " converged " << converged << std::endl;
-
+#endif
         return converged;
     }
 
