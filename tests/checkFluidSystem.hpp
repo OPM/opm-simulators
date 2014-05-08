@@ -24,8 +24,8 @@
 #define OPM_CHECK_FLUIDSYSTEM_HPP
 
 // include all fluid systems in opm-material
-#include <opm/material/fluidsystems/1pFluidSystem.hpp>
-#include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
+#include <opm/material/fluidsystems/SinglePhaseFluidSystem.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidsystems/H2ON2LiquidPhaseFluidSystem.hpp>
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>

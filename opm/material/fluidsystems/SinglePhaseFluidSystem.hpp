@@ -19,10 +19,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::OneP
+ * \copydoc Opm::FluidSystems::SinglePhase
  */
-#ifndef OPM_1P_FLUIDSYSTEM_HPP
-#define OPM_1P_FLUIDSYSTEM_HPP
+#ifndef OPM_SINGLE_PHASE_FLUIDSYSTEM_HPP
+#define OPM_SINGLE_PHASE_FLUIDSYSTEM_HPP
 
 #include "BaseFluidSystem.hpp"
 #include "NullParameterCache.hpp"
@@ -50,10 +50,10 @@ namespace FluidSystems {
  * Opm::GasPhase<Component> may be used.
  */
 template <class Scalar, class Fluid>
-class OneP
-    : public BaseFluidSystem<Scalar, OneP<Scalar, Fluid> >
+class SinglePhase
+    : public BaseFluidSystem<Scalar, SinglePhase<Scalar, Fluid> >
 {
-    typedef OneP<Scalar, Fluid> ThisType;
+    typedef SinglePhase<Scalar, Fluid> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
 public:
@@ -262,7 +262,6 @@ public:
     }
 };
 
-} // namespace FluidSystems
-} // namespace Opm
+}} // namespace Opm, FluidSystems
 
 #endif

@@ -19,10 +19,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::FluidSystems::TwoPImmiscible
+ * \copydoc Opm::FluidSystems::TwoPhaseImmiscible
  */
-#ifndef OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HPP
-#define OPM_2P_IMMISCIBLE_FLUID_SYSTEM_HPP
+#ifndef OPM_TWO_PHASE_IMMISCIBLE_FLUID_SYSTEM_HPP
+#define OPM_TWO_PHASE_IMMISCIBLE_FLUID_SYSTEM_HPP
 
 #include <limits>
 #include <cassert>
@@ -51,14 +51,14 @@ namespace FluidSystems {
  * systems without compositional effects.
  */
 template <class Scalar, class WettingPhase, class NonwettingPhase>
-class TwoPImmiscible
-: public BaseFluidSystem<Scalar, TwoPImmiscible<Scalar, WettingPhase, NonwettingPhase> >
+class TwoPhaseImmiscible
+: public BaseFluidSystem<Scalar, TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> >
 {
     // do not try to instanciate this class, it has only static members!
-    TwoPImmiscible()
+    TwoPhaseImmiscible()
     {}
 
-    typedef TwoPImmiscible<Scalar, WettingPhase, NonwettingPhase> ThisType;
+    typedef TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 public:
     //! \copydoc BaseFluidSystem::ParameterCache

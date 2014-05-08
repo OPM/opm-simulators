@@ -46,7 +46,7 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
 // include some fluid systems
-#include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 // include some components
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
     typedef Opm::LiquidPhase<Scalar, H2O> Liquid;
     typedef Opm::GasPhase<Scalar, N2> Gas;
 
-    typedef Opm::FluidSystems::TwoPImmiscible<Scalar, Liquid, Gas> TwoPFluidSystem;
+    typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Gas> TwoPFluidSystem;
     typedef Opm::FluidSystems::BlackOil<Scalar> ThreePFluidSystem;
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,

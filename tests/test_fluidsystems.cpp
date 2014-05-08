@@ -27,8 +27,8 @@
 #include "checkFluidSystem.hpp"
 
 // include all fluid systems in opm-material
-#include <opm/material/fluidsystems/1pFluidSystem.hpp>
-#include <opm/material/fluidsystems/2pImmiscibleFluidSystem.hpp>
+#include <opm/material/fluidsystems/SinglePhaseFluidSystem.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BrineCO2FluidSystem.hpp>
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
@@ -172,20 +172,20 @@ int main(int argc, char **argv)
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // 2p-immiscible
-    {   typedef Opm::FluidSystems::TwoPImmiscible<Scalar, Liquid, Liquid> FluidSystem;
+    {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
-    {   typedef Opm::FluidSystems::TwoPImmiscible<Scalar, Liquid, Gas> FluidSystem;
+    {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Gas> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
-    {  typedef Opm::FluidSystems::TwoPImmiscible<Scalar, Gas, Liquid> FluidSystem;
+    {  typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Gas, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     // 1p
-    {   typedef Opm::FluidSystems::OneP<Scalar, Liquid> FluidSystem;
+    {   typedef Opm::FluidSystems::SinglePhase<Scalar, Liquid> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
-    {   typedef Opm::FluidSystems::OneP<Scalar, Gas> FluidSystem;
+    {   typedef Opm::FluidSystems::SinglePhase<Scalar, Gas> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem>(); }
 
     return 0;
