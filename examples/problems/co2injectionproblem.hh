@@ -158,7 +158,7 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, EndTime, 1e4);
 SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
-SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "grids/co2injection.dgf");
+SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
 } // namespace Properties
 } // namespace Opm
 

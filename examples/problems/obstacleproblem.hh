@@ -104,7 +104,7 @@ SET_SCALAR_PROP(ObstacleBaseProblem, EndTime, 1e4);
 SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
-SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./grids/obstacle_24x16.dgf");
+SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");
 } // namespace Properties
 } // namespace Opm
 

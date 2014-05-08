@@ -74,7 +74,7 @@ SET_SCALAR_PROP(StokesNiTestProblem, InitialTimeStepSize, 0.1);
 SET_SCALAR_PROP(StokesNiTestProblem, NewtonTolerance, 1e-4);
 
 // Default grid file to load
-SET_STRING_PROP(StokesNiTestProblem, GridFile, "grids/test_stokes2cni.dgf");
+SET_STRING_PROP(StokesNiTestProblem, GridFile, "data/test_stokes2cni.dgf");
 } // namespace Properties
 } // namespace Opm
 
