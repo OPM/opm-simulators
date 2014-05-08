@@ -29,7 +29,7 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(ImmiscibleOnePhaseModel, GroundWaterBaseProblem));
+NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(ImmiscibleSinglePhaseModel, GroundWaterBaseProblem));
 }}
 
 int main(int argc, char **argv)
