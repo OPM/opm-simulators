@@ -33,6 +33,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 
 #include <cassert>
@@ -1790,10 +1791,10 @@ namespace {
         double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
         double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>();
 
-        const double day = 24 * 60 * 60;
-        const double barsa = 1.e5;
+        // const double day = 24 * 60 * 60;
+        // const double barsa = 1.e5;
 
-        bool converged_Well = (residualWellFlux < 1./day) && (residualWell < barsa);
+        bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
@@ -1802,6 +1803,15 @@ namespace {
 
         return converged;
     }
+
+    template<class T>
+    bool
+    FullyImplicitBlackoilSolver<T>::getConvergence_b( const BlackoilState& x,
+                                                      const WellStateFullyImplicitBlackoil& xw,
+                                                      const double dt){
+
+    }
+
 
 
     template<class T>
