@@ -266,12 +266,9 @@ namespace {
 
         bool converged = false;
         const double r0  = residualNorm();
-        // {
-            // const SolutionState state = constantState(x, xw);
-        //     const SolutionState state = variableState(x, xw);
-            // converged = getConvergence(state, dt);
-            converged = getConvergence(dt);
-        // }
+
+        converged = getConvergence(dt);
+
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
@@ -289,11 +286,8 @@ namespace {
             const double r = residualNorm();
 
             resTooLarge = (r > atol) && (r > rtol*r0);
-            // {
-            //     const SolutionState state = constantState(x, xw);
-            //     converged = getConvergence(state, dt);
+
             converged = getConvergence(dt);
-            // }
 
             it += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
