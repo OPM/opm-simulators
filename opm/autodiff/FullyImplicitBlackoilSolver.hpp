@@ -268,10 +268,6 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         bool getConvergence(const SolutionState& state, const double dt);
 
-        bool getConvergence_b( const BlackoilState& x,
-                               const WellStateFullyImplicitBlackoil& xw,
-                               const double dt);
-
 
     };
 } // namespace Opm

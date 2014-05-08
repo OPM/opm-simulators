@@ -1718,6 +1718,7 @@ namespace {
         const double tol_cnv = 1.0e-3;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
         const double pvSum = pv.sum();
@@ -1742,7 +1743,8 @@ namespace {
         double BG_avg = 0.;
 
         if (active_[Water]) {
-            ADB tempBW = fluidReciprocFVF(Water, press, rs, rv, cond, cells_);
+            const int pos = pu.phase_pos[Water];
+            const ADB& tempBW = rq_[pos].b;
             V BW = 1./tempBW.value();
             V RW = residual_.material_balance_eq[Water].value();
             BW_avg = BW.sum()/nc;
@@ -1755,7 +1757,8 @@ namespace {
 
         if (active_[Oil]) {
             // Omit the disgas here. We should add it.
-            ADB tempBO = fluidReciprocFVF(Oil, press, rs, rv, cond, cells_);
+            const int pos = pu.phase_pos[Oil];
+            const ADB& tempBO = rq_[pos].b;
             V BO = 1./tempBO.value();
             V RO = residual_.material_balance_eq[Oil].value();
             BO_avg = BO.sum()/nc;
@@ -1768,7 +1771,8 @@ namespace {
 
         if (active_[Gas]) {
             // Omit the vapoil here. We should add it.
-            ADB tempBG = fluidReciprocFVF(Gas, press, rs, rv, cond, cells_);
+            const int pos = pu.phase_pos[Gas];
+            const ADB& tempBG = rq_[pos].b;
             V BG = 1./tempBG.value();
             V RG = residual_.material_balance_eq[Gas].value();
             BG_avg = BG.sum()/nc;
@@ -1791,9 +1795,6 @@ namespace {
         double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
         double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>();
 
-        // const double day = 24 * 60 * 60;
-        // const double barsa = 1.e5;
-
         bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
 
         bool converged = converged_MB && converged_CNV && converged_Well;
@@ -1803,16 +1804,6 @@ namespace {
 
         return converged;
     }
-
-    template<class T>
-    bool
-    FullyImplicitBlackoilSolver<T>::getConvergence_b( const BlackoilState& x,
-                                                      const WellStateFullyImplicitBlackoil& xw,
-                                                      const double dt){
-        bool converged = false;
-        return converged;
-    }
-
 
 
     template<class T>
