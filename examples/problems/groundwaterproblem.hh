@@ -99,7 +99,7 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, EndTime, 1);
 SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
-SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./grids/groundwater_2d.dgf");
+SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
 } // namespace Properties
 } // namespace Opm
 

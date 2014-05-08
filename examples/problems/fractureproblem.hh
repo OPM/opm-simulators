@@ -135,7 +135,7 @@ SET_BOOL_PROP(FractureProblem, EnableGravity, false);
 SET_BOOL_PROP(FractureProblem, EnableConstraints, true);
 
 // Set the default value for the file name of the grid
-SET_STRING_PROP(FractureProblem, GridFile, "grids/fracture.art");
+SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art");
 
 // Set the default value for the end time
 SET_SCALAR_PROP(FractureProblem, EndTime, 3e3);

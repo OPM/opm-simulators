@@ -73,7 +73,7 @@ SET_SCALAR_PROP(OutflowBaseProblem, EndTime, 100);
 SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
-SET_STRING_PROP(OutflowBaseProblem, GridFile, "./grids/outflow.dgf");
+SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
 } // namespace Properties
 } // namespace Opm
 

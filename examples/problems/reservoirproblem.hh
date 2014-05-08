@@ -104,7 +104,7 @@ SET_SCALAR_PROP(ReservoirBaseProblem, EndTime, 100);
 SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 10);
 
 // The default DGF file to load
-SET_STRING_PROP(ReservoirBaseProblem, GridFile, "grids/reservoir.dgf");
+SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 }} // namespace Properties, Opm
 
 namespace Ewoms {

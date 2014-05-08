@@ -137,7 +137,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 SET_BOOL_PROP(EclBaseProblem, EnableEclipseOutput, true);
 
 // The default DGF file to load
-SET_STRING_PROP(EclBaseProblem, GridFile, "grids/ecl.DATA");
+SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 }} // namespace Properties, Opm
 
 namespace Ewoms {

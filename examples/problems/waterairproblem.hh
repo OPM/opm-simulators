@@ -116,7 +116,7 @@ SET_SCALAR_PROP(WaterAirBaseProblem, EndTime, 5e3);
 SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
-SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./grids/waterair.dgf");
+SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 } // namespace Properties
 } // namespace Opm
 

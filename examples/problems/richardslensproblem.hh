@@ -116,7 +116,7 @@ SET_SCALAR_PROP(RichardsLensProblem, EndTime, 3000);
 SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
-SET_STRING_PROP(RichardsLensProblem, GridFile, "./grids/richardslens_24x16.dgf");
+SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
 }} // namespace Opm, Properties
 
 namespace Ewoms {

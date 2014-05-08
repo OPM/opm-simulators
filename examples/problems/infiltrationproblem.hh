@@ -111,7 +111,7 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 
 // The default DGF file to load
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
-                "./grids/infiltration_50x3.dgf");
+                "./data/infiltration_50x3.dgf");
 } // namespace Properties
 } // namespace Opm
 

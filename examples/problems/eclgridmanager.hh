@@ -58,7 +58,7 @@ NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclipseDeckFileName);
 
-SET_STRING_PROP(EclGridManager, EclipseDeckFileName, "grids/ecl.DATA");
+SET_STRING_PROP(EclGridManager, EclipseDeckFileName, "data/ecl.DATA");
 
 // set the Grid and GridManager properties
 SET_TYPE_PROP(EclGridManager, Grid, Dune::CpGrid);

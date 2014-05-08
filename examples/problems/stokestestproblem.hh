@@ -74,7 +74,7 @@ SET_SCALAR_PROP(StokesTestProblem, EndTime, 10.0);
 SET_SCALAR_PROP(StokesTestProblem, InitialTimeStepSize, 10.0);
 
 // Default grid file to load
-SET_STRING_PROP(StokesTestProblem, GridFile, "grids/test_stokes.dgf");
+SET_STRING_PROP(StokesTestProblem, GridFile, "data/test_stokes.dgf");
 } // namespace Properties
 } // namespace Opm
 
