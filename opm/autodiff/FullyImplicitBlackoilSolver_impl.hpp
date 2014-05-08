@@ -712,7 +712,8 @@ namespace {
         // a well control is switched.
         updateWellControls(state.bhp, state.qs, xw);
         V aliveWells;
-        addWellEq(state, aliveWells);
+        // xw.perfPhaseRates() are updated in the call to addWellEq().
+        addWellEq(state, xw, aliveWells);
         addWellControlEq(state, xw, aliveWells);
     }
 
@@ -722,6 +723,7 @@ namespace {
 
     template <class T>
     void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
+                                                   WellStateFullyImplicitBlackoil& xw,
                                                    V& aliveWells)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -745,6 +747,33 @@ namespace {
 
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcell - (wops_.w2p * state.bhp + cdp);
+
+        // The following block computes (surface volume) flow in all well perforations.
+        // The purpose is to update the well state perfPhaseRates() field.
+        // It has been put into its own block to prevent conflict with the very similar
+        // code below, the difference is that below, only flow into the wellbore is used.
+        {
+            std::vector<ADB> cq_ps(np, ADB::null());
+            for (int phase = 0; phase < np; ++phase) {
+                const ADB& wellcell_mob = subset(rq_[phase].mob, well_cells);
+                const ADB& wellcell_b = subset(rq_[phase].b, well_cells);
+                const ADB cq_p = -Tw * (wellcell_mob * drawdown);
+                cq_ps[phase] = wellcell_b * cq_p;
+            }
+            if (active_[Oil] && active_[Gas]) {
+                const int oilpos = pu.phase_pos[Oil];
+                const int gaspos = pu.phase_pos[Gas];
+                ADB cq_psOil = cq_ps[oilpos];
+                ADB cq_psGas = cq_ps[gaspos];
+                cq_ps[gaspos] += subset(state.rs, well_cells) * cq_psOil;
+                cq_ps[oilpos] += subset(state.rv, well_cells) * cq_psGas;
+            }
+            for (int perf = 0; perf < nperf; ++perf) {
+                for (int phase = 0; phase < np; ++phase) {
+                    xw.perfPhaseRates()[np*perf + phase] = cq_ps[phase].value()[perf];
+                }
+            }
+        }
 
         // current injecting connections
         auto connInjInx = drawdown.value() < 0;
