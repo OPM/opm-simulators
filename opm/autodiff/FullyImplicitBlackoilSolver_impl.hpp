@@ -1809,7 +1809,8 @@ namespace {
     FullyImplicitBlackoilSolver<T>::getConvergence_b( const BlackoilState& x,
                                                       const WellStateFullyImplicitBlackoil& xw,
                                                       const double dt){
-
+        bool converged = false;
+        return converged;
     }
 
 
