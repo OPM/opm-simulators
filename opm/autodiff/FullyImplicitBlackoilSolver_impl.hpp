@@ -712,7 +712,7 @@ namespace {
         // a well control is switched.
         updateWellControls(state.bhp, state.qs, xw);
         V aliveWells;
-        addWellEq(state, aliveWells);
+        addWellEq(state, xw, aliveWells);
         addWellControlEq(state, xw, aliveWells);
     }
 
@@ -722,6 +722,7 @@ namespace {
 
     template <class T>
     void FullyImplicitBlackoilSolver<T>::addWellEq(const SolutionState& state,
+                                                   WellStateFullyImplicitBlackoil& xw,
                                                    V& aliveWells)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -904,12 +905,22 @@ namespace {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
+
         // Add WELL EQUATIONS
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
             qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
+
+
+        V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
+        for (int phase = 1; phase < np; ++phase) {
+            cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
+        }
+
+        std::vector<double> cq_d(cq.data(), cq.data() + nperf*np);
+        xw.perfPhaseRates() = cq_d;
 
         residual_.well_flux_eq = qs;
     }

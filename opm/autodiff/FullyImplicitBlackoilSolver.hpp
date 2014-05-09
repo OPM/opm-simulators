@@ -170,6 +170,7 @@ namespace Opm {
 
         void
         addWellEq(const SolutionState& state,
+                  WellStateFullyImplicitBlackoil& xw,
                   V& aliveWells);
 
         void updateWellControls(ADB& bhp,
