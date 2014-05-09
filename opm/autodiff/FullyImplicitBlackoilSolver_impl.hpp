@@ -257,8 +257,6 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const double atol  = 1.0e-12;
-        const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
         assemble(pvdt, x, xw);
@@ -273,9 +271,7 @@ namespace {
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
-        bool resTooLarge = r0 > atol;
-        converged = false;
-        // while (resTooLarge && (it < maxit)) {
+
         while ((!converged) && (it < maxit)) {
             const V dx = solveJacobianSystem();
 
@@ -285,8 +281,6 @@ namespace {
 
             const double r = residualNorm();
 
-            resTooLarge = (r > atol) && (r > rtol*r0);
-
             converged = getConvergence(dt);
 
             it += 1;
@@ -294,7 +288,6 @@ namespace {
                       << std::setw(18) << r << std::endl;
         }
 
-        // if (resTooLarge) {
         if (!converged) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
