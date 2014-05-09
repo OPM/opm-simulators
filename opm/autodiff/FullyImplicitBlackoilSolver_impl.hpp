@@ -33,6 +33,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 
 #include <cassert>
@@ -256,19 +257,22 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const double atol  = 1.0e-12;
-        const double rtol  = 5.0e-8;
         const int    maxit = 15;
 
         assemble(pvdt, x, xw);
 
+
+        bool converged = false;
         const double r0  = residualNorm();
+
+        converged = getConvergence(dt);
+
         int          it  = 0;
         std::cout << "\nIteration         Residual\n"
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
-        bool resTooLarge = r0 > atol;
-        while (resTooLarge && (it < maxit)) {
+
+        while ((!converged) && (it < maxit)) {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
@@ -277,14 +281,14 @@ namespace {
 
             const double r = residualNorm();
 
-            resTooLarge = (r > atol) && (r > rtol*r0);
+            converged = getConvergence(dt);
 
             it += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
 
-        if (resTooLarge) {
+        if (!converged) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
@@ -1706,6 +1710,94 @@ namespace {
 
 
 
+    template<class T>
+    bool
+    FullyImplicitBlackoilSolver<T>::getConvergence(const double dt)
+    {
+        const double tol_mb = 1.0e-7;
+        const double tol_cnv = 1.0e-3;
+
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+
+        const V pv = geo_.poreVolume();
+        const double pvSum = pv.sum();
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
+        double CNVW = 0.;
+        double CNVO = 0.;
+        double CNVG = 0.;
+
+        double RW_sum = 0.;
+        double RO_sum = 0.;
+        double RG_sum = 0.;
+
+        double BW_avg = 0.;
+        double BO_avg = 0.;
+        double BG_avg = 0.;
+
+        if (active_[Water]) {
+            const int pos = pu.phase_pos[Water];
+            const ADB& tempBW = rq_[pos].b;
+            V BW = 1./tempBW.value();
+            V RW = residual_.material_balance_eq[Water].value();
+            BW_avg = BW.sum()/nc;
+            const V tempV = RW.abs()/pv;
+
+            CNVW = BW_avg * dt * tempV.maxCoeff();
+            RW_sum = RW.sum();
+        }
+
+        if (active_[Oil]) {
+            // Omit the disgas here. We should add it.
+            const int pos = pu.phase_pos[Oil];
+            const ADB& tempBO = rq_[pos].b;
+            V BO = 1./tempBO.value();
+            V RO = residual_.material_balance_eq[Oil].value();
+            BO_avg = BO.sum()/nc;
+            const V tempV = RO.abs()/pv;
+
+            CNVO = BO_avg * dt * tempV.maxCoeff();
+            RO_sum = RO.sum();
+        }
+
+        if (active_[Gas]) {
+            // Omit the vapoil here. We should add it.
+            const int pos = pu.phase_pos[Gas];
+            const ADB& tempBG = rq_[pos].b;
+            V BG = 1./tempBG.value();
+            V RG = residual_.material_balance_eq[Gas].value();
+            BG_avg = BG.sum()/nc;
+            const V tempV = RG.abs()/pv;
+
+            CNVG = BG_avg * dt * tempV.maxCoeff();
+            RG_sum = RG.sum();
+        }
+
+        double tempValue = tol_mb * pvSum /dt;
+
+        bool converged_MB = (fabs(BW_avg*RW_sum) < tempValue)
+                         && (fabs(BO_avg*RO_sum) < tempValue)
+                         && (fabs(BG_avg*RG_sum) < tempValue);
+
+        bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
+
+
+        double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
+        double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>();
+
+        bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
+
+        bool converged = converged_MB && converged_CNV && converged_Well;
+
+#ifdef OPM_VERBOSE
+        std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
+        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
+                  << " converged_Well " << converged_Well << " converged " << converged << std::endl;
+#endif
+        return converged;
+    }
 
 
     template<class T>
