@@ -161,9 +161,6 @@ namespace Opm {
                                             const WellStateFullyImplicitBlackoil& xw);
 
         void
-        addOldWellEq(const SolutionState& state);
-
-        void
         addWellControlEq(const SolutionState& state,
                          const WellStateFullyImplicitBlackoil& xw,
                          const V& aliveWells);
