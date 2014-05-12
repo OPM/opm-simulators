@@ -22,7 +22,9 @@
 
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <memory>
 
 namespace Opm
 {
@@ -35,8 +37,9 @@ namespace Opm
     {
     public:
         /// Construct a system solver.
-        /// \param[in] linsolver   linear solver to use
-        NewtonIterationBlackoilSimple(const LinearSolverInterface& linsolver);
+        /// \param[in] param   parameters controlling the behaviour and
+        ///                    choice of linear solver.
+        NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param);
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -46,7 +49,7 @@ namespace Opm
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
 
     private:
-        const LinearSolverInterface& linsolver_;
+        std::unique_ptr<LinearSolverInterface> linsolver_;
     };
 
 } // namespace Opm

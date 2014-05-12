@@ -22,15 +22,16 @@
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/linalg/LinearSolverFactory.hpp>
 
 namespace Opm
 {
 
     /// Construct a system solver.
     /// \param[in] linsolver   linear solver to use
-    NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const LinearSolverInterface& linsolver)
-        : linsolver_(linsolver)
+    NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param)
     {
+        linsolver_.reset(new LinearSolverFactory(param));
     }
 
     /// Solve the linear system Ax = b, with A being the
@@ -54,9 +55,9 @@ namespace Opm
 
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
-            = linsolver_.solve(matr.rows(), matr.nonZeros(),
-                               matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               total_residual.value().data(), dx.data());
+            = linsolver_->solve(matr.rows(), matr.nonZeros(),
+                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
+                                total_residual.value().data(), dx.data());
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
