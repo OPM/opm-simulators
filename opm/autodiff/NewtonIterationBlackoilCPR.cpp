@@ -22,7 +22,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/linalg/LinearSolverUmfpack.hpp>
+#include <opm/core/linalg/LinearSolverFactory.hpp>
 
 namespace Opm
 {
@@ -31,7 +31,10 @@ namespace Opm
     /// \param[in] linsolver   linear solver to use
     NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
     {
-        linsolver_full_.reset(new LinearSolverUmfpack);
+        parameter::ParameterGroup cpr_elliptic = param.getDefault("cpr_elliptic", param);
+        linsolver_elliptic_.reset(new LinearSolverFactory(cpr_elliptic));
+        parameter::ParameterGroup cpr_full = param.getDefault("cpr_full", param);
+        linsolver_full_.reset(new LinearSolverFactory(cpr_full));
     }
 
     /// Solve the linear system Ax = b, with A being the
