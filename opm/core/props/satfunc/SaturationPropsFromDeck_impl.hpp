@@ -186,6 +186,19 @@ namespace Opm
         if (!phase_usage_.phase_used[Liquid]) {
             OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  oil phase must be active.");
         }
+        
+        // Check SATOPTS status
+        bool hysteresis_switch = false;
+        if (newParserDeck->hasKeyword("SATOPTS")) {
+            const std::vector<std::string>& satopts = newParserDeck->getKeyword("SATOPTS")->getStringData();
+            for (int i = 0; i < satopts.size(); ++i) {
+                if (satopts[i] == std::string("HYSTER")) {
+                    hysteresis_switch = true;
+                } else {
+                    OPM_THROW(std::runtime_error, "Keyword SATOPTS:  Switch " << satopts[i] << " not supported. ");
+                }
+            }
+        }
 
         // Obtain SATNUM, if it exists, and create cell_to_func_.
         // Otherwise, let the cell_to_func_ mapping be just empty.
@@ -228,9 +241,30 @@ namespace Opm
         for (int table = 0; table < num_tables; ++table) {
             satfuncset_[table].init(newParserDeck, table, phase_usage_, samples);
         }
+        
+        // Check EHYSTR status
+        do_hyst_ = false;
+        if (hysteresis_switch && newParserDeck->hasKeyword("EHYSTR")) {
+           const int& relative_perm_hyst = newParserDeck->getKeyword("EHYSTR")->getRecord(0)->getItem(1)->getInt(0);
+           const std::string& limiting_hyst_flag = newParserDeck->getKeyword("EHYSTR")->getRecord(0)->getItem(4)->getString(0);
+           if (relative_perm_hyst != int(0)) {
+               OPM_THROW(std::runtime_error, "Keyword EHYSTR, item 2: Flag '" << relative_perm_hyst << "' found, only '0' is supported. ");
+           }          
+           if (limiting_hyst_flag != std::string("KR")) {
+               OPM_THROW(std::runtime_error, "Keyword EHYSTR, item 5: Flag '" << limiting_hyst_flag << "' found, only 'KR' is supported. ");
+           }                   
+           if ( ! newParserDeck->hasKeyword("ENDSCALE")) {
+               // TODO When use of IMBNUM is implemented, this constraint will be lifted.
+               OPM_THROW(std::runtime_error, "Currently hysteris effects is only available through endpoint scaling.");
+           }
+           do_hyst_ = true;
+        } else if (hysteresis_switch) {
+           OPM_THROW(std::runtime_error, "Switch HYSTER of keyword SATOPTS is active, but keyword EHYSTR not found.");
+        } else if (newParserDeck->hasKeyword("EHYSTR")) {
+           OPM_THROW(std::runtime_error, "Found keyword EHYSTR, but switch HYSTER of keyword SATOPTS is not set.");
+        }
 
         // Saturation table scaling
-        do_hyst_ = false;
         do_eps_ = false;
         do_3pt_ = false;
         if (newParserDeck->hasKeyword("ENDSCALE")) {
@@ -252,20 +286,24 @@ namespace Opm
                 }
             }
             do_eps_ = true;
+                 
+            // Make a consistency check of ENDNUM: #regions = NTENDP (ENDSCALE::3, TABDIMS::8)...      
+            if (newParserDeck->hasKeyword("ENDNUM")) {
+                const std::vector<int>& endnum = newParserDeck->getKeyword("ENDNUM")->getIntData();
+                int endnum_regions = *std::max_element(endnum.begin(), endnum.end());
+                if (endnum_regions > endscale.numEndscaleTables()) {
+                    OPM_THROW(std::runtime_error,
+                        "ENDNUM:  Found " << endnum_regions << 
+                         " regions.  Maximum allowed is " << endscale.numEndscaleTables() <<
+                         " (confer item 3 of keyword ENDSCALE).");  // TODO  See also item 8 of TABDIMS ...
+                }
+            }
+            // TODO: ENPTVD/ENKRVD: Too few tables gives a cryptical message from parser, 
+            //       superfluous tables are ignored by the parser without any warning ...
 
             initEPS(newParserDeck, number_of_cells, global_cell, begin_cell_centroids,
                     dimensions);
 
-            // For now, a primitive detection of hysteresis. TODO: SATOPTS HYSTER/ and EHYSTR
-            do_hyst_ =
-                newParserDeck->hasKeyword("ISWL")
-                || newParserDeck->hasKeyword("ISWU")
-                || newParserDeck->hasKeyword("ISWCR")
-                || newParserDeck->hasKeyword("ISGL")
-                || newParserDeck->hasKeyword("ISGU")
-                || newParserDeck->hasKeyword("ISGCR")
-                ||  newParserDeck->hasKeyword("ISOWCR")
-                || newParserDeck->hasKeyword("ISOGCR");
             if (do_hyst_) {
                 if (newParserDeck->hasKeyword("KRW")
                     || newParserDeck->hasKeyword("KRG")
@@ -274,6 +312,7 @@ namespace Opm
                     || newParserDeck->hasKeyword("KRGR")
                     || newParserDeck->hasKeyword("KRORW")
                     || newParserDeck->hasKeyword("KRORG")
+                    || newParserDeck->hasKeyword("ENKRVD")
                     || newParserDeck->hasKeyword("IKRW")
                     || newParserDeck->hasKeyword("IKRG")
                     || newParserDeck->hasKeyword("IKRO")
@@ -281,11 +320,29 @@ namespace Opm
                     || newParserDeck->hasKeyword("IKRGR")
                     || newParserDeck->hasKeyword("IKRORW")
                     || newParserDeck->hasKeyword("IKRORG") ) {
-                    OPM_THROW(std::runtime_error,
-                              "SaturationPropsFromDeck::init()   --  ENDSCALE: "
-                              "Currently hysteresis and relperm value scaling "
-                              "cannot be combined.");
+                    OPM_THROW(std::runtime_error,"Currently hysteresis and relperm value scaling cannot be combined.");
                 }
+                
+                if (newParserDeck->hasKeyword("IMBNUM")) {
+                    const std::vector<int>& imbnum = newParserDeck->getKeyword("IMBNUM")->getIntData();
+                    int imbnum_regions = *std::max_element(imbnum.begin(), imbnum.end());
+                    if (imbnum_regions > num_tables) {
+                        OPM_THROW(std::runtime_error,
+                            "IMBNUM:  Found " << imbnum_regions << 
+                            " regions.  Maximum allowed is " << num_tables <<
+                            " (number of tables provided by SWOF/SGOF).");
+                    }
+                    const int num_cells = number_of_cells;
+                    cell_to_func_imb_.resize(num_cells);
+                    const int* gc = global_cell;
+                    for (int cell = 0; cell < num_cells; ++cell) {
+                        const int deck_pos = (gc == NULL) ? cell : gc[cell];
+                        cell_to_func_imb_[cell] = imbnum[deck_pos] - 1;
+                    }
+                    // TODO: Make actual use of IMBNUM.  For now we just consider the imbibition curve
+                    //       to be a scaled version of the drainage curve (confer Norne model).
+                }
+                
                 initEPSHyst(newParserDeck, number_of_cells, global_cell, begin_cell_centroids,
                             dimensions);
             }
@@ -418,14 +475,18 @@ namespace Opm
                 smin[np*i + opos] = 1.0;
                 smax[np*i + opos] = 1.0;
                 if (phase_usage_.phase_used[Aqua]) {
-                    smin[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].wat.smin: funcForCell(cells[i]).smin_[wpos];
-                    smax[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].wat.smax: funcForCell(cells[i]).smax_[wpos];
+                    smin[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? funcForCell(cells[i]).smin_[wpos]
+                                                                             : eps_transf_[cells[i]].wat.smin;
+                    smax[np*i + wpos] = eps_transf_[cells[i]].wat.doNotScale ? funcForCell(cells[i]).smax_[wpos]
+                                                                             : eps_transf_[cells[i]].wat.smax;
                     smin[np*i + opos] -= smax[np*i + wpos];
                     smax[np*i + opos] -= smin[np*i + wpos];
                 }  
                 if (phase_usage_.phase_used[Vapour]) {
-                    smin[np*i + gpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].gas.smin: funcForCell(cells[i]).smin_[gpos];
-                    smax[np*i + gpos] = eps_transf_[cells[i]].wat.doNotScale ? eps_transf_[cells[i]].gas.smax: funcForCell(cells[i]).smax_[gpos];
+                    smin[np*i + gpos] = eps_transf_[cells[i]].gas.doNotScale ? funcForCell(cells[i]).smin_[gpos]
+                                                                             : eps_transf_[cells[i]].gas.smin;
+                    smax[np*i + gpos] = eps_transf_[cells[i]].gas.doNotScale ? funcForCell(cells[i]).smax_[gpos]
+                                                                             : eps_transf_[cells[i]].gas.smax;
                     smin[np*i + opos] -= smax[np*i + gpos];
                     smax[np*i + opos] -= smin[np*i + gpos];
                 }
@@ -1095,6 +1156,7 @@ namespace Opm
                     for (int i=0; i<number_of_cells; ++i)
                         scaleparam[i] = funcForCell(i).krgmax_;
                 }
+            } else if (keyword == std::string("KRO") || keyword == std::string("IKRO") ) {
                 if (useLiquid && (useKeyword || columnIsMasked_(newParserDeck, "ENKRVD", 2))) {
                     itab = 3;
                     scaleparam.resize(number_of_cells);
@@ -1158,14 +1220,28 @@ namespace Opm
             }
         } else {
             const int dim = dimensions;
+            std::vector<int> endnum;
+            if ( newParserDeck->hasKeyword("ENDNUM")) {
+                const std::vector<int>& e = 
+                    newParserDeck->getKeyword("ENDNUM")->getIntData();              
+                endnum.resize(number_of_cells);                                   
+                const int* gc = global_cell;
+                for (int cell = 0; cell < number_of_cells; ++cell) {
+                    const int deck_pos = (gc == NULL) ? cell : gc[cell];
+                    endnum[cell] = e[deck_pos] - 1; // Deck value zero prevents scaling via ENPTVD/ENKRVD
+                }
+            }
+            else {
+                // Default deck value is one
+                endnum.assign(number_of_cells, 0);
+            }
             for (int cell = 0; cell < number_of_cells; ++cell) {
-                int jtab = cell_to_func_.empty() ? 0 : cell_to_func_[cell];
-                if (param_col[jtab][0] >= 0.0) {
+                if (endnum[cell] >= 0 && param_col[endnum[cell]][0] >= 0.0) {
                     double zc = UgGridHelpers
                         ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
                                        dim-1);
-                    if (zc >= depth_col[jtab].front() && zc <= depth_col[jtab].back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth_col[jtab], param_col[jtab], zc);
+                    if (zc >= depth_col[endnum[cell]].front() && zc <= depth_col[endnum[cell]].back()) { //don't want extrap outside depth interval
+                        scaleparam[cell] = linearInterpolation(depth_col[endnum[cell]], param_col[endnum[cell]], zc);
                     }
                 }
             }

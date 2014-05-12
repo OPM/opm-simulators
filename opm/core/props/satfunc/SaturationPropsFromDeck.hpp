@@ -166,6 +166,7 @@ namespace Opm
         PhaseUsage phase_usage_;
         std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
+        std::vector<int> cell_to_func_imb_;
 
         bool do_eps_;  // ENDSCALE is active
         bool do_3pt_;  // SCALECRS: YES~true  NO~false
