@@ -191,7 +191,7 @@ namespace Opm
         bool hysteresis_switch = false;
         if (newParserDeck->hasKeyword("SATOPTS")) {
             const std::vector<std::string>& satopts = newParserDeck->getKeyword("SATOPTS")->getStringData();
-            for (int i = 0; i < satopts.size(); ++i) {
+            for (size_t i = 0; i < satopts.size(); ++i) {
                 if (satopts[i] == std::string("HYSTER")) {
                     hysteresis_switch = true;
                 } else {
