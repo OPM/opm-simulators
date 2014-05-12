@@ -1661,9 +1661,8 @@ namespace {
 
         bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
 
-
-        double residualWellFlux = residual_.well_flux_eq.value().matrix().lpNorm<Eigen::Infinity>();
-        double residualWell = residual_.well_eq.value().matrix().lpNorm<Eigen::Infinity>();
+        double residualWellFlux = residual_.well_flux_eq.value().matrix().template lpNorm<Eigen::Infinity>();
+        double residualWell = residual_.well_eq.value().matrix().template lpNorm<Eigen::Infinity>();
 
         bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
 
