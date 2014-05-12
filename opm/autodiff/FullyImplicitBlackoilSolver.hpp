@@ -161,9 +161,6 @@ namespace Opm {
                                             const WellStateFullyImplicitBlackoil& xw);
 
         void
-        addOldWellEq(const SolutionState& state);
-
-        void
         addWellControlEq(const SolutionState& state,
                          const WellStateFullyImplicitBlackoil& xw,
                          const V& aliveWells);
@@ -264,6 +261,10 @@ namespace Opm {
 
         void
         classifyCondition(const BlackoilState&        state);
+
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        bool getConvergence(const double dt);
 
 
     };
