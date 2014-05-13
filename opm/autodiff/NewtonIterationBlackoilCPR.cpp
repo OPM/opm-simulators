@@ -27,6 +27,39 @@
 namespace Opm
 {
 
+
+    typedef AutoDiffBlock<double> ADB;
+    typedef ADB::V V;
+    typedef ADB::M M;
+
+    namespace {
+        /// Eliminate a variable via Schur complement.
+        /// \param[in]  eqs  set of equations with Jacobians
+        /// \param[in]  n    index of equation/variable to eliminate.
+        /// \return          new set of equations, one smaller than eqs.
+        /// Note: this method requires the eliminated variable to have the same size
+        /// as the equation in the corresponding position (that also will be eliminated).
+        /// It also required the jacobian block n of equation n to be diagonal.
+        std::vector<ADB> eliminateVariable(const std::vector<ADB>& eqs, const int n);
+
+        /// Recover that value of a variable previously eliminated.
+        /// \param[in]  equation          previously eliminated equation.
+        /// \param[in]  partial_solution  solution to the remainder system after elimination.
+        /// \param[in]  n                 index of equation/variable that was eliminated.
+        /// \return                       solution to complete system.
+        V recoverVariable(const ADB& equation, const V& partial_solution, const int n);
+
+        /// Determine diagonality of a sparse matrix.
+        /// If there are off-diagonal elements in the sparse
+        /// structure, this function returns true if they are all
+        /// equal to zero.
+        bool isDiagonal(const M& matrix);
+    } // anonymous namespace
+
+
+
+
+
     /// Construct a system solver.
     /// \param[in] linsolver   linear solver to use
     NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
@@ -36,6 +69,10 @@ namespace Opm
         parameter::ParameterGroup cpr_full = param.getDefault("cpr_full", param);
         linsolver_full_.reset(new LinearSolverFactory(cpr_full));
     }
+
+
+
+
 
     /// Solve the linear system Ax = b, with A being the
     /// combined derivative matrix of the residual and b
@@ -68,6 +105,149 @@ namespace Opm
         }
         return dx;
     }
+
+
+
+
+    namespace
+    {
+
+
+        std::vector<ADB> eliminateVariable(const std::vector<ADB>& eqs, const int n)
+        {
+            // Check that the variable index to eliminate is within bounds.
+            const int num_eq = eqs.size();
+            const int num_vars = eqs[0].derivative().size();
+            if (num_eq != num_vars) {
+                OPM_THROW(std::logic_error, "eliminateVariable() requires the same number of variables and equations.");
+            }
+            if (n >= num_eq) {
+                OPM_THROW(std::logic_error, "Trying to eliminate variable from too small set of equations.");
+            }
+
+            // Schur complement of (A B ; C D) wrt. D is A - B*inv(D)*C.
+            // This is applied to all 2x2 block submatrices.
+            // We require that D is diagonal.
+            const M& D = eqs[n].derivative()[n];
+            if (!isDiagonal(D)) {
+                // std::cout << "++++++++++++++++++++++++++++++++++++++++++++\n"
+                //           << D
+                //           << "++++++++++++++++++++++++++++++++++++++++++++\n" << std::endl;
+                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+            }
+            V diag = D.diagonal();
+            Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
+            std::vector<V> vals(num_eq);              // Number n will remain empty.
+            std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
+            for (int eq = 0; eq < num_eq; ++eq) {
+                if (eq == n) {
+                    continue;
+                }
+                jacs[eq].reserve(num_eq - 1);
+                const M& B = eqs[eq].derivative()[n];
+                for (int var = 0; var < num_eq; ++var) {
+                    if (var == n) {
+                        continue;
+                    }
+                    // Create new jacobians.
+                    M schur_jac = eqs[eq].derivative()[var] - B * (invD * eqs[n].derivative()[var]);
+                    jacs[eq].push_back(schur_jac);
+                }
+                // Update right hand side.
+                vals[eq] = eqs[eq].value().matrix() - B * (invD * eqs[n].value().matrix());
+            }
+
+            // Create return value.
+            std::vector<ADB> retval;
+            retval.reserve(num_eq - 1);
+            for (int eq = 0; eq < num_eq; ++eq) {
+                if (eq == n) {
+                    continue;
+                }
+                retval.push_back(ADB::function(vals[eq], jacs[eq]));
+            }
+            return retval;
+        }
+
+
+
+
+
+        V recoverVariable(const ADB& equation, const V& partial_solution, const int n)
+        {
+            // The equation to solve for the unknown y (to be recovered) is
+            //    Cx + Dy = b
+            //    y = inv(D) (b - Cx)
+            // where D is the eliminated block, C is the jacobian of
+            // the eliminated equation with respect to the
+            // non-eliminated unknowms, b is the right-hand side of
+            // the eliminated equation, and x is the partial solution
+            // of the non-eliminated unknowns.
+            // We require that D is diagonal.
+
+            // Find inv(D).
+            const M& D = equation.derivative()[n];
+            if (!isDiagonal(D)) {
+                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+            }
+            V diag = D.diagonal();
+            Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
+
+            // Build C.
+            std::vector<M> C_jacs = equation.derivative();
+            C_jacs.erase(C_jacs.begin() + n);
+            ADB eq_coll = collapseJacs(ADB::function(equation.value(), C_jacs));
+            const M& C = eq_coll.derivative()[0];
+
+            // Compute value of eliminated variable.
+            V elim_var = invD * (equation.value().matrix() - C * partial_solution.matrix());
+
+            // Find the relevant sizes to use when reconstructing the full solution.
+            const int nelim = equation.size();
+            const int npart = partial_solution.size();
+            assert(C.cols() == npart);
+            const int full_size = nelim + npart;
+            int start = 0;
+            for (int i = 0; i < n; ++i) {
+                start += equation.derivative()[i].cols();
+            }
+            assert(start < full_size);
+
+            // Reconstruct complete solution vector.
+            V sol(full_size);
+            std::copy_n(partial_solution.data(), start, sol.data());
+            std::copy_n(elim_var.data(), nelim, sol.data() + start);
+            std::copy_n(partial_solution.data() + start, npart - start, sol.data() + start + nelim);
+            return sol;
+        }
+
+
+
+
+
+        bool isDiagonal(const M& matr)
+        {
+            M matrix = matr;
+            matrix.makeCompressed();
+            for (int k = 0; k < matrix.outerSize(); ++k) {
+                for (M::InnerIterator it(matrix, k); it; ++it) {
+                    if (it.col() != it.row()) {
+                        // Off-diagonal element.
+                        if (it.value() != 0.0) {
+                            // Nonzero off-diagonal element.
+                            // std::cout << "off-diag: " << it.row() << ' ' << it.col() << std::endl;
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+
+
+    } // anonymous namespace
+
 
 } // namespace Opm
 
