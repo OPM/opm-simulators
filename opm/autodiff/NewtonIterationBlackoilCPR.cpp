@@ -82,17 +82,34 @@ namespace Opm
     NewtonIterationBlackoilCPR::SolutionVector
     NewtonIterationBlackoilCPR::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
-        typedef LinearisedBlackoilResidual::ADB ADB;
+        // Build the vector of equations.
         const int np = residual.material_balance_eq.size();
-        ADB mass_res = residual.material_balance_eq[0];
-        for (int phase = 1; phase < np; ++phase) {
-            mass_res = vertcat(mass_res, residual.material_balance_eq[phase]);
+        std::vector<ADB> eqs;
+        eqs.reserve(np + 2);
+        for (int phase = 0; phase < np; ++phase) {
+            eqs.push_back(residual.material_balance_eq[phase]);
         }
-        const ADB well_res = vertcat(residual.well_flux_eq, residual.well_eq);
-        const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
+        eqs.push_back(residual.well_flux_eq);
+        eqs.push_back(residual.well_eq);
 
+        // Eliminate the well-related unknowns, and corresponding equations.
+        std::vector<ADB> elim_eqs;
+        elim_eqs.reserve(2);
+        elim_eqs.push_back(eqs[np]);
+        eqs = eliminateVariable(eqs, np); // Eliminate well flux unknowns.
+        elim_eqs.push_back(eqs[np]);
+        eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
+        assert(int(eqs.size()) == np);
+
+        // Combine in single block.
+        ADB total_residual = eqs[0];
+        for (int phase = 1; phase < np; ++phase) {
+            total_residual = vertcat(total_residual, eqs[phase]);
+        }
+        total_residual = collapseJacs(total_residual);
+
+        // Solve reduced system.
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
-
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_full_->solve(matr.rows(), matr.nonZeros(),
@@ -103,6 +120,11 @@ namespace Opm
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
                       "Linear solver convergence failure.");
         }
+
+        // Compute full solution using the eliminated equations.
+        // Recovery in inverse order of elimination.
+        dx = recoverVariable(elim_eqs[1], dx, np);
+        dx = recoverVariable(elim_eqs[0], dx, np);
         return dx;
     }
 
