@@ -369,8 +369,6 @@ namespace Opm
                                  const UnstructuredGrid&                 G    ,
                                  const double grav)
                 {
-                    typedef Miscibility::NoMixing NoMix;
-
                     for (typename RMap::RegionId
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)

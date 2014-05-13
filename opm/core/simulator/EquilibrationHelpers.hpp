@@ -139,7 +139,7 @@ namespace Opm
                 props_.matrix(1, &p, &z[0], &c_[0], &A[0], dAdp);
 
                 std::vector<double> rho(np, 0.0);
-                props_.density(1, &A[0], &rho[0]);
+                props_.density(1, &A[0], &c_[0], &rho[0]);
 
                 return rho;
             }
