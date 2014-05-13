@@ -104,6 +104,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "BlackoilPropertiesFromDeck::viscosity()  --  derivatives of viscosity not yet implemented.");
         } else {
             const int *cellPvtTableIdx = cellPvtRegionIndex();
+            assert(cellPvtTableIdx != 0);
             std::vector<int> pvtTableIdx(n);
             for (int i = 0; i < n; ++ i)
                 pvtTableIdx[i] = cellPvtTableIdx[cells[i]];
