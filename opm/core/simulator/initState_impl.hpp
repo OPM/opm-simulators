@@ -184,7 +184,7 @@ namespace Opm
                 double A[4] = { 0.0 };
                 props_.matrix(1, &pressure, surfvol[phase], cells, A, 0);
                 double rho[2] = { 0.0 };
-                props_.density(1, A, rho);
+                props_.density(1, A, cells, rho);
                 return rho[phase];
             }
         };

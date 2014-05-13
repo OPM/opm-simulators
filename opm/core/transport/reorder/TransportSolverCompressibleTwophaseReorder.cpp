@@ -418,7 +418,7 @@ namespace Opm
         assert(np == 2);
         const int dim = grid_.dimensions;
         density_.resize(nc*np);
-        props_.density(grid_.number_of_cells, &A_[0], &density_[0]);
+        props_.density(grid_.number_of_cells, &A_[0], /*cellIndices=*/NULL, &density_[0]);
         std::fill(gravflux_.begin(), gravflux_.end(), 0.0);
         for (int f = 0; f < nf; ++f) {
             const int* c = &grid_.face_cells[2*f];

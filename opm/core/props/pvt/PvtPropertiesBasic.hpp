@@ -95,6 +95,8 @@ namespace Opm
                   double* output_dRdp) const;
 
     private:
+        // The PVT properties. We need to store one value per PVT
+        // region.
         std::vector<double> density_;
         std::vector<double> viscosity_;
         std::vector<double> formation_volume_factor_;

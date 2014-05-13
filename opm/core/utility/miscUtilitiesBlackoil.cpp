@@ -285,7 +285,8 @@ namespace Opm
 
     /// @brief Computes saturation from surface volume
     void computeSaturation(const BlackoilPropertiesInterface& props,
-                          BlackoilState& state){
+                           BlackoilState& state)
+    {
 
         const int np = props.numPhases();
         const int nc = props.numCells();

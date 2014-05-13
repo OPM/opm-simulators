@@ -238,7 +238,7 @@ namespace Opm
                 const int cell = wells_->well_cells[j];
                 const double cell_depth = grid_.cell_centroids[dim * cell + dim - 1];
                 props_.matrix(1, &state.pressure()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
-                props_.density(1, &A[0], &rho[0]);
+                props_.density(1, &A[0], &cell, &rho[0]);
                 for (int phase = 0; phase < np; ++phase) {
                     const double s_phase = state.saturation()[np*cell + phase];
                     wellperf_wdp_[j] += s_phase*rho[phase]*grav*(cell_depth - ref_depth);
@@ -380,7 +380,7 @@ namespace Opm
                     // Gravity contribution, gravcontrib = rho*(face_z - cell_z) [per phase].
                     if (grav != 0.0) {
                         const double depth_diff = face_depth - grid_.cell_centroids[c[j]*dim + dim - 1];
-                        props_.density(1, &cell_A_[np*np*c[j]], &gravcontrib[j][0]);
+                        props_.density(1, &cell_A_[np*np*c[j]], &c[j], &gravcontrib[j][0]);
                         for (int p = 0; p < np; ++p) {
                             gravcontrib[j][p] *= depth_diff*grav;
                         }

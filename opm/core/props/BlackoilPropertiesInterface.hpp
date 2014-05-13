@@ -47,6 +47,10 @@ namespace Opm
         /// \return   N, the number of cells.
         virtual int numCells() const = 0;
 
+        /// Return an array containing the PVT table index for each
+        /// grid cell
+        virtual const int* cellPvtRegionIndex() const = 0;
+
         /// \return   Array of N porosity values.
         virtual const double* porosity() const = 0;
 
@@ -102,14 +106,16 @@ namespace Opm
         ///                    matrix A = RB^{-1} which relates z to u by z = Au. The matrices
         ///                    are assumed to be in Fortran order, and are typically the result
         ///                    of a call to the method matrix().
+        /// \param[in]  cells  The index of the grid cell of each data point.
         /// \param[out] rho    Array of nP density values, array must be valid before calling.
         virtual void density(const int n,
                              const double* A,
+                             const int* cells,
                              double* rho) const = 0;
 
         /// Densities of stock components at surface conditions.
         /// \return Array of P density values.
-        virtual const double* surfaceDensity() const = 0;
+        virtual const double* surfaceDensity(int regionIdx = 0) const = 0;
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  s      Array of nP saturation values.
