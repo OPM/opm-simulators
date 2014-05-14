@@ -94,6 +94,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
+	opm/autodiff/CPRPreconditioner.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
