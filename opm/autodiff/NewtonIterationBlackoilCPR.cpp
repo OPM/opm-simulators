@@ -20,9 +20,27 @@
 #include <config.h>
 
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
+
+#include "disable_warning_pragmas.h"
+
+#include <dune/istl/bvector.hh>
+#include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/operators.hh>
+#include <dune/istl/io.hh>
+#include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/preconditioners.hh>
+#include <dune/istl/schwarz.hh>
+#include <dune/istl/solvers.hh>
+#include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/kamg.hh>
+#include <dune/istl/paamg/pinfo.hh>
+
+#include "reenable_warning_pragmas.h"
+
 
 namespace Opm
 {
@@ -31,6 +49,12 @@ namespace Opm
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
+
+    typedef Dune::FieldVector<double, 1   > VectorBlockType;
+    typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
+    typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
+    typedef Dune::BlockVector<VectorBlockType>        Vector;
+
 
     namespace {
         /// Eliminate a variable via Schur complement.
@@ -53,7 +77,15 @@ namespace Opm
         /// If there are off-diagonal elements in the sparse
         /// structure, this function returns true if they are all
         /// equal to zero.
+        /// \param[in]  matrix  the matrix under consideration
+        /// \return             true if matrix is diagonal
         bool isDiagonal(const M& matrix);
+
+        /// Create a dune-istl matrix from an Eigen matrix.
+        /// \param[in]  matrix       input Eigen::SparseMatrix
+        /// \return                  output Dune::BCRSMatrix
+        Mat makeIstlMatrix(const Eigen::SparseMatrix<double, Eigen::RowMajor>& matrix);
+
     } // anonymous namespace
 
 
@@ -120,6 +152,54 @@ namespace Opm
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
                       "Linear solver convergence failure.");
         }
+
+
+
+        // Create ISTL matrix.
+        Mat A = makeIstlMatrix(matr);
+
+        // Construct operator, scalar product and vectors needed.
+        typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
+        Operator opA(A);
+        Dune::SeqScalarProduct<Vector> sp;
+        // Right hand side.
+        Vector b(opA.getmat().N());
+        std::copy_n(total_residual.value().data(), b.size(), b.begin());
+        // System solution
+        Vector x(opA.getmat().M());
+        x = 0.0;
+
+        // Construct preconditioner.
+        // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
+        typedef Opm::CPRPreconditioner<Mat,Vector,Vector> Preconditioner;
+        const double relax = 1.0;
+        const int nc = residual.material_balance_eq[0].size();
+        Preconditioner precond(A, nc, relax);
+
+        // Construct linear solver.
+        const double tolerance = 1e-8;
+        const int maxit = 5000;
+        const int verbosity = 1;
+        Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond, tolerance, maxit, verbosity);
+
+        /*
+        // Solve system.
+        Dune::InverseOperatorResult result;
+        linsolve.apply(x, b, result);
+
+        // Output results.
+        LinearSolverInterface::LinearSolverReport res;
+        res.converged = result.converged;
+        res.iterations = result.iterations;
+        res.residual_reduction = result.reduction;
+        */
+
+        // std::copy(x.begin(), x.end(), dx.data());
+
+
+
+
+
 
         // Compute full solution using the eliminated equations.
         // Recovery in inverse order of elimination.
@@ -264,6 +344,32 @@ namespace Opm
                 }
             }
             return true;
+        }
+
+
+
+
+        Mat makeIstlMatrix(const Eigen::SparseMatrix<double, Eigen::RowMajor>& matrix)
+        {
+            // Create ISTL matrix.
+            const int size = matrix.rows();
+            const int nonzeros = matrix.nonZeros();
+            const int* ia = matrix.outerIndexPtr();
+            const int* ja = matrix.innerIndexPtr();
+            const double* sa = matrix.valuePtr();
+            Mat A(size, size, nonzeros, Mat::row_wise);
+            for (Mat::CreateIterator row = A.createbegin(); row != A.createend(); ++row) {
+                const int ri = row.index();
+                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                    row.insert(ja[i]);
+                }
+            }
+            for (int ri = 0; ri < size; ++ri) {
+                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                    A[ri][ja[i]] = sa[i];
+                }
+            }
+            return A;
         }
 
 
