@@ -72,15 +72,15 @@ namespace Opm
 
           Constructor gets all parameters to operate the prec.
           \param A  The matrix to operate on.
-          \param ne The size of the elliptic top-left part
+          \param Ae The top-left elliptic part of A.
           \param w  The ILU0 relaxation factor.
         */
-        CPRPreconditioner (const M& A, const int ne, const field_type w)
-            : ILU(A) // copy A
+        CPRPreconditioner (const M& A, const M& Ae, const field_type relax)
+            : ILU_(A), // copy A (will be overwritten by ILU decomp)
+              Ae_(Ae),
+              relax_(relax)
         {
-            _w =w;
-            Dune::bilu0_decomposition(ILU);
-            // Ae = A(pindx, pindx);
+            Dune::bilu0_decomposition(ILU_);
         }
 
         /*!
@@ -101,8 +101,21 @@ namespace Opm
         */
         virtual void apply (X& v, const Y& d)
         {
-            Dune::bilu_backsolve(ILU,v,d);
-            v *= _w;
+            // Extract part of d corresponding to elliptic part.
+            Y de(Ae_.N());
+            std::copy_n(d.begin(), Ae_.N(), de.begin());
+
+            // Solve elliptic part, extend solution to full.
+            // "ve = Ae_ \ de;"
+            // "vfull = ve Extend full"
+
+            // Subtract elliptic residual from initial residual.
+            // "dmodified = d - A*vfull"
+
+            // Apply ILU0.
+            Dune::bilu_backsolve(ILU_, vilu, dmodified);
+            // "v = vfull + vilu;"
+            v *= relax_;
         }
 
         /*!
@@ -116,12 +129,12 @@ namespace Opm
         }
 
     private:
-        //! \brief The relaxation factor to use.
-        field_type _w;
         //! \brief The ILU0 decomposition of the matrix.
-        matrix_type ILU;
+        matrix_type ILU_;
         //! \brief The elliptic part of the matrix.
-        matrix_type Ae;
+        matrix_type Ae_;
+        //! \brief The relaxation factor to use.
+        field_type relax_;
     };
 
 } // namespace Opm

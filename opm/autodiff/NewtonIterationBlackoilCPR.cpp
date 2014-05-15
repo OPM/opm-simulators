@@ -158,6 +158,10 @@ namespace Opm
         // Create ISTL matrix.
         Mat A = makeIstlMatrix(matr);
 
+        // Create ISTL matrix for elliptic part.
+        const int nc = residual.material_balance_eq[0].size();
+        Mat Ae = makeIstlMatrix(matr.topLeftCorner(nc, nc));
+
         // Construct operator, scalar product and vectors needed.
         typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
         Operator opA(A);
@@ -173,8 +177,7 @@ namespace Opm
         // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
         typedef Opm::CPRPreconditioner<Mat,Vector,Vector> Preconditioner;
         const double relax = 1.0;
-        const int nc = residual.material_balance_eq[0].size();
-        Preconditioner precond(A, nc, relax);
+        Preconditioner precond(A, Ae, relax);
 
         // Construct linear solver.
         const double tolerance = 1e-8;
@@ -182,7 +185,6 @@ namespace Opm
         const int verbosity = 1;
         Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond, tolerance, maxit, verbosity);
 
-        /*
         // Solve system.
         Dune::InverseOperatorResult result;
         linsolve.apply(x, b, result);
@@ -192,7 +194,6 @@ namespace Opm
         res.converged = result.converged;
         res.iterations = result.iterations;
         res.residual_reduction = result.reduction;
-        */
 
         // std::copy(x.begin(), x.end(), dx.data());
 
