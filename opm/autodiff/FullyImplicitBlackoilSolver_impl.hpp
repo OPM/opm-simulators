@@ -210,6 +210,7 @@ namespace {
 } // Anonymous namespace
 
 
+
     template<class T>
     FullyImplicitBlackoilSolver<T>::
     FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,

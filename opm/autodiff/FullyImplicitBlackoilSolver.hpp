@@ -64,7 +64,6 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-
         FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
                                     const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
