@@ -21,6 +21,7 @@
 #include "config.h"
 #include <opm/core/linalg/LinearSolverPetsc.hpp>
 #include <opm/core/linalg/call_petsc.h>
+#include <petsc.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 namespace Opm
 {
@@ -32,7 +33,7 @@ namespace Opm
 
 
     LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
-        , ksp_type_("gmres")
+        : ksp_type_("gmres")
         , pc_type_("sor")
         , view_ksp_(false)
         , rtol_(1e-5)
@@ -90,7 +91,7 @@ namespace Opm
                 break;        
             }
         }
-        call_Petsc(size, nonzeros, ia, ja, sa, rhs, solution, argc_, argv_, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, view_ksp_);
+        call_Petsc(size, nonzeros, ia, ja, sa, rhs, solution, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, view_ksp_);
         LinearSolverReport rep = {};
         rep.converged = true;
         return rep;
