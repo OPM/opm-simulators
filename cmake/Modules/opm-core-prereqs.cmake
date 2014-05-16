@@ -25,6 +25,7 @@ set (opm-core_DEPS
 	"SuiteSparse COMPONENTS umfpack"
 	# solver
 	"SuperLU"
+	"Petsc"
 	# xml processing (for config parsing)
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)
