@@ -1905,15 +1905,34 @@ namespace {
         const PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         if (active_[ Gas ]) {
+
             // Oil/Gas or Water/Oil/Gas system
             const V so = s.col(pu.phase_pos[ Oil ]);
             const V sg = s.col(pu.phase_pos[ Gas ]);
 
-            for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                if (so[c] > 0)        { phaseCondition_[c].setFreeOil  (); }
-                if (sg[c] > 0)        { phaseCondition_[c].setFreeGas  (); }
-                if (active_[ Water ]) { phaseCondition_[c].setFreeWater(); }
+            // For the only water cases the gas saturation is
+            // used as an variable to avoid trivial RS/RV values
+            // The phase condition is therefore set to Freegas/Freeoil
+            // when only water is present.
+            if (active_[ Water ]) {
+                const double eps = std::sqrt(std::numeric_limits<double>::epsilon());
+                const V sw = s.col(pu.phase_pos[ Water ]);
+                auto watOnly = sw > (1 - eps);
+
+                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                    if (so[c] > 0 || watOnly[c]) { phaseCondition_[c].setFreeOil  (); }
+                    if (sg[c] > 0 || watOnly[c]) { phaseCondition_[c].setFreeGas  (); }
+                    phaseCondition_[c].setFreeWater();
+                }
             }
+            else{
+                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                    if (so[c] > 0)        { phaseCondition_[c].setFreeOil  (); }
+                    if (sg[c] > 0)        { phaseCondition_[c].setFreeGas  (); }
+                }
+            }
+
+
         }
         else {
             // Water/Oil system
