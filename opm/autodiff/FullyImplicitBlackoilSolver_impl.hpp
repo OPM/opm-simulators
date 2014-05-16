@@ -1224,7 +1224,7 @@ namespace {
         assert(varstart == dx.size());
 
         // Pressure update.
-        const double dpmaxrel = 0.8;
+        const double dpmaxrel = 0.2;
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
@@ -1417,7 +1417,8 @@ namespace {
 
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        const V bhp = bhp_old - dbhp;
+        const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
+        const V bhp = bhp_old - dbhp_limited;
         std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }
