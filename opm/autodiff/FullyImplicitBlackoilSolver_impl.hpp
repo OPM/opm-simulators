@@ -1275,13 +1275,13 @@ namespace {
             }
         }
 
-        const double drsmax = 1e9;
+        const double drsmaxrel = 0.2;
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
         if (disgas) {
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(drsmax);
+            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
