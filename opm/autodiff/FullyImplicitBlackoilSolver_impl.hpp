@@ -1235,32 +1235,45 @@ namespace {
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        const double dsmax = 0.3;
+        const double dsmax = 0.05;
         V so = one;
         V sw;
+        V sg;
 
-        if (active_[ Water ]) {
-            const int pos = pu.phase_pos[ Water ];
-            const V sw_old = s_old.col(pos);
-            const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
-            sw = (sw_old - dsw_limited).unaryExpr(Chop01());
-            so -= sw;
-            for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = sw[c];
+        {
+            V maxVal = zero;
+            V dso = zero;
+            if (active_[Water]){
+                maxVal = dsw.abs().max(maxVal);
+                dso = dso - dsw;
+            }
+
+            V dsg;
+            if (active_[Gas]){
+                dsg = isSg * dxvar - isRv * dsw;
+                maxVal = dsg.abs().max(maxVal);
+                dso = dso - dsg;
+            }
+
+            maxVal = dso.abs().max(maxVal);
+
+            V step = dsmax/maxVal;
+            step = step.min(1.);
+
+            if (active_[Water]) {
+                const int pos = pu.phase_pos[ Water ];
+                const V sw_old = s_old.col(pos);
+                sw = sw_old - step * dsw;
+                so -= sw;
+            }
+
+            if (active_[Gas]) {
+                const int pos = pu.phase_pos[ Gas ];
+                const V sg_old = s_old.col(pos);
+                sg = sg_old - step * dsg;
+                so -= sg;
             }
         }
-
-        V sg;
-        if (active_[Gas]) {
-            const int pos = pu.phase_pos[ Gas ];
-            const V sg_old = s_old.col(pos);
-            const V dsg = isSg * dxvar - isRv * dsw;
-            const V dsg_limited = sign(dsg) * dsg.abs().min(dsmax);
-            sg = sg_old - dsg_limited;
-            so -= sg;
-        }
-
-
 
         const double drsmax = 1e9;
         const double drvmax = 1e9;//% same as in Mrst
