@@ -49,7 +49,7 @@ namespace Opm
 #else
         solver_.reset(new LinearSolverPetsc);
 
-        OPM_THROW(std::runtime_error, "No linear solver available, you must have UMFPACK or dune-istl installed to use LinearSolverFactory.");
+        OPM_THROW(std::runtime_error, "No linear solver available, you must have UMFPACK , dune-istl or Petsc installed to use LinearSolverFactory.");
 #endif
     }
 
