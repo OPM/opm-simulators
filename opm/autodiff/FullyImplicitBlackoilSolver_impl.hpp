@@ -243,11 +243,11 @@ namespace {
         if (param.has("dp_max_rel")) {
             dp_max_rel_ = param.get<double>(std::string("dp_max_rel"));
         }
-        if (param.has("dp_max")) {
-            ds_max_ = param.get<double>("dp_max");
+        if (param.has("ds_max")) {
+            ds_max_ = param.get<double>("ds_max");
         }
         if (param.has("drs_max_rel")) {
-            ds_max_ = param.get<double>("drs_max_rel");
+            drs_max_rel_ = param.get<double>("drs_max_rel");
         }
     }
 
@@ -1693,13 +1693,13 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
-// #ifdef OPM_VERBOSE
+#ifdef OPM_VERBOSE
         std::cout << " residualWellFlux " << residualWellFlux << " residualWell " << residualWell << std::endl;
         std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
         std::cout << " MB " << fabs(BW_avg*RW_sum) << " " << fabs(BO_avg*RO_sum) << " " << fabs(BG_avg*RG_sum) << std::endl;
         std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
                   << " converged_Well " << converged_Well << " converged " << converged << std::endl;
-// #endif
+#endif
         return converged;
     }
 
