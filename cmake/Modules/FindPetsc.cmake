@@ -1,14 +1,13 @@
-# - Try to find Eigen3 lib
+# - Try to find Petsc lib
 #
 # This module supports requiring a minimum version, e.g. you can do
-#   find_package(Eigen3 3.1.2)
-# to require version 3.1.2 or newer of Eigen3.
+#   find_package(Petsc)
 #
 # Once done this will define
 #
-#  PETSC_FOUND - system has eigen lib with correct version
-#  PETSC_INCLUDE_DIRS - the eigen include directory
-#  PETSC_LIBRARIES   - the petsc library.
+#  PETSC_FOUND - system has Petsc lib with correct version
+#  PETSC_INCLUDE_DIRS - the Petsc include directory
+#  PETSC_LIBRARIES   - the Petsc library.
 
 # Copyright (c) 2006, 2007 Montel Laurent, <montel@kde.org>
 # Copyright (c) 2008, 2009 Gael Guennebaud, <g.gael@free.fr>
