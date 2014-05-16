@@ -23,6 +23,7 @@
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 #include "disable_warning_pragmas.h"
@@ -133,6 +134,22 @@ namespace Opm
         eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
         assert(int(eqs.size()) == np);
 
+        // Scale material balance equations.
+        const double matbalscale[3] = { 1.1169, 1.0031, 0.0031 }; // HACK hardcoded instead of computed.
+        for (int phase = 0; phase < np; ++phase) {
+            eqs[phase] = eqs[phase] * matbalscale[phase];
+        }
+
+        // Add material balance equations to form pressure equation
+        // in place of first balance equation.
+        for (int phase = 1; phase < np; ++phase) {
+            eqs[0] += eqs[phase];
+        }
+
+        // Scale pressure equation.
+        const double pscale = 200*unit::barsa;
+        eqs[0] = eqs[0] * pscale;
+
         // Combine in single block.
         ADB total_residual = eqs[0];
         for (int phase = 1; phase < np; ++phase) {
@@ -143,6 +160,7 @@ namespace Opm
         // Solve reduced system.
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
+        /*
         Opm::LinearSolverInterface::LinearSolverReport rep
             = linsolver_full_->solve(matr.rows(), matr.nonZeros(),
                                      matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
@@ -152,7 +170,7 @@ namespace Opm
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
                       "Linear solver convergence failure.");
         }
-
+        */
 
 
         // Create ISTL matrix.
@@ -180,10 +198,12 @@ namespace Opm
         Preconditioner precond(A, Ae, relax);
 
         // Construct linear solver.
-        const double tolerance = 1e-8;
+        const double tolerance = 1e-3;
         const int maxit = 5000;
         const int verbosity = 1;
-        Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond, tolerance, maxit, verbosity);
+        // Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond, tolerance, maxit, verbosity);
+        const int restart = 40;
+        Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
 
         // Solve system.
         Dune::InverseOperatorResult result;
@@ -195,7 +215,7 @@ namespace Opm
         res.iterations = result.iterations;
         res.residual_reduction = result.reduction;
 
-        // std::copy(x.begin(), x.end(), dx.data());
+        std::copy(x.begin(), x.end(), dx.data());
 
 
 

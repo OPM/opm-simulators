@@ -76,7 +76,8 @@ namespace Opm
           \param w  The ILU0 relaxation factor.
         */
         CPRPreconditioner (const M& A, const M& Ae, const field_type relax)
-            : ILU_(A), // copy A (will be overwritten by ILU decomp)
+            : A_(A),
+              ILU_(A), // copy A (will be overwritten by ILU decomp)
               Ae_(Ae),
               relax_(relax)
         {
@@ -103,18 +104,26 @@ namespace Opm
         {
             // Extract part of d corresponding to elliptic part.
             Y de(Ae_.N());
+            // Note: Assumes that the elliptic part comes first.
             std::copy_n(d.begin(), Ae_.N(), de.begin());
 
             // Solve elliptic part, extend solution to full.
-            // "ve = Ae_ \ de;"
-            // "vfull = ve Extend full"
+            Y ve = solveElliptic(de);
+            Y vfull(ILU_.N());
+            vfull = 0.0;
+            // Again assuming that the elliptic part comes first.
+            std::copy(ve.begin(), ve.end(), vfull.begin());
 
             // Subtract elliptic residual from initial residual.
-            // "dmodified = d - A*vfull"
+            // dmodified = d - A * vfull
+            Y dmodified = d;
+            A_.mmv(vfull, dmodified);
 
             // Apply ILU0.
+            Y vilu(ILU_.N());
             Dune::bilu_backsolve(ILU_, vilu, dmodified);
-            // "v = vfull + vilu;"
+            v = vfull;
+            v += vilu;
             v *= relax_;
         }
 
@@ -129,6 +138,40 @@ namespace Opm
         }
 
     private:
+        Y solveElliptic(Y& de)
+        {
+            // std::cout << "solveElliptic()" << std::endl;
+            // Construct operator, scalar product and vectors needed.
+            typedef Dune::MatrixAdapter<M,X,X> Operator;
+            Operator opAe(Ae_);
+            Dune::SeqScalarProduct<X> sp;
+            // Right hand side.
+            // System solution
+            X x(opAe.getmat().M());
+            x = 0.0;
+
+            // Construct preconditioner.
+            typedef typename Dune::SeqILU0<M,X,X> Preconditioner;
+            const double relax = 1.0;
+            Preconditioner precond(Ae_, relax);
+
+            // Construct linear solver.
+            const double tolerance = 1e-4;
+            const int maxit = 5000;
+            const int verbosity = 0;
+            Dune::BiCGSTABSolver<X> linsolve(opAe, sp, precond, tolerance, maxit, verbosity);
+
+            // Solve system.
+            Dune::InverseOperatorResult result;
+            linsolve.apply(x, de, result);
+            if (result.converged) {
+                // std::cout << "solveElliptic() successful!" << std::endl;
+            }
+            return x;
+        }
+
+        //! \brief The matrix for the full linear problem.
+        const matrix_type& A_;
         //! \brief The ILU0 decomposition of the matrix.
         matrix_type ILU_;
         //! \brief The elliptic part of the matrix.
