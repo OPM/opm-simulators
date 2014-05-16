@@ -35,6 +35,7 @@
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -209,10 +210,10 @@ namespace {
 } // Anonymous namespace
 
 
-
     template<class T>
     FullyImplicitBlackoilSolver<T>::
-    FullyImplicitBlackoilSolver(const Grid&                     grid ,
+    FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
+                                const Grid&                     grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
@@ -235,10 +236,20 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
+        , dp_max_rel_ ( 0.2 )
+        , ds_max_ ( 0.05 )
+        , drs_max_rel_ ( 0.2 )
     {
+        if (param.has("dp_max_rel")) {
+            dp_max_rel_ = param.get<double>(std::string("dp_max_rel"));
+        }
+        if (param.has("dp_max")) {
+            ds_max_ = param.get<double>("dp_max");
+        }
+        if (param.has("drs_max_rel")) {
+            ds_max_ = param.get<double>("drs_max_rel");
+        }
     }
-
-
 
 
     template<class T>
@@ -1224,7 +1235,7 @@ namespace {
         assert(varstart == dx.size());
 
         // Pressure update.
-        const double dpmaxrel = 0.2;
+        const double dpmaxrel = dpMaxRel();
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
@@ -1235,7 +1246,7 @@ namespace {
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        const double dsmax = 0.05;
+        const double dsmax = dsMax();
         V so = one;
         V sw;
         V sg;
@@ -1275,7 +1286,7 @@ namespace {
             }
         }
 
-        const double drsmaxrel = 0.2;
+        const double drsmaxrel = drsMaxRel();
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
         if (disgas) {
