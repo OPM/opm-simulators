@@ -122,6 +122,10 @@ namespace Opm {
                Oil   = BlackoilPropsAdInterface::Oil  ,
                Gas   = BlackoilPropsAdInterface::Gas  };
 
+        // the Newton relaxation type
+        enum RelaxType { DAMPEN, SOR };
+
+
         // Member data
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
@@ -272,7 +276,8 @@ namespace Opm {
                                       const int it, const double relaxRelTol,
                                       bool &oscillate, bool &stagnate ) const;
 
-        void stablizeNewton( V &dx, const bool &oscillate, const bool &stagnate, const int omega ) const;
+        void stablizeNewton(V &dx, const bool &oscillate, const bool &stagnate, const double omega,
+                            const RelaxType relax_type) const;
 
     };
 } // namespace Opm

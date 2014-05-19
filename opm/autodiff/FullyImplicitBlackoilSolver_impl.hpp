@@ -1708,10 +1708,27 @@ namespace {
     template<class T>
     void
     FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, const bool &oscillate, const bool &stagnate, 
-                                                    const int omega ) const {
-        const V dxold = dx; 
+                                                    const double omega, const RelaxType relax_type) const {
 
+        switch (relax_type) {
+            case DAMPEN:
+                if (omega == 1.) { 
+                    return;
+                }
+                dx = dx*omega;
+                return;
+            case SOR:
+                if (omega == 1.) {
+                    return;
+                }
+                const V dxold = dx;
+                dx = dx*omega + (1.-omega)*dxold;
+                return;
+            default:
+                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
+        }
 
+        return;
     }
 
     template<class T>
