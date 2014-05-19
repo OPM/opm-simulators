@@ -248,7 +248,6 @@ namespace {
          BlackoilState& x ,
          WellStateFullyImplicitBlackoil& xw)
     {
-        std::vector <std::vector<double>> residual_history;
         const V pvdt = geo_.poreVolume() / dt;
 
         classifyCondition(x);
@@ -259,6 +258,7 @@ namespace {
         }
 
         const int    maxit = 15;
+        std::vector <std::vector<double>> residual_history;
 
         assemble(pvdt, x, xw);
 
@@ -1588,11 +1588,39 @@ namespace {
     }
 
 
-    template<class T> 
+    template<class T>
     std::vector<double>
     FullyImplicitBlackoilSolver<T>::residuals() const
     {
         std::vector<double> residual;
+
+        std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
+        const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
+
+        for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
+            const double massBalanceResid = (*massBalanceIt).value().matrix().template lpNorm<Eigen::Infinity>();
+            if (!std::isfinite(massBalanceResid)) {
+                OPM_THROW(Opm::NumericalProblem,
+                          "Encountered a non-finite residual");
+            }
+            residual.push_back(massBalanceResid);
+        }
+
+        // the following residuals are not used in the oscillation detection now
+        const double wellFluxResid = residual_.well_flux_eq.value().matrix().template lpNorm<Eigen::Infinity>();
+        if (!std::isfinite(wellFluxResid)) {
+           OPM_THROW(Opm::NumericalProblem,
+               "Encountered a non-finite residual");
+        }
+        residual.push_back(wellFluxResid);
+
+        const double wellResid = residual_.well_eq.value().matrix().template lpNorm<Eigen::Infinity>();
+        if (!std::isfinite(wellResid)) {
+           OPM_THROW(Opm::NumericalProblem,
+               "Encountered a non-finite residual");
+        }
+        residual.push_back(wellResid);
+
         return residual;
     }
 
