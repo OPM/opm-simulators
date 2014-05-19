@@ -189,7 +189,6 @@ namespace Opm
         const double tolerance = 1e-3;
         const int maxit = 5000;
         const int verbosity = 1;
-        // Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond, tolerance, maxit, verbosity);
         const int restart = 40;
         Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
 
@@ -197,18 +196,13 @@ namespace Opm
         Dune::InverseOperatorResult result;
         linsolve.apply(x, b, result);
 
-        // Output results.
-        LinearSolverInterface::LinearSolverReport res;
-        res.converged = result.converged;
-        res.iterations = result.iterations;
-        res.residual_reduction = result.reduction;
+        // Check for failure of linear solver.
+        if (!result.converged) {
+            OPM_THROW(std::runtime_error, "Convergence failure for linear solver.");
+        }
 
+        // Copy solver output to dx.
         std::copy(x.begin(), x.end(), dx.data());
-
-
-
-
-
 
         // Compute full solution using the eliminated equations.
         // Recovery in inverse order of elimination.
