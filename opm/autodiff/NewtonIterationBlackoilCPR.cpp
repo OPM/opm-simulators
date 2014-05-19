@@ -160,18 +160,6 @@ namespace Opm
         // Solve reduced system.
         const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
-        /*
-        Opm::LinearSolverInterface::LinearSolverReport rep
-            = linsolver_full_->solve(matr.rows(), matr.nonZeros(),
-                                     matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                                     total_residual.value().data(), dx.data());
-        if (!rep.converged) {
-            OPM_THROW(std::runtime_error,
-                      "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
-                      "Linear solver convergence failure.");
-        }
-        */
-
 
         // Create ISTL matrix.
         Mat A = makeIstlMatrix(matr);
