@@ -206,6 +206,8 @@ namespace Opm {
         double
         residualNorm() const;
 
+        std::vector<double> residuals() const;
+
         ADB
         fluidViscosity(const int               phase,
                        const ADB&              p    ,

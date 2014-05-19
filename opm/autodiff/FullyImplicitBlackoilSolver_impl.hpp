@@ -248,6 +248,7 @@ namespace {
          BlackoilState& x ,
          WellStateFullyImplicitBlackoil& xw)
     {
+        std::vector <std::vector<double>> residual_history;
         const V pvdt = geo_.poreVolume() / dt;
 
         classifyCondition(x);
@@ -1587,6 +1588,13 @@ namespace {
     }
 
 
+    template<class T> 
+    std::vector<double>
+    FullyImplicitBlackoilSolver<T>::residuals() const
+    {
+        std::vector<double> residual;
+        return residual;
+    }
 
     template<class T>
     bool
