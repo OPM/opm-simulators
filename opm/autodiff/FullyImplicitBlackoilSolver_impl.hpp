@@ -277,6 +277,7 @@ namespace {
 
 
         bool converged = false;
+        double omega = 1.;
         const double r0  = residualNorm();
         {
             const std::vector<double> rLpInfinity = residuals();
@@ -303,15 +304,30 @@ namespace {
         linearSize += residual_.well_eq.size();
 
         std::cout << " the size of the linear system is " << linearSize << std::endl;
-        std::cin.ignore();
+        // std::cin.ignore();
 
         V dxOld = V::Zero(linearSize);
 
-        bool isOscillate;
-        bool isStagnat;
+        bool isOscillate = false;
+        bool isStagnate = false;
+        const double relaxRelTol = 0.2;
         
         while ((!converged) && (it < maxit)) {
             V dx = solveJacobianSystem();
+
+            detectNewtonOscillations(residual_history, it, relaxRelTol, isOscillate, isStagnate);
+
+            if (isOscillate) {
+                omega -= 0.1;
+                omega = std::max(omega, 0.5);
+                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl; 
+                // std::cin.ignore();
+            }
+
+            enum RelaxType relaxType = DAMPEN;
+            std::cout << " omega " << omega << std::endl;
+
+            stablizeNewton( dx, dxOld, isOscillate, isStagnate, omega, relaxType );
 
             updateState(dx, x, xw);
 
@@ -323,7 +339,6 @@ namespace {
                 residual_history.push_back(rLpInfinity);
             }
 
-            const double relaxRelTol = 0.2;
 
             converged = getConvergence(dt);
 
