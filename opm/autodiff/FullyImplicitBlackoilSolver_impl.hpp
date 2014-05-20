@@ -35,6 +35,7 @@
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -212,7 +213,8 @@ namespace {
 
     template<class T>
     FullyImplicitBlackoilSolver<T>::
-    FullyImplicitBlackoilSolver(const Grid&                     grid ,
+    FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
+                                const Grid&                     grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
@@ -230,15 +232,25 @@ namespace {
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
+        , dp_max_rel_ ( 1.0e9 )
+        , ds_max_ ( 0.2 )
+        , drs_max_rel_ ( 1.0e9 )
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
     {
+        if (param.has("dp_max_rel")) {
+            dp_max_rel_ = param.get<double>(std::string("dp_max_rel"));
+        }
+        if (param.has("ds_max")) {
+            ds_max_ = param.get<double>("ds_max");
+        }
+        if (param.has("drs_max_rel")) {
+            drs_max_rel_ = param.get<double>("drs_max_rel");
+        }
     }
-
-
 
 
     template<class T>
@@ -1251,7 +1263,7 @@ namespace {
         assert(varstart == dx.size());
 
         // Pressure update.
-        const double dpmaxrel = 0.8;
+        const double dpmaxrel = dpMaxRel();
         const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
@@ -1262,40 +1274,53 @@ namespace {
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        const double dsmax = 0.3;
+        const double dsmax = dsMax();
         V so = one;
         V sw;
+        V sg;
 
-        if (active_[ Water ]) {
-            const int pos = pu.phase_pos[ Water ];
-            const V sw_old = s_old.col(pos);
-            const V dsw_limited = sign(dsw) * dsw.abs().min(dsmax);
-            sw = (sw_old - dsw_limited).unaryExpr(Chop01());
-            so -= sw;
-            for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = sw[c];
+        {
+            V maxVal = zero;
+            V dso = zero;
+            if (active_[Water]){
+                maxVal = dsw.abs().max(maxVal);
+                dso = dso - dsw;
+            }
+
+            V dsg;
+            if (active_[Gas]){
+                dsg = isSg * dxvar - isRv * dsw;
+                maxVal = dsg.abs().max(maxVal);
+                dso = dso - dsg;
+            }
+
+            maxVal = dso.abs().max(maxVal);
+
+            V step = dsmax/maxVal;
+            step = step.min(1.);
+
+            if (active_[Water]) {
+                const int pos = pu.phase_pos[ Water ];
+                const V sw_old = s_old.col(pos);
+                sw = sw_old - step * dsw;
+                so -= sw;
+            }
+
+            if (active_[Gas]) {
+                const int pos = pu.phase_pos[ Gas ];
+                const V sg_old = s_old.col(pos);
+                sg = sg_old - step * dsg;
+                so -= sg;
             }
         }
 
-        V sg;
-        if (active_[Gas]) {
-            const int pos = pu.phase_pos[ Gas ];
-            const V sg_old = s_old.col(pos);
-            const V dsg = isSg * dxvar - isRv * dsw;
-            const V dsg_limited = sign(dsg) * dsg.abs().min(dsmax);
-            sg = sg_old - dsg_limited;
-            so -= sg;
-        }
-
-
-
-        const double drsmax = 1e9;
+        const double drsmaxrel = drsMaxRel();
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
         if (disgas) {
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(drsmax);
+            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
@@ -1431,7 +1456,8 @@ namespace {
 
         // Bhp update.
         const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-        const V bhp = bhp_old - dbhp;
+        const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
+        const V bhp = bhp_old - dbhp_limited;
         std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
     }

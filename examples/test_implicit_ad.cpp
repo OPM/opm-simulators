@@ -105,7 +105,7 @@ try
     Opm::LinearSolverFactory linsolver(param);
     Opm::NewtonIterationBlackoilSimple fis_solver(linsolver);
 
-    Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(*g, props, geo, 0, *wells, fis_solver);
+    Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param, *g, props, geo, 0, *wells, fis_solver);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);
