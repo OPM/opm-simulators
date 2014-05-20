@@ -306,6 +306,9 @@ namespace {
         std::cin.ignore();
 
         V dxOld = V::Zero(linearSize);
+
+        bool isOscillate;
+        bool isStagnat;
         
         while ((!converged) && (it < maxit)) {
             V dx = solveJacobianSystem();
@@ -319,6 +322,8 @@ namespace {
                 const std::vector<double> rLpInfinity = residuals();
                 residual_history.push_back(rLpInfinity);
             }
+
+            const double relaxRelTol = 0.2;
 
             converged = getConvergence(dt);
 
