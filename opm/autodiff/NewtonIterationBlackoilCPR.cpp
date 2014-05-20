@@ -108,12 +108,8 @@ namespace Opm
 
     /// Construct a system solver.
     /// \param[in] linsolver   linear solver to use
-    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
+    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& /*param*/)
     {
-        parameter::ParameterGroup cpr_elliptic = param.getDefault("cpr_elliptic", param);
-        linsolver_elliptic_.reset(new LinearSolverFactory(cpr_elliptic));
-        parameter::ParameterGroup cpr_full = param.getDefault("cpr_full", param);
-        linsolver_full_.reset(new LinearSolverFactory(cpr_full));
     }
 
 
