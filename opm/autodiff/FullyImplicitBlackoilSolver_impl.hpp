@@ -232,14 +232,14 @@ namespace {
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
+        , dp_max_rel_ ( 1.0e9 )
+        , ds_max_ ( 0.2 )
+        , drs_max_rel_ ( 1.0e9 )
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
-        , dp_max_rel_ ( 0.2 )
-        , ds_max_ ( 0.05 )
-        , drs_max_rel_ ( 0.2 )
     {
         if (param.has("dp_max_rel")) {
             dp_max_rel_ = param.get<double>(std::string("dp_max_rel"));
