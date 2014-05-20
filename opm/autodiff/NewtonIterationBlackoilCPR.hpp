@@ -32,6 +32,9 @@ namespace Opm
     /// This class solves the fully implicit black-oil system by
     /// applying a Constrained Pressure Residual preconditioning
     /// strategy.
+    /// The approach is similar to the one described in
+    /// "Preconditioning for Efficiently Applying Algebraic Multigrid
+    /// in Fully Implicit Reservoir Simulations" by Gries et al (SPE 163608).
     class NewtonIterationBlackoilCPR : public NewtonIterationBlackoilInterface
     {
     public:
