@@ -458,8 +458,8 @@ namespace {
 
         // Initial well rates.
         assert (not xw.wellRates().empty());
-        // Need to reshuffle well rates, from ordered by wells, then phase,
-        // to ordered by phase, then wells.
+        // Need to reshuffle well rates, from phase running fastest
+        // to wells running fastest.
         const int nw = wells_.number_of_wells;
         // The transpose() below switches the ordering.
         const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
@@ -1059,7 +1059,9 @@ namespace {
                     break;
                 case SURFACE_RATE:
                     for (int phase = 0; phase < np; ++phase) {
-                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                        if (distr[phase] > 0.0) {
+                            xw.wellRates()[np*w + phase] = target * distr[phase];
+                        }
                     }
                     rates_changed = true;
                     break;
@@ -1076,7 +1078,11 @@ namespace {
             bhp = ADB::function(new_bhp, bhp.derivative());
         }
         if (rates_changed) {
-            ADB::V new_qs = Eigen::Map<ADB::V>(xw.wellRates().data(), np*nw);
+            // Need to reshuffle well rates, from phase running fastest
+            // to wells running fastest.
+            // The transpose() below switches the ordering.
+            const DataBlock wrates = Eigen::Map<const DataBlock>(xw.wellRates().data(), nw, np).transpose();
+            const ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
             well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
         }
     }
