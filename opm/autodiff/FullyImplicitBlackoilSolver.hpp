@@ -272,9 +272,9 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt);
 
-        const double dpMaxRel () const { return dp_max_rel_; }
-        const double dsMax () const { return ds_max_; }
-        const double drsMaxRel () const { return drs_max_rel_; }
+        const double dpMaxRel() const { return dp_max_rel_; }
+        const double dsMax() const { return ds_max_; }
+        const double drsMaxRel() const { return drs_max_rel_; }
 
     };
 } // namespace Opm

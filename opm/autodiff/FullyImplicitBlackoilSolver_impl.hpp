@@ -242,13 +242,13 @@ namespace {
                         ADB::null() } )
     {
         if (param.has("dp_max_rel")) {
-            dp_max_rel_ = param.get<double>(std::string("dp_max_rel"));
+            dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
         }
         if (param.has("ds_max")) {
-            ds_max_ = param.get<double>("ds_max");
+            ds_max_ = param.getDefault("ds_max", ds_max_);
         }
         if (param.has("drs_max_rel")) {
-            drs_max_rel_ = param.get<double>("drs_max_rel");
+            drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
         }
     }
 
