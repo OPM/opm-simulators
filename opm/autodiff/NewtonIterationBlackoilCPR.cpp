@@ -82,6 +82,19 @@ namespace Opm
         /// \return             true if matrix is diagonal
         bool isDiagonal(const M& matrix);
 
+        /// Form an elliptic system of equations.
+        /// \param[in]       num_phases  the number of fluid phases
+        /// \param[in]       eqs         the equations
+        /// \param[out]      A           the resulting full system matrix
+        /// \param[out]      b           the right hand side
+        /// This function will deal with the first num_phases
+        /// equations in eqs, and return a matrix A for the full
+        /// system that has a elliptic upper left corner, if possible.
+        void formEllipticSystem(const int num_phases,
+                                const std::vector<ADB>& eqs,
+                                Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                V& b);
+
         /// Create a dune-istl matrix from an Eigen matrix.
         /// \param[in]  matrix       input Eigen::SparseMatrix
         /// \return                  output Dune::BCRSMatrix
@@ -140,41 +153,34 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Add material balance equations to form pressure equation
-        // in place of first balance equation.
-        for (int phase = 1; phase < np; ++phase) {
-            eqs[0] += eqs[phase];
-        }
+        // Add material balance equations (or other manipulations) to
+        // form pressure equation in top left of full system.
+        Eigen::SparseMatrix<double, Eigen::RowMajor> A;
+        V b;
+        formEllipticSystem(np, eqs, A, b);
 
         // Scale pressure equation.
         const double pscale = 200*unit::barsa;
-        eqs[0] = eqs[0] * pscale;
-
-        // Combine in single block.
-        ADB total_residual = eqs[0];
-        for (int phase = 1; phase < np; ++phase) {
-            total_residual = vertcat(total_residual, eqs[phase]);
-        }
-        total_residual = collapseJacs(total_residual);
+        const int nc = residual.material_balance_eq[0].size();
+        A.topRows(nc) *= pscale;
+        b.topRows(nc) *= pscale;
 
         // Solve reduced system.
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
-        SolutionVector dx(SolutionVector::Zero(total_residual.size()));
+        SolutionVector dx(SolutionVector::Zero(b.size()));
 
         // Create ISTL matrix.
-        Mat A = makeIstlMatrix(matr);
+        Mat istlA = makeIstlMatrix(A);
 
         // Create ISTL matrix for elliptic part.
-        const int nc = residual.material_balance_eq[0].size();
-        Mat Ae = makeIstlMatrix(matr.topLeftCorner(nc, nc));
+        Mat istlAe = makeIstlMatrix(A.topLeftCorner(nc, nc));
 
         // Construct operator, scalar product and vectors needed.
         typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
-        Operator opA(A);
+        Operator opA(istlA);
         Dune::SeqScalarProduct<Vector> sp;
         // Right hand side.
-        Vector b(opA.getmat().N());
-        std::copy_n(total_residual.value().data(), b.size(), b.begin());
+        Vector istlb(opA.getmat().N());
+        std::copy_n(b.data(), istlb.size(), istlb.begin());
         // System solution
         Vector x(opA.getmat().M());
         x = 0.0;
@@ -183,7 +189,7 @@ namespace Opm
         // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
         typedef Opm::CPRPreconditioner<Mat,Vector,Vector> Preconditioner;
         const double relax = 1.0;
-        Preconditioner precond(A, Ae, relax);
+        Preconditioner precond(istlA, istlAe, relax);
 
         // Construct linear solver.
         const double tolerance = 1e-3;
@@ -194,7 +200,7 @@ namespace Opm
 
         // Solve system.
         Dune::InverseOperatorResult result;
-        linsolve.apply(x, b, result);
+        linsolve.apply(x, istlb, result);
 
         // Check for failure of linear solver.
         if (!result.converged) {
@@ -348,6 +354,108 @@ namespace Opm
             }
             return true;
         }
+
+
+
+
+        /// Form an elliptic system of equations.
+        /// \param[in]       num_phases  the number of fluid phases
+        /// \param[in]       eqs         the equations
+        /// \param[out]      A           the resulting full system matrix
+        /// \param[out]      b           the right hand side
+        /// This function will deal with the first num_phases
+        /// equations in eqs, and return a matrix A for the full
+        /// system that has a elliptic upper left corner, if possible.
+        void formEllipticSystem(const int num_phases,
+                                const std::vector<ADB>& eqs_in,
+                                Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                V& b)
+        {
+            if (num_phases != 3) {
+                OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases for now.");
+            }
+
+            // A concession to MRST, to obtain more similar behaviour:
+            // swap the first two equations, so that oil is first, then water.
+            auto eqs = eqs_in;
+            std::swap(eqs[0], eqs[1]);
+
+            // Characterize the material balance equations.
+            const int n = eqs[0].size();
+            const double ratio_limit = 0.01;
+            typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> Block;
+            // The l1 block indicates if the equation for a given cell and phase is
+            // sufficiently strong on the diagonal.
+            Block l1 = Block::Zero(n, num_phases);
+            for (int phase = 0; phase < num_phases; ++phase) {
+                const M& J = eqs[phase].derivative()[0];
+                V dj = J.diagonal().cwiseAbs();
+                V sod = V::Zero(n);
+                for (int elem = 0; elem < n; ++elem) {
+                    sod(elem) = J.col(elem).cwiseAbs().sum() - dj(elem);
+                }
+                l1.col(phase) = (dj/sod > ratio_limit).cast<double>();
+            }
+
+            // By default, replace first equation with sum of all phase equations.
+            // Build helper vectors.
+            V l21 = V::Zero(n);
+            V l22 = V::Ones(n);
+            V l31 = V::Zero(n);
+            V l33 = V::Ones(n);
+
+            // If the first phase diagonal is not strong enough, we need further treatment.
+            // Then the first equation will be the sum of the remaining equations,
+            // and we swap the first equation into one of their slots.
+            for (int elem = 0; elem < n; ++elem) {
+                if (!l1(elem, 0)) {
+                    const double l12x = l1(elem, 1);
+                    const double l13x = l1(elem, 2);
+                    const bool allzero = (l12x + l13x == 0);
+                    if (allzero) {
+                        l1(elem, 0) = 1;
+                    } else {
+                        if (l12x >= l13x) {
+                            l21(elem) = 1;
+                            l22(elem) = 0;
+                        } else {
+                            l31(elem) = 1;
+                            l33(elem) = 0;
+                        }
+                    }
+                }
+            }
+
+            // Construct the sparse matrix L that does the swaps and sums.
+            Span i1(n, 1, 0);
+            Span i2(n, 1, n);
+            Span i3(n, 1, 2*n);
+            std::vector< Eigen::Triplet<double> > t;
+            t.reserve(7*n);
+            for (int ii = 0; ii < n; ++ii) {
+                t.emplace_back(i1[ii], i1[ii], l1(ii));
+                t.emplace_back(i1[ii], i2[ii], l1(ii+n));
+                t.emplace_back(i1[ii], i3[ii], l1(ii+2*n));
+                t.emplace_back(i2[ii], i1[ii], l21(ii));
+                t.emplace_back(i2[ii], i2[ii], l22(ii));
+                t.emplace_back(i3[ii], i1[ii], l31(ii));
+                t.emplace_back(i3[ii], i3[ii], l33(ii));
+            }
+            M L(3*n, 3*n);
+            L.setFromTriplets(t.begin(), t.end());
+
+            // Combine in single block.
+            ADB total_residual = eqs[0];
+            for (int phase = 1; phase < num_phases; ++phase) {
+                total_residual = vertcat(total_residual, eqs[phase]);
+            }
+            total_residual = collapseJacs(total_residual);
+
+            // Create output as product of L with equations.
+            A = L * total_residual.derivative()[0];
+            b = L * total_residual.value().matrix();
+        }
+
 
 
 
