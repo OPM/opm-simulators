@@ -31,6 +31,7 @@ struct Wells;
 
 namespace Opm {
 
+    namespace parameter { class ParameterGroup; }
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
@@ -56,13 +57,15 @@ namespace Opm {
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
+        /// \param[in] param       parameters
         /// \param[in] grid             grid data structure
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const Grid&                     grid ,
+        FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
+                                    const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
@@ -137,6 +140,9 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         const M                         grav_;
+        double                          dp_max_rel_;
+        double                          ds_max_;
+        double                          drs_max_rel_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -266,6 +272,9 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt);
 
+        const double dpMaxRel() const { return dp_max_rel_; }
+        const double dsMax() const { return ds_max_; }
+        const double drsMaxRel() const { return drs_max_rel_; }
 
     };
 } // namespace Opm
