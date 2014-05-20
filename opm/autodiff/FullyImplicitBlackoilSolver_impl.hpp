@@ -433,10 +433,10 @@ namespace {
 
             for (int c = 0; c < nc ; c++ ) {
                 const PhasePresence cond = phaseCondition()[c];
-                if ( (!cond.hasFreeGas()) && disgas ) {
+                if ( (!cond.hasFreeGas()) && !cond.hasOnlyWater() && disgas ) {
                     isRs[c] = 1;
                 }
-                else if ( (!cond.hasFreeOil()) && vapoil ) {
+                else if ( (!cond.hasFreeOil()) && !cond.hasOnlyWater() && vapoil ) {
                     isRv[c] = 1;
                 }
                 else {
@@ -1197,10 +1197,10 @@ namespace {
         const std::vector<PhasePresence> conditions = phaseCondition();
         for (int c = 0; c < nc; c++ ) {
             const PhasePresence cond = conditions[c];
-            if ( (!cond.hasFreeGas()) && disgas ) {
+            if ( (!cond.hasFreeGas()) && !cond.hasOnlyWater() && disgas ) {
                 isRs[c] = 1;
             }
-            else if ( (!cond.hasFreeOil()) && vapoil ) {
+            else if ( (!cond.hasFreeOil()) && !cond.hasOnlyWater() && vapoil ) {
                 isRv[c] = 1;
             }
             else {
@@ -1910,26 +1910,20 @@ namespace {
             const V so = s.col(pu.phase_pos[ Oil ]);
             const V sg = s.col(pu.phase_pos[ Gas ]);
 
-            // For the only water cases the gas saturation is
-            // used as an variable to avoid trivial RS/RV values
-            // The phase condition is therefore set to Freegas/Freeoil
-            // when only water is present.
             if (active_[ Water ]) {
                 const double eps = std::sqrt(std::numeric_limits<double>::epsilon());
                 const V sw = s.col(pu.phase_pos[ Water ]);
                 auto watOnly = sw > (1 - eps);
 
                 for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                    if (so[c] > 0 || watOnly[c]) { phaseCondition_[c].setFreeOil  (); }
-                    if (sg[c] > 0 || watOnly[c]) { phaseCondition_[c].setFreeGas  (); }
+                    if (watOnly[c]) { phaseCondition_[c].setOnlyWater(); }
                     phaseCondition_[c].setFreeWater();
                 }
             }
-            else{
-                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                    if (so[c] > 0)        { phaseCondition_[c].setFreeOil  (); }
-                    if (sg[c] > 0)        { phaseCondition_[c].setFreeGas  (); }
-                }
+
+            for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                if (so[c] > 0)        { phaseCondition_[c].setFreeOil  (); }
+                if (sg[c] > 0)        { phaseCondition_[c].setFreeGas  (); }
             }
 
 
