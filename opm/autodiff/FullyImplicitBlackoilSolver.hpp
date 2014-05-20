@@ -276,7 +276,7 @@ namespace Opm {
                                       const int it, const double relaxRelTol,
                                       bool &oscillate, bool &stagnate ) const;
 
-        void stablizeNewton(V &dx, const bool &oscillate, const bool &stagnate, const double omega,
+        void stablizeNewton(V &dx, V &dxOld, const bool &oscillate, const bool &stagnate, const double omega,
                             const RelaxType relax_type) const;
 
     };

@@ -278,8 +278,25 @@ namespace {
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
 
+        // compute the size of the linear system
+        int linearSize = 0;
+
+        std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
+        const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
+
+        for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
+            linearSize += (*massBalanceIt).size();
+        }
+        linearSize += residual_.well_flux_eq.size();
+        linearSize += residual_.well_eq.size();
+
+        std::cout << " the size of the linear system is " << linearSize << std::endl;
+        std::cin.ignore();
+
+        V dxOld = V::Zero(linearSize);
+        
         while ((!converged) && (it < maxit)) {
-            const V dx = solveJacobianSystem();
+            V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
 
@@ -1707,8 +1724,11 @@ namespace {
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, const bool &oscillate, const bool &stagnate, 
+    FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, V &dxOld, const bool &oscillate, const bool &stagnate, 
                                                     const double omega, const RelaxType relax_type) const {
+
+        const V tempDxOld = dxOld;
+        dxOld = dx;
 
         switch (relax_type) {
             case DAMPEN:
@@ -1721,8 +1741,8 @@ namespace {
                 if (omega == 1.) {
                     return;
                 }
-                const V dxold = dx;
-                dx = dx*omega + (1.-omega)*dxold;
+                // const V dxold = dx;
+                dx = dx*omega + (1.-omega)*tempDxOld;
                 return;
             default:
                 OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
