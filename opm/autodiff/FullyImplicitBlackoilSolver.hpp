@@ -282,8 +282,7 @@ namespace Opm {
                                       const int it, const double relaxRelTol,
                                       bool &oscillate, bool &stagnate ) const;
 
-        void stablizeNewton(V &dx, V &dxOld, const bool &oscillate, const bool &stagnate, const double omega,
-                            const RelaxType relax_type) const;
+        void stablizeNewton(V &dx, V &dxOld, const double omega, const RelaxType relax_type) const;
         const double dpMaxRel () const { return dp_max_rel_; }
         const double dsMax () const { return ds_max_; }
         const double drsMaxRel () const { return drs_max_rel_; }

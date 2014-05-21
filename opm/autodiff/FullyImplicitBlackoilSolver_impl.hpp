@@ -1700,11 +1700,11 @@ namespace {
     void
     FullyImplicitBlackoilSolver<T>::detectNewtonOscillations(const std::vector<std::vector<double>> residual_history,
                                                              const int it, const double relaxRelTol,
-                                                             bool &oscillate, bool &stagnate ) const {
-        // It looks like that in MRST detection of oscillation in two primary variables results in the determination
-        // of the detection of oscillation for the solver.
-        // Here, we decide that the oscillation will be reported when oscillation for one primary variable is detected.
-
+                                                             bool &oscillate, bool &stagnate ) const
+    {
+        // The detection of oscillation in two primary variable results in the report of the detection
+        // of oscillation for the solver 
+        // Stagnate is not used for any treatment here.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         oscillate = false;
@@ -1731,8 +1731,8 @@ namespace {
                                            residual_history[it][Water] );
             oscillateWater = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
 
-            double relChange3 = std::fabs((residual_history[it-1][Water] - residual_history[it - 2][Water]) /
-                                           residual_history[it-2][Water] );
+            double relChange3 = std::fabs((residual_history[it - 1][Water] - residual_history[it - 2][Water]) /
+                                           residual_history[it - 2][Water] );
             stagnateWater = relChange3 < 1.e-3;
         }
 
@@ -1744,8 +1744,8 @@ namespace {
                                            residual_history[it][Oil] );
             oscillateOil = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
 
-            double relChange3 = std::fabs((residual_history[it-1][Oil] - residual_history[it - 2][Oil]) /
-                                           residual_history[it-2][Oil] );
+            double relChange3 = std::fabs((residual_history[it - 1][Oil] - residual_history[it - 2][Oil]) /
+                                           residual_history[it - 2][Oil] );
             stagnateOil = relChange3 < 1.e-3;
         }
 
@@ -1757,8 +1757,8 @@ namespace {
                                            residual_history[it][Gas] );
             oscillateGas = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
 
-            double relChange3 = std::fabs((residual_history[it-1][Gas] - residual_history[it - 2][Gas]) /
-                                           residual_history[it-2][Gas] );
+            double relChange3 = std::fabs((residual_history[it - 1][Gas] - residual_history[it - 2][Gas]) /
+                                           residual_history[it - 2][Gas] );
             stagnateGas = relChange3 < 1.e-3;
         }
 
@@ -1770,9 +1770,8 @@ namespace {
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, V &dxOld, const bool &oscillate, const bool &stagnate, 
-                                                    const double omega, const RelaxType relax_type) const {
-
+    FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, V &dxOld, const double omega, 
+                                                    const RelaxType relax_type) const {
         const V tempDxOld = dxOld;
         dxOld = dx;
 
@@ -1787,7 +1786,6 @@ namespace {
                 if (omega == 1.) {
                     return;
                 }
-                // const V dxold = dx;
                 dx = dx*omega + (1.-omega)*tempDxOld;
                 return;
             default:
