@@ -368,7 +368,7 @@ namespace Opm
                                 V& b)
         {
             if (num_phases != 3) {
-                OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases for now.");
+                OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases.");
             }
 
             // A concession to MRST, to obtain more similar behaviour:
