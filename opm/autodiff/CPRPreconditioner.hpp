@@ -89,10 +89,8 @@ namespace Opm
 
           \copydoc Preconditioner::pre(X&,Y&)
         */
-        virtual void pre (X& x, Y& b)
+        virtual void pre (X& /*x*/, Y& /*b*/)
         {
-            DUNE_UNUSED_PARAMETER(x);
-            DUNE_UNUSED_PARAMETER(b);
         }
 
         /*!
@@ -132,9 +130,8 @@ namespace Opm
 
           \copydoc Preconditioner::post(X&)
         */
-        virtual void post (X& x)
+        virtual void post (X& /*x*/)
         {
-            DUNE_UNUSED_PARAMETER(x);
         }
 
     private:
