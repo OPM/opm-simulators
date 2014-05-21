@@ -104,7 +104,7 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::ParserPtr parser(new Opm::Parser());
-        Opm::DeckConstPtr deck = parser->parseFile( deck_filename );
+        deck = parser->parseFile( deck_filename );
         eclipseState.reset(new EclipseState(deck));
 
         // Grid init
