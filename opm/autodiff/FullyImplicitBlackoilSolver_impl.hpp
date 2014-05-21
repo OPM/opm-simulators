@@ -333,7 +333,6 @@ namespace {
                 residual_history.push_back(rLpInfinity);
             }
 
-
             converged = getConvergence(dt);
 
             it += 1;
