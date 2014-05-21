@@ -321,7 +321,7 @@ namespace {
             enum RelaxType relaxType = DAMPEN;
             std::cout << " omega " << omega << std::endl;
 
-            stablizeNewton( dx, dxOld, isOscillate, isStagnate, omega, relaxType );
+            stablizeNewton(dx, dxOld, omega, relaxType);
 
             updateState(dx, x, xw);
 
