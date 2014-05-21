@@ -38,6 +38,7 @@
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -141,9 +142,13 @@ try
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Linear solver.
-    LinearSolverFactory linsolver(param);
-    NewtonIterationBlackoilSimple fis_solver(linsolver);
+    // Solver for Newton iterations.
+    std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
+    if (param.getDefault("use_cpr", false)) {
+        fis_solver.reset(new NewtonIterationBlackoilCPR(param));
+    } else {
+        fis_solver.reset(new NewtonIterationBlackoilSimple(param));
+    }
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
@@ -212,7 +217,7 @@ try
                                                  *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
-                                                 fis_solver,
+                                                 *fis_solver,
                                                  grav);
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 

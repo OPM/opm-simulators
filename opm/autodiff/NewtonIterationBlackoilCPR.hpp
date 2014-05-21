@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED
-#define OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED
+#ifndef OPM_NEWTONITERATIONBLACKOILCPR_HEADER_INCLUDED
+#define OPM_NEWTONITERATIONBLACKOILCPR_HEADER_INCLUDED
 
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -30,16 +30,20 @@ namespace Opm
 {
 
     /// This class solves the fully implicit black-oil system by
-    /// simply concatenating the Jacobian matrices and passing the
-    /// resulting system to a linear solver. The linear solver used
-    /// can be passed in as a constructor argument.
-    class NewtonIterationBlackoilSimple : public NewtonIterationBlackoilInterface
+    /// applying a Constrained Pressure Residual preconditioning
+    /// strategy.
+    /// The approach is similar to the one described in
+    /// "Preconditioning for Efficiently Applying Algebraic Multigrid
+    /// in Fully Implicit Reservoir Simulations" by Gries et al (SPE 163608).
+    class NewtonIterationBlackoilCPR : public NewtonIterationBlackoilInterface
     {
     public:
         /// Construct a system solver.
-        /// \param[in] param   parameters controlling the behaviour and
-        ///                    choice of linear solver.
-        NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param);
+        /// \param[in] param   parameters controlling the behaviour of
+        ///                    the preconditioning and choice of
+        ///                    linear solvers.
+        ///                    Note: parameters currently unused.
+        NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param);
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -47,12 +51,8 @@ namespace Opm
         /// \param[in] residual   residual object containing A and b.
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
-
-    private:
-        std::unique_ptr<LinearSolverInterface> linsolver_;
     };
 
 } // namespace Opm
 
-
-#endif // OPM_NEWTONITERATIONBLACKOILSIMPLE_HEADER_INCLUDED
+#endif // OPM_NEWTONITERATIONBLACKOILCPR_HEADER_INCLUDED
