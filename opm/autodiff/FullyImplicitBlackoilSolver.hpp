@@ -151,6 +151,7 @@ namespace Opm {
         double                          relax_max_;
         double                          relax_increment_;
         double                          relax_rel_tol_;
+        int                             max_iter_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -295,6 +296,7 @@ namespace Opm {
         double relaxMax() const { return relax_max_; };
         double relaxIncrement() const { return relax_increment_; };
         double relaxRelTol() const { return relax_rel_tol_; };
+        double maxIter() const { return max_iter_; }
 
     };
 } // namespace Opm

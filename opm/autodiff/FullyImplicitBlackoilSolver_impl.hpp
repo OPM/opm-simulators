@@ -239,6 +239,7 @@ namespace {
         , relax_max_ (0.5)
         , relax_increment_ (0.1)
         , relax_rel_tol_ (0.2)
+        , max_iter_ (15)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -249,6 +250,7 @@ namespace {
         ds_max_ = param.getDefault("ds_max", ds_max_);
         drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
         relax_max_ = param.getDefault("relax_max", relax_max_);
+        max_iter_ = param.getDefault("max_iter", max_iter_);
 
         std::string relaxtion_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxtion_type.compare(std::string("dampen")) == 0) {
@@ -277,7 +279,6 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const int    maxit = 15;
 
         std::vector<std::vector<double>> residual_history;
 
@@ -319,7 +320,7 @@ namespace {
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
 
-        while ((!converged) && (it < maxit)) {
+        while ((!converged) && (it < maxIter())) {
             V dx = solveJacobianSystem();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
