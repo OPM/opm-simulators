@@ -263,7 +263,7 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const int    maxit = 15;
+        const int    maxit = 25;
 
         std::vector<std::vector<double>> residual_history;
 
@@ -285,22 +285,22 @@ namespace {
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
 
-        // compute the size of the linear system
-        int linearSize = 0;
+        // compute the size of the non-linear system
+        int sizeNonLinear = 0;
 
         std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
 
         for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            linearSize += (*massBalanceIt).size();
+            sizeNonLinear += (*massBalanceIt).size();
         }
-        linearSize += residual_.well_flux_eq.size();
-        linearSize += residual_.well_eq.size();
+        sizeNonLinear += residual_.well_flux_eq.size();
+        sizeNonLinear += residual_.well_eq.size();
 
-        std::cout << " the size of the linear system is " << linearSize << std::endl;
+        std::cout << " the size of the linear system is " << sizeNonLinear<< std::endl;
         // std::cin.ignore();
 
-        V dxOld = V::Zero(linearSize);
+        V dxOld = V::Zero(sizeNonLinear);
 
         bool isOscillate = false;
         bool isStagnate = false;
@@ -1704,66 +1704,53 @@ namespace {
         // The detection of oscillation in two primary variable results in the report of the detection
         // of oscillation for the solver 
         // Stagnate is not used for any treatment here.
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         oscillate = false;
         stagnate = false;
 
-        if ( it < 3 ) {
+        if ( it < 2 ) {
             return;
         }
 
-        bool oscillateWater = false;
-        bool oscillateOil  = false;
-        bool oscillateGas = false;
+        int oscillatePhase = 0;
 
-        bool stagnateWater = true;
-        bool stagnateOil = true;
-        bool stagnateGas = true;
+        stagnate = true;
 
+        // bool oscillateWater = false;
+        // bool oscillateOil  = false;
+        // bool oscillateGas = false;
 
-        if ( active_[Water]) {
-            const int pos = pu.phase_pos[Water];
-            double relChange1 = std::fabs((residual_history[it][Water] - residual_history[it - 2][Water]) /
-                                           residual_history[it][Water] );
-            double relChange2 = std::fabs((residual_history[it][Water] - residual_history[it - 1][Water]) /
-                                           residual_history[it][Water] );
-            oscillateWater = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+        // bool stagnateWater = true;
+        // bool stagnateOil = true;
+        // bool stagnateGas = true;
 
-            double relChange3 = std::fabs((residual_history[it - 1][Water] - residual_history[it - 2][Water]) /
-                                           residual_history[it - 2][Water] );
-            stagnateWater = relChange3 < 1.e-3;
+        std::cout << " residual_history " << std::endl;
+        for( int i = it-2; i <=it; i++ ){
+            for ( int j = 0; j<5; j++ ){
+                std::cout << " " << residual_history[i][j];
+            }
+            std::cout << std::endl;
+        }
+        for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
+            if (active_[phaseIdx]) {
+                double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                               residual_history[it][phaseIdx]);
+                double relChange2 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 1][phaseIdx]) /
+                                               residual_history[it][phaseIdx]);
+                oscillatePhase += (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+
+                double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                               residual_history[it - 2][phaseIdx]);
+                stagnate = stagnate && (relChange3 > 1.e-3);
+
+                std::cout << " relChange1 " << relChange1 << " relChange2 " << relChange2
+                          << " relChange3 " << relChange3 << std::endl;
+            }
         }
 
-        if ( active_[Oil]) {
-            const int pos = pu.phase_pos[Oil];
-            double relChange1 = std::fabs((residual_history[it][Oil] - residual_history[it - 2][Oil]) /
-                                           residual_history[it][Oil] );
-            double relChange2 = std::fabs((residual_history[it][Oil] - residual_history[it - 1][Oil]) /
-                                           residual_history[it][Oil] );
-            oscillateOil = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+        oscillate = (oscillatePhase > 1);
 
-            double relChange3 = std::fabs((residual_history[it - 1][Oil] - residual_history[it - 2][Oil]) /
-                                           residual_history[it - 2][Oil] );
-            stagnateOil = relChange3 < 1.e-3;
-        }
-
-        if ( active_[Gas]) {
-            const int pos = pu.phase_pos[Gas];
-            double relChange1 = std::fabs((residual_history[it][Gas] - residual_history[it - 2][Gas]) /
-                                           residual_history[it][Gas] );
-            double relChange2 = std::fabs((residual_history[it][Gas] - residual_history[it - 1][Gas]) /
-                                           residual_history[it][Gas] );
-            oscillateGas = (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
-
-            double relChange3 = std::fabs((residual_history[it - 1][Gas] - residual_history[it - 2][Gas]) /
-                                           residual_history[it - 2][Gas] );
-            stagnateGas = relChange3 < 1.e-3;
-        }
-
-        stagnate = stagnateWater && stagnateOil && stagnateGas;
-        oscillate = ( oscillateWater + oscillateOil + oscillateGas ) > 1;
-
+        std::cin.ignore();
     }
 
 
