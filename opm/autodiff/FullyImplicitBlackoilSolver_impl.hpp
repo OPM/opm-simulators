@@ -235,6 +235,7 @@ namespace {
         , dp_max_rel_ ( 1.0e9 )
         , ds_max_ ( 0.2 )
         , drs_max_rel_ ( 1.0e9 )
+        , max_iter_ (15)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -244,6 +245,7 @@ namespace {
         dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_ = param.getDefault("ds_max", ds_max_);
         drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
+        max_iter_ = param.getDefault("max_iter", max_iter_);
     }
 
 
@@ -263,7 +265,6 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const int    maxit = 15;
 
         assemble(pvdt, x, xw);
 
@@ -278,7 +279,7 @@ namespace {
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
 
-        while ((!converged) && (it < maxit)) {
+        while ((!converged) && (it < maxIter())) {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);

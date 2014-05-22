@@ -143,6 +143,7 @@ namespace Opm {
         double                          dp_max_rel_;
         double                          ds_max_;
         double                          drs_max_rel_;
+        int                             max_iter_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -275,6 +276,7 @@ namespace Opm {
         double dpMaxRel() const { return dp_max_rel_; }
         double dsMax() const { return ds_max_; }
         double drsMaxRel() const { return drs_max_rel_; }
+        double maxIter() const { return max_iter_; }
 
     };
 } // namespace Opm
