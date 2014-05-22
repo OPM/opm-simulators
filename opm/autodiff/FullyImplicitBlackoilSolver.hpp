@@ -148,6 +148,9 @@ namespace Opm {
         double                          ds_max_;
         double                          drs_max_rel_;
         enum RelaxType                  relax_type_;
+        double                          relax_max_;
+        double                          relax_increment_;
+        double                          relax_rel_tol_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -289,6 +292,9 @@ namespace Opm {
         double dsMax() const { return ds_max_; }
         double drsMaxRel() const { return drs_max_rel_; }
         enum RelaxType relaxType() const { return relax_type_; }
+        double relaxMax() const { return relax_max_; };
+        double relaxIncrement() const { return relax_increment_; };
+        double relaxRelTol() const { return relax_rel_tol_; };
 
     };
 } // namespace Opm

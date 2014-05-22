@@ -235,7 +235,10 @@ namespace {
         , dp_max_rel_ (1.0e9)
         , ds_max_ (0.2)
         , drs_max_rel_ (1.0e9)
-        , relax_type_ ( DAMPEN )
+        , relax_type_ (DAMPEN)
+        , relax_max_ (0.5)
+        , relax_increment_ (0.1)
+        , relax_rel_tol_ (0.2)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -245,6 +248,16 @@ namespace {
         dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_ = param.getDefault("ds_max", ds_max_);
         drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
+        relax_max_ = param.getDefault("relax_max", relax_max_);
+
+        std::string relaxtion_type = param.getDefault("relax_type", std::string("dampen"));
+        if (relaxtion_type.compare(std::string("dampen")) == 0) {
+            relax_type_ = DAMPEN;
+        } else if (relaxtion_type.compare(std::string("sor")) == 0) {
+            relax_type_ = SOR;
+        } else {
+            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxtion_type);
+        }
     }
 
 
@@ -299,27 +312,23 @@ namespace {
         sizeNonLinear += residual_.well_eq.size();
 
         std::cout << " the size of the linear system is " << sizeNonLinear<< std::endl;
-        // std::cin.ignore();
 
         V dxOld = V::Zero(sizeNonLinear);
 
         bool isOscillate = false;
         bool isStagnate = false;
-        const double relaxRelTol = 0.2;
         const enum RelaxType relaxtype = relaxType();
         
         while ((!converged) && (it < maxit)) {
             V dx = solveJacobianSystem();
 
-            detectNewtonOscillations(residual_history, it, relaxRelTol, isOscillate, isStagnate);
+            detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
 
             if (isOscillate) {
-                omega -= 0.1;
-                omega = std::max(omega, 0.5);
+                omega -= relaxIncrement();
+                omega = std::max(omega, relaxMax());
                 std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl; 
             }
-
-            std::cout << " omega " << omega << std::endl;
 
             stablizeNewton(dx, dxOld, omega, relaxtype);
 
@@ -1841,13 +1850,11 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
-// #ifdef OPM_VERBOSE
-        std::cout << " residualWellFlux " << residualWellFlux << " residualWell " << residualWell << std::endl;
+#ifdef OPM_VERBOSE
         std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
-        std::cout << " MB " << fabs(BW_avg*RW_sum) << " " << fabs(BO_avg*RO_sum) << " " << fabs(BG_avg*RG_sum) << std::endl;
         std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
                   << " converged_Well " << converged_Well << " converged " << converged << std::endl;
-// #endif
+#endif
         return converged;
     }
 
