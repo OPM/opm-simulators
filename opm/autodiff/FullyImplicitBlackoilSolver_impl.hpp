@@ -1703,6 +1703,7 @@ namespace {
     {
         // The detection of oscillation in two primary variable results in the report of the detection
         // of oscillation for the solver 
+        // Only the saturations are used in detection for the black oil model. 
         // Stagnate is not used for any treatment here.
 
         oscillate = false;
@@ -1713,8 +1714,6 @@ namespace {
         }
 
         int oscillatePhase = 0;
-
-        stagnate = true;
 
         // bool oscillateWater = false;
         // bool oscillateOil  = false;
@@ -1741,14 +1740,18 @@ namespace {
 
                 double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
                                                residual_history[it - 2][phaseIdx]);
-                stagnate = stagnate && (relChange3 > 1.e-3);
+                stagnate = stagnate || (relChange3 > 1.e-3);
 
                 std::cout << " relChange1 " << relChange1 << " relChange2 " << relChange2
                           << " relChange3 " << relChange3 << std::endl;
             }
         }
 
+        stagnate = !stagnate;
+
         oscillate = (oscillatePhase > 1);
+
+        std::cout << " oscillate " << oscillate << " stagnate " << stagnate << std::endl;
 
         std::cin.ignore();
     }
