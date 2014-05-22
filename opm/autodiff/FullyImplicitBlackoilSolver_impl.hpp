@@ -318,7 +318,7 @@ namespace {
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
-        
+
         while ((!converged) && (it < maxit)) {
             V dx = solveJacobianSystem();
 
@@ -327,7 +327,7 @@ namespace {
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl; 
+                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
             }
 
             stablizeNewton(dx, dxOld, omega, relaxtype);
@@ -1711,8 +1711,8 @@ namespace {
                                                              bool &oscillate, bool &stagnate ) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
-        // of oscillation for the solver 
-        // Only the saturations are used in detection for the black oil model. 
+        // of oscillation for the solver.
+        // Only the saturations are used for oscillation detection for the black oil model.
         // Stagnate is not used for any treatment here.
 
         oscillate = false;
@@ -1745,14 +1745,14 @@ namespace {
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::stablizeNewton(V &dx, V &dxOld, const double omega, 
+    FullyImplicitBlackoilSolver<T>::stablizeNewton(V &dx, V &dxOld, const double omega,
                                                     const RelaxType relax_type) const {
         const V tempDxOld = dxOld;
         dxOld = dx;
 
         switch (relax_type) {
             case DAMPEN:
-                if (omega == 1.) { 
+                if (omega == 1.) {
                     return;
                 }
                 dx = dx*omega;
