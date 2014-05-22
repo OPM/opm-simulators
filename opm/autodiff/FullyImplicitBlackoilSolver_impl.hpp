@@ -312,8 +312,6 @@ namespace {
         sizeNonLinear += residual_.well_flux_eq.size();
         sizeNonLinear += residual_.well_eq.size();
 
-        std::cout << " the size of the linear system is " << sizeNonLinear<< std::endl;
-
         V dxOld = V::Zero(sizeNonLinear);
 
         bool isOscillate = false;
