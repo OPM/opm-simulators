@@ -232,9 +232,10 @@ namespace {
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
-        , dp_max_rel_ ( 1.0e9 )
-        , ds_max_ ( 0.2 )
-        , drs_max_rel_ ( 1.0e9 )
+        , dp_max_rel_ (1.0e9)
+        , ds_max_ (0.2)
+        , drs_max_rel_ (1.0e9)
+        , relax_type_ ( DAMPEN )
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -305,6 +306,7 @@ namespace {
         bool isOscillate = false;
         bool isStagnate = false;
         const double relaxRelTol = 0.2;
+        const enum RelaxType relaxtype = relaxType();
         
         while ((!converged) && (it < maxit)) {
             V dx = solveJacobianSystem();
@@ -315,13 +317,11 @@ namespace {
                 omega -= 0.1;
                 omega = std::max(omega, 0.5);
                 std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl; 
-                // std::cin.ignore();
             }
 
-            enum RelaxType relaxType = DAMPEN;
             std::cout << " omega " << omega << std::endl;
 
-            stablizeNewton(dx, dxOld, omega, relaxType);
+            stablizeNewton(dx, dxOld, omega, relaxtype);
 
             updateState(dx, x, xw);
 
@@ -1715,21 +1715,6 @@ namespace {
 
         int oscillatePhase = 0;
 
-        // bool oscillateWater = false;
-        // bool oscillateOil  = false;
-        // bool oscillateGas = false;
-
-        // bool stagnateWater = true;
-        // bool stagnateOil = true;
-        // bool stagnateGas = true;
-
-        std::cout << " residual_history " << std::endl;
-        for( int i = it-2; i <=it; i++ ){
-            for ( int j = 0; j<5; j++ ){
-                std::cout << " " << residual_history[i][j];
-            }
-            std::cout << std::endl;
-        }
         for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
             if (active_[phaseIdx]) {
                 double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
@@ -1741,25 +1726,17 @@ namespace {
                 double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
                                                residual_history[it - 2][phaseIdx]);
                 stagnate = stagnate || (relChange3 > 1.e-3);
-
-                std::cout << " relChange1 " << relChange1 << " relChange2 " << relChange2
-                          << " relChange3 " << relChange3 << std::endl;
             }
         }
 
         stagnate = !stagnate;
-
         oscillate = (oscillatePhase > 1);
-
-        std::cout << " oscillate " << oscillate << " stagnate " << stagnate << std::endl;
-
-        std::cin.ignore();
     }
 
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::stablizeNewton( V &dx, V &dxOld, const double omega, 
+    FullyImplicitBlackoilSolver<T>::stablizeNewton(V &dx, V &dxOld, const double omega, 
                                                     const RelaxType relax_type) const {
         const V tempDxOld = dxOld;
         dxOld = dx;

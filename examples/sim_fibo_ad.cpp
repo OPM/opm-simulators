@@ -222,7 +222,6 @@ try
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         ++simtimer;
-        std::cin.ignore();
 
         outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         fullReport += episodeReport;
