@@ -102,8 +102,7 @@ try
     double grav[] = { 0.0, 0.0 };
     Opm::DerivedGeology geo(*g, props, grav);
 
-    Opm::LinearSolverFactory linsolver(param);
-    Opm::NewtonIterationBlackoilSimple fis_solver(linsolver);
+    Opm::NewtonIterationBlackoilSimple fis_solver(param);
 
     Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param, *g, props, geo, 0, *wells, fis_solver);
 
