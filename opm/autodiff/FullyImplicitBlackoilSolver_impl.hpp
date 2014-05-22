@@ -277,7 +277,7 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const int    maxit = 25;
+        const int    maxit = 15;
 
         std::vector<std::vector<double>> residual_history;
 
