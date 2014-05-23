@@ -311,7 +311,6 @@ namespace {
             V dx = solveJacobianSystem();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
-            std::cout << " oscillate " << isOscillate << " stagnate " << isStagnate << std::endl;
 
             if (isOscillate) {
                 omega -= relaxIncrement();
@@ -319,8 +318,6 @@ namespace {
                 std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
             }
 
-            // The dxOld is updated with dx in stablizeNewton().
-            // If omega is equal to 1., no relaxtion will be appiled in stablizeNewton().
             stablizeNewton(dx, dxOld, omega, relaxtype);
 
             updateState(dx, x, xw);
