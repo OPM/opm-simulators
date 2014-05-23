@@ -288,10 +288,8 @@ namespace {
         bool converged = false;
         double omega = 1.;
         const double r0  = residualNorm();
-        {
-            const std::vector<double> rLpInfinity = residuals();
-            residual_history.push_back(rLpInfinity);
-        }
+
+        residual_history.push_back(residuals());
 
         converged = getConvergence(dt);
 
@@ -313,6 +311,7 @@ namespace {
             V dx = solveJacobianSystem();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
+            std::cout << " oscillate " << isOscillate << " stagnate " << isStagnate << std::endl;
 
             if (isOscillate) {
                 omega -= relaxIncrement();
@@ -320,8 +319,8 @@ namespace {
                 std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
             }
 
-            // The dxOld is updated with dx in stablizeNewton.
-            // If omega is equal to 1., no relaxtion will be appiled.
+            // The dxOld is updated with dx in stablizeNewton().
+            // If omega is equal to 1., no relaxtion will be appiled in stablizeNewton().
             stablizeNewton(dx, dxOld, omega, relaxtype);
 
             updateState(dx, x, xw);
@@ -329,10 +328,8 @@ namespace {
             assemble(pvdt, x, xw);
 
             const double r = residualNorm();
-            {
-                const std::vector<double> rLpInfinity = residuals();
-                residual_history.push_back(rLpInfinity);
-            }
+
+            residual_history.push_back(residuals());
 
             converged = getConvergence(dt);
 
@@ -1707,13 +1704,13 @@ namespace {
         // Only the saturations are used for oscillation detection for the black oil model.
         // Stagnate is not used for any treatment here.
 
-        oscillate = false;
-        stagnate = false;
-
         if ( it < 2 ) {
+            oscillate = false;
+            stagnate = false;
             return;
         }
 
+        stagnate = true;
         int oscillatePhase = 0;
 
         for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
@@ -1726,11 +1723,12 @@ namespace {
 
                 double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
                                                residual_history[it - 2][phaseIdx]);
-                stagnate = stagnate || (relChange3 > 1.e-3);
+                if (relChange3 > 1.e-3) {
+                    stagnate = false;
+                }
             }
         }
 
-        stagnate = !stagnate;
         oscillate = (oscillatePhase > 1);
     }
 
@@ -1738,7 +1736,11 @@ namespace {
     template<class T>
     void
     FullyImplicitBlackoilSolver<T>::stablizeNewton(V& dx, V& dxOld, const double omega,
-                                                    const RelaxType relax_type) const {
+                                                    const RelaxType relax_type) const
+    {
+        // The dxOld is updated with dx.
+        // If omega is equal to 1., no relaxtion will be appiled.
+
         const V tempDxOld = dxOld;
         dxOld = dx;
 
