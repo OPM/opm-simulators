@@ -283,11 +283,11 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt);
 
-        void detectNewtonOscillations(const std::vector<std::vector<double>> &residual_history,
+        void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,
-                                      bool &oscillate, bool &stagnate) const;
+                                      bool& oscillate, bool& stagnate) const;
 
-        void stablizeNewton(V &dx, V &dxOld, const double omega, const RelaxType relax_type) const;
+        void stablizeNewton(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
 
         double dpMaxRel() const { return dp_max_rel_; }
         double dsMax() const { return ds_max_; }

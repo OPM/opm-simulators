@@ -1705,9 +1705,9 @@ namespace {
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::detectNewtonOscillations(const std::vector<std::vector<double>> &residual_history,
+    FullyImplicitBlackoilSolver<T>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                                              const int it, const double relaxRelTol,
-                                                             bool &oscillate, bool &stagnate) const
+                                                             bool& oscillate, bool& stagnate) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
         // of oscillation for the solver.
@@ -1744,7 +1744,7 @@ namespace {
 
     template<class T>
     void
-    FullyImplicitBlackoilSolver<T>::stablizeNewton(V &dx, V &dxOld, const double omega,
+    FullyImplicitBlackoilSolver<T>::stablizeNewton(V& dx, V& dxOld, const double omega,
                                                     const RelaxType relax_type) const {
         const V tempDxOld = dxOld;
         dxOld = dx;
