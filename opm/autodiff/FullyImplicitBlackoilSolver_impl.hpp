@@ -252,13 +252,13 @@ namespace {
         relax_max_ = param.getDefault("relax_max", relax_max_);
         max_iter_ = param.getDefault("max_iter", max_iter_);
 
-        std::string relaxtion_type = param.getDefault("relax_type", std::string("dampen"));
-        if (relaxtion_type.compare(std::string("dampen")) == 0) {
+        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
+        if (relaxation_type == "dampen") {
             relax_type_ = DAMPEN;
-        } else if (relaxtion_type.compare(std::string("sor")) == 0) {
+        } else if (relaxation_type == "sor") {
             relax_type_ = SOR;
         } else {
-            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxtion_type);
+            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
         }
     }
 
