@@ -21,10 +21,102 @@
 #include "config.h"
 #include <opm/core/linalg/LinearSolverPetsc.hpp>
 #include <opm/core/linalg/call_petsc.h>
+#include <unordered_map>
 #include <petsc.h>
 #include <opm/core/utility/ErrorMacros.hpp>
+
 namespace Opm
 {
+    
+namespace{
+
+    class KSPTypeMap {
+    public:
+        explicit
+        KSPTypeMap(const std::string& default_type = "gmres")
+            : default_type_(default_type)
+        {
+            type_map_.insert(std::make_pair("richardson", KSPRICHARDSON));
+            type_map_.insert(std::make_pair("chebyshev", KSPCHEBYSHEV));
+            type_map_.insert(std::make_pair("cg", KSPCG));
+            type_map_.insert(std::make_pair("bicgs", KSPBICG));
+            type_map_.insert(std::make_pair("gmres", KSPGMRES));
+            type_map_.insert(std::make_pair("fgmres", KSPFGMRES));
+            type_map_.insert(std::make_pair("dgmres", KSPDGMRES));
+            type_map_.insert(std::make_pair("gcr", KSPGCR));
+            type_map_.insert(std::make_pair("bcgs", KSPBCGS));
+            type_map_.insert(std::make_pair("cgs", KSPCGS));
+            type_map_.insert(std::make_pair("tfqmr", KSPTFQMR));
+            type_map_.insert(std::make_pair("tcqmr", KSPTCQMR));
+            type_map_.insert(std::make_pair("cr", KSPCR));
+            type_map_.insert(std::make_pair("preonly", KSPPREONLY));
+        }
+          
+        KSPType 
+        find(const std::string& type) const
+        {
+            Map::const_iterator it = type_map_.find(type);
+
+            if (it == type_map_.end()) {
+                it = type_map_.find(default_type_);
+            }
+        
+            if (it == type_map_.end()) {
+                OPM_THROW(std::runtime_error, "Unknown KSPType: '" << type << "'");
+            }
+            return it->second;
+        }
+    private:
+        typedef std::unordered_map<std::string, KSPType> Map;
+
+        std::string default_type_;
+        Map type_map_;
+    };
+
+
+    class PCTypeMap {
+    public:
+        explicit
+        PCTypeMap(const std::string& default_type = "jacobi")
+            : default_type_(default_type)
+        {
+            type_map_.insert(std::make_pair("jacobi", PCJACOBI));
+            type_map_.insert(std::make_pair("bjacobi", PCBJACOBI));
+            type_map_.insert(std::make_pair("sor", PCSOR));
+            type_map_.insert(std::make_pair("eisenstat", PCEISENSTAT));
+            type_map_.insert(std::make_pair("icc", PCICC));
+            type_map_.insert(std::make_pair("ilu", PCILU));
+            type_map_.insert(std::make_pair("asm", PCASM));
+            type_map_.insert(std::make_pair("gamg", PCGAMG));
+            type_map_.insert(std::make_pair("ksp", PCKSP));
+            type_map_.insert(std::make_pair("composite", PCCOMPOSITE));
+            type_map_.insert(std::make_pair("lu", PCLU));
+            type_map_.insert(std::make_pair("cholesky", PCCHOLESKY));
+            type_map_.insert(std::make_pair("none", PCNONE));
+        }
+            
+        PCType 
+        find(const std::string& type) const
+        {
+            Map::const_iterator it = type_map_.find(type);
+
+            if (it == type_map_.end()) {
+                it = type_map_.find(default_type_);
+            }
+       
+            if (it == type_map_.end()) {
+                OPM_THROW(std::runtime_error, "Unknown PCType: '" << type << "'");
+            }
+            return it->second;
+        }
+    private:
+        typedef std::unordered_map<std::string, PCType> Map;
+
+        std::string default_type_;
+        Map type_map_;
+    };
+
+} // anonymous namespace.
 
     LinearSolverPetsc::LinearSolverPetsc()
     {
@@ -35,7 +127,7 @@ namespace Opm
     LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
         : ksp_type_("gmres")
         , pc_type_("sor")
-        , view_ksp_(false)
+        , ksp_view_(false)
         , rtol_(1e-5)
         , atol_(1e-50)
         , dtol_(1e5)
@@ -46,7 +138,7 @@ namespace Opm
         PetscInitialize(&argc, &argv, (char*)0, "Petsc interface for OPM!\n");
         ksp_type_ = (param.getDefault("ksp_type", std::string(ksp_type_)));
         pc_type_ = (param.getDefault("pc_type", std::string(pc_type_)));
-        view_ksp_ = (param.getDefault("ksp_view", int(view_ksp_)));
+        ksp_view_ = (param.getDefault("ksp_view", int(ksp_view_)));
         rtol_ = param.getDefault("ksp_rtol", rtol_);
         atol_ = param.getDefault("ksp_atol", atol_);
         dtol_ = param.getDefault("ksp_dtol", dtol_);
@@ -60,7 +152,6 @@ namespace Opm
     }
 
 
-
     LinearSolverInterface::LinearSolverReport
     LinearSolverPetsc::solve(const int size,
                                const int nonzeros,
@@ -71,27 +162,13 @@ namespace Opm
                                double* solution,
                                const boost::any&) const
     {
-        int ksp_type=4;
-        int pc_type=0;
-        const std::string ksp[]={"richardson", "chebyshev", "cg", "bicg", 
-                                 "gmres", "fgmres", "dgmres", "gcr", "bcgs", 
-                                 "cgs", "tfqmr", "tcqmr", "cr", "lsqr", "preonly"};
-        const std::string pc[] = {"jacobi", "bjacobi", "sor", "eisenstat", 
-                                  "icc", "ilu", "pcasm", "gamg", "ksp", 
-                                  "composit", "lu", "cholesky", "none"};
-        for (int i = 0; i < 15; ++i){
-            if (ksp[i] == ksp_type_){
-                ksp_type=i;
-                break;        
-            }
-        }
-        for (int i = 0; i < 13; ++i){
-            if (pc[i] == pc_type_){
-                pc_type=i;
-                break;        
-            }
-        }
-        call_Petsc(size, nonzeros, ia, ja, sa, rhs, solution, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, view_ksp_);
+        KSPTypeMap ksp(ksp_type_);
+        KSPType ksp_type = ksp.find(ksp_type_);
+        PCTypeMap pc(pc_type_);
+        PCType pc_type = pc.find(pc_type_);
+        
+        call_Petsc(size, nonzeros, ia, ja, sa, rhs, solution, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_);
+
         LinearSolverReport rep = {};
         rep.converged = true;
         return rep;
