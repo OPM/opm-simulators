@@ -301,16 +301,7 @@ namespace {
                   << std::setw(18) << r0 << std::endl;
 
         // compute the size of the non-linear system
-        int sizeNonLinear = 0;
-
-        std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
-        const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
-
-        for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            sizeNonLinear += (*massBalanceIt).size();
-        }
-        sizeNonLinear += residual_.well_flux_eq.size();
-        sizeNonLinear += residual_.well_eq.size();
+        const int sizeNonLinear = residual_.sizeNonLinear();
 
         V dxOld = V::Zero(sizeNonLinear);
 

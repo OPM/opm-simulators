@@ -62,6 +62,9 @@ namespace Opm
         /// well either a rate specification or bottom hole
         /// pressure specification.
         ADB well_eq;
+
+        /// The size of the non-linear system.
+        int sizeNonLinear() const;
     };
 
 } // namespace Opm
