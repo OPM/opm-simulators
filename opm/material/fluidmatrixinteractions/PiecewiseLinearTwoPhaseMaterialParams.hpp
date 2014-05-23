@@ -71,7 +71,7 @@ public:
                  origSampleIdx < SwSamples_.size() / 2;
                  ++ origSampleIdx)
             {
-                size_t newSampleIdx = SwSamples_.size() - origSampleIdx;
+                size_t newSampleIdx = SwSamples_.size() - origSampleIdx - 1;
 
                 std::swap(SwSamples_[origSampleIdx], SwSamples_[newSampleIdx]);
                 std::swap(pcwnSamples_[origSampleIdx], pcwnSamples_[newSampleIdx]);
