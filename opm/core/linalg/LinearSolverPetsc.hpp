@@ -81,7 +81,7 @@ namespace Opm
     private:
         std::string     ksp_type_;
         std::string     pc_type_;
-        int             view_ksp_;
+        int             ksp_view_;
         double          rtol_;
         double          atol_;
         double          dtol_;
