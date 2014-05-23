@@ -298,7 +298,6 @@ namespace {
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
 
-        // compute the size of the non-linear system
         const int sizeNonLinear = residual_.sizeNonLinear();
 
         V dxOld = V::Zero(sizeNonLinear);
