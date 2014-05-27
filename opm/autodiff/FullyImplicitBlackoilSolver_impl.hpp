@@ -532,8 +532,8 @@ namespace {
             std::vector<int> all_cells = buildAllCells(nc);
             ADB rsSat = fluidRsSat(state.pressure,all_cells);
             ADB rvSat = fluidRvSat(state.pressure,all_cells);
-            ADB xvar = vars[ nextvar++ ];
             if (active_[ Gas]) {
+                ADB xvar = vars[ nextvar++ ];
                 ADB sg = isSg*xvar + isRv* so;
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
