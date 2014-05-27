@@ -732,18 +732,18 @@ namespace {
         // The extra terms in the accumulation part of the equation are already handled.
         if (active_[ Oil ] && active_[ Gas ]) {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
+            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
+
             const UpwindSelector<double> upwindOil(grid_, ops_,
                                                 rq_[po].head.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
-            residual_.material_balance_eq[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
-
-            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
             const UpwindSelector<double> upwindGas(grid_, ops_,
                                                 rq_[pg].head.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
-            residual_.material_balance_eq[ Oil ] += ops_.div * (rv_face * rq_[pg].mflux);
+            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
+            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
 
             // DUMP(residual_.material_balance_eq[ Gas ]);
 
