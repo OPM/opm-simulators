@@ -74,7 +74,9 @@ namespace Opm
                                        const RockCompressibility* rock_comp_props,
                                        WellsManager& wells_manager,
                                        NewtonIterationBlackoilInterface& linsolver,
-                                       const double* gravity);
+                                       const double* gravity,
+                                       const bool disgas,
+                                       const bool vapoil );
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will

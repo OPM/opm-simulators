@@ -70,7 +70,9 @@ namespace Opm {
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const NewtonIterationBlackoilInterface& linsolver);
+                                    const NewtonIterationBlackoilInterface& linsolver,
+                                    const bool has_disgas,
+                                    const bool has_vapoil );
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -144,6 +146,8 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         const M                         grav_;
+        const bool has_disgas_;
+        const bool has_vapoil_;
         double                          dp_max_rel_;
         double                          ds_max_;
         double                          drs_max_rel_;

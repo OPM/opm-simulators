@@ -219,7 +219,9 @@ namespace {
                                 const DerivedGeology&           geo  ,
                                 const RockCompressibility*      rock_comp_props,
                                 const Wells&                    wells,
-                                const NewtonIterationBlackoilInterface&    linsolver)
+                                const NewtonIterationBlackoilInterface&    linsolver,
+                                const bool has_disgas,
+                                const bool has_vapoil)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -232,6 +234,8 @@ namespace {
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
+        , has_disgas_(has_disgas)
+        , has_vapoil_(has_vapoil)
         , dp_max_rel_ (1.0e9)
         , ds_max_ (0.2)
         , drs_max_rel_ (1.0e9)
