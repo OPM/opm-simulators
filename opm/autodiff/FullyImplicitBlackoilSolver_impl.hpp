@@ -276,7 +276,7 @@ namespace {
     {
         const V pvdt = geo_.poreVolume() / dt;
 
-        classifyCondition(x);
+        updatePrimalVariableFromState(x);
         {
             const SolutionState state = constantState(x, xw);
             computeAccum(state, 0);
@@ -467,26 +467,14 @@ namespace {
         V isRs = V::Zero(nc,1);
         V isRv = V::Zero(nc,1);
         V isSg = V::Zero(nc,1);
-        bool disgas = false;
-        bool vapoil = false;
 
         if (active_[ Gas ]){
-            // this is a temporary hack to find if vapoil or disgas
-            // is a active component. Should be given directly from
-            // DISGAS and VAPOIL keywords in the deck.
-            for (int c = 0; c < nc; c++){
-                if(x.rv()[c] > 0)
-                    vapoil = true;
-                if(x.gasoilratio ()[c] > 0)
-                    disgas = true;
-            }
 
             for (int c = 0; c < nc ; c++ ) {
-                const PhasePresence cond = phaseCondition()[c];
-                if ( (!cond.hasFreeGas()) && disgas ) {
+                if ( primalVariable_[c] == PrimalVariables::RS ) {
                     isRs[c] = 1;
                 }
-                else if ( (!cond.hasFreeOil()) && vapoil ) {
+                else if ( primalVariable_[c] == PrimalVariables::RV ) {
                     isRv[c] = 1;
                 }
                 else {
@@ -550,12 +538,12 @@ namespace {
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
 
-                if (disgas) {
+                if (has_disgas_) {
                     state.rs = (1-isRs) * rsSat + isRs*xvar;
                 } else {
                     state.rs = rsSat;
                 }
-                if (vapoil) {
+                if (has_vapoil_) {
                     state.rv = (1-isRv) * rvSat + isRv*xvar;
                 } else {
                     state.rv = rvSat;
@@ -1237,26 +1225,11 @@ namespace {
         V isRv = V::Zero(nc,1);
         V isSg = V::Zero(nc,1);
 
-        bool disgas = false;
-        bool vapoil = false;
-
-        // this is a temporary hack to find if vapoil or disgas
-        // is a active component. Should be given directly from
-        // DISGAS and VAPOIL keywords in the deck.
-        for (int c = 0; c<nc; c++){
-            if(state.rv()[c]>0)
-                vapoil = true;
-            if(state.gasoilratio()[c]>0)
-                disgas = true;
-        }
-
-        const std::vector<PhasePresence> conditions = phaseCondition();
-        for (int c = 0; c < nc; c++ ) {
-            const PhasePresence cond = conditions[c];
-            if ( (!cond.hasFreeGas()) && disgas ) {
+        for (int c = 0; c < nc ; c++ ) {
+            if ( primalVariable_[c] == PrimalVariables::RS ) {
                 isRs[c] = 1;
             }
-            else if ( (!cond.hasFreeOil()) && vapoil ) {
+            else if ( primalVariable_[c] == PrimalVariables::RV ) {
                 isRv[c] = 1;
             }
             else {
@@ -1334,14 +1307,14 @@ namespace {
         const double drsmaxrel = drsMaxRel();
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
-        if (disgas) {
+        if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
             const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
-        if (vapoil) {
+        if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
             const V drv = isRv * dxvar;
             const V drv_limited = sign(drv) * drv.abs().min(drvmax);
@@ -1360,23 +1333,23 @@ namespace {
         // reset the phase conditions
         std::vector<PhasePresence> cond(nc);
 
-        if (disgas) {
-            // The obvioious case
-            auto ix0 = (sg > 0 && isRs == 0);
+        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+
+        if (has_disgas_) {
+            // The obvious case
+            auto hasGas = (sg > 0 && isRs == 0);
 
             // keep oil saturated if previous sg is sufficient large:
             const int pos = pu.phase_pos[ Gas ];
-            auto ix1 = (sg < 0 && s_old.col(pos) > epsilon);
+            auto hadGas = (sg < 0 && s_old.col(pos) > epsilon);
             // Set oil saturated if previous rs is sufficiently large
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            auto ix2 =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
+            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
 
-            auto gasPresent = watOnly || ix0 || ix1  || ix2;
+            auto useSg = watOnly || hasGas || hadGas  || gasVaporized;
             for (int c = 0; c < nc; ++c) {
-                if (gasPresent[c]) {
-                    rs[c] = rsSat[c];
-                    cond[c].setFreeGas();
-                }
+                if (useSg[c]) { rs[c] = rsSat[c];}
+                else { primalVariable_[c] = PrimalVariables::RS; }
 
             }
         }
@@ -1385,26 +1358,24 @@ namespace {
         const V rvSat0 = fluidRvSat(p_old, cells_);
         const V rvSat = fluidRvSat(p, cells_);
 
-        if (vapoil) {
+        if (has_vapoil_) {
             // The obvious case
-            auto ix0 = (so > 0 && isRv == 0);
+            auto hasOil = (so > 0 && isRv == 0);
 
-            // keep oil saturated if previous sg is sufficient large:
+            // keep oil saturated if previous so is sufficient large:
             const int pos = pu.phase_pos[ Oil ];
-            auto ix1 = (so < 0 && s_old.col(pos) > epsilon );
-            // Set oil saturated if previous rs is sufficiently large
+            auto hadOil = (so < 0 && s_old.col(pos) > epsilon );
+            // Set oil saturated if previous rv is sufficiently large
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
-            auto ix2 = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-            auto oilPresent = watOnly || ix0 || ix1 || ix2;
+            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
+            auto useSg = watOnly || hasOil || hadOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
-                if (oilPresent[c]) {
-                    rv[c] = rvSat[c];
-                    cond[c].setFreeOil();
-                }
+                if (useSg[c]) { rv[c] = rvSat[c]; }
+                else {primalVariable_[c] = PrimalVariables::RV; }
+
             }
 
         }
-        std::copy(&cond[0], &cond[0] + nc, phaseCondition_.begin());
 
         auto ixg = sg < 0;
         for (int c = 0; c < nc; ++c) {
@@ -1453,10 +1424,10 @@ namespace {
         }
 
         // Rs and Rv updates
-        if (disgas)
+        if (has_disgas_)
             std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
 
-        if (vapoil)
+        if (has_vapoil_)
             std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
 
 
@@ -2107,5 +2078,46 @@ namespace {
 
 
     }
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::updatePrimalVariableFromState(const BlackoilState& state)
+    {
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
+        const int np = state.numPhases();
+
+        const PhaseUsage& pu = fluid_.phaseUsage();
+        const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+
+        assert (active_[ Gas ]);
+
+        // reset the primary variables if RV and RS is not set Sg is used as primary variable.
+        primalVariable_.resize(nc);
+        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+
+        if (has_disgas_) {
+            // Oil/Gas or Water/Oil/Gas system
+            const V sg = s.col(pu.phase_pos[ Gas ]);
+            const V so = s.col(pu.phase_pos[ Oil ]);
+
+            for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                if ( sg[c] <= 0 && so[c] > 0 ) {primalVariable_[c] = PrimalVariables::RS; }
+            }
+        }
+
+        if (has_vapoil_) {
+            // Oil/Gas or Water/Oil/Gas system
+            const V sg = s.col(pu.phase_pos[ Gas ]);
+            const V so = s.col(pu.phase_pos[ Oil ]);
+
+            for (V::Index c = 0, e = so.size(); c != e; ++c) {
+                if (so[c] <= 0 && sg[c] > 0) {primalVariable_[c] = PrimalVariables::RV; }
+            }
+        }
+
+    }
+
+
 
 } // namespace Opm

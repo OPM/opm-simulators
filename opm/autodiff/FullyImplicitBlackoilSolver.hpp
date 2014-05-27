@@ -129,7 +129,7 @@ namespace Opm {
 
         // the Newton relaxation type
         enum RelaxType { DAMPEN, SOR };
-
+        enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
         // Member data
         const Grid&         grid_;
@@ -162,6 +162,8 @@ namespace Opm {
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
+
+        std::vector<int>         primalVariable_;
 
         // Private methods.
         SolutionState
@@ -282,6 +284,9 @@ namespace Opm {
 
         void
         classifyCondition(const BlackoilState&        state);
+
+        void
+        updatePrimalVariableFromState(const BlackoilState&        state);
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
