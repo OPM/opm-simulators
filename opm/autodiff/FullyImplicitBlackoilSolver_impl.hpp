@@ -711,7 +711,7 @@ namespace {
         const std::vector<ADB> kr = computeRelPerm(state);
         const std::vector<ADB> pressures = computePressures(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            computeMassFlux(phaseIdx, transi, kr[phaseIdx], pressures[phaseIdx], state);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], pressures[canph_[phaseIdx]], state);
             // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
             // std::cout << kr[phase];
             // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
