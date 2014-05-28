@@ -38,6 +38,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
 	opm/autodiff/WellDensitySegmented.cpp
+	opm/autodiff/LinearisedBlackoilResidual.cpp
 	)
 
 # originally generated with the command:

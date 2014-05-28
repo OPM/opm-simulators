@@ -232,9 +232,14 @@ namespace {
         , ops_   (grid)
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
-        , dp_max_rel_ ( 1.0e9 )
-        , ds_max_ ( 0.2 )
-        , drs_max_rel_ ( 1.0e9 )
+        , dp_max_rel_ (1.0e9)
+        , ds_max_ (0.2)
+        , drs_max_rel_ (1.0e9)
+        , relax_type_ (DAMPEN)
+        , relax_max_ (0.5)
+        , relax_increment_ (0.1)
+        , relax_rel_tol_ (0.2)
+        , max_iter_ (15)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -244,6 +249,17 @@ namespace {
         dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_ = param.getDefault("ds_max", ds_max_);
         drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
+        relax_max_ = param.getDefault("relax_max", relax_max_);
+        max_iter_ = param.getDefault("max_iter", max_iter_);
+
+        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
+        if (relaxation_type == "dampen") {
+            relax_type_ = DAMPEN;
+        } else if (relaxation_type == "sor") {
+            relax_type_ = SOR;
+        } else {
+            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
+        }
     }
 
 
@@ -263,13 +279,17 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        const int    maxit = 15;
+
+        std::vector<std::vector<double>> residual_history;
 
         assemble(pvdt, x, xw);
 
 
         bool converged = false;
+        double omega = 1.;
         const double r0  = residualNorm();
+
+        residual_history.push_back(residuals());
 
         converged = getConvergence(dt);
 
@@ -278,14 +298,34 @@ namespace {
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::endl;
 
-        while ((!converged) && (it < maxit)) {
-            const V dx = solveJacobianSystem();
+        const int sizeNonLinear = residual_.sizeNonLinear();
+
+        V dxOld = V::Zero(sizeNonLinear);
+
+        bool isOscillate = false;
+        bool isStagnate = false;
+        const enum RelaxType relaxtype = relaxType();
+
+        while ((!converged) && (it < maxIter())) {
+            V dx = solveJacobianSystem();
+
+            detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
+
+            if (isOscillate) {
+                omega -= relaxIncrement();
+                omega = std::max(omega, relaxMax());
+                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
+            }
+
+            stablizeNewton(dx, dxOld, omega, relaxtype);
 
             updateState(dx, x, xw);
 
             assemble(pvdt, x, xw);
 
             const double r = residualNorm();
+
+            residual_history.push_back(residuals());
 
             converged = getConvergence(dt);
 
@@ -1613,6 +1653,112 @@ namespace {
     }
 
 
+    template<class T>
+    std::vector<double>
+    FullyImplicitBlackoilSolver<T>::residuals() const
+    {
+        std::vector<double> residual;
+
+        std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
+        const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
+
+        for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
+            const double massBalanceResid = (*massBalanceIt).value().matrix().template lpNorm<Eigen::Infinity>();
+            if (!std::isfinite(massBalanceResid)) {
+                OPM_THROW(Opm::NumericalProblem,
+                          "Encountered a non-finite residual");
+            }
+            residual.push_back(massBalanceResid);
+        }
+
+        // the following residuals are not used in the oscillation detection now
+        const double wellFluxResid = residual_.well_flux_eq.value().matrix().template lpNorm<Eigen::Infinity>();
+        if (!std::isfinite(wellFluxResid)) {
+           OPM_THROW(Opm::NumericalProblem,
+               "Encountered a non-finite residual");
+        }
+        residual.push_back(wellFluxResid);
+
+        const double wellResid = residual_.well_eq.value().matrix().template lpNorm<Eigen::Infinity>();
+        if (!std::isfinite(wellResid)) {
+           OPM_THROW(Opm::NumericalProblem,
+               "Encountered a non-finite residual");
+        }
+        residual.push_back(wellResid);
+
+        return residual;
+    }
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
+                                                             const int it, const double relaxRelTol,
+                                                             bool& oscillate, bool& stagnate) const
+    {
+        // The detection of oscillation in two primary variable results in the report of the detection
+        // of oscillation for the solver.
+        // Only the saturations are used for oscillation detection for the black oil model.
+        // Stagnate is not used for any treatment here.
+
+        if ( it < 2 ) {
+            oscillate = false;
+            stagnate = false;
+            return;
+        }
+
+        stagnate = true;
+        int oscillatePhase = 0;
+
+        for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
+            if (active_[phaseIdx]) {
+                double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                               residual_history[it][phaseIdx]);
+                double relChange2 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 1][phaseIdx]) /
+                                               residual_history[it][phaseIdx]);
+                oscillatePhase += (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+
+                double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                               residual_history[it - 2][phaseIdx]);
+                if (relChange3 > 1.e-3) {
+                    stagnate = false;
+                }
+            }
+        }
+
+        oscillate = (oscillatePhase > 1);
+    }
+
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::stablizeNewton(V& dx, V& dxOld, const double omega,
+                                                    const RelaxType relax_type) const
+    {
+        // The dxOld is updated with dx.
+        // If omega is equal to 1., no relaxtion will be appiled.
+
+        const V tempDxOld = dxOld;
+        dxOld = dx;
+
+        switch (relax_type) {
+            case DAMPEN:
+                if (omega == 1.) {
+                    return;
+                }
+                dx = dx*omega;
+                return;
+            case SOR:
+                if (omega == 1.) {
+                    return;
+                }
+                dx = dx*omega + (1.-omega)*tempDxOld;
+                return;
+            default:
+                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
+        }
+
+        return;
+    }
 
     template<class T>
     bool
