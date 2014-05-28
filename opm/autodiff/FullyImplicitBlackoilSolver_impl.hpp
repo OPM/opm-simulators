@@ -479,10 +479,10 @@ namespace {
 
             for (int c = 0; c < nc ; c++ ) {
                 const PhasePresence cond = phaseCondition()[c];
-                if ( (!cond.hasFreeGas()) && disgas ) {
+                if ( (!cond.hasFreeGas()) && !cond.hasOnlyWater() && disgas ) {
                     isRs[c] = 1;
                 }
-                else if ( (!cond.hasFreeOil()) && vapoil ) {
+                else if ( (!cond.hasFreeOil()) && !cond.hasOnlyWater() && vapoil ) {
                     isRv[c] = 1;
                 }
                 else {
@@ -1249,10 +1249,10 @@ namespace {
         const std::vector<PhasePresence> conditions = phaseCondition();
         for (int c = 0; c < nc; c++ ) {
             const PhasePresence cond = conditions[c];
-            if ( (!cond.hasFreeGas()) && disgas ) {
+            if ( (!cond.hasFreeGas()) && !cond.hasOnlyWater() && disgas ) {
                 isRs[c] = 1;
             }
-            else if ( (!cond.hasFreeOil()) && vapoil ) {
+            else if ( (!cond.hasFreeOil()) && !cond.hasOnlyWater() && vapoil ) {
                 isRv[c] = 1;
             }
             else {
@@ -2077,15 +2077,28 @@ namespace {
         const PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         if (active_[ Gas ]) {
+
             // Oil/Gas or Water/Oil/Gas system
             const V so = s.col(pu.phase_pos[ Oil ]);
             const V sg = s.col(pu.phase_pos[ Gas ]);
 
+            if (active_[ Water ]) {
+                const double eps = std::sqrt(std::numeric_limits<double>::epsilon());
+                const V sw = s.col(pu.phase_pos[ Water ]);
+                auto watOnly = sw > (1 - eps);
+
+                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                    if (watOnly[c]) { phaseCondition_[c].setOnlyWater(); }
+                    phaseCondition_[c].setFreeWater();
+                }
+            }
+
             for (V::Index c = 0, e = sg.size(); c != e; ++c) {
                 if (so[c] > 0)        { phaseCondition_[c].setFreeOil  (); }
                 if (sg[c] > 0)        { phaseCondition_[c].setFreeGas  (); }
-                if (active_[ Water ]) { phaseCondition_[c].setFreeWater(); }
             }
+
+
         }
         else {
             // Water/Oil system
