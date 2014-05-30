@@ -232,10 +232,11 @@ public:
         simulator.setEpisodeIndex(0);
 
         // the user-specified initial time step can be shorter than
-        // the one given in the deck, but it can't be longer.
+        // the initial report step size given in the deck, but it
+        // can't be longer.
         Scalar dt = simulator.timeStepSize();
         if (dt > simulator.episodeLength())
-            simulator.setTimeStepSize(dt);
+            simulator.setTimeStepSize(simulator.episodeLength());
     }
 
     /*!
@@ -245,8 +246,18 @@ public:
     {
         Simulator &simulator = this->simulator();
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
+
+        // TimeMap deals with points in time, so the number of time
+        // intervalls (i.e., report steps) is one less!
+        int numReportSteps = timeMap->size() - 1;
+
+        // start the next episode if there are additional report
+        // steps, else finish the simulation
         int episodeIdx = simulator.episodeIndex();
-        simulator.startNextEpisode(timeMap->getTimeStepLength(episodeIdx + 1));
+        if (episodeIdx < numReportSteps)
+            simulator.startNextEpisode(timeMap->getTimeStepLength(episodeIdx + 1));
+        else
+            simulator.setFinished(true);
     }
 
     /*!
@@ -545,16 +556,14 @@ private:
         initialFluidStates_.resize(numDof);
 
         if (!deck->hasKeyword("SWAT") ||
-            !deck->hasKeyword("SGAS")) {
+            !deck->hasKeyword("SGAS"))
             OPM_THROW(std::runtime_error,
                       "So far, the Eclipse input file requires the presence of the SWAT "
                       "and SGAS keywords");
-        }
-        if (!deck->hasKeyword("PRESSURE")) {
+        if (!deck->hasKeyword("PRESSURE"))
             OPM_THROW(std::runtime_error,
                       "So far, the Eclipse input file requires the presence of the PRESSURE "
                       "keyword");
-        }
 
         const std::vector<double> &waterSaturationData =
             deck->getKeyword("SWAT")->getSIDoubleData();
