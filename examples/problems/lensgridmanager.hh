@@ -33,6 +33,7 @@
 #include <dune/common/version.hh>
 
 #include <vector>
+#include <memory>
 
 namespace Ewoms {
 template <class TypeTag>
@@ -78,6 +79,8 @@ class LensGridManager : public BaseGridManager<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+
+    typedef std::unique_ptr<Grid> GridPointer;
 
     static const int dim = Grid::dimension;
 
@@ -125,8 +128,6 @@ public:
         Dune::FieldVector<Scalar, dim> upperRight;
         Dune::FieldVector<Scalar, dim> lowerLeft;
 
-        grid_ = 0;
-
         lowerLeft[1] = 0.0;
         upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
         upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
@@ -141,38 +142,32 @@ public:
         unsigned numRefinements
             = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
 
-        grid_ = new Dune::YaspGrid<dim>(
+        gridPtr_.reset(new Dune::YaspGrid<dim>(
 #ifdef HAVE_MPI
             /*mpiCommunicator=*/Dune::MPIHelper::getCommunicator(),
 #endif
             /*upperRightCorner=*/upperRight,
             /*numCells=*/cellRes, isPeriodic,
-            /*overlap=*/1);
-        grid_->globalRefine(numRefinements);
+            /*overlap=*/1));
+        gridPtr_->globalRefine(numRefinements);
 
         this->finalizeInit_();
     }
 
     /*!
-     * \brief Destroy the grid
+     * \brief Return a reference to the grid object.
      */
-    ~LensGridManager()
-    { delete grid_; }
+    Grid& grid()
+    { return *gridPtr_; }
 
     /*!
-     * \brief Return a pointer to the grid object.
+     * \brief Return a constant reference to the grid object.
      */
-    Grid* gridPointer()
-    { return grid_; }
-
-    /*!
-     * \brief Return a constant pointer to the grid object.
-     */
-    const Grid* gridPointer() const
-    { return grid_; }
+    const Grid& grid() const
+    { return *gridPtr_; }
 
 private:
-    Grid *grid_;
+    GridPointer gridPtr_;
 };
 
 } // namespace Ewoms

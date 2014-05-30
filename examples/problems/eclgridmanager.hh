@@ -79,8 +79,8 @@ class EclGridManager : public BaseGridManager<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
 
-    typedef std::shared_ptr<Grid> GridPointer;
-    typedef std::shared_ptr<const Grid> GridConstPointer;
+    typedef std::unique_ptr<Grid> GridPointer;
+    typedef std::unique_ptr<const Grid> GridConstPointer;
     static const int dim = Grid::dimension;
 
 public:
@@ -126,16 +126,16 @@ public:
     }
 
     /*!
-     * \brief Return a pointer to the grid.
+     * \brief Return a reference to the grid.
      */
-    GridPointer gridPointer()
-    { return grid_; }
+    Grid& grid()
+    { return *grid_; }
 
     /*!
-     * \brief Return a pointer to the grid.
+     * \brief Return a reference to the grid.
      */
-    GridConstPointer gridPointer() const
-    { return grid_; }
+    const Grid& grid() const
+    { return *grid_; }
 
     /*!
      * \brief Return a pointer to the parsed Eclipse deck
