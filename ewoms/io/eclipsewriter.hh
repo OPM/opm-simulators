@@ -255,7 +255,8 @@ public:
             const std::string &name = bufIt->first;
             const ScalarBuffer &buffer = *bufIt->second;
 
-            ErtKeyword<float> bufKeyword(name, buffer);
+            std::shared_ptr<const ErtKeyword<float>>
+                bufKeyword(new ErtKeyword<float>(name, buffer));
             solution.add(bufKeyword);
         }
 
