@@ -285,6 +285,9 @@ namespace Opm {
         void
         classifyCondition(const BlackoilState&        state);
 
+
+        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
+        /// be active to call this method.
         void
         updatePrimalVariableFromState(const BlackoilState&        state);
 

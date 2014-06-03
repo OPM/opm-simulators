@@ -276,7 +276,8 @@ namespace {
     {
         const V pvdt = geo_.poreVolume() / dt;
 
-        updatePrimalVariableFromState(x);
+        if (active_[Gas]) { updatePrimalVariableFromState(x); }
+
         {
             const SolutionState state = constantState(x, xw);
             computeAccum(state, 0);
@@ -469,7 +470,6 @@ namespace {
         V isSg = V::Zero(nc,1);
 
         if (active_[ Gas ]){
-
             for (int c = 0; c < nc ; c++ ) {
                 if ( primalVariable_[c] == PrimalVariables::RS ) {
                     isRs[c] = 1;
@@ -1224,16 +1224,17 @@ namespace {
         V isRs = V::Zero(nc,1);
         V isRv = V::Zero(nc,1);
         V isSg = V::Zero(nc,1);
-
-        for (int c = 0; c < nc ; c++ ) {
-            if ( primalVariable_[c] == PrimalVariables::RS ) {
-                isRs[c] = 1;
-            }
-            else if ( primalVariable_[c] == PrimalVariables::RV ) {
-                isRv[c] = 1;
-            }
-            else {
-                isSg[c] = 1;
+        if (active_[Gas]) {
+            for (int c = 0; c < nc ; c++ ) {
+                if ( primalVariable_[c] == PrimalVariables::RS ) {
+                    isRs[c] = 1;
+                }
+                else if ( primalVariable_[c] == PrimalVariables::RV ) {
+                    isRv[c] = 1;
+                }
+                else {
+                    isSg[c] = 1;
+                }
             }
         }
 
