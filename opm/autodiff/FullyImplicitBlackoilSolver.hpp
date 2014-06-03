@@ -140,7 +140,7 @@ namespace Opm {
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
-        // Size = # active faces. Maps active -> canonical phase indices.
+        // Size = # active phases. Maps active -> canonical phase indices.
         const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
