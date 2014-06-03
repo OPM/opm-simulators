@@ -18,8 +18,8 @@
 */
 
 #include <opm/polymer/PolymerInflow.hpp>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 #include <opm/core/wells.h>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <map>
 
 namespace Opm
@@ -60,19 +60,19 @@ namespace Opm
 
     /// Constructor.
     /// @param[in]  deck     Input deck expected to contain WPOLYMER.
-    PolymerInflowFromDeck::PolymerInflowFromDeck(const EclipseGridParser& deck,
+    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::DeckConstPtr deck,
                                                  const Wells& wells,
                                                  const int num_cells)
         : sparse_inflow_(num_cells)
     {
-        if (!deck.hasField("WPOLYMER")) {
+        if (!deck->hasKeyword("WPOLYMER")) {
             OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
             return;
         }
 
         // Extract concentrations and put into cell->concentration map.
-        const std::vector<WpolymerLine>& wpl = deck.getWPOLYMER().wpolymer_;
-        const int num_wpl = wpl.size();
+        Opm::DeckKeywordConstPtr wpolymerKeyword = deck->getKeyword("WPOLYMER");
+        const int num_wpl = wpolymerKeyword->size();
         std::map<int, double> perfcell_conc;
         for (int i = 0; i < num_wpl; ++i) {
             // Only use well name and polymer concentration.
@@ -80,16 +80,19 @@ namespace Opm
             // names.
             int wix = 0;
             for (; wix < wells.number_of_wells; ++wix) {
-                if (wpl[i].well_ == wells.name[wix]) {
+                if (wpolymerKeyword->getRecord(i)->getItem("WELL")->getString(0) == wells.name[wix]) {
                     break;
                 }
             }
             if (wix == wells.number_of_wells) {
-                OPM_THROW(std::runtime_error, "Could not find a match for well " << wpl[i].well_ << " from WPOLYMER.");
+                OPM_THROW(std::runtime_error, "Could not find a match for well "
+                          << wpolymerKeyword->getRecord(i)->getItem("WELL")->getString(0)
+                          << " from WPOLYMER.");
             }
             for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
                 const int perf_cell = wells.well_cells[j];
-                perfcell_conc[perf_cell] = wpl[i].polymer_concentration_;
+                perfcell_conc[perf_cell] =
+                    wpolymerKeyword->getRecord(i)->getItem("POLYMER_CONCENTRATION")->getSIDouble(0);
             }
         }
 
