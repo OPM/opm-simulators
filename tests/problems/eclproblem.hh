@@ -212,11 +212,9 @@ public:
         // (z coodinates represent depth, not height.)
         this->gravity_[dim - 1] *= -1;
 
-        const auto deck = this->simulator().gridManager().deck();
-
-        initFluidSystem_(deck);
-        readMaterialParameters_(deck);
-        readInitialCondition_(deck);
+        initFluidSystem_();
+        readMaterialParameters_();
+        readInitialCondition_();
 
         // Start the first episode. For this, ask the Eclipse schedule.
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
@@ -395,7 +393,7 @@ public:
     //! \}
 
 private:
-    void readMaterialParameters_(Opm::DeckConstPtr deck)
+    void readMaterialParameters_()
     {
         size_t numDof = this->model().numDof();
 
@@ -403,28 +401,17 @@ private:
         porosity_.resize(numDof);
         materialParams_.resize(numDof);
 
-        // read the intrinsic permeabilities from the deck
-        if (deck->hasKeyword("PERM")) {
-            // the PERM and PERM{X,Y,Z,{X,Y,Z}{X,Y,Z}} keywords are
-            // mutually exclusive, but if the deck does shit, it is
-            // not our fault!
-            const std::vector<double> &permData =
-                deck->getKeyword("PERM")->getSIDoubleData();
-
-            assert(permData.size() == numDof);
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                intrinsicPermeability_[dofIdx] = this->toDimMatrix_(permData[dofIdx]);
-        }
-        else if (deck->hasKeyword("PERMX")) {
+        // read the intrinsic permeabilities from the eclipseState
+        auto eclipseState = this->simulator().gridManager().eclipseState();
+        if (eclipseState->hasDoubleGridProperty("PERMX")) {
             const std::vector<double> &permxData =
-                deck->getKeyword("PERMX")->getSIDoubleData();
+                eclipseState->getDoubleGridProperty("PERMX")->getData();
             std::vector<double> permyData(permxData);
-            if (deck->hasKeyword("PERMY"))
-                permyData = deck->getKeyword("PERMY")->getSIDoubleData();
+            if (eclipseState->hasDoubleGridProperty("PERMY"))
+                permyData = eclipseState->getDoubleGridProperty("PERMY")->getData();
             std::vector<double> permzData(permxData);
-            if (deck->hasKeyword("PERMZ"))
-                permzData = deck->getKeyword("PERMZ")->getSIDoubleData();
+            if (eclipseState->hasDoubleGridProperty("PERMZ"))
+                permzData = eclipseState->getDoubleGridProperty("PERMZ")->getData();
 
             assert(permxData.size() == numDof);
             assert(permyData.size() == numDof);
@@ -441,12 +428,12 @@ private:
         }
         else
             OPM_THROW(std::logic_error,
-                      "Can't read the intrinsic permeability from the deck. "
-                      "(The PERM* keywords are missing)");
+                      "Can't read the intrinsic permeability from the eclipse state. "
+                      "(The PERM{X,Y,Z} keywords are missing)");
 
-        if (deck->hasKeyword("PORO")) {
+        if (eclipseState->hasDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
-                deck->getKeyword("PORO")->getSIDoubleData();
+                eclipseState->getDoubleGridProperty("PORO")->getData();
 
             assert(poroData.size() == numDof);
 
@@ -455,9 +442,10 @@ private:
         }
         else
             OPM_THROW(std::logic_error,
-                      "Can't read the porosity from the deck. "
+                      "Can't read the porosity from the eclipse state. "
                       "(The PORO keyword is missing)");
 
+        auto deck = this->simulator().gridManager().deck();
         Opm::DeckKeywordConstPtr swofKeyword = deck->getKeyword("SWOF");
         Opm::DeckKeywordConstPtr sgofKeyword = deck->getKeyword("SGOF");
 
@@ -503,9 +491,8 @@ private:
         }
 
         // set the index of the table to be used
-        if (deck->hasKeyword("SATNUM")) {
-            const std::vector<int> &satnumData =
-                deck->getKeyword("SATNUM")->getRecord(0)->getItem(0)->getIntData();
+        if (eclipseState->hasIntGridProperty("SATNUM")) {
+            const std::vector<int> &satnumData = eclipseState->getIntGridProperty("SATNUM")->getData();
             assert(satnumData.size() == numDof);
 
             materialParamTableIdx_.resize(numDof);
@@ -523,8 +510,10 @@ private:
             materialParamTableIdx_.clear();
     }
 
-    void initFluidSystem_(Opm::DeckConstPtr deck)
+    void initFluidSystem_()
     {
+        const auto deck = this->simulator().gridManager().deck();
+
         FluidSystem::initBegin();
 
         // so far, we require the presence of the PVTO, PVTW and PVDG
@@ -549,9 +538,10 @@ private:
         FluidSystem::initEnd();
    }
 
-    void readInitialCondition_(Opm::DeckConstPtr deck)
+    void readInitialCondition_()
     {
         size_t numDof = this->model().numDof();
+        const auto deck = this->simulator().gridManager().deck();
 
         initialFluidStates_.resize(numDof);
 
