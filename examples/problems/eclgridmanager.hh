@@ -32,6 +32,7 @@
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
@@ -109,11 +110,7 @@ public:
         Opm::ParserPtr parser(new Opm::Parser());
         deck_ = parser->parseFile(deckPath.string());
 
-        schedule_.reset(new Opm::Schedule(deck_));
-
-        std::shared_ptr<Opm::RUNSPECSection> runspecSection(new Opm::RUNSPECSection(deck_) );
-        std::shared_ptr<Opm::GRIDSection> gridSection(new Opm::GRIDSection(deck_) );
-        eclipseGrid_.reset(new Opm::EclipseGrid(runspecSection, gridSection));
+        eclipseState_.reset(new Opm::EclipseState(deck_));
 
         grid_ = GridPointer(new Grid());
         grid_->processEclipseFormat(deck_,
@@ -144,11 +141,17 @@ public:
     { return deck_; }
 
     /*!
+     * \brief Return a pointer to the internalized Eclipse deck
+     */
+    Opm::EclipseStateConstPtr eclipseState() const
+    { return eclipseState_; }
+
+    /*!
      * \brief Return a pointer to the internalized schedule of the
      *        Eclipse deck
      */
     Opm::ScheduleConstPtr schedule() const
-    { return schedule_; }
+    { return eclipseState_->getSchedule(); }
 
     /*!
      * \brief Return a pointer to the EclipseGrid object
@@ -159,7 +162,7 @@ public:
      * Dune::CpGrid)
      */
     Opm::EclipseGridConstPtr eclipseGrid() const
-    { return eclipseGrid_; }
+    { return eclipseState_->getEclipseGrid(); }
 
     /*!
      * \brief Returns the name of the case.
@@ -174,8 +177,7 @@ private:
     std::string caseName_;
     GridPointer grid_;
     Opm::DeckConstPtr deck_;
-    Opm::ScheduleConstPtr schedule_;
-    Opm::EclipseGridConstPtr eclipseGrid_;
+    Opm::EclipseStateConstPtr eclipseState_;
 };
 
 } // namespace Ewoms
