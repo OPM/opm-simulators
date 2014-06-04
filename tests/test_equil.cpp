@@ -428,13 +428,13 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     // the true answer or something else.
     const double reltol = 1.0e-6;
     BOOST_CHECK_CLOSE(pressures[0][first] , 1.469769063e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.545e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.546e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 15452880.328284413   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 15462880.328284413   , reltol);
 
     const auto& sats = comp.saturation();
     const std::vector<double> s[3]{
-        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.425893333333, 0.774026666666, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 0, 0, 0, 0.00736, 0.792746666666, 0.8, 0.8, 0.8, 0.8, 0.574106666666, 0.225973333333, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.42192000000000002, 0.77802666666666664, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0, 0, 0, 0.00736, 0.792746666666, 0.8, 0.8, 0.8, 0.8, 0.57807999999999993, 0.22197333333333336, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { 0.8, 0.8, 0.8, 0.79264, 0.007253333333, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     };
     for (int phase = 0; phase < 3; ++phase) {
