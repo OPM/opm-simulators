@@ -119,7 +119,7 @@ try
     rock_comp.reset(new RockCompressibility(deck));
 
     // Gravity.
-    gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = unit::gravity;
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
