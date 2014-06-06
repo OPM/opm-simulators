@@ -178,13 +178,15 @@ namespace Opm
                           const double s0_tab,
                           const double krsr_tab,
                           const double krmax_tab,
+                          const double pcmax_tab,
                           const std::vector<double>& sl,
                           const std::vector<double>& scr,
                           const std::vector<double>& su,
                           const std::vector<double>& sxcr,
                           const std::vector<double>& s0,
                           const std::vector<double>& krsr,
-                          const std::vector<double>& krmax);
+                          const std::vector<double>& krmax,
+                          const std::vector<double>& pcmax);
 
         bool columnIsMasked_(Opm::DeckConstPtr deck,
                              const std::string& keywordName,
