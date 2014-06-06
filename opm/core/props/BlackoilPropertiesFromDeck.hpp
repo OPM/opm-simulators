@@ -47,6 +47,7 @@ namespace Opm
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
+                                   Opm::EclipseStateConstPtr eclState,
                                    const UnstructuredGrid& grid, bool init_rock=true );
 
         /// Initialize from deck, grid and parameters.
@@ -61,6 +62,7 @@ namespace Opm
         ///                      For both size parameters, a 0 or negative value indicates that no spline fitting is to
         ///                      be done, and the input fluid data used directly for linear interpolation.
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
+                                   Opm::EclipseStateConstPtr eclState,
                                    const UnstructuredGrid& grid,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
@@ -68,6 +70,7 @@ namespace Opm
 
         template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
+                                   Opm::EclipseStateConstPtr eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
@@ -77,6 +80,7 @@ namespace Opm
 
         template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
+                                   Opm::EclipseStateConstPtr eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
@@ -222,6 +226,7 @@ namespace Opm
 
         template<class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
+                  Opm::EclipseStateConstPtr eclState,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
@@ -230,6 +235,7 @@ namespace Opm
                   bool init_rock);
         template<class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
+                  Opm::EclipseStateConstPtr eclState,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,

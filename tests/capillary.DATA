@@ -1,6 +1,17 @@
+-- Most of the following sections are not actually needed by the test,
+-- but it is required by the Eclipse reference manual that they are
+-- present. Also, the higher level opm-parser classes
+-- (i.e. Opm::EclipseState et al.) assume that they are present.
+
+-------------------------------------
+RUNSPEC
+
 WATER
 OIL
 GAS
+
+DIMENS
+3 3 3 /
 
 TABDIMS
   1    1   40   20    1   20  /
@@ -8,6 +19,27 @@ TABDIMS
 EQLDIMS
 -- NTEQUL
      1 /
+
+-------------------------------------
+GRID
+
+-- Opm::EclipseState assumes that _some_ grid gets defined, so let's
+-- specify a fake one...
+
+DXV
+1 2 3 /
+
+DYV
+4 5 6 /
+
+DZV
+7 8 9 /
+
+DEPTHZ
+16*123.456 /
+
+-------------------------------------
+PROPS
 
 PVDO
 100 1.0 1.0
@@ -37,6 +69,13 @@ DENSITY
 700 1000 1
 /
 
+-------------------------------------
+SOLUTION
+
 EQUIL
 50 150 50 0.25 20 0.35 1* 1* 0
 /
+
+-------------------------------------
+SCHEDULE
+-- empty section

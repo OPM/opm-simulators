@@ -20,7 +20,7 @@
 #ifndef OPM_ROCKFROMDECK_HEADER_INCLUDED
 #define OPM_ROCKFROMDECK_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <vector>
 
@@ -36,12 +36,12 @@ namespace Opm
         RockFromDeck();
 
         /// Initialize from deck and cell mapping.
-        /// \param  deck            Deck produced by the opm-parser code
+        /// \param  eclState        The EclipseState (processed deck) produced by the opm-parser code
         /// \param  number_of_cells The number of cells in the grid.
         /// \param  global_cell     The mapping fom local to global cell indices.
         ///                         global_cell[i] is the corresponding global index of i.
         /// \param  cart_dims       The size of the underlying cartesian grid.
-        void init(Opm::DeckConstPtr deck,
+        void init(Opm::EclipseStateConstPtr eclState,
                   int number_of_cells, const int* global_cell,
                   const int* cart_dims);
 
@@ -72,10 +72,10 @@ namespace Opm
         }
 
     private:
-        void assignPorosity(Opm::DeckConstPtr deck,
+        void assignPorosity(Opm::EclipseStateConstPtr eclState,
                             int number_of_cells,
                             const int* global_cell);
-        void assignPermeability(Opm::DeckConstPtr deck,
+        void assignPermeability(Opm::EclipseStateConstPtr eclState,
                                 int number_of_cells,
                                 const int* global_cell,
                                 const int* cart_dims,

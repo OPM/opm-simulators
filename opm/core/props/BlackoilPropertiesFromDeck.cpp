@@ -24,19 +24,21 @@
 namespace Opm
 {
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
+                                                           Opm::EclipseStateConstPtr eclState,
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
-        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims,
+        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims,
              grid.cell_centroids, grid.dimensions, init_rock);
     }
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
+                                                           Opm::EclipseStateConstPtr eclState,
                                                            const UnstructuredGrid& grid,
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
     {
-        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
+        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
              grid.dimensions, param, init_rock);
     }
 

@@ -86,10 +86,11 @@ try
     const std::string deck_filename = param.get<std::string>("deck_filename");
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::DeckConstPtr deck = parser->parseFile(deck_filename);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     const double grav = param.getDefault("gravity", unit::gravity);
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
-    BlackoilPropertiesFromDeck props(deck, grid, param);
+    BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param);
     warnIfUnusedParams(param);
 
     // Initialisation.
