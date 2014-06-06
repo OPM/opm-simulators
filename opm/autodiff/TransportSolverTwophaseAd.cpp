@@ -185,7 +185,6 @@ namespace Opm
         // but for scalar lambda and using TPFA it holds.
         const V p1 = Vec(state.pressure().data(), nc, 1);
         const V ndp = (ops_.ngrad * p1.matrix()).array();
-        typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DynArr;
         const V z = cellCentroidsZ(grid_);
         const V ndz = (ops_.ngrad * z.matrix()).array();
         assert(num_internal == ndp.size());

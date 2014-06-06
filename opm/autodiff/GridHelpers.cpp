@@ -233,9 +233,6 @@ void extractInternalFaces(const Dune::CpGrid& grid,
                           Eigen::Array<int, Eigen::Dynamic, 1>& internal_faces,
                           Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>& nbi)
 {
-    typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
-    typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
-    typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
     // Extracts the internal faces of the grid.
     // These are stored in internal_faces.
     int nf=numFaces(grid);

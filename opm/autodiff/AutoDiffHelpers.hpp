@@ -66,9 +66,7 @@ struct HelperOps
         const int nc = numCells(grid);
         const int nf = numFaces(grid);
         // Define some neighbourhood-derived helper arrays.
-        typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
         typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
-        typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
         TwoColInt nbi;
         extractInternalFaces(grid, internal_faces, nbi);
         int num_internal=internal_faces.size();
