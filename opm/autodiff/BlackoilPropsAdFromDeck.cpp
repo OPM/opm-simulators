@@ -33,6 +33,7 @@
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Utility/PvtoTable.hpp>
 #include <opm/parser/eclipse/Utility/PvtgTable.hpp>
 #include <opm/parser/eclipse/Utility/PvtwTable.hpp>
@@ -51,20 +52,22 @@ namespace Opm
 
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                                     Opm::EclipseStateConstPtr eclState,
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {
-        init(deck, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims, 
              grid.cell_centroids, grid.dimensions, init_rock);
     }
 
 #ifdef HAVE_DUNE_CORNERPOINT
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                                     Opm::EclipseStateConstPtr eclState,
                                                      const Dune::CpGrid& grid,
                                                      const bool init_rock )
     {
-        init(deck, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
+        init(deck, eclState, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
              static_cast<const int*>(&grid.logicalCartesianSize()[0]),
              grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
     }
@@ -73,6 +76,7 @@ namespace Opm
     /// Initializes the properties.
     template <class CentroidIterator>
     void BlackoilPropsAdFromDeck::init(Opm::DeckConstPtr deck,
+                                       Opm::EclipseStateConstPtr eclState,
                                        int number_of_cells,
                                        const int* global_cell,
                                        const int* cart_dims,
@@ -85,7 +89,7 @@ namespace Opm
         extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
 
         if (init_rock){
-            rock_.init(deck, number_of_cells, global_cell, cart_dims);
+            rock_.init(eclState, number_of_cells, global_cell, cart_dims);
         }
 
         phase_usage_ = phaseUsageFromDeck(deck);

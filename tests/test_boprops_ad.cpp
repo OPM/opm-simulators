@@ -36,6 +36,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <fstream>
@@ -47,6 +48,7 @@ struct SetupSimple {
     {
         Opm::ParserPtr parser(new Opm::Parser());
         deck = parser->parseFile("fluid.data");
+        eclState.reset(new Opm::EclipseState(deck));
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
@@ -57,6 +59,7 @@ struct SetupSimple {
 
     Opm::parameter::ParameterGroup  param;
     Opm::DeckConstPtr               deck;
+    Opm::EclipseStateConstPtr       eclState;
 };
 
 
@@ -66,13 +69,14 @@ struct TestFixture : public Setup
     TestFixture()
         : Setup()
         , grid (deck)
-        , props(deck, *grid.c_grid(), param,
+        , props(deck, eclState, *grid.c_grid(), param,
                 param.getDefault("init_rock", false))
     {
     }
 
     using Setup::param;
     using Setup::deck;
+    using Setup::eclState;
 
     Opm::GridManager                grid;
     Opm::BlackoilPropertiesFromDeck props;
