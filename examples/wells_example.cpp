@@ -36,15 +36,15 @@ try
     // Read input file
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckConstPtr deck = parser->parseFile(file_name);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     std::cout << "Done!" << std::endl;
 
     // Setup grid
     GridManager grid(deck);
 
     // Define rock and fluid properties
-    IncompPropertiesFromDeck incomp_properties(deck, *grid.c_grid());
+    IncompPropertiesFromDeck incomp_properties(deck, eclipseState, *grid.c_grid());
     RockCompressibility rock_comp(deck);
-    EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
 
     // Finally handle the wells
     WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
