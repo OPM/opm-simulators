@@ -99,12 +99,12 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         deck = parser->parseFile(deck_filename);
-
         eclipseState.reset(new EclipseState(deck));
+
         // Grid init
         grid.reset(new GridManager(deck));
         // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(deck, *grid->c_grid(), param));
+        props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
