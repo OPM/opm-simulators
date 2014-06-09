@@ -30,6 +30,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <memory>
+#include <array>
 #include <vector>
 
 #ifdef HAVE_DUNE_CORNERPOINT
