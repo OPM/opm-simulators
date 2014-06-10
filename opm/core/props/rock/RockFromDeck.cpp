@@ -159,15 +159,15 @@ namespace Opm
         {
             const bool xx = deck->hasKeyword("PERMX" );
             const bool xy = deck->hasKeyword("PERMXY");
-            const bool xz = deck->hasKeyword("PERMXZ");
+            const bool yx = xy;
 
-            const bool yx = deck->hasKeyword("PERMYX");
             const bool yy = deck->hasKeyword("PERMY" );
             const bool yz = deck->hasKeyword("PERMYZ");
+            const bool zy = yz;
 
-            const bool zx = deck->hasKeyword("PERMZX");
-            const bool zy = deck->hasKeyword("PERMZY");
             const bool zz = deck->hasKeyword("PERMZ" );
+            const bool zx = deck->hasKeyword("PERMZX");
+            const bool xz = zx;
 
             int num_cross_comp = xy + xz + yx + yz + zx + zy;
             int num_comp       = xx + yy + zz + num_cross_comp;
@@ -278,7 +278,7 @@ namespace Opm
                    zx, zy, zz };  // 6, 7, 8
 
             // -----------------------------------------------------------
-            // 1st row: [kxx, kxy, kxz]
+            // 1st row: [ kxx, kxy ], kxz handled in kzx
             if (deck->hasKeyword("PERMX" )) {
                 kmap[xx] = tensor.size();
                 tensor.push_back(&deck->getKeyword("PERMX")->getSIDoubleData());
@@ -289,17 +289,9 @@ namespace Opm
                 kmap[xy] = kmap[yx] = tensor.size();  // Enforce symmetry.
                 tensor.push_back(&deck->getKeyword("PERMXY")->getSIDoubleData());
             }
-            if (deck->hasKeyword("PERMXZ")) {
-                kmap[xz] = kmap[zx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&deck->getKeyword("PERMXZ")->getSIDoubleData());
-            }
 
             // -----------------------------------------------------------
-            // 2nd row: [kyx, kyy, kyz]
-            if (deck->hasKeyword("PERMYX")) {
-                kmap[yx] = kmap[xy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&deck->getKeyword("PERMYX")->getSIDoubleData());
-            }
+            // 2nd row: [ kyy, kyz ], kyx handled in kxy
             if (deck->hasKeyword("PERMY" )) {
                 kmap[yy] = tensor.size();
                 tensor.push_back(&deck->getKeyword("PERMY")->getSIDoubleData());
@@ -312,14 +304,10 @@ namespace Opm
             }
 
             // -----------------------------------------------------------
-            // 3rd row: [kzx, kzy, kzz]
+            // 3rd row: [ kzx, kzz ], kzy handled in kyz
             if (deck->hasKeyword("PERMZX")) {
                 kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
                 tensor.push_back(&deck->getKeyword("PERMZX")->getSIDoubleData());
-            }
-            if (deck->hasKeyword("PERMZY")) {
-                kmap[zy] = kmap[yz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&deck->getKeyword("PERMZY")->getSIDoubleData());
             }
             if (deck->hasKeyword("PERMZ" )) {
                 kmap[zz] = tensor.size();
