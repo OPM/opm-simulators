@@ -579,7 +579,8 @@ namespace Opm
         std::vector< std::vector<double> >
         phaseSaturations(const Region&           reg,
                          const CellRange&        cells,
-                         const BlackoilPropertiesInterface& props,
+                         BlackoilPropertiesInterface& props,
+                         const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures)
         {
             const double z0   = reg.datum();
@@ -610,8 +611,14 @@ namespace Opm
                 double sw = 0.0;
                 if (water) {
                     const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
-                    sw = satFromPc(props, waterpos, cell, pcov);
-                    phase_saturations[waterpos][local_index] = sw;
+                    if (swat_init.empty()) { // Invert Pc to find sw
+                        sw = satFromPc(props, waterpos, cell, pcov);
+                        phase_saturations[waterpos][local_index] = sw;
+                    } else { // Scale Pc to reflect imposed sw
+                        sw = swat_init[cell];
+                        props.swatInitScaling(cell, pcov, sw);
+                        phase_saturations[waterpos][local_index] = sw;
+                    }
                 }
                 double sg = 0.0;
                 if (gas) {
@@ -736,7 +743,7 @@ namespace Opm
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
      */
     void initStateEquil(const UnstructuredGrid& grid,
-                        const BlackoilPropertiesInterface& props,
+                        BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr deck,
                         const double gravity,
                         BlackoilState& state)

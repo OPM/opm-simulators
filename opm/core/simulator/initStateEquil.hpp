@@ -150,8 +150,9 @@ namespace Opm
         std::vector< std::vector<double> >
         phaseSaturations(const Region&           reg,
                          const CellRange&        cells,
-                         const BlackoilPropertiesInterface& props,
-                         const std::vector< std::vector<double> >& phase_pressures);
+                         BlackoilPropertiesInterface& props,
+                         const std::vector<double> swat_init,
+                         std::vector< std::vector<double> >& phase_pressures);
 
 
 
@@ -254,7 +255,7 @@ namespace Opm
 
             class InitialStateComputer {
             public:
-                InitialStateComputer(const BlackoilPropertiesInterface& props,
+                InitialStateComputer(BlackoilPropertiesInterface& props,
                                      const Opm::DeckConstPtr            deck,
                                      const UnstructuredGrid&            G    ,
                                      const double                       grav = unit::gravity)
@@ -333,6 +334,19 @@ namespace Opm
                             rv_func_.push_back(std::make_shared<Miscibility::NoMixing>());
                         }
                     }
+                    
+
+                    // Check for presence of kw SWATINIT
+                    if (deck->hasKeyword("SWATINIT")) {
+                        const std::vector<double>& swat_init = deck->getKeyword("SWATINIT")->getSIDoubleData();
+                        swat_init_.resize(G.number_of_cells);
+                        const int* gc = G.global_cell;
+                        for (int c = 0; c < G.number_of_cells; ++c) {
+                            const int deck_pos = (gc == NULL) ? c : gc[c];
+                            swat_init_[c] = swat_init[deck_pos];
+                        }
+
+                    }
 
                     // Compute pressures, saturations, rs and rv factors.
                     calcPressSatRsRv(eqlmap, rec, props, G, grav);
@@ -360,15 +374,18 @@ namespace Opm
                 PVec sat_;
                 Vec rs_;
                 Vec rv_;
+                Vec swat_init_;
 
                 template <class RMap>
                 void
-                calcPressSatRsRv(const RMap&                             reg  ,
-                                 const std::vector< EquilRecord >&       rec  ,
-                                 const Opm::BlackoilPropertiesInterface& props,
-                                 const UnstructuredGrid&                 G    ,
+                calcPressSatRsRv(const RMap&                       reg  ,
+                                 const std::vector< EquilRecord >& rec  ,
+                                 Opm::BlackoilPropertiesInterface& props,
+                                 const UnstructuredGrid&           G    ,
                                  const double grav)
                 {
+                    typedef Miscibility::NoMixing NoMix;
+
                     for (typename RMap::RegionId
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)
@@ -383,7 +400,7 @@ namespace Opm
                    
                         PVec press = phasePressures(G, eqreg, cells, grav);
 
-                        const PVec sat = phaseSaturations(eqreg, cells, props, press);
+                        const PVec sat = phaseSaturations(eqreg, cells, props, swat_init_, press);
 
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
