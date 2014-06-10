@@ -412,6 +412,39 @@ namespace Opm
         } 
     }
 
+
+    /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+    /// \param[in]     cell  Cell index. 
+    /// \param[in]     pcow  P_oil - P_water.
+    /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.    
+    template <class SatFuncSet>
+    void SaturationPropsFromDeck<SatFuncSet>::swatInitScaling(const int cell, 
+                                                              const double pcow, 
+                                                              double & swat)
+    {
+        if (phase_usage_.phase_used[Aqua]) {
+            // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
+            if (swat <= eps_transf_[cell].wat.smin) {
+                swat = eps_transf_[cell].wat.smin;
+            } else if (pcow < 1.0e-8) {
+                swat = eps_transf_[cell].wat.smax;
+            } else {
+                const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
+                const int np = phase_usage_.num_phases;
+                double s[np];
+                s[wpos] = swat; 
+                double pc[np];
+                funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));          
+                if (pc[wpos] > 1.0e-8) {
+                    eps_transf_[cell].wat.pcFactor *= pcow/pc[wpos];
+                }
+            }
+        } else {
+            OPM_THROW(std::runtime_error, "swatInitScaling: no water phase! ");
+        }
+    }
+
+
     // Map the cell number to the correct function set.
     template <class SatFuncSet>
     const typename SaturationPropsFromDeck<SatFuncSet>::Funcs&
