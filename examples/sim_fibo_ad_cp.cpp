@@ -131,6 +131,7 @@ try
 
     Opm::ParserPtr newParser(new Opm::Parser() );
     Opm::DeckConstPtr deck = newParser->parseFile( deck_filename );
+    Opm::EclipseStateConstPtr eclipseState(new EclipseState(deck));
 
     // Grid init
     grid.reset(new Dune::CpGrid());
@@ -151,12 +152,13 @@ try
                                     Opm::UgGridHelpers::dimensions(*grid));
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, Opm::UgGridHelpers::numCells(*grid),
+    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
+                                               Opm::UgGridHelpers::numCells(*grid),
                                                Opm::UgGridHelpers::globalCell(*grid),
                                                Opm::UgGridHelpers::cartDims(*grid),
                                                Opm::UgGridHelpers::beginCellCentroids(*grid),
                                                Opm::UgGridHelpers::dimensions(*grid), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, *grid));
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid));
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
@@ -232,7 +234,6 @@ try
     WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
     SimulatorTimer simtimer;
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // initialize variables
     simtimer.init(timeMap);

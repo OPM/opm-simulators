@@ -28,6 +28,7 @@
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <memory>
 #include <array>
@@ -57,12 +58,14 @@ namespace Opm
     public:
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
 #endif
@@ -345,6 +348,7 @@ namespace Opm
         /// Initializes the properties.
         template <class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
+                  Opm::EclipseStateConstPtr eclState,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,

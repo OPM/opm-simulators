@@ -1,13 +1,19 @@
+-- =====================================================================
 RUNSPEC
-
-DIMENS
-1 1 1
-/
 
 OIL
 WATER
 
 METRIC
+
+DIMENS
+1 1 1
+/
+
+TABDIMS
+-- use the default values for TABDIMS, but the keyword must be present
+-- if any tables ought to be specified...
+/
 
 -- =====================================================================
 GRID
@@ -28,29 +34,8 @@ DEPTHZ
 4*0
 /
 
-PERMX
-1.01325E15
-/
-
-PERMY
-1.01325E15
-/
-
-PERMZ
-1.01325E15
-/
-
-PORO
-1
-/
-
 -- =====================================================================
 PROPS
-
-TABDIMS
--- use the default values for TABDIMS, but the keyword must be present
--- if any tables ought to be specified...
-/
 
 PVTW
 -- Pw Bw(Pw) Cw muw  Cv
@@ -70,6 +55,14 @@ SWOF
 DENSITY
   800 1000 1
 /
+
+-- =====================================================================
+SOLUTION
+-- empty section
+
+-- =====================================================================
+SCHEDULE
+-- empty section
 
 -- =====================================================================
 END
