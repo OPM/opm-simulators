@@ -37,6 +37,11 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
+       opm/autodiff/IncompPropsAdInterface.cpp
+       opm/autodiff/IncompPropsAdBasic.cpp
+       opm/autodiff/IncompPropsAdFromDeck.cpp
+       opm/autodiff/SimulatorFullyImplicitTwophase.cpp
+       opm/autodiff/FullyImplicitTwoPhaseSolver.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
 	)
@@ -77,6 +82,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/sim_simple.cpp
 	examples/test_impestpfa_ad.cpp
 	examples/test_implicit_ad.cpp
+       examples/sim_fi2p_incomp_ad.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -84,6 +90,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_fibo_ad.cpp
+       examples/sim_fi2p_incomp_ad.cpp
 	)
 
 # originally generated with the command:
@@ -110,6 +117,11 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
+       opm/autodiff/IncompPropsAdInterface.hpp
+       opm/autodiff/IncompPropsAdBasic.hpp
+       opm/autodiff/IncompPropsAdFromDeck.hpp
+       opm/autodiff/SimulatorFullyImplicitTwophase.hpp
+       opm/autodiff/FullyImplicitTwoPhaseSolver.hpp
 	opm/autodiff/WellDensitySegmented.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
 	)
