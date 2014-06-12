@@ -110,11 +110,9 @@ if (NOT CJSON_FOUND)
 endif ()
 
 # get the prerequisite Boost libraries
-if (NOT Boost_FOUND)
-  find_package(Boost 1.44.0
-    COMPONENTS filesystem date_time system unit_test_framework
-    ${opm-parser_FIND_REQUIRED} ${OPM_PARSER_QUIET})
-endif ()
+find_package(Boost 1.44.0
+  COMPONENTS filesystem date_time system unit_test_framework
+  ${opm-parser_FIND_REQUIRED} ${OPM_PARSER_QUIET})
 
 if (NOT CJSON_FOUND OR NOT ERT_FOUND OR NOT Boost_FOUND)
   set(opm-parser_FOUND "0")
