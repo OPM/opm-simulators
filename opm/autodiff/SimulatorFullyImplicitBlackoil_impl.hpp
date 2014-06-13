@@ -66,7 +66,9 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              NewtonIterationBlackoilInterface& linsolver,
-             const double* gravity);
+             const double* gravity,
+             bool has_disgas,
+             bool has_vapoil );
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state,
@@ -107,10 +109,12 @@ namespace Opm
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    NewtonIterationBlackoilInterface& linsolver,
-                                                                   const double* gravity)
+                                                                   const double* gravity,
+                                                                   const bool has_disgas,
+                                                                   const bool has_vapoil )
 
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity, has_disgas, has_vapoil));
     }
 
 
@@ -192,7 +196,9 @@ namespace Opm
                                                const RockCompressibility* rock_comp_props,
                                                WellsManager& wells_manager,
                                                NewtonIterationBlackoilInterface& linsolver,
-                                               const double* gravity)
+                                               const double* gravity,
+                                               const bool has_disgas,
+                                               const bool has_vapoil)
         : grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -200,7 +206,7 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
-          solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver)
+          solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver, has_disgas, has_vapoil)
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),
                                param.getDefault("nl_pressure_maxiter", 10),

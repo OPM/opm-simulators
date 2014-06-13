@@ -94,6 +94,8 @@ namespace Opm
 
         phase_usage_ = phaseUsageFromDeck(deck);
 
+
+
         // Surface densities. Accounting for different orders in eclipse and our code.
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numRegions = densityKeyword->size();

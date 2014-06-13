@@ -70,7 +70,9 @@ namespace Opm {
                                     const DerivedGeology&           geo  ,
                                     const RockCompressibility*      rock_comp_props,
                                     const Wells&                    wells,
-                                    const NewtonIterationBlackoilInterface& linsolver);
+                                    const NewtonIterationBlackoilInterface& linsolver,
+                                    const bool has_disgas,
+                                    const bool has_vapoil );
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -127,7 +129,7 @@ namespace Opm {
 
         // the Newton relaxation type
         enum RelaxType { DAMPEN, SOR };
-
+        enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
         // Member data
         const Grid&         grid_;
@@ -144,6 +146,8 @@ namespace Opm {
         HelperOps                       ops_;
         const WellOps                   wops_;
         const M                         grav_;
+        const bool has_disgas_;
+        const bool has_vapoil_;
         double                          dp_max_rel_;
         double                          ds_max_;
         double                          drs_max_rel_;
@@ -158,6 +162,8 @@ namespace Opm {
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
+
+        std::vector<int>         primalVariable_;
 
         // Private methods.
         SolutionState
@@ -278,6 +284,12 @@ namespace Opm {
 
         void
         classifyCondition(const BlackoilState&        state);
+
+
+        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
+        /// be active to call this method.
+        void
+        updatePrimalVariableFromState(const BlackoilState&        state);
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).

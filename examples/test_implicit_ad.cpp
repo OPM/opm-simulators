@@ -104,7 +104,7 @@ try
 
     Opm::NewtonIterationBlackoilSimple fis_solver(param);
 
-    Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param, *g, props, geo, 0, *wells, fis_solver);
+    Opm::FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param, *g, props, geo, 0, *wells, fis_solver, /*hasDisgas*/ true, /*hasVapoil=*/false);
 
     Opm::BlackoilState state;
     initStateBasic(*g, props0, param, 0.0, state);

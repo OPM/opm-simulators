@@ -360,6 +360,8 @@ namespace Opm
         std::unique_ptr<SaturationPropsInterface> satprops_;
 
         PhaseUsage phase_usage_;
+        bool has_vapoil_;
+        bool has_disgas_;
 
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
