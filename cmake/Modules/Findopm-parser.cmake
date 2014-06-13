@@ -109,15 +109,21 @@ if (NOT ERT_FOUND)
   find_package(ERT ${OPM_PARSER_QUIET})
 endif ()
 
-# get the prerequisite Boost libraries
-find_package(Boost 1.44.0 COMPONENTS filesystem date_time system unit_test_framework regex ${OPM_PARSER_QUIET})
+# get the prerequisite CJSON library
+if (NOT CJSON_FOUND)
+  find_package(cjson ${OPM_PARSER_QUIET})
+endif ()
 
-if (ERT_FOUND AND Boost_FOUND AND
+# get the prerequisite Boost libraries
+find_package(Boost 1.44.0 COMPONENTS filesystem date_time system unit_test_framework ${OPM_PARSER_QUIET})
+
+if (CJSON_FOUND AND ERT_FOUND AND Boost_FOUND AND
     OPM_PARSER_LIBRARY AND OPM_JSON_LIBRARY AND OPM_PARSER_INCLUDE_DIR)
   # setup list of all required libraries to link with opm-parser. notice that
   # we use the plural form to get *all* the libraries needed by cjson
   set (opm-parser_INCLUDE_DIRS
     ${OPM_PARSER_INCLUDE_DIR}
+    ${CJSON_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${ERT_INCLUDE_DIRS})
 
@@ -153,7 +159,7 @@ find_package_handle_standard_args (opm-parser
   opm-parser_INCLUDE_DIRS opm-parser_LIBRARIES HAVE_OPM_PARSER
     )
 
-set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER;HAVE_REGEX")
+set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER")
 set (opm-parser_FOUND ${OPM-PARSER_FOUND})
 
 mark_as_advanced(opm-parser_LIBRARIES opm-parser_INCLUDE_DIRS OPM-PARSER_FOUND)
