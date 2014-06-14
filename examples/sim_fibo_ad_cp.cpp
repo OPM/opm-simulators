@@ -271,14 +271,16 @@ try
             outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
         }
 
-        // Create and run simulator.
         SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                                *grid,
                                                                *new_props,
                                                                rock_comp->isActive() ? rock_comp.get() : 0,
                                                                wells,
                                                                *fis_solver,
-                                                               grav);
+                                                               grav,
+                                                               deck->hasKeyword("DISGAS"),
+                                                               deck->hasKeyword("VAPOIL") );
+
         SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
 
         ++simtimer;
