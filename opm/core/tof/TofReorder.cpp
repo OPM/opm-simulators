@@ -374,7 +374,7 @@ namespace Opm
                 // We have no contribution from face f, it is an outflow face.
                 continue;
             }
-            ASSERT(influx_f > 0.0);
+            assert(influx_f > 0.0);
             const double omega_star = influx_f/flux_face;
             // SPU
             // const double omega = 0.0;
