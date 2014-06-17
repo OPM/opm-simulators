@@ -56,6 +56,9 @@ endmacro (sources_hook)
 macro (fortran_hook)
 endmacro (fortran_hook)
 
+macro (files_hook)
+endmacro (files_hook)
+
 macro (tests_hook)
 endmacro (tests_hook)
 
