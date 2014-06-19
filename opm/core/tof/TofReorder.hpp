@@ -90,6 +90,8 @@ namespace Opm
 
         void multidimUpwindTerms(const int face, const int upwind_cell,
                                  double& face_term, double& cell_term_factor) const;
+        void localMultidimUpwindTerms(const int face, const int upwind_cell, const int node_pos,
+                                      double& face_term, double& cell_term_factor) const;
 
     private:
         const UnstructuredGrid& grid_;

@@ -71,7 +71,8 @@ namespace Opm
         // Sanity check for sources.
         const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
         if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
-            OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
+            // OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
+            OPM_MESSAGE("Warning: sources do not sum to zero: " << cum_src);
         }
 #endif
         tof.resize(grid_.number_of_cells);
@@ -307,7 +308,10 @@ namespace Opm
 
 
 
-    // Assumes that face_tof_[f] is known for all upstream faces f of upwind_cell.
+    // Assumes that face_part_tof_[node_pos] is known for all inflow
+    // faces to 'upwind_cell' sharing vertices with 'face'. The index
+    // 'node_pos' is the same as the one used for the grid face-node
+    // connectivity.
     // Assumes that darcyflux_[face] is != 0.0.
     // This function returns factors to compute the tof for 'face':
     //   tof(face) = face_term + cell_term_factor*tof(upwind_cell).
@@ -318,6 +322,24 @@ namespace Opm
                                          double& face_term,
                                          double& cell_term_factor) const
     {
+        // Combine locally computed (for each adjacent vertex) terms, with uniform weighting.
+        const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
+        const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[face + 1];
+        const int num_terms = face_nodes_end - face_nodes_beg;
+        assert(num_terms == 2 || grid_.dimensions != 2);
+        face_term = 0.0;
+        for (const int* fn_iter = face_nodes_beg; fn_iter < face_nodes_end; ++fn_iter) {
+            double loc_face_term = 0.0;
+            double loc_cell_term_factor = 0.0;
+            localMultidimUpwindTerms(face, upwind_cell, fn_iter - grid_.face_nodepos,
+                                     loc_face_term, loc_cell_term_factor);
+            face_term += loc_face_term;
+            cell_term_factor += loc_cell_term_factor;
+        }
+        face_term /= double(num_terms);
+        cell_term_factor /= double(num_terms);
+
+#if 0
         // Implements multidim upwind according to
         // "Multidimensional upstream weighting for multiphase transport on general grids"
         // by Keilegavlen, Kozdon, Mallison.
@@ -377,25 +399,98 @@ namespace Opm
             assert(influx_f > 0.0);
             const double omega_star = influx_f/flux_face;
             // SPU
-            // const double omega = 0.0;
+            const double omega = 0.0;
             // TMU
             // const double omega = omega_star > 0.0 ? std::min(omega_star, 1.0) :  0.0;
             // SMU
-            const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
-            const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
-            const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
-            for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
-                if (face_part_tof_[*f_iter] > 0.0) {
-                    face_term += omega * face_part_tof_[*f_iter];
-                    cell_term_factor += (1.0 - omega);
-                    ++num_contrib;
-                }
-            }
+            // const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
+            face_term += omega * face_tof_[f];
+            cell_term_factor += (1.0 - omega);
+            // const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
+            // const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
+            // for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
+            //     if (face_part_tof_[*f_iter] > 0.0) {
+            //         face_term += omega * face_part_tof_[*f_iter];
+            //         cell_term_factor += (1.0 - omega);
+            //         ++num_contrib;
+            //     }
+            // }
         }
-        face_term /= double(num_contrib);
-        cell_term_factor /= double(num_contrib);
+        face_term /= double(num_adj);
+        cell_term_factor /= double(num_adj);
+        // face_term /= double(num_contrib);
+        // cell_term_factor /= double(num_contrib);
+#endif
     }
 
 
+    namespace {
+        double weightFunc(const double w)
+        {
+            // SPU
+            return 0.0;
+            // TMU
+            // return w > 0.0 ? std::min(w, 1.0) :  0.0;
+            // SMU
+            // return w > 0.0 ? w/(1.0 + w) : 0.0;
+        }
+    }
+
+
+
+
+    void TofReorder::localMultidimUpwindTerms(const int face,
+                                              const int upwind_cell,
+                                              const int node_pos,
+                                              double& face_term,
+                                              double& cell_term_factor) const
+    {
+        // Loop over all faces adjacent to the given cell and the
+        // vertex in position node_pos.
+        // If that part's influx is positive, we store it, and also its associated
+        // node position.
+        std::vector<double> influx;
+        std::vector<int> node_pos_influx;
+        influx.reserve(5);
+        node_pos_influx.reserve(5);
+        const int node = grid_.face_nodes[node_pos];
+        for (int hf = grid_.cell_facepos[upwind_cell]; hf < grid_.cell_facepos[upwind_cell + 1]; ++hf) {
+            const int f = grid_.cell_faces[hf];
+            if (f != face) {
+                // Find out if the face 'f' is adjacent to vertex 'node'.
+                const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
+                const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
+                const int* pos = std::find(f_nodes_beg, f_nodes_end, node);
+                const int node_pos2 = pos - grid_.face_nodes;
+                const bool is_adj = (pos != f_nodes_end);
+                if (is_adj) {
+                    const int num_parts = f_nodes_end - f_nodes_beg;
+                    const double influx_sign = (grid_.face_cells[2*f] == upwind_cell) ? -1.0 : 1.0;
+                    const double part_influx = influx_sign * darcyflux_[f] / double(num_parts);
+                    if (part_influx > 0.0) {
+                        influx.push_back(part_influx);
+                        node_pos_influx.push_back(node_pos2);
+                    }
+                }
+            }
+        }
+
+        // Now we may compute the weighting of the upwind terms.
+        const int num_parts = grid_.face_nodepos[face + 1] - grid_.face_nodepos[face];
+        const double outflux_sign = (grid_.face_cells[2*face] == upwind_cell) ? 1.0 : -1.0;
+        const double part_outflux = outflux_sign * darcyflux_[face] / double(num_parts);
+        const double sum_influx = std::accumulate(influx.begin(), influx.end(), 0.0);
+        const double w_factor = weightFunc(sum_influx / part_outflux);
+        const int num_influx = influx.size();
+        std::vector<double> w(num_influx);
+        face_term = 0.0;
+        for (int ii = 0; ii < num_influx; ++ii) {
+            w[ii] = (influx[ii] / sum_influx) * w_factor;
+            face_term += w[ii] * face_part_tof_[node_pos_influx[ii]];
+        }
+        const double sum_w = std::accumulate(w.begin(), w.end(), 0.0);
+        cell_term_factor = 1.0 - sum_w;
+        assert(cell_term_factor >= 0.0);
+    }
 
 } // namespace Opm
