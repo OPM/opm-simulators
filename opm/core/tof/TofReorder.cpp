@@ -336,6 +336,16 @@ namespace Opm
                                          double& face_term,
                                          double& cell_term_factor) const
     {
+        // Implements multidim upwind inspired by
+        // "Multidimensional upstream weighting for multiphase transport on general grids"
+        // by Keilegavlen, Kozdon, Mallison.
+        // However, that article does not give a 3d extension other than noting that using
+        // multidimensional upwinding in the XY-plane and not in the Z-direction may be
+        // a good idea. We have here attempted some generalization, by treating each face-part
+        // (association of a face and a vertex) as possibly influencing all downwind face-parts
+        // of the neighbouring cell that share the same vertex.
+        // The current implementation aims to reproduce 2d results for extruded 3d grids.
+
         // Combine locally computed (for each adjacent vertex) terms, with uniform weighting.
         const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
         const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[face + 1];
@@ -354,89 +364,9 @@ namespace Opm
         face_term /= double(num_terms);
         cell_term_factor /= double(num_terms);
 
-#if 0
-        // Implements multidim upwind according to
-        // "Multidimensional upstream weighting for multiphase transport on general grids"
-        // by Keilegavlen, Kozdon, Mallison.
-        // However, that article does not give a 3d extension other than noting that using
-        // multidimensional upwinding in the XY-plane and not in the Z-direction may be
-        // a good idea. We have here attempted some generalization, by looking at all
-        // face-neighbours across edges as upwind candidates, and giving them all uniform weight.
-        // This will over-weight the immediate upstream cell value in an extruded 2d grid with
-        // one layer (top and bottom no-flow faces will enter the computation) compared to the
-        // original 2d case. Improvements are welcome.
-        // Note: Modified algorithm to consider faces that share even a single vertex with
-        // the input face. This reduces the problem of non-edge-conformal grids, but does not
-        // eliminate it entirely.
-
-        // Identify the adjacent faces of the upwind cell.
-        const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[face];
-        const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[face + 1];
-        assert(face_nodes_end - face_nodes_beg == 2 || grid_.dimensions != 2);
-        adj_faces_.clear();
-        for (int hf = grid_.cell_facepos[upwind_cell]; hf < grid_.cell_facepos[upwind_cell + 1]; ++hf) {
-            const int f = grid_.cell_faces[hf];
-            if (f != face) {
-                const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
-                const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
-                // Find out how many vertices they have in common.
-                // Using simple linear searches since sets are small.
-                int num_common = 0;
-                for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
-                    num_common += std::count(face_nodes_beg, face_nodes_end, *f_iter);
-                }
-                // Before: neighbours over an edge (3d) or vertex (2d).
-                // Now: neighbours across a vertex.
-                // if (num_common == grid_.dimensions - 1) {
-                if (num_common > 0) {
-                    adj_faces_.push_back(f);
-                }
-            }
-        }
-
-        // Indentify adjacent faces with inflows, compute omega_star, omega,
-        // add up contributions.
-        const int num_adj = adj_faces_.size();
-        // The assertion below only holds if the grid is edge-conformal.
-        // No longer testing, since method no longer requires it.
-        // assert(num_adj == face_nodes_end - face_nodes_beg);
-        const double flux_face = std::fabs(darcyflux_[face]);
-        face_term = 0.0;
-        cell_term_factor = 0.0;
-        int num_contrib = 0;
-        for (int ii = 0; ii < num_adj; ++ii) {
-            const int f = adj_faces_[ii];
-            const double influx_f = (grid_.face_cells[2*f] == upwind_cell) ? -darcyflux_[f] : darcyflux_[f];
-            if (influx_f <= 0.0) {
-                // We have no contribution from face f, it is an outflow face.
-                continue;
-            }
-            assert(influx_f > 0.0);
-            const double omega_star = influx_f/flux_face;
-            // SPU
-            const double omega = 0.0;
-            // TMU
-            // const double omega = omega_star > 0.0 ? std::min(omega_star, 1.0) :  0.0;
-            // SMU
-            // const double omega = omega_star > 0.0 ? omega_star/(1.0 + omega_star) : 0.0;
-            face_term += omega * face_tof_[f];
-            cell_term_factor += (1.0 - omega);
-            // const int* f_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
-            // const int* f_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
-            // for (const int* f_iter = f_nodes_beg; f_iter < f_nodes_end; ++f_iter) {
-            //     if (face_part_tof_[*f_iter] > 0.0) {
-            //         face_term += omega * face_part_tof_[*f_iter];
-            //         cell_term_factor += (1.0 - omega);
-            //         ++num_contrib;
-            //     }
-            // }
-        }
-        face_term /= double(num_adj);
-        cell_term_factor /= double(num_adj);
-        // face_term /= double(num_contrib);
-        // cell_term_factor /= double(num_contrib);
-#endif
     }
+
+
 
 
     namespace {
