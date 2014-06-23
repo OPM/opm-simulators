@@ -31,7 +31,9 @@
 /// \snippet tutorial1.cpp including headers
 
 /// \internal [including headers]
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>

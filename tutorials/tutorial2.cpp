@@ -28,7 +28,9 @@
 /// We solve the flow equations for a Cartesian grid and we set the source term
 /// \f$q\f$ be zero except at the left-lower and right-upper corner, where it is equal
 /// with opposite sign (inflow equal to outflow).
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
