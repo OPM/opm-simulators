@@ -150,6 +150,7 @@ namespace Opm
         int num_tracers_;
         enum { NoTracerHead = -1 };
         std::vector<int> tracerhead_by_cell_;
+        bool tracers_ensure_unity_;
         // Used by solveSingleCell().
         std::vector<double> rhs_;   // single-cell right-hand-sides
         std::vector<double> jac_;   // single-cell jacobian

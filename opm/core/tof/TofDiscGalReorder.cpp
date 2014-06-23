@@ -59,6 +59,8 @@ namespace Opm
             basis_func_.reset(new DGBasisBoundedTotalDegree(grid_, dg_degree));
         }
 
+        tracers_ensure_unity_ = param.getDefault("tracers_ensure_unity", true);
+
         use_cvi_ = param.getDefault("use_cvi", use_cvi_);
         use_limiter_ = param.getDefault("use_limiter", use_limiter_);
         if (use_limiter_) {
@@ -305,7 +307,7 @@ namespace Opm
         }
 
         // Ensure that tracer averages sum to 1.
-        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
+        if (num_tracers_ && tracers_ensure_unity_ && tracerhead_by_cell_[cell] == NoTracerHead) {
             std::vector<double> tr_aver(num_tracers_);
             double tr_sum = 0.0;
             for (int tr = 0; tr < num_tracers_; ++tr) {
