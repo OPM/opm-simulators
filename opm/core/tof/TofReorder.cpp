@@ -275,6 +275,20 @@ namespace Opm
                 double fterm, cterm_factor;
                 multidimUpwindTerms(f, cell, fterm, cterm_factor);
                 face_tof_[f] = fterm + cterm_factor*tof_[cell];
+
+                // Combine locally computed (for each adjacent vertex) terms, with uniform weighting.
+                const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
+                const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
+                const int num_terms = face_nodes_end - face_nodes_beg;
+                assert(num_terms == 2 || grid_.dimensions != 2);
+                for (const int* fn_iter = face_nodes_beg; fn_iter < face_nodes_end; ++fn_iter) {
+                    double loc_face_term = 0.0;
+                    double loc_cell_term_factor = 0.0;
+                    const int node_pos = fn_iter - grid_.face_nodes;
+                    localMultidimUpwindTerms(f, cell, node_pos,
+                                             loc_face_term, loc_cell_term_factor);
+                    face_part_tof_[node_pos] = loc_face_term + loc_cell_term_factor * tof_[cell];
+                }
             }
         }
     }
