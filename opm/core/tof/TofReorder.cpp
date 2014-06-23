@@ -443,11 +443,11 @@ namespace Opm
         double weightFunc(const double w)
         {
             // SPU
-            return 0.0;
+            // return 0.0;
             // TMU
             // return w > 0.0 ? std::min(w, 1.0) :  0.0;
             // SMU
-            // return w > 0.0 ? w/(1.0 + w) : 0.0;
+            return w > 0.0 ? w/(1.0 + w) : 0.0;
         }
     }
 
