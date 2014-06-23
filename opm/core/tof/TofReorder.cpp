@@ -342,10 +342,11 @@ namespace Opm
         const int num_terms = face_nodes_end - face_nodes_beg;
         assert(num_terms == 2 || grid_.dimensions != 2);
         face_term = 0.0;
+        cell_term_factor = 0.0;
         for (const int* fn_iter = face_nodes_beg; fn_iter < face_nodes_end; ++fn_iter) {
             double loc_face_term = 0.0;
             double loc_cell_term_factor = 0.0;
-            localMultidimUpwindTerms(face, upwind_cell, fn_iter - grid_.face_nodepos,
+            localMultidimUpwindTerms(face, upwind_cell, fn_iter - grid_.face_nodes,
                                      loc_face_term, loc_cell_term_factor);
             face_term += loc_face_term;
             cell_term_factor += loc_cell_term_factor;
