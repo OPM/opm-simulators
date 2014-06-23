@@ -112,7 +112,6 @@ namespace Opm
         bool use_multidim_upwind_;
         std::vector<double> face_tof_;       // For multidim upwind face tofs.
         std::vector<double> face_part_tof_;  // For multidim upwind face tofs.
-        mutable std::vector<int> adj_faces_; // For multidim upwind logic.
     };
 
 } // namespace Opm
