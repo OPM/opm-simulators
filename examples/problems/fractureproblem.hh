@@ -443,7 +443,7 @@ public:
     // \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     // \{
 
@@ -559,10 +559,10 @@ private:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
-                Scalar lambdaFluid
-                    = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
-                lambdaSaturated = std::pow(lambdaGranite, (1 - poro))
-                                  + std::pow(lambdaFluid, poro);
+                Scalar lambdaFluid = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
+                lambdaSaturated =
+                    std::pow(lambdaGranite, (1 - poro))
+                    + std::pow(lambdaFluid, poro);
             }
             else
                 lambdaSaturated = std::pow(lambdaGranite, (1 - poro));

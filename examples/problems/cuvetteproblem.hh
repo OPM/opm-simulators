@@ -379,19 +379,18 @@ public:
             // the injection fluid state
             Scalar molarInjectionRate = 0.3435; // [mol/(m^2 s)]
             for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                molarRate[conti0EqIdx + compIdx]
-                    = -molarInjectionRate
-                      * injectFluidState_.moleFraction(gasPhaseIdx, compIdx);
+                molarRate[conti0EqIdx + compIdx] =
+                    -molarInjectionRate
+                    * injectFluidState_.moleFraction(gasPhaseIdx, compIdx);
 
             // calculate the total mass injection rate [kg / (m^2 s)
-            Scalar massInjectionRate
-                = molarInjectionRate
-                  * injectFluidState_.averageMolarMass(gasPhaseIdx);
+            Scalar massInjectionRate =
+                molarInjectionRate
+                * injectFluidState_.averageMolarMass(gasPhaseIdx);
 
-            // set the boundary rate vector
+            // set the boundary rate vector [J / (m^2 s)]
             values.setMolarRate(molarRate);
-            values.setEnthalpyRate(-injectFluidState_.enthalpy(gasPhaseIdx)
-                                   * massInjectionRate); // [J / (m^2 s)]
+            values.setEnthalpyRate(-injectFluidState_.enthalpy(gasPhaseIdx) * massInjectionRate);
         }
         else
             values.setNoFlow();
@@ -400,7 +399,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -477,8 +476,7 @@ private:
             fs.setSaturation(gasPhaseIdx, 1 - 0.12 - 0.07);
 
             // set the capillary pressures
-            const auto &matParams
-                = materialLawParams(context, spaceIdx, timeIdx);
+            const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -496,8 +494,7 @@ private:
             fs.setSaturation(naplPhaseIdx, 0);
 
             // set the capillary pressures
-            const auto &matParams
-                = materialLawParams(context, spaceIdx, timeIdx);
+            const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -549,10 +546,11 @@ private:
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
-                Scalar lambdaFluid
-                    = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
-                lambdaSaturated = std::pow(lambdaGranite, (1 - poro))
-                                  + std::pow(lambdaFluid, poro);
+                Scalar lambdaFluid = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);
+                lambdaSaturated =
+                    std::pow(lambdaGranite, (1 - poro))
+                    +
+                    std::pow(lambdaFluid, poro);
             }
             else
                 lambdaSaturated = std::pow(lambdaGranite, (1 - poro));
@@ -578,8 +576,7 @@ private:
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updatePhase(injectFluidState_, gasPhaseIdx);
 
-        Scalar h
-            = FluidSystem::enthalpy(injectFluidState_, paramCache, gasPhaseIdx);
+        Scalar h = FluidSystem::enthalpy(injectFluidState_, paramCache, gasPhaseIdx);
         injectFluidState_.setEnthalpy(gasPhaseIdx, h);
     }
 

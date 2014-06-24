@@ -230,8 +230,7 @@ public:
 
         if (dimWorld == 3) {
             lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftZ);
-            lensUpperRight_[2]
-                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
+            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
         }
 
         // parameters for the Van Genuchten law
@@ -380,8 +379,7 @@ public:
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             // free flow boundary
-            Scalar densityW
-                = WettingPhase::density(temperature_, /*pressure=*/1e5);
+            Scalar densityW = WettingPhase::density(temperature_, /*pressure=*/1e5);
 
             Scalar T = temperature(context, spaceIdx, timeIdx);
             Scalar pw, Sw;
@@ -405,8 +403,7 @@ public:
             }
 
             // specify a full fluid state using pw and Sw
-            const MaterialLawParams &matParams
-                = this->materialLawParams(context, spaceIdx, timeIdx);
+            const MaterialLawParams &matParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem,
                                       /*storeEnthalpy=*/false> fs;
@@ -439,7 +436,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -470,8 +467,7 @@ public:
         Scalar pw = 1e5 - densityW * this->gravity()[1] * depth;
 
         // calculate the capillary pressure
-        const MaterialLawParams &matParams
-            = this->materialLawParams(context, spaceIdx, timeIdx);
+        const MaterialLawParams &matParams = this->materialLawParams(context, spaceIdx, timeIdx);
         Scalar pC[numPhases];
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 

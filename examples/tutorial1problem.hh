@@ -218,8 +218,7 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) {
             // Free-flow conditions on left boundary
-            const auto &materialParams
-                = this->materialLawParams(context, spaceIdx, timeIdx);
+            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             Scalar Sw = 1.0;

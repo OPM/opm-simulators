@@ -294,8 +294,7 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
-            const auto &materialParams
-                = this->materialLawParams(context, spaceIdx, timeIdx);
+            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Scalar Sw = 0.0;
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
@@ -324,7 +323,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -337,8 +336,7 @@ public:
                  int spaceIdx,
                  int timeIdx) const
     {
-        const auto &materialParams
-            = this->materialLawParams(context, spaceIdx, timeIdx);
+        const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
         Scalar Sw = 0.0;
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;

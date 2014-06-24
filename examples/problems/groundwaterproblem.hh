@@ -164,16 +164,12 @@ public:
 
         lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
         if (dim > 1)
-            lensUpperRight_[1]
-                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
         if (dim > 2)
-            lensUpperRight_[2]
-                = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
 
-        intrinsicPerm_
-            = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
-        intrinsicPermLens_ = this->toDimMatrix_(
-            EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
+        intrinsicPerm_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
+        intrinsicPermLens_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
     }
 
     /*!
@@ -296,7 +292,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 

@@ -390,7 +390,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -413,8 +413,8 @@ public:
     /*!
      * \copydoc VcfvProblem::constraints
      *
-     * In this problem, constraints are used to keep the temperature
-     * of the finite-volumes which are closest to the inlet constant.
+     * In this problem, constraints are used to keep the temperature of the degrees of
+     * freedom which are closest to the inlet constant.
      */
     template <class Context>
     void constraints(Constraints &constraints,

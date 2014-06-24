@@ -459,7 +459,7 @@ public:
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             fs.setSaturation(gasPhaseIdx, 1.0);
             fs.setPressure(gasPhaseIdx,
-                           context.volVars(spaceIdx, timeIdx).fluidState().pressure(
+                           context.intensiveQuantities(spaceIdx, timeIdx).fluidState().pressure(
                                gasPhaseIdx));
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
             typename FluidSystem::ParameterCache paramCache;
@@ -478,7 +478,7 @@ public:
     // \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -537,8 +537,7 @@ private:
         Scalar pl = 1e5 - densityL * this->gravity()[dim - 1] * depth;
 
         Scalar pC[numPhases];
-        const auto &matParams
-            = this->materialLawParams(context, spaceIdx, timeIdx);
+        const auto &matParams = this->materialLawParams(context, spaceIdx, timeIdx);
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
         fs.setPressure(liquidPhaseIdx, pl + (pC[liquidPhaseIdx] - pC[liquidPhaseIdx]));

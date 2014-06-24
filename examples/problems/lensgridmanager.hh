@@ -139,9 +139,7 @@ public:
             cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
-        unsigned numRefinements
-            = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
-
+        unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
         gridPtr_.reset(new Dune::YaspGrid<dim>(
 #ifdef HAVE_MPI
             /*mpiCommunicator=*/Dune::MPIHelper::getCommunicator(),
