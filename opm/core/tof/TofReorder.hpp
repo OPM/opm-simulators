@@ -80,6 +80,7 @@ namespace Opm
                             std::vector<double>& tracer);
 
     private:
+        void executeSolve();
         virtual void solveSingleCell(const int cell);
         void solveSingleCellMultidimUpwind(const int cell);
         void assembleSingleCell(const int cell,
@@ -99,8 +100,7 @@ namespace Opm
         const double* porevolume_;  // one volume per cell
         const double* source_;      // one volumetric source term per cell
         double* tof_;
-        double* tracer_;
-        int num_tracers_;
+        bool compute_tracer_;
         enum { NoTracerHead = -1 };
         std::vector<int> tracerhead_by_cell_;
         // For solveMultiCell():

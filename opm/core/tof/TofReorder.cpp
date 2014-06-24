@@ -42,8 +42,6 @@ namespace Opm
           porevolume_(0),
           source_(0),
           tof_(0),
-          tracer_(0),
-          num_tracers_(0),
           gauss_seidel_tol_(1e-3),
           use_multidim_upwind_(use_multidim_upwind)
     {
@@ -84,16 +82,8 @@ namespace Opm
             face_part_tof_.resize(grid_.face_nodepos[grid_.number_of_faces]);
             std::fill(face_part_tof_.begin(), face_part_tof_.end(), 0.0);
         }
-        num_tracers_ = 0;
-        num_multicell_ = 0;
-        max_size_multicell_ = 0;
-        max_iter_multicell_ = 0;
-        reorderAndTransport(grid_, darcyflux);
-        if (num_multicell_ > 0) {
-            std::cout << num_multicell_ << " multicell blocks with max size "
-                      << max_size_multicell_ << " cells in upto "
-                      << max_iter_multicell_ << " iterations." << std::endl;
-        }
+        compute_tracer_ = false;
+        executeSolve();
     }
 
 
@@ -131,41 +121,58 @@ namespace Opm
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
 
-        // Find the tracer heads (injectors).
-        num_tracers_ = tracerheads.size();
-        tracer.resize(grid_.number_of_cells*num_tracers_);
-        std::fill(tracer.begin(), tracer.end(), 0.0);
-        if (num_tracers_ > 0) {
-            tracerhead_by_cell_.clear();
-            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
-        }
-        for (int tr = 0; tr < num_tracers_; ++tr) {
-            for (int i = 0; i < tracerheads[tr].size(); ++i) {
-                const int cell = tracerheads[tr][i];
-                tracer[cell*num_tracers_ + tr] = 1.0;
-                tracerhead_by_cell_[cell] = tr;
-            }
-        }
-
-        tracer_ = &tracer[0];
         if (use_multidim_upwind_) {
             face_tof_.resize(grid_.number_of_faces);
             std::fill(face_tof_.begin(), face_tof_.end(), 0.0);
             face_part_tof_.resize(grid_.face_nodepos[grid_.number_of_faces]);
             std::fill(face_part_tof_.begin(), face_part_tof_.end(), 0.0);
-            OPM_THROW(std::runtime_error, "Multidimensional upwind not yet implemented for tracer.");
         }
+
+        // Execute solve for tof
+        compute_tracer_ = false;
+        executeSolve();
+
+        // Find the tracer heads (injectors).
+        const int num_tracers = tracerheads.size();
+        tracer.resize(grid_.number_of_cells*num_tracers);
+        std::fill(tracer.begin(), tracer.end(), 0.0);
+        if (num_tracers > 0) {
+            tracerhead_by_cell_.clear();
+            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+        }
+        for (int tr = 0; tr < num_tracers; ++tr) {
+            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+                const int cell = tracerheads[tr][i];
+                tracer[cell*num_tracers + tr] = 1.0;
+                tracerhead_by_cell_[cell] = tr;
+            }
+        }
+
+        // Execute solve for tracers.
+        std::vector<double> fake_pv(grid_.number_of_cells, 0.0);
+        porevolume_ = fake_pv.data();
+        for (int tr = 0; tr < num_tracers; ++tr) {
+            tof_ = tracer.data() + tr * grid_.number_of_cells;
+            compute_tracer_ = true;
+            executeSolve();
+        }
+    }
+
+
+
+
+    void TofReorder::executeSolve()
+    {
         num_multicell_ = 0;
         max_size_multicell_ = 0;
         max_iter_multicell_ = 0;
-        reorderAndTransport(grid_, darcyflux);
+        reorderAndTransport(grid_, darcyflux_);
         if (num_multicell_ > 0) {
             std::cout << num_multicell_ << " multicell blocks with max size "
                       << max_size_multicell_ << " cells in upto "
                       << max_iter_multicell_ << " iterations." << std::endl;
         }
     }
-
 
 
 
@@ -181,10 +188,9 @@ namespace Opm
         // to the downwind_flux (note sign change resulting from
         // different sign conventions: pos. source is injection,
         // pos. flux is outflow).
-        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
-            for (int tr = 0; tr < num_tracers_; ++tr) {
-                tracer_[num_tracers_*cell + tr] = 0.0;
-            }
+        if (compute_tracer_ && tracerhead_by_cell_[cell] != NoTracerHead) {
+            // This is a tracer head cell, already has solution.
+            return;
         }
         double upwind_term = 0.0;
         double downwind_flux = std::max(-source_[cell], 0.0);
@@ -207,11 +213,6 @@ namespace Opm
                 // face.
                 if (other != -1) {
                     upwind_term += flux*tof_[other];
-                    if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
-                        for (int tr = 0; tr < num_tracers_; ++tr) {
-                            tracer_[num_tracers_*cell + tr] += flux*tracer_[num_tracers_*other + tr];
-                        }
-                    }
                 }
             } else {
                 downwind_flux += flux;
@@ -220,14 +221,6 @@ namespace Opm
 
         // Compute tof.
         tof_[cell] = (porevolume_[cell] - upwind_term)/downwind_flux;
-
-        // Compute tracers (if any).
-        // Do not change tracer solution in source cells.
-        if (num_tracers_ && tracerhead_by_cell_[cell] == NoTracerHead) {
-            for (int tr = 0; tr < num_tracers_; ++tr) {
-                tracer_[num_tracers_*cell + tr] *= -1.0/downwind_flux;
-            }
-        }
     }
 
 
@@ -265,7 +258,11 @@ namespace Opm
         }
 
         // Compute tof for cell.
-        tof_[cell] = (porevolume_[cell] - upwind_term - downwind_term_face)/downwind_term_cell_factor;
+        if (compute_tracer_ && tracerhead_by_cell_[cell] != NoTracerHead) {
+            // Do nothing to the value in this cell, since we are at a tracer head.
+        } else {
+            tof_[cell] = (porevolume_[cell] - upwind_term - downwind_term_face)/downwind_term_cell_factor;
+        }
 
         // Compute tof for downwind faces.
         for (int i = grid_.cell_facepos[cell]; i < grid_.cell_facepos[cell+1]; ++i) {
@@ -375,9 +372,9 @@ namespace Opm
             // SPU
             // return 0.0;
             // TMU
-            // return w > 0.0 ? std::min(w, 1.0) :  0.0;
+            return w > 0.0 ? std::min(w, 1.0) :  0.0;
             // SMU
-            return w > 0.0 ? w/(1.0 + w) : 0.0;
+            // return w > 0.0 ? w/(1.0 + w) : 0.0;
         }
     }
 
@@ -435,7 +432,13 @@ namespace Opm
         }
         const double sum_w = std::accumulate(w.begin(), w.end(), 0.0);
         cell_term_factor = 1.0 - sum_w;
+        const double tol = 1e-5;
+        if (cell_term_factor < -tol && cell_term_factor > 1.0 + tol) {
+            OPM_THROW(std::logic_error, "cell_term_factor outside [0,1]: " << cell_term_factor);
+        }
+        cell_term_factor = std::min(std::max(cell_term_factor, 0.0), 1.0);
         assert(cell_term_factor >= 0.0);
+        assert(cell_term_factor <= 1.0);
     }
 
 } // namespace Opm
