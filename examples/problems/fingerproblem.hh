@@ -272,8 +272,7 @@ public:
             elemCtx.updateAll(*elemIt);
             for (int scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx) {
                 int globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
-                const auto &fs
-                    = elemCtx.volVars(scvIdx, /*timeIdx=*/0).fluidState();
+                const auto &fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
                 ParkerLenhard::update(materialParams_[globalIdx], fs);
             }
         }
@@ -355,7 +354,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 

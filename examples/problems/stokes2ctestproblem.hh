@@ -185,7 +185,7 @@ public:
     //! \}
 
     /*!
-     * \name Volume terms
+     * \name Volumetric terms
      */
     //! \{
 
@@ -205,11 +205,13 @@ public:
 
         // parabolic profile
         const Scalar v1 = 1.0;
-        values[velocity0Idx + 1]
-            = -v1 * (globalPos[0] - this->boundingBoxMin()[0])
-              * (this->boundingBoxMax()[0] - globalPos[0])
-              / (0.25 * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0])
-                 * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0]));
+        values[velocity0Idx + 1] =
+            - v1
+            * (globalPos[0] - this->boundingBoxMin()[0])
+            * (this->boundingBoxMax()[0] - globalPos[0])
+            / (0.25
+               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0])
+               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0]));
 
         Scalar moleFrac[numComponents];
         if (onUpperBoundary_(globalPos))
