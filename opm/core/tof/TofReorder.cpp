@@ -110,14 +110,15 @@ namespace Opm
         darcyflux_ = darcyflux;
         porevolume_ = porevolume;
         source_ = source;
+        const int num_cells = grid_.number_of_cells;
 #ifndef NDEBUG
         // Sanity check for sources.
-        const double cum_src = std::accumulate(source, source + grid_.number_of_cells, 0.0);
-        if (std::fabs(cum_src) > *std::max_element(source, source + grid_.number_of_cells)*1e-2) {
+        const double cum_src = std::accumulate(source, source + num_cells, 0.0);
+        if (std::fabs(cum_src) > *std::max_element(source, source + num_cells)*1e-2) {
             OPM_THROW(std::runtime_error, "Sources do not sum to zero: " << cum_src);
         }
 #endif
-        tof.resize(grid_.number_of_cells);
+        tof.resize(num_cells);
         std::fill(tof.begin(), tof.end(), 0.0);
         tof_ = &tof[0];
 
@@ -134,27 +135,35 @@ namespace Opm
 
         // Find the tracer heads (injectors).
         const int num_tracers = tracerheads.size();
-        tracer.resize(grid_.number_of_cells*num_tracers);
+        tracer.resize(num_cells*num_tracers);
         std::fill(tracer.begin(), tracer.end(), 0.0);
         if (num_tracers > 0) {
             tracerhead_by_cell_.clear();
-            tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
+            tracerhead_by_cell_.resize(num_cells, NoTracerHead);
         }
         for (int tr = 0; tr < num_tracers; ++tr) {
             for (int i = 0; i < tracerheads[tr].size(); ++i) {
                 const int cell = tracerheads[tr][i];
-                tracer[cell*num_tracers + tr] = 1.0;
+                tracer[num_cells * tr + cell] = 1.0;
                 tracerhead_by_cell_[cell] = tr;
             }
         }
 
         // Execute solve for tracers.
-        std::vector<double> fake_pv(grid_.number_of_cells, 0.0);
+        std::vector<double> fake_pv(num_cells, 0.0);
         porevolume_ = fake_pv.data();
         for (int tr = 0; tr < num_tracers; ++tr) {
-            tof_ = tracer.data() + tr * grid_.number_of_cells;
+            tof_ = tracer.data() + tr * num_cells;
             compute_tracer_ = true;
             executeSolve();
+        }
+
+        // Write output tracer data (transposing the computed data).
+        std::vector<double> computed = tracer;
+        for (int cell = 0; cell < num_cells; ++cell) {
+            for (int tr = 0; tr < num_tracers; ++tr) {
+                tracer[num_tracers * cell + tr] = computed[num_cells * tr + cell];
+            }
         }
     }
 
