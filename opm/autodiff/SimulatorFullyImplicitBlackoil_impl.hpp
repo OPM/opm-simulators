@@ -284,7 +284,6 @@ namespace Opm
             {
                 // Run solver.
                 solver_timer.start();
-                std::vector<double> initial_pressure = state.pressure();
                 solver_.step(timer.currentStepLength(), state, well_state);
 
                 // Stop timer and report.
