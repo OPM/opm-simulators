@@ -628,18 +628,28 @@ namespace Opm
                     sg = satFromPc(props, gaspos, cell, pcog, increasing);
                     phase_saturations[gaspos][local_index] = sg;
                 }
-                bool overlap = false;
                 if (gas && water && (sg + sw > 1.0)) {
                     // Overlapping gas-oil and oil-water transition
                     // zones can lead to unphysical saturations when
                     // treated as above. Must recalculate using gas-water
                     // capillary pressure.
                     const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
+                    if (! swat_init.empty()) { 
+                        // Re-scale Pc to reflect imposed sw for vanishing oil phase.
+                        // This seems consistent with ecl, and fails to honour 
+                        // swat_init in case of non-trivial gas-oil cap pressure.
+                        props.swatInitScaling(cell, pcgw, sw);
+                    }
                     sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
                     sg = 1.0 - sw;
                     phase_saturations[waterpos][local_index] = sw;
                     phase_saturations[gaspos][local_index] = sg;
-                    overlap = true;
+                    // Adjust oil pressure according to gas saturation and cap pressure
+                    double pc[BlackoilPhases::MaxNumPhases];
+                    double sat[BlackoilPhases::MaxNumPhases];
+                    sat[gaspos] = sg;
+                    props.capPress(1, sat, &cell, pc, 0);                   
+                    phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
                 }
                 phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
                 
@@ -650,7 +660,7 @@ namespace Opm
                     sat[waterpos] = smax[waterpos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
-                } else if (overlap || sg > smax[gaspos]-1.0e-6) {
+                } else if (sg > smax[gaspos]-1.0e-6) {
                     sat[gaspos] = smax[gaspos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
