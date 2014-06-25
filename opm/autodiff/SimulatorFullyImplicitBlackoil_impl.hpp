@@ -83,9 +83,6 @@ namespace Opm
         bool output_vtk_;
         std::string output_dir_;
         int output_interval_;
-        // Parameters for well control
-        bool check_well_controls_;
-        int max_well_control_iterations_;
         // Observed objects.
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
@@ -231,10 +228,6 @@ namespace Opm
             output_interval_ = param.getDefault("output_interval", 1);
         }
 
-        // Well control related init.
-        check_well_controls_ = param.getDefault("check_well_controls", false);
-        max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
-
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
         allcells_.resize(num_cells);
@@ -288,18 +281,7 @@ namespace Opm
             }
 
             SimulatorReport sreport;
-
-            // Solve pressure equation.
-            // if (check_well_controls_) {
-            //     computeFractionalFlow(props_, allcells_,
-            //                           state.pressure(), state.surfacevol(), state.saturation(),
-            //                           fractional_flows);
-            //     wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
-            // }
-
-            bool well_control_passed = !check_well_controls_;
-            int well_control_iteration = 0;
-            do {
+            {
                 // Run solver.
                 solver_timer.start();
                 std::vector<double> initial_pressure = state.pressure();
@@ -312,23 +294,7 @@ namespace Opm
 
                 stime += st;
                 sreport.pressure_time = st;
-
-                // Optionally, check if well controls are satisfied.
-                if (check_well_controls_) {
-                    std::cout << "Checking well conditions." << std::endl;
-                    // For testing we set surface := reservoir
-                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_state.wellRates(), well_state.wellRates());
-                    ++well_control_iteration;
-                    if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
-                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
-                    }
-                    if (!well_control_passed) {
-                        std::cout << "Well controls not passed, solving again." << std::endl;
-                    } else {
-                        std::cout << "Well conditions met." << std::endl;
-                    }
-                }
-            } while (!well_control_passed);
+            }
 
             // Update pore volumes if rock is compressible.
             if (rock_comp_props_ && rock_comp_props_->isActive()) {
