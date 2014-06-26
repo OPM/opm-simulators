@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     Opm::DeckConstPtr deck = parser->parseFile("deadfluids.DATA");
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, *grid, false);
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, *grid, 10.0);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, *grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
@@ -419,7 +419,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, grid, 10.0);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -459,7 +459,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, grid, 9.80665);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -521,7 +521,7 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, grid, 9.80665);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -600,7 +600,7 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, grid, 9.80665);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -682,7 +682,7 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, grid, 9.80665);
+    Opm::Equil::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);

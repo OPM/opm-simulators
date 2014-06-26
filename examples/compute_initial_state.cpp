@@ -95,7 +95,7 @@ try
 
     // Initialisation.
     BlackoilState state;
-    initStateEquil(grid, props, deck, grav, state);
+    initStateEquil(grid, props, deck, eclipseState, grav, state);
 
     // Output.
     const std::string output_dir = param.getDefault<std::string>("output_dir", "output");
