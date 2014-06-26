@@ -22,6 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/simulator/initState.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -769,7 +770,7 @@ namespace Opm
         state.saturation() = convertSats(isc.saturation());
         state.gasoilratio() = isc.rs();
         state.rv() = isc.rv();
-        // TODO: state.surfacevol() must be computed from s, rs, rv.
+        initBlackoilSurfvolUsingRSorRV(grid, props, state);
     }
 
 
