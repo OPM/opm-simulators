@@ -26,6 +26,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/simulator/initState.hpp>
+#include <opm/core/simulator/initStateEquil.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -135,6 +136,11 @@ try
                     / state.surfacevol()[c*np + pu.phase_pos[Oil]];
             }
         }
+    } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
+        state.init(*grid->c_grid(), props->numPhases());
+        const double grav = param.getDefault("gravity", unit::gravity);
+        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state);
+        state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
     } else {
         initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
     }
