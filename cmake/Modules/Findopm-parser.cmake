@@ -82,7 +82,7 @@ endif ()
 # libraries in the directories relevant for the architecture
 if (CMAKE_SIZEOF_VOID_P)
   math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-endif (CMAKE_SIZEOF_VOID_P)
+endif ()
 
 # these libraries constitute the parser core
 find_library (OPM_PARSER_LIBRARY
@@ -94,6 +94,7 @@ find_library (OPM_PARSER_LIBRARY
   DOC "Path to OPM parser library archive/shared object files"
   ${_no_default_path} )
 
+# find the OPM-parser wrapper library around cJSON
 find_library (OPM_JSON_LIBRARY
   NAMES "opm-json"
   HINTS "${OPM_PARSER_ROOT}"
@@ -103,62 +104,63 @@ find_library (OPM_JSON_LIBRARY
   DOC "Path to OPM JSON library archive/shared object files"
   ${_no_default_path} )
 
+# get the prerequisite ERT libraries
+if (NOT ERT_FOUND)
+  find_package(ERT ${OPM_PARSER_QUIET})
+endif ()
+
 # get the prerequisite CJSON library
 if (NOT CJSON_FOUND)
-  find_package (cjson REQUIRED ${OPM_PARSER_QUIET})
+  find_package(cjson ${OPM_PARSER_QUIET})
 endif ()
 
 # get the prerequisite Boost libraries
-if (NOT Boost_FOUND)
-  find_package(Boost 1.44.0
-        COMPONENTS filesystem date_time system unit_test_framework REQUIRED ${OPM_PARSER_QUIET})
-endif ()
+find_package(Boost 1.44.0 COMPONENTS filesystem date_time system unit_test_framework regex ${OPM_PARSER_QUIET})
 
-# setup list of all required libraries to link with opm-parser. notice that
-# we use the plural form to get *all* the libraries needed by cjson
-set (OPM_PARSER_INCLUDE_DIRS
-  ${OPM_PARSER_INCLUDE_DIR}
-  ${CJSON_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS})
+if (CJSON_FOUND AND ERT_FOUND AND Boost_FOUND AND
+    OPM_PARSER_LIBRARY AND OPM_JSON_LIBRARY AND OPM_PARSER_INCLUDE_DIR)
+  # setup list of all required libraries to link with opm-parser. notice that
+  # we use the plural form to get *all* the libraries needed by cjson
+  set (opm-parser_INCLUDE_DIRS
+    ${OPM_PARSER_INCLUDE_DIR}
+    ${CJSON_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${ERT_INCLUDE_DIRS})
 
-set (OPM_PARSER_LIBRARIES
-  ${OPM_PARSER_LIBRARY}
-  ${OPM_JSON_LIBRARY}
-  ${CJSON_LIBRARIES}
-  ${Boost_LIBRARIES})
+  set (opm-parser_LIBRARIES
+    ${OPM_PARSER_LIBRARY}
+    ${OPM_JSON_LIBRARY}
+    ${CJSON_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${ERT_LIBRARIES})
 
-# see if we can compile a minimum example
-# CMake logical test doesn't handle lists (sic)
-if (NOT (OPM_PARSER_INCLUDE_DIR MATCHES "-NOTFOUND"
-          OR OPM_PARSER_LIBRARIES MATCHES "-NOTFOUND"))
+  # see if we can compile a minimum example
+  # CMake logical test doesn't handle lists (sic)
   include (CMakePushCheckState)
   include (CheckCSourceCompiles)
   cmake_push_check_state ()
-  set (CMAKE_REQUIRED_INCLUDES ${OPM_PARSER_INCLUDE_DIRS})
-  set (CMAKE_REQUIRED_LIBRARIES ${OPM_PARSER_LIBRARIES})
+  set (CMAKE_REQUIRED_INCLUDES ${opm-parser_INCLUDE_DIRS})
+  set (CMAKE_REQUIRED_LIBRARIES ${opm-parser_LIBRARIES})
 
   check_cxx_source_compiles (
-"#include <cstdlib>
+      "#include <cstdlib>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 int main (void) {
    return EXIT_SUCCESS;
 }" HAVE_OPM_PARSER)
   cmake_pop_check_state ()
-else ()
-  # clear the cache so the find probe is attempted again if files becomes
-  # available (only upon a unsuccessful *compile* should we disable further
-  # probing)
-  set (HAVE_OPM_PARSER)
-  unset (HAVE_OPM_PARSER CACHE)
-endif ()
+endif()
 
 # if the test program didn't compile, but was required to do so, bail
 # out now and display an error; otherwise limp on
 set (OPM_PARSER_FIND_REQUIRED ${opm-parser_FIND_REQUIRED})
-set (OPM_PARSER_FIND_QUIETLY ${opm-parser_FIND_QUIETLY})
-find_package_handle_standard_args (OPM_PARSER
+find_package_handle_standard_args (opm-parser
   DEFAULT_MSG
-  OPM_PARSER_INCLUDE_DIRS OPM_PARSER_LIBRARIES HAVE_OPM_PARSER
-  )
-set (opm-parser_FOUND ${OPM_PARSER_FOUND})
+  opm-parser_INCLUDE_DIRS opm-parser_LIBRARIES HAVE_OPM_PARSER
+    )
+
+set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER")
+set (opm-parser_FOUND ${OPM-PARSER_FOUND})
+
+mark_as_advanced(opm-parser_LIBRARIES opm-parser_INCLUDE_DIRS OPM-PARSER_FOUND)
