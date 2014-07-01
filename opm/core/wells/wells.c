@@ -474,14 +474,12 @@ struct Wells *
 clone_wells(const struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    int                        c, np, nperf, ok, pos, w;
-    double                     target;
-    const int                 *cells;
-    const double              *WI, *comp_frac, *distr;
-    enum WellControlType       type;
-    const struct WellControls *ctrls;
+    int                  np, nperf, ok, pos, w;
+    const int           *cells;
+    const double        *WI, *comp_frac;
 
-    struct Wells *newWells;
+    struct WellControls *ctrl;
+    struct Wells        *newWells;
 
     if (W == NULL) {
         newWells = NULL;
@@ -505,25 +503,16 @@ clone_wells(const struct Wells *W)
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
                               comp_frac, cells, WI, W->name[ w ], newWells);
 
-                /* Capacity should be sufficient from create_wells() */
-                assert (ok);
-
-                ctrls = W->ctrls[ w ];
-
                 if (ok) {
-                    for (c = 0; ok && (c < well_controls_get_num(ctrls)); c++) {
-                        type   = well_controls_iget_type( ctrls , c );
-                        target = well_controls_iget_target( ctrls , c );
-                        distr  = well_controls_iget_distr( ctrls , c );
-
-                        ok = append_well_controls(type, target, distr, w, newWells);
-                        
-                        assert (ok);
-                    }
+                    ok = (ctrl = well_controls_clone(W->ctrls[w])) != NULL;
                 }
 
                 if (ok) {
-                    set_current_control(w, well_controls_get_current( ctrls) , newWells);
+                    /* Destroy control set implied by add_well() */
+                    well_controls_destroy(newWells->ctrls[w]);
+
+                    /* Assign complete clone of w's control set */
+                    newWells->ctrls[w] = ctrl;
                 }
 
                 pos = W->well_connpos[w + 1];
