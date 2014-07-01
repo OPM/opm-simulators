@@ -536,6 +536,8 @@ clone_wells(const struct Wells *W)
         }
     }
 
+    assert (wells_equal(newWells, W, false));
+
     return newWells;
 }
 
