@@ -226,16 +226,38 @@ append_well_controls(enum WellControlType type  ,
                      int                  well_index,
                      struct Wells        *W);
 
+
 /**
- * Set the current control for a single well.
+ * Set the current/active control for a single well.
+ *
+ * The new control ID must refer to a previously defined control mode.
+ * Total number of defined control modes available through function
+ * well_controls_get_num().
+ *
+ * \param[in]     well_index
+ *                   Identity of particular well.  Must be in
+ *                   \code [0 .. number_of_wells - 1] \endcode.
+ *
+ * \param[in]     current_control
+ *                   Index of new control mode.
+ *
+ * \param[in,out] W  Existing set of wells.
  */
 void
 set_current_control(int well_index, int current_control, struct Wells *W);
 
+
 /**
  * Clear all controls from a single well.
  *
- * Does not affect the control set capacity. */
+ * Does not affect the control set capacity.
+ *
+ * \param[in]     well_index
+ *                   Identity of particular well.  Must be in
+ *                   \code [0 .. number_of_wells - 1] \endcode.
+ *
+ * \param[in,out] W  Existing set of wells.
+ */
 void
 clear_well_controls(int well_index, struct Wells *W);
 
@@ -264,9 +286,45 @@ destroy_wells(struct Wells *W);
 struct Wells *
 clone_wells(const struct Wells *W);
 
+
+/**
+ * Compare well structures for equality.
+ *
+ * Two sets of wells are equal if all of the following conditions hold
+ *  - They have the same number of wells
+ *
+ *  - They have the same number of completions/connections
+ *
+ *  - They specify the same number of phases
+ *
+ *  - Individual wells with corresponding well IDs have the same names
+ *    (including both being \c NULL).
+ *
+ *  - Individual wells with corresponding well IDs have the same
+ *    completions
+ *
+ *  - Individual wells with corresponding well IDs have the same well
+ *    types
+ *
+ *  - Individual wells with corresponding well IDs specify the same
+ *    reference depths
+ *
+ *  - Individual wells with corresponding well IDs have the same set
+ *    of defined and active operational constraints as determined by
+ *    function well_controls_equal()
+ *
+ * \param[in] W1      Existing set of wells.
+ * \param[in] W2      Existing set of wells.
+ *
+ * \param[in] verbose Flag for whether or not to report which
+ *                    conditions do not hold.  Use \code verbose =
+ *                    true \endcode to print transcript to \c stdout.
+ *
+ * \return Whether or not well structures \c W1 and \c W2 represent
+ * the same set of wells.
+ */
 bool
 wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose);
-
 
 
 #ifdef __cplusplus
