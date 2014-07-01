@@ -22,7 +22,10 @@
 
 #include <stdbool.h>
 
-
+/**
+ * @file
+ * API for managing sets of well controls.
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +44,16 @@ well_controls_equal(const struct WellControls *ctrls1, const struct WellControls
 
 struct WellControls * 
 well_controls_create(void);
+
+/**
+ * Create deep copy (clone) of an existing set of well controls.
+ *
+ * @param[in] ctrl Existing set of well controls.
+ *
+ * @return Deep copy of @c ctrl.
+ */
+struct WellControls *
+well_controls_clone(const struct WellControls *ctrl);
 
 void
 well_controls_destroy(struct WellControls *ctrl);

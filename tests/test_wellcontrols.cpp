@@ -116,3 +116,28 @@ BOOST_AUTO_TEST_CASE(OpenClose)
     well_controls_destroy( ctrls );
 }
 
+
+BOOST_AUTO_TEST_CASE(Clone)
+{
+    std::shared_ptr<WellControls>
+        ctrls(well_controls_create(),
+              & well_controls_destroy);
+
+    const WellControlType type1 = BHP;
+    const WellControlType type2 = SURFACE_RATE;
+
+    const int num_phases = 3;
+    const double dist1[] = { 0,  1,  2};
+    const double dist2[] = {10, 11, 12};
+    const double target  = 77;
+
+    well_controls_assert_number_of_phases(ctrls.get(), num_phases);
+    well_controls_add_new(type1,   target, dist1, ctrls.get());
+    well_controls_add_new(type2, 2*target, dist2, ctrls.get());
+
+    std::shared_ptr<WellControls>
+        c(well_controls_clone(ctrls.get()),
+          & well_controls_destroy);
+
+    BOOST_CHECK(well_controls_equal(ctrls.get(), c.get(), false));
+}

@@ -181,6 +181,65 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
 }
 
 
+/* ---------------------------------------------------------------------- */
+struct WellControls *
+well_controls_clone(const struct WellControls *ctrl)
+/* ---------------------------------------------------------------------- */
+{
+    int                   ok, i, n;
+    double                target;
+    const double         *distr;
+    struct WellControls  *new;
+    enum WellControlType  type;
+
+    new = well_controls_create();
+
+    if (new != NULL) {
+        /* Assign appropriate number of phases */
+        well_controls_assert_number_of_phases(new, ctrl->number_of_phases);
+
+        n  = well_controls_get_num(ctrl);
+        ok = well_controls_reserve(n, new);
+
+        if (! ok) {
+            well_controls_destroy(new);
+            new = NULL;
+        }
+        else {
+            for (i = 0; ok && (i < n); i++) {
+                type   = well_controls_iget_type  (ctrl, i);
+                distr  = well_controls_iget_distr (ctrl, i);
+                target = well_controls_iget_target(ctrl, i);
+
+                ok = well_controls_add_new(type, target, distr, new);
+            }
+
+            if (i < n) {
+                assert (!ok);
+                well_controls_destroy(new);
+
+                new = NULL;
+            }
+            else {
+                i = well_controls_get_current(ctrl);
+                well_controls_set_current(new, i);
+
+                if (well_controls_well_is_open(ctrl)) {
+                    well_controls_open_well(new);
+                }
+                else {
+                    well_controls_shut_well(new);
+                }
+            }
+        }
+    }
+
+    assert (well_controls_equal(ctrl, new, true));
+
+    return new;
+}
+
+
 int well_controls_get_num(const struct WellControls *ctrl) {
   return ctrl->num;
 }
