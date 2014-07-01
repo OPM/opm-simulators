@@ -340,7 +340,6 @@ well_controls_equal(const struct WellControls *ctrls1, const struct WellControls
         if (verbose) 
             printf("The ->target vectors are different \n");
     }
-    are_equal = are_equal && (ctrls1->cpty == ctrls2->cpty);
 
     return are_equal;
 }
