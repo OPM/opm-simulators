@@ -34,6 +34,8 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
+#include <opm/core/utility/Average.hpp>
+
 // for this simulator to make sense, dune-cornerpoint and opm-parser
 // must be available
 #include <dune/grid/CpGrid.hpp>
@@ -290,6 +292,29 @@ public:
     }
 
     /*!
+     * \copydoc FvBaseMultiPhaseProblem::intersectionIntrinsicPermeability
+     */
+    template <class Context>
+    void intersectionIntrinsicPermeability(DimMatrix &result,
+                                           const Context &context,
+                                           int localIntersectionIdx, int timeIdx) const
+    {
+        // calculate the intersection index
+        const auto &scvf = context.stencil(timeIdx).interiorFace(localIntersectionIdx);
+
+        int numElements = this->model().numDof();
+
+        size_t interiorElemIdx = context.globalSpaceIndex(scvf.interiorIndex(), timeIdx);
+        size_t exteriorElemIdx = context.globalSpaceIndex(scvf.exteriorIndex(), timeIdx);
+
+        size_t elem1Idx = std::min(interiorElemIdx, exteriorElemIdx);
+        size_t elem2Idx = std::max(interiorElemIdx, exteriorElemIdx);
+
+        size_t globalIntersectionIdx = elem1Idx*numElements + elem2Idx;
+        result = intersectionIntrinsicPermeability_.at(globalIntersectionIdx);
+    }
+
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
@@ -395,14 +420,22 @@ public:
 private:
     void readMaterialParameters_()
     {
+        auto deck = this->simulator().gridManager().deck();
+        auto eclipseState = this->simulator().gridManager().eclipseState();
+        const auto &grid = this->simulator().gridManager().grid();
+
         size_t numDof = this->model().numDof();
 
         intrinsicPermeability_.resize(numDof);
         porosity_.resize(numDof);
         materialParams_.resize(numDof);
 
-        // read the intrinsic permeabilities from the eclipseState
-        auto eclipseState = this->simulator().gridManager().eclipseState();
+        ////////////////////////////////
+        // permeability
+
+        // read the intrinsic permeabilities from the eclipseState. Note that all arrays
+        // provided by eclipseState are one-per-cell of "uncompressed" grid, whereas the
+        // dune-cornerpoint grid object might remove a few elements...
         if (eclipseState->hasDoubleGridProperty("PERMX")) {
             const std::vector<double> &permxData =
                 eclipseState->getDoubleGridProperty("PERMX")->getData();
@@ -413,39 +446,77 @@ private:
             if (eclipseState->hasDoubleGridProperty("PERMZ"))
                 permzData = eclipseState->getDoubleGridProperty("PERMZ")->getData();
 
-            assert(permxData.size() == numDof);
-            assert(permyData.size() == numDof);
-            assert(permzData.size() == numDof);
-
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
                 intrinsicPermeability_[dofIdx] = 0.0;
-                intrinsicPermeability_[dofIdx][0][0] = permxData[dofIdx];
-                intrinsicPermeability_[dofIdx][1][1] = permyData[dofIdx];
-                intrinsicPermeability_[dofIdx][2][2] = permzData[dofIdx];
+                intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
+                intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
+                intrinsicPermeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
             }
 
-            // we don't care about non-diagonal entries
+            // for now we don't care about non-diagonal entries
         }
         else
             OPM_THROW(std::logic_error,
                       "Can't read the intrinsic permeability from the eclipse state. "
                       "(The PERM{X,Y,Z} keywords are missing)");
 
+        // apply the NTG keyword to the X and Y permeabilities
+        if (eclipseState->hasDoubleGridProperty("NTG")) {
+            const std::vector<double> &ntgData =
+                eclipseState->getDoubleGridProperty("NTG")->getData();
+
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                intrinsicPermeability_[dofIdx][0][0] *= ntgData[cartesianElemIdx];
+                intrinsicPermeability_[dofIdx][1][1] *= ntgData[cartesianElemIdx];
+            }
+        }
+
+        computeFaceIntrinsicPermeabilities_();
+        ////////////////////////////////
+
+
+        ////////////////////////////////
+        // compute the porosity
         if (eclipseState->hasDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
                 eclipseState->getDoubleGridProperty("PORO")->getData();
 
-            assert(poroData.size() == numDof);
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] = poroData[dofIdx];
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                porosity_[dofIdx] = poroData[cartesianElemIdx];
+            }
         }
         else
             OPM_THROW(std::logic_error,
                       "Can't read the porosity from the eclipse state. "
                       "(The PORO keyword is missing)");
 
-        auto deck = this->simulator().gridManager().deck();
+        // apply the NTG keyword to the porosity
+        if (eclipseState->hasDoubleGridProperty("NTG")) {
+            const std::vector<double> &ntgData =
+                eclipseState->getDoubleGridProperty("NTG")->getData();
+
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                porosity_[dofIdx] *= ntgData[cartesianElemIdx];
+            }
+        }
+
+        // apply the MULTPV keyword to the porosity
+        if (eclipseState->hasDoubleGridProperty("MULTPV")) {
+            const std::vector<double> &multpvData =
+                eclipseState->getDoubleGridProperty("MULTPV")->getData();
+
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                porosity_[dofIdx] *= multpvData[cartesianElemIdx];
+            }
+        }
+
+        ////////////////////////////////
+        // fluid parameters
         Opm::DeckKeywordConstPtr swofKeyword = deck->getKeyword("SWOF");
         Opm::DeckKeywordConstPtr sgofKeyword = deck->getKeyword("SGOF");
 
@@ -493,21 +564,23 @@ private:
         // set the index of the table to be used
         if (eclipseState->hasIntGridProperty("SATNUM")) {
             const std::vector<int> &satnumData = eclipseState->getIntGridProperty("SATNUM")->getData();
-            assert(satnumData.size() == numDof);
 
             materialParamTableIdx_.resize(numDof);
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = grid.globalCell()[dofIdx];
+
                 // make sure that all values are in the correct range
                 assert(1 <= satnumData[dofIdx]);
                 assert(satnumData[dofIdx] <= static_cast<int>(numSatfuncTables));
 
                 // Eclipse uses Fortran-style indices which start at
                 // 1, but this here is C++...
-                materialParamTableIdx_[dofIdx] = satnumData[dofIdx] - 1;
+                materialParamTableIdx_[dofIdx] = satnumData[cartesianElemIdx] - 1;
             }
         }
         else
             materialParamTableIdx_.clear();
+        ////////////////////////////////
     }
 
     void initFluidSystem_()
@@ -636,8 +709,131 @@ private:
         }
     }
 
+    void computeFaceIntrinsicPermeabilities_()
+    {
+        auto eclipseState = this->simulator().gridManager().eclipseState();
+        const auto &grid = this->simulator().gridManager().grid();
+
+        int numElements = this->gridView().size(/*codim=*/0);
+
+        std::vector<Scalar> multx(numElements, 1.0);
+        std::vector<Scalar> multy(numElements, 1.0);
+        std::vector<Scalar> multz(numElements, 1.0);
+        std::vector<Scalar> multxMinus(numElements, 1.0);
+        std::vector<Scalar> multyMinus(numElements, 1.0);
+        std::vector<Scalar> multzMinus(numElements, 1.0);
+
+        // retrieve the transmissibility multiplier keywords. Note that we use them as
+        // permeability multipliers...
+        if (eclipseState->hasDoubleGridProperty("MULTX"))
+            multx = eclipseState->getDoubleGridProperty("MULTX")->getData();
+        if (eclipseState->hasDoubleGridProperty("MULTX-"))
+            multxMinus = eclipseState->getDoubleGridProperty("MULTX-")->getData();
+        if (eclipseState->hasDoubleGridProperty("MULTY"))
+            multy = eclipseState->getDoubleGridProperty("MULTY")->getData();
+        if (eclipseState->hasDoubleGridProperty("MULTY-"))
+            multyMinus = eclipseState->getDoubleGridProperty("MULTY-")->getData();
+        if (eclipseState->hasDoubleGridProperty("MULTZ"))
+            multz = eclipseState->getDoubleGridProperty("MULTZ")->getData();
+        if (eclipseState->hasDoubleGridProperty("MULTZ-"))
+            multzMinus = eclipseState->getDoubleGridProperty("MULTZ-")->getData();
+
+        // resize the hash map to a appropriate size for a conforming 3D grid
+        float maxLoadFactor = intersectionIntrinsicPermeability_.max_load_factor();
+        intersectionIntrinsicPermeability_.reserve(numElements * 6 / maxLoadFactor * 1.05 );
+
+        auto elemIt = this->gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            auto intersectIt = elemIt->ileafbegin();
+            const auto &intersectEndIt = elemIt->ileafend();
+            for (; intersectIt != intersectEndIt; ++intersectIt) {
+                if (!intersectIt->neighbor())
+                    // skip boundary intersections...
+                    continue;
+
+                // calculate the "intersection index"
+                size_t interiorElemIdx = this->elementMapper().map(intersectIt->inside());
+                size_t exteriorElemIdx = this->elementMapper().map(intersectIt->outside());
+
+                size_t elem1Idx = std::min(interiorElemIdx, exteriorElemIdx);
+                size_t elem2Idx = std::max(interiorElemIdx, exteriorElemIdx);
+
+                size_t intersectIdx = elem1Idx*numElements + elem2Idx;
+
+                // do nothing if this intersection was already seen "from the other side"
+                if (intersectionIntrinsicPermeability_.count(intersectIdx) > 0)
+                    continue;
+
+                auto K1 = intrinsicPermeability_[interiorElemIdx];
+                auto K2 = intrinsicPermeability_[exteriorElemIdx];
+
+                int interiorElemCartIdx = grid.globalCell()[interiorElemIdx];
+                int exteriorElemCartIdx = grid.globalCell()[exteriorElemIdx];
+
+                // local index of the face of the interior element which contains the
+                // intersection
+                int insideFaceIdx = intersectIt->indexInInside();
+
+                // take the transmissibility multipliers into account (i.e., the
+                // MULT[XYZ]-? keywords)
+                if (insideFaceIdx == 1) { // right
+                    K1 *= multx[interiorElemCartIdx];
+                    K2 *= multxMinus[exteriorElemCartIdx];
+                }
+                else if (insideFaceIdx == 0) { // left
+                    K1 *= multxMinus[interiorElemCartIdx];
+                    K2 *= multx[exteriorElemCartIdx];
+                }
+
+                else if (insideFaceIdx == 3) { // back
+                    K1 *= multy[interiorElemCartIdx];
+                    K2 *= multyMinus[exteriorElemCartIdx];
+                }
+                else if (insideFaceIdx == 2) { // front
+                    K1 *= multyMinus[interiorElemCartIdx];
+                    K2 *= multy[exteriorElemCartIdx];
+                }
+
+                else if (insideFaceIdx == 5) { // top
+                    K1 *= multz[interiorElemCartIdx];
+                    K2 *= multzMinus[exteriorElemCartIdx];
+                }
+                else if (insideFaceIdx == 4) { // bottom
+                    K1 *= multzMinus[interiorElemCartIdx];
+                    K2 *= multz[exteriorElemCartIdx];
+                }
+
+                // element-wise harmonic average
+                auto &K = intersectionIntrinsicPermeability_[intersectIdx];
+                K = 0.0;
+                for (int i = 0; i < dimWorld; ++i)
+                    for (int j = 0; j < dimWorld; ++j)
+                        K[i][j] = Opm::utils::harmonicAverage(K1[i][j], K2[i][j]);
+            }
+        }
+    }
+
     std::vector<Scalar> porosity_;
     std::vector<DimMatrix> intrinsicPermeability_;
+
+    // the intrinsic permeabilities for interior faces. since grids may be
+    // non-conforming, and there does not seem to be a mapper for interfaces in DUNE,
+    // these transmissibilities are accessed via the (elementIndex1,
+    // elementIndex2) pairs of the interfaces where
+    //
+    // elementIndex1 = min(interiorElementIndex, exteriorElementIndex)
+    //
+    // and
+    //
+    // elementIndex2 = max(interiorElementIndex, exteriorElementIndex)
+    //
+    // To make this perform better, this is first mingled into a single index using
+    //
+    // intersectionIndex = elementIndex1*numElements + elementIndex2
+    //
+    // as the index for the hash map.
+    std::unordered_map<size_t, DimMatrix> intersectionIntrinsicPermeability_;
 
     std::vector<unsigned short> materialParamTableIdx_;
     std::vector<MaterialLawParams> materialParams_;
