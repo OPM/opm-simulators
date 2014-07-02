@@ -19,6 +19,8 @@ set (ewoms_DEPS
 	"dune-istl REQUIRED"
 	"opm-core REQUIRED"
 	"opm-material REQUIRED"
+	"opm-parser"
+	"dune-cornerpoint"
 	# valgrind client requests
 	"Valgrind"
 	# quadruple precision floating point calculations
