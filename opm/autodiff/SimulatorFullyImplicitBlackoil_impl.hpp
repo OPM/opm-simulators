@@ -206,10 +206,6 @@ namespace Opm
           gravity_(gravity),
           geo_(geo),
           solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver, has_disgas, has_vapoil)
-          /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
-                               param.getDefault("nl_pressure_change_tolerance", 1.0),
-                               param.getDefault("nl_pressure_maxiter", 10),
-                               gravity,  */
     {
         // For output.
         output_ = param.getDefault("output", true);
