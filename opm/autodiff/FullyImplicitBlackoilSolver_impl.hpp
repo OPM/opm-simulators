@@ -233,6 +233,18 @@ namespace {
 
         std::vector<std::vector<double>> residual_history;
 
+
+        // do a zero update once to switch to the right primary
+        // variables. this is a bit hacky, but it is by far the
+        // easiest thing to do...
+        int numCells = Opm::AutoDiffGrid::numCells(grid_);
+        int numPhases = x.numPhases();
+        int numWells = xw.basicWellState().bhp().size();
+        int numDofs = numPhases * (numCells + numWells) + numWells;
+        V zero = V::Zero(numDofs);
+        updateState(zero, x, xw);
+
+
         assemble(pvdt, x, xw);
 
 
