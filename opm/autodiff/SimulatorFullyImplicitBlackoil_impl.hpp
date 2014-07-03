@@ -41,7 +41,6 @@
 
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
