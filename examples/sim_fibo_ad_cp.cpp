@@ -272,11 +272,12 @@ try
         }
 
         SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
+                                                               eclipseState->getSchedule(),
                                                                *grid,
                                                                geology,
                                                                *new_props,
                                                                rock_comp->isActive() ? rock_comp.get() : 0,
-                                                               wells,
+                                                               wells.c_wells(),
                                                                *fis_solver,
                                                                grav,
                                                                deck->hasKeyword("DISGAS"),

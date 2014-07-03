@@ -33,12 +33,14 @@ namespace Opm
     class BlackoilPropsAdInterface;
     class RockCompressibility;
     class DerivedGeology;
-    class WellsManager;
     class NewtonIterationBlackoilInterface;
     class SimulatorTimer;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
     struct SimulatorReport;
+
+    class Schedule;
+    typedef std::shared_ptr<const Schedule> ScheduleConstPtr;
 
     /// Class collecting all necessary components for a two-phase simulation.
     template<class T>
@@ -63,18 +65,20 @@ namespace Opm
         ///     use_segregation_split (false)  solve for gravity segregation (if false,
         ///                                    segregation is ignored).
         ///
+        /// \param[in] schedule      Simulation schedule
         /// \param[in] grid          grid data structure
         /// \param[in] props         fluid and rock properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
-        /// \param[in] well_manager  well manager, may manage no (null) wells
+        /// \param[in] wells         Collection of wells.  Null if no wells.
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
+                                       ScheduleConstPtr schedule,
                                        const Grid& grid,
                                        const DerivedGeology& geo,
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
-                                       WellsManager& wells_manager,
+                                       const Wells* wells,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const double* gravity,
                                        const bool disgas,

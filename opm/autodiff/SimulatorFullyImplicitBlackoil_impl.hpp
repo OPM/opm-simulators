@@ -37,12 +37,12 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
-#include <opm/core/wells/WellsManager.hpp>
-
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -60,11 +60,12 @@ namespace Opm
     {
     public:
         Impl(const parameter::ParameterGroup& param,
+             ScheduleConstPtr schedule,
              const Grid& grid,
              const DerivedGeology& geo,
              BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
-             WellsManager& wells_manager,
+             const Wells* wells,
              NewtonIterationBlackoilInterface& linsolver,
              const double* gravity,
              bool has_disgas,
@@ -83,11 +84,11 @@ namespace Opm
         std::string output_dir_;
         int output_interval_;
         // Observed objects.
+        ScheduleConstPtr schedule_;
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
         const RockCompressibility* rock_comp_props_;
-        WellsManager& wells_manager_;
-        const Wells* wells_;
+        std::shared_ptr<Wells> wells_;
         const double* gravity_;
         // Solvers
         const DerivedGeology &geo_;
@@ -101,18 +102,19 @@ namespace Opm
 
     template<class T>
     SimulatorFullyImplicitBlackoil<T>::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
+                                                                      ScheduleConstPtr schedule,
                                                                    const Grid& grid,
                                                                    const DerivedGeology& geo,
                                                                    BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
-                                                                   WellsManager& wells_manager,
+                                                                   const Wells* wells,
                                                                    NewtonIterationBlackoilInterface& linsolver,
                                                                    const double* gravity,
                                                                    const bool has_disgas,
                                                                    const bool has_vapoil )
 
     {
-        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, wells_manager, linsolver, gravity, has_disgas, has_vapoil));
+        pimpl_.reset(new Impl(param, schedule, grid, geo, props, rock_comp_props, wells, linsolver, gravity, has_disgas, has_vapoil));
     }
 
 
@@ -189,23 +191,24 @@ namespace Opm
     // \TODO: Treat bcs.
     template<class T>
     SimulatorFullyImplicitBlackoil<T>::Impl::Impl(const parameter::ParameterGroup& param,
+                                                  ScheduleConstPtr schedule,
                                                const Grid& grid,
                                                const DerivedGeology& geo,
                                                BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
-                                               WellsManager& wells_manager,
+                                               const Wells* wells,
                                                NewtonIterationBlackoilInterface& linsolver,
                                                const double* gravity,
                                                const bool has_disgas,
                                                const bool has_vapoil)
-        : grid_(grid),
+        : schedule_(schedule)
+        , grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
-          wells_manager_(wells_manager),
-          wells_(wells_manager.c_wells()),
+          wells_(clone_wells(wells), & destroy_wells),
           gravity_(gravity),
           geo_(geo),
-          solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver, has_disgas, has_vapoil)
+          solver_(param, grid_, props_, geo_, rock_comp_props, *wells_, linsolver, has_disgas, has_vapoil)
     {
         // For output.
         output_ = param.getDefault("output", true);

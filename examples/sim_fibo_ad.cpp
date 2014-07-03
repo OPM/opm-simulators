@@ -226,11 +226,12 @@ try
 
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
+                                                                   eclipseState->getSchedule(),
                                                  *grid->c_grid(),
                                                  geology,
                                                  *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
-                                                 wells,
+                                                 wells.c_wells(),
                                                  *fis_solver,
                                                  grav,
                                                  deck->hasKeyword("DISGAS"),
