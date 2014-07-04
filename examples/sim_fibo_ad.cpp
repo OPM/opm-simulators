@@ -183,6 +183,8 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
+    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState);
+
     SimulatorReport fullReport;
     for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
         // Report on start of a report step.
@@ -214,6 +216,7 @@ try
         // Create and run simulator.
         SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
                                                  *grid->c_grid(),
+                                                 geology,
                                                  *new_props,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,

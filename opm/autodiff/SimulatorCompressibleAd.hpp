@@ -31,6 +31,7 @@ namespace Opm
 {
     namespace parameter { class ParameterGroup; }
     class BlackoilPropertiesInterface;
+    class DerivedGeology;
     class RockCompressibility;
     class WellsManager;
     class LinearSolverInterface;
@@ -60,6 +61,7 @@ namespace Opm
         ///                                    segregation is ignored).
         ///
         /// \param[in] grid          grid data structure
+        /// \param[in] geo           the "ready to use" geological properties of the reservoir
         /// \param[in] props         fluid and rock properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
         /// \param[in] well_manager  well manager
@@ -67,6 +69,7 @@ namespace Opm
         /// \param[in] gravity       if non-null, gravity vector
        SimulatorCompressibleAd(const parameter::ParameterGroup& param,
                                const UnstructuredGrid& grid,
+                               const DerivedGeology& geo,
                                const BlackoilPropertiesInterface& props,
                                const RockCompressibility* rock_comp_props,
                                WellsManager& wells_manager,
