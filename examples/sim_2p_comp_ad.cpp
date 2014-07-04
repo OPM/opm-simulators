@@ -45,6 +45,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/SimulatorCompressibleAd.hpp>
+#include <opm/autodiff/GeoProps.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -208,11 +209,13 @@ try
     std::cout << "\n\n================    Starting main simulation loop     ===============\n";
 
     SimulatorReport rep;
+    Opm::DerivedGeology geology(*grid->c_grid(), *props);
     if (!use_deck) {
         // Simple simulation without a deck.
         WellsManager wells(simple_wells);
         SimulatorCompressibleAd simulator(param,
                                           *grid->c_grid(),
+                                          geology,
                                           *props,
                                           rock_comp->isActive() ? rock_comp.get() : 0,
                                           wells,
@@ -250,6 +253,7 @@ try
             // Create and run simulator.
             SimulatorCompressibleAd simulator(param,
                                               *grid->c_grid(),
+                                              geology,
                                               *props,
                                               rock_comp->isActive() ? rock_comp.get() : 0,
                                               wells,
