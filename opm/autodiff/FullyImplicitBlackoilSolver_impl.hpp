@@ -495,6 +495,10 @@ namespace {
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
 
+                std::vector<int> all_cells = buildAllCells(nc);
+                ADB rsSat = fluidRsSat(state.pressure, so, all_cells);
+                ADB rvSat = fluidRvSat(state.pressure, so, all_cells);
+
                 if (has_disgas_) {
                     state.rs = (1-isRs) * rsSat + isRs*xvar;
                 } else {
@@ -595,18 +599,20 @@ namespace {
             const ADB bw = fluid_.bWat(perf_press, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw.value();
         }
+        assert(active_[Oil]);
+        const ADB perf_so =  subset(state.saturation[pu.phase_pos[Oil]], well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = subset(state.rs, well_cells);
             const ADB bo = fluid_.bOil(perf_press, perf_rs, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo.value();
-            const V rssat = fluidRsSat(perf_press.value(), well_cells);
+            const V rssat = fluidRsSat(perf_press.value(), perf_so.value(), well_cells);
             rssat_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
             const ADB bg = fluid_.bGas(perf_press, perf_rv, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg.value();
-            const V rvsat = fluidRvSat(perf_press.value(), well_cells);
+            const V rvsat = fluidRvSat(perf_press.value(), perf_so.value(), well_cells);
             rvsat_perf.assign(rvsat.data(), rvsat.data() + nperf);
         }
         // b is row major, so can just copy data.
@@ -1285,8 +1291,8 @@ namespace {
 
 
         // phase translation sg <-> rs
-        const V rsSat0 = fluidRsSat(p_old, cells_);
-        const V rsSat = fluidRsSat(p, cells_);
+        const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rsSat = fluidRsSat(p, so, cells_);
 
         std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
 
@@ -1310,8 +1316,8 @@ namespace {
         }
 
         // phase transitions so <-> rv
-        const V rvSat0 = fluidRvSat(p_old, cells_);
-        const V rvSat = fluidRvSat(p, cells_);
+        const V rvSat0 = fluidRvSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rvSat = fluidRvSat(p, so, cells_);
 
         if (has_vapoil_) {
             // The obvious case
@@ -1863,9 +1869,10 @@ namespace {
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const V&                p,
+                                            const V&                satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, cells);
+        return fluid_.rsSat(p, satOil, cells);
     }
 
 
@@ -1875,17 +1882,19 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const ADB&              p,
+                                            const ADB&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, cells);
+        return fluid_.rsSat(p, satOil, cells);
     }
 
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const V&                p,
+                                            const V&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, cells);
+        return fluid_.rvSat(p, satOil, cells);
     }
 
 
@@ -1895,9 +1904,10 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const ADB&              p,
+                                            const ADB&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, cells);
+        return fluid_.rvSat(p, satOil, cells);
     }
 
 

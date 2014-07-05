@@ -188,6 +188,15 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
             }
         }
+        // Oil vaporization controls (kw VAPPARS)
+        vap1_ = vap2_ = 0.0;
+        if (deck->hasKeyword("VAPPARS") && deck->hasKeyword("VAPOIL") && deck->hasKeyword("DISGAS")) {
+            vap1_ = deck->getKeyword("VAPPARS")->getRecord(0)->getItem(0)->getRawDouble(0);
+            vap2_ = deck->getKeyword("VAPPARS")->getRecord(0)->getItem(1)->getRawDouble(0);
+            satOilMax_.resize(number_of_cells, 0.0);
+        } else if (deck->hasKeyword("VAPPARS")) {
+            OPM_THROW(std::runtime_error, "Input has VAPPARS, but missing VAPOIL and/or DISGAS\n");
+        }
 
         SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
             = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
@@ -748,6 +757,20 @@ namespace Opm
 
     /// Bubble point curve for Rs as function of oil pressure.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    V BlackoilPropsAdFromDeck::rsSat(const V& po,
+                                     const V& so,
+                                     const Cells& cells) const
+    {
+        V rs = rsSat(po, cells);
+        applyVap(rs, so, cells, vap2_);
+        return rs;
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
     ADB BlackoilPropsAdFromDeck::rsSat(const ADB& po,
@@ -770,6 +793,20 @@ namespace Opm
         return ADB::function(rbub, jacs);
     }
 
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADB BlackoilPropsAdFromDeck::rsSat(const ADB& po,
+                                       const ADB& so,
+                                       const Cells& cells) const
+    {
+        ADB rs = rsSat(po, cells);
+        applyVap(rs, so, cells, vap2_);
+        return rs;
+    }
+
     // ------ Condensation curve ------
 
     /// Condensation curve for Rv as function of oil pressure.
@@ -787,6 +824,20 @@ namespace Opm
         V rv(n);
         V drvdp(n);
         props_[Gas]->rvSat(n, &pvtTableIdx_[0], po.data(), rv.data(), drvdp.data());
+        return rv;
+    }
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    V BlackoilPropsAdFromDeck::rvSat(const V& po,
+                                     const V& so,
+                                     const Cells& cells) const
+    {
+        V rv = rvSat(po, cells);
+        applyVap(rv, so, cells, vap1_);
         return rv;
     }
 
@@ -812,6 +863,20 @@ namespace Opm
             jacs[block] = drvdp_diag * po.derivative()[block];
         }
         return ADB::function(rv, jacs);
+    }
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADB BlackoilPropsAdFromDeck::rvSat(const ADB& po,
+                                       const ADB& so,
+                                       const Cells& cells) const
+    {
+        ADB rv = rvSat(po, cells);
+        applyVap(rv, so, cells, vap1_);
+        return rv;
     }
 
     // ------ Relative permeability ------
@@ -986,6 +1051,74 @@ namespace Opm
     {
         const int n = cells.size();
         satprops_->updateSatHyst(n, cells.data(), saturation.data());
+    }
+    
+    /// Update for max oil saturation.
+    void BlackoilPropsAdFromDeck::updateSatOilMax(const std::vector<double>& saturation)
+    {
+        if (!satOilMax_.empty()) {
+            const int n = satOilMax_.size();
+            const int np = phase_usage_.num_phases;
+            const int posOil = phase_usage_.phase_pos[Oil];
+            const double* s = saturation.data();
+            for (int i=0; i<n; ++i) {
+                if (satOilMax_[i] < *(s+np*i+posOil)) satOilMax_[i] = *(s+np*i+posOil);
+            }
+        }
+    }
+    
+    /// Apply correction to rs/rv according to kw VAPPARS
+    /// \param[in/out] r     Array of n rs/rv values.
+    /// \param[in]     so    Array of n oil saturation values.
+    /// \param[in]     cells Array of n cell indices to be associated with the r and so values.
+    /// \param[in]     vap   Correction parameter.
+    void BlackoilPropsAdFromDeck::applyVap(V& r,
+                                           const V& so,
+                                           const std::vector<int>& cells,
+                                           const double vap) const
+    {
+        if (!satOilMax_.empty() && vap > 0.0) { 
+            const int n = cells.size();
+            V factor = V::Ones(n, 1);
+            for (int i=0; i<n; ++i) {
+                if (satOilMax_[cells[i]] > 0.01 && so[i] < satOilMax_[cells[i]]) {
+                    factor[i] = std::pow(so[i]/satOilMax_[cells[i]], vap);
+                } 
+            }
+            r = factor*r;
+        }
+    }
+    
+    /// Apply correction to rs/rv according to kw VAPPARS
+    /// \param[in/out] r     Array of n rs/rv values.
+    /// \param[in]     so    Array of n oil saturation values.
+    /// \param[in]     cells Array of n cell indices to be associated with the r and so values.
+    /// \param[in]     vap   Correction parameter.
+    void BlackoilPropsAdFromDeck::applyVap(ADB& r,
+                                           const ADB& so,
+                                           const std::vector<int>& cells,
+                                           const double vap) const
+    {
+        if (!satOilMax_.empty() && vap > 0.0) { 
+            const int n = cells.size();
+            V factor = V::Ones(n, 1);
+            //V dfactor_dso = V::Zero(n, 1);  TODO: Consider effect of complete jacobian (including so-derivatives)
+            for (int i=0; i<n; ++i) {
+                if (satOilMax_[cells[i]] > 0.01 && so.value()[i] < satOilMax_[cells[i]]) {
+                    factor[i] = std::pow(so.value()[i]/satOilMax_[cells[i]], vap);
+                    //dfactor_dso[i] = vap*std::pow(so.value()[i]/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
+                }
+            }
+            //ADB::M dfactor_dso_diag = spdiag(dfactor_dso);
+            //const int num_blocks = so.numBlocks();
+            //std::vector<ADB::M> jacs(num_blocks);
+            //for (int block = 0; block < num_blocks; ++block) {
+            //    jacs[block] = dfactor_dso_diag * so.derivative()[block];
+            //}
+            //r = ADB::function(factor, jacs)*r;
+            
+            r = factor*r;
+        }
     }
 
 } // namespace Opm

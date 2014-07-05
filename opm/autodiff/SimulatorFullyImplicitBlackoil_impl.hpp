@@ -289,6 +289,9 @@ namespace Opm
 
             SimulatorReport sreport;
 
+            // Max oil saturation
+            props_.updateSatOilMax(state.saturation());
+
             // Solve pressure equation.
             // if (check_well_controls_) {
             //     computeFractionalFlow(props_, allcells_,

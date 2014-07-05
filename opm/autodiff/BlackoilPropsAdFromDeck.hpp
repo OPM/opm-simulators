@@ -279,9 +279,27 @@ namespace Opm
 
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        V rsSat(const V& po,
+                const V& so,
+                const Cells& cells) const;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         ADB rsSat(const ADB& po,
+                  const Cells& cells) const;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        ADB rsSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const;
 
         // ------ Rv condensation curve ------
@@ -295,9 +313,27 @@ namespace Opm
 
         /// Condensation curve for Rv as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        V rvSat(const V& po,
+                const V& so,
+                const Cells& cells) const;
+
+        /// Condensation curve for Rv as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         ADB rvSat(const ADB& po,
+                  const Cells& cells) const;
+
+        /// Condensation curve for Rv as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        ADB rvSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const;
 
         // ------ Relative permeability ------
@@ -344,6 +380,9 @@ namespace Opm
         void updateSatHyst(const std::vector<double>& saturation,
                            const std::vector<int>& cells);
 
+        /// Update for max oil saturation.                  
+        void updateSatOilMax(const std::vector<double>& saturation);
+
     private:
         /// Initializes the properties.
         template <class CentroidIterator>
@@ -355,6 +394,17 @@ namespace Opm
                   const CentroidIterator& begin_cell_centroids,
                   int dimension,
                   const bool init_rock);
+
+        /// Correction to rs/rv according to kw VAPPARS
+        void applyVap(V& r,
+                      const V& so,
+                      const std::vector<int>& cells,
+                      const double vap) const;
+
+        void applyVap(ADB& r,
+                      const ADB& so,
+                      const std::vector<int>& cells,
+                      const double vap) const;
 
         RockFromDeck rock_;
         std::unique_ptr<SaturationPropsInterface> satprops_;
@@ -380,6 +430,12 @@ namespace Opm
         std::vector<int> pvtTableIdx_;
 
         std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
+        
+        // VAPPARS
+        double vap1_;
+        double vap2_;
+        std::vector<double> satOilMax_;
+
     };
 } // namespace Opm
 
