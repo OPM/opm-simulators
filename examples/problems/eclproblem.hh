@@ -631,6 +631,19 @@ private:
             OPM_THROW(std::runtime_error,
                       "So far, the Eclipse input file requires the presence of the PRESSURE "
                       "keyword");
+        if (!deck->hasKeyword("DISGAS"))
+            OPM_THROW(std::runtime_error,
+                      "The deck must exhibit gas dissolved in the oil phase (DISGAS keyword is missing)");
+        if (!deck->hasKeyword("RS"))
+            OPM_THROW(std::runtime_error,
+                      "The Eclipse input file requires the presence of the RS keyword");
+
+        if (deck->hasKeyword("VAPOIL"))
+            OPM_THROW(std::runtime_error,
+                      "The deck must _not_ exhibit vaporized oil (The VAPOIL keyword is unsupported)");
+        if (deck->hasKeyword("RV"))
+            OPM_THROW(std::runtime_error,
+                      "The Eclipse input file requires the RV keyword to be non-present");
 
         const std::vector<double> &waterSaturationData =
             deck->getKeyword("SWAT")->getSIDoubleData();
@@ -698,25 +711,36 @@ private:
             //
             // first, retrieve the relevant black-oil parameters from
             // the fluid system.
-            Scalar Bo = FluidSystem::oilFormationVolumeFactor(oilPressure);
-            Scalar Rs = FluidSystem::gasDissolutionFactor(oilPressure);
-            Scalar rhoo = FluidSystem::surfaceDensity(oilPhaseIdx) / Bo;
-            Scalar rhogref = FluidSystem::surfaceDensity(gasPhaseIdx);
+            Scalar RsSat = FluidSystem::gasDissolutionFactor(oilPressure);
+            Scalar RsReal = rsData[cartesianDofIdx];
 
-            // calculate composition of oil phase in terms of mass
-            // fractions.
-            Scalar XoG = Rs * rhogref / rhoo;
+            if (RsReal > RsSat) {
+                std::array<int, 3> ijk;
+                grid.getIJK(dofIdx, ijk);
+                std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
+                          <<           " than the maximium\n"
+                          << "         amount which can be dissolved in oil (R_s,max=" << RsSat << ")"
+                          <<           " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
+                          <<           " Ignoring.\n";
+                RsReal = RsSat;
+            }
+
+            // calculate composition of the real and the saturated oil phase in terms of
+            // mass fractions.
+            Scalar rhooRef = FluidSystem::surfaceDensity(oilPhaseIdx);
+            Scalar rhogRef = FluidSystem::surfaceDensity(gasPhaseIdx);
+            Scalar XoGReal = RsReal*rhogRef / (RsReal*rhogRef + rhooRef);
 
             // convert mass to mole fractions
             Scalar MG = FluidSystem::molarMass(gasCompIdx);
             Scalar MO = FluidSystem::molarMass(oilCompIdx);
 
-            Scalar xoG = XoG * MO / ((MO - MG) * XoG + MG);
-            Scalar xoO = 1 - xoG;
+            Scalar xoGReal = XoGReal * MO / ((MO - MG) * XoGReal + MG);
+            Scalar xoOReal = 1 - xoGReal;
 
-            // finally set the oil-phase composition
-            dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
-            dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
+            // finally, set the oil-phase composition
+            dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
+            dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoOReal);
         }
     }
 
