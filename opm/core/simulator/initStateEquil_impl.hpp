@@ -22,6 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/simulator/initState.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -579,7 +580,8 @@ namespace Opm
         std::vector< std::vector<double> >
         phaseSaturations(const Region&           reg,
                          const CellRange&        cells,
-                         const BlackoilPropertiesInterface& props,
+                         BlackoilPropertiesInterface& props,
+                         const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures)
         {
             const double z0   = reg.datum();
@@ -610,8 +612,14 @@ namespace Opm
                 double sw = 0.0;
                 if (water) {
                     const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
-                    sw = satFromPc(props, waterpos, cell, pcov);
-                    phase_saturations[waterpos][local_index] = sw;
+                    if (swat_init.empty()) { // Invert Pc to find sw
+                        sw = satFromPc(props, waterpos, cell, pcov);
+                        phase_saturations[waterpos][local_index] = sw;
+                    } else { // Scale Pc to reflect imposed sw
+                        sw = swat_init[cell];
+                        props.swatInitScaling(cell, pcov, sw);
+                        phase_saturations[waterpos][local_index] = sw;
+                    }
                 }
                 double sg = 0.0;
                 if (gas) {
@@ -621,18 +629,28 @@ namespace Opm
                     sg = satFromPc(props, gaspos, cell, pcog, increasing);
                     phase_saturations[gaspos][local_index] = sg;
                 }
-                bool overlap = false;
                 if (gas && water && (sg + sw > 1.0)) {
                     // Overlapping gas-oil and oil-water transition
                     // zones can lead to unphysical saturations when
                     // treated as above. Must recalculate using gas-water
                     // capillary pressure.
                     const double pcgw = phase_pressures[gaspos][local_index] - phase_pressures[waterpos][local_index];
+                    if (! swat_init.empty()) { 
+                        // Re-scale Pc to reflect imposed sw for vanishing oil phase.
+                        // This seems consistent with ecl, and fails to honour 
+                        // swat_init in case of non-trivial gas-oil cap pressure.
+                        props.swatInitScaling(cell, pcgw, sw);
+                    }
                     sw = satFromSumOfPcs(props, waterpos, gaspos, cell, pcgw);
                     sg = 1.0 - sw;
                     phase_saturations[waterpos][local_index] = sw;
                     phase_saturations[gaspos][local_index] = sg;
-                    overlap = true;
+                    // Adjust oil pressure according to gas saturation and cap pressure
+                    double pc[BlackoilPhases::MaxNumPhases];
+                    double sat[BlackoilPhases::MaxNumPhases];
+                    sat[gaspos] = sg;
+                    props.capPress(1, sat, &cell, pc, 0);                   
+                    phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
                 }
                 phase_saturations[oilpos][local_index] = 1.0 - sw - sg;
                 
@@ -643,7 +661,7 @@ namespace Opm
                     sat[waterpos] = smax[waterpos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
-                } else if (overlap || sg > smax[gaspos]-1.0e-6) {
+                } else if (sg > smax[gaspos]-1.0e-6) {
                     sat[gaspos] = smax[gaspos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
@@ -736,13 +754,14 @@ namespace Opm
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
      */
     void initStateEquil(const UnstructuredGrid& grid,
-                        const BlackoilPropertiesInterface& props,
+                        BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr deck,
+                        const Opm::EclipseStateConstPtr eclipseState,
                         const double gravity,
                         BlackoilState& state)
     {
         typedef Equil::DeckDependent::InitialStateComputer ISC;
-        ISC isc(props, deck, grid, gravity);
+        ISC isc(props, deck, eclipseState, grid, gravity);
         const auto pu = props.phaseUsage();
         const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
             ? pu.phase_pos[BlackoilPhases::Liquid]
@@ -751,7 +770,7 @@ namespace Opm
         state.saturation() = convertSats(isc.saturation());
         state.gasoilratio() = isc.rs();
         state.rv() = isc.rv();
-        // TODO: state.surfacevol() must be computed from s, rs, rv.
+        initBlackoilSurfvolUsingRSorRV(grid, props, state);
     }
 
 

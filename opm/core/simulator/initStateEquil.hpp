@@ -28,6 +28,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
 #include <opm/parser/eclipse/Utility/SingleRecordTable.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <array>
 #include <cassert>
@@ -62,6 +63,7 @@ namespace Opm
     void initStateEquil(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr deck,
+                        const Opm::EclipseStateConstPtr eclipseState,
                         const double gravity,
                         BlackoilState& state);
 
@@ -150,8 +152,9 @@ namespace Opm
         std::vector< std::vector<double> >
         phaseSaturations(const Region&           reg,
                          const CellRange&        cells,
-                         const BlackoilPropertiesInterface& props,
-                         const std::vector< std::vector<double> >& phase_pressures);
+                         BlackoilPropertiesInterface& props,
+                         const std::vector<double> swat_init,
+                         std::vector< std::vector<double> >& phase_pressures);
 
 
 
@@ -229,13 +232,14 @@ namespace Opm
             inline
             std::vector<int>
             equilnum(const Opm::DeckConstPtr deck,
+                     const Opm::EclipseStateConstPtr eclipseState,
                      const UnstructuredGrid&  G   )
             {
                 std::vector<int> eqlnum;
                 if (deck->hasKeyword("EQLNUM")) {
                     eqlnum.resize(G.number_of_cells);                   
                     const std::vector<int>& e = 
-                        deck->getKeyword("EQLNUM")->getIntData();                    
+                        eclipseState->getIntGridProperty("EQLNUM")->getData();                    
                     const int* gc = G.global_cell;
                     for (int cell = 0; cell < G.number_of_cells; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -254,8 +258,9 @@ namespace Opm
 
             class InitialStateComputer {
             public:
-                InitialStateComputer(const BlackoilPropertiesInterface& props,
+                InitialStateComputer(BlackoilPropertiesInterface& props,
                                      const Opm::DeckConstPtr            deck,
+                                     const Opm::EclipseStateConstPtr eclipseState,
                                      const UnstructuredGrid&            G    ,
                                      const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
@@ -269,7 +274,7 @@ namespace Opm
                     const std::vector<EquilRecord> rec = getEquil(deck);
 
                     // Create (inverse) region mapping.
-                    const RegionMapping<> eqlmap(equilnum(deck, G)); 
+                    const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
@@ -333,6 +338,18 @@ namespace Opm
                             rv_func_.push_back(std::make_shared<Miscibility::NoMixing>());
                         }
                     }
+                    
+
+                    // Check for presence of kw SWATINIT
+                    if (deck->hasKeyword("SWATINIT")) {
+                        const std::vector<double>& swat_init = eclipseState->getDoubleGridProperty("SWATINIT")->getData();
+                        swat_init_.resize(G.number_of_cells);
+                        const int* gc = G.global_cell;
+                        for (int c = 0; c < G.number_of_cells; ++c) {
+                            const int deck_pos = (gc == NULL) ? c : gc[c];
+                            swat_init_[c] = swat_init[deck_pos];
+                        }
+                    }
 
                     // Compute pressures, saturations, rs and rv factors.
                     calcPressSatRsRv(eqlmap, rec, props, G, grav);
@@ -360,15 +377,18 @@ namespace Opm
                 PVec sat_;
                 Vec rs_;
                 Vec rv_;
+                Vec swat_init_;
 
                 template <class RMap>
                 void
-                calcPressSatRsRv(const RMap&                             reg  ,
-                                 const std::vector< EquilRecord >&       rec  ,
-                                 const Opm::BlackoilPropertiesInterface& props,
-                                 const UnstructuredGrid&                 G    ,
+                calcPressSatRsRv(const RMap&                       reg  ,
+                                 const std::vector< EquilRecord >& rec  ,
+                                 Opm::BlackoilPropertiesInterface& props,
+                                 const UnstructuredGrid&           G    ,
                                  const double grav)
                 {
+                    typedef Miscibility::NoMixing NoMix;
+
                     for (typename RMap::RegionId
                              r = 0, nr = reg.numRegions();
                          r < nr; ++r)
@@ -383,7 +403,7 @@ namespace Opm
                    
                         PVec press = phasePressures(G, eqreg, cells, grav);
 
-                        const PVec sat = phaseSaturations(eqreg, cells, props, press);
+                        const PVec sat = phaseSaturations(eqreg, cells, props, swat_init_, press);
 
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {

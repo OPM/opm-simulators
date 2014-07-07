@@ -124,13 +124,21 @@ namespace Opm
                       const int* cells,
                       double* smin,
                       double* smax) const;
-        
+
         /// Update saturation state for the hysteresis tracking 
         /// \param[in]  n      Number of data points. 
         /// \param[in]  s      Array of nP saturation values.             
         void updateSatHyst(const int n,
                            const int* cells,
                            const double* s);
+
+        /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+        /// \param[in]     cell  Cell index. 
+        /// \param[in]     pcow  P_oil - P_water.
+        /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.        
+        void swatInitScaling(const int cell, 
+                             const double pcow, 
+                             double & swat);
 
     private:
         PhaseUsage phase_usage_;
@@ -178,13 +186,15 @@ namespace Opm
                           const double s0_tab,
                           const double krsr_tab,
                           const double krmax_tab,
+                          const double pcmax_tab,
                           const std::vector<double>& sl,
                           const std::vector<double>& scr,
                           const std::vector<double>& su,
                           const std::vector<double>& sxcr,
                           const std::vector<double>& s0,
                           const std::vector<double>& krsr,
-                          const std::vector<double>& krmax);
+                          const std::vector<double>& krmax,
+                          const std::vector<double>& pcmax);
 
         bool columnIsMasked_(Opm::DeckConstPtr deck,
                              const std::string& keywordName,

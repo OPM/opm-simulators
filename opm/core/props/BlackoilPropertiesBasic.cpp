@@ -239,5 +239,16 @@ namespace Opm
     }
 
 
+    /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+    /// \param[in]     cell   Cell index. 
+    /// \param[in]     pcow   P_oil - P_water.
+    /// \param[in/out] swat   Water saturation. / Possibly modified Water saturation.      
+    void BlackoilPropertiesBasic::swatInitScaling(const int cell, 
+                                                  const double pcow, 
+                                                  double & swat)
+    {
+        OPM_THROW(std::runtime_error, "BlackoilPropertiesBasic::swatInitScaling()  --  not implemented.");
+    }
+
 } // namespace Opm
 

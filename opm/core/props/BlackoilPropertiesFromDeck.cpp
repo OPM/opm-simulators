@@ -303,7 +303,18 @@ namespace Opm
     {
         satprops_->satRange(n, cells, smin, smax);
     }
-
+ 
+ 
+    /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+    /// \param[in]     cell   Cell index. 
+    /// \param[in]     pcow   P_oil - P_water.
+    /// \param[in/out] swat   Water saturation. / Possibly modified Water saturation.
+    void BlackoilPropertiesFromDeck::swatInitScaling(const int cell,
+                                                     const double pcow, 
+                                                     double & swat)
+    {
+        satprops_->swatInitScaling(cell, pcow, swat);
+    }
 
 } // namespace Opm
 

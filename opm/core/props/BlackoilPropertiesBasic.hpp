@@ -163,9 +163,9 @@ namespace Opm
                               double* dpcds) const;
 
 
-/// Obtain the range of allowable saturation values.
-	/// In cell cells[i], saturation of phase p is allowed to be
-	/// in the interval [smin[i*P + p], smax[i*P + p]].
+        /// Obtain the range of allowable saturation values.
+	    /// In cell cells[i], saturation of phase p is allowed to be
+	    /// in the interval [smin[i*P + p], smax[i*P + p]].
         /// \param[in]  n      Number of data points.
         /// \param[in]  cells  Array of n cell indices.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
@@ -174,6 +174,16 @@ namespace Opm
                               const int* cells,
                               double* smin,
                               double* smax) const;
+
+
+        /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+        /// \param[in]     cell   Cell index.
+        /// \param[in]     pcow   P_oil - P_water.
+        /// \param[in/out] swat   Water saturation. / Possibly modified Water saturation.      
+        virtual  void swatInitScaling(const int cell,
+                                      const double pcow, 
+                                      double & swat);
+
 
     private:
         RockBasic rock_;
