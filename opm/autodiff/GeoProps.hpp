@@ -156,7 +156,7 @@ namespace Opm
             // multiply the face transmissibilities with their appropriate
             // transmissibility multipliers
             for (int faceIdx = 0; faceIdx < numFaces; faceIdx++) {
-                trans_.data()[faceIdx] *= mult[faceIdx];
+                trans_[faceIdx] *= mult[faceIdx];
             }
 
             // Compute z coordinates
