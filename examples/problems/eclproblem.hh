@@ -613,8 +613,12 @@ private:
 
     void readInitialCondition_()
     {
-        size_t numDof = this->model().numDof();
         const auto deck = this->simulator().gridManager().deck();
+        const auto &grid = this->simulator().gridManager().grid();
+
+        size_t numDof = this->model().numDof();
+        const auto &cartSize = grid.logicalCartesianSize();
+        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
 
         initialFluidStates_.resize(numDof);
 
@@ -634,15 +638,22 @@ private:
             deck->getKeyword("SGAS")->getSIDoubleData();
         const std::vector<double> &pressureData =
             deck->getKeyword("PRESSURE")->getSIDoubleData();
+        const std::vector<double> &rsData =
+            deck->getKeyword("RS")->getSIDoubleData();
 
         // make sure that the size of the data arrays is correct
-        assert(waterSaturationData.size() == numDof);
-        assert(gasSaturationData.size() == numDof);
-        assert(pressureData.size() == numDof);
+        assert(waterSaturationData.size() == numCartesianCells);
+        assert(gasSaturationData.size() == numCartesianCells);
+        assert(pressureData.size() == numCartesianCells);
+        assert(rsData.size() == numCartesianCells);
 
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
+
+            size_t cartesianDofIdx = grid.globalCell()[dofIdx];
+            assert(0 <= cartesianDofIdx);
+            assert(cartesianDofIdx <= numCartesianCells);
 
             //////
             // set temperatures
@@ -653,18 +664,18 @@ private:
             // set saturations
             //////
             dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                        waterSaturationData[dofIdx]);
+                                        waterSaturationData[cartesianDofIdx]);
             dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                        gasSaturationData[dofIdx]);
+                                        gasSaturationData[cartesianDofIdx]);
             dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
                                         1
-                                        - waterSaturationData[dofIdx]
-                                        - gasSaturationData[dofIdx]);
+                                        - waterSaturationData[cartesianDofIdx]
+                                        - gasSaturationData[cartesianDofIdx]);
 
             //////
             // set pressures
             //////
-            Scalar oilPressure = pressureData[dofIdx];
+            Scalar oilPressure = pressureData[cartesianDofIdx];
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 dofFluidState.setPressure(phaseIdx, oilPressure);
             }
