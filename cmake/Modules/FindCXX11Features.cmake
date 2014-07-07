@@ -133,7 +133,7 @@ CHECK_CXX_SOURCE_RUNS("
     #include <regex>
     int main(void)
     {
-      std::regex r(\"AB.*|BC+\", std::regex::extended);
+      std::regex r(\"AB.*|BC+\");
       if (!std::regex_match(\"AB\", r))
            return 1;
       if (!std::regex_match(\"ABC\", r))
