@@ -97,98 +97,66 @@ namespace Opm
             Grid* ug = const_cast<Grid*>(& grid);
             tpfa_htrans_compute(ug, props.permeability(), htrans.data());
 
-            // multiply the half-face transmissibilities with the appropriate NTG values
+            std::vector<double> mult(numFaces, 1.0);
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                // loop over all logically-Cartesian faces of the current cell
                 for (int cellFaceIdx = grid.cell_facepos[cellIdx];
                      cellFaceIdx < grid.cell_facepos[cellIdx + 1];
                      ++ cellFaceIdx)
                 {
+                    // the index of the current cell in arrays for the logically-Cartesian grid
                     int cartesianCellIdx = grid.global_cell[cellIdx];
 
-                    // std::cout << "cellFaceIdx: " << cellFaceIdx << ", cellIdx: " << cellIdx << "\n";
-                    switch (grid.cell_facetag[cellFaceIdx]) {
-                    case 0: // left
-                    case 1: // right
-                    case 2: // front
-                    case 3: // back
-                        htrans.data()[cellFaceIdx] *= ntg[cartesianCellIdx];
+                    // The index of the face in the compressed grid
+                    int faceIdx = grid.cell_faces[cellFaceIdx];
+
+                    // the logically-Cartesian direction of the face
+                    int faceTag = grid.cell_facetag[cellFaceIdx];
+
+                    // Translate the C face tag into the enum used by opm-parser's TransMult class
+                    Opm::FaceDir::DirEnum faceDirection;
+                    if (faceTag == 0) // left
+                        faceDirection = Opm::FaceDir::XMinus;
+                    else if (faceTag == 1) // right
+                        faceDirection = Opm::FaceDir::XPlus;
+                    else if (faceTag == 2) // front
+                        faceDirection = Opm::FaceDir::YMinus;
+                    else if (faceTag == 3) // back
+                        faceDirection = Opm::FaceDir::YPlus;
+                    else if (faceTag == 4) // bottom
+                        faceDirection = Opm::FaceDir::ZMinus;
+                    else if (faceTag == 5) // top
+                        faceDirection = Opm::FaceDir::ZPlus;
+                    else
+                        OPM_THROW(std::logic_error, "Unhandled face direction: " << faceTag);
+
+                    // Account for NTG in horizontal one-sided transmissibilities
+                    switch (faceDirection) {
+                    case Opm::FaceDir::XMinus:
+                    case Opm::FaceDir::XPlus:
+                    case Opm::FaceDir::YMinus:
+                    case Opm::FaceDir::YPlus:
+                        htrans[cellFaceIdx] *= ntg[cartesianCellIdx];
+                        break;
+                    default:
+                        // do nothing for the top and bottom faces
                         break;
                     }
+
+                    // Multiplier contribution on this face
+                    mult[faceIdx] *=
+                        multipliers->getMultiplier(cartesianCellIdx, faceDirection);
                 }
             }
 
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
-            tpfa_trans_compute (ug, htrans.data()     , trans_.data());
+            tpfa_trans_compute(ug, htrans.data(), trans_.data());
 
-            // multiply the face transmissibilities with the appropriate transmissibility
-            // multipliers
+            // multiply the face transmissibilities with their appropriate
+            // transmissibility multipliers
             for (int faceIdx = 0; faceIdx < numFaces; faceIdx++) {
-                // get the two cells adjacent to the face and ignore all boundary faces
-                int insideCompressedCellIdx = grid.face_cells[2*faceIdx + 0];
-                int outsideCompressedCellIdx = grid.face_cells[2*faceIdx + 1];
-                if (insideCompressedCellIdx < 0 || outsideCompressedCellIdx  < 0)
-                    continue;
-
-                // convert the compressed cell indices to indices of the logically
-                // cartesian grid
-                int insideCartesianCellIdx = AutoDiffGrid::globalCell(grid)[insideCompressedCellIdx];
-                int outsideCartesianCellIdx = AutoDiffGrid::globalCell(grid)[outsideCompressedCellIdx];
-
-                // find out the orientation of the face in the Cartesian grid from the
-                // inside cell's perspective. Note that -- as an unlikely corner case --
-                // the face could exhibit a different Cartesian orientation for the
-                // outside cell. We don't consider this case here, though...
-                int insideFaceTag = -1;
-                for (int cellFaceIdx = grid.cell_facepos[insideCompressedCellIdx];
-                     cellFaceIdx < grid.cell_facepos[insideCompressedCellIdx + 1];
-                     ++ cellFaceIdx)
-                {
-                    if (faceIdx == grid.cell_faces[cellFaceIdx]) {
-                        insideFaceTag = grid.cell_facetag[cellFaceIdx];
-                        break;
-                    }
-                }
-                // we need a face tag!
-                assert(insideFaceTag >= 0);
-
-                double multiplier = 1.0;
-                switch (insideFaceTag) {
-                case 0: // left
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::XMinus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::XPlus);
-                    break;
-
-                case 1: // right
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::XPlus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::XMinus);
-                    break;
-
-                case 2: // front
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::YMinus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::YPlus);
-                    break;
-                case 3: // back
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::YPlus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::YMinus);
-                    break;
-
-                case 4: // top
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::ZMinus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::ZPlus);
-                    break;
-                case 5: // bottom
-                    multiplier *= multipliers->getMultiplier(insideCartesianCellIdx, FaceDir::ZPlus);
-                    multiplier *= multipliers->getMultiplier(outsideCartesianCellIdx, FaceDir::ZMinus);
-                    break;
-
-                default:
-                    // all cells need to be hexahedrons in logically cartesian
-                    // coordinates!
-                    assert(false);
-                }
-
-                trans_.data()[faceIdx] *= multiplier;
+                trans_.data()[faceIdx] *= mult[faceIdx];
             }
 
             // Compute z coordinates
