@@ -7,6 +7,7 @@
 # HAVE_SHARED_PTR                  True if std::shared_ptr is available
 # HAVE_UNIQUE_PTR                  True if std::unique_ptr is available
 # HAVE_NULLPTR                     True if nullptr is available
+# HAVE_REGEX                       True if std::regex available and sufficiently usable
 # HAVE_ARRAY                       True if header <array> and fill() are available
 # HAVE_ATTRIBUTE_ALWAYS_INLINE     True if attribute always inline is supported
 # HAS_ATTRIBUTE_UNUSED             True if attribute unused is supported
@@ -21,6 +22,9 @@
 # HAVE_RVALUE_REFERENCES           True if rvalue references are supported
 # HAVE_TUPLE                       True if std::tuple is available
 # HAVE_TR1_TUPLE                   True if std::tr1::tuple is available
+
+include(CheckCXXSourceCompiles)
+include(CheckCXXSourceRuns)
 
 # test for C++11 flags
 include(TestCXXAcceptsFlag)
@@ -122,6 +126,29 @@ CHECK_CXX_SOURCE_COMPILES("
       return 0;
     }
 "  HAVE_NULLPTR
+)
+
+# <regex>
+CHECK_CXX_SOURCE_RUNS("
+    #include <regex>
+    int main(void)
+    {
+      std::regex r(\"AB.*|BC+\");
+      if (!std::regex_match(\"AB\", r))
+           return 1;
+      if (!std::regex_match(\"ABC\", r))
+           return 1;
+      if (!std::regex_match(\"ABC!#\", r))
+           return 1;
+      if (std::regex_match(\"B\", r))
+           return 1;
+      if (!std::regex_match(\"BC\", r))
+           return 1;
+      if (std::regex_match(\"BCE\", r))
+           return 1;
+      return 0;
+    }
+"  HAVE_REGEX
 )
 
 # constexpr
