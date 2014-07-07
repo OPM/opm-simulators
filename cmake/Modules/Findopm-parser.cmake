@@ -160,7 +160,7 @@ find_package_handle_standard_args (opm-parser
   opm-parser_INCLUDE_DIRS opm-parser_LIBRARIES HAVE_OPM_PARSER
     )
 
-set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER")
+set (opm-parser_CONFIG_VARS "HAVE_OPM_PARSER;HAVE_REGEX")
 set (opm-parser_FOUND ${OPM-PARSER_FOUND})
 
 mark_as_advanced(opm-parser_LIBRARIES opm-parser_INCLUDE_DIRS OPM-PARSER_FOUND)
