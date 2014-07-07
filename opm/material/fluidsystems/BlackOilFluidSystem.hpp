@@ -88,10 +88,12 @@ public:
      */
     static void init()
     {
-        OPM_THROW(std::logic_error, "No generic init() method for this fluid system. The black-oil fluid system must be initialized with:\n"
-                   << "    FluidSystem::initBegin()\n"
-                   << "    // set black oil parameters\n"
-                   << "    FluidSystem::initEnd()\n");
+        OPM_THROW(std::logic_error,
+                  "There is no generic init() method for this fluid system. The "
+                  << "black-oil fluid system must be initialized using:\n"
+                  << "    FluidSystem::initBegin()\n"
+                  << "    // set black oil parameters\n"
+                  << "    FluidSystem::initEnd()\n");
     }
 
     /*!

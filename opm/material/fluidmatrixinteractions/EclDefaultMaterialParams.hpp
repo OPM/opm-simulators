@@ -85,7 +85,7 @@ public:
     { assertFinalized_(); return oilWaterParams_; }
 
     /*!
-     * \brief The parameter object for the oil-water twophase law.
+     * \brief Set the parameter object for the oil-water twophase law.
      */
     void setOilWaterParams(const OilWaterParams& val)
     { oilWaterParams_ = val; }

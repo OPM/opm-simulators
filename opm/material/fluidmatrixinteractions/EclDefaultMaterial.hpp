@@ -294,11 +294,11 @@ public:
     template <class ContainerT, class FluidState>
     static void dCapillaryPressures_dSaturation(ContainerT &values,
                                                 const Params &params,
-                                                const FluidState &state,
+                                                const FluidState &fluidState,
                                                 int satPhaseIdx)
     {
         OPM_THROW(std::logic_error,
-                  "Not implemented: dCapillaryPressures_dSaturation()");
+                  "Not implemented: dCapillaryPressure_dSaturation()");
     }
 
     /*!
