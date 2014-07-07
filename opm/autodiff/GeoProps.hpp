@@ -31,6 +31,7 @@
 
 #include "reenable_warning_pragmas.h"
 
+#include <cstddef>
 
 namespace Opm
 {
@@ -82,17 +83,18 @@ namespace Opm
                 typedef typename ADCell2FacesTraits<Grid>::Type Cell2Faces;
                 Cell2Faces c2f=cell2Faces(grid);
 
+                std::size_t i = 0;
                 for (typename Vector::Index c = 0; c < nc; ++c) {
                     const double* const cc = cellCentroid(grid, c);
 
                     typename Cell2Faces::row_type faces=c2f[c];
                     typedef typename Cell2Faces::row_type::iterator Iter;
 
-                    for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
+                    for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f, ++i) {
                         const double* const fc = faceCentroid(grid, *f);
 
                         for (typename Vector::Index d = 0; d < nd; ++d) {
-                            gpot_[f-faces.begin()] += grav[d] * (fc[d] - cc[d]);
+                            gpot_[i] += grav[d] * (fc[d] - cc[d]);
                         }
                     }
                 }
