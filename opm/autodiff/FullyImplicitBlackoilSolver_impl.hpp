@@ -417,14 +417,18 @@ namespace {
 
         if (active_[ Gas ]){
             for (int c = 0; c < nc ; c++ ) {
-                if ( primalVariable_[c] == PrimalVariables::RS ) {
+                switch (primalVariable_[c]) {
+                case PrimalVariables::RS:
                     isRs[c] = 1;
-                }
-                else if ( primalVariable_[c] == PrimalVariables::RV ) {
+                    break;
+
+                case PrimalVariables::RV:
                     isRv[c] = 1;
-                }
-                else {
+                    break;
+
+                default:
                     isSg[c] = 1;
+                    break;
                 }
             }
 
@@ -1192,15 +1196,19 @@ namespace {
         V isRv = V::Zero(nc,1);
         V isSg = V::Zero(nc,1);
         if (active_[Gas]) {
-            for (int c = 0; c < nc ; c++ ) {
-                if ( primalVariable_[c] == PrimalVariables::RS ) {
+            for (int c = 0; c < nc; ++c) {
+                switch (primalVariable_[c]) {
+                case PrimalVariables::RS:
                     isRs[c] = 1;
-                }
-                else if ( primalVariable_[c] == PrimalVariables::RV ) {
+                    break;
+
+                case PrimalVariables::RV:
                     isRv[c] = 1;
-                }
-                else {
+                    break;
+
+                default:
                     isSg[c] = 1;
+                    break;
                 }
             }
         }
