@@ -34,6 +34,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_pengrobinson.cpp
 	tests/test_ncpflash.cpp
 	tests/test_tabulation.cpp
+	tests/test_2dtables.cpp
 	tests/test_fluidsystems.cpp
 	tests/test_immiscibleflash.cpp
 	)

@@ -26,7 +26,7 @@
 
 #include <opm/material/fluidstates/TemperatureOverlayFluidState.hpp>
 #include <opm/material/IdealGas.hpp>
-#include <opm/material/DynamicTabulated2dFunction.hpp>
+#include <opm/material/UniformTabulated2DFunction.hpp>
 
 #include <opm/core/utility/Unused.hpp>
 #include <opm/core/utility/PolynomialUtils.hpp>
@@ -518,9 +518,9 @@ protected:
     { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); }
 
 /*
-    static DynamicTabulated2DFunction<Scalar> criticalTemperature_;
-    static DynamicTabulated2DFunction<Scalar> criticalPressure_;
-    static DynamicTabulated2DFunction<Scalar> criticalMolarVolume_;
+    static UniformTabulated2DFunction<Scalar> criticalTemperature_;
+    static UniformTabulated2DFunction<Scalar> criticalPressure_;
+    static UniformTabulated2DFunction<Scalar> criticalMolarVolume_;
 */
 };
 
@@ -529,13 +529,13 @@ const Scalar PengRobinson<Scalar>::R = Opm::Constants<Scalar>::R;
 
 /*
 template <class Scalar>
-DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
+UniformTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalTemperature_;
 
 template <class Scalar>
-DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
+UniformTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalPressure_;
 
 template <class Scalar>
-DynamicTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
+UniformTabulated2DFunction<Scalar> PengRobinson<Scalar>::criticalMolarVolume_;
 */
 
 } // namespace Opm

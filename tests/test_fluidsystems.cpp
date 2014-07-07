@@ -47,7 +47,7 @@
 
 // include the tables for CO2 which are delivered with opm-material by
 // default
-#include <opm/material/StaticTabulated2dFunction.hpp>
+#include <opm/material/UniformTabulated2DFunction.hpp>
 
 namespace Opm {
 namespace FluidSystemsTest {
