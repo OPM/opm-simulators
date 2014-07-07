@@ -303,40 +303,18 @@ public:
         // depending of the mass fraction in gas
         int n = gasDissolutionFactorSpline_.numSamples()*5;
         int delta =
-            (gasDissolutionFactorSpline_.xMax() - gasDissolutionFactorSpline_.xMin())
-            /(n + 1);
+            (gasDissolutionFactorSpline_.xMax() - gasDissolutionFactorSpline_.xMin())/(n + 1);
 
         SplineSamplingPoints pSatSamplePoints;
         Scalar X_oG = 0;
-        for (int i=0; i <= n && X_oG < 0.7; ++ i) {
-            Scalar pSat = i*delta + gasDissolutionFactorSpline_.xMin();
+        for (int i=0; i <= n; ++ i) {
+            Scalar pSat = gasDissolutionFactorSpline_.xMin() + i*delta;
             X_oG = saturatedOilGasMassFraction(pSat);
 
             std::pair<Scalar, Scalar> val(X_oG, pSat);
-            pSatSamplePoints.push_back(val);;
-        };
-        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
-
-        if (0) {
-            // some output only helpful for debugging
-            int n = 1000;
-            Scalar pMin = 10e6;
-            Scalar pMax = 35e6;
-            std::cerr.precision(16);
-            for (int i = 0; i < n; ++i) {
-                Scalar p = Scalar(i)/n*(pMax - pMin) + pMin;
-
-                Scalar X_ogf = saturatedOilGasMassFraction(p);
-                Scalar pPrime = oilSaturationPressure(X_ogf);
-
-                std::cerr << p << " "
-                          << X_ogf << " "
-                          << pPrime << " "
-                          << p - pPrime << " "
-                          << "\n";
-            };
-            exit(1);
+            pSatSamplePoints.push_back(val);
         }
+        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
     }
 
     //! \copydoc BaseFluidSystem::phaseName
@@ -414,52 +392,7 @@ public:
         switch (phaseIdx) {
         case waterPhaseIdx: return waterDensity_(p);
         case gasPhaseIdx: return gasDensity_(p);
-        case oilPhaseIdx: {
-            Scalar pSat = oilSaturationPressure(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
-
-            // retrieve the gas formation factor and the oil formation volume factor
-            Scalar Rs = gasDissolutionFactorSpline_.eval(pSat, /*extrapolate=*/true);
-            Scalar Bo = oilFormationVolumeFactor(pSat);
-
-            // retrieve the derivatives of the oil formation volume
-            // factor and the gas formation factor regarding pressure
-            Scalar dBo_dp = oilFormationVolumeFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
-            Scalar dRs_dp = gasDissolutionFactorSpline_.evalDerivative(pSat, /*extrapolate=*/true);
-
-            // define the derivatives of oil regarding oil component
-            // mass fraction and pressure
-            Scalar drhoo_dXoO =
-                surfaceDensity_[oilPhaseIdx]*
-                (1 + oilCompressibility()*(p - 1.0135e5));
-            Scalar drhoo_dp =
-                oilCompressibility();
-
-            // Calculate the derivative of the density of saturated
-            // oil regarding pressure
-            Scalar drhoosat_dp = - surfaceDensity_[oilPhaseIdx]*dBo_dp / (Bo * Bo);
-
-            // calculate the derivative of the gas component mass
-            // fraction regarding pressure in saturated oil
-            Scalar dXoOsat_dp =
-                - surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx]
-                *(Bo * dRs_dp + Rs * dBo_dp);
-
-            // Using the previous derivatives, define a derivative
-            // for the oil density in regard to the gas mass fraction.
-            Scalar drhoo_dXoG =
-                drhoo_dXoO + (drhoo_dp - drhoosat_dp) / dXoOsat_dp;
-
-            // calculate the composition of saturated oil.
-            Scalar XoGsat = surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx] * Rs * Bo;
-            Scalar XoOsat = 1.0 - XoGsat;
-
-            Scalar rhoo =
-                surfaceDensity_[oilPhaseIdx]/Bo*(1 + drhoo_dp*(p - pSat))
-                + (XoOsat - fluidState.massFraction(oilPhaseIdx, oilCompIdx))*drhoo_dXoO
-                + (XoGsat - fluidState.massFraction(oilPhaseIdx, gasCompIdx))*drhoo_dXoG;
-
-            return rhoo;
-        }
+        case oilPhaseIdx: return oilDensity(p, fluidState.massFraction(oilPhaseIdx, gasCompIdx));
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -624,8 +557,7 @@ public:
      */
     static Scalar oilCompressibility()
     {
-        return
-            (1.1200 - 1.1189)/((5000 - 4000)*6894.76); // [kg/m^3 / Pa)]
+        return (1.1200 - 1.1189)/((5000 - 4000)*6894.76); // [kg/m^3 / Pa)]
     }
 
     /*!
@@ -658,36 +590,27 @@ public:
         OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << X_oG);
     }
 
-
     // the mass fraction of the gas component in the oil phase in a
     // flash experiment
     static Scalar saturatedOilGasMassFraction(Scalar pressure)
     {
-        // first, we calculate the total reservoir oil phase density
-        // [kg/m^3]
         Scalar rho_gRef = surfaceDensity_[gasPhaseIdx];
 
-        Scalar B_o = oilFormationVolumeFactor(pressure);
-        Scalar rho_o = surfaceDensity(oilPhaseIdx)/B_o;
-
-        // then, we calculate the mass of the gas component [kg/m^3]
-        // in the oil phase. This is equivalent to the gas formation
-        // factor [m^3/m^3] at current pressure times the gas density
-        // [kg/m^3] at standard pressure
+        // calculate the mass of the gas component [kg/m^3] in the oil phase. This is
+        // equivalent to the gas formation factor [m^3/m^3] at current pressure times the
+        // gas density [kg/m^3] at standard pressure
         Scalar rho_oG = gasDissolutionFactor(pressure) * rho_gRef;
 
-        // with these quantities it is pretty easy to calculate to the
-        // composition of the oil phase in terms of mass fractions
-        return rho_oG/rho_o;
+        // we now have the total density of saturated oil and the partial density of the
+        // gas component within it. The gas mass fraction is the ratio of these two.
+        return rho_oG/(surfaceDensity(oilPhaseIdx) + rho_oG);
     }
 
-    // the mole fraction of the gas component in the oil phase in a
-    // flash experiment
+    // the mole fraction of the gas component of a gas-saturated oil phase
     static Scalar saturatedOilGasMoleFraction(Scalar pressure)
     {
         // calculate the mass fractions of gas and oil
         Scalar XoG = saturatedOilGasMassFraction(pressure);
-        //Scalar XoO = 1.0 - XoG;
 
         // which can be converted to mole fractions, given the
         // components' molar masses
@@ -700,7 +623,7 @@ public:
         return xoG;
     }
 
-    // density of oil in a flash experiment
+    // density of gas-saturated oil
     static Scalar saturatedOilDensity(Scalar pressure)
     {
         // oil formation volume factor at reservoir pressure
@@ -717,12 +640,60 @@ public:
         return rhoRef * BoRef/Bo;
     }
 
+
+    // density of gas (potentially) under-saturated oil
+    static Scalar oilDensity(Scalar oilPressure, Scalar massFractionGasInOil)
+    {
+        Scalar poSat = oilSaturationPressure(massFractionGasInOil);
+
+        // retrieve the gas formation factor and the oil formation volume factor
+        Scalar Rs = gasDissolutionFactorSpline_.eval(poSat, /*extrapolate=*/true);
+        Scalar Bo = oilFormationVolumeFactor(poSat);
+
+        // retrieve the derivatives of the oil formation volume
+        // factor and the gas formation factor regarding pressure
+        Scalar dBo_dp = oilFormationVolumeFactorSpline_.evalDerivative(poSat, /*extrapolate=*/true);
+        Scalar dRs_dp = gasDissolutionFactorSpline_.evalDerivative(poSat, /*extrapolate=*/true);
+
+        // define the derivatives of oil regarding oil component
+        // mass fraction and pressure
+        Scalar drhoo_dXoO =
+            surfaceDensity_[oilPhaseIdx]
+            * (1 + oilCompressibility()*(oilPressure - 1.0135e5));
+        Scalar drhoo_dp = oilCompressibility();
+
+        // Calculate the derivative of the density of saturated
+        // oil regarding pressure
+        Scalar drhoosat_dp = - surfaceDensity_[oilPhaseIdx]*dBo_dp / (Bo * Bo);
+
+        // calculate the derivative of the gas component mass
+        // fraction regarding pressure in saturated oil
+        Scalar dXoOsat_dp =
+            - surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx]
+            *(Bo * dRs_dp + Rs * dBo_dp);
+
+        // Using the previous derivatives, define a derivative
+        // for the oil density in regard to the gas mass fraction.
+        Scalar drhoo_dXoG =
+            drhoo_dXoO + (drhoo_dp - drhoosat_dp) / dXoOsat_dp;
+
+        // calculate the composition of saturated oil.
+        Scalar XoGsat = surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx] * Rs * Bo;
+        Scalar XoOsat = 1.0 - XoGsat;
+
+        Scalar rhoo =
+            surfaceDensity_[oilPhaseIdx]/Bo*(1 + drhoo_dp*(oilPressure - poSat))
+            + (XoOsat - (1 - massFractionGasInOil))*drhoo_dXoO
+            + (XoGsat - massFractionGasInOil)*drhoo_dXoG;
+
+        return rhoo;
+    }
+
 private:
     static Scalar gasDensity_(Scalar pressure)
     {
         // gas formation volume factor at reservoir pressure
         Scalar Bg = gasFormationVolumeFactor(pressure);
-
 
         // gas formation volume factor at standard pressure
         Scalar BgRef = refFormationVolumeFactor_[gasPhaseIdx];
