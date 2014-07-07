@@ -59,7 +59,7 @@ namespace Opm
             , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
             , z_(Opm::AutoDiffGrid::numCells(grid))
         {
-            auto multipliers = eclState->getTransMult();
+            std::shared_ptr<const Opm::TransMult> multipliers = eclState->getTransMult();
 
             int numCells = AutoDiffGrid::numCells(grid);
             int numFaces = AutoDiffGrid::numFaces(grid);
