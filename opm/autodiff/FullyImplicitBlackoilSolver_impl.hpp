@@ -528,13 +528,12 @@ namespace {
                 so = so - sw;
             }
 
-            // Define Sg Rs and Rv in terms of xvar.
-            std::vector<int> all_cells = buildAllCells(nc);
-            ADB rsSat = fluidRsSat(state.pressure,all_cells);
-            ADB rvSat = fluidRvSat(state.pressure,all_cells);
-            ADB xvar = vars[ nextvar++ ];
             if (active_[ Gas]) {
-                ADB sg = isSg*xvar + isRv* so;
+                // Define Sg Rs and Rv in terms of xvar.
+                const ADB& rsSat = fluidRsSat(state.pressure, cells_);
+                const ADB& rvSat = fluidRvSat(state.pressure, cells_);
+                const ADB& xvar = vars[ nextvar++ ];
+                const ADB& sg = isSg*xvar + isRv* so;
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
 
@@ -711,7 +710,7 @@ namespace {
         const std::vector<ADB> kr = computeRelPerm(state);
         const std::vector<ADB> pressures = computePressures(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            computeMassFlux(phaseIdx, transi, kr[phaseIdx], pressures[phaseIdx], state);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], pressures[canph_[phaseIdx]], state);
             // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
             // std::cout << kr[phase];
             // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
@@ -733,18 +732,18 @@ namespace {
         // The extra terms in the accumulation part of the equation are already handled.
         if (active_[ Oil ] && active_[ Gas ]) {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
+            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
+
             const UpwindSelector<double> upwindOil(grid_, ops_,
                                                 rq_[po].head.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
-            residual_.material_balance_eq[ Gas ] += ops_.div * (rs_face * rq_[po].mflux);
-
-            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
             const UpwindSelector<double> upwindGas(grid_, ops_,
                                                 rq_[pg].head.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
-            residual_.material_balance_eq[ Oil ] += ops_.div * (rv_face * rq_[pg].mflux);
+            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
+            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
 
             // DUMP(residual_.material_balance_eq[ Gas ]);
 
