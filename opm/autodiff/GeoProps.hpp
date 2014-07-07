@@ -119,9 +119,9 @@ namespace Opm
                         faceDirection = Opm::FaceDir::XMinus;
                     else if (faceTag == 1) // right
                         faceDirection = Opm::FaceDir::XPlus;
-                    else if (faceTag == 2) // front
+                    else if (faceTag == 2) // back
                         faceDirection = Opm::FaceDir::YMinus;
-                    else if (faceTag == 3) // back
+                    else if (faceTag == 3) // front
                         faceDirection = Opm::FaceDir::YPlus;
                     else if (faceTag == 4) // bottom
                         faceDirection = Opm::FaceDir::ZMinus;
