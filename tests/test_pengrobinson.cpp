@@ -322,6 +322,9 @@ int main(int argc, char** argv)
                                                               surfaceAlpha,
                                                               flashFluidState,
                                                               /*guessInitial=*/false);
+        Scalar Rs =
+            surfaceFluidState.saturation(gasPhaseIdx)
+            / surfaceFluidState.saturation(oilPhaseIdx);
         std::cout << alpha << " "
                   << flashFluidState.pressure(oilPhaseIdx) << " "
                   << flashFluidState.saturation(gasPhaseIdx) << " "
@@ -329,7 +332,7 @@ int main(int argc, char** argv)
                   << flashFluidState.density(gasPhaseIdx) << " "
                   << flashFluidState.averageMolarMass(oilPhaseIdx) << " "
                   << flashFluidState.averageMolarMass(gasPhaseIdx) << " "
-                  << surfaceFluidState.saturation(gasPhaseIdx)*surfaceAlpha << " "
+                  << Rs << " "
                   << rho_gRef/flashFluidState.density(gasPhaseIdx) << " "
                   << rho_oRef/flashFluidState.density(oilPhaseIdx) << " "
                   << "\n";
