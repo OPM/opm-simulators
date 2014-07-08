@@ -42,16 +42,19 @@ namespace Opm
 
         /// Construct from parameters.
         /// The accepted parameters are (default) (allowed values):
-        ///    linsolver ("umfpack")   ("umfpack", "istl")
+        ///    linsolver ("umfpack")   ("umfpack", "istl", "petsc")
         /// For the umfpack solver to be available, this class must be
         /// compiled with UMFPACK support, as indicated by the
         /// variable HAVE_SUITESPARSE_UMFPACK_H in config.h.
         /// For the istl solver to be available, this class must be
         /// compiled with dune-istl support, as indicated by the
         /// variable HAVE_DUNE_ISTL in config.h.
+        /// For the petsc solver to be available, this class must be
+        /// compiled with petsc support, as indicated by the
+        /// variable HAVE_PETSC in config.h.
         /// Any further parameters are passed on to the constructors
-        /// of the actual solver used, see LinearSolverUmfpack
-        /// and LinearSolverIstl for details.
+        /// of the actual solver used, see LinearSolverUmfpack,
+        /// LinearSolverIstl and LinearSolverPetsc for details.
         LinearSolverFactory(const parameter::ParameterGroup& param);
 
         /// Destructor.

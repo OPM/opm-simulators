@@ -185,6 +185,7 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
 #endif
 #endif
 
+#if HAVE_PETSC
 BOOST_AUTO_TEST_CASE(PETScTest)
 {
     Opm::parameter::ParameterGroup param;
@@ -195,3 +196,4 @@ BOOST_AUTO_TEST_CASE(PETScTest)
     param.insertParameter(std::string("ksp_view"), std::string("0"));
     run_test(param);
 }
+#endif
