@@ -37,7 +37,7 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
-#include <opm/material/StaticTabulated2dFunction.hpp>
+#include <opm/material/UniformTabulated2DFunction.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 

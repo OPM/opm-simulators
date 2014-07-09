@@ -172,88 +172,91 @@ public:
      */
     ReservoirProblem(Simulator &simulator)
         : ParentType(simulator)
+    {}
+
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 1e-6;
 
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
 
-        FluidSystem::initBegin();
-        std::vector<std::pair<Scalar, Scalar> > Bg =
-            { { 1.013529e+05, 9.998450e-01 },
-              { 2.757903e+06, 3.075500e-02 },
-              { 5.515806e+06, 1.537947e-02 },
-              { 8.273709e+06, 1.021742e-02 },
-              { 1.103161e+07, 7.662783e-03 },
-              { 1.378951e+07, 6.151899e-03 },
-              { 1.654742e+07, 5.108709e-03 },
-              { 1.930532e+07, 4.378814e-03 },
-              { 2.206322e+07, 3.857780e-03 },
-              { 2.482113e+07, 3.388401e-03 },
-              { 2.757903e+07, 3.049842e-03 } };
-        std::vector<std::pair<Scalar, Scalar> > Bo =
-            { { 1.013529e+05, 1.000000e+00 },
-              { 2.757903e+06, 1.012000e+00 },
-              { 5.515806e+06, 1.025500e+00 },
-              { 8.273709e+06, 1.038000e+00 },
-              { 1.103161e+07, 1.051000e+00 },
-              { 1.378951e+07, 1.063000e+00 },
-              { 1.654742e+07, 1.075000e+00 },
-              { 1.930532e+07, 1.087000e+00 },
-              { 2.206322e+07, 1.098500e+00 },
-              { 2.482113e+07, 1.110000e+00 },
-              { 2.757903e+07, 1.120000e+00 } };
-        std::vector<std::pair<Scalar, Scalar> > Rs =
-            { { 1.013529e+05, 0.000000e+00 },
-              { 2.757903e+06, 2.938776e+01 },
-              { 5.515806e+06, 5.966605e+01 },
-              { 8.273709e+06, 8.905380e+01 },
-              { 1.103161e+07, 1.184416e+02 },
-              { 1.378951e+07, 1.474731e+02 },
-              { 1.654742e+07, 1.754360e+02 },
-              { 1.930532e+07, 2.012616e+02 },
-              { 2.206322e+07, 2.261967e+02 },
-              { 2.482113e+07, 2.475696e+02 },
-              { 2.757903e+07, 2.671614e+02 } };
-        std::vector<std::pair<Scalar, Scalar> > muo =
-            { { 1.013529e+05, 1.200000e-03 },
-              { 2.757903e+06, 1.170000e-03 },
-              { 5.515806e+06, 1.140000e-03 },
-              { 8.273709e+06, 1.110000e-03 },
-              { 1.103161e+07, 1.080000e-03 },
-              { 1.378951e+07, 1.060000e-03 },
-              { 1.654742e+07, 1.030000e-03 },
-              { 1.930532e+07, 1.000000e-03 },
-              { 2.206322e+07, 9.800000e-04 },
-              { 2.482113e+07, 9.500000e-04 },
-              { 2.757903e+07, 9.400000e-04 } };
-        std::vector<std::pair<Scalar, Scalar> > mug =
-            { { 1.013529e+05, 1.250000e-05 },
-              { 2.757903e+06, 1.300000e-05 },
-              { 5.515806e+06, 1.350000e-05 },
-              { 8.273709e+06, 1.400000e-05 },
-              { 1.103161e+07, 1.450000e-05 },
-              { 1.378951e+07, 1.500000e-05 },
-              { 1.654742e+07, 1.550000e-05 },
-              { 1.930532e+07, 1.600000e-05 },
-              { 2.206322e+07, 1.650000e-05 },
-              { 2.482113e+07, 1.700000e-05 },
-              { 2.757903e+07, 1.750000e-05 }, };
+        FluidSystem::initBegin();std::vector<std::pair<Scalar, Scalar> > Bo = {
+            { 101353, 1.062 },
+            { 1.82504e+06, 1.15 },
+            { 3.54873e+06, 1.207 },
+            { 6.99611e+06, 1.295 },
+            { 1.38909e+07, 1.435 },
+            { 1.73382e+07, 1.5 },
+            { 2.07856e+07, 1.565 },
+            { 2.76804e+07, 1.695 },
+            { 3.45751e+07, 1.827 }
+        };
+        std::vector<std::pair<Scalar, Scalar> > muo = {
+            { 101353, 0.00104 },
+            { 1.82504e+06, 0.000975 },
+            { 3.54873e+06, 0.00091 },
+            { 6.99611e+06, 0.00083 },
+            { 1.38909e+07, 0.000695 },
+            { 1.73382e+07, 0.000641 },
+            { 2.07856e+07, 0.000594 },
+            { 2.76804e+07, 0.00051 },
+            { 3.45751e+07, 0.000449 }
+        };
+        std::vector<std::pair<Scalar, Scalar> > Rs = {
+            { 101353, 0.178108 },
+            { 1.82504e+06, 16.1187 },
+            { 3.54873e+06, 32.0594 },
+            { 6.99611e+06, 66.0779 },
+            { 1.38909e+07, 113.276 },
+            { 1.73382e+07, 138.033 },
+            { 2.07856e+07, 165.64 },
+            { 2.76804e+07, 226.197 },
+            { 3.45751e+07, 288.178 }
+        };
+        std::vector<std::pair<Scalar, Scalar> > Bg = {
+            { 101353, 0.93576 },
+            { 1.82504e+06, 0.0678972 },
+            { 3.54873e+06, 0.0352259 },
+            { 6.99611e+06, 0.0179498 },
+            { 1.38909e+07, 0.00906194 },
+            { 1.73382e+07, 0.00726527 },
+            { 2.07856e+07, 0.00606375 },
+            { 2.76804e+07, 0.00455343 },
+            { 3.45751e+07, 0.00364386 },
+            { 6.21542e+07, 0.00216723 }
+        };
+        std::vector<std::pair<Scalar, Scalar> > mug = {
+            { 101353, 8e-06 },
+            { 1.82504e+06, 9.6e-06 },
+            { 3.54873e+06, 1.12e-05 },
+            { 6.99611e+06, 1.4e-05 },
+            { 1.38909e+07, 1.89e-05 },
+            { 1.73382e+07, 2.08e-05 },
+            { 2.07856e+07, 2.28e-05 },
+            { 2.76804e+07, 2.68e-05 },
+            { 3.45751e+07, 3.09e-05 },
+            { 6.21542e+07, 4.7e-05 }
+        };
+
+        FluidSystem::setSurfaceDensities(/*oil=*/720.51,
+                                         /*water=*/1009.32,
+                                         /*gas=*/1.1245);
         FluidSystem::setGasFormationVolumeFactor(Bg);
-        FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
         FluidSystem::setSaturatedOilGasDissolutionFactor(Rs);
+        FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
         FluidSystem::setSaturatedOilViscosity(muo);
         FluidSystem::setGasViscosity(mug);
         FluidSystem::setWaterViscosity(9.6e-4);
         FluidSystem::setWaterCompressibility(1.450377e-10);
-        FluidSystem::setSurfaceDensities(/*oil=*/720.51,
-                                         /*water=*/1009.32,
-                                         /*gas=*/1.1245);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            FluidSystem::setReferenceVolumeFactor(phaseIdx, 1.0);
+        FluidSystem::setSurfaceDensities(/*oil=*/786,
+                                         /*water=*/1037,
+                                         /*gas=*/0.97);
         FluidSystem::initEnd();
 
-        pReservoir_ = 20e6;
+        pReservoir_ = 330e5;
         layerBottom_ = 22.0;
 
         // intrinsic permeabilities
@@ -548,23 +551,7 @@ private:
         // set composition of the oil phase
         //////
 
-        // retrieve the relevant black-oil parameters from the fluid
-        // system.
-        Scalar pSat = pReservoir_; // the saturation pressure of the oil
-        Scalar Bo = FluidSystem::oilFormationVolumeFactor(pSat);
-        Scalar Rs = FluidSystem::gasDissolutionFactor(pSat);
-        Scalar rhoo = FluidSystem::surfaceDensity(oilPhaseIdx) / Bo;
-        Scalar rhogref = FluidSystem::surfaceDensity(gasPhaseIdx);
-
-        // calculate composition of oil phase in terms of mass
-        // fractions.
-        Scalar XoG = Rs * rhogref / rhoo;
-
-        // convert mass to mole fractions
-        Scalar MG = FluidSystem::molarMass(gasCompIdx);
-        Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
-        Scalar xoG = XoG * MO / ((MO - MG) * XoG + MG);
+        Scalar xoG = 0.95*FluidSystem::saturatedOilGasMoleFraction(fs.pressure(oilPhaseIdx));
         Scalar xoO = 1 - xoG;
 
         // finally set the oil-phase composition
