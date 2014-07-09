@@ -122,8 +122,10 @@ SET_SCALAR_PROP(EclBaseProblem, Temperature, 293.15);
 
 // The default for the end time of the simulation [s]
 //
-// By default, stop after the first year...
-SET_SCALAR_PROP(EclBaseProblem, EndTime, 1*365*24*60*60);
+// By default, stop it after the universe will probably have stopped
+// to exist. (the ECL problem will finish the simulation explicitly
+// after it simulated the last episode specified in the deck.)
+SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 
 // The default for the initial time step size of the simulation [s].
 //
@@ -240,22 +242,41 @@ public:
     }
 
     /*!
-     * \brief Called by the time manager after the end of an episode.
+     * \brief Called by the simulator before an episode begins.
      */
-    void episodeEnd()
+    void beginEpisode()
+    { }
+
+    /*!
+     * \brief Called by the simulator before each time integration.
+     */
+    void beginTimeStep()
+    { }
+
+    /*!
+     * \brief Called by the simulator before each Newton-Raphson iteration.
+     */
+    void beginIteration()
+    { }
+
+    /*!
+     * \brief Called by the simulator after the end of an episode.
+     */
+    void endEpisode()
     {
         Simulator &simulator = this->simulator();
-        Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
+        Opm::EclipseStateConstPtr eclipseState = this->simulator().gridManager().eclipseState();
+        Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
 
         // TimeMap deals with points in time, so the number of time
-        // intervalls (i.e., report steps) is one less!
+        // intervals (i.e., report steps) is one less!
         int numReportSteps = timeMap->size() - 1;
 
         // start the next episode if there are additional report
         // steps, else finish the simulation
-        int episodeIdx = simulator.episodeIndex();
-        if (episodeIdx < numReportSteps)
-            simulator.startNextEpisode(timeMap->getTimeStepLength(episodeIdx + 1));
+        int nextEpisodeIdx = simulator.episodeIndex() + 1;
+        if (nextEpisodeIdx < numReportSteps)
+            simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
         else
             simulator.setFinished(true);
     }
