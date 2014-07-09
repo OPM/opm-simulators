@@ -252,8 +252,10 @@ public:
 
     /*!
      * \brief Set the x-position of a vertical line.
+     *
+     * Returns the i index of that line.
      */
-    void appendXPos(Scalar nextX)
+    size_t appendXPos(Scalar nextX)
     {
 #ifndef NDEBUG
         if (xPos_.size())
@@ -262,17 +264,23 @@ public:
 
         xPos_.push_back(nextX);
         samples_.resize(xPos_.size());
+
+        return xPos_.size() - 1;
     }
 
     /*!
      * \brief Append a sample point.
+     *
+     * Returns the i index of that line.
      */
-    void appendSamplePoint(int i, Scalar y, Scalar value)
+    size_t appendSamplePoint(int i, Scalar y, Scalar value)
     {
         assert(0 <= i && i < numX());
 
         Scalar x = iToX(i);
         samples_[i].push_back(SamplePoint(x, y, value));
+
+        return samples_[i].size() - 1;
     }
 
     /*!
