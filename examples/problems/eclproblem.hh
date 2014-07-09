@@ -624,6 +624,12 @@ private:
 
         FluidSystem::initBegin();
 
+        // set the reference densities
+        Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(0);
+        FluidSystem::setSurfaceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
+                                         densityRecord->getItem("WATER")->getSIDouble(0),
+                                         densityRecord->getItem("GAS")->getSIDouble(0));
+
         // so far, we require the presence of the PVTO, PVTW and PVDG
         // keywords...
         Opm::PvtoTable pvtoTable(deck->getKeyword("PVTO"), /*tableIdx=*/0);
@@ -633,15 +639,6 @@ private:
         FluidSystem::setPvtoTable(pvtoTable);
         FluidSystem::setPvtwTable(pvtwTable);
         FluidSystem::setPvdgTable(pvdgTable);
-
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            FluidSystem::setReferenceVolumeFactor(phaseIdx, 1.0);
-
-        // set the reference densities
-        Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(0);
-        FluidSystem::setSurfaceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
-                                         densityRecord->getItem("WATER")->getSIDouble(0),
-                                         densityRecord->getItem("GAS")->getSIDouble(0));
 
         FluidSystem::initEnd();
    }
