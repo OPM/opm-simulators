@@ -25,6 +25,8 @@
 //#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
 
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include "disable_warning_pragmas.h"
 
 #include <Eigen/Eigen>
@@ -49,9 +51,10 @@ namespace Opm
         /// Construct contained derived geological properties
         /// from grid and property information.
         template <class Props, class Grid>
-        DerivedGeology(const Grid&             grid,
-                       const Props&            props ,
-                       const double*           grav = 0)
+        DerivedGeology(const Grid&              grid,
+                       const Props&             props ,
+                       Opm::EclipseStateConstPtr eclState,
+                       const double*            grav = 0)
             : pvol_ (Opm::AutoDiffGrid::numCells(grid))
             , trans_(Opm::AutoDiffGrid::numFaces(grid))
             , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
