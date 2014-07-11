@@ -68,9 +68,6 @@ SET_BOOL_PROP(InfiltrationBaseProblem, EnableGravity, true);
 // Write newton convergence?
 SET_BOOL_PROP(InfiltrationBaseProblem, NewtonWriteConvergence, false);
 
-// Maximum tolerated error in the Newton method
-SET_SCALAR_PROP(InfiltrationBaseProblem, NewtonTolerance, 1e-8);
-
 // -1 backward differences, 0: central differences, +1: forward differences
 SET_INT_PROP(InfiltrationBaseProblem, NumericDifferenceMethod, 1);
 
