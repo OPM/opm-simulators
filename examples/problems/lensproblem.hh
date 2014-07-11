@@ -97,8 +97,7 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
-    Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx> Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -342,7 +341,8 @@ public:
     std::string name() const
     {
         std::ostringstream oss;
-        oss << "lens_" << Model::name();
+        oss << "lens_" << Model::name()
+            << "_" << Model::discretizationName();
         return oss.str();
     }
 
