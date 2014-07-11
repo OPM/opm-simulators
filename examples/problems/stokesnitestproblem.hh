@@ -70,8 +70,8 @@ SET_SCALAR_PROP(StokesNiTestProblem, EndTime, 3.0);
 // Default initial time step size [s]
 SET_SCALAR_PROP(StokesNiTestProblem, InitialTimeStepSize, 0.1);
 
-// Default tolerance of the Newton-Raphson method
-SET_SCALAR_PROP(StokesNiTestProblem, NewtonTolerance, 1e-4);
+// Increase the default raw tolerance of the Newton-Raphson method to 10^-4
+SET_SCALAR_PROP(StokesNiTestProblem, NewtonRawTolerance, 1e-4);
 
 // Default grid file to load
 SET_STRING_PROP(StokesNiTestProblem, GridFile, "data/test_stokes2cni.dgf");
