@@ -110,7 +110,7 @@ public:
 };
 
 // Use the algebraic multi-grid linear solver for this problem
-SET_TAG_PROP(LensBaseProblem, LinearSolverSplice, ParallelAmgBackend);
+SET_TAG_PROP(LensBaseProblem, LinearSolverSplice, ParallelAmgLinearSolver);
 
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(LensBaseProblem, NewtonWriteConvergence, false);
