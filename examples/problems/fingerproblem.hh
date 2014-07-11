@@ -194,7 +194,6 @@ public:
         : ParentType(simulator)
     {
         eps_ = 3e-6;
-        FluidSystem::init();
 
         temperature_ = 273.15 + 20; // -> 20°C
     }
@@ -223,10 +222,13 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::init
+     * \copydoc FvBaseProblem::finishInit()
      */
-    void init()
+    void finishInit()
     {
+        ParentType::finishInit();
+
+        FluidSystem::init();
 
         // parameters for the Van Genuchten law of the main imbibition
         // and the main drainage curves.
@@ -254,8 +256,6 @@ public:
         K_ = this->toDimMatrix_(4.6e-10);
 
         setupInitialFluidState_();
-
-        ParentType::init();
     }
 
     /*!
