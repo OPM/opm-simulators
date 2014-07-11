@@ -46,7 +46,6 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -108,7 +107,12 @@ try
 
     // Grid init
     grid.reset(new GridManager(eclipseState->getEclipseGrid()));
-    Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
+    auto &cGrid = *grid->c_grid();
+    Opm::EclipseWriter outputWriter(param,
+                                    deck,
+                                    cGrid.number_of_cells,
+                                    cGrid.global_cell,
+                                    cGrid.cartdims);
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));

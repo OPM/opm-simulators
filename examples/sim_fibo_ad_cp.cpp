@@ -148,8 +148,7 @@ try
     Opm::EclipseWriter outputWriter(param, deck,
                                     Opm::UgGridHelpers::numCells(*grid),
                                     Opm::UgGridHelpers::globalCell(*grid),
-                                    Opm::UgGridHelpers::cartDims(*grid),
-                                    Opm::UgGridHelpers::dimensions(*grid));
+                                    Opm::UgGridHelpers::cartDims(*grid));
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
