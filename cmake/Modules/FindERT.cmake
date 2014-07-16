@@ -182,6 +182,9 @@ if (UNIX)
   list (APPEND ERT_LIBRARIES ${MATH_LIBRARY})
 endif (UNIX)
 
+# Platform specific library where dlopen with friends lives
+list (APPEND ERT_LIBRARIES ${CMAKE_DL_LIBS})
+
 # since OpenMP often implies pthreads, we need to tidy up
 # (last instance of library must be left standing, thus reversing that
 # list before removing duplicates)
