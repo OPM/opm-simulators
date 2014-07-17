@@ -122,7 +122,7 @@ SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief Non-isothermal gas injection problem where a air
  *        is injected into a fully water saturated medium.
  *
@@ -251,7 +251,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     {
@@ -340,7 +340,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * For this problem, we inject air at the inlet on the center of
      * the lower domain boundary and use a no-flow condition on the
@@ -395,7 +395,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      *
      * For this problem, we set the medium to be fully saturated by
      * liquid water and assume hydrostatic pressure.
@@ -411,7 +411,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * In this problem, constraints are used to keep the temperature of the degrees of
      * freedom which are closest to the inlet constant.
@@ -429,7 +429,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

@@ -77,7 +77,7 @@ SET_STRING_PROP(Stokes2cTestProblem, GridFile, "data/test_stokes2c.dgf");
 namespace Ewoms {
 /*!
  * \ingroup Stokes2cModel
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Stokes transport problem with humid air flowing from the
  *        left to the right.
@@ -136,7 +136,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return "stokes2ctest"; }
@@ -158,7 +158,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * This problem uses an out-flow boundary on the lower edge of the
      * domain, no-flow on the left and right edges and constrains the
@@ -190,7 +190,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      *
      * For this method a parabolic velocity profile from left to
      * right, atmospheric pressure and a mole fraction of water of
@@ -226,7 +226,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all conserved quantities
      * is 0 everywhere.
@@ -237,7 +237,7 @@ public:
     { rate = Scalar(0.0); }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * In this problem, the method sets the domain's lower edge to
      * initial conditions.

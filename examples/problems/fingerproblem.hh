@@ -204,7 +204,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return std::string("finger_") + Model::name(); }
@@ -259,7 +259,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::endTimeStep
+     * \copydoc FvBaseProblem::endTimeStep
      */
     void endTimeStep()
     {
@@ -326,7 +326,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -359,7 +359,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -370,7 +370,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
@@ -389,7 +389,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

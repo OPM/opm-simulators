@@ -105,7 +105,7 @@ SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Test for the immisicible VCVF discretization with only a single phase
  *
@@ -217,7 +217,7 @@ public:
     // \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     {
@@ -258,7 +258,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -297,7 +297,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -308,7 +308,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      */
     template <class Context>
     void source(RateVector &rate, const Context &context, int spaceIdx,

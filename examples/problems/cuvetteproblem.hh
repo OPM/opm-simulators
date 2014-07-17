@@ -114,7 +114,7 @@ SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Non-isothermal three-phase gas injection problem where a hot gas
  *        is injected into a unsaturated porous medium with a residually
@@ -261,7 +261,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::shouldWriteRestartFile
+     * \copydoc FvBaseProblem::shouldWriteRestartFile
      *
      * This problem writes a restart file after every time step.
      */
@@ -269,7 +269,7 @@ public:
     { return true; }
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return std::string("cuvette_") + Model::name(); }
@@ -355,7 +355,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -404,7 +404,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -419,7 +419,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

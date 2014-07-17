@@ -133,7 +133,7 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief 1D Problem with very fast injection of gas on the left.
  *
  * The velocity model is chosen in the .cc file in this problem. The
@@ -213,7 +213,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     {
@@ -228,7 +228,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::endTimeStep
+     * \copydoc FvBaseProblem::endTimeStep
      */
     void endTimeStep()
     {
@@ -257,7 +257,7 @@ public:
     { return K_; }
 
     /*!
-     * \copydoc VcfvForchheimerBaseProblem::ergunCoefficient
+     * \copydoc ForchheimerBaseProblem::ergunCoefficient
      */
     template <class Context>
     Scalar ergunCoefficient(const Context &context, int spaceIdx,
@@ -294,7 +294,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * This problem sets a very high injection rate of nitrogen on the
      * left and a free-flow boundary on the right.
@@ -327,7 +327,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -338,7 +338,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

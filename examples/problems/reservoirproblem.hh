@@ -109,7 +109,7 @@ SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Some simple test problem for the black-oil VCVF discretization
  *        inspired by an oil reservoir.
@@ -341,7 +341,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
@@ -366,7 +366,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * The reservoir problem uses constraints to approximate
      * extraction and production wells, so all boundaries are no-flow.
@@ -387,7 +387,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      *
      * The reservoir problem uses a constant boundary condition for
      * the whole domain.
@@ -397,7 +397,7 @@ public:
     { values.assignNaive(initialFluidState_); }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * The reservoir problem places two water-injection wells on the
      * lower parts of the left and right edges of the domains and on
@@ -469,7 +469,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0 everywhere.
      */

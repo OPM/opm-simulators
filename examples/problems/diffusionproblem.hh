@@ -114,7 +114,7 @@ SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief 1D problem which is driven by molecular diffusion.
  *
  * The domain is one meter long and completely filled with gas and
@@ -187,7 +187,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return std::string("diffusion_") + Model::name(); }
@@ -237,7 +237,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * This problem sets no-flow boundaries everywhere.
      */
@@ -254,7 +254,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -268,7 +268,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.
