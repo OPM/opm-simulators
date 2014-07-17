@@ -1330,9 +1330,6 @@ namespace {
         const V rsSat0 = fluidRsSat(p_old, cells_);
         const V rsSat = fluidRsSat(p, cells_);
 
-        // reset the phase conditions
-        std::vector<PhasePresence> cond(nc);
-
         std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
 
         if (has_disgas_) {
@@ -1448,6 +1445,8 @@ namespace {
         const V bhp = bhp_old - dbhp_limited;
         std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
+        // Update phase conditions used for property calculations.
+        updatePhaseCondFromPrimalVariable();
     }
 
 
@@ -2115,8 +2114,39 @@ namespace {
                 if (so[c] <= 0 && sg[c] > 0) {primalVariable_[c] = PrimalVariables::RV; }
             }
         }
-
+        updatePhaseCondFromPrimalVariable();
     }
+
+
+
+
+
+    /// Update the phaseCondition_ member based on the primalVariable_ member.
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::updatePhaseCondFromPrimalVariable()
+    {
+        const int nc = primalVariable_.size();
+        for (int c = 0; c < nc; ++c) {
+            phaseCondition_[c] = PhasePresence(); // No free phases.
+            phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
+            switch (primalVariable_[c]) {
+            case PrimalVariables::Sg:
+                phaseCondition_[c].setFreeOil();
+                phaseCondition_[c].setFreeGas();
+                break;
+            case PrimalVariables::RS:
+                phaseCondition_[c].setFreeOil();
+                break;
+            case PrimalVariables::RV:
+                phaseCondition_[c].setFreeGas();
+                break;
+            default:
+                OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << primalVariable_[c]);
+            }
+        }
+    }
+
 
 
 

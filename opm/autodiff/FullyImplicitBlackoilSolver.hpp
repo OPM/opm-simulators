@@ -291,6 +291,10 @@ namespace Opm {
         void
         updatePrimalVariableFromState(const BlackoilState&        state);
 
+        /// Update the phaseCondition_ member based on the primalVariable_ member.
+        void
+        updatePhaseCondFromPrimalVariable();
+
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt);
