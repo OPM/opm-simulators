@@ -259,9 +259,9 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::postTimeStep
+     * \copydoc VcfvProblem::endTimeStep
      */
-    void postTimeStep()
+    void endTimeStep()
     {
         // update the history of the hysteresis law
         ElementContext elemCtx(this->simulator());

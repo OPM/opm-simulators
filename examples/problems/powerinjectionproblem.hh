@@ -228,9 +228,9 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::postTimeStep
+     * \copydoc VcfvProblem::endTimeStep
      */
-    void postTimeStep()
+    void endTimeStep()
     {
         // Calculate storage terms
         PrimaryVariables storage;

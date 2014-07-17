@@ -347,9 +347,21 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::postTimeStep
+     * \copydoc FvBaseProblem::beginTimeStep
      */
-    void postTimeStep()
+    void beginTimeStep()
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::beginIteration
+     */
+    void beginIteration()
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
     {
         // Calculate storage terms
         PrimaryVariables storage;
