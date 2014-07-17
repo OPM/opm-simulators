@@ -81,7 +81,7 @@ SET_STRING_PROP(StokesNiTestProblem, GridFile, "data/test_stokes2cni.dgf");
 namespace Ewoms {
 /*!
  * \ingroup StokesNiModel
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief Non-isothermal test problem for the Stokes model with a gas
  *        (N2) flowing from the left to the right.
  *
@@ -150,7 +150,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return "stokestest_ni"; }
@@ -163,7 +163,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -191,7 +191,7 @@ public:
     // \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -237,7 +237,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all conserved quantities
      * is 0 everywhere.
@@ -248,7 +248,7 @@ public:
     { rate = Scalar(0.0); }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * This problem sets temperature constraints for the finite volumes
      * adjacent to the inlet.

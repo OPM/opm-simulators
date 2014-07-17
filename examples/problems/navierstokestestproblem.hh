@@ -81,7 +81,7 @@ SET_STRING_PROP(NavierStokesTestProblem, GridFile,
 namespace Ewoms {
 /*!
  * \ingroup StokesModel
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief Stokes flow problem with modified nitrogen (N2) circulating in
  *        a cavity. (lid-driven cavity-flow)
  *
@@ -138,7 +138,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return "navierstokes"; }
@@ -160,7 +160,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -187,7 +187,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -195,7 +195,7 @@ public:
     { initial_(values); }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * For this problem, we fix the velocity of upper boundary.
      */
@@ -216,7 +216,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      */
     template <class Context>
     void source(RateVector &rate, const Context &context, int spaceIdx,

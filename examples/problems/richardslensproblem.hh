@@ -121,7 +121,7 @@ SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief A water infiltration problem with a low-permeability lens
  *        embedded into a high-permeability domain.
@@ -217,7 +217,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return "lens_richards"; }
@@ -283,7 +283,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values,
@@ -328,7 +328,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values,
@@ -349,7 +349,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

@@ -81,7 +81,7 @@ SET_STRING_PROP(StokesTestProblem, GridFile, "data/test_stokes.dgf");
 namespace Ewoms {
 /*!
  * \ingroup StokesModel
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Stokes flow problem with nitrogen (\f$N_2\f$) flowing
  *        from the left to the right.
@@ -138,7 +138,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     { return "stokestest"; }
@@ -160,7 +160,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      *
      * For this problem, we use an out-flow boundary on the right,
      * no-flow at the top and at the bottom and the left boundary gets
@@ -205,7 +205,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -232,7 +232,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all conserved quantities
      * is 0 everywhere.
@@ -243,7 +243,7 @@ public:
     { rate = Scalar(0.0); }
 
     /*!
-     * \copydoc VcfvProblem::constraints
+     * \copydoc FvBaseProblem::constraints
      *
      * For this problem, the left side of the domain gets a parabolic
      * velocity profile using constraints.

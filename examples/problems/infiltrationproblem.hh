@@ -114,7 +114,7 @@ SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  * \brief Isothermal NAPL infiltration problem where LNAPL
  *        contaminates the unsaturated and the saturated groundwater
  *        zone.
@@ -223,7 +223,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::shouldWriteRestartFile
+     * \copydoc FvBaseProblem::shouldWriteRestartFile
      *
      * This problem writes a restart file after every time step.
      */
@@ -231,7 +231,7 @@ public:
     { return true; }
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     {
@@ -296,7 +296,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -330,7 +330,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -346,7 +346,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.

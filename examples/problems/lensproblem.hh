@@ -147,7 +147,7 @@ SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 
 namespace Ewoms {
 /*!
- * \ingroup VcfvTestProblems
+ * \ingroup TestProblems
  *
  * \brief Soil contamination problem where DNAPL infiltrates a fully
  *        water saturated medium.
@@ -336,7 +336,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::name
+     * \copydoc FvBaseProblem::name
      */
     std::string name() const
     {
@@ -381,7 +381,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::boundary
+     * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
@@ -453,7 +453,7 @@ public:
     //! \{
 
     /*!
-     * \copydoc VcfvProblem::initial
+     * \copydoc FvBaseProblem::initial
      */
     template <class Context>
     void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
@@ -492,7 +492,7 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::source
+     * \copydoc FvBaseProblem::source
      *
      * For this problem, the source term of all components is 0
      * everywhere.
