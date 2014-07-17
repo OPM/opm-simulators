@@ -200,6 +200,7 @@ class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
 
@@ -363,14 +364,18 @@ public:
      */
     void endTimeStep()
     {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
         // Calculate storage terms
-        PrimaryVariables storage;
+        EqVector storage;
         this->model().globalStorage(storage);
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
             std::cout << "Storage: " << storage << std::endl << std::flush;
         }
+#endif // NDEBUG
     }
 
     //! \}
@@ -384,8 +389,8 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector &values,
+                  const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -456,8 +461,7 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         Scalar depth = this->boundingBoxMax()[1] - pos[1];
