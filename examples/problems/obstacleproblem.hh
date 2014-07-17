@@ -231,9 +231,9 @@ public:
     }
 
     /*!
-     * \copydoc VcfvProblem::postTimeStep
+     * \copydoc VcfvProblem::endTimeStep
      */
-    void postTimeStep()
+    void endTimeStep()
     {
         // Calculate storage terms of the individual phases
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {

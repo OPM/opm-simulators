@@ -276,7 +276,7 @@ public:
     /*!
      * \brief Called directly after the time integration.
      */
-    void postTimeStep()
+    void endTimeStep()
     {
         // Calculate storage terms
         EqVector storage;
