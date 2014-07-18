@@ -46,7 +46,6 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -108,7 +107,13 @@ try
 
     // Grid init
     grid.reset(new GridManager(eclipseState->getEclipseGrid()));
-    Opm::EclipseWriter outputWriter(param, deck, share_obj(*grid->c_grid()));
+    auto &cGrid = *grid->c_grid();
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+    Opm::EclipseWriter outputWriter(param,
+                                    eclipseState,
+                                    pu,
+                                    cGrid.number_of_cells,
+                                    cGrid.global_cell);
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
@@ -127,7 +132,6 @@ try
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
         initBlackoilSurfvol(*grid->c_grid(), *props, state);
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
-        const PhaseUsage pu = props->phaseUsage();
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
             const int nc = grid->c_grid()->number_of_cells;

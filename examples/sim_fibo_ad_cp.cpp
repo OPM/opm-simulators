@@ -145,11 +145,10 @@ try
     }
 
 
-    Opm::EclipseWriter outputWriter(param, deck,
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+    Opm::EclipseWriter outputWriter(param, eclipseState, pu,
                                     Opm::UgGridHelpers::numCells(*grid),
-                                    Opm::UgGridHelpers::globalCell(*grid),
-                                    Opm::UgGridHelpers::cartDims(*grid),
-                                    Opm::UgGridHelpers::dimensions(*grid));
+                                    Opm::UgGridHelpers::globalCell(*grid));
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
@@ -177,7 +176,6 @@ try
                        *props, param, gravity[2], state);
         initBlackoilSurfvol(grid->numCells(), *props, state);
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
-        const PhaseUsage pu = props->phaseUsage();
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
             const int nc = grid->numCells();
