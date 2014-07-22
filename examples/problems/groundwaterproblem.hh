@@ -137,6 +137,7 @@ class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
@@ -224,6 +225,25 @@ public:
         std::ostringstream oss;
         oss << "groundwater_" << Model::name();
         return oss.str();
+    }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
     }
 
     /*!

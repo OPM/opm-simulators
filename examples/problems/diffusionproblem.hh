@@ -152,6 +152,7 @@ class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
 
@@ -191,6 +192,25 @@ public:
      */
     std::string name() const
     { return std::string("diffusion_") + Model::name(); }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
+    }
 
     //! \}
 

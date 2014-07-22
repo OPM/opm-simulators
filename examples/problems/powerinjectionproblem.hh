@@ -156,6 +156,7 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -232,14 +233,18 @@ public:
      */
     void endTimeStep()
     {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
         // Calculate storage terms
-        PrimaryVariables storage;
+        EqVector storage;
         this->model().globalStorage(storage);
 
         // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
             std::cout << "Storage: " << storage << std::endl << std::flush;
         }
+#endif // NDEBUG
     }
     //! \}
 

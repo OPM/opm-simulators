@@ -103,6 +103,7 @@ class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -155,6 +156,25 @@ public:
      */
     std::string name() const
     { return "outflow"; }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
+    }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature

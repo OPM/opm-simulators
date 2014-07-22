@@ -151,6 +151,7 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
@@ -295,6 +296,33 @@ public:
     }
 
     /*!
+     * \copydoc FvBaseProblem::name
+     */
+    std::string name() const
+    { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        // checkConservativeness() does not include the effect of constraints, so we
+        // disable it for this problem...
+        //this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
+    }
+
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      *
      * For this problem, a layer with high permability is located
@@ -340,11 +368,6 @@ public:
      */
     //! \{
 
-    /*!
-     * \copydoc FvBaseProblem::name
-     */
-    std::string name() const
-    { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
