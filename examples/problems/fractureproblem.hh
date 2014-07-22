@@ -278,15 +278,20 @@ public:
      */
     void endTimeStep()
     {
+#ifndef NDEBUG
+        // checkConservativeness() does not include the effect of constraints, so we
+        // disable it for this problem...
+        //this->model().checkConservativeness();
+
         // Calculate storage terms
         EqVector storage;
         this->model().globalStorage(storage);
 
-        // Process with rank 0 informs about the total masses of all
-        // components inside the domain
+        // Write mass balance information for rank 0
         if (this->gridView().comm().rank() == 0) {
-            std::cout << "Mass in domain: " << storage << std::endl << std::flush;
+            std::cout << "Storage: " << storage << std::endl << std::flush;
         }
+#endif // NDEBUG
     }
 
     /*!

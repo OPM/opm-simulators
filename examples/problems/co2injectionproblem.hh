@@ -340,6 +340,10 @@ public:
      */
     void endTimeStep()
     {
+#ifndef NDEBUG
+        Scalar tol = this->model().newtonMethod().tolerance()*5e2;
+        this->model().checkConservativeness(tol);
+
         // Calculate storage terms
         PrimaryVariables storageL, storageG;
         this->model().globalPhaseStorage(storageL, /*phaseIdx=*/0);
@@ -350,6 +354,7 @@ public:
             std::cout << "Storage: liquid=[" << storageL << "]"
                       << " gas=[" << storageG << "]\n" << std::flush;
         }
+#endif // NDEBUG
     }
 
     /*!

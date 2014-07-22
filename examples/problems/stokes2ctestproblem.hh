@@ -94,6 +94,7 @@ class Stokes2cTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
@@ -140,6 +141,27 @@ public:
      */
     std::string name() const
     { return "stokes2ctest"; }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        // checkConservativeness() does not include the effect of constraints, so we
+        // disable it for this problem...
+        //this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
+    }
 
     /*!
      * \brief StokesProblem::temperature

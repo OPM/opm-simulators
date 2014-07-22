@@ -142,6 +142,7 @@ class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
@@ -235,6 +236,9 @@ public:
      */
     void endTimeStep()
     {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
         // Calculate storage terms of the individual phases
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             PrimaryVariables phaseStorage;
@@ -248,7 +252,7 @@ public:
         }
 
         // Calculate total storage terms
-        PrimaryVariables storage;
+        EqVector storage;
         this->model().globalStorage(storage);
 
         // Write mass balance information for rank 0
@@ -256,6 +260,7 @@ public:
             std::cout << "Storage total: [" << storage << "]"
                       << "\n"  << std::flush;
         }
+#endif // NDEBUG
     }
 
     /*!

@@ -186,6 +186,7 @@ class WaterAirProblem
 
     static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
 
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
@@ -261,6 +262,27 @@ public:
             oss << "_ni";
 
         return oss.str();
+    }
+
+    /*!
+     * \copydoc FvBaseProblem::endTimeStep
+     */
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        // checkConservativeness() does not include the effect of constraints, so we
+        // disable it for this problem...
+        //this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
     }
 
     /*!
