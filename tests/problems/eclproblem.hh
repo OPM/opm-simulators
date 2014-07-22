@@ -175,6 +175,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
@@ -250,8 +251,21 @@ public:
     /*!
      * \brief Called by the simulator before each time integration.
      */
-    void beginTimeStep()
-    { }
+    void endTimeStep()
+    {
+#ifndef NDEBUG
+        this->model().checkConservativeness();
+
+        // Calculate storage terms
+        EqVector storage;
+        this->model().globalStorage(storage);
+
+        // Write mass balance information for rank 0
+        if (this->gridView().comm().rank() == 0) {
+            std::cout << "Storage: " << storage << std::endl << std::flush;
+        }
+#endif // NDEBUG
+    }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
