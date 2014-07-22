@@ -678,7 +678,7 @@ public:
             drhoo_dXoO + (drhoo_dp - drhoosat_dp) / dXoOsat_dp;
 
         // calculate the composition of saturated oil.
-        Scalar XoGsat = surfaceDensity_[gasPhaseIdx]/surfaceDensity_[oilPhaseIdx] * Rs * Bo;
+        Scalar XoGsat = saturatedOilGasMassFraction(oilPressure);
         Scalar XoOsat = 1.0 - XoGsat;
 
         Scalar rhoo =
