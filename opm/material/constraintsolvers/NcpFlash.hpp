@@ -26,6 +26,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Average.hpp>
@@ -246,6 +248,29 @@ public:
                   "Flash calculation failed."
                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                   << fluidState.temperature(/*phaseIdx=*/0));
+    }
+
+    /*!
+     * \brief Calculates the chemical equilibrium from the component
+     *        fugacities in a phase.
+     *
+     * This is a convenience method which assumes that the capillary pressure is
+     * zero...
+     */
+    template <class FluidState>
+    static void solve(FluidState &fluidState,
+                      const ComponentVector &globalMolarities,
+                      Scalar tolerance = 0.0)
+    {
+        ParameterCache paramCache;
+        paramCache.updateAll(fluidState);
+
+        typedef NullMaterialTraits<Scalar, numPhases> MaterialTraits;
+        typedef NullMaterial<MaterialTraits> MaterialLaw;
+        typedef typename MaterialLaw::Params MaterialLawParams;
+
+        MaterialLawParams matParams;
+        solve<MaterialLaw>(fluidState, paramCache, matParams, globalMolarities, tolerance);
     }
 
 

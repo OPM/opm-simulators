@@ -32,8 +32,109 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
 template <class FluidSystem, class FluidState>
-void guessInitial(FluidState &fluidState,
-                  int phaseIdx)
+void createSurfaceGasFluidSystem(FluidState &gasFluidState)
+{
+    static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+
+    // temperature
+    gasFluidState.setTemperature(273.15 + 20);
+
+    // gas pressure
+    gasFluidState.setPressure(gasPhaseIdx, 1e5);
+
+    // gas saturation
+    gasFluidState.setSaturation(gasPhaseIdx, 1.0);
+
+    //  gas composition: mostly methane, a bit of propane
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::H2OIdx, 0.0);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C1Idx, 0.94);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C3Idx, 0.06);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C6Idx, 0.00);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C10Idx, 0.00);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C15Idx, 0.00);
+    gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C20Idx, 0.00);
+
+    // gas density
+    typename FluidSystem::ParameterCache paramCache;
+    paramCache.updatePhase(gasFluidState, gasPhaseIdx);
+    gasFluidState.setDensity(gasPhaseIdx,
+                             FluidSystem::density(gasFluidState, paramCache, gasPhaseIdx));
+}
+
+template <class Scalar, class FluidSystem, class FluidState>
+Scalar computeSumxg(FluidState &resultFluidState,
+                    const FluidState &prestineFluidState,
+                    const FluidState &gasFluidState,
+                    Scalar additionalGas)
+{
+    static const int oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static const int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+    static const int numComponents = FluidSystem::numComponents;
+
+    typedef Opm::ThreePhaseMaterialTraits<Scalar, waterPhaseIdx, oilPhaseIdx, gasPhaseIdx> MaterialTraits;
+    typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
+    typedef typename MaterialLaw::Params MaterialLawParams;
+    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+    typedef Opm::NcpFlash<Scalar, FluidSystem> Flash;
+
+    resultFluidState.assign(prestineFluidState);
+
+    // add a bit of additional gas components
+    ComponentVector totalMolarities;
+    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx)
+        totalMolarities =
+            prestineFluidState.molarity(oilPhaseIdx, compIdx)
+            + additionalGas*gasFluidState.moleFraction(gasPhaseIdx, compIdx);
+
+    // "flash" the modified fluid state
+    typename FluidSystem::ParameterCache paramCache;
+    Flash::solve(resultFluidState, totalMolarities);
+
+    Scalar sumxg = 0;
+    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
+        sumxg += resultFluidState.moleFraction(gasPhaseIdx, compIdx);
+
+    return sumxg;
+}
+
+template <class Scalar, class FluidSystem, class FluidState>
+void makeOilSaturated(FluidState &fluidState, const FluidState &gasFluidState)
+{
+    static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
+
+    FluidState prestineFluidState;
+    prestineFluidState.assign(fluidState);
+
+    Scalar sumxg = 0;
+    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
+        sumxg += fluidState.moleFraction(gasPhaseIdx, compIdx);
+
+    // Newton method
+    Scalar tol = 1e-8;
+    Scalar additionalGas = 0; // [mol]
+    for (int i = 0; std::abs(sumxg - 1) > tol; ++i) {
+        if (i > 50)
+            throw std::runtime_error("Newton method did not converge after 50 iterations");
+
+        Scalar eps = std::max(1e-8, additionalGas*1e-8);
+
+        Scalar f = 1 - computeSumxg<Scalar, FluidSystem>(prestineFluidState,
+                                                         fluidState,
+                                                         gasFluidState,
+                                                         additionalGas);
+        Scalar fStar = 1 - computeSumxg<Scalar, FluidSystem>(prestineFluidState,
+                                                             fluidState,
+                                                             gasFluidState,
+                                                             additionalGas + eps);
+        Scalar fPrime = (fStar - f)/eps;
+
+        additionalGas -= f/fPrime;
+    };
+}
+
+template <class FluidSystem, class FluidState>
+void guessInitial(FluidState &fluidState, int phaseIdx)
 {
     if (phaseIdx == FluidSystem::gasPhaseIdx) {
         fluidState.setMoleFraction(phaseIdx, FluidSystem::H2OIdx, 0.0);
@@ -106,6 +207,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
             surfaceFluidState.setSaturation(phaseIdx, 0.0);
         }
         surfaceFluidState.setSaturation(oilPhaseIdx, 1.0);
+        surfaceFluidState.setSaturation(gasPhaseIdx, 1.0 - surfaceFluidState.saturation(oilPhaseIdx));
     }
 
     typename FluidSystem::ParameterCache paramCache;
@@ -147,6 +249,42 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     tmpMolarities /= alpha;
     Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
     return alpha;
+}
+
+template <class RawTable>
+void printResult(const RawTable& rawTable,
+                 const std::string &fieldName,
+                 size_t firstIdx,
+                 size_t secondIdx,
+                 double hiresThres)
+{
+    std::cout << "std::vector<std::pair<Scalar, Scalar> > "<<fieldName<<" = {\n";
+
+    size_t sampleIdx = 0;
+    size_t numSamples = 20;
+    size_t numRawHires = 0;
+    for (; rawTable[numRawHires][firstIdx] > hiresThres; ++numRawHires)
+    {}
+
+    for (; sampleIdx < numSamples; ++sampleIdx) {
+        size_t rawIdx = sampleIdx*numRawHires/numSamples;
+        std::cout << "{ " << rawTable[rawIdx][firstIdx] << ", "
+                  << rawTable[rawIdx][secondIdx] << " }"
+                  << ",\n";
+    }
+
+    numSamples = 15;
+    for (sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx) {
+        size_t rawIdx = sampleIdx*(rawTable.size() - numRawHires)/numSamples + numRawHires;
+        std::cout << "{ " << rawTable[rawIdx][firstIdx] << ", "
+                  << rawTable[rawIdx][secondIdx] << " }";
+        if (sampleIdx < numSamples - 1)
+            std::cout << ",\n";
+        else
+            std::cout << "\n";
+    }
+
+    std::cout << "};\n";
 }
 
 int main(int argc, char** argv)
@@ -201,6 +339,9 @@ int main(int argc, char** argv)
     ////////////
     // Create a fluid state
     ////////////
+    FluidState gasFluidState;
+    createSurfaceGasFluidSystem<FluidSystem>(gasFluidState);
+
     FluidState fluidState;
     ParameterCache paramCache;
 
@@ -212,8 +353,9 @@ int main(int argc, char** argv)
 
     // oil saturation
     fluidState.setSaturation(oilPhaseIdx, 1.0);
+    fluidState.setSaturation(gasPhaseIdx, 1.0 - fluidState.saturation(oilPhaseIdx));
 
-    // composition: SPE-5 reservoir oil
+    // oil composition: SPE-5 reservoir oil
     fluidState.setMoleFraction(oilPhaseIdx, H2OIdx, 0.0);
     fluidState.setMoleFraction(oilPhaseIdx, C1Idx, 0.50);
     fluidState.setMoleFraction(oilPhaseIdx, C3Idx, 0.03);
@@ -222,53 +364,17 @@ int main(int argc, char** argv)
     fluidState.setMoleFraction(oilPhaseIdx, C15Idx, 0.15);
     fluidState.setMoleFraction(oilPhaseIdx, C20Idx, 0.05);
 
-    // set the fugacities in the oil phase
-    paramCache.updatePhase(fluidState, oilPhaseIdx);
-    ComponentVector fugVec;
-    for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-        Scalar Phi =
-            FluidSystem::fugacityCoefficient(fluidState, paramCache, oilPhaseIdx, compIdx);
-        fluidState.setFugacityCoefficient(oilPhaseIdx, compIdx, Phi);
-        fugVec[compIdx] = fluidState.fugacity(oilPhaseIdx, compIdx);
+    //makeOilSaturated<Scalar, FluidSystem>(fluidState, gasFluidState);
 
-        fluidState.setMoleFraction(gasPhaseIdx, compIdx, fluidState.moleFraction(oilPhaseIdx, compIdx));
-    }
-
-/*
-    fluidState.setPressure(gasPhaseIdx, fluidState.pressure(oilPhaseIdx)); // 4000 PSI
-    {
-    Scalar TMin = fluidState.temperature(oilPhaseIdx)/2;
-    Scalar TMax = fluidState.temperature(oilPhaseIdx)*2;
-    int n = 1000;
-    for (int i = 0; i < n; ++i) {
-        Scalar T = TMin + (TMax - TMin)*i/(n - 1);
-
-        fluidState.setTemperature(T);
-        paramCache.updatePhase(fluidState, oilPhaseIdx);
-        paramCache.updatePhase(fluidState, gasPhaseIdx);
-
-        Scalar rhoO = FluidSystem::density(fluidState, paramCache, oilPhaseIdx);
-        Scalar rhoG = FluidSystem::density(fluidState, paramCache, gasPhaseIdx);
-        fluidState.setDensity(oilPhaseIdx, rhoO);
-        fluidState.setDensity(gasPhaseIdx, rhoG);
-        std::cout << T << " "
-                  << fluidState.density(oilPhaseIdx) << " "
-                  << fluidState.density(gasPhaseIdx) << " "
-                  << paramCache.gasPhaseParams().a() << " "
-                  << paramCache.gasPhaseParams().b() << " "
-                  << "\n";
-    }
-    exit(0);
-    }
-*/
-
+    // set the saturations and pressures of the other phases
     for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         if (phaseIdx != oilPhaseIdx) {
             fluidState.setSaturation(phaseIdx, 0.0);
             fluidState.setPressure(phaseIdx, fluidState.pressure(oilPhaseIdx));
         }
 
-        // initial guess for the composition
+        // initial guess for the composition (needed by the ComputeFromReferencePhase
+        // constraint solver. TODO: bug in ComputeFromReferencePhase?)
         guessInitial<FluidSystem>(fluidState, phaseIdx);
     }
 
@@ -282,9 +388,9 @@ int main(int argc, char** argv)
     ////////////
     // Calculate the total molarities of the components
     ////////////
-    ComponentVector molarities;
+    ComponentVector totalMolarities;
     for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
-        molarities[compIdx] = fluidState.saturation(oilPhaseIdx)*fluidState.molarity(oilPhaseIdx, compIdx);
+        totalMolarities[compIdx] = fluidState.saturation(oilPhaseIdx)*fluidState.molarity(oilPhaseIdx, compIdx);
 
     ////////////
     // Gradually increase the volume for and calculate the gas
@@ -294,29 +400,31 @@ int main(int argc, char** argv)
 
     FluidState flashFluidState, surfaceFluidState;
     flashFluidState.assign(fluidState);
-    //Flash::guessInitial(flashFluidState, paramCache, molarities);
-    Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, molarities);
+    //Flash::guessInitial(flashFluidState, paramCache, totalMolarities);
+    Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, totalMolarities);
 
     Scalar surfaceAlpha = 1;
     surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, surfaceAlpha, flashFluidState, /*guessInitial=*/true);
     Scalar rho_gRef = surfaceFluidState.density(gasPhaseIdx);
     Scalar rho_oRef = surfaceFluidState.density(oilPhaseIdx);
 
-    std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
-    int n = 1000;
-    for (int i = 0; i < n; ++i) {
-        Scalar minAlpha = 0.98;
-        Scalar maxAlpha = 5.0;
+    std::vector<std::array<Scalar, 10> > resultTable;
 
+    Scalar minAlpha = 0.98;
+    Scalar maxAlpha = surfaceAlpha;
+
+    std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
+    int n = 3000;
+    for (int i = 0; i < n; ++i) {
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
 
         // increasing the volume means decreasing the molartity
-        ComponentVector curMolarities = molarities;
-        curMolarities /= alpha;
+        ComponentVector curTotalMolarities = totalMolarities;
+        curTotalMolarities /= alpha;
 
         // "flash" the modified reservoir oil
-        Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curMolarities);
+        Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curTotalMolarities);
 
         surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState,
                                                               surfaceAlpha,
@@ -336,10 +444,36 @@ int main(int argc, char** argv)
                   << rho_gRef/flashFluidState.density(gasPhaseIdx) << " "
                   << rho_oRef/flashFluidState.density(oilPhaseIdx) << " "
                   << "\n";
+
+        std::array<Scalar, 10> tmp;
+        tmp[0] = alpha;
+        tmp[1] = flashFluidState.pressure(oilPhaseIdx);
+        tmp[2] = flashFluidState.saturation(gasPhaseIdx);
+        tmp[3] = flashFluidState.density(oilPhaseIdx);
+        tmp[4] = flashFluidState.density(gasPhaseIdx);
+        tmp[5] = flashFluidState.averageMolarMass(oilPhaseIdx);
+        tmp[6] = flashFluidState.averageMolarMass(gasPhaseIdx);
+        tmp[7] = Rs;
+        tmp[8] = rho_gRef/flashFluidState.density(gasPhaseIdx);
+        tmp[9] = rho_oRef/flashFluidState.density(oilPhaseIdx);
+
+        resultTable.push_back(tmp);
     }
 
     std::cout << "reference density oil [kg/m^3]: " << rho_oRef << "\n";
     std::cout << "reference density gas [kg/m^3]: " << rho_gRef << "\n";
+
+    Scalar hiresThresholdPressure = resultTable[20][1];
+    printResult(resultTable,
+                "Bg", /*firstIdx=*/1, /*secondIdx=*/8,
+                /*hiresThreshold=*/hiresThresholdPressure);
+    printResult(resultTable,
+                "Bo", /*firstIdx=*/1, /*secondIdx=*/9,
+                /*hiresThreshold=*/hiresThresholdPressure);
+    printResult(resultTable,
+                "Rs", /*firstIdx=*/1, /*secondIdx=*/7,
+                /*hiresThreshold=*/hiresThresholdPressure);
+
 
     return 0;
 }
