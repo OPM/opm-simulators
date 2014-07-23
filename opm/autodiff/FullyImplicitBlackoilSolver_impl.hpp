@@ -2126,6 +2126,9 @@ namespace {
     void
     FullyImplicitBlackoilSolver<T>::updatePhaseCondFromPrimalVariable()
     {
+        if (! active_[Gas]) {
+            OPM_THROW(std::logic_error, "updatePhaseCondFromPrimarVariable() logic requires active gas phase.");
+        }
         const int nc = primalVariable_.size();
         for (int c = 0; c < nc; ++c) {
             phaseCondition_[c] = PhasePresence(); // No free phases.
