@@ -49,6 +49,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
+	tests/test_transmissibilitymultipliers.cpp
 	tests/test_welldensitysegmented.cpp
 	)
 
