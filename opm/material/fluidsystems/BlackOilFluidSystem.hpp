@@ -788,7 +788,6 @@ public:
      */
     static Scalar oilDensity(Scalar oilPressure, Scalar XoG)
     {
-        return 650;
         Scalar Bo = oilFormationVolumeFactor(oilPressure, XoG);
         return surfaceDensity_[oilPhaseIdx]/Bo;
     }
