@@ -277,6 +277,13 @@ public:
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
 
+                // TODO: (?) include the composition-related derivatives
+#if 1
+                Scalar poSat = oilSaturationPressure(XoG);
+                Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
+                Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
+                Scalar rhoo = surfaceDensity_[oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
+#else
                 // Estimate the oil density. We use the method outlined in:
                 //
                 // A. Lauser: "Theory and Numerical Applications of Compositional
@@ -326,6 +333,7 @@ public:
                     surfaceDensity_[oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat))
                     + (XoOsat - (1 - XoG))*drhoo_dXoO
                     + (XoGsat - XoG)*drhoo_dXoG;
+#endif
 
                 Scalar Bo = surfaceDensity(oilPhaseIdx)/rhoo;
 
