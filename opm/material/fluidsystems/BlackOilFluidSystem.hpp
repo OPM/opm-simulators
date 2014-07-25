@@ -390,9 +390,8 @@ public:
         // water is simple: 18 g/mol
         molarMass_[waterCompIdx] = 18e-3;
 
-        // for gas, we take the density at standard pressure and
-        // temperature and assume it to be ideal
-        Scalar p = 1.0135e5;
+        // for gas, we take the density at standard conditions and assume it to be ideal
+        Scalar p = surfacePressure_;
         Scalar rho_g = surfaceDensity_[gasPhaseIdx];
         Scalar T = 297.15;
         molarMass_[gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
