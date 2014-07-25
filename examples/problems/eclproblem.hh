@@ -210,7 +210,12 @@ public:
      */
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
+    {}
+
+    void finishInit()
     {
+        ParentType::finishInit();
+
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
 
         // invert the direction of the gravity vector for ECL problems
@@ -222,6 +227,7 @@ public:
         readInitialCondition_();
 
         // Start the first episode. For this, ask the Eclipse schedule.
+        auto& simulator = this->simulator();
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
 
