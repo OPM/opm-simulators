@@ -128,6 +128,7 @@ public:
                                                 saturatedTable->getPressureColumn(),
                                                 saturatedTable->getGasSolubilityColumn(),
                                                 /*type=*/Spline::Monotonic);
+        updateSaturationPressureSpline_();
 
         Scalar rhooRef = surfaceDensity(oilPhaseIdx);
         Scalar rhogRef = surfaceDensity(gasPhaseIdx);
@@ -227,22 +228,7 @@ public:
         gasDissolutionFactorSpline_.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
         assert(gasDissolutionFactorSpline_.monotonic());
 
-        // create the spline representing saturation pressure
-        // depending of the mass fraction in gas
-        int n = gasDissolutionFactorSpline_.numSamples()*5;
-        int delta =
-            (gasDissolutionFactorSpline_.xMax() - gasDissolutionFactorSpline_.xMin())/(n + 1);
-
-        SplineSamplingPoints pSatSamplePoints;
-        Scalar X_oG = 0;
-        for (int i=0; i <= n; ++ i) {
-            Scalar pSat = gasDissolutionFactorSpline_.xMin() + i*delta;
-            X_oG = saturatedOilGasMassFraction(pSat);
-
-            std::pair<Scalar, Scalar> val(X_oG, pSat);
-            pSatSamplePoints.push_back(val);
-        }
-        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
+        updateSaturationPressureSpline_();
     }
 
     /*!
@@ -803,6 +789,26 @@ public:
     }
 
 private:
+    static void updateSaturationPressureSpline_()
+    {
+        // create the spline representing saturation pressure
+        // depending of the mass fraction in gas
+        int n = gasDissolutionFactorSpline_.numSamples()*5;
+        int delta =
+            (gasDissolutionFactorSpline_.xMax() - gasDissolutionFactorSpline_.xMin())/(n + 1);
+
+        SplineSamplingPoints pSatSamplePoints;
+        Scalar X_oG = 0;
+        for (int i=0; i <= n; ++ i) {
+            Scalar pSat = gasDissolutionFactorSpline_.xMin() + i*delta;
+            X_oG = saturatedOilGasMassFraction(pSat);
+
+            std::pair<Scalar, Scalar> val(X_oG, pSat);
+            pSatSamplePoints.push_back(val);
+        }
+        saturationPressureSpline_.setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
+    }
+
     static Scalar gasDensity_(Scalar pressure)
     {
         // gas formation volume factor at reservoir pressure
