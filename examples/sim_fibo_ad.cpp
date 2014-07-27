@@ -198,7 +198,7 @@ try
     // since number of wells may change etc.
 
 
-    SimulatorFullyImplicitBlackoil simulator(param,
+    SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
                                              *grid->c_grid(),
                                              *new_props,
                                              rock_comp->isActive() ? rock_comp.get() : 0,

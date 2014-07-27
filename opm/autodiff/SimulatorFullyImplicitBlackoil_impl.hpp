@@ -65,7 +65,6 @@ namespace Opm
              const Grid& grid,
              BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
-             WellsManager& wells_manager,
              NewtonIterationBlackoilInterface& linsolver,
              const double* gravity,
              bool has_disgas,
@@ -114,7 +113,6 @@ namespace Opm
                                                                    const Grid& grid,
                                                                    BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
-                                                                   WellsManager& wells_manager,
                                                                    NewtonIterationBlackoilInterface& linsolver,
                                                                    const double* gravity,
                                                                    const bool has_disgas,
@@ -123,7 +121,7 @@ namespace Opm
                                                                    EclipseWriter& output_writer)
 
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity, has_disgas, has_vapoil, eclipse_state, output_writer));
+        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil, eclipse_state, output_writer));
     }
 
 
@@ -215,7 +213,7 @@ namespace Opm
           gravity_(gravity),
           geo_(grid_, props_, gravity_),
           // solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver, has_disgas, has_vapoil)
-          slover_(linsolver),
+          solver_(linsolver),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           eclipse_state_(eclipse_state),
@@ -294,7 +292,7 @@ namespace Opm
 
             if (timer.currentStepNum() == 0) {
                     well_state.init(wells, state);
-                    output_writer_.writeInit(timer, state, well_state.basicWellState());
+                    output_writer_.writeInit(timer);
             } else {
                     // TODO: add a function to update the well_state here.
             }
@@ -310,7 +308,7 @@ namespace Opm
 
             SimulatorReport sreport;
 
-            FullyImplicitBlackoilSolver solver( param_, grid_, props_, geo_, rock_comp_props_, *wells, linsolver_, has_disgas_, has_vapoil_);
+            FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
 
             // Run solver.
             solver_timer.start();
