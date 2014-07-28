@@ -67,6 +67,7 @@ namespace Opm
     public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
+             const DerivedGeology& geo,
              const BlackoilPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
@@ -100,7 +101,7 @@ namespace Opm
         const double* gravity_;
         // Solvers
         BlackoilPropsAd fluid_;
-        DerivedGeology geo_;
+        const DerivedGeology& geo_;
         ImpesTPFAAD psolver_;
         TransportSolverCompressibleTwophaseReorder tsolver_;
         // Needed by column-based gravity segregation solver.
@@ -114,13 +115,14 @@ namespace Opm
 
     SimulatorCompressibleAd::SimulatorCompressibleAd(const parameter::ParameterGroup& param,
                                                      const UnstructuredGrid& grid,
+                                                     const DerivedGeology& geo,
                                                      const BlackoilPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
                                                      WellsManager& wells_manager,
                                                      LinearSolverInterface& linsolver,
                                                      const double* gravity)
     {
-        pimpl_.reset(new Impl(param, grid, props, rock_comp_props, wells_manager, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, wells_manager, linsolver, gravity));
     }
 
 
@@ -232,6 +234,7 @@ namespace Opm
     // \TODO: make CompressibleTpfa take bcs.
     SimulatorCompressibleAd::Impl::Impl(const parameter::ParameterGroup& param,
                                         const UnstructuredGrid& grid,
+                                        const DerivedGeology& geo,
                                         const BlackoilPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,
                                         WellsManager& wells_manager,
@@ -244,7 +247,7 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           gravity_(gravity),
           fluid_(props_),
-          geo_(grid_, fluid_, gravity_),
+          geo_(geo),
           psolver_(grid_, fluid_, geo_, *wells_manager.c_wells(), linsolver),
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
                                param.getDefault("nl_pressure_change_tolerance", 1.0),

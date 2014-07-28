@@ -230,11 +230,13 @@ try
               << std::flush;
 
     WellStateFullyImplicitBlackoil well_state;
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
+    Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
     SimulatorTimer simtimer;
 
     // initialize variables
     simtimer.init(timeMap);
+
+    Opm::DerivedGeology geology(*grid, *new_props, eclipseState);
 
     SimulatorReport fullReport;
     for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
@@ -271,6 +273,7 @@ try
 
         SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                                *grid,
+                                                               geology,
                                                                *new_props,
                                                                rock_comp->isActive() ? rock_comp.get() : 0,
                                                                wells,
