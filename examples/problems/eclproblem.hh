@@ -295,8 +295,10 @@ public:
         // start the next episode if there are additional report
         // steps, else finish the simulation
         int nextEpisodeIdx = simulator.episodeIndex() + 1;
-        if (nextEpisodeIdx < numReportSteps)
+        if (nextEpisodeIdx < numReportSteps) {
             simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
+            simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
+        }
         else
             simulator.setFinished(true);
     }
