@@ -236,7 +236,7 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    Opm::DerivedGeology geology(*grid, *new_props, eclipseState);
+    Opm::DerivedGeology geology(*grid, *new_props, eclipseState, grav);
 
     SimulatorReport fullReport;
     for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
