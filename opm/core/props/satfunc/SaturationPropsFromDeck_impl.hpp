@@ -430,7 +430,7 @@ namespace Opm
                 swat = eps_transf_[cell].wat.smax;
             } else {
                 const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-                const int np = phase_usage_.num_phases;
+                const int np = BlackoilPhases::MaxNumPhases;
                 double s[np];
                 s[wpos] = swat; 
                 double pc[np];
