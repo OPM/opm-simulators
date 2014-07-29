@@ -422,7 +422,7 @@ namespace Opm
                                                               const double pcow, 
                                                               double & swat)
     {
-        if (phase_usage_.phase_used[Aqua]) {
+        if (phase_usage_.phase_used[BlackoilPhases::Aqua]) {
             // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
             if (swat <= eps_transf_[cell].wat.smin) {
                 swat = eps_transf_[cell].wat.smin;
