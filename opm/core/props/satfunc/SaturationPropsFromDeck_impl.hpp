@@ -431,9 +431,9 @@ namespace Opm
             } else {
                 const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
                 const int np = BlackoilPhases::MaxNumPhases;
-                double s[np];
+                double s[np] = { 0.0 };
                 s[wpos] = swat; 
-                double pc[np];
+                double pc[np] = { 0.0 };
                 funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));          
                 if (pc[wpos] > 1.0e-8) {
                     eps_transf_[cell].wat.pcFactor *= pcow/pc[wpos];
