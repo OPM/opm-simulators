@@ -155,8 +155,41 @@ public:
                 oilViscosity_.appendSamplePoint(outerIdx, po, muo);
             }
         }
+
+        // we only need this spline to be able to calculate the reference oil formation
+        // factor without preconditions (oilFormationVolumeFactor_.eval() may throw if
+        // there are X values for which only one pressure is defined.)
+        Spline BoSpline;
+        BoSpline.setXYArrays(saturatedTable->numRows(),
+                             saturatedTable->getPressureColumn(),
+                             saturatedTable->getOilFormationFactorColumn(),
+                             /*type=*/Spline::Monotonic);
         referenceFormationVolumeFactor_[oilPhaseIdx] =
-            oilFormationVolumeFactor_.eval(/*XoG=*/0, surfacePressure_, /*extrapolate=*/true);
+            BoSpline.eval(surfacePressure_, /*extrapolate=*/true);
+
+
+        // make sure to have at least two sample points per mole fraction
+        for (int xIdx = 0; xIdx < oilFormationVolumeFactor_.numX(); ++xIdx) {
+            // a single sample point is definitely needed
+            assert(oilFormationVolumeFactor_.numY(xIdx) > 0);
+
+            if (oilFormationVolumeFactor_.numY(xIdx) > 1)
+                continue;
+
+            // assume oil with a constant compressibility and viscosity
+            Scalar poSat = saturatedTable->getPressureColumn()[0];
+            Scalar po = poSat * 2;
+            Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[0]/referenceFormationVolumeFactor_[oilPhaseIdx];
+
+            Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
+            Scalar rhoo = surfaceDensity_[oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
+
+            Scalar Bo = surfaceDensity(oilPhaseIdx)/rhoo;
+            oilFormationVolumeFactor_.appendSamplePoint(xIdx, po, Bo*referenceFormationVolumeFactor_[oilPhaseIdx]);
+
+            Scalar muo = saturatedTable->getOilViscosityColumn()[0];
+            oilViscosity_.appendSamplePoint(xIdx, po, muo);
+        }
     }
 
     /*!
