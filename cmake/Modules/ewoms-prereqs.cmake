@@ -20,6 +20,7 @@ set (ewoms_DEPS
 	"opm-core REQUIRED"
 	"opm-material REQUIRED"
 	"opm-parser"
+	"dune-alugrid REQUIRED"
 	"dune-cornerpoint"
 	# valgrind client requests
 	"Valgrind"
