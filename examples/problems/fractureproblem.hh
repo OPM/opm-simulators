@@ -25,7 +25,12 @@
 #define EWOMS_FRACTURE_PROBLEM_HH
 
 #include <ewoms/parallel/mpihelper.hh>
+
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#else
 #include <dune/grid/alugrid.hh>
+#endif
 
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
