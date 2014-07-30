@@ -30,7 +30,12 @@
 #include <opm/material/fluidsystems/GasPhase.hpp>
 #include <opm/material/components/N2.hpp>
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/dgf.hh>
+#else
 #include <dune/grid/alugrid/2d/alugrid.hh>
+#endif
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>

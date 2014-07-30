@@ -28,7 +28,12 @@
 #include <opm/core/utility/PropertySystem.hpp>
 #include <ewoms/common/parametersystem.hh>
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#else
 #include <dune/grid/alugrid.hh>
+#endif
+
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
