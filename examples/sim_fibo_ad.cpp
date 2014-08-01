@@ -204,10 +204,15 @@ try
                   << "---------------------------------------------------------------\n"
                   << "\n";
 
+        const double *ntg = 0;
+        if (eclipseState->hasDoubleGridProperty("NTG")) {
+            ntg = eclipseState->getDoubleGridProperty("NTG")->getData().data();
+        }
         WellsManager wells(eclipseState,
                            reportStepIdx,
                            *grid->c_grid(),
-                           props->permeability());
+                           props->permeability(),
+                           ntg);
 
         if (reportStepIdx == 0) {
             // @@@ HACK: we should really make a new well state and
