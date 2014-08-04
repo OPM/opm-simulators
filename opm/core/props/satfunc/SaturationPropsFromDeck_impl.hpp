@@ -430,10 +430,10 @@ namespace Opm
                 swat = eps_transf_[cell].wat.smax;
             } else {
                 const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-                const int np = BlackoilPhases::MaxNumPhases;
-                double s[np] = { 0.0 };
+                const int max_np = BlackoilPhases::MaxNumPhases;
+                double s[max_np] = { 0.0 };
                 s[wpos] = swat; 
-                double pc[np] = { 0.0 };
+                double pc[max_np] = { 0.0 };
                 funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));          
                 if (pc[wpos] > 1.0e-8) {
                     eps_transf_[cell].wat.pcFactor *= pcow/pc[wpos];
