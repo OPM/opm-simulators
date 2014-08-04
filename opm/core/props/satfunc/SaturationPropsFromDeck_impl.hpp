@@ -420,7 +420,7 @@ namespace Opm
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::swatInitScaling(const int cell,
                                                               const double pcow,
-                                                              double & swat)
+                                                              double& swat)
     {
         if (phase_usage_.phase_used[BlackoilPhases::Aqua]) {
             const double pc_low_threshold = 1.0e-8;
