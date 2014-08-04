@@ -414,12 +414,12 @@ namespace Opm
 
 
     /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
-    /// \param[in]     cell  Cell index. 
+    /// \param[in]     cell  Cell index.
     /// \param[in]     pcow  P_oil - P_water.
-    /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.    
+    /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.
     template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::swatInitScaling(const int cell, 
-                                                              const double pcow, 
+    void SaturationPropsFromDeck<SatFuncSet>::swatInitScaling(const int cell,
+                                                              const double pcow,
                                                               double & swat)
     {
         if (phase_usage_.phase_used[BlackoilPhases::Aqua]) {
@@ -433,9 +433,9 @@ namespace Opm
                 const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
                 const int max_np = BlackoilPhases::MaxNumPhases;
                 double s[max_np] = { 0.0 };
-                s[wpos] = swat; 
+                s[wpos] = swat;
                 double pc[max_np] = { 0.0 };
-                funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));          
+                funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));
                 if (pc[wpos] > pc_low_threshold) {
                     eps_transf_[cell].wat.pcFactor *= pcow/pc[wpos];
                 }
