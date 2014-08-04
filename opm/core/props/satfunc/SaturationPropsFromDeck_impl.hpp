@@ -423,10 +423,11 @@ namespace Opm
                                                               double & swat)
     {
         if (phase_usage_.phase_used[BlackoilPhases::Aqua]) {
+            const double pc_low_threshold = 1.0e-8;
             // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
             if (swat <= eps_transf_[cell].wat.smin) {
                 swat = eps_transf_[cell].wat.smin;
-            } else if (pcow < 1.0e-8) {
+            } else if (pcow < pc_low_threshold) {
                 swat = eps_transf_[cell].wat.smax;
             } else {
                 const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
@@ -435,7 +436,7 @@ namespace Opm
                 s[wpos] = swat; 
                 double pc[max_np] = { 0.0 };
                 funcForCell(cell).evalPc(s, pc, &(eps_transf_[cell]));          
-                if (pc[wpos] > 1.0e-8) {
+                if (pc[wpos] > pc_low_threshold) {
                     eps_transf_[cell].wat.pcFactor *= pcow/pc[wpos];
                 }
             }
