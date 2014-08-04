@@ -312,7 +312,7 @@ public:
      */
     bool shouldWriteOutput()
     {
-        if (this->simulator().timeStepIndex() == 0)
+        if (this->simulator().timeStepIndex() < 0)
             // always write the initial solution
             return true;
 
