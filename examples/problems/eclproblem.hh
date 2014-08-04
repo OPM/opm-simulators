@@ -674,8 +674,6 @@ private:
         const auto &grid = this->simulator().gridManager().grid();
 
         size_t numDof = this->model().numDof();
-        const auto &cartSize = grid.logicalCartesianSize();
-        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
 
         initialFluidStates_.resize(numDof);
 
@@ -714,10 +712,14 @@ private:
             deck->getKeyword("RS")->getSIDoubleData();
 
         // make sure that the size of the data arrays is correct
+#ifndef NDEBUG
+        const auto &cartSize = grid.logicalCartesianSize();
+        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
         assert(pressureData.size() == numCartesianCells);
         assert(rsData.size() == numCartesianCells);
+#endif
 
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
