@@ -90,59 +90,6 @@ namespace {
         return all_cells;
     }
 
-    template <class GeoProps, class Grid>
-    AutoDiffBlock<double>::M
-    gravityOperator(const Grid&             grid,
-                    const HelperOps&        ops ,
-                    const GeoProps&         geo )
-    {
-        using namespace Opm::AutoDiffGrid;
-        const int nc = numCells(grid);
-        typedef typename Opm::UgGridHelpers::Cell2FacesTraits<Grid>::Type Cell2Faces;
-        Cell2Faces c2f = cell2Faces(grid);
-
-        std::vector<int> f2hf(2 * numFaces(grid), -1);
-        typename ADFaceCellTraits<Grid>::Type
-            face_cells = faceCells(grid);
-        for (int c = 0, i = 0; c < nc; ++c) {
-            typename Cell2Faces::row_type faces=c2f[c];
-            typedef typename Cell2Faces::row_type::iterator Iter;
-            for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f) {
-                const int p = 0 + (face_cells(*f, 0) != c);
-
-                f2hf[2*(*f) + p] = i;
-            }
-        }
-
-        typedef AutoDiffBlock<double>::V V;
-        typedef AutoDiffBlock<double>::M M;
-
-        const V& gpot  = geo.gravityPotential();
-        const V& trans = geo.transmissibility();
-
-        const HelperOps::IFaces::Index ni = ops.internal_faces.size();
-
-        typedef Eigen::Triplet<double> Tri;
-        std::vector<Tri> grav;  grav.reserve(2 * ni);
-        for (HelperOps::IFaces::Index i = 0; i < ni; ++i) {
-            const int f  = ops.internal_faces[ i ];
-            const int c1 = faceCells(grid)(f, 0);
-            const int c2 = faceCells(grid)(f, 1);
-
-            assert ((c1 >= 0) && (c2 >= 0));
-
-            const double dG1 = gpot[ f2hf[2*f + 0] ];
-            const double dG2 = gpot[ f2hf[2*f + 1] ];
-            const double t   = trans[ f ];
-
-            grav.push_back(Tri(i, c1,   t * dG1));
-            grav.push_back(Tri(i, c2, - t * dG2));
-        }
-
-        M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
-
-        return G;
-    }
 
 
     template<class Grid>
@@ -233,7 +180,6 @@ namespace {
         , cells_ (buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid)
         , wops_  (wells)
-        , grav_  (gravityOperator(grid_, ops_, geo_))
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
         , dp_max_rel_ (1.0e9)
