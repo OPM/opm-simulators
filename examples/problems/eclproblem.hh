@@ -392,6 +392,27 @@ public:
     }
 
     /*!
+     * \brief Returns the index of the relevant region for thermodynmic properties
+     */
+    template <class Context>
+    int pvtRegionIndex(const Context &context, int spaceIdx, int timeIdx) const
+    {
+        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
+
+        if (!deck->hasKeyword("PVTNUM"))
+            return 0;
+
+        const auto &grid = this->simulator().gridManager().grid();
+
+        // this is quite specific to the ECFV discretization. But so is everything in an
+        // ECL deck, i.e., we don't need to care here...
+        int compressedDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        int cartesianDofIdx = grid.globalCell()[compressedDofIdx];
+
+        return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
+    }
+
+    /*!
      * \name Problem parameters
      */
     //! \{
@@ -649,21 +670,26 @@ private:
 
         FluidSystem::initBegin();
 
-        // set the reference densities
-        Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(0);
-        FluidSystem::setSurfaceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
-                                         densityRecord->getItem("WATER")->getSIDouble(0),
-                                         densityRecord->getItem("GAS")->getSIDouble(0));
+        int numRegions = deck->getKeyword("DENSITY")->size();
+        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            // set the reference densities
+            Opm::DeckRecordConstPtr densityRecord =
+                deck->getKeyword("DENSITY")->getRecord(regionIdx);
+            FluidSystem::setSurfaceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
+                                             densityRecord->getItem("WATER")->getSIDouble(0),
+                                             densityRecord->getItem("GAS")->getSIDouble(0),
+                                             regionIdx);
 
-        // so far, we require the presence of the PVTO, PVTW and PVDG
-        // keywords...
-        Opm::PvtoTable pvtoTable(deck->getKeyword("PVTO"), /*tableIdx=*/0);
-        Opm::PvtwTable pvtwTable(deck->getKeyword("PVTW"));
-        Opm::PvdgTable pvdgTable(deck->getKeyword("PVDG"));
+            // so far, we require the presence of the PVTO, PVTW and PVDG
+            // keywords...
+            Opm::PvtoTable pvtoTable(deck->getKeyword("PVTO"), regionIdx);
+            Opm::PvtwTable pvtwTable(deck->getKeyword("PVTW"), regionIdx);
+            Opm::PvdgTable pvdgTable(deck->getKeyword("PVDG"), regionIdx);
 
-        FluidSystem::setPvtoTable(pvtoTable);
-        FluidSystem::setPvtwTable(pvtwTable);
-        FluidSystem::setPvdgTable(pvdgTable);
+            FluidSystem::setPvtoTable(pvtoTable, regionIdx);
+            FluidSystem::setPvtwTable(pvtwTable, regionIdx);
+            FluidSystem::setPvdgTable(pvdgTable, regionIdx);
+        }
 
         FluidSystem::initEnd();
    }
@@ -672,10 +698,6 @@ private:
     {
         const auto deck = this->simulator().gridManager().deck();
         const auto &grid = this->simulator().gridManager().grid();
-
-        size_t numDof = this->model().numDof();
-
-        initialFluidStates_.resize(numDof);
 
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
@@ -701,6 +723,10 @@ private:
         if (deck->hasKeyword("RV"))
             OPM_THROW(std::runtime_error,
                       "The Eclipse input file requires the RV keyword to be non-present");
+
+        size_t numDof = this->model().numDof();
+
+        initialFluidStates_.resize(numDof);
 
         const std::vector<double> &waterSaturationData =
             deck->getKeyword("SWAT")->getSIDoubleData();
@@ -772,7 +798,7 @@ private:
             //
             // first, retrieve the relevant black-oil parameters from
             // the fluid system.
-            Scalar RsSat = FluidSystem::gasDissolutionFactor(oilPressure);
+            Scalar RsSat = FluidSystem::gasDissolutionFactor(oilPressure, /*regionIdx=*/0);
             Scalar RsReal = rsData[cartesianDofIdx];
 
             if (RsReal > RsSat) {
@@ -789,8 +815,8 @@ private:
 
             // calculate composition of the real and the saturated oil phase in terms of
             // mass fractions.
-            Scalar rhooRef = FluidSystem::surfaceDensity(oilPhaseIdx);
-            Scalar rhogRef = FluidSystem::surfaceDensity(gasPhaseIdx);
+            Scalar rhooRef = FluidSystem::surfaceDensity(oilPhaseIdx, /*regionIdx=*/0);
+            Scalar rhogRef = FluidSystem::surfaceDensity(gasPhaseIdx, /*regionIdx=*/0);
             Scalar XoGReal = RsReal*rhogRef / (RsReal*rhogRef + rhooRef);
 
             // convert mass to mole fractions
