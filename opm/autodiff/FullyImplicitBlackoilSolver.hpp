@@ -145,7 +145,6 @@ namespace Opm {
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
         const WellOps                   wops_;
-        const M                         grav_;
         const bool has_disgas_;
         const bool has_vapoil_;
         double                          dp_max_rel_;
