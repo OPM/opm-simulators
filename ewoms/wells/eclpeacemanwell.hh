@@ -573,7 +573,22 @@ public:
      * accumulation callback.
      */
     void beginIterationPostProcess()
-    { }
+    {
+        Scalar alpha = 1.0;
+        if (controlMode_ == VolumetricSurfaceRate) {
+            Scalar weightedSurfRate = computeWeightedRate_(unconstraintSurfaceRates_);
+            if (std::abs(weightedSurfRate) > maximumSurfaceRate_)
+                alpha = std::abs(maximumSurfaceRate_/weightedSurfRate);
+        }
+        else if (controlMode_ == VolumetricReservoirRate) {
+            Scalar weightedResvRate = computeWeightedRate_(unconstraintReservoirRates_);
+            if (std::abs(weightedResvRate) > maximumReservoirRate_)
+                alpha = std::abs(maximumReservoirRate_/weightedResvRate);
+        }
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            currentSurfaceRates_[phaseIdx] = unconstraintSurfaceRates_[phaseIdx]*alpha;
+        }
+    }
 
     /*!
      * \brief Called by the simulator after each Newton-Raphson iteration.
@@ -586,30 +601,28 @@ public:
      */
     void endTimeStep()
     {
-        Scalar weightedReservoirRate = computeWeightedRate_(unconstraintReservoirRates_);
-        Scalar weightedSurfaceRate = computeWeightedRate_(unconstraintSurfaceRates_);
+        Scalar weightedLimitedSurfaceRate = computeWeightedRate_(currentSurfaceRates_);
 
         std::cout << "Well '" << name() << "':\n";
+        std::cout << " Control mode: " << controlMode_ << "\n";
         std::cout << " Target BHP: " << targetBhp_ << "\n";
         std::cout << " Observed BHP: " << observedBhp_ << "\n";
-        std::cout << " Control mode: " << controlMode_ << "\n";
-        std::cout << " Unconstraint reservoir rate: " << weightedReservoirRate << "\n";
-        std::cout << " Unconstraint surface rate: " << weightedSurfaceRate << "\n";
+        std::cout << " Unconstraint phase-specific surface rates:\n";
+        std::cout << "   oil=" << unconstraintSurfaceRates_[oilPhaseIdx]
+                  << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
+        std::cout << "   gas=" << unconstraintSurfaceRates_[gasPhaseIdx]
+                  << " m^3/s (=" << 3051.1872*unconstraintSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
+        std::cout << "   water=" << unconstraintSurfaceRates_[waterPhaseIdx]
+                  << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
         std::cout << " Rate-limited phase-specific surface rates:\n";
         std::cout << "   oil=" << currentSurfaceRates_[oilPhaseIdx]
-                  << " (=" << 543439.65*currentSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
+                  << " m^3/s (=" << 543439.65*currentSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
         std::cout << "   gas=" << currentSurfaceRates_[gasPhaseIdx]
-                  << " (=" << 3051.1872*currentSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
+                  << " m^3/s (=" << 3051.1872*currentSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
         std::cout << "   water=" << currentSurfaceRates_[waterPhaseIdx]
-                  << " (=" << 543439.65*currentSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
-        std::cout << " Mass rates: " << unconstraintedMassRate_ << "\n";
-        std::cout << " Maximum reservoir rate: " << maximumReservoirRate_ << "\n";
-        std::cout << " Maximum surface rate: " << maximumSurfaceRate_ << "\n";
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            std::cout << "   " << FluidSystem::phaseName(phaseIdx) << " phase rate: ";
-            std::cout << "surface=" << unconstraintSurfaceRates_[phaseIdx] << " ";
-            std::cout << "reservoir=" << unconstraintReservoirRates_[phaseIdx] << "\n";
-        }
+                  << " m^3/s (=" << 543439.65*currentSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
+        std::cout << " Rate-limited weighted limited rate: " << weightedLimitedSurfaceRate << "\n";
+        std::cout << " Maximum weighted surface rate: " << maximumSurfaceRate_ << "\n";
     }
 
     /*!
@@ -927,8 +940,8 @@ protected:
             // calulate the current total rate of the well: first subtract the rate of the
             // DOF from the prestine well rates, then add the just calculated rate to it.
             Scalar weightedReservoirRate = computeWeightedRate_(unconstraintReservoirRates_);
-//            weightedReservoirRate -= computeWeightedRate_(dofVars.unconstraintRates);
-//            weightedReservoirRate += computeWeightedRate_(reservoirDofVolRates);
+            weightedReservoirRate -= computeWeightedRate_(dofVars.unconstraintRates);
+            weightedReservoirRate += computeWeightedRate_(reservoirDofVolRates);
 
             // if we're below the limit, we're gold
             if (std::abs(weightedReservoirRate) <= maximumReservoirRate_)
