@@ -237,8 +237,8 @@ public:
         // use one bar for the default bottom and top hole
         // pressures. For the bottom hole pressure, this is probably
         // off by at least one magnitude...
-        bottomHolePressure_ = 1e5;
-        topHolePressure_ = 1e5;
+        targetBhp_ = 1e5;
+        targetThp_ = 1e5;
 
         // By default, all fluids exhibit the weight 1.0
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -343,7 +343,10 @@ public:
 
         // we assume that the z-coordinate represents depth (and not
         // height) here...
-        bottomDepth_ = std::max(bottomDepth_, dofPos[2]);
+        if (dofPos[2] > bottomDepth_) {
+            bottomDofGlobalIdx_ = globalDofIdx;
+            bottomDepth_ = dofPos[2];
+        }
     }
 
     /*!
@@ -409,14 +412,14 @@ public:
     /*!
      * \brief Set the maximum bottom hole pressure [Pa] of the well.
      */
-    void setBottomHolePressure(Scalar val)
-    { bottomHolePressure_ = val; }
+    void setTargetBottomHolePressure(Scalar val)
+    { targetBhp_ = val; }
 
     /*!
      * \brief Set the top hole pressure [Pa] of the well.
      */
-    void setTopHolePressure(Scalar val)
-    { topHolePressure_ = val; }
+    void setTargetTopHolePressure(Scalar val)
+    { targetThp_ = val; }
 
     /*!
      * \brief Set the maximum combined rate of the fluids at the surface.
@@ -478,14 +481,14 @@ public:
             // assume a density of 650 kg/m^3 for the bottom hole pressure
             // calculation
             Scalar rho = 650.0;
-            effectiveBottomHolePressure_ = topHolePressure_ + rho*bottomDepth_;
+            effectiveBottomHolePressure_ = targetThp_ + rho*bottomDepth_;
 
             // set the maximum rates to unlimited
             maximumReservoirRate_ = 1e100;
             maximumSurfaceRate_ = 1e100;
         }
         else if (controlMode_ == ControlMode::BottomHolePressure) {
-            effectiveBottomHolePressure_ = bottomHolePressure_;
+            effectiveBottomHolePressure_ = targetBhp_;
 
             // set the maximum rates to unlimited
             maximumReservoirRate_ = 1e100;
@@ -496,12 +499,12 @@ public:
             // limit. this is a HACK since the effective density must be given and is
             // assumed to be constant...
             Scalar rhoEff = 650; // kg/m^3
-            Scalar bhpFromThp = topHolePressure_ + rhoEff*bottomDepth_;
+            Scalar bhpFromThp = targetThp_ + rhoEff*bottomDepth_;
 
             if (wellType_ == WellType::Injector)
-                effectiveBottomHolePressure_ = std::max(bhpFromThp, bottomHolePressure_);
+                effectiveBottomHolePressure_ = std::max(bhpFromThp, targetBhp_);
             else if (wellType_ == WellType::Producer)
-                effectiveBottomHolePressure_ = std::min(bhpFromThp, bottomHolePressure_);
+                effectiveBottomHolePressure_ = std::min(bhpFromThp, targetBhp_);
         }
 
         // make it very likely that we screw up if we control for {surface,reservoir}
@@ -549,13 +552,17 @@ public:
             }
 
             std::array<Scalar, numPhases> dofSurfaceRate;
+            const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
             computeSurfaceRates_(dofSurfaceRate,
                                  reservoirVolRates,
-                                 context.intensiveQuantities(dofIdx, timeIdx).fluidState());
+                                 intQuants.fluidState());
 
             dofVariables_[globalDofIdx].unconstraintSurfaceRates = dofSurfaceRate;
             for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
                 unconstraintSurfaceRates_[phaseIdx] += dofSurfaceRate[phaseIdx];
+
+            if (globalDofIdx == bottomDofGlobalIdx_)
+                observedBhp_ = intQuants.fluidState().pressure(oilPhaseIdx);
         }
     }
 
@@ -583,7 +590,8 @@ public:
         Scalar weightedSurfaceRate = computeWeightedRate_(unconstraintSurfaceRates_);
 
         std::cout << "Well '" << name() << "':\n";
-        std::cout << " BHP: " << bottomHolePressure_ << "\n";
+        std::cout << " Target BHP: " << targetBhp_ << "\n";
+        std::cout << " Observed BHP: " << observedBhp_ << "\n";
         std::cout << " Control mode: " << controlMode_ << "\n";
         std::cout << " Unconstraint reservoir rate: " << weightedReservoirRate << "\n";
         std::cout << " Unconstraint surface rate: " << weightedSurfaceRate << "\n";
@@ -653,8 +661,8 @@ public:
         res.serializeSectionBegin("PeacemanWell");
 
         res.serializeStream()
-            << topHolePressure_ << " "
-            << bottomHolePressure_ << " "
+            << targetThp_ << " "
+            << targetBhp_ << " "
             << controlMode_ << " "
             << wellType_ << " "
             << maximumSurfaceRate_ << " "
@@ -684,8 +692,8 @@ public:
     {
         res.deserializeSectionBegin("PeacemanWell");
         res.deserializeStream()
-            >> topHolePressure_
-            >> bottomHolePressure_
+            >> targetThp_
+            >> targetBhp_
             >> controlMode_
             >> wellType_
             >> maximumSurfaceRate_
@@ -944,8 +952,11 @@ protected:
     Scalar wellTotalVolume_;
 
     // The assumed bottom and top hole pressures as specified by the user
-    Scalar bottomHolePressure_;
-    Scalar topHolePressure_;
+    Scalar targetBhp_;
+    Scalar targetThp_;
+
+    // real pressure seen at the bottom of the borehole
+    Scalar observedBhp_;
 
     // The sum of the unconstraint volumetric reservoir rates of all
     // degrees of freedom in the well for all fluid phases. This is
@@ -1012,6 +1023,9 @@ protected:
     // the depth of the deepest DOF. (actually, the center of this
     // DOF, but the difference should be minimal.)
     Scalar bottomDepth_;
+
+    // global index of the DOF at the bottom of the well
+    int bottomDofGlobalIdx_;
 };
 } // namespace Ewoms
 

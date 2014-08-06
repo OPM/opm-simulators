@@ -222,8 +222,8 @@ public:
 
                 well->setMaximumSurfaceRate(injectProperties.surfaceInjectionRate);
                 well->setMaximumReservoirRate(injectProperties.reservoirInjectionRate);
-                well->setBottomHolePressure(injectProperties.BHPLimit);
-                well->setTopHolePressure(injectProperties.THPLimit);
+                well->setTargetBottomHolePressure(injectProperties.BHPLimit);
+                well->setTargetTopHolePressure(injectProperties.THPLimit);
             }
 
             if (deckWell->isProducer(episodeIdx)) {
@@ -280,8 +280,8 @@ public:
                               "Not implemented: Well groups");
                 }
 
-                well->setBottomHolePressure(producerProperties.BHPLimit);
-                well->setTopHolePressure(producerProperties.THPLimit);
+                well->setTargetBottomHolePressure(producerProperties.BHPLimit);
+                well->setTargetTopHolePressure(producerProperties.THPLimit);
             }
         }
     }
