@@ -227,7 +227,15 @@ public:
      */
     Co2InjectionProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 1e-6;
 
         temperatureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);

@@ -175,7 +175,15 @@ public:
      */
     ObstacleProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 1e-6;
         temperature_ = 273.15 + 25; // -> 25°C
 

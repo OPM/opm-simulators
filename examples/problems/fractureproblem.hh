@@ -217,7 +217,15 @@ public:
      */
     FractureProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 3e-6;
         temperature_ = 273.15 + 20; // -> 20°C
 

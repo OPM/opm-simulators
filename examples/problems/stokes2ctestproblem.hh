@@ -124,7 +124,15 @@ public:
      */
     Stokes2cTestProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 1e-6;
 
         // initialize the tables of the fluid system

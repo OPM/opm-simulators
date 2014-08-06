@@ -191,7 +191,15 @@ public:
      */
     PowerInjectionProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 3e-6;
         FluidSystem::init();
 
