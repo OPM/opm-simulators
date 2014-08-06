@@ -18,10 +18,12 @@
 */
 /*!
  * \file
- * \copydoc Opm::PiecewiseLinearTwoPhaseMaterialParams
+ * \copydoc Opm::SplineTwoPhaseMaterialParams
  */
-#ifndef OPM_PIECEWISE_LINEAR_TWO_PHASE_MATERIAL_PARAMS_HPP
-#define OPM_PIECEWISE_LINEAR_TWO_PHASE_MATERIAL_PARAMS_HPP
+#ifndef OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
+#define OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
+
+#include <opm/core/utility/Spline.hpp>
 
 #include <vector>
 
@@ -30,19 +32,21 @@ namespace Opm {
  * \ingroup FluidMatrixInteractions
  *
  * \brief Specification of the material parameters for a two-phase material law which
- *        uses a table and piecewise constant interpolation.
+ *        uses a table and spline-based interpolation.
  */
 template<class TraitsT>
-class PiecewiseLinearTwoPhaseMaterialParams
+class SplineTwoPhaseMaterialParams
 {
     typedef typename TraitsT::Scalar Scalar;
 
 public:
     typedef std::vector<Scalar> SamplePoints;
+    typedef Opm::Spline<Scalar> Spline;
+    typedef typename Spline::SplineType SplineType;
 
     typedef TraitsT Traits;
 
-    PiecewiseLinearTwoPhaseMaterialParams()
+    SplineTwoPhaseMaterialParams()
     {
 #ifndef NDEBUG
         finalized_ = false;
@@ -58,51 +62,28 @@ public:
 #ifndef NDEBUG
         finalized_ = true;
 #endif
-
-        // revert the order of the sampling points if they were given
-        // in reverse direction.
-        if (SwSamples_.front() > SwSamples_.back()) {
-            for (size_t origSampleIdx = 0;
-                 origSampleIdx < SwSamples_.size() / 2;
-                 ++ origSampleIdx)
-            {
-                size_t newSampleIdx = SwSamples_.size() - origSampleIdx - 1;
-
-                std::swap(SwSamples_[origSampleIdx], SwSamples_[newSampleIdx]);
-                std::swap(pcwnSamples_[origSampleIdx], pcwnSamples_[newSampleIdx]);
-                std::swap(krwSamples_[origSampleIdx], krwSamples_[newSampleIdx]);
-                std::swap(krnSamples_[origSampleIdx], krnSamples_[newSampleIdx]);
-            }
-        }
     }
-
-    /*!
-     * \brief Return the wetting-phase saturation values of all sampling points.
-     */
-    const SamplePoints& SwSamples() const
-    { assertFinalized_(); return SwSamples_; }
-
-    /*!
-     * \brief Set the wetting-phase saturation values of all sampling points.
-     */
-    void setSwSamples(const SamplePoints& samples)
-    { SwSamples_ = samples; }
 
     /*!
      * \brief Return the sampling points for the capillary pressure curve.
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& pcnwSamples() const
-    { assertFinalized_(); return pcwnSamples_; }
+    const Spline& pcnwSpline() const
+    { assertFinalized_(); return pcwnSpline_; }
 
     /*!
      * \brief Set the sampling points for the capillary pressure curve.
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setPcnwSamples(const SamplePoints& samples)
-    { pcwnSamples_ = samples; }
+    void setPcnwSamples(const SamplePoints& SwSamplePoints,
+                        const SamplePoints& pcnwSamplePoints,
+                        SplineType splineType = Spline::Monotonic)
+    {
+        assert(SwSamplePoints.size() == pcnwSamplePoints.size());
+        pcwnSpline_.setXYContainers(SwSamplePoints, pcnwSamplePoints, splineType);
+    }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -110,8 +91,8 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& krwSamples() const
-    { assertFinalized_(); return krwSamples_; }
+    const Spline& krwSpline() const
+    { assertFinalized_(); return krwSpline_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -119,8 +100,13 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrwSamples(const SamplePoints& samples)
-    { krwSamples_ = samples; }
+    void setKrwSamples(const SamplePoints& SwSamplePoints,
+                       const SamplePoints& krwSamplePoints,
+                       SplineType splineType = Spline::Monotonic)
+    {
+        assert(SwSamplePoints.size() == krwSamplePoints.size());
+        krwSpline_.setXYContainers(SwSamplePoints, krwSamplePoints, splineType);
+    }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -128,8 +114,8 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& krnSamples() const
-    { assertFinalized_(); return krnSamples_; }
+    const Spline& krnSpline() const
+    { assertFinalized_(); return krnSpline_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -137,8 +123,13 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrnSamples(const SamplePoints& samples)
-    { krnSamples_ = samples; }
+    void setKrnSamples(const SamplePoints& SwSamplePoints,
+                       const SamplePoints& krnSamplePoints,
+                       SplineType splineType = Spline::Monotonic)
+    {
+        assert(SwSamplePoints.size() == krnSamplePoints.size());
+        krnSpline_.setXYContainers(SwSamplePoints, krnSamplePoints, splineType);
+    }
 
 private:
 #ifndef NDEBUG
@@ -151,10 +142,10 @@ private:
     { }
 #endif
 
-    SamplePoints SwSamples_;
-    SamplePoints pcwnSamples_;
-    SamplePoints krwSamples_;
-    SamplePoints krnSamples_;
+    Spline SwSpline_;
+    Spline pcwnSpline_;
+    Spline krwSpline_;
+    Spline krnSpline_;
 };
 } // namespace Opm
 

@@ -87,7 +87,6 @@ public:
 
     static const int numPhases = 3;
     static const int waterPhaseIdx = Traits::wettingPhaseIdx;
-    static const int nonWettingPhaseIdx = Traits::nonWettingPhaseIdx;
     static const int oilPhaseIdx = Traits::nonWettingPhaseIdx;
     static const int gasPhaseIdx = Traits::gasPhaseIdx;
 
@@ -235,7 +234,7 @@ public:
                                        const FluidState &fluidState)
     {
         values[waterPhaseIdx] = krw(params, fluidState);
-        values[nonWettingPhaseIdx] = krn(params, fluidState);
+        values[oilPhaseIdx] = krn(params, fluidState);
         values[gasPhaseIdx] = krg(params, fluidState);
     }
 
