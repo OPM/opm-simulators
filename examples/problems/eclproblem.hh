@@ -31,6 +31,7 @@
 #include <ewoms/wells/eclwellmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/SplineTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -98,8 +99,11 @@ private:
                                           /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
                                           /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
-    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
-    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
+    //typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
+    //typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
+
+    typedef typename Opm::SplineTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
+    typedef typename Opm::SplineTwoPhaseMaterial<GasOilTraits> GasOilLaw;
 
 public:
     typedef Opm::EclDefaultMaterial<Traits, GasOilLaw, OilWaterLaw> type;
@@ -604,11 +608,12 @@ private:
         // must be identical
         assert(Opm::SwofTable::numTables(swofKeyword) == Opm::SgofTable::numTables(sgofKeyword));
 
+        size_t numSatfuncTables = Opm::SwofTable::numTables(swofKeyword);
+        materialParams_.resize(numSatfuncTables);
+
         typedef typename MaterialLawParams::GasOilParams GasOilParams;
         typedef typename MaterialLawParams::OilWaterParams OilWaterParams;
 
-        size_t numSatfuncTables = Opm::SwofTable::numTables(swofKeyword);
-        materialParams_.resize(numSatfuncTables);
         for (size_t tableIdx = 0; tableIdx < numSatfuncTables; ++ tableIdx) {
             // set the parameters of the material law for a given table
             OilWaterParams owParams;
@@ -617,20 +622,19 @@ private:
             Opm::SwofTable swofTable(swofKeyword, tableIdx);
             Opm::SgofTable sgofTable(sgofKeyword, tableIdx);
 
-            owParams.setSwSamples(swofTable.getSwColumn());
-            owParams.setKrwSamples(swofTable.getKrwColumn());
-            owParams.setKrnSamples(swofTable.getKrowColumn());
-            owParams.setPcnwSamples(swofTable.getPcowColumn());
+            const auto &SwColumn = swofTable.getSwColumn();
+            owParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
+            owParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
+            owParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
 
             // convert the saturations from gas to oil saturations
             auto SoSamples = sgofTable.getSgColumn();
             for (size_t sampleIdx = 0; sampleIdx < SoSamples.size(); ++ sampleIdx) {
                 SoSamples[sampleIdx] = 1 - SoSamples[sampleIdx];
             }
-            goParams.setSwSamples(SoSamples);
-            goParams.setKrwSamples(sgofTable.getKrogColumn());
-            goParams.setKrnSamples(sgofTable.getKrgColumn());
-            goParams.setPcnwSamples(sgofTable.getPcogColumn());
+            goParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
+            goParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
+            goParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
 
             owParams.finalize();
             goParams.finalize();
