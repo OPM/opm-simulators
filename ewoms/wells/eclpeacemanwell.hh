@@ -566,52 +566,7 @@ public:
      * accumulation callback.
      */
     void beginIterationPostProcess()
-    {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-            currentSurfaceRates_[phaseIdx] = 0.0;
-
-        std::array<Scalar, numPhases> dofReservoirRates;
-        std::array<Scalar, numPhases> dofSurfaceRates;
-
-        // call the accumulation routines
-        ElementContext elemCtx(simulator_);
-        auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
-        const auto &elemEndIt = simulator_.gridManager().gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            elemCtx.updateStencil(*elemIt);
-            elemCtx.updateIntensiveQuantities(/*timeIdx=*/0);
-
-            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                if (!applies(globalDofIdx))
-                    continue;
-
-                const DofVariables &dofVars = dofVariables_.at(globalDofIdx);
-
-                computeUnconstraintVolumetricDofRates_(dofReservoirRates,
-                                                       dofVars,
-                                                       elemCtx,
-                                                       dofIdx,
-                                                       /*timeIdx=*/0);
-
-                limitVolumetricReservoirRates_(dofReservoirRates,
-                                               dofVars,
-                                               elemCtx,
-                                               dofIdx,
-                                               /*timeIdx=*/0);
-                computeSurfaceRates_(dofSurfaceRates,
-                                     dofReservoirRates,
-                                     elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState());
-
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-                    currentSurfaceRates_[phaseIdx] += dofSurfaceRates[phaseIdx];
-            }
-        }
-
-        Valgrind::CheckDefined(currentSurfaceRates_[oilPhaseIdx]);
-        Valgrind::CheckDefined(currentSurfaceRates_[gasPhaseIdx]);
-        Valgrind::CheckDefined(currentSurfaceRates_[waterPhaseIdx]);
-    }
+    { }
 
     /*!
      * \brief Called by the simulator after each Newton-Raphson iteration.
