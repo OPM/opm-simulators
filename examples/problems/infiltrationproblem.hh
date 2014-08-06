@@ -187,7 +187,15 @@ public:
     InfiltrationProblem(Simulator &simulator)
         : ParentType(simulator)
         , eps_(1e-6)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         temperature_ = 273.15 + 10.0; // -> 10 degrees Celsius
         FluidSystem::init(/*tempMin=*/temperature_ - 1,
                           /*tempMax=*/temperature_ + 1,

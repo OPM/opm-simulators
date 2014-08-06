@@ -193,11 +193,7 @@ public:
      */
     FingerProblem(Simulator &simulator)
         : ParentType(simulator)
-    {
-        eps_ = 3e-6;
-
-        temperature_ = 273.15 + 20; // -> 20°C
-    }
+    { }
 
     /*!
      * \name Auxiliary methods
@@ -228,6 +224,10 @@ public:
     void finishInit()
     {
         ParentType::finishInit();
+
+        eps_ = 3e-6;
+
+        temperature_ = 273.15 + 20; // -> 20°C
 
         FluidSystem::init();
 

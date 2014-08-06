@@ -134,7 +134,15 @@ public:
     OutflowProblem(Simulator &simulator)
         : ParentType(simulator)
         , eps_(1e-6)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         temperature_ = 273.15 + 20;
         FluidSystem::init(/*minT=*/temperature_ - 1, /*maxT=*/temperature_ + 2,
                           /*numT=*/3,

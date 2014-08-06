@@ -154,7 +154,15 @@ public:
      */
     GroundWaterProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 1.0e-3;
 
         lensLowerLeft_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftX);

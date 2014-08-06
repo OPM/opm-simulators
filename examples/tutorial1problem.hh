@@ -163,11 +163,20 @@ class Tutorial1Problem
     enum { contiNonWettingEqIdx = Indices::conti0EqIdx + nonWettingPhaseIdx };
 
 public:
-    //! The constructor of the problem
+    //! The constructor of the problem. This only _allocates_ the memory required by the
+    //! problem. The constructor is supposed to _never ever_ throw an exception.
     Tutorial1Problem(Simulator &simulator)
         : ParentType(simulator)
         , eps_(3e-6)
+    { }
+
+    //! This method initializes the data structures allocated by the problem
+    //! constructor. In contrast to the constructor, exceptions thrown from within this
+    //! method won't lead to segmentation faults.
+    void finishInit()
     {
+        ParentType::finishInit();
+
         // Use an isotropic and homogeneous intrinsic permeability
         K_ = this->toDimMatrix_(1e-7);
 

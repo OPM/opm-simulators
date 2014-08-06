@@ -185,7 +185,15 @@ public:
     CuvetteProblem(Simulator &simulator)
         : ParentType(simulator)
         , eps_(1e-6)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         if (Valgrind::IsRunning())
             FluidSystem::init(/*minT=*/283.15, /*maxT=*/500.0, /*nT=*/20,
                               /*minp=*/0.8e5, /*maxp=*/2e5, /*np=*/10);

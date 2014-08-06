@@ -170,7 +170,15 @@ public:
      */
     DiffusionProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         FluidSystem::init();
 
         temperature_ = 273.15 + 20.0;

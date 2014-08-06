@@ -216,8 +216,11 @@ public:
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
         , wellManager_(simulator)
-    {}
+    { }
 
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
     void finishInit()
     {
         ParentType::finishInit();

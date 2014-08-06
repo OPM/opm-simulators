@@ -150,8 +150,7 @@ namespace Ewoms {
  * K/m.
  */
 template <class TypeTag >
-class WaterAirProblem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class WaterAirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
@@ -209,7 +208,15 @@ public:
      */
     WaterAirProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         maxDepth_ = 1000.0; // [m]
         eps_ = 1e-6;
 

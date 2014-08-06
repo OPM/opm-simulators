@@ -24,6 +24,8 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
+#include <dune/grid/cpgrid/IntersectionMapper.hpp>
+
 #include "lensgridmanager.hh"
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
@@ -218,7 +220,15 @@ public:
      */
     LensProblem(Simulator &simulator)
         : ParentType(simulator)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 3e-6;
         FluidSystem::init();
 

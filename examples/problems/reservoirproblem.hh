@@ -172,8 +172,11 @@ public:
      */
     ReservoirProblem(Simulator &simulator)
         : ParentType(simulator)
-    {}
+    { }
 
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
     void finishInit()
     {
         ParentType::finishInit();

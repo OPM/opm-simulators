@@ -181,7 +181,15 @@ public:
     RichardsLensProblem(Simulator &simulator)
         : ParentType(simulator)
         , pnRef_(1e5)
+    { }
+
+    /*!
+     * \copydoc FvBaseProblem::finishInit
+     */
+    void finishInit()
     {
+        ParentType::finishInit();
+
         eps_ = 3e-6;
         pnRef_ = 1e5;
 
