@@ -927,8 +927,13 @@ private:
     static std::vector<Scalar> waterViscosityScalar_;
 
     static const Scalar surfacePressure_;
-    static std::vector<std::array<Scalar, numPhases> > surfaceDensity_;
-    static std::vector<std::array<Scalar, numPhases>> referenceFormationVolumeFactor_;
+
+    // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
+    // here, because GCC 4.4 seems to be unable to determine the number of phases from
+    // the BlackOil fluid system in the attribute declaration below...
+    static std::vector<std::array<Scalar, /*numPhases=*/3> > surfaceDensity_;
+    static std::vector<std::array<Scalar, /*numPhases=*/3>> referenceFormationVolumeFactor_;
+
     static Scalar molarMass_[numComponents];
 };
 
@@ -961,11 +966,11 @@ const Scalar
 BlackOil<Scalar>::surfacePressure_ = 101325.0; // [Pa]
 
 template <class Scalar>
-std::vector<std::array<Scalar, BlackOil<Scalar>::numPhases>>
+std::vector<std::array<Scalar, 3> >
 BlackOil<Scalar>::surfaceDensity_;
 
 template <class Scalar>
-std::vector<std::array<Scalar, BlackOil<Scalar>::numPhases>>
+std::vector<std::array<Scalar, 3> >
 BlackOil<Scalar>::referenceFormationVolumeFactor_;
 
 template <class Scalar>
