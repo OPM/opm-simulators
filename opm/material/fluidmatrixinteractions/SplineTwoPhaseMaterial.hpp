@@ -307,7 +307,7 @@ public:
     { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
 
     static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
-    { return params.krwSpline().eval(Sw, /*extrapolate=*/true); }
+    { return std::max(0.0, std::min(1.0, params.krwSpline().eval(Sw, /*extrapolate=*/true))); }
 
     /*!
      * \brief The derivative of the relative permeability of the
@@ -330,7 +330,7 @@ public:
     { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
 
     static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
-    { return params.krnSpline().eval(Sw, /*extrapolate=*/true); }
+    { return std::max(0.0, std::min(1.0, params.krnSpline().eval(Sw, /*extrapolate=*/true))); }
 
     /*!
      * \brief The derivative of the relative permeability for the

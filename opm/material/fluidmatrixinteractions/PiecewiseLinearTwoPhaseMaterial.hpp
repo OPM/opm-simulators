@@ -310,14 +310,7 @@ public:
     { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
 
     static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
-    {
-        if (Sw < params.SwSamples().front())
-            return params.krwSamples().front();
-        else if (Sw > params.SwSamples().back())
-            return params.krwSamples().back();
-
-        return eval_(params.SwSamples(), params.krwSamples(), Sw);
-    }
+    { return std::max(0.0, std::min(1.0, eval_(params.SwSamples(), params.krwSamples(), Sw))); }
 
     /*!
      * \brief The derivative of the relative permeability of the
@@ -330,11 +323,6 @@ public:
 
     static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
     {
-        if (Sw < params.SwSamples().front())
-            return 0;
-        else if (Sw > params.SwSamples().back())
-            return 0;
-
         return evalDeriv_(params.SwSamples(),
                           params.krwSamples(),
                           Sw);
@@ -350,14 +338,9 @@ public:
 
     static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
     {
-        if (Sw < params.SwSamples().front())
-            return params.krnSamples().front();
-        else if (Sw > params.SwSamples().back())
-            return params.krnSamples().back();
-
-        return eval_(params.SwSamples(),
-                     params.krnSamples(),
-                     Sw);
+        return std::max(0.0, std::min(1.0, eval_(params.SwSamples(),
+                                                 params.krnSamples(),
+                                                 Sw)));
     }
 
     /*!
@@ -371,11 +354,6 @@ public:
 
     static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
     {
-        if (Sw < params.SwSamples().front())
-            return 0;
-        else if (Sw > params.SwSamples().back())
-            return 0;
-
         return evalDeriv_(params.SwSamples(),
                           params.krnSamples(),
                           Sw);
