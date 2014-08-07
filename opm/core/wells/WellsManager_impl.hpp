@@ -101,11 +101,11 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
             well_names.push_back(well->name());
             {
                 WellData wd;
-                // If negative (defaulted), set refdepth to a marker
+                // If defaulted, set refdepth to a marker
                 // value, will be changed after getting perforation
                 // data to the centroid of the cell of the top well
                 // perforation.
-                wd.reference_bhp_depth = (well->getRefDepth() < 0.0) ? -1e100 : well->getRefDepth();
+                wd.reference_bhp_depth = (well->getRefDepthDefaulted()) ? -1e100 : well->getRefDepth();
                 wd.welspecsline = -1;
                 if (well->isInjector( timeStep ))
                     wd.type = INJECTOR;
@@ -160,7 +160,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     assert(dimensions == 3);
     for (int w = 0; w < num_wells; ++w) {
         num_perfs += wellperf_data[w].size();
-        if (well_data[w].reference_bhp_depth < 0.0) {
+        if (well_data[w].reference_bhp_depth == -1e100) {
             // It was defaulted. Set reference depth to minimum perforation depth.
             double min_depth = 1e100;
             int num_wperfs = wellperf_data[w].size();
