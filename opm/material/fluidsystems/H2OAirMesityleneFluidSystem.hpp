@@ -161,9 +161,9 @@ public:
     static const char *phaseName(int phaseIdx)
     {
         switch (phaseIdx) {
-        case waterPhaseIdx: return "w";
-        case naplPhaseIdx: return "n";
-        case gasPhaseIdx: return "g";;
+        case waterPhaseIdx: return "water";
+        case naplPhaseIdx: return "napl";
+        case gasPhaseIdx: return "gas";
         };
         OPM_THROW(std::logic_error, "Invalid phase index " << phaseIdx);
     }

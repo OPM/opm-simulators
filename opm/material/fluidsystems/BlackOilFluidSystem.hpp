@@ -513,7 +513,7 @@ public:
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(const int phaseIdx)
     {
-        static const char *name[] = { "o", "w", "g" };
+        static const char *name[] = { "oil", "water", "gas" };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
         return name[phaseIdx];

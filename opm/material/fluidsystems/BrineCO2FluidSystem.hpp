@@ -91,8 +91,8 @@ public:
     static const char *phaseName(int phaseIdx)
     {
         static const char *name[] = {
-            "l",
-            "g"
+            "liquid",
+            "gas"
         };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);

@@ -81,7 +81,7 @@ public:
     {
         assert(phaseIdx == liquidPhaseIdx);
 
-        return "l";
+        return "liquid";
     }
 
     //! \copydoc BaseFluidSystem::isLiquid

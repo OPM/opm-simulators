@@ -82,8 +82,8 @@ public:
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         static const char *name[] = {
-            "w",
-            "n"
+            "wetting",
+            "nonwetting"
         };
         return name[phaseIdx];
     }
