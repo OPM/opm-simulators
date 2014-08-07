@@ -24,8 +24,6 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include <dune/grid/cpgrid/IntersectionMapper.hpp>
-
 #include "lensgridmanager.hh"
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
