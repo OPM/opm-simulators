@@ -230,6 +230,7 @@ public:
     {
         // this is going to be increased by any realistic grid. Shall we bet?
         bottomDepth_ = -1e100;
+        bottomDofGlobalIdx_ = -1;
 
         // By default, take the bottom hole pressure as a given
         controlMode_ = ControlMode::BottomHolePressure;
@@ -353,7 +354,15 @@ public:
      * \brief Finalize the specification of the borehole.
      */
     void endSpec()
-    { }
+    {
+        const auto& comm = simulator_.gridView().comm();
+
+        // determine the maximum depth of the well over all processes
+        bottomDepth_ = comm.max(bottomDepth_);
+
+        // the total volume of the well must also be summed over all processes
+        wellTotalVolume_ = comm.sum(wellTotalVolume_);
+    }
 
     /*!
      * \brief Set the control mode of the well.
@@ -507,6 +516,11 @@ public:
                 effectiveBottomHolePressure_ = std::min(bhpFromThp, targetBhp_);
         }
 
+        if (wellType_ == WellType::Injector)
+            observedBhp_ = - 1e100;
+        else if (wellType_ == WellType::Producer)
+            observedBhp_ = 1e100;
+
         // make it very likely that we screw up if we control for {surface,reservoir}
         // rate, but depend on the {reservoir,surface} rate somewhere...
         if (controlMode_ == ControlMode::VolumetricSurfaceRate)
@@ -516,7 +530,6 @@ public:
 
         // reset the unconstraint rates for the complete well. ("unconstraint" ==
         // unaffected by rate limits.)
-        unconstraintedMassRate_ = 0.0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             unconstraintReservoirRates_[phaseIdx] = 0.0;
             unconstraintSurfaceRates_[phaseIdx] = 0.0;
@@ -546,7 +559,6 @@ public:
                 massRate.setVolumetricRate(context.intensiveQuantities(dofIdx, timeIdx).fluidState(),
                                            phaseIdx,
                                            reservoirVolRates[phaseIdx]);
-                unconstraintedMassRate_ += massRate;
 
                 unconstraintReservoirRates_[phaseIdx] += reservoirVolRates[phaseIdx];
             }
@@ -574,6 +586,19 @@ public:
      */
     void beginIterationPostProcess()
     {
+        const auto& comm = simulator_.gridView().comm();
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            unconstraintReservoirRates_[phaseIdx] = comm.sum(unconstraintReservoirRates_[phaseIdx]);
+            unconstraintSurfaceRates_[phaseIdx] = comm.sum(unconstraintSurfaceRates_[phaseIdx]);
+        }
+
+        // determine the grid-global observed bottom hole pressure
+        if (wellType_ == Producer)
+            observedBhp_ = comm.min(observedBhp_);
+        else if (wellType_ == Injector)
+            observedBhp_ = comm.max(observedBhp_);
+
+        // determine the rate-limited surface rates
         Scalar alpha = 1.0;
         if (controlMode_ == VolumetricSurfaceRate) {
             Scalar weightedSurfRate = computeWeightedRate_(unconstraintSurfaceRates_);
@@ -601,28 +626,30 @@ public:
      */
     void endTimeStep()
     {
-        Scalar weightedLimitedSurfaceRate = computeWeightedRate_(currentSurfaceRates_);
+        if (simulator_.gridView().comm().rank() == 0) {
+            Scalar weightedLimitedSurfaceRate = computeWeightedRate_(currentSurfaceRates_);
 
-        std::cout << "Well '" << name() << "':\n";
-        std::cout << " Control mode: " << controlMode_ << "\n";
-        std::cout << " Target BHP: " << targetBhp_ << "\n";
-        std::cout << " Observed BHP: " << observedBhp_ << "\n";
-        std::cout << " Unconstraint phase-specific surface rates:\n";
-        std::cout << "   oil=" << unconstraintSurfaceRates_[oilPhaseIdx]
-                  << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
-        std::cout << "   gas=" << unconstraintSurfaceRates_[gasPhaseIdx]
-                  << " m^3/s (=" << 3051.1872*unconstraintSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
-        std::cout << "   water=" << unconstraintSurfaceRates_[waterPhaseIdx]
-                  << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
-        std::cout << " Rate-limited phase-specific surface rates:\n";
-        std::cout << "   oil=" << currentSurfaceRates_[oilPhaseIdx]
-                  << " m^3/s (=" << 543439.65*currentSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
-        std::cout << "   gas=" << currentSurfaceRates_[gasPhaseIdx]
-                  << " m^3/s (=" << 3051.1872*currentSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
-        std::cout << "   water=" << currentSurfaceRates_[waterPhaseIdx]
-                  << " m^3/s (=" << 543439.65*currentSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
-        std::cout << " Rate-limited weighted limited rate: " << weightedLimitedSurfaceRate << "\n";
-        std::cout << " Maximum weighted surface rate: " << maximumSurfaceRate_ << "\n";
+            std::cout << "Well '" << name() << "':\n";
+            std::cout << " Control mode: " << controlMode_ << "\n";
+            std::cout << " Target BHP: " << targetBhp_ << "\n";
+            std::cout << " Observed BHP: " << observedBhp_ << "\n";
+            std::cout << " Unconstraint phase-specific surface rates:\n";
+            std::cout << "   oil=" << unconstraintSurfaceRates_[oilPhaseIdx]
+                      << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
+            std::cout << "   gas=" << unconstraintSurfaceRates_[gasPhaseIdx]
+                      << " m^3/s (=" << 3051.1872*unconstraintSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
+            std::cout << "   water=" << unconstraintSurfaceRates_[waterPhaseIdx]
+                      << " m^3/s (=" << 543439.65*unconstraintSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
+            std::cout << " Rate-limited phase-specific surface rates:\n";
+            std::cout << "   oil=" << currentSurfaceRates_[oilPhaseIdx]
+                      << " m^3/s (=" << 543439.65*currentSurfaceRates_[oilPhaseIdx] << " STB/day)\n";
+            std::cout << "   gas=" << currentSurfaceRates_[gasPhaseIdx]
+                      << " m^3/s (=" << 3051.1872*currentSurfaceRates_[gasPhaseIdx] << " MCF/day)\n";
+            std::cout << "   water=" << currentSurfaceRates_[waterPhaseIdx]
+                      << " m^3/s (=" << 543439.65*currentSurfaceRates_[waterPhaseIdx] << " STB/day)\n";
+            std::cout << " Rate-limited weighted limited rate: " << weightedLimitedSurfaceRate << "\n";
+            std::cout << " Maximum weighted surface rate: " << maximumSurfaceRate_ << "\n";
+        }
     }
 
     /*!
@@ -984,10 +1011,6 @@ protected:
 
     // the total rate of the well with limits applied
     std::array<Scalar, numPhases> currentSurfaceRates_;
-
-    // The mass rate produced by the well if it was not affected by
-    // rate limits
-    RateVector unconstraintedMassRate_;
 
     // specifies the quantities which are controlled for (i.e., which
     // should be assumed to be externally specified and which should

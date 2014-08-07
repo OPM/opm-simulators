@@ -89,6 +89,9 @@ public:
             auto elemIt = gridView.template begin</*codim=*/0>();
             const auto elemEndIt = gridView.template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
+                if (elemIt->partitionType() != Dune::InteriorEntity)
+                    continue;
+
                 elemCtx.updateStencil(elemIt);
                 for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                     int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
@@ -370,8 +373,11 @@ public:
         auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
         const auto &elemEndIt = simulator_.gridManager().gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
+            if (elemIt->partitionType() != Dune::InteriorEntity)
+                continue;
+
             elemCtx.updateStencil(*elemIt);
-            elemCtx.updateIntensiveQuantities(/*timeIdx=*/0);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
                 wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
