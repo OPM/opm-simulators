@@ -102,7 +102,8 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr newParser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = newParser->parseFile( deck_filename );
+    bool strict_parsing = param.getDefault("strict_parsing", true);
+    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename, strict_parsing);
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // Grid init
