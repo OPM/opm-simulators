@@ -30,11 +30,19 @@
 // MPI header
 #if HAVE_MPI
 #include <mpi.h>
+#include <dune/common/version.hh>
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/communicator.hh>
 #include <dune/common/parallel/remoteindices.hh>
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
+#include <dune/common/parallel/mpicollectivecommunication.hh>
+#include <dune/common/parallel/collectivecommunication.hh>
+#else
 #include <dune/common/mpicollectivecommunication.hh>
 #include <dune/common/collectivecommunication.hh>
+#endif
+
 #include <dune/istl/owneroverlapcopy.hh>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #else
