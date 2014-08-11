@@ -871,7 +871,7 @@ namespace Opm
             const PcEq f(props, phase, cell, 0);
             const double f0 = f(sminarr[phase]);
             const double f1 = f(smaxarr[phase]);
-            return std::abs(f0 - f1 < std::numeric_limits<double>::epsilon());
+            return std::abs(f0 - f1) < std::numeric_limits<double>::epsilon();
         }
 
     } // namespace Equil
