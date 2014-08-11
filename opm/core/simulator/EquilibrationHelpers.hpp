@@ -745,6 +745,7 @@ namespace Opm
             const PcEq f(props, phase, cell, target_pc);
             const double f0 = f(s0);
             const double f1 = f(s1);
+
             if (f0 <= 0.0) {
                 return s0;
             } else if (f1 > 0.0) {
@@ -831,6 +832,46 @@ namespace Opm
                 const double sol = ScalarSolver::solve(f, smin, smax, max_iter, tol, iter_used);
                 return sol;
             }
+        }
+
+        /// Compute saturation from depth. Used for constant capillary pressure function
+        inline double satFromDepth(const BlackoilPropertiesInterface& props,
+                                   const double cellDepth,
+                                   const double contactDepth,
+                                   const int phase,
+                                   const int cell,
+                                   const bool increasing = false)
+        {
+            // Find minimum and maximum saturations.
+            double sminarr[BlackoilPhases::MaxNumPhases];
+            double smaxarr[BlackoilPhases::MaxNumPhases];
+            props.satRange(1, &cell, sminarr, smaxarr);
+            const double s0 = increasing ? smaxarr[phase] : sminarr[phase];
+            const double s1 = increasing ? sminarr[phase] : smaxarr[phase];
+
+            if (cellDepth < contactDepth){
+                return s0;
+            } else {
+                return s1;
+            }
+
+        }
+
+        /// Return true if capillary pressure function is constant
+        bool isConstPc(const BlackoilPropertiesInterface& props,
+                       const int phase,
+                       const int cell)
+        {
+            // Find minimum and maximum saturations.
+            double sminarr[BlackoilPhases::MaxNumPhases];
+            double smaxarr[BlackoilPhases::MaxNumPhases];
+            props.satRange(1, &cell, sminarr, smaxarr);
+
+            // Create the equation f(s) = pc(s);
+            const PcEq f(props, phase, cell, 0);
+            const double f0 = f(sminarr[phase]);
+            const double f1 = f(smaxarr[phase]);
+            return std::abs(f0 - f1 < std::numeric_limits<double>::epsilon());
         }
 
     } // namespace Equil
