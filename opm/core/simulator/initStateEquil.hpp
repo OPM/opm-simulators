@@ -403,7 +403,7 @@ namespace Opm
                    
                         PVec press = phasePressures(G, eqreg, cells, grav);
 
-                        const PVec sat = phaseSaturations(eqreg, cells, props, swat_init_, press);
+                        const PVec sat = phaseSaturations(G, eqreg, cells, props, swat_init_, press);
 
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
