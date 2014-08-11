@@ -162,7 +162,7 @@ public:
             case Opm::WellCommon::SHUT:
                 well->setOpen(false);
                 break;
-            };
+            }
 
             // make sure that the well is either an injector or a
             // producer for the current episode. (it is not allowed to
