@@ -253,16 +253,6 @@ namespace Opm
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
                                                               BlackoilState& state)
     {
-        // Initialisation.
-        std::vector<double> porevol;
-        if (rock_comp_props_ && rock_comp_props_->isActive()) {
-            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
-        } else {
-            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), porevol);
-        }
-        // const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-        std::vector<double> initial_porevol = porevol;
-
         WellStateFullyImplicitBlackoil well_state;
 
         // Main simulation loop.
@@ -320,11 +310,6 @@ namespace Opm
 
             stime += st;
             sreport.pressure_time = st;
-
-            // Update pore volumes if rock is compressible.
-            if (rock_comp_props_ && rock_comp_props_->isActive()) {
-                computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
-            }
 
             // Hysteresis
             props_.updateSatHyst(state.saturation(), allcells_);
