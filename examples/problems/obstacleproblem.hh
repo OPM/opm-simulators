@@ -486,7 +486,7 @@ private:
             // set the gas composition to 99% nitrogen and 1% steam
             fs.setMoleFraction(gasPhaseIdx, N2Idx, 0.99);
             fs.setMoleFraction(gasPhaseIdx, H2OIdx, 0.01);
-        };
+        }
 
         // set the other saturation
         fs.setSaturation(otherPhaseIdx, 1.0 - fs.saturation(refPhaseIdx));

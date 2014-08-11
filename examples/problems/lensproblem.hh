@@ -288,7 +288,7 @@ public:
                                  "The z-coordinate of the lens' upper-right "
                                  "corner [m].");
         }
-    };
+    }
 
     /*!
      * \name Soil parameters
