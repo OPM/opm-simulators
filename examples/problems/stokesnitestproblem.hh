@@ -234,7 +234,7 @@ public:
         if (inLens_(pos)) {
             moleFrac[H2OIdx] = 0.9e-4;
             temperature = 284.15;
-        };
+        }
         moleFrac[AirIdx] = 1 - moleFrac[H2OIdx];
 
         // parabolic velocity profile

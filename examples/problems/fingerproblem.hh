@@ -358,7 +358,7 @@ public:
             assert(onUpperBoundary_(pos));
 
             values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidState_);
-        };
+        }
 
         // override the value for the liquid phase by forced
         // imbibition of water on inlet boundary segments
