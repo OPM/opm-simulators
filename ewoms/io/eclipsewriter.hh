@@ -41,6 +41,11 @@
 #include <fstream>
 #include <type_traits>
 
+namespace Opm {
+namespace Properties {
+NEW_PROP_TAG(EnableEclipseOutput);
+}}
+
 namespace Ewoms {
 template <class TypeTag>
 class EclipseWriter;

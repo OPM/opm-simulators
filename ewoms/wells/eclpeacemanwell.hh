@@ -24,10 +24,20 @@
 #ifndef EWOMS_ECL_PEACEMAN_WELL_HH
 #define EWOMS_ECL_PEACEMAN_WELL_HH
 
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
 #include <opm/core/utility/PropertySystem.hpp>
 #include <opm/core/utility/Average.hpp>
 
 #include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#include <dune/geometry/referenceelements.hh>
+#else
+#include <dune/geometry/genericreferenceelements.hh>
+#endif
+
+#include <unordered_map>
 
 namespace Opm {
 namespace Properties {
@@ -38,9 +48,14 @@ NEW_PROP_TAG(Simulator);
 NEW_PROP_TAG(ElementContext);
 NEW_PROP_TAG(RateVector);
 NEW_PROP_TAG(GridView);
+NEW_PROP_TAG(NumPhases);
+NEW_PROP_TAG(NumComponents);
 }}
 
 namespace Ewoms {
+template <class TypeTag>
+class EcfvDiscretization;
+
 /*!
  * \brief The well model of Peaceman.
  *
