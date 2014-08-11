@@ -100,7 +100,6 @@ class Stokes2cTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numComponents = FluidSystem::numComponents };

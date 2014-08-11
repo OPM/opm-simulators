@@ -104,11 +104,9 @@ class StokesNiTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
 
     enum {
         // Number of equations and grid dimension
-        numEq = GET_PROP_VALUE(TypeTag, NumEq),
 
         dimWorld = GridView::dimensionworld,
 
