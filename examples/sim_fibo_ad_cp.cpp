@@ -248,6 +248,10 @@ try
                   << "\n";
 
         // Create new wells, well_state
+        const double *ntg = 0;
+        if (eclipseState->hasDoubleGridProperty("NTG")) {
+            ntg = eclipseState->getDoubleGridProperty("NTG")->getData().data();
+        }
         WellsManager wells(eclipseState, reportStepIdx, Opm::UgGridHelpers::numCells(*grid), 
                            Opm::UgGridHelpers::globalCell(*grid),
                            Opm::UgGridHelpers::cartDims(*grid),
@@ -255,7 +259,8 @@ try
                            Opm::UgGridHelpers::beginCellCentroids(*grid),
                            Opm::UgGridHelpers::cell2Faces(*grid),
                            Opm::UgGridHelpers::beginFaceCentroids(*grid),
-                           props->permeability());
+                           props->permeability(),
+                           ntg);
 
         if (reportStepIdx == 0) {
             // @@@ HACK: we should really make a new well state and

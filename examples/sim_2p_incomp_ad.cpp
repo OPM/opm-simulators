@@ -248,7 +248,10 @@ try
                       << timeMap->numTimesteps() - reportStepIdx << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            const double *ntg = 0;
+            if (eclipseState->hasDoubleGridProperty("NTG"))
+                ntg = eclipseState->getDoubleGridProperty("NTG")->getData().data();
+            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability(), ntg);
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.
