@@ -578,7 +578,8 @@ namespace Opm
 
         template <class Region, class CellRange>
         std::vector< std::vector<double> >
-        phaseSaturations(const Region&           reg,
+        phaseSaturations(const UnstructuredGrid& G,
+                         const Region&           reg,
                          const CellRange&        cells,
                          BlackoilPropertiesInterface& props,
                          const std::vector<double> swat_init,
@@ -598,6 +599,8 @@ namespace Opm
             double smin[BlackoilPhases::MaxNumPhases] = { 0.0 };
             double smax[BlackoilPhases::MaxNumPhases] = { 0.0 };
 
+            const double* const cc  = & G.cell_centroids[0];
+
             const bool water = reg.phaseUsage().phase_used[BlackoilPhases::Aqua];
             const bool gas = reg.phaseUsage().phase_used[BlackoilPhases::Vapour];
             const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
@@ -611,23 +614,39 @@ namespace Opm
                 // inverting capillary pressure functions.
                 double sw = 0.0;
                 if (water) {
-                    const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
-                    if (swat_init.empty()) { // Invert Pc to find sw
-                        sw = satFromPc(props, waterpos, cell, pcov);
+                    if (isConstPc(props,waterpos,cell)){
+                        const int nd = G.dimensions;
+                        const double cellDepth  = cc[nd * cell + nd-1];
+                        sw = satFromDepth(props,cellDepth,zwoc,waterpos,cell,false);
                         phase_saturations[waterpos][local_index] = sw;
-                    } else { // Scale Pc to reflect imposed sw
-                        sw = swat_init[cell];
-                        props.swatInitScaling(cell, pcov, sw);
-                        phase_saturations[waterpos][local_index] = sw;
+                    }
+                    else{
+                        const double pcov = phase_pressures[oilpos][local_index] - phase_pressures[waterpos][local_index];
+                        if (swat_init.empty()) { // Invert Pc to find sw
+                            sw = satFromPc(props, waterpos, cell, pcov);
+                            phase_saturations[waterpos][local_index] = sw;
+                        } else { // Scale Pc to reflect imposed sw
+                            sw = swat_init[cell];
+                            props.swatInitScaling(cell, pcov, sw);
+                            phase_saturations[waterpos][local_index] = sw;
+                        }
                     }
                 }
                 double sg = 0.0;
                 if (gas) {
-                    // Note that pcog is defined to be (pg - po), not (po - pg).
-                    const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
-                    const double increasing = true; // pcog(sg) expected to be increasing function
-                    sg = satFromPc(props, gaspos, cell, pcog, increasing);
-                    phase_saturations[gaspos][local_index] = sg;
+                    if (isConstPc(props,gaspos,cell)){
+                        const int nd = G.dimensions;
+                        const double cellDepth  = cc[nd * cell + nd-1];
+                        sg = satFromDepth(props,cellDepth,zgoc,gaspos,cell,true);
+                        phase_saturations[gaspos][local_index] = sg;
+                    }
+                    else{
+                        // Note that pcog is defined to be (pg - po), not (po - pg).
+                        const double pcog = phase_pressures[gaspos][local_index] - phase_pressures[oilpos][local_index];
+                        const double increasing = true; // pcog(sg) expected to be increasing function
+                        sg = satFromPc(props, gaspos, cell, pcog, increasing);
+                        phase_saturations[gaspos][local_index] = sg;
+                    }
                 }
                 if (gas && water && (sg + sw > 1.0)) {
                     // Overlapping gas-oil and oil-water transition
