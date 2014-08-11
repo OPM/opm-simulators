@@ -196,53 +196,22 @@ try
 
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
 
-    SimulatorReport fullReport;
-    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
-        // Report on start of a report step.
-        std::cout << "\n"
-                  << "---------------------------------------------------------------\n"
-                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
-                  << "---------------------------------------------------------------\n"
-                  << "\n";
+    SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
+                                             *grid->c_grid(),
+                                             geology,
+                                             *new_props,
+                                             rock_comp->isActive() ? rock_comp.get() : 0,
+                                             *fis_solver,
+                                             grav,
+                                             deck->hasKeyword("DISGAS"),
+                                             deck->hasKeyword("VAPOIL"),
+                                             eclipseState,
+                                             outputWriter);
 
-        WellsManager wells(eclipseState,
-                           reportStepIdx,
-                           *grid->c_grid(),
-                           props->permeability());
+    std::cout << "\n\n================ Starting main simulation loop ===============\n"
+              << std::flush;
 
-        if (reportStepIdx == 0) {
-            // @@@ HACK: we should really make a new well state and
-            // properly transfer old well state to it every epoch,
-            // since number of wells may change etc.
-            well_state.init(wells.c_wells(), state);
-        }
-
-        simtimer.setCurrentStepNum(reportStepIdx);
-
-        if (reportStepIdx == 0) {
-            outputWriter.writeInit(simtimer);
-            outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
-        }
-
-        // Create and run simulator.
-        SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
-                                                 *grid->c_grid(),
-                                                 geology,
-                                                 *new_props,
-                                                 rock_comp->isActive() ? rock_comp.get() : 0,
-                                                 wells,
-                                                 *fis_solver,
-                                                 grav,
-                                                 deck->hasKeyword("DISGAS"),
-                                                 deck->hasKeyword("VAPOIL") );
-
-        SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
-
-        ++simtimer;
-
-        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
-        fullReport += episodeReport;
-    }
+    SimulatorReport fullReport = simulator.run(simtimer, state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
