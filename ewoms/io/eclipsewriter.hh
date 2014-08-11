@@ -127,13 +127,9 @@ class EclipseWriter : public BaseOutputWriter
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
-    enum { dim = GridView::dimension };
 
-    typedef BaseOutputWriter::Scalar Scalar;
-    typedef BaseOutputWriter::Vector Vector;
     typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
     typedef BaseOutputWriter::VectorBuffer VectorBuffer;
 
