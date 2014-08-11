@@ -81,8 +81,6 @@ class EclGridManager : public BaseGridManager<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
 
     typedef std::unique_ptr<Grid> GridPointer;
-    typedef std::unique_ptr<const Grid> GridConstPointer;
-    static const int dim = Grid::dimension;
 
 public:
     /*!
