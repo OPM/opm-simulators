@@ -184,8 +184,10 @@ endif (UNIX)
 
 # if shared libraries are disabled on linux, explcitly linking to the
 # pthreads library is required by ERT
-find_package(Threads ${ERT_QUIET} REQUIRED)
-list (APPEND ERT_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+find_package(Threads ${ERT_QUIET})
+if (CMAKE_THREAD_LIBS_INIT)
+  list (APPEND ERT_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 # Platform specific library where dlopen with friends lives
 list (APPEND ERT_LIBRARIES ${CMAKE_DL_LIBS})
