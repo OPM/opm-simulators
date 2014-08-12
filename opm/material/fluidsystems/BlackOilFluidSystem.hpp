@@ -97,6 +97,9 @@ public:
     //! Index of the gas phase
     static const int gasPhaseIdx = 2;
 
+    //! The pressure at the surface
+    static const Scalar surfacePressure;
+
     /*!
      * \copydoc BaseFluidSystem::init
      *
@@ -123,7 +126,7 @@ public:
     /*!
      * \brief Begin the initialization of the black oil fluid system.
      *
-     * After calling this method the surface densities, all formation
+     * After calling this method the reference densities, all formation
      * and volume factors, the oil bubble pressure, all viscosities
      * and the water compressibility must be set. Before the fluid
      * system can be used, initEnd() must be called to finalize the
@@ -137,7 +140,7 @@ public:
      *        gas content using a table stemming from the Eclipse PVTO
      *        keyword.
      *
-     * When calling this method, the surface densities of the fluids _must_ have already
+     * When calling this method, the reference densities of the fluids _must_ have already
      * been set!
      */
     static void setPvtoTable(const PvtoTable &pvtoTable, int regionIdx=0)
@@ -157,8 +160,8 @@ public:
                                                /*type=*/Spline::Monotonic);
         updateSaturationPressureSpline_(regionIdx);
 
-        Scalar rhooRef = surfaceDensity(oilPhaseIdx, regionIdx);
-        Scalar rhogRef = surfaceDensity(gasPhaseIdx, regionIdx);
+        Scalar rhooRef = referenceDensity(oilPhaseIdx, regionIdx);
+        Scalar rhogRef = referenceDensity(gasPhaseIdx, regionIdx);
 
         // extract the table for the oil formation factor
         for (int outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
@@ -183,18 +186,6 @@ public:
             }
         }
 
-        // we only need this spline to be able to calculate the reference oil formation
-        // factor without preconditions (oilFormationVolumeFactor.eval() may throw if
-        // there are X values for which only one pressure is defined.)
-        Spline BoSpline;
-        BoSpline.setXYArrays(saturatedTable->numRows(),
-                             saturatedTable->getPressureColumn(),
-                             saturatedTable->getOilFormationFactorColumn(),
-                             /*type=*/Spline::Monotonic);
-        referenceFormationVolumeFactor_[regionIdx][oilPhaseIdx] =
-            BoSpline.eval(surfacePressure_, /*extrapolate=*/true);
-
-
         // make sure to have at least two sample points per mole fraction
         for (int xIdx = 0; xIdx < oilFormationVolumeFactor.numX(); ++xIdx) {
             // a single sample point is definitely needed
@@ -204,16 +195,15 @@ public:
                 continue;
 
             // assume oil with a constant compressibility and viscosity
-            Scalar BoRef = referenceFormationVolumeFactor_[regionIdx][oilPhaseIdx];
             Scalar poSat = saturatedTable->getPressureColumn()[0];
             Scalar po = poSat * 2;
-            Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[0] / BoRef;
+            Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[0];
 
             Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
-            Scalar rhoo = surfaceDensity_[regionIdx][oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
+            Scalar rhoo = referenceDensity_[regionIdx][oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
 
-            Scalar Bo = surfaceDensity(oilPhaseIdx, regionIdx)/rhoo;
-            oilFormationVolumeFactor.appendSamplePoint(xIdx, po, Bo*BoRef);
+            Scalar Bo = referenceDensity(oilPhaseIdx, regionIdx)/rhoo;
+            oilFormationVolumeFactor.appendSamplePoint(xIdx, po, Bo);
 
             Scalar muo = saturatedTable->getOilViscosityColumn()[0];
             oilViscosity.appendSamplePoint(xIdx, po, muo);
@@ -224,8 +214,8 @@ public:
      * \brief Sets the pressure-dependent water viscosity and density
      *        using a table stemming from the Eclipse PVTW keyword.
      *
-     * This function also sets the surface viscosity and the surface
-     * density of water, but these can be overwritten using setSurface*().
+     * This function also sets the reference viscosity and the reference
+     * density of water, but these can be overwritten using setReference*().
      */
     static void setPvtwTable(const PvtwTable &pvtwTable, int regionIdx=0)
     {
@@ -242,9 +232,9 @@ public:
      *        gas using a table stemming from the Eclipse PVDG
      *        keyword.
      *
-     * This function also sets the surface viscosity and the surface
+     * This function also sets the reference viscosity and the reference
      * density of gas, but these can be overwritten using
-     * setSurface*().
+     * setReference*().
      */
     static void setPvdgTable(const PvdgTable &pvdgTable, int regionIdx=0)
     {
@@ -262,28 +252,25 @@ public:
                                                    pvdgTable.getPressureColumn(),
                                                    pvdgTable.getFormationFactorColumn(),
                                                    /*type=*/Spline::Monotonic);
-
-        referenceFormationVolumeFactor_[regionIdx][gasPhaseIdx] =
-            gasFormationVolumeFactorSpline_[regionIdx].eval(surfacePressure_, /*extrapolate=*/true);
     }
 
     /*!
-     * \brief Initialize the values of the surface densities
+     * \brief Initialize the values of the reference densities
      *
-     * \param rhoOil The surface density of (gas saturated) oil phase.
-     * \param rhoWater The surface density of the water phase.
-     * \param rhoGas The surface density of the gas phase.
+     * \param rhoOil The reference density of (gas saturated) oil phase.
+     * \param rhoWater The reference density of the water phase.
+     * \param rhoGas The reference density of the gas phase.
      */
-    static void setSurfaceDensities(Scalar rhoOil,
+    static void setReferenceDensities(Scalar rhoOil,
                                     Scalar rhoWater,
                                     Scalar rhoGas,
                                     int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        surfaceDensity_[regionIdx][oilPhaseIdx] = rhoOil;
-        surfaceDensity_[regionIdx][waterPhaseIdx] = rhoWater;
-        surfaceDensity_[regionIdx][gasPhaseIdx] = rhoGas;
+        referenceDensity_[regionIdx][oilPhaseIdx] = rhoOil;
+        referenceDensity_[regionIdx][waterPhaseIdx] = rhoWater;
+        referenceDensity_[regionIdx][gasPhaseIdx] = rhoGas;
     }
 
     /*!
@@ -322,9 +309,9 @@ public:
         Scalar XoGMin = 0.0;
         Scalar RsMax = RsSpline.eval(gasDissolutionFactorSpline_[regionIdx].xMax());
         Scalar XoGMax =
-            RsMax*surfaceDensity(gasPhaseIdx, regionIdx)
-            / (RsMax*surfaceDensity(gasPhaseIdx, regionIdx)
-               + surfaceDensity(oilPhaseIdx, regionIdx));
+            RsMax*referenceDensity(gasPhaseIdx, regionIdx)
+            / (RsMax*referenceDensity(gasPhaseIdx, regionIdx)
+               + referenceDensity(oilPhaseIdx, regionIdx));
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -348,16 +335,13 @@ public:
                 Scalar poSat = oilSaturationPressure(XoG, regionIdx);
                 Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
                 Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
-                Scalar rhoo = surfaceDensity(oilPhaseIdx, regionIdx)/BoSat*(1 + drhoo_dp*(po - poSat));
+                Scalar rhoo = referenceDensity(oilPhaseIdx, regionIdx)/BoSat*(1 + drhoo_dp*(po - poSat));
 
-                Scalar Bo = surfaceDensity(oilPhaseIdx, regionIdx)/rhoo;
+                Scalar Bo = referenceDensity(oilPhaseIdx, regionIdx)/rhoo;
 
                 oilFormationVolumeFactor.appendSamplePoint(XIdx, po, Bo);
             }
         }
-
-        referenceFormationVolumeFactor_[regionIdx][oilPhaseIdx] =
-            oilFormationVolumeFactor.eval(/*XoG=*/0, surfacePressure_, /*extrapolate=*/true);
     }
 
     /*!
@@ -370,9 +354,6 @@ public:
         resizeArrays_(regionIdx);
 
         oilFormationVolumeFactor_[regionIdx] = Bo;
-
-        referenceFormationVolumeFactor_[oilPhaseIdx] =
-            oilFormationVolumeFactor.eval(/*XoG=*/0, surfacePressure_, /*extrapolate=*/true);
     }
 
     /*!
@@ -404,9 +385,9 @@ public:
         Scalar XoGMin = 0.0;
         Scalar RsMax = gasDissolutionFactorSpline.eval(gasDissolutionFactorSpline_[regionIdx].xMax());
         Scalar XoGMax =
-            RsMax*surfaceDensity(gasPhaseIdx, regionIdx)
-            /(RsMax*surfaceDensity(gasPhaseIdx, regionIdx)
-              + surfaceDensity(oilPhaseIdx, regionIdx));
+            RsMax*referenceDensity(gasPhaseIdx, regionIdx)
+            /(RsMax*referenceDensity(gasPhaseIdx, regionIdx)
+              + referenceDensity(oilPhaseIdx, regionIdx));
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -449,9 +430,6 @@ public:
         gasFormationVolumeFactorSpline_[regionIdx].setContainerOfTuples(samplePoints,
                                                                         /*type=*/Spline::Monotonic);
         assert(gasFormationVolumeFactorSpline_[regionIdx].monotonic());
-
-        referenceFormationVolumeFactor_[regionIdx][gasPhaseIdx] =
-            gasFormationVolumeFactorSpline_[regionIdx].eval(surfacePressure_, /*extrapolate=*/true);
     }
 
     /*!
@@ -500,8 +478,8 @@ public:
         molarMass_[waterCompIdx] = 18e-3;
 
         // for gas, we take the density at standard conditions and assume it to be ideal
-        Scalar p = surfacePressure_;
-        Scalar rho_g = surfaceDensity_[/*regionIdx=*/0][gasPhaseIdx];
+        Scalar p = surfacePressure;
+        Scalar rho_g = referenceDensity_[/*regionIdx=*/0][gasPhaseIdx];
         Scalar T = 297.15;
         molarMass_[gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
 
@@ -584,8 +562,8 @@ public:
         int regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
-        case waterPhaseIdx: return waterDensity_(p, regionIdx);
-        case gasPhaseIdx: return gasDensity_(p, regionIdx);
+        case waterPhaseIdx: return waterDensity(p, regionIdx);
+        case gasPhaseIdx: return gasDensity(p, regionIdx);
         case oilPhaseIdx: return oilDensity(p,
                                             fluidState.massFraction(oilPhaseIdx, gasCompIdx),
                                             regionIdx);
@@ -645,8 +623,8 @@ public:
      *
      * \copydoc Doxygen::phaseIdxParam
      */
-    static Scalar surfaceDensity(int phaseIdx, int regionIdx=0)
-    { return surfaceDensity_[regionIdx][phaseIdx]; }
+    static Scalar referenceDensity(int phaseIdx, int regionIdx=0)
+    { return referenceDensity_[regionIdx][phaseIdx]; }
 
     /*!
      * \brief Returns the oil formation volume factor \f$B_o\f$ of saturated oil for a given pressure
@@ -665,14 +643,12 @@ public:
     }
 
     /*!
-     * \brief Return the normalized formation volume factor of gas.
-     *
-     * "Normalized" means "1 at surface pressure".
+     * \brief Return the formation volume factor of gas.
      */
     static Scalar gasFormationVolumeFactor(Scalar pressure, int regionIdx=0)
     {
         Scalar BgRaw = gasFormationVolumeFactorSpline_[regionIdx].eval(pressure, /*extrapolate=*/true);
-        return BgRaw/referenceFormationVolumeFactor_[regionIdx][gasPhaseIdx];
+        return BgRaw;
     }
 
     /*!
@@ -787,7 +763,7 @@ public:
     // flash experiment
     static Scalar saturatedOilGasMassFraction(Scalar pressure, int regionIdx=0)
     {
-        Scalar rho_gRef = surfaceDensity(gasPhaseIdx, regionIdx);
+        Scalar rho_gRef = referenceDensity(gasPhaseIdx, regionIdx);
 
         // calculate the mass of the gas component [kg/m^3] in the oil phase. This is
         // equivalent to the gas formation factor [m^3/m^3] at current pressure times the
@@ -796,7 +772,7 @@ public:
 
         // we now have the total density of saturated oil and the partial density of the
         // gas component within it. The gas mass fraction is the ratio of these two.
-        return rho_oG/(surfaceDensity(oilPhaseIdx, regionIdx) + rho_oG);
+        return rho_oG/(referenceDensity(oilPhaseIdx, regionIdx) + rho_oG);
     }
 
     // the mole fraction of the gas component of a gas-saturated oil phase
@@ -826,7 +802,7 @@ public:
     {
         // ATTENTION: XoG is represented by the _first_ axis!
         Scalar BoRaw = oilFormationVolumeFactor_[regionIdx].eval(XoG, oilPressure);
-        return BoRaw/referenceFormationVolumeFactor_[regionIdx][oilPhaseIdx];
+        return BoRaw;
     }
 
 
@@ -835,8 +811,20 @@ public:
      */
     static Scalar oilDensity(Scalar oilPressure, Scalar XoG, int regionIdx=0)
     {
+        Scalar rhooRef = referenceDensity_[regionIdx][oilPhaseIdx];
+        Scalar rhogRef = referenceDensity_[regionIdx][gasPhaseIdx];
+
         Scalar Bo = oilFormationVolumeFactor(oilPressure, XoG, regionIdx);
-        return surfaceDensity_[regionIdx][oilPhaseIdx]/Bo;
+        Scalar rhoo = rhooRef/Bo;
+
+        // for some reason, the gas concentration is not considered in the oil formation
+        // volume factor. WTF? While I have no idea why this should be there, it is
+        // analogous to what's done in opm-autodiff which seems to be in agreement what
+        // the commercial simulator does...
+        Scalar Rs = XoG*rhooRef / ((1-XoG)*rhogRef);
+        rhoo += rhogRef*Rs/Bo;
+
+        return rhoo;
     }
 
     /*!
@@ -847,6 +835,26 @@ public:
         // mass fraction of gas-saturated oil
         Scalar XoG = saturatedOilGasMassFraction(pressure, regionIdx);
         return oilDensity(pressure, XoG, regionIdx);
+    }
+
+    /*!
+     * \brief Return the density of dry gas.
+     */
+    static Scalar gasDensity(Scalar pressure, int regionIdx)
+    {
+        // gas formation volume factor at reservoir pressure
+        Scalar Bg = gasFormationVolumeFactor(pressure, regionIdx);
+        return referenceDensity_[regionIdx][gasPhaseIdx]/Bg;
+    }
+
+    /*!
+     * \brief Return the density of water.
+     */
+    static Scalar waterDensity(Scalar pressure, int regionIdx)
+    {
+        // compressibility of water times standard density
+        Scalar rhoRef = referenceDensity_[regionIdx][waterPhaseIdx];
+        return rhoRef*(1 + waterCompressibilityScalar_[regionIdx]*(pressure - 1.0135e5));
     }
 
 private:
@@ -863,8 +871,7 @@ private:
             saturationPressureSpline_.resize(numRegions);
             waterCompressibilityScalar_.resize(numRegions);
 
-            surfaceDensity_.resize(numRegions);
-            referenceFormationVolumeFactor_.resize(numRegions);
+            referenceDensity_.resize(numRegions);
         }
     }
 
@@ -892,20 +899,6 @@ private:
         saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
     }
 
-    static Scalar gasDensity_(Scalar pressure, int regionIdx)
-    {
-        // gas formation volume factor at reservoir pressure
-        Scalar Bg = gasFormationVolumeFactor(pressure, regionIdx);
-        return surfaceDensity_[regionIdx][gasPhaseIdx]/Bg;
-    }
-
-    static Scalar waterDensity_(Scalar pressure, int regionIdx)
-    {
-        // compressibility of water times standard density
-        Scalar rhoRef = surfaceDensity_[regionIdx][waterPhaseIdx];
-        return rhoRef*(1 + waterCompressibilityScalar_[regionIdx]*(pressure - 1.0135e5));
-    }
-
     static Scalar gasViscosity_(Scalar pressure, int regionIdx)
     {
         return gasViscositySpline_[regionIdx].eval(pressure,
@@ -926,13 +919,10 @@ private:
     static std::vector<Scalar> waterCompressibilityScalar_;
     static std::vector<Scalar> waterViscosityScalar_;
 
-    static const Scalar surfacePressure_;
-
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
     // here, because GCC 4.4 seems to be unable to determine the number of phases from
     // the BlackOil fluid system in the attribute declaration below...
-    static std::vector<std::array<Scalar, /*numPhases=*/3> > surfaceDensity_;
-    static std::vector<std::array<Scalar, /*numPhases=*/3>> referenceFormationVolumeFactor_;
+    static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
 
     static Scalar molarMass_[numComponents];
 };
@@ -963,15 +953,11 @@ BlackOil<Scalar>::gasViscositySpline_;
 
 template <class Scalar>
 const Scalar
-BlackOil<Scalar>::surfacePressure_ = 101325.0; // [Pa]
+BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
 
 template <class Scalar>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::surfaceDensity_;
-
-template <class Scalar>
-std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::referenceFormationVolumeFactor_;
+BlackOil<Scalar>::referenceDensity_;
 
 template <class Scalar>
 Scalar
