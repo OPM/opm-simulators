@@ -350,8 +350,8 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     // the true answer or something else.
     const double reltol = 1.0e-3;
     BOOST_CHECK_CLOSE(pressures[0][first] , 1.496329839e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.50473245e7   , reltol);
-    BOOST_CHECK_CLOSE(pressures[1][last] , 1.50473245e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[0][last ] , 1.504526940e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[1][last] , 1.504526940e7   , reltol);
 }
 
 
