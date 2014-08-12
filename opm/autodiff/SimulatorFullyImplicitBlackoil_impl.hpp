@@ -251,7 +251,7 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
-                                                              BlackoilState& state)
+                                                                 BlackoilState& state)
     {
         WellStateFullyImplicitBlackoil well_state;
 
@@ -271,17 +271,23 @@ namespace Opm
             timer.report(std::cout);
 
             WellsManager wells_manager(eclipse_state_,
-                               timer.currentStepNum(),
-                                                grid_,
-                                 props_.permeability());
+                                       timer.currentStepNum(),
+                                       Opm::UgGridHelpers::numCells(grid_),
+                                       Opm::UgGridHelpers::globalCell(grid_),
+                                       Opm::UgGridHelpers::cartDims(grid_),
+                                       Opm::UgGridHelpers::dimensions(grid_),
+                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
+                                       Opm::UgGridHelpers::cell2Faces(grid_),
+                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
+                                       props_.permeability());
 
             const Wells *wells = wells_manager.c_wells();
 
             if (timer.currentStepNum() == 0) {
-                    well_state.init(wells, state);
-                    output_writer_.writeInit(timer);
+                well_state.init(wells, state);
+                output_writer_.writeInit(timer);
             } else {
-                    // TODO: add a function to update the well_state here.
+                // TODO: add a function to update the well_state here.
             }
 
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
