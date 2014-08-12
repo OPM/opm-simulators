@@ -901,9 +901,10 @@ protected:
         // chosen the correct fluid system. Currently,
         // only Opm::FluidSystems::BlackOil is supported,
         // sorry...
-        Scalar rhoOilSurface = FluidSystem::surfaceDensity(oilPhaseIdx, /*regionIdx=*/0);
-        Scalar rhoGasSurface = FluidSystem::surfaceDensity(gasPhaseIdx, /*regionIdx=*/0);
-        Scalar rhoWaterSurface = FluidSystem::surfaceDensity(waterPhaseIdx, /*regionIdx=*/0);
+        Scalar pSurface = FluidSystem::surfacePressure;
+        Scalar rhoOilSurface = FluidSystem::oilDensity(pSurface, /*XoG=*/0, /*regionIdx=*/0);
+        Scalar rhoGasSurface = FluidSystem::gasDensity(pSurface, /*regionIdx=*/0);
+        Scalar rhoWaterSurface = FluidSystem::waterDensity(pSurface, /*regionIdx=*/0);
 
         // oil
         surfaceRates[oilPhaseIdx] =
