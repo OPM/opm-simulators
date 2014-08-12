@@ -208,6 +208,7 @@ namespace Opm
                       "Inconsistent number of phases in pvt data (" << phase_usage_.num_phases
                       << ") and saturation-dependent function data (" << satprops_->numPhases() << ").");
         }
+        vap_satmax_guard_ = 0.01;
     }
 
     ////////////////////////////
@@ -1081,7 +1082,7 @@ namespace Opm
             const int n = cells.size();
             V factor = V::Ones(n, 1);
             for (int i=0; i<n; ++i) {
-                if (satOilMax_[cells[i]] > 0.01 && so[i] < satOilMax_[cells[i]]) {
+                if (satOilMax_[cells[i]] > vap_satmax_guard_ && so[i] < satOilMax_[cells[i]]) {
                     factor[i] = std::pow(so[i]/satOilMax_[cells[i]], vap);
                 } 
             }
@@ -1104,7 +1105,7 @@ namespace Opm
             V factor = V::Ones(n, 1);
             //V dfactor_dso = V::Zero(n, 1);  TODO: Consider effect of complete jacobian (including so-derivatives)
             for (int i=0; i<n; ++i) {
-                if (satOilMax_[cells[i]] > 0.01 && so.value()[i] < satOilMax_[cells[i]]) {
+                if (satOilMax_[cells[i]] > vap_satmax_guard_ && so.value()[i] < satOilMax_[cells[i]]) {
                     factor[i] = std::pow(so.value()[i]/satOilMax_[cells[i]], vap);
                     //dfactor_dso[i] = vap*std::pow(so.value()[i]/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
                 }

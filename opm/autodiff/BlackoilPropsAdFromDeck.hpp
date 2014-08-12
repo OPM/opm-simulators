@@ -435,6 +435,7 @@ namespace Opm
         double vap1_;
         double vap2_;
         std::vector<double> satOilMax_;
+        double vap_satmax_guard_;  //Threshold value to promote stability
 
     };
 } // namespace Opm
