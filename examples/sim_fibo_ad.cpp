@@ -163,9 +163,9 @@ try
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
-    std::ofstream outStream;
     std::string output_dir;
     if (output) {
+        // Create output directory if needed.
         output_dir =
             param.getDefault("output_dir", std::string("output"));
         boost::filesystem::path fpath(output_dir);
@@ -175,19 +175,13 @@ try
         catch (...) {
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
-        std::string filename = output_dir + "/timing.param";
-        outStream.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
-        // open file to clean it. The file is appended to in SimulatorTwophase
-        filename = output_dir + "/step_timing.param";
-        std::fstream step_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-        step_os.close();
+        // Write simulation parameters.
         param.writeParam(output_dir + "/simulation.param");
     }
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
 
-    WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
     SimulatorTimer simtimer;
 
@@ -217,7 +211,7 @@ try
     fullReport.report(std::cout);
 
     if (output) {
-        std::string filename = output_dir + "/walltime.param";
+        std::string filename = output_dir + "/walltime.txt";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
         fullReport.reportParam(tot_os);
         warnIfUnusedParams(param);

@@ -255,17 +255,16 @@ namespace Opm
     {
         WellStateFullyImplicitBlackoil well_state;
 
-        // Main simulation loop.
+        // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
         double stime = 0.0;
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::fstream tstep_os;
-        if (output_) {
-            std::string filename = output_dir_ + "/step_timing.param";
-            tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
-        }
+        std::string tstep_filename = output_dir_ + "/step_timing.txt";
+        std::ofstream tstep_os(tstep_filename.c_str());
+
+        // Main simulation loop.
         while (!timer.done()) {
             // Report timestep and (optionally) write state to disk.
             step_timer.start();
@@ -323,7 +322,6 @@ namespace Opm
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-                tstep_os.close();
             }
 
             output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
