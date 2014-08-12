@@ -243,9 +243,7 @@ public:
             { 6.21542e+07, 4.7e-05 }
         };
 
-        FluidSystem::setSurfaceDensities(/*oil=*/720.51,
-                                         /*water=*/1009.32,
-                                         /*gas=*/1.1245);
+        FluidSystem::setReferenceDensities(/*oil=*/786, /*water=*/1037, /*gas=*/0.97);
         FluidSystem::setGasFormationVolumeFactor(Bg);
         FluidSystem::setSaturatedOilGasDissolutionFactor(Rs);
         FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
@@ -253,9 +251,6 @@ public:
         FluidSystem::setGasViscosity(mug);
         FluidSystem::setWaterViscosity(9.6e-4);
         FluidSystem::setWaterCompressibility(1.450377e-10);
-        FluidSystem::setSurfaceDensities(/*oil=*/786,
-                                         /*water=*/1037,
-                                         /*gas=*/0.97);
         FluidSystem::initEnd();
 
         pReservoir_ = 330e5;

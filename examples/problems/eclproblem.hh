@@ -676,7 +676,7 @@ private:
             // set the reference densities
             Opm::DeckRecordConstPtr densityRecord =
                 deck->getKeyword("DENSITY")->getRecord(regionIdx);
-            FluidSystem::setSurfaceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
+            FluidSystem::setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
                                              densityRecord->getItem("WATER")->getSIDouble(0),
                                              densityRecord->getItem("GAS")->getSIDouble(0),
                                              regionIdx);
@@ -816,8 +816,8 @@ private:
 
             // calculate composition of the real and the saturated oil phase in terms of
             // mass fractions.
-            Scalar rhooRef = FluidSystem::surfaceDensity(oilPhaseIdx, /*regionIdx=*/0);
-            Scalar rhogRef = FluidSystem::surfaceDensity(gasPhaseIdx, /*regionIdx=*/0);
+            Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
+            Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
             Scalar XoGReal = RsReal*rhogRef / (RsReal*rhogRef + rhooRef);
 
             // convert mass to mole fractions
