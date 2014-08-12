@@ -302,10 +302,14 @@ namespace Opm
             SimulatorReport sreport;
 
             FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
+            // Max oil saturation
+            props_.updateSatOilMax(state.saturation());
+
+            // Hysteresis
+            props_.updateSatHyst(state.saturation(), allcells_);
 
             // Run solver.
             solver_timer.start();
-            std::vector<double> initial_pressure = state.pressure();
             solver.step(timer.currentStepLength(), state, well_state);
 
             // Stop timer and report.
@@ -315,9 +319,6 @@ namespace Opm
 
             stime += st;
             sreport.pressure_time = st;
-
-            // Hysteresis
-            props_.updateSatHyst(state.saturation(), allcells_);
 
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
