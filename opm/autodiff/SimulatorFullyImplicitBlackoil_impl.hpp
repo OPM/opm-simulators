@@ -295,7 +295,7 @@ namespace Opm
 
             SimulatorReport sreport;
 
-            FullyImplicitBlackoilSolver<UnstructuredGrid> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
+            FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
 
             // Run solver.
             solver_timer.start();
