@@ -249,10 +249,30 @@ namespace Opm
 
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        virtual
+        V rsSat(const V& po,
+                const V& so,
+                const Cells& cells) const = 0;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         virtual
         ADB rsSat(const ADB& po,
+                  const Cells& cells) const = 0;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        virtual
+        ADB rsSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const = 0;
 
         // ------ Rs bubble point curve ------
@@ -267,10 +287,30 @@ namespace Opm
 
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        virtual
+        V rvSat(const V& po,
+                const V& so,
+                const Cells& cells) const = 0;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         virtual
         ADB rvSat(const ADB& po,
+                  const Cells& cells) const = 0;
+
+        /// Bubble point curve for Rs as function of oil pressure.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        virtual
+        ADB rvSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const = 0;
 
         // ------ Relative permeability ------
@@ -321,6 +361,10 @@ namespace Opm
         virtual
         void updateSatHyst(const std::vector<double>& saturation,
                            const std::vector<int>& cells) = 0;
+
+        /// Update for max oil saturation.
+        virtual                  
+        void updateSatOilMax(const std::vector<double>& saturation) = 0;
     };
 
 } // namespace Opm

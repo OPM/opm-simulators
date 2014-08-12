@@ -289,6 +289,12 @@ namespace Opm
 
             SimulatorReport sreport;
 
+            // Max oil saturation
+            props_.updateSatOilMax(state.saturation());
+
+            // Hysteresis
+            props_.updateSatHyst(state.saturation(), allcells_);
+
             // Solve pressure equation.
             // if (check_well_controls_) {
             //     computeFractionalFlow(props_, allcells_,
@@ -335,9 +341,6 @@ namespace Opm
                 initial_porevol = porevol;
                 computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
-
-            // Hysteresis
-            props_.updateSatHyst(state.saturation(), allcells_);
 
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
