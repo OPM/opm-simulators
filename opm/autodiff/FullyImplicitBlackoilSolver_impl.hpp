@@ -476,16 +476,12 @@ namespace {
 
             if (active_[ Gas]) {
                 // Define Sg Rs and Rv in terms of xvar.
-                const ADB& rsSat = fluidRsSat(state.pressure, cells_);
-                const ADB& rvSat = fluidRvSat(state.pressure, cells_);
                 const ADB& xvar = vars[ nextvar++ ];
                 const ADB& sg = isSg*xvar + isRv* so;
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
-
-                std::vector<int> all_cells = buildAllCells(nc);
-                ADB rsSat = fluidRsSat(state.pressure, so, all_cells);
-                ADB rvSat = fluidRvSat(state.pressure, so, all_cells);
+                const ADB rsSat = fluidRsSat(state.pressure, so, cells_);
+                const ADB rvSat = fluidRvSat(state.pressure, so, cells_);
 
                 if (has_disgas_) {
                     state.rs = (1-isRs) * rsSat + isRs*xvar;
