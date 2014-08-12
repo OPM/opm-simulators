@@ -250,7 +250,7 @@ public:
 
         gasViscositySpline_[regionIdx].setXYArrays(numSamples,
                                                    pvdgTable.getPressureColumn(),
-                                                   pvdgTable.getFormationFactorColumn(),
+                                                   pvdgTable.getViscosityColumn(),
                                                    /*type=*/Spline::Monotonic);
     }
 
@@ -970,7 +970,6 @@ BlackOil<Scalar>::waterCompressibilityScalar_;
 template <class Scalar>
 std::vector<Scalar>
 BlackOil<Scalar>::waterViscosityScalar_;
-} // namespace FluidSystems
-} // namespace Opm
+}} // namespace Opm, FluidSystems
 
 #endif
