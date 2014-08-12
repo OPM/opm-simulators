@@ -1063,7 +1063,9 @@ namespace Opm
             const int posOil = phase_usage_.phase_pos[Oil];
             const double* s = saturation.data();
             for (int i=0; i<n; ++i) {
-                if (satOilMax_[i] < *(s+np*i+posOil)) satOilMax_[i] = *(s+np*i+posOil);
+                if (satOilMax_[i] < s[np*i+posOil]) {
+                    satOilMax_[i] = s[np*i+posOil];
+                }
             }
         }
     }
