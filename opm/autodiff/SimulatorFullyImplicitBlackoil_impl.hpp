@@ -30,6 +30,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
 
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
@@ -65,19 +66,19 @@ namespace Opm
              const DerivedGeology& geo,
              BlackoilPropsAdInterface& props,
              const RockCompressibility* rock_comp_props,
-             WellsManager& wells_manager,
              NewtonIterationBlackoilInterface& linsolver,
              const double* gravity,
              bool has_disgas,
-             bool has_vapoil );
+             bool has_vapoil,
+             std::shared_ptr<EclipseState> eclipse_state,
+             EclipseWriter& output_writer);
 
         SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state,
-                            WellStateFullyImplicitBlackoil& well_state);
+                            BlackoilState& state);
 
     private:
         // Data.
-
+        const parameter::ParameterGroup param_;
         // Parameters for output.
         bool output_;
         bool output_vtk_;
@@ -90,14 +91,18 @@ namespace Opm
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
         const RockCompressibility* rock_comp_props_;
-        WellsManager& wells_manager_;
-        const Wells* wells_;
         const double* gravity_;
         // Solvers
-        const DerivedGeology &geo_;
-        FullyImplicitBlackoilSolver<Grid> solver_;
+        const DerivedGeology& geo_;
+        NewtonIterationBlackoilInterface& solver_;
         // Misc. data
         std::vector<int> allcells_;
+        const bool has_disgas_;
+        const bool has_vapoil_;
+        // eclipse_state
+        std::shared_ptr<EclipseState> eclipse_state_;
+        // output_writer
+        EclipseWriter& output_writer_;
     };
 
 
@@ -109,14 +114,16 @@ namespace Opm
                                                                    const DerivedGeology& geo,
                                                                    BlackoilPropsAdInterface& props,
                                                                    const RockCompressibility* rock_comp_props,
-                                                                   WellsManager& wells_manager,
                                                                    NewtonIterationBlackoilInterface& linsolver,
                                                                    const double* gravity,
                                                                    const bool has_disgas,
-                                                                   const bool has_vapoil )
+                                                                   const bool has_vapoil,
+                                                                   std::shared_ptr<EclipseState> eclipse_state,
+                                                                   EclipseWriter& output_writer)
 
     {
-        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, wells_manager, linsolver, gravity, has_disgas, has_vapoil));
+        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil,
+                              eclipse_state, output_writer));
     }
 
 
@@ -125,10 +132,9 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::run(SimulatorTimer& timer,
-                                                        BlackoilState& state,
-                                                        WellStateFullyImplicitBlackoil& well_state)
+                                                        BlackoilState& state)
     {
-        return pimpl_->run(timer, state, well_state);
+        return pimpl_->run(timer, state);
     }
 
 
@@ -197,23 +203,23 @@ namespace Opm
                                                const DerivedGeology& geo,
                                                BlackoilPropsAdInterface& props,
                                                const RockCompressibility* rock_comp_props,
-                                               WellsManager& wells_manager,
                                                NewtonIterationBlackoilInterface& linsolver,
                                                const double* gravity,
                                                const bool has_disgas,
-                                               const bool has_vapoil)
-        : grid_(grid),
+                                               const bool has_vapoil,
+                                               std::shared_ptr<EclipseState> eclipse_state,
+                                               EclipseWriter& output_writer)
+        : param_(param),
+          grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
-          wells_manager_(wells_manager),
-          wells_(wells_manager.c_wells()),
           gravity_(gravity),
           geo_(geo),
-          solver_(param, grid_, props_, geo_, rock_comp_props, *wells_manager.c_wells(), linsolver, has_disgas, has_vapoil)
-          /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),
-                               param.getDefault("nl_pressure_change_tolerance", 1.0),
-                               param.getDefault("nl_pressure_maxiter", 10),
-                               gravity,  */
+          solver_(linsolver),
+          has_disgas_(has_disgas),
+          has_vapoil_(has_vapoil),
+          eclipse_state_(eclipse_state),
+          output_writer_(output_writer)
     {
         // For output.
         output_ = param.getDefault("output", true);
@@ -245,39 +251,45 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
-                                                              BlackoilState& state,
-                                                              WellStateFullyImplicitBlackoil& well_state)
+                                                                 BlackoilState& state)
     {
-        // Initialisation.
-        std::vector<double> porevol;
-        if (rock_comp_props_ && rock_comp_props_->isActive()) {
-            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
-        } else {
-            computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), porevol);
-        }
-        // const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-        std::vector<double> initial_porevol = porevol;
+        WellStateFullyImplicitBlackoil well_state;
 
-        // Main simulation loop.
+        // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
         double stime = 0.0;
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::vector<double> fractional_flows;
-        std::vector<double> well_resflows_phase;
-        if (wells_) {
-            well_resflows_phase.resize((wells_->number_of_phases)*(wells_->number_of_wells), 0.0);
-        }
-        std::fstream tstep_os;
-        if (output_) {
-            std::string filename = output_dir_ + "/step_timing.param";
-            tstep_os.open(filename.c_str(), std::fstream::out | std::fstream::app);
-        }
+        std::string tstep_filename = output_dir_ + "/step_timing.txt";
+        std::ofstream tstep_os(tstep_filename.c_str());
+
+        // Main simulation loop.
         while (!timer.done()) {
             // Report timestep and (optionally) write state to disk.
             step_timer.start();
             timer.report(std::cout);
+
+            WellsManager wells_manager(eclipse_state_,
+                                       timer.currentStepNum(),
+                                       Opm::UgGridHelpers::numCells(grid_),
+                                       Opm::UgGridHelpers::globalCell(grid_),
+                                       Opm::UgGridHelpers::cartDims(grid_),
+                                       Opm::UgGridHelpers::dimensions(grid_),
+                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
+                                       Opm::UgGridHelpers::cell2Faces(grid_),
+                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
+                                       props_.permeability());
+
+            const Wells *wells = wells_manager.c_wells();
+
+            if (timer.currentStepNum() == 0) {
+                well_state.init(wells, state);
+                output_writer_.writeInit(timer);
+            } else {
+                // TODO: add a function to update the well_state here.
+            }
+
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
@@ -289,58 +301,24 @@ namespace Opm
 
             SimulatorReport sreport;
 
+            FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
             // Max oil saturation
             props_.updateSatOilMax(state.saturation());
 
             // Hysteresis
             props_.updateSatHyst(state.saturation(), allcells_);
 
-            // Solve pressure equation.
-            // if (check_well_controls_) {
-            //     computeFractionalFlow(props_, allcells_,
-            //                           state.pressure(), state.surfacevol(), state.saturation(),
-            //                           fractional_flows);
-            //     wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
-            // }
+            // Run solver.
+            solver_timer.start();
+            solver.step(timer.currentStepLength(), state, well_state);
 
-            bool well_control_passed = !check_well_controls_;
-            int well_control_iteration = 0;
-            do {
-                // Run solver.
-                solver_timer.start();
-                std::vector<double> initial_pressure = state.pressure();
-                solver_.step(timer.currentStepLength(), state, well_state);
+            // Stop timer and report.
+            solver_timer.stop();
+            const double st = solver_timer.secsSinceStart();
+            std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
 
-                // Stop timer and report.
-                solver_timer.stop();
-                const double st = solver_timer.secsSinceStart();
-                std::cout << "Fully implicit solver took:  " << st << " seconds." << std::endl;
-
-                stime += st;
-                sreport.pressure_time = st;
-
-                // Optionally, check if well controls are satisfied.
-                if (check_well_controls_) {
-                    std::cout << "Checking well conditions." << std::endl;
-                    // For testing we set surface := reservoir
-                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_state.wellRates(), well_state.wellRates());
-                    ++well_control_iteration;
-                    if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
-                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
-                    }
-                    if (!well_control_passed) {
-                        std::cout << "Well controls not passed, solving again." << std::endl;
-                    } else {
-                        std::cout << "Well conditions met." << std::endl;
-                    }
-                }
-            } while (!well_control_passed);
-
-            // Update pore volumes if rock is compressible.
-            if (rock_comp_props_ && rock_comp_props_->isActive()) {
-                initial_porevol = porevol;
-                computePorevolume(AutoDiffGrid::numCells(grid_), AutoDiffGrid::beginCellVolumes(grid_), props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
-            }
+            stime += st;
+            sreport.pressure_time = st;
 
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
@@ -351,12 +329,11 @@ namespace Opm
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-                tstep_os.close();
             }
 
-            // advance to next timestep before reporting at this location
-            // ++timer; // Commented out since this has temporarily moved to the main() function.
-            break; // this is a temporary measure
+            output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
+
+            ++timer;
         }
 
         total_timer.stop();
