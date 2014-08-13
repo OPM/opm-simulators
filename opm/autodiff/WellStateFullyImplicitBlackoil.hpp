@@ -24,6 +24,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <vector>
 #include <cassert>
 
@@ -100,6 +101,53 @@ namespace Opm
         const WellState& basicWellState() const
         {
             return basic_well_state_;
+        }
+
+        /// The number of wells present.
+        int numWells() const
+        {
+            return bhp().size();
+        }
+
+        /// The number of phases present.
+        int numPhases() const
+        {
+            return wellRates().size() / numWells();
+        }
+
+        /// Copy data for the first num_wells_to_copy from source,
+        /// overwriting any data in this object associated with those
+        /// wells. Assumes that the number of phases are the same,
+        /// that the number of perforations associated with the wells
+        /// is unchanging, and that both objects contain at least
+        /// num_wells_to_copy wells.
+        void partialCopy(const WellStateFullyImplicitBlackoil& source,
+                         const Wells& wells,
+                         const int num_wells_to_copy)
+        {
+            if (numPhases() != source.numPhases()) {
+                OPM_THROW(std::logic_error, "partialCopy(): source and destination have different number of phases.");
+            }
+            if (num_wells_to_copy > numWells() || num_wells_to_copy > source.numWells()) {
+                OPM_THROW(std::logic_error, "partialCopy(): trying to copy too many wells.");
+            }
+            // bhp
+            std::copy(source.bhp().begin(),
+                      source.bhp().begin() + num_wells_to_copy,
+                      bhp().begin());
+            // wellRates
+            std::copy(source.wellRates().begin(),
+                      source.wellRates().begin() + numPhases()*num_wells_to_copy,
+                      wellRates().begin());
+            // perfPhaseRates
+            const int num_perfs_to_copy = wells.well_connpos[num_wells_to_copy];
+            std::copy(source.perfPhaseRates().begin(),
+                      source.perfPhaseRates().begin() + numPhases()*num_perfs_to_copy,
+                      perfPhaseRates().begin());
+            // currentControls
+            std::copy(source.currentControls().begin(),
+                      source.currentControls().begin() + num_wells_to_copy,
+                      currentControls().begin());
         }
 
     private:
