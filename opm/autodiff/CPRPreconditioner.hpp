@@ -37,6 +37,7 @@
 
 #include "reenable_warning_pragmas.h"
 
+#include <opm/core/utility/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -161,8 +162,8 @@ namespace Opm
             // Solve system.
             Dune::InverseOperatorResult result;
             linsolve.apply(x, de, result);
-            if (result.converged) {
-                // std::cout << "solveElliptic() successful!" << std::endl;
+            if (!result.converged) {
+                OPM_THROW(std::runtime_error, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
             return x;
         }
