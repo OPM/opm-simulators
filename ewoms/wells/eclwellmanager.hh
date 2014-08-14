@@ -77,6 +77,9 @@ public:
         const Grid &grid = simulator_.gridManager().grid();
         const GridView gridView = simulator_.gridManager().gridView();
 
+        elemIsInAWell_.resize(simulator_.model().elementMapper().size());
+        std::fill(elemIsInAWell_.begin(), elemIsInAWell_.end(), false);
+
         // create the wells
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx) {
             Opm::WellConstPtr deckWell = deckSchedule->getWells()[deckWellIdx];
@@ -120,6 +123,9 @@ public:
                             && ijk[1] == completion->getJ()
                             && ijk[2] == completion->getK())
                         {
+                            int globalElemIdx = simulator_.model().elementMapper().map(*elemIt);
+                            elemIsInAWell_[globalElemIdx] = true;
+
                             well->addDof(elemCtx, dofIdx);
                             well->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
                         }
@@ -384,6 +390,10 @@ public:
             if (elemIt->partitionType() != Dune::InteriorEntity)
                 continue;
 
+            int globalElemIdx = simulator_.model().elementMapper().map(*elemIt);
+            if (!elemIsInAWell_[globalElemIdx])
+                continue;
+
             elemCtx.updateStencil(*elemIt);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -480,6 +490,7 @@ protected:
     const Simulator &simulator_;
 
     std::vector<std::shared_ptr<Well> > wells_;
+    std::vector<bool> elemIsInAWell_;
     std::map<std::string, int> wellNameToIndex_;
 };
 } // namespace Ewoms
