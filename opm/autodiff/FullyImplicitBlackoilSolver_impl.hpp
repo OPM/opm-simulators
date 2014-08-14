@@ -1354,7 +1354,7 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             if (ixw[c]) {
                 so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-so[c]);
+                sg[c] = sg[c] / (1-sw[c]);
                 sw[c] = 0;
             }
         }
