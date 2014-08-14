@@ -253,7 +253,7 @@ namespace Opm
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
                                                                  BlackoilState& state)
     {
-        WellStateFullyImplicitBlackoil well_state;
+        WellStateFullyImplicitBlackoil prev_well_state;
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -281,13 +281,15 @@ namespace Opm
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability());
 
-            const Wells *wells = wells_manager.c_wells();
+            const Wells* wells = wells_manager.c_wells();
+            WellStateFullyImplicitBlackoil well_state;
+            well_state.init(wells, state);
 
             if (timer.currentStepNum() == 0) {
-                well_state.init(wells, state);
                 output_writer_.writeInit(timer);
             } else {
-                // TODO: add a function to update the well_state here.
+                // Transfer previous well state tu current.
+                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
             }
 
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
@@ -334,6 +336,7 @@ namespace Opm
             output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
 
             ++timer;
+            prev_well_state = well_state;
         }
 
         total_timer.stop();
