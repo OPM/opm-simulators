@@ -34,9 +34,11 @@
 #include <opm/material/fluidsystems/NullParameterCache.hpp>
 #include <opm/material/UniformXTabulated2DFunction.hpp>
 
+#if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Utility/PvtoTable.hpp>
 #include <opm/parser/eclipse/Utility/PvtwTable.hpp>
 #include <opm/parser/eclipse/Utility/PvdgTable.hpp>
+#endif // HAVE_OPM_PARSER
 
 #include <array>
 #include <vector>
@@ -135,6 +137,7 @@ public:
     static void initBegin()
     {}
 
+#if HAVE_OPM_PARSER
     /*!
      * \brief Sets the pressure-dependent oil viscosity, density and
      *        gas content using a table stemming from the Eclipse PVTO
@@ -253,6 +256,7 @@ public:
                                                    pvdgTable.getViscosityColumn(),
                                                    /*type=*/Spline::Monotonic);
     }
+#endif
 
     /*!
      * \brief Initialize the values of the reference densities
