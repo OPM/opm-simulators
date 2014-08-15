@@ -642,6 +642,15 @@ namespace {
         // Create the primary variables.
         SolutionState state = variableState(x, xw);
 
+        // DISKVAL(state.pressure);
+        // DISKVAL(state.saturation[0]);
+        // DISKVAL(state.saturation[1]);
+        // DISKVAL(state.saturation[2]);
+        // DISKVAL(state.rs);
+        // DISKVAL(state.rv);
+        // DISKVAL(state.qs);
+        // DISKVAL(state.bhp);
+
         // -------- Mass balance equations --------
 
         // Compute b_p and the accumulation term b_p*s_p for each phase,
@@ -1345,7 +1354,7 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             if (ixw[c]) {
                 so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-so[c]);
+                sg[c] = sg[c] / (1-sw[c]);
                 sw[c] = 0;
             }
         }
@@ -1563,8 +1572,10 @@ namespace {
         for (; quantityIt != endQuantityIt; ++quantityIt) {
             const double quantityResid = (*quantityIt).value().matrix().norm();
             if (!std::isfinite(quantityResid)) {
+                const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
                 OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
+                          "Encountered a non-finite residual in material balance equation "
+                          << trouble_phase);
             }
             globalNorm = std::max(globalNorm, quantityResid);
         }
