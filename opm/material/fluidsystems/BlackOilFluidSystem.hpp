@@ -135,7 +135,11 @@ public:
      * initialization.
      */
     static void initBegin()
-    {}
+    {
+        setWaterReferenceFormationFactor(1.0);
+        setWaterViscosibility(0.0);
+        setWaterReferencePressure(surfacePressure);
+    }
 
 #if HAVE_OPM_PARSER
     /*!
@@ -226,8 +230,21 @@ public:
 
         resizeArrays_(regionIdx);
 
-        waterCompressibilityScalar_[regionIdx] = pvtwTable.getCompressibilityColumn()[0];
-        waterViscosityScalar_[regionIdx] = pvtwTable.getViscosityColumn()[0];
+        // actually the PVTW does not specify a table, but for now we use a table wrapper
+        // anyway because we don't want to break the opm-parser API at this point...
+        std::vector<double> pressureCol = pvtwTable.getPressureColumn();
+        std::vector<double> refBwCol = pvtwTable.getFormationFactorColumn();
+        std::vector<double> compressCol = pvtwTable.getCompressibilityColumn();
+        std::vector<double> viscosityCol = pvtwTable.getViscosityColumn();
+        std::vector<double> viscosibilityCol = pvtwTable.getViscosibilityColumn();
+
+        assert(pressureCol.size() == 1);
+
+        waterReferencePressureScalar_[regionIdx] = pressureCol[0];
+        waterReferenceFormationFactorScalar_[regionIdx] = refBwCol[0];
+        waterCompressibilityScalar_[regionIdx] = compressCol[0];
+        waterViscosityScalar_[regionIdx] = viscosityCol[0];
+        waterViscosibilityScalar_[regionIdx] = viscosibilityCol[0];
     }
 
     /*!
@@ -266,9 +283,9 @@ public:
      * \param rhoGas The reference density of the gas phase.
      */
     static void setReferenceDensities(Scalar rhoOil,
-                                    Scalar rhoWater,
-                                    Scalar rhoGas,
-                                    int regionIdx=0)
+                                      Scalar rhoWater,
+                                      Scalar rhoGas,
+                                      int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -444,30 +461,59 @@ public:
     static void setGasViscosity(const SplineSamplingPoints &samplePoints, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
+
         gasViscositySpline_[regionIdx].setContainerOfTuples(samplePoints,
                                                             /*type=*/Spline::Monotonic);
         assert(gasViscositySpline_[regionIdx].monotonic());
     }
 
     /*!
+     * \brief Set the water reference pressure [Pa]
+     */
+    static void setWaterReferencePressure(Scalar p, int regionIdx=0)
+    {
+        resizeArrays_(regionIdx);
+
+        waterReferencePressureScalar_[regionIdx] = p;
+    }
+
+    /*!
+     * \brief Set the water reference formation volume factor [-]
+     */
+    static void setWaterReferenceFormationFactor(Scalar BwRef, int regionIdx=0)
+    {
+        resizeArrays_(regionIdx);
+
+        waterReferenceFormationFactorScalar_[regionIdx] = BwRef;
+    }
+
+    /*!
      * \brief Set the water viscosity [Pa s]
-     *
-     * \param muWater The dynamic viscosity of the water phase.
      */
     static void setWaterViscosity(Scalar muWater, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
+
         waterViscosityScalar_[regionIdx] = muWater;
     }
 
     /*!
+     * \brief Set the water "viscosibility" [1/ (Pa s)]
+     */
+    static void setWaterViscosibility(Scalar muCompWater, int regionIdx=0)
+    {
+        resizeArrays_(regionIdx);
+
+        waterViscosibilityScalar_[regionIdx] = muCompWater;
+    }
+
+    /*!
      * \brief Set the water compressibility [1 / Pa]
-     *
-     * \param cWater The compressibility of the water phase.
      */
     static void setWaterCompressibility(Scalar cWater, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
+
         waterCompressibilityScalar_[regionIdx] = cWater;
     }
 
@@ -653,6 +699,21 @@ public:
     {
         Scalar BgRaw = gasFormationVolumeFactorSpline_[regionIdx].eval(pressure, /*extrapolate=*/true);
         return BgRaw;
+    }
+
+    /*!
+     * \brief Return the formation volume factor of water.
+     */
+    static Scalar waterFormationVolumeFactor(Scalar pressure, int regionIdx=0)
+    {
+        // cf. ECLiPSE 2011 technical description, p. 116
+        Scalar pRef = waterReferencePressureScalar_[regionIdx];
+        Scalar X = waterCompressibilityScalar_[regionIdx]*(pressure - pRef);
+
+        Scalar BwRef = waterReferenceFormationFactorScalar_[regionIdx];
+
+        // TODO (?): consider the salt concentration of the brine
+        return BwRef/(1 + X*(1 + X/2));
     }
 
     /*!
@@ -856,9 +917,9 @@ public:
      */
     static Scalar waterDensity(Scalar pressure, int regionIdx)
     {
-        // compressibility of water times standard density
-        Scalar rhoRef = referenceDensity_[regionIdx][waterPhaseIdx];
-        return rhoRef*(1 + waterCompressibilityScalar_[regionIdx]*(pressure - 1.0135e5));
+        Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
+        Scalar rhowRef = referenceDensity(waterPhaseIdx, regionIdx);
+        return rhowRef/Bw;
     }
 
 private:
@@ -870,10 +931,13 @@ private:
             gasFormationVolumeFactorSpline_.resize(numRegions);
             oilViscosity_.resize(numRegions);
             gasViscositySpline_.resize(numRegions);
-            waterViscosityScalar_.resize(numRegions);
             gasDissolutionFactorSpline_.resize(numRegions);
             saturationPressureSpline_.resize(numRegions);
+            waterReferencePressureScalar_.resize(numRegions);
+            waterReferenceFormationFactorScalar_.resize(numRegions);
             waterCompressibilityScalar_.resize(numRegions);
+            waterViscosityScalar_.resize(numRegions);
+            waterViscosibilityScalar_.resize(numRegions);
 
             referenceDensity_.resize(numRegions);
         }
@@ -900,17 +964,21 @@ private:
             std::pair<Scalar, Scalar> val(X_oG, pSat);
             pSatSamplePoints.push_back(val);
         }
-        saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints, /*type=*/Spline::Monotonic);
+        saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints,
+                                                                  /*type=*/Spline::Monotonic);
     }
 
     static Scalar gasViscosity_(Scalar pressure, int regionIdx)
-    {
-        return gasViscositySpline_[regionIdx].eval(pressure,
-                                                   /*extrapolate=*/true);
-    }
+    { return gasViscositySpline_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     static Scalar waterViscosity_(Scalar pressure, int regionIdx)
-    { return waterViscosityScalar_[regionIdx]; }
+    {
+        Scalar muRef = waterViscosityScalar_[regionIdx];
+        Scalar Cnu = waterViscosibilityScalar_[regionIdx];
+        Scalar pRef = waterReferencePressureScalar_[regionIdx];
+        Scalar deltamu = (pressure - pRef)*Cnu*muRef;
+        return muRef + deltamu;
+    }
 
     static std::vector<TabulatedFunction> oilFormationVolumeFactor_;
     static std::vector<TabulatedFunction> oilViscosity_;
@@ -920,8 +988,11 @@ private:
     static std::vector<Spline> gasFormationVolumeFactorSpline_;
     static std::vector<Spline> gasViscositySpline_;
 
+    static std::vector<Scalar> waterReferencePressureScalar_;
+    static std::vector<Scalar> waterReferenceFormationFactorScalar_;
     static std::vector<Scalar> waterCompressibilityScalar_;
     static std::vector<Scalar> waterViscosityScalar_;
+    static std::vector<Scalar> waterViscosibilityScalar_;
 
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
     // here, because GCC 4.4 seems to be unable to determine the number of phases from
@@ -930,6 +1001,10 @@ private:
 
     static Scalar molarMass_[numComponents];
 };
+
+template <class Scalar>
+const Scalar
+BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::TabulatedFunction>
@@ -956,16 +1031,12 @@ std::vector<typename BlackOil<Scalar>::Spline>
 BlackOil<Scalar>::gasViscositySpline_;
 
 template <class Scalar>
-const Scalar
-BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+std::vector<Scalar>
+BlackOil<Scalar>::waterReferencePressureScalar_;
 
 template <class Scalar>
-std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::referenceDensity_;
-
-template <class Scalar>
-Scalar
-BlackOil<Scalar>::molarMass_[BlackOil<Scalar>::numComponents];
+std::vector<Scalar>
+BlackOil<Scalar>::waterReferenceFormationFactorScalar_;
 
 template <class Scalar>
 std::vector<Scalar>
@@ -974,6 +1045,18 @@ BlackOil<Scalar>::waterCompressibilityScalar_;
 template <class Scalar>
 std::vector<Scalar>
 BlackOil<Scalar>::waterViscosityScalar_;
+
+template <class Scalar>
+std::vector<Scalar>
+BlackOil<Scalar>::waterViscosibilityScalar_;
+
+template <class Scalar>
+std::vector<std::array<Scalar, 3> >
+BlackOil<Scalar>::referenceDensity_;
+
+template <class Scalar>
+Scalar
+BlackOil<Scalar>::molarMass_[BlackOil<Scalar>::numComponents];
 }} // namespace Opm, FluidSystems
 
 #endif
