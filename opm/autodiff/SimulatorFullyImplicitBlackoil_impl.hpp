@@ -266,10 +266,11 @@ namespace Opm
 
         // Main simulation loop.
         while (!timer.done()) {
-            // Report timestep and (optionally) write state to disk.
+            // Report timestep.
             step_timer.start();
             timer.report(std::cout);
 
+            // Create wells and well state.
             WellsManager wells_manager(eclipse_state_,
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid_),
@@ -280,67 +281,67 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability());
-
             const Wells* wells = wells_manager.c_wells();
             WellStateFullyImplicitBlackoil well_state;
             well_state.init(wells, state);
-
-            if (timer.currentStepNum() == 0) {
-                output_writer_.writeInit(timer);
-            } else {
-                // Transfer previous well state tu current.
+            if (timer.currentStepNum() != 0) {
+                // Transfer previous well state to current.
                 well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
             }
 
+            // Output state at start of time step.
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
                 outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-
+            }
+            if (output_) {
+                if (timer.currentStepNum() == 0) {
+                    output_writer_.writeInit(timer);
+                }
+                output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
             }
 
-            SimulatorReport sreport;
-
-            FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
-            // Max oil saturation
+            // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
-
-            // Hysteresis
             props_.updateSatHyst(state.saturation(), allcells_);
 
-            // Run solver.
+            // Run a single step of the solver.
             solver_timer.start();
+            FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
             solver.step(timer.currentStepLength(), state, well_state);
-
-            // Stop timer and report.
             solver_timer.stop();
+
+            // Report timing.
             const double st = solver_timer.secsSinceStart();
             std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
-
             stime += st;
-            sreport.pressure_time = st;
-
-            sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
-                sreport.reportParam(tstep_os);
-
-                if (output_vtk_) {
-                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-                }
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                SimulatorReport step_report;
+                step_report.pressure_time = st;
+                step_report.total_time =  step_timer.secsSinceStart();
+                step_report.reportParam(tstep_os);
             }
 
-            output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
-
+            // Increment timer, remember well state.
             ++timer;
             prev_well_state = well_state;
         }
 
-        total_timer.stop();
+        // Write final simulation state.
+        if (output_) {
+            if (output_vtk_) {
+                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+            }
+            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+            output_writer_.writeTimeStep(timer, state, prev_well_state.basicWellState());
+        }
 
+        // Stop timer and create timing report
+        total_timer.stop();
         SimulatorReport report;
         report.pressure_time = stime;
         report.transport_time = 0.0;
