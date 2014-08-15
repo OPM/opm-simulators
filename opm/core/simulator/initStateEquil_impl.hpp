@@ -394,20 +394,28 @@ namespace Opm
 
                 assign(G, opress, z0, cells, press);
 
+                // Default pressure at WOC and GOC to -inf
                 po_woc = -std::numeric_limits<double>::max();
                 po_goc = -std::numeric_limits<double>::max();
 
                 const double woc = reg.zwoc();
-                // Compute Oil pressure at WOC
-                if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
-                else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
-                else               { po_woc = p0;             } // WOC *at*  datum
+                // Compute Oil pressure at WOC,
+                // if WOC is within the reservoir.
+                if ( ( woc > span[0] ) & ( woc < span[1] ) ){
+                    if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
+                    else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
+                    else               { po_woc = p0;             } // WOC *at*  datum
+                }
 
                 const double goc = reg.zgoc();
-                // Compute Oil pressure at GOC
-                if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
-                else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
-                else               { po_goc = p0;             } // GOC *at*  datum
+                // Compute Oil pressure at GOC,
+                // if GOC is within the reservoir.
+                if ( ( goc > span[0] ) & ( goc < span[1] ) ){
+                    if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
+                    else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
+                    else               { po_goc = p0;             } // GOC *at*  datum
+                }
+
             }
 
             template <class Region,
@@ -474,14 +482,43 @@ namespace Opm
 
             if (PhaseUsed::water(pu)) {
                 const int wix = PhaseIndex::water(pu);
-                PhasePressure::water(G, reg, span, grav, po_woc,
-                                     cells, press[ wix ]);
+
+                // If woc is above or below the reservoar,
+                // po_woc is -inf and the water pressure
+                // is set to -inf.
+                if ( po_woc > 0 ){
+
+                    PhasePressure::water(G, reg, span, grav, po_woc,
+                                         cells, press[ wix ]);
+                } else {
+                    std::vector<double>::size_type local_index = 0;
+                    for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
+                        const int cell = *ci;
+                        press[wix][cell] = po_woc;
+                    }
+                }
+
+
             }
 
             if (PhaseUsed::gas(pu)) {
                 const int gix = PhaseIndex::gas(pu);
-                PhasePressure::gas(G, reg, span, grav, po_goc,
-                                   cells, press[ gix ]);
+
+                // If woc is above or below the reservoar,
+                // po_woc is -inf and the water pressure
+                // is set to -inf.
+                if (po_goc > 0){
+
+                    PhasePressure::gas(G, reg, span, grav, po_goc,
+                                       cells, press[ gix ]);
+                } else {
+                    std::vector<double>::size_type local_index = 0;
+                    for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
+                        const int cell = *ci;
+                        press[gix][cell] = po_goc;
+                    }
+                }
+
             }
         }
     } // namespace Details
