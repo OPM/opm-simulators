@@ -189,7 +189,6 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
 public:
-
     /*!
      * \copydoc FvBaseProblem::registerParameters
      */
@@ -840,12 +839,12 @@ private:
 
         int numElements = this->gridView().size(/*codim=*/0);
 
-        std::vector<Scalar> multx(numElements, 1.0);
-        std::vector<Scalar> multy(numElements, 1.0);
-        std::vector<Scalar> multz(numElements, 1.0);
-        std::vector<Scalar> multxMinus(numElements, 1.0);
-        std::vector<Scalar> multyMinus(numElements, 1.0);
-        std::vector<Scalar> multzMinus(numElements, 1.0);
+        std::vector<double> multx(numElements, 1.0);
+        std::vector<double> multy(numElements, 1.0);
+        std::vector<double> multz(numElements, 1.0);
+        std::vector<double> multxMinus(numElements, 1.0);
+        std::vector<double> multyMinus(numElements, 1.0);
+        std::vector<double> multzMinus(numElements, 1.0);
 
         // retrieve the transmissibility multiplier keywords. Note that we use them as
         // permeability multipliers...
