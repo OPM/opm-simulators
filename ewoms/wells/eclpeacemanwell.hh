@@ -30,12 +30,7 @@
 #include <opm/core/utility/Average.hpp>
 
 #include <dune/common/version.hh>
-
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
 #include <dune/geometry/referenceelements.hh>
-#else
-#include <dune/geometry/genericreferenceelements.hh>
-#endif
 
 #include <unordered_map>
 
