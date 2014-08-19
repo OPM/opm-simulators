@@ -198,22 +198,51 @@ public:
             // a single sample point is definitely needed
             assert(oilFormationVolumeFactor.numY(xIdx) > 0);
 
+            // everything is fine if the current table has two or more sampling points
+            // for a given mole fraction
             if (oilFormationVolumeFactor.numY(xIdx) > 1)
                 continue;
 
-            // assume oil with a constant compressibility and viscosity
-            Scalar poSat = saturatedTable->getPressureColumn()[0];
-            Scalar po = poSat * 2;
-            Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[0];
+            // find the master table which will be used as a template to extend the
+            // current line. We define master table as the first table which has values
+            // for undersaturated oil...
+            int masterTableIdx = xIdx + 1;
+            for (; masterTableIdx < pvtoTable.getOuterTable()->numRows(); ++masterTableIdx) {
+                if (pvtoTable.getInnerTable(masterTableIdx)->numRows() > 1)
+                    break;
+            }
 
-            Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
-            Scalar rhoo = referenceDensity_[regionIdx][oilPhaseIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
+            if (masterTableIdx >= pvtoTable.getOuterTable()->numRows())
+                OPM_THROW(std::runtime_error,
+                          "PVTO tables are invalid: The last table must exhibit at least one "
+                          "entry for undersaturated oil!");
 
-            Scalar Bo = referenceDensity(oilPhaseIdx, regionIdx)/rhoo;
-            oilFormationVolumeFactor.appendSamplePoint(xIdx, po, Bo);
+            // extend the current table using the master table. this is done by assuming
+            // that the current table exhibits the same ratios of the oil formation
+            // factors and viscosities for identical pressure rations as in the master
+            // table.
+            const auto masterTable = pvtoTable.getInnerTable(masterTableIdx);
+            const auto curTable = pvtoTable.getInnerTable(xIdx);
+            for (int newRowIdx = 1; newRowIdx < masterTable->numRows(); ++ newRowIdx) {
+                Scalar alphaPo =
+                    masterTable->getPressureColumn()[newRowIdx]
+                    / masterTable->getPressureColumn()[0];
 
-            Scalar muo = saturatedTable->getOilViscosityColumn()[0];
-            oilViscosity.appendSamplePoint(xIdx, po, muo);
+                Scalar alphaBo =
+                    masterTable->getOilFormationFactorColumn()[newRowIdx]
+                    / masterTable->getOilFormationFactorColumn()[0];
+
+                Scalar alphaMuo =
+                    masterTable->getOilViscosityColumn()[newRowIdx]
+                    / masterTable->getOilViscosityColumn()[0];
+
+                Scalar newPo = curTable->getPressureColumn()[0]*alphaPo;
+                Scalar newBo = curTable->getOilFormationFactorColumn()[0]*alphaBo;
+                Scalar newMuo = curTable->getOilViscosityColumn()[0]*alphaMuo;
+
+                oilFormationVolumeFactor.appendSamplePoint(xIdx, newPo, newBo);
+                oilViscosity.appendSamplePoint(xIdx, newPo, newMuo);
+            }
         }
     }
 
