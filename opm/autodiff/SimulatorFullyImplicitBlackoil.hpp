@@ -41,9 +41,6 @@ namespace Opm
     class EclipseWriter;
     struct SimulatorReport;
 
-    class Schedule;
-    typedef std::shared_ptr<const Schedule> ScheduleConstPtr;
-
     /// Class collecting all necessary components for a two-phase simulation.
     template<class T>
     class SimulatorFullyImplicitBlackoil
