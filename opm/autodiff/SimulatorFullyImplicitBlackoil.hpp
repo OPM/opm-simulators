@@ -67,13 +67,14 @@ namespace Opm
         ///     use_segregation_split (false)  solve for gravity segregation (if false,
         ///                                    segregation is ignored).
         ///
-        /// \param[in] schedule      Simulation schedule
         /// \param[in] grid          grid data structure
+        /// \param[in] geo           derived geological properties
         /// \param[in] props         fluid and rock properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
-        /// \param[in] wells         Collection of wells.  Null if no wells.
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
+        /// \param[in] disgas        true for dissolved gas option
+        /// \param[in] vapoil        true for vaporized oil option
         /// \param[in] eclipse_state
         /// \param[in] output_writer
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
