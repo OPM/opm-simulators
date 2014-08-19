@@ -611,6 +611,23 @@ namespace Opm
 
     /// Bubble point curve for Rs as function of oil pressure.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    V BlackoilPropsAd::rsSat(const V& po,
+                             const V& so,
+                             const Cells& cells) const
+    {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(so);
+        static_cast<void>(cells);
+
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
     ADB BlackoilPropsAd::rsSat(const ADB& po,
@@ -618,6 +635,23 @@ namespace Opm
     {
         // Suppress warning about "unused parameters".
         static_cast<void>(po);
+        static_cast<void>(cells);
+
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADB BlackoilPropsAd::rsSat(const ADB& po,
+                               const ADB& so,
+                               const Cells& cells) const
+    {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(so);
         static_cast<void>(cells);
 
         OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
@@ -641,6 +675,23 @@ namespace Opm
 
     /// Bubble point curve for Rs as function of oil pressure.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    V BlackoilPropsAd::rvSat(const V& po,
+                             const V& so,
+                             const Cells& cells) const
+    {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(so);
+        static_cast<void>(cells);
+
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
     ADB BlackoilPropsAd::rvSat(const ADB& po,
@@ -648,6 +699,23 @@ namespace Opm
     {
         // Suppress warning about "unused parameters".
         static_cast<void>(po);
+        static_cast<void>(cells);
+
+        OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADB BlackoilPropsAd::rvSat(const ADB& po,
+                               const ADB& so,
+                               const Cells& cells) const
+    {
+        // Suppress warning about "unused parameters".
+        static_cast<void>(po);
+        static_cast<void>(so);
         static_cast<void>(cells);
 
         OPM_THROW(std::runtime_error, "Method rsMax() not implemented.");
@@ -828,7 +896,12 @@ namespace Opm
     {
         OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support hysteresis.");
     }
-
+    
+    /// Update for max oil saturation.
+    void BlackoilPropsAd::updateSatOilMax(const std::vector<double>& saturation)
+    {
+        OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support this functionality.");
+    }
 
 } // namespace Opm
 

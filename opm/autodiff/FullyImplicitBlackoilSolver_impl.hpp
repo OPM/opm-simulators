@@ -480,12 +480,12 @@ namespace {
 
             if (active_[ Gas]) {
                 // Define Sg Rs and Rv in terms of xvar.
-                const ADB& rsSat = fluidRsSat(state.pressure, cells_);
-                const ADB& rvSat = fluidRvSat(state.pressure, cells_);
                 const ADB& xvar = vars[ nextvar++ ];
                 const ADB& sg = isSg*xvar + isRv* so;
                 state.saturation[ pu.phase_pos[ Gas ] ] = sg;
                 so = so - sg;
+                const ADB rsSat = fluidRsSat(state.pressure, so, cells_);
+                const ADB rvSat = fluidRvSat(state.pressure, so, cells_);
 
                 if (has_disgas_) {
                     state.rs = (1-isRs) * rsSat + isRs*xvar;
@@ -587,18 +587,20 @@ namespace {
             const ADB bw = fluid_.bWat(perf_press, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw.value();
         }
+        assert(active_[Oil]);
+        const ADB perf_so =  subset(state.saturation[pu.phase_pos[Oil]], well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = subset(state.rs, well_cells);
             const ADB bo = fluid_.bOil(perf_press, perf_rs, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo.value();
-            const V rssat = fluidRsSat(perf_press.value(), well_cells);
+            const V rssat = fluidRsSat(perf_press.value(), perf_so.value(), well_cells);
             rssat_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
             const ADB bg = fluid_.bGas(perf_press, perf_rv, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg.value();
-            const V rvsat = fluidRvSat(perf_press.value(), well_cells);
+            const V rvsat = fluidRvSat(perf_press.value(), perf_so.value(), well_cells);
             rvsat_perf.assign(rvsat.data(), rvsat.data() + nperf);
         }
         // b is row major, so can just copy data.
@@ -643,6 +645,15 @@ namespace {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
         SolutionState state = variableState(x, xw);
+
+        // DISKVAL(state.pressure);
+        // DISKVAL(state.saturation[0]);
+        // DISKVAL(state.saturation[1]);
+        // DISKVAL(state.saturation[2]);
+        // DISKVAL(state.rs);
+        // DISKVAL(state.rv);
+        // DISKVAL(state.qs);
+        // DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
 
@@ -1303,8 +1314,8 @@ namespace {
 
 
         // phase translation sg <-> rs
-        const V rsSat0 = fluidRsSat(p_old, cells_);
-        const V rsSat = fluidRsSat(p, cells_);
+        const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rsSat = fluidRsSat(p, so, cells_);
 
         std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
 
@@ -1328,8 +1339,8 @@ namespace {
         }
 
         // phase transitions so <-> rv
-        const V rvSat0 = fluidRvSat(p_old, cells_);
-        const V rvSat = fluidRvSat(p, cells_);
+        const V rvSat0 = fluidRvSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rvSat = fluidRvSat(p, so, cells_);
 
         if (has_vapoil_) {
             // The obvious case
@@ -1373,7 +1384,7 @@ namespace {
         for (int c = 0; c < nc; ++c) {
             if (ixw[c]) {
                 so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-so[c]);
+                sg[c] = sg[c] / (1-sw[c]);
                 sw[c] = 0;
             }
         }
@@ -1591,8 +1602,10 @@ namespace {
         for (; quantityIt != endQuantityIt; ++quantityIt) {
             const double quantityResid = (*quantityIt).value().matrix().norm();
             if (!std::isfinite(quantityResid)) {
+                const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
                 OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
+                          "Encountered a non-finite residual in material balance equation "
+                          << trouble_phase);
             }
             globalNorm = std::max(globalNorm, quantityResid);
         }
@@ -1881,9 +1894,10 @@ namespace {
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const V&                p,
+                                            const V&                satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, cells);
+        return fluid_.rsSat(p, satOil, cells);
     }
 
 
@@ -1893,17 +1907,19 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const ADB&              p,
+                                            const ADB&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, cells);
+        return fluid_.rsSat(p, satOil, cells);
     }
 
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const V&                p,
+                                            const V&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, cells);
+        return fluid_.rvSat(p, satOil, cells);
     }
 
 
@@ -1913,9 +1929,10 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const ADB&              p,
+                                            const ADB&              satOil,
                                             const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, cells);
+        return fluid_.rvSat(p, satOil, cells);
     }
 
 

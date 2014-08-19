@@ -37,6 +37,8 @@ namespace Opm
     class SimulatorTimer;
     class BlackoilState;
     class WellStateFullyImplicitBlackoil;
+    class EclipseState;
+    class EclipseWriter;
     struct SimulatorReport;
 
     class Schedule;
@@ -72,17 +74,19 @@ namespace Opm
         /// \param[in] wells         Collection of wells.  Null if no wells.
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
+        /// \param[in] eclipse_state
+        /// \param[in] output_writer
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                       ScheduleConstPtr schedule,
                                        const Grid& grid,
                                        const DerivedGeology& geo,
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
-                                       const Wells* wells,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const double* gravity,
                                        const bool disgas,
-                                       const bool vapoil );
+                                       const bool vapoil,
+                                       std::shared_ptr<EclipseState> eclipse_state,
+                                       EclipseWriter& output_writer);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -92,8 +96,7 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state,
-                            WellStateFullyImplicitBlackoil& well_state);
+                            BlackoilState& state);
 
     private:
         class Impl;

@@ -256,9 +256,27 @@ namespace Opm
 
         /// Solution gas/oil ratio and its derivatives at saturated condition as a function of p.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        V rsSat(const V& po,
+                const V& so,
+                const Cells& cells) const;
+
+        /// Solution gas/oil ratio and its derivatives at saturated condition as a function of p.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         ADB rsSat(const ADB& po,
+                  const Cells& cells) const;
+
+        /// Solution gas/oil ratio and its derivatives at saturated condition as a function of p.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        ADB rsSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const;
 
         // ------ Rv condensation curve ------
@@ -272,9 +290,27 @@ namespace Opm
 
         /// Vapor oil/gas ratio and its derivatives at saturated conditions as a function of p.
         /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        V rvSat(const V& po,
+                const V& so,
+                const Cells& cells) const;
+
+        /// Vapor oil/gas ratio and its derivatives at saturated conditions as a function of p.
+        /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         ADB rvSat(const ADB& po,
+                  const Cells& cells) const;
+
+        /// Vapor oil/gas ratio and its derivatives at saturated conditions as a function of p.
+        /// \param[in]  po     Array of n oil pressure values.
+        /// \param[in]  so     Array of n oil saturation values.
+        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+        /// \return            Array of n bubble point values for Rs.
+        ADB rvSat(const ADB& po,
+                  const ADB& so,
                   const Cells& cells) const;
 
         // ------ Relative permeability ------
@@ -320,6 +356,11 @@ namespace Opm
         /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
         void updateSatHyst(const std::vector<double>& saturation,
                            const std::vector<int>& cells);
+
+
+        /// Update for max oil saturation.
+        void updateSatOilMax(const std::vector<double>& saturation);
+
     private:
         const BlackoilPropertiesInterface& props_;
         PhaseUsage pu_;

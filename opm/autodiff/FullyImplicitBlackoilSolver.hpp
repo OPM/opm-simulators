@@ -254,18 +254,22 @@ namespace Opm {
 
         V
         fluidRsSat(const V&                p,
+                   const V&                so,
                    const std::vector<int>& cells) const;
 
         ADB
         fluidRsSat(const ADB&              p,
+                   const ADB&              so,
                    const std::vector<int>& cells) const;
 
         V
         fluidRvSat(const V&                p,
+                   const V&                so,
                    const std::vector<int>& cells) const;
 
         ADB
         fluidRvSat(const ADB&              p,
+                   const ADB&              so,
                    const std::vector<int>& cells) const;
 
         ADB

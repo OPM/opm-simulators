@@ -48,6 +48,7 @@
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/simulator/initState.hpp>
+#include <opm/core/simulator/initStateEquil.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -130,8 +131,9 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr newParser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = newParser->parseFile( deck_filename );
-    Opm::EclipseStateConstPtr eclipseState(new EclipseState(deck));
+    bool strict_parsing = param.getDefault("strict_parsing", true);
+    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename, strict_parsing);
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // Grid init
     grid.reset(new Dune::CpGrid());
@@ -184,6 +186,8 @@ try
                     / state.surfacevol()[c*np + pu.phase_pos[Oil]];
             }
         }
+    } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
+        OPM_THROW(std::logic_error, "sim_fibo_ad_cp does not support EQUIL initialization.");
     } else {
         initBlackoilStateFromDeck(grid->numCells(), &(grid->globalCell())[0],
                                   grid->numFaces(), AutoDiffGrid::faceCells(*grid),
@@ -205,9 +209,9 @@ try
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
-    std::ofstream outStream;
     std::string output_dir;
     if (output) {
+        // Create output directory if needed.
         output_dir =
             param.getDefault("output_dir", std::string("output"));
         boost::filesystem::path fpath(output_dir);
@@ -217,19 +221,10 @@ try
         catch (...) {
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
-        std::string filename = output_dir + "/timing.param";
-        outStream.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
-        // open file to clean it. The file is appended to in SimulatorTwophase
-        filename = output_dir + "/step_timing.param";
-        std::fstream step_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-        step_os.close();
+        // Write simulation parameters.
         param.writeParam(output_dir + "/simulation.param");
     }
 
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << std::flush;
-
-    WellStateFullyImplicitBlackoil well_state;
     Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
     SimulatorTimer simtimer;
 
@@ -238,64 +233,28 @@ try
 
     Opm::DerivedGeology geology(*grid, *new_props, eclipseState, grav);
 
-    SimulatorReport fullReport;
-    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
-        // Report on start of a report step.
-        std::cout << "\n"
-                  << "---------------------------------------------------------------\n"
-                  << "--------------    Starting report step " << reportStepIdx << "    --------------\n"
-                  << "---------------------------------------------------------------\n"
-                  << "\n";
+    SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
+                                                           *grid,
+                                                           geology,
+                                                           *new_props,
+                                                           rock_comp->isActive() ? rock_comp.get() : 0,
+                                                           *fis_solver,
+                                                           grav,
+                                                           deck->hasKeyword("DISGAS"),
+                                                           deck->hasKeyword("VAPOIL"),
+                                                           eclipseState,
+                                                           outputWriter);
 
-        // Create new wells, well_state
-        WellsManager wells(eclipseState, reportStepIdx, Opm::UgGridHelpers::numCells(*grid), 
-                           Opm::UgGridHelpers::globalCell(*grid),
-                           Opm::UgGridHelpers::cartDims(*grid),
-                           Opm::UgGridHelpers::dimensions(*grid),
-                           Opm::UgGridHelpers::beginCellCentroids(*grid),
-                           Opm::UgGridHelpers::cell2Faces(*grid),
-                           Opm::UgGridHelpers::beginFaceCentroids(*grid),
-                           props->permeability());
+    std::cout << "\n\n================ Starting main simulation loop ===============\n"
+              << std::flush;
 
-        if (reportStepIdx == 0) {
-            // @@@ HACK: we should really make a new well state and
-            // properly transfer old well state to it every epoch,
-            // since number of wells may change etc.
-            well_state.init(wells.c_wells(), state);
-        }
-
-        simtimer.setCurrentStepNum(reportStepIdx);
-
-        if (reportStepIdx == 0) {
-            outputWriter.writeInit(simtimer);
-            outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
-        }
-
-        SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
-                                                               eclipseState->getSchedule(),
-                                                               *grid,
-                                                               geology,
-                                                               *new_props,
-                                                               rock_comp->isActive() ? rock_comp.get() : 0,
-                                                               wells.c_wells(),
-                                                               *fis_solver,
-                                                               grav,
-                                                               deck->hasKeyword("DISGAS"),
-                                                               deck->hasKeyword("VAPOIL") );
-
-        SimulatorReport episodeReport = simulator.run(simtimer, state, well_state);
-
-        ++simtimer;
-
-        outputWriter.writeTimeStep(simtimer, state, well_state.basicWellState());
-        fullReport += episodeReport;
-    }
+    SimulatorReport fullReport = simulator.run(simtimer, state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
 
     if (output) {
-        std::string filename = output_dir + "/walltime.param";
+        std::string filename = output_dir + "/walltime.txt";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
         fullReport.reportParam(tot_os);
         warnIfUnusedParams(param);
