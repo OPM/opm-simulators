@@ -968,11 +968,13 @@ namespace {
                 switch (ctrl_type) {
                 case BHP:
                     broken = bhp.value()[well] > target;
+                    break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
                     broken = rateToCompare(well_phase_flow_rate,
                                            well, num_phases, distr) > target;
+                    break;
                 }
             }
             break;
@@ -991,6 +993,7 @@ namespace {
                     // (as for injection).
                     broken = rateToCompare(well_phase_flow_rate,
                                            well, num_phases, distr) < target;
+                    break;
                 }
             }
             break;
