@@ -132,6 +132,7 @@ class EclipseWriter : public BaseOutputWriter
 
     typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
     typedef BaseOutputWriter::VectorBuffer VectorBuffer;
+    typedef BaseOutputWriter::TensorBuffer TensorBuffer;
 
     friend class EclipseWriterHelper<TypeTag, GridManager>;
 
@@ -202,6 +203,15 @@ public:
                   "The EclipseWriter can only write element based quantities!");
     }
 
+    /*
+     * \brief Add a vertex-centered tensor field to the output.
+     */
+    void attachTensorVertexData(TensorBuffer &buf, std::string name)
+    {
+        OPM_THROW(std::logic_error,
+                  "The EclipseWriter can only write element based quantities!");
+    }
+
     /*!
      * \brief Add a scalar quantity to the output.
      *
@@ -221,6 +231,15 @@ public:
      * std::logic_error exception
      */
     void attachVectorElementData(VectorBuffer &buf, std::string name)
+    {
+        OPM_THROW(std::logic_error,
+                  "Currently, the EclipseWriter can only write scalar quantities!");
+    }
+
+    /*
+     * \brief Add a element-centered tensor field to the output.
+     */
+    void attachTensorElementData(TensorBuffer &buf, std::string name)
     {
         OPM_THROW(std::logic_error,
                   "Currently, the EclipseWriter can only write scalar quantities!");
