@@ -121,8 +121,10 @@ namespace Opm
                         // K(i,j) = (*tensor[kmap[kix]])[glob];
                         permeability_[off + (i + dim*j)] = (*tensor[kmap[kix]])[glob];
                     }
+
                     // K(i,i) = std::max(K(i,i), perm_threshold);
-                    permeability_[off + 3*i + i] = std::max(permeability_[off + 3*i + i], perm_threshold);
+                    double& kii = permeability_[off + i*(dim + 1)];
+                    kii = std::max(kii, perm_threshold);
                 }
 
                 permfield_valid_[c] = std::vector<unsigned char>::value_type(1);
