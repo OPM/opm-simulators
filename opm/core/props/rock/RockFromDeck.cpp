@@ -126,7 +126,7 @@ namespace Opm
                 for (int i = 0; i < dim; ++i) {
                     for (int j = 0; j < dim; ++j, ++kix) {
                         // K(i,j) = (*tensor[kmap[kix]])[glob];
-                        permeability_[off + kix] = (*tensor[kmap[kix]])[glob];
+                        permeability_[off + (i + dim*j)] = (*tensor[kmap[kix]])[glob];
                     }
                     // K(i,i) = std::max(K(i,i), perm_threshold);
                     permeability_[off + 3*i + i] = std::max(permeability_[off + 3*i + i], perm_threshold);
