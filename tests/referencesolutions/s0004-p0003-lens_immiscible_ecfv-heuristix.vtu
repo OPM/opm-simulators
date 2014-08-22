@@ -2,8 +2,8 @@
 <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">
   <UnstructuredGrid>
     <Piece NumberOfCells="384" NumberOfPoints="425">
-      <CellData Scalars="pressure_w">
-        <DataArray type="Float32" Name="pressure_w" NumberOfComponents="1" format="ascii">
+      <CellData Scalars="pressure_wetting">
+        <DataArray type="Float32" Name="pressure_wetting" NumberOfComponents="1" format="ascii">
           123225 123003 122776 122541 122295 122030 121731 121346 121011 120911 120793 120670
           120544 120419 120292 120165 120037 119909 119781 119652 119524 119395 119265 119136
           121689 121480 121264 121036 120792 120524 120214 119837 119595 119536 119450 119350
@@ -37,7 +37,7 @@
           102623 102548 102475 102401 102327 102251 102175 102099 102021 101943 101864 101784
           101703 101620 101536 101450 101362 101272 101181 101089 100995 100901 100805 100709
         </DataArray>
-        <DataArray type="Float32" Name="pressure_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="pressure_nonwetting" NumberOfComponents="1" format="ascii">
           123225 123003 122776 122541 122295 122030 121731 121346 121011 120911 120793 120670
           120544 120419 120292 120165 120037 119909 119781 119652 119524 119395 119265 119136
           121689 121480 121264 121036 120792 120524 120214 119837 119595 119536 119450 119350
@@ -71,7 +71,7 @@
           102734 102575 102475 102401 102327 102251 102175 102099 102021 101943 101864 101784
           101703 101620 101536 101450 101362 101272 101181 101089 100995 100901 100805 100709
         </DataArray>
-        <DataArray type="Float32" Name="density_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="density_wetting" NumberOfComponents="1" format="ascii">
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
@@ -105,7 +105,7 @@
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
         </DataArray>
-        <DataArray type="Float32" Name="density_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="density_nonwetting" NumberOfComponents="1" format="ascii">
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
@@ -139,7 +139,7 @@
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
         </DataArray>
-        <DataArray type="Float32" Name="saturation_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="saturation_wetting" NumberOfComponents="1" format="ascii">
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
@@ -173,7 +173,7 @@
           0.988452 0.998613 0.999983 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
         </DataArray>
-        <DataArray type="Float32" Name="saturation_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="saturation_nonwetting" NumberOfComponents="1" format="ascii">
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
@@ -207,7 +207,7 @@
           0.0115476 0.00138732 1.6576e-05 2.63306e-09 1.11022e-16 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
         </DataArray>
-        <DataArray type="Float32" Name="relativePerm_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="relativePerm_wetting" NumberOfComponents="1" format="ascii">
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
@@ -241,7 +241,7 @@
           0.923966 0.985779 0.999575 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
         </DataArray>
-        <DataArray type="Float32" Name="relativePerm_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="relativePerm_nonwetting" NumberOfComponents="1" format="ascii">
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0

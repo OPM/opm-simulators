@@ -2,8 +2,8 @@
 <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">
   <UnstructuredGrid>
     <Piece NumberOfCells="384" NumberOfPoints="425">
-      <PointData Scalars="pressure_w">
-        <DataArray type="Float32" Name="pressure_w" NumberOfComponents="1" format="ascii">
+      <PointData Scalars="pressure_wetting">
+        <DataArray type="Float32" Name="pressure_wetting" NumberOfComponents="1" format="ascii">
           143991 143763 142764 142536 143538 142310 143315 142088 143095 141868 142878 141651
           142664 141436 142453 141225 142245 141017 142040 140812 141839 140611 141641 140413
           141446 140218 141254 140026 141066 139838 140880 139652 140697 139469 140516 139289
@@ -41,7 +41,7 @@
           121885 121530 121444 121324 121200 121076 120951 120825 120699 120573 120446 120320
           120193 120066 119938 119811 119684
         </DataArray>
-        <DataArray type="Float32" Name="pressure_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="pressure_nonwetting" NumberOfComponents="1" format="ascii">
           143991 143763 142764 142536 143538 142310 143315 142088 143095 141868 142878 141651
           142664 141436 142453 141225 142245 141017 142040 140812 141839 140611 141641 140413
           141446 140218 141254 140026 141066 139838 140880 139652 140697 139469 140516 139289
@@ -79,7 +79,7 @@
           121885 121530 121444 121324 121200 121076 120951 120825 120699 120573 120446 120320
           120193 120066 119938 119811 119684
         </DataArray>
-        <DataArray type="Float32" Name="density_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="density_wetting" NumberOfComponents="1" format="ascii">
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
@@ -117,7 +117,7 @@
           1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000
           1000 1000 1000 1000 1000
         </DataArray>
-        <DataArray type="Float32" Name="density_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="density_nonwetting" NumberOfComponents="1" format="ascii">
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
@@ -155,7 +155,7 @@
           1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460 1460
           1460 1460 1460 1460 1460
         </DataArray>
-        <DataArray type="Float32" Name="saturation_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="saturation_wetting" NumberOfComponents="1" format="ascii">
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
@@ -193,7 +193,7 @@
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1
         </DataArray>
-        <DataArray type="Float32" Name="saturation_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="saturation_nonwetting" NumberOfComponents="1" format="ascii">
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
@@ -231,7 +231,7 @@
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0
         </DataArray>
-        <DataArray type="Float32" Name="relativePerm_w" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="relativePerm_wetting" NumberOfComponents="1" format="ascii">
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1 1 1 1 1 1 1 1
@@ -269,7 +269,7 @@
           1 1 1 1 1 1 1 1 1 1 1 1
           1 1 1 1 1
         </DataArray>
-        <DataArray type="Float32" Name="relativePerm_n" NumberOfComponents="1" format="ascii">
+        <DataArray type="Float32" Name="relativePerm_nonwetting" NumberOfComponents="1" format="ascii">
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0
           0 0 0 0 0 0 0 0 0 0 0 0

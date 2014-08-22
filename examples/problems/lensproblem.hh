@@ -142,7 +142,8 @@ SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 
-//SET_BOOL_PROP(LensBaseProblem, EnableConstraints, true);
+// By default, include the intrinsic permeability tensor to the VTK output files
+SET_BOOL_PROP(LensBaseProblem, VtkWriteIntrinsicPermeabilities, true);
 }} // namespace Opm, Properties
 
 namespace Ewoms {
