@@ -71,16 +71,6 @@ include (UseOptimization)
 # dependencies, in case they alter the list of warnings
 include (UseWarnings)
 
-# parallel computing must be explicitly enabled
-option (USE_MPI "Use Message Passing Interface for parallel computing" OFF)
-if (NOT USE_MPI)
-	set (CMAKE_DISABLE_FIND_PACKAGE_MPI TRUE)
-endif (NOT USE_MPI)
-
-# parallel programming
-include (UseOpenMP)
-find_openmp (${project})
-
 # callback hook to setup additional dependencies
 if (COMMAND prereqs_hook)
 	prereqs_hook ()

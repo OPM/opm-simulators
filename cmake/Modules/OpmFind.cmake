@@ -131,7 +131,7 @@ macro (find_and_append_package_to prefix name)
   endif ((NOT (_${name}_exempted EQUAL -1)) AND (DEFINED ${name}_DIR))
 
   # if we're told not to look for the package, pretend it was never found
-  if (CMAKE_DISABLE_FIND_PACKAGE_${name})
+  if (DEFINED "USE_${name}" AND NOT "USE_${name}")
 	set (${name}_FOUND FALSE)
 	set (${NAME}_FOUND FALSE)
   else ()
