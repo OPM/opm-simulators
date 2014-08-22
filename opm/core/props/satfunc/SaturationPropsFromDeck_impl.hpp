@@ -50,10 +50,11 @@ namespace Opm
     /// Initialize from deck.
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
+                                                   Opm::EclipseStateConstPtr eclState,
                                                    const UnstructuredGrid& grid,
                                                    const int samples)
     {
-        this->init(deck, grid.number_of_cells,
+        this->init(deck, eclState, grid.number_of_cells,
                    grid.global_cell, grid.cell_centroids,
                    grid.dimensions, samples);
     }
@@ -62,6 +63,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
+                                                   Opm::EclipseStateConstPtr eclState,
                                                    int number_of_cells,
                                                    const int* global_cell,
                                                    const T& begin_cell_centroids,
