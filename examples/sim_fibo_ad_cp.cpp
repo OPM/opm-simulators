@@ -137,15 +137,7 @@ try
 
     // Grid init
     grid.reset(new Dune::CpGrid());
-    {
-        grdecl g = {};
-        GridManager::createGrdecl(deck, g);
-
-        grid->processEclipseFormat(g, 2e-12, false);
-
-        std::free(const_cast<double*>(g.mapaxes));
-    }
-
+    grid->processEclipseFormat(deck, false, false, false);
 
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::EclipseWriter outputWriter(param, eclipseState, pu,
