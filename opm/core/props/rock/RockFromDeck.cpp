@@ -107,13 +107,6 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Invalid permeability field.");
         }
 
-        // Assign permeability values only if such values are
-        // given in the input deck represented by 'deck'.  In
-        // other words: Don't set any (arbitrary) default values.
-        // It is infinitely better to experience a reproducible
-        // crash than subtle errors resulting from a (poorly
-        // chosen) default value...
-        //
         if (tensor.size() > 1) {
             const int* gc = global_cell;
             int off = 0;
