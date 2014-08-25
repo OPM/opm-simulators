@@ -417,14 +417,18 @@ namespace {
 
         if (active_[ Gas ]){
             for (int c = 0; c < nc ; c++ ) {
-                if ( primalVariable_[c] == PrimalVariables::RS ) {
+                switch (primalVariable_[c]) {
+                case PrimalVariables::RS:
                     isRs[c] = 1;
-                }
-                else if ( primalVariable_[c] == PrimalVariables::RV ) {
+                    break;
+
+                case PrimalVariables::RV:
                     isRv[c] = 1;
-                }
-                else {
+                    break;
+
+                default:
                     isSg[c] = 1;
+                    break;
                 }
             }
 
@@ -955,37 +959,50 @@ namespace {
             const WellControlType ctrl_type = well_controls_iget_type(wc, ctrl_index);
             const double target = well_controls_iget_target(wc, ctrl_index);
             const double* distr = well_controls_iget_distr(wc, ctrl_index);
+
+            bool broken = false;
+
             switch (well_type) {
             case INJECTOR:
+            {
                 switch (ctrl_type) {
                 case BHP:
-                    return bhp.value()[well] > target;
+                    broken = bhp.value()[well] > target;
+                    break;
+
+                case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
-                    return rateToCompare(well_phase_flow_rate, well, num_phases, distr) > target;
-                case RESERVOIR_RATE:
-                    // Intentional fall-through.
-                default:
-                    OPM_THROW(std::logic_error, "Can only handle BHP and SURFACE_RATE controls.");
+                    broken = rateToCompare(well_phase_flow_rate,
+                                           well, num_phases, distr) > target;
+                    break;
                 }
-                break;
+            }
+            break;
+
             case PRODUCER:
+            {
                 switch (ctrl_type) {
                 case BHP:
-                    return bhp.value()[well] < target;
+                    broken = bhp.value()[well] < target;
+                    break;
+
+                case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
                     // Note that the rates compared below are negative,
                     // so breaking the constraints means: too high flow rate
                     // (as for injection).
-                    return rateToCompare(well_phase_flow_rate, well, num_phases, distr) < target;
-                case RESERVOIR_RATE:
-                    // Intentional fall-through.
-                default:
-                    OPM_THROW(std::logic_error, "Can only handle BHP and SURFACE_RATE controls.");
+                    broken = rateToCompare(well_phase_flow_rate,
+                                           well, num_phases, distr) < target;
+                    break;
                 }
-                break;
+            }
+            break;
+
             default:
                 OPM_THROW(std::logic_error, "Can only handle INJECTOR and PRODUCER wells.");
             }
+
+            return broken;
         }
     } // anonymous namespace
 
@@ -1022,14 +1039,6 @@ namespace {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (well_controls_iget_type(wc, ctrl_index) == RESERVOIR_RATE) {
-                    // We cannot handle this yet.
-#ifdef OPM_VERBOSE
-                    std::cout << "Warning: a RESERVOIR_RATE well control exists for well "
-                              << wells_.name[w] << ", but will never be checked." << std::endl;
-#endif
-                    continue;
-                }
                 if (constraintBroken(bhp, well_phase_flow_rate, w, np, wells_.type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
@@ -1051,6 +1060,18 @@ namespace {
                     xw.bhp()[w] = target;
                     bhp_changed = true;
                     break;
+
+                case RESERVOIR_RATE:
+                    // No direct change to any observable quantity at
+                    // surface condition.  In this case, use existing
+                    // flow rates as initial conditions as reservoir
+                    // rate acts only in aggregate.
+                    //
+                    // Just record the fact that we need to recompute
+                    // the 'well_phase_flow_rate'.
+                    rates_changed = true;
+                    break;
+
                 case SURFACE_RATE:
                     for (int phase = 0; phase < np; ++phase) {
                         if (distr[phase] > 0.0) {
@@ -1059,9 +1080,6 @@ namespace {
                     }
                     rates_changed = true;
                     break;
-                default:
-                    OPM_THROW(std::logic_error, "Programmer error: should not have switched "
-                                                "to anything but BHP or SURFACE_RATE.");
                 }
             }
         }
@@ -1089,13 +1107,11 @@ namespace {
                                                           const WellStateFullyImplicitBlackoil& xw,
                                                           const V& aliveWells)
     {
-        // Handling BHP and SURFACE_RATE wells.
-
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
 
-        V bhp_targets(nw);
-        V rate_targets(nw);
+        V bhp_targets  = V::Zero(nw);
+        V rate_targets = V::Zero(nw);
         M rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
@@ -1103,20 +1119,33 @@ namespace {
             // the current control set in the Wells struct, which
             // is instead treated as a default.
             const int current = xw.currentControls()[w];
-            if (well_controls_iget_type(wc, current) == BHP) {
-                bhp_targets[w] = well_controls_iget_target(wc, current);
-                rate_targets[w] = -1e100;
-            } else if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
-                bhp_targets[w] = -1e100;
-                rate_targets[w] = well_controls_iget_target(wc, current);
-                {
-                    const double * distr = well_controls_iget_distr(wc, current);
-                    for (int phase = 0; phase < np; ++phase) {
-                        rate_distr.insert(w, phase*nw + w) = distr[phase];
-                    }
+
+            switch (well_controls_iget_type(wc, current)) {
+            case BHP:
+            {
+                bhp_targets (w) = well_controls_iget_target(wc, current);
+                rate_targets(w) = -1e100;
+            }
+            break;
+
+            case RESERVOIR_RATE: // Intentional fall-through
+            case SURFACE_RATE:
+            {
+                // RESERVOIR and SURFACE rates look the same, from a
+                // high-level point of view, in the system of
+                // simultaneous linear equations.
+
+                const double* const distr =
+                    well_controls_iget_distr(wc, current);
+
+                for (int p = 0; p < np; ++p) {
+                    rate_distr.insert(w, p*nw + w) = distr[p];
                 }
-            } else {
-                OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
+
+                bhp_targets (w) = -1.0e100;
+                rate_targets(w) = well_controls_iget_target(wc, current);
+            }
+            break;
             }
         }
         const ADB bhp_residual = state.bhp - bhp_targets;
@@ -1181,15 +1210,19 @@ namespace {
         V isRv = V::Zero(nc,1);
         V isSg = V::Zero(nc,1);
         if (active_[Gas]) {
-            for (int c = 0; c < nc ; c++ ) {
-                if ( primalVariable_[c] == PrimalVariables::RS ) {
+            for (int c = 0; c < nc; ++c) {
+                switch (primalVariable_[c]) {
+                case PrimalVariables::RS:
                     isRs[c] = 1;
-                }
-                else if ( primalVariable_[c] == PrimalVariables::RV ) {
+                    break;
+
+                case PrimalVariables::RV:
                     isRv[c] = 1;
-                }
-                else {
+                    break;
+
+                default:
                     isSg[c] = 1;
+                    break;
                 }
             }
         }

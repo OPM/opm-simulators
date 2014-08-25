@@ -33,7 +33,6 @@ namespace Opm
     class BlackoilPropsAdInterface;
     class RockCompressibility;
     class DerivedGeology;
-    class WellsManager;
     class NewtonIterationBlackoilInterface;
     class SimulatorTimer;
     class BlackoilState;
@@ -66,11 +65,13 @@ namespace Opm
         ///                                    segregation is ignored).
         ///
         /// \param[in] grid          grid data structure
+        /// \param[in] geo           derived geological properties
         /// \param[in] props         fluid and rock properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
-        /// \param[in] well_manager  well manager, may manage no (null) wells
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
+        /// \param[in] disgas        true for dissolved gas option
+        /// \param[in] vapoil        true for vaporized oil option
         /// \param[in] eclipse_state
         /// \param[in] output_writer
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,

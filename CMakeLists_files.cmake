@@ -46,6 +46,7 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
+	tests/test_rateconverter.cpp
 	tests/test_span.cpp
 	tests/test_syntax.cpp
 	tests/test_scalar_mult.cpp
@@ -104,6 +105,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
+	opm/autodiff/RateConverter.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp

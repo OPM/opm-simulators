@@ -217,9 +217,6 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << std::flush;
-
     Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
     SimulatorTimer simtimer;
 

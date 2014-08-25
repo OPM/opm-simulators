@@ -26,8 +26,11 @@
 #include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/RateConverter.hpp>
+
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
@@ -38,22 +41,31 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
-#include <opm/core/wells/WellsManager.hpp>
-
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/core/grid/ColumnExtract.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <cassert>
+#include <functional>
 #include <memory>
 #include <numeric>
 #include <fstream>
 #include <iostream>
-
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace Opm
 {
@@ -78,15 +90,17 @@ namespace Opm
 
     private:
         // Data.
+        typedef RateConverter::
+        SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
+                                   std::vector<int> > RateConverterType;
+
         const parameter::ParameterGroup param_;
+
         // Parameters for output.
         bool output_;
         bool output_vtk_;
         std::string output_dir_;
         int output_interval_;
-        // Parameters for well control
-        bool check_well_controls_;
-        int max_well_control_iterations_;
         // Observed objects.
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
@@ -103,6 +117,13 @@ namespace Opm
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
         EclipseWriter& output_writer_;
+        RateConverterType rateConverter_;
+
+        void
+        computeRESV(const std::size_t               step,
+                    const Wells*                    wells,
+                    const BlackoilState&            x,
+                    WellStateFullyImplicitBlackoil& xw);
     };
 
 
@@ -219,7 +240,8 @@ namespace Opm
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           eclipse_state_(eclipse_state),
-          output_writer_(output_writer)
+          output_writer_(output_writer),
+          rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0))
     {
         // For output.
         output_ = param.getDefault("output", true);
@@ -236,10 +258,6 @@ namespace Opm
             }
             output_interval_ = param.getDefault("output_interval", 1);
         }
-
-        // Well control related init.
-        check_well_controls_ = param.getDefault("check_well_controls", false);
-        max_well_control_iterations_ = param.getDefault("max_well_control_iterations", 10);
 
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
@@ -308,6 +326,9 @@ namespace Opm
             props_.updateSatOilMax(state.saturation());
             props_.updateSatHyst(state.saturation(), allcells_);
 
+            // Compute reservoir volumes for RESV controls.
+            computeRESV(timer.currentStepNum(), wells, state, well_state);
+
             // Run a single step of the solver.
             solver_timer.start();
             FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
@@ -349,5 +370,211 @@ namespace Opm
         return report;
     }
 
+    namespace SimFIBODetails {
+        typedef std::unordered_map<std::string, WellConstPtr> WellMap;
 
+        inline WellMap
+        mapWells(const std::vector<WellConstPtr>& wells)
+        {
+            WellMap wmap;
+
+            for (std::vector<WellConstPtr>::const_iterator
+                     w = wells.begin(), e = wells.end();
+                 w != e; ++w)
+            {
+                wmap.insert(std::make_pair((*w)->name(), *w));
+            }
+
+            return wmap;
+        }
+
+        inline int
+        resv_control(const WellControls* ctrl)
+        {
+            int i, n = well_controls_get_num(ctrl);
+
+            bool match = false;
+            for (i = 0; (! match) && (i < n); ++i) {
+                match = well_controls_iget_type(ctrl, i) == RESERVOIR_RATE;
+            }
+
+            if (! match) { i = 0; }
+
+            return i - 1; // -1 if no match, undo final "++" otherwise
+        }
+
+        inline bool
+        is_resv_prod(const Wells& wells,
+                     const int    w)
+        {
+            return ((wells.type[w] == PRODUCER) &&
+                    (0 <= resv_control(wells.ctrls[w])));
+        }
+
+        inline bool
+        is_resv_prod(const WellMap&     wmap,
+                     const std::string& name,
+                     const std::size_t  step)
+        {
+            bool match = false;
+
+            WellMap::const_iterator i = wmap.find(name);
+
+            if (i != wmap.end()) {
+                WellConstPtr wp = i->second;
+
+                match = (wp->isProducer(step) &&
+                         wp->getProductionProperties(step)
+                         .hasProductionControl(WellProducer::RESV));
+            }
+
+            return match;
+        }
+
+        inline std::vector<int>
+        resvProducers(const Wells&      wells,
+                      const std::size_t step,
+                      const WellMap&    wmap)
+        {
+            std::vector<int> resv_prod;
+
+            for (int w = 0, nw = wells.number_of_wells; w < nw; ++w) {
+                if (is_resv_prod(wells, w) ||
+                    ((wells.name[w] != 0) &&
+                     is_resv_prod(wmap, wells.name[w], step)))
+                {
+                    resv_prod.push_back(w);
+                }
+            }
+
+            return resv_prod;
+        }
+
+        inline void
+        historyRates(const PhaseUsage&               pu,
+                     const WellProductionProperties& p,
+                     std::vector<double>&            rates)
+        {
+            assert (! p.predictionMode);
+            assert (rates.size() ==
+                    std::vector<double>::size_type(pu.num_phases));
+
+            if (pu.phase_used[ BlackoilPhases::Aqua ]) {
+                const std::vector<double>::size_type
+                    i = pu.phase_pos[ BlackoilPhases::Aqua ];
+
+                rates[i] = p.WaterRate;
+            }
+
+            if (pu.phase_used[ BlackoilPhases::Liquid ]) {
+                const std::vector<double>::size_type
+                    i = pu.phase_pos[ BlackoilPhases::Liquid ];
+
+                rates[i] = p.OilRate;
+            }
+
+            if (pu.phase_used[ BlackoilPhases::Vapour ]) {
+                const std::vector<double>::size_type
+                    i = pu.phase_pos[ BlackoilPhases::Vapour ];
+
+                rates[i] = p.GasRate;
+            }
+        }
+    } // namespace SimFIBODetails
+
+    template <class T>
+    void
+    SimulatorFullyImplicitBlackoil<T>::
+    Impl::computeRESV(const std::size_t               step,
+                      const Wells*                    wells,
+                      const BlackoilState&            x,
+                      WellStateFullyImplicitBlackoil& xw)
+    {
+        typedef SimFIBODetails::WellMap WellMap;
+
+        const std::vector<WellConstPtr>& w_ecl = eclipse_state_->getSchedule()->getWells(step);
+        const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
+
+        const std::vector<int>& resv_prod =
+            SimFIBODetails::resvProducers(*wells, step, wmap);
+
+        if (! resv_prod.empty()) {
+            const PhaseUsage&                    pu = props_.phaseUsage();
+            const std::vector<double>::size_type np = props_.numPhases();
+
+            rateConverter_.defineState(x);
+
+            std::vector<double> distr (np);
+            std::vector<double> hrates(np);
+            std::vector<double> prates(np);
+
+            for (std::vector<int>::const_iterator
+                     rp = resv_prod.begin(), e = resv_prod.end();
+                 rp != e; ++rp)
+            {
+                WellControls* ctrl = wells->ctrls[*rp];
+
+                // RESV control mode, all wells
+                {
+                    const int rctrl = SimFIBODetails::resv_control(ctrl);
+
+                    if (0 <= rctrl) {
+                        const std::vector<double>::size_type off = (*rp) * np;
+
+                        // Convert to positive rates to avoid issues
+                        // in coefficient calculations.
+                        std::transform(xw.wellRates().begin() + (off + 0*np),
+                                       xw.wellRates().begin() + (off + 1*np),
+                                       prates.begin(), std::negate<double>());
+
+                        const int fipreg = 0; // Hack.  Ignore FIP regions.
+                        rateConverter_.calcCoeff(prates, fipreg, distr);
+
+                        well_controls_iset_distr(ctrl, rctrl, & distr[0]);
+                    }
+                }
+
+                // RESV control, WCONHIST wells.  A bit of duplicate
+                // work, regrettably.
+                if (wells->name[*rp] != 0) {
+                    WellMap::const_iterator i = wmap.find(wells->name[*rp]);
+
+                    if (i != wmap.end()) {
+                        WellConstPtr wp = i->second;
+
+                        const WellProductionProperties& p =
+                            wp->getProductionProperties(step);
+
+                        if (! p.predictionMode) {
+                            // History matching (WCONHIST/RESV)
+                            SimFIBODetails::historyRates(pu, p, hrates);
+
+                            const int fipreg = 0; // Hack.  Ignore FIP regions.
+                            rateConverter_.calcCoeff(hrates, fipreg, distr);
+
+                            // WCONHIST/RESV target is sum of all
+                            // observed phase rates translated to
+                            // reservoir conditions.  Recall sign
+                            // convention: Negative for producers.
+                            const double target =
+                                - std::inner_product(distr.begin(), distr.end(),
+                                                     hrates.begin(), 0.0);
+
+                            well_controls_clear(ctrl);
+                            well_controls_assert_number_of_phases(ctrl, int(np));
+
+                            const int ok =
+                                well_controls_add_new(RESERVOIR_RATE, target,
+                                                      & distr[0], ctrl);
+
+                            if (ok != 0) {
+                                xw.currentControls()[*rp] = 0;
+                                well_controls_set_current(ctrl, 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 } // namespace Opm
