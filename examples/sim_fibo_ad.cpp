@@ -107,7 +107,11 @@ try
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
 
     // Grid init
-    grid.reset(new GridManager(eclipseState->getEclipseGrid()));
+    std::vector<double> porv;
+    if (eclipseState->hasDoubleGridProperty("PORV")) {
+        porv = eclipseState->getDoubleGridProperty("PORV")->getData();
+    }
+    grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::EclipseWriter outputWriter(param,
