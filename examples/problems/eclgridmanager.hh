@@ -111,8 +111,7 @@ public:
         eclipseState_.reset(new Opm::EclipseState(deck_));
 
         grid_ = GridPointer(new Grid());
-        grid_->processEclipseFormat(deck_,
-                                    /*zTolerance=*/0,
+        grid_->processEclipseFormat(eclipseState_->getEclipseGrid(),
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false);
