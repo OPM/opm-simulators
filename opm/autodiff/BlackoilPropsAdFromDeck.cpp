@@ -201,7 +201,7 @@ namespace Opm
         SaturationPropsFromDeck<SatFuncGwsegNonuniform>* ptr
             = new SaturationPropsFromDeck<SatFuncGwsegNonuniform>();
         satprops_.reset(ptr);
-        ptr->init(deck, number_of_cells, global_cell, begin_cell_centroids, dimension, -1);
+        ptr->init(deck, eclState, number_of_cells, global_cell, begin_cell_centroids, dimension, -1);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "
