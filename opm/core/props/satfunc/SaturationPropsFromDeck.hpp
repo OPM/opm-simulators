@@ -161,21 +161,16 @@ namespace Opm
         const Funcs& funcForCell(const int cell) const;
         template<class T>
         void initEPS(Opm::DeckConstPtr deck,
-                     Opm::EclipseStateConstPtr eclipseState,
+                     Opm::EclipseStateConstPtr eclState,
                      int number_of_cells,
                      const int* global_cell,
                      const T& begin_cell_centroids,
-                     int dimensions);
-        template<class T>
-        void initEPSHyst(Opm::DeckConstPtr deck,
-                         Opm::EclipseStateConstPtr eclipseState,
-                         int number_of_cells,
-                         const int* global_cell,
-                         const T& begin_cell_centroids,
-                         int dimensions);
+                     int dimensions,
+                     const std::vector<std::string>& eps_kw,
+                     std::vector<EPSTransforms>& eps_transf);
         template<class T>
         void initEPSKey(Opm::DeckConstPtr deck,
-                        Opm::EclipseStateConstPtr eclipseState,
+                        Opm::EclipseStateConstPtr eclState,
                         int number_of_cells,
                         const int* global_cell,
                         const T& begin_cell_centroids,

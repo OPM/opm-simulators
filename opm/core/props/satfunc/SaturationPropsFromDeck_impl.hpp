@@ -190,8 +190,11 @@ namespace Opm
             // TODO: ENPTVD/ENKRVD: Too few tables gives a cryptical message from parser, 
             //       superfluous tables are ignored by the parser without any warning ...
 
+            const std::vector<std::string> eps_kw{"SWL", "SWU", "SWCR", "SGL", "SGU", "SGCR", "SOWCR",
+                "SOGCR", "KRW", "KRG", "KRO", "KRWR", "KRGR", "KRORW", "KRORG", "PCW", "PCG"};
+            eps_transf_.resize(number_of_cells);
             initEPS(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
-                    dimensions);
+                    dimensions, eps_kw, eps_transf_);
 
             if (do_hyst_) {
                 if (deck->hasKeyword("KRW")
@@ -230,12 +233,17 @@ namespace Opm
                     // TODO: Make actual use of IMBNUM.  For now we just consider the imbibition curve
                     //       to be a scaled version of the drainage curve (confer Norne model).
                 }
-                
-                initEPSHyst(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
-                            dimensions);
+
+                const std::vector<std::string> eps_i_kw{"ISWL", "ISWU", "ISWCR", "ISGL", "ISGU", "ISGCR", "ISOWCR",
+                    "ISOGCR", "IKRW", "IKRG", "IKRO", "IKRWR", "IKRGR", "IKRORW", "IKRORG", "IPCW", "IPCG"};
+                eps_transf_hyst_.resize(number_of_cells);
+                sat_hyst_.resize(number_of_cells);                
+                initEPS(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
+                        dimensions, eps_i_kw, eps_transf_hyst_);
             }
         }
     }
+
 
 
 
@@ -458,208 +466,21 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(Opm::DeckConstPtr deck,
-                                                      Opm::EclipseStateConstPtr eclipseState,
+                                                      Opm::EclipseStateConstPtr eclState,
                                                       int number_of_cells,
                                                       const int* global_cell,
                                                       const T& begin_cell_centroid,
-                                                      int dimensions)
+                                                      int dimensions,
+                                                      const std::vector<std::string>& eps_kw,
+                                                      std::vector<EPSTransforms>& eps_transf)
     {
-        std::vector<double> swl, swcr, swu, sgl, sgcr, sgu, sowcr, sogcr;
-        std::vector<double> krw, krg, kro, krwr, krgr, krorw, krorg;
-        std::vector<double> pcw, pcg;
+        std::vector<std::vector<double> > eps_vec(eps_kw.size());
         const std::vector<double> dummy;
-        // Initialize saturation scaling parameter
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SWL"),   swl);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SWU"),   swu);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SWCR"),  swcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SGL"),   sgl);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SGU"),   sgu);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SGCR"),  sgcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SOWCR"), sowcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("SOGCR"), sogcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRW"),   krw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRG"),   krg);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRO"),   kro);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRWR"),  krwr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRGR"),  krgr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRORW"), krorw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("KRORG"), krorg);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("PCW"), pcw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("PCG"), pcg);
-
-        eps_transf_.resize(number_of_cells);
-
-        const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-        const int gpos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-        const bool oilWater = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && !phase_usage_.phase_used[Vapour];
-        const bool oilGas = !phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
-        const bool threephase = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
-
-        for (int cell = 0; cell < number_of_cells; ++cell) {
-            if (oilWater) {
-                // ### krw
-                initEPSParam(cell, eps_transf_[cell].wat, false, 
-                             funcForCell(cell).smin_[wpos],
-                             funcForCell(cell).swcr_, 
-                             funcForCell(cell).smax_[wpos],
-                             funcForCell(cell).sowcr_, 
-                             -1.0, 
-                             funcForCell(cell).krwr_, 
-                             funcForCell(cell).krwmax_, 
-                             funcForCell(cell).pcwmax_, 
-                             swl, swcr, swu, sowcr, sgl, krwr, krw, pcw);
-                // ### krow
-                initEPSParam(cell, eps_transf_[cell].watoil, true, 
-                             0.0, 
-                             funcForCell(cell).sowcr_, 
-                             funcForCell(cell).smin_[wpos],
-                             funcForCell(cell).swcr_, 
-                             -1.0, 
-                             funcForCell(cell).krorw_, 
-                             funcForCell(cell).kromax_,
-                             0.0, 
-                             swl, sowcr, swl, swcr, sgl, krorw, kro, dummy);
-            } else if (oilGas) {
-                // ### krg
-                initEPSParam(cell, eps_transf_[cell].gas, false, 
-                             funcForCell(cell).smin_[gpos], 
-                             funcForCell(cell).sgcr_, 
-                             funcForCell(cell).smax_[gpos],
-                             funcForCell(cell).sogcr_, 
-                             -1.0, 
-                             funcForCell(cell).krgr_, 
-                             funcForCell(cell).krgmax_, 
-                             funcForCell(cell).pcgmax_, 
-                             sgl, sgcr, sgu, sogcr, swl, krgr, krg, pcg);
-                // ### krog
-                initEPSParam(cell, eps_transf_[cell].gasoil, true, 
-                             0.0, 
-                             funcForCell(cell).sogcr_, 
-                             funcForCell(cell).smin_[gpos],
-                             funcForCell(cell).sgcr_, 
-                             -1.0, 
-                             funcForCell(cell).krorg_, 
-                             funcForCell(cell).kromax_,
-                             0.0, 
-                             sgl, sogcr, sgl, sgcr, swl, krorg, kro, dummy);
-            } else if (threephase) {
-                // ### krw
-                initEPSParam(cell, eps_transf_[cell].wat, false, 
-                             funcForCell(cell).smin_[wpos], 
-                             funcForCell(cell).swcr_, 
-                             funcForCell(cell).smax_[wpos], 
-                             funcForCell(cell).sowcr_,
-                             funcForCell(cell).smin_[gpos], 
-                             funcForCell(cell).krwr_, 
-                             funcForCell(cell).krwmax_, 
-                             funcForCell(cell).pcwmax_, 
-                             swl, swcr, swu, sowcr, sgl, krwr, krw, pcw);
-                 // ### krow
-                initEPSParam(cell, eps_transf_[cell].watoil, true, 
-                            0.0, 
-                            funcForCell(cell).sowcr_, 
-                            funcForCell(cell).smin_[wpos], 
-                            funcForCell(cell).swcr_,
-                            funcForCell(cell).smin_[gpos], 
-                            funcForCell(cell).krorw_, 
-                            funcForCell(cell).kromax_,
-                            0.0, 
-                            swl, sowcr, swl, swcr, sgl, krorw, kro, dummy);
-                 // ### krg
-                initEPSParam(cell, eps_transf_[cell].gas, false, 
-                             funcForCell(cell).smin_[gpos], 
-                             funcForCell(cell).sgcr_, 
-                             funcForCell(cell).smax_[gpos], 
-                             funcForCell(cell).sogcr_,
-                             funcForCell(cell).smin_[wpos], 
-                             funcForCell(cell).krgr_, 
-                             funcForCell(cell).krgmax_, 
-                             funcForCell(cell).pcgmax_, 
-                             sgl, sgcr, sgu, sogcr, swl, krgr, krg, pcg);
-                 // ### krog
-                initEPSParam(cell, eps_transf_[cell].gasoil, true, 
-                             0.0, 
-                             funcForCell(cell).sogcr_, 
-                             funcForCell(cell).smin_[gpos], 
-                             funcForCell(cell).sgcr_,
-                             funcForCell(cell).smin_[wpos], 
-                             funcForCell(cell).krorg_, 
-                             funcForCell(cell).kromax_,
-                             0.0, 
-                             sgl, sogcr, sgl, sgcr, swl, krorg, kro, dummy);
-            }
+        
+        for (size_t i = 0; i < eps_kw.size(); ++i) {
+            initEPSKey(deck, eclState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+                       eps_kw[i], eps_vec[i]);
         }
-    }
-
-    // Initialize hysteresis saturation scaling parameters
-    template <class SatFuncSet>
-    template<class T>
-    void SaturationPropsFromDeck<SatFuncSet>::initEPSHyst(Opm::DeckConstPtr deck,
-                                                      Opm::EclipseStateConstPtr eclipseState,
-                                                      int number_of_cells,
-                                                      const int* global_cell,
-                                                      const T& begin_cell_centroid,
-                                                      int dimensions)
-    {
-        std::vector<double> iswl, iswcr, iswu, isgl, isgcr, isgu, isowcr, isogcr;
-        std::vector<double> ikrw, ikrg, ikro, ikrwr, ikrgr, ikrorw, ikrorg;
-        std::vector<double> ipcw, ipcg;
-        const std::vector<double> dummy;
-        // Initialize hysteresis saturation scaling parameters
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISWL"),   iswl);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISWU"),   iswu);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISWCR"),  iswcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISGL"),   isgl);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISGU"),   isgu);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISGCR"),  isgcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISOWCR"), isowcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("ISOGCR"), isogcr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRW"),   ikrw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRG"),   ikrg);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRO"),   ikro);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRWR"),  ikrwr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRGR"),  ikrgr);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRORW"), ikrorw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IKRORG"), ikrorg);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IPCW"), ipcw);
-        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
-                   std::string("IPCG"), ipcg);
-
-        eps_transf_hyst_.resize(number_of_cells);
-        sat_hyst_.resize(number_of_cells);
 
         const int wpos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
         const int gpos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
@@ -668,97 +489,53 @@ namespace Opm
         const bool threephase = phase_usage_.phase_used[Aqua] && phase_usage_.phase_used[Liquid] && phase_usage_.phase_used[Vapour];
 
         for (int cell = 0; cell < number_of_cells; ++cell) {
-            if (oilWater) {
-                 // ### krw
-                 initEPSParam(cell, eps_transf_hyst_[cell].wat, false, 
-                              funcForCell(cell).smin_[wpos], 
-                              funcForCell(cell).swcr_, 
-                              funcForCell(cell).smax_[wpos],
-                              funcForCell(cell).sowcr_, 
-                              -1.0, 
-                              funcForCell(cell).krwr_, 
-                              funcForCell(cell).krwmax_, 
-                              funcForCell(cell).pcwmax_, 
-                              iswl, iswcr, iswu, isowcr, isgl, ikrwr, ikrw, ipcw);
-                 // ### krow
-                 initEPSParam(cell, eps_transf_hyst_[cell].watoil, true, 
-                              0.0, 
-                              funcForCell(cell).sowcr_, 
-                              funcForCell(cell).smin_[wpos],
-                              funcForCell(cell).swcr_, 
-                              -1.0, 
-                              funcForCell(cell).krorw_, 
-                              funcForCell(cell).kromax_,
-                              0.0, 
-                              iswl, isowcr, iswl, iswcr, isgl, ikrorw, ikro, dummy);
-             } else if (oilGas) {
-                 // ### krg
-                 initEPSParam(cell, eps_transf_hyst_[cell].gas, false, 
-                              funcForCell(cell).smin_[gpos], 
-                              funcForCell(cell).sgcr_, 
-                              funcForCell(cell).smax_[gpos],
-                              funcForCell(cell).sogcr_, 
-                              -1.0, 
-                              funcForCell(cell).krgr_, 
-                              funcForCell(cell).krgmax_, 
-                              funcForCell(cell).pcgmax_, 
-                              isgl, isgcr, isgu, isogcr, iswl, ikrgr, ikrg, ipcg);
-                 // ### krog
-                 initEPSParam(cell, eps_transf_hyst_[cell].gasoil, true, 
-                              0.0, 
-                              funcForCell(cell).sogcr_, 
-                              funcForCell(cell).smin_[gpos],
-                              funcForCell(cell).sgcr_, 
-                              -1.0, 
-                              funcForCell(cell).krorg_, 
-                              funcForCell(cell).kromax_,
-                              0.0, 
-                              isgl, isogcr, isgl, isgcr, iswl, ikrorg, ikro, dummy);
-             } else if (threephase) {
-                 // ### krw
-                 initEPSParam(cell, eps_transf_hyst_[cell].wat, false, 
-                              funcForCell(cell).smin_[wpos], 
-                              funcForCell(cell).swcr_, 
-                              funcForCell(cell).smax_[wpos], 
-                              funcForCell(cell).sowcr_,
-                              funcForCell(cell).smin_[gpos], 
-                              funcForCell(cell).krwr_, 
-                              funcForCell(cell).krwmax_, 
-                              funcForCell(cell).pcwmax_, 
-                              iswl, iswcr, iswu, isowcr, isgl, ikrwr, ikrw, ipcw);
-                 // ### krow
-                 initEPSParam(cell, eps_transf_hyst_[cell].watoil, true, 
-                              0.0, 
-                              funcForCell(cell).sowcr_, 
-                              funcForCell(cell).smin_[wpos], 
-                              funcForCell(cell).swcr_,
-                              funcForCell(cell).smin_[gpos], 
-                              funcForCell(cell).krorw_, 
-                              funcForCell(cell).kromax_,
-                              0.0, 
-                              iswl, isowcr, iswl, iswcr, isgl, ikrorw, ikro, dummy);
-                 // ### krg
-                 initEPSParam(cell, eps_transf_hyst_[cell].gas, false, 
-                              funcForCell(cell).smin_[gpos], 
-                              funcForCell(cell).sgcr_, 
-                              funcForCell(cell).smax_[gpos], 
-                              funcForCell(cell).sogcr_,
-                              funcForCell(cell).smin_[wpos], 
-                              funcForCell(cell).krgr_, 
-                              funcForCell(cell).krgmax_, 
-                              funcForCell(cell).pcgmax_, 
-                              isgl, isgcr, isgu, isogcr, iswl, ikrgr, ikrg, ipcg);
-                 // ### krog
-                 initEPSParam(cell, eps_transf_hyst_[cell].gasoil, true, 
-                              0.0, 
-                              funcForCell(cell).sogcr_, 
-                              funcForCell(cell).smin_[gpos], 
-                              funcForCell(cell).sgcr_, 
-                              funcForCell(cell).smin_[wpos], 
-                              funcForCell(cell).krorg_, 
-                              funcForCell(cell).kromax_,
-                              0.0, 
-                              isgl, isogcr, isgl, isgcr, iswl, ikrorg, ikro, dummy);
+            if (threephase || oilWater) {
+                // ### krw
+                initEPSParam(cell, eps_transf[cell].wat, false,
+                             funcForCell(cell).smin_[wpos],
+                             funcForCell(cell).swcr_,
+                             funcForCell(cell).smax_[wpos],
+                             funcForCell(cell).sowcr_,
+                             oilWater ? -1.0 : funcForCell(cell).smin_[gpos],
+                             funcForCell(cell).krwr_,
+                             funcForCell(cell).krwmax_,
+                             funcForCell(cell).pcwmax_,
+                             eps_vec[0], eps_vec[2], eps_vec[1], eps_vec[6], eps_vec[3], eps_vec[11], eps_vec[8], eps_vec[15]);
+                // ### krow
+                initEPSParam(cell, eps_transf[cell].watoil, true,
+                             0.0,
+                             funcForCell(cell).sowcr_,
+                             funcForCell(cell).smin_[wpos],
+                             funcForCell(cell).swcr_,
+                             oilWater ? -1.0 : funcForCell(cell).smin_[gpos],
+                             funcForCell(cell).krorw_,
+                             funcForCell(cell).kromax_,
+                             0.0,
+                             eps_vec[0], eps_vec[6], eps_vec[0], eps_vec[2], eps_vec[3], eps_vec[13], eps_vec[10], dummy);
+            }
+            if (threephase || oilGas) {
+                // ### krg
+                initEPSParam(cell, eps_transf[cell].gas, false,
+                             funcForCell(cell).smin_[gpos],
+                             funcForCell(cell).sgcr_,
+                             funcForCell(cell).smax_[gpos],
+                             funcForCell(cell).sogcr_,
+                             oilGas ? -1.0 : funcForCell(cell).smin_[wpos],
+                             funcForCell(cell).krgr_,
+                             funcForCell(cell).krgmax_,
+                             funcForCell(cell).pcgmax_,
+                             eps_vec[3], eps_vec[5], eps_vec[4], eps_vec[7], eps_vec[0], eps_vec[12], eps_vec[9], eps_vec[16]);
+                // ### krog
+                initEPSParam(cell, eps_transf[cell].gasoil, true,
+                             0.0,
+                             funcForCell(cell).sogcr_,
+                             funcForCell(cell).smin_[gpos],
+                             funcForCell(cell).sgcr_,
+                             oilGas ? -1.0 : funcForCell(cell).smin_[wpos],
+                             funcForCell(cell).krorg_,
+                             funcForCell(cell).kromax_,
+                             0.0,
+                             eps_vec[3], eps_vec[7], eps_vec[3], eps_vec[5], eps_vec[0], eps_vec[14], eps_vec[10], dummy);
             }
         }
     }
@@ -767,7 +544,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPSKey(Opm::DeckConstPtr deck,
-                                                         Opm::EclipseStateConstPtr eclipseState,
+                                                         Opm::EclipseStateConstPtr eclState,
                                                          int number_of_cells,
                                                          const int* global_cell,
                                                          const T& begin_cell_centroid,
