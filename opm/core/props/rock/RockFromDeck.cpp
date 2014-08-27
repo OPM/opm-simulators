@@ -118,7 +118,13 @@ namespace Opm
 
                 for (int i = 0; i < dim; ++i) {
                     for (int j = 0; j < dim; ++j, ++kix) {
-                        // K(i,j) = (*tensor[kmap[kix]])[glob];
+                        // Clients expect column-major (Fortran) order
+                        // in "permeability_" so honour that
+                        // requirement despite "tensor" being created
+                        // row-major.  Note: The actual numerical
+                        // values in the resulting array are the same
+                        // in either order when viewed contiguously
+                        // because fillTensor() enforces symmetry.
                         permeability_[off + (i + dim*j)] = (*tensor[kmap[kix]])[glob];
                     }
 
