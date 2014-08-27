@@ -214,6 +214,23 @@ namespace {
     }
 
 
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::
+    setThresholdPressures(const Eigen::Array<double, Eigen::Dynamic, 1>& threshold_pressures)
+    {
+        const int ifacesize = ops_.internal_faces.size();
+        if (threshold_pressures.size() != ifacesize) {
+            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures input, must be equal to number of interior faces.");
+        }
+        use_threshold_pressure_ = true;
+        threshold_pressures_by_face_ = threshold_pressures;
+    }
+
+
+
+
     template<class T>
     void
     FullyImplicitBlackoilSolver<T>::

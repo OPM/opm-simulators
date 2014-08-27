@@ -74,6 +74,16 @@ namespace Opm {
                                     const bool has_disgas,
                                     const bool has_vapoil );
 
+        /// \brief Set threshold pressures that prevent or reduce flow.
+        /// This prevents flow across faces if the potential
+        /// difference is less than the threshold. If the potential
+        /// difference is greater, the threshold value is subtracted
+        /// before calculating flow. This is treated symmetrically, so
+        /// flow is prevented or reduced in both directions equally.
+        /// \param[in]  threshold_pressures   array of size equal to the number of interior faces
+        ///                                   of the grid passed in the constructor.
+        void setThresholdPressures(const Eigen::Array<double, Eigen::Dynamic, 1>& threshold_pressures);
+
         /// Take a single forward step, modifiying
         ///   state.pressure()
         ///   state.faceflux()
