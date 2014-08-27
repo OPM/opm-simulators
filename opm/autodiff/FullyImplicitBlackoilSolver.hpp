@@ -155,6 +155,8 @@ namespace Opm {
         double                          relax_increment_;
         double                          relax_rel_tol_;
         int                             max_iter_;
+        bool use_threshold_pressure_;
+        V threshold_pressures_by_face_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -222,6 +224,8 @@ namespace Opm {
                         const ADB&              kr    ,
                         const ADB&              p     ,
                         const SolutionState&    state );
+
+        void applyThresholdPressures(ADB& dp);
 
         double
         residualNorm() const;
