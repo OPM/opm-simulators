@@ -166,7 +166,7 @@ namespace Opm {
         double                          relax_rel_tol_;
         int                             max_iter_;
         bool use_threshold_pressure_;
-        V threshold_pressures_by_face_;
+        V threshold_pressures_by_interior_face_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
