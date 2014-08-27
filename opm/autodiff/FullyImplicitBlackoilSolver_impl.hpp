@@ -1635,11 +1635,12 @@ namespace {
 
         // Identify the set of faces where the potential is under the
         // threshold, that shall have zero flow. Storing the bool
-        // Array as a V (a double Array) with 1 and 0 elements.
-        const V low_potential = (dp.value().abs() < threshold_pressures_by_interior_face_).template cast<double>();
+        // Array as a V (a double Array) with 1 and 0 elements, a
+        // 1 where flow is allowed, a 0 where it is not.
+        const V high_potential = (dp.value().abs() >= threshold_pressures_by_interior_face_).template cast<double>();
 
         // Create a sparse vector that nullifies the low potential elements.
-        const M nullify_low_potential = spdiag(low_potential);
+        const M keep_high_potential = spdiag(high_potential);
 
         // The threshold modification must have the sign that reduces the
         // absolute value of the potential.
@@ -1647,7 +1648,7 @@ namespace {
         const V threshold_modification = sign_for_mod * threshold_pressures_by_interior_face_;
 
         // Modify potential and nullify where appropriate.
-        dp = nullify_low_potential * (dp + threshold_modification);
+        dp = keep_high_potential * (dp + threshold_modification);
     }
 
 
