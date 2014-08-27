@@ -26,7 +26,11 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/core/utility/CompressedPropertyAccess.hpp>
+
 #include <array>
+#include <string>
+#include <vector>
 
 namespace Opm
 {
@@ -38,9 +42,23 @@ namespace Opm
 
         void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k);
-        PermeabilityKind fillTensor(Opm::EclipseStateConstPtr eclState,
-                                    std::vector<const std::vector<double>*>& tensor,
-                                    std::array<int,9>&                     kmap);
+
+        typedef GridPropertyAccess::ArrayPolicy::ExtractFromDeck<double> PermArray;
+
+        struct PermTag {};
+
+        typedef GridPropertyAccess::Compressed<PermArray, PermTag> PermComponent;
+
+        PermComponent
+        extractPermComponent(EclipseStateConstPtr ecl,
+                             const std::string&   kw,
+                             const int*           global_cell);
+
+        PermeabilityKind
+        fillTensor(EclipseStateConstPtr        eclState,
+                   const int*                  global_cell,
+                   std::vector<PermComponent>& tensor,
+                   std::array<int,9>&          kmap);
 
     } // anonymous namespace
 
@@ -68,16 +86,15 @@ namespace Opm
     void RockFromDeck::assignPorosity(Opm::EclipseStateConstPtr eclState,
                                       int number_of_cells, const int* global_cell)
     {
-        porosity_.assign(number_of_cells, 1.0);
-        if (eclState->hasDoubleGridProperty("PORO")) {
-            const std::vector<double>& poro =
-                eclState->getDoubleGridProperty("PORO")->getData();
-            for (int c = 0; c < int(porosity_.size()); ++c) {
-                const int deck_pos = (global_cell == NULL) ? c : global_cell[c];
-                assert(0 <= c && c < (int) porosity_.size());
-                assert(0 <= deck_pos && deck_pos < (int) poro.size());
-                porosity_[c] = poro[deck_pos];
-            }
+        typedef GridPropertyAccess::ArrayPolicy
+            ::ExtractFromDeck<double> Array;
+
+        Array poro_glob(eclState, "PORO", 1.0);
+        GridPropertyAccess::Compressed<Array> poro(poro_glob, global_cell);
+
+        porosity_.clear(); porosity_.reserve(number_of_cells);
+        for (int c = 0; c < number_of_cells; ++c) {
+            porosity_.push_back(poro[c]);
         }
     }
 
@@ -95,26 +112,23 @@ namespace Opm
 
         permeability_.assign(dim * dim * nc, 0.0);
 
-        std::vector<const std::vector<double>*> tensor;
-        tensor.reserve(10);
-
-        const std::vector<double> zero(num_global_cells, 0.0);
-        tensor.push_back(&zero);
+        std::vector<PermComponent> tensor;
+        tensor.reserve(6);
 
         std::array<int,9> kmap;
-        PermeabilityKind pkind = fillTensor(eclState, tensor, kmap);
+        PermeabilityKind pkind = fillTensor(eclState, global_cell,
+                                            tensor, kmap);
         if (pkind == Invalid) {
             OPM_THROW(std::runtime_error, "Invalid permeability field.");
         }
 
-        if (tensor.size() > 1) {
-            const int* gc = global_cell;
+        assert (! tensor.empty());
+        {
             int off = 0;
 
             for (int c = 0; c < nc; ++c, off += dim*dim) {
                 // SharedPermTensor K(dim, dim, &permeability_[off]);
-                int       kix  = 0;
-                const int glob = (gc == NULL) ? c : gc[c];
+                int kix = 0;
 
                 for (int i = 0; i < dim; ++i) {
                     for (int j = 0; j < dim; ++j, ++kix) {
@@ -125,7 +139,8 @@ namespace Opm
                         // values in the resulting array are the same
                         // in either order when viewed contiguously
                         // because fillTensor() enforces symmetry.
-                        permeability_[off + (i + dim*j)] = (*tensor[kmap[kix]])[glob];
+                        permeability_[off + (i + dim*j)] =
+                            tensor[kmap[kix]][c];
                     }
 
                     // K(i,i) = std::max(K(i,i), perm_threshold);
@@ -229,8 +244,8 @@ namespace Opm
         void setScalarPermIfNeeded(std::array<int,9>& kmap,
                                    int i, int j, int k)
         {
-            if (kmap[j] == 0) { kmap[j] = kmap[i]; }
-            if (kmap[k] == 0) { kmap[k] = kmap[i]; }
+            if (kmap[j] < 0) { kmap[j] = kmap[i]; }
+            if (kmap[k] < 0) { kmap[k] = kmap[i]; }
         }
 
         /// @brief
@@ -265,16 +280,20 @@ namespace Opm
         ///
         /// @param [out] tensor
         /// @param [out] kmap
-        PermeabilityKind fillTensor(Opm::EclipseStateConstPtr eclState,
-                                    std::vector<const std::vector<double>*>& tensor,
-                                    std::array<int,9>&                     kmap)
+        PermeabilityKind
+        fillTensor(EclipseStateConstPtr        eclState,
+                   const int*                  global_cell,
+                   std::vector<PermComponent>& tensor,
+                   std::array<int,9>&          kmap)
         {
             PermeabilityKind kind = classifyPermeability(eclState);
             if (kind == Invalid) {
                 OPM_THROW(std::runtime_error, "Invalid set of permeability fields given.");
             }
-            assert(tensor.size() == 1);
-            for (int i = 0; i < 9; ++i) { kmap[i] = 0; }
+
+            assert (tensor.empty());
+
+            for (int i = 0; i < 9; ++i) { kmap[i] = -1; }
 
             enum { xx, xy, xz,    // 0, 1, 2
                    yx, yy, yz,    // 3, 4, 5
@@ -284,43 +303,53 @@ namespace Opm
             // 1st row: [ kxx, kxy ], kxz handled in kzx
             if (eclState->hasDoubleGridProperty("PERMX" )) {
                 kmap[xx] = tensor.size();
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMX")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMX", global_cell));
 
                 setScalarPermIfNeeded(kmap, xx, yy, zz);
             }
-            if (eclState->hasDoubleGridProperty("PERMXY")) {
+            {
                 kmap[xy] = kmap[yx] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMXY")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMXY", global_cell));
             }
 
             // -----------------------------------------------------------
             // 2nd row: [ kyy, kyz ], kyx handled in kxy
             if (eclState->hasDoubleGridProperty("PERMY" )) {
                 kmap[yy] = tensor.size();
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMY")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMY", global_cell));
 
                 setScalarPermIfNeeded(kmap, yy, zz, xx);
             }
-            if (eclState->hasDoubleGridProperty("PERMYZ")) {
+            {
                 kmap[yz] = kmap[zy] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMYZ")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMYZ", global_cell));
             }
 
             // -----------------------------------------------------------
             // 3rd row: [ kzx, kzz ], kzy handled in kyz
-            if (eclState->hasDoubleGridProperty("PERMZX")) {
+            {
                 kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMZX")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMZX", global_cell));
             }
             if (eclState->hasDoubleGridProperty("PERMZ" )) {
                 kmap[zz] = tensor.size();
-                tensor.push_back(&eclState->getDoubleGridProperty("PERMZ")->getData());
+                tensor.push_back(extractPermComponent(eclState, "PERMZ", global_cell));
 
                 setScalarPermIfNeeded(kmap, zz, xx, yy);
             }
+
             return kind;
         }
 
+        PermComponent
+        extractPermComponent(EclipseStateConstPtr ecl,
+                             const std::string&   kw,
+                             const int*           global_cell)
+        {
+            PermArray k(ecl, kw, 0.0); // return 0.0 if not present.
+
+            return PermComponent(k, global_cell);
+        }
     } // anonymous namespace
 
 } // namespace Opm
