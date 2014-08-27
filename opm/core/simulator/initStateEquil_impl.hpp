@@ -394,14 +394,12 @@ namespace Opm
 
                 assign(G, opress, z0, cells, press);
 
-                // Default pressure at WOC and GOC to -inf
-                po_woc = -std::numeric_limits<double>::max();
-                po_goc = -std::numeric_limits<double>::max();
-
                 const double woc = reg.zwoc();
                 // Compute Oil pressure at WOC,
-                // if WOC is within the reservoir.
-                if ( ( woc > span[0] ) && ( woc < span[1] ) ){
+                if      ( woc > span[1] ) { po_woc = std::numeric_limits<double>::max(); }   // WOC above reservoir (model is entirely water filled)
+                else if ( woc < span[0] ) { po_woc = -std::numeric_limits<double>::max(); }  // WOC below reservoir
+                else{
+                    // if WOC is within the reservoir.
                     if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
                     else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
                     else               { po_woc = p0;             } // WOC *at*  datum
@@ -409,8 +407,10 @@ namespace Opm
 
                 const double goc = reg.zgoc();
                 // Compute Oil pressure at GOC,
-                // if GOC is within the reservoir.
-                if ( ( goc > span[0] ) && ( goc < span[1] ) ){
+                if      ( goc > span[1] ) { po_goc = -std::numeric_limits<double>::max(); }   // GOC above reservoir
+                else if ( goc < span[0] ) { po_goc = std::numeric_limits<double>::max(); }    // GOC below reservoir (model is entirely gas filled)
+                else{
+                    // if GOC is within the reservoir.
                     if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
                     else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
                     else               { po_goc = p0;             } // GOC *at*  datum
@@ -484,9 +484,9 @@ namespace Opm
                 const int wix = PhaseIndex::water(pu);
 
                 // If woc is above or below the reservoar,
-                // po_woc is -inf and the water pressure
-                // is set to -inf.
-                if ( po_woc > 0 ){
+                // po_woc is set to inf and -inf, respectivly
+                // and so is the water pressure
+                if ( std::abs(po_woc) < std::numeric_limits<double>::max() ){
                     PhasePressure::water(G, reg, span, grav, po_woc,
                                          cells, press[ wix ]);
                 } else {
@@ -498,10 +498,11 @@ namespace Opm
             if (PhaseUsed::gas(pu)) {
                 const int gix = PhaseIndex::gas(pu);
 
-                // If woc is above or below the reservoar,
-                // po_woc is -inf and the water pressure
-                // is set to -inf.
-                if (po_goc > 0){
+                // If goc is above or below the reservoar,
+                // po_goc is set to -inf and inf, respectivly
+                // and so is the gas pressure
+
+                if ( std::abs(po_goc) < std::numeric_limits<double>::max()){
                     PhasePressure::gas(G, reg, span, grav, po_goc,
                                        cells, press[ gix ]);
                 } else {
