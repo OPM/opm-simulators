@@ -63,7 +63,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
-                                                   Opm::EclipseStateConstPtr eclState,
+                                                   Opm::EclipseStateConstPtr /*eclState*/,
                                                    int number_of_cells,
                                                    const int* global_cell,
                                                    const T& begin_cell_centroids,
