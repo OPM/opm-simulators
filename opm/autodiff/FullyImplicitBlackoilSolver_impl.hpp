@@ -227,6 +227,7 @@ namespace {
         use_threshold_pressure_ = true;
         // Map to interior faces.
         const int num_ifaces = ops_.internal_faces.size();
+        threshold_pressures_by_interior_face_.resize(num_ifaces);
         for (int ii = 0; ii < num_ifaces; ++ii) {
             threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
         }
