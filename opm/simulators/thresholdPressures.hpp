@@ -25,9 +25,9 @@ namespace Opm
 
     /// \brief Make a vector of pressure thresholds from deck input.
     /// This function looks at EQLOPTS, THPRES and EQLNUM to determine
-    /// pressure thresholds.  It does not considered the case where
-    /// the threshold values are defaulted, in which case they should
-    /// be determined from the initial, equilibrated simulation state.
+    /// pressure thresholds.  It does not consider the case where the
+    /// threshold values are defaulted, in which case they should be
+    /// determined from the initial, equilibrated simulation state.
     /// \tparam    Grid           Type of grid object (UnstructuredGrid or CpGrid).
     /// \param[in] deck           Input deck, EQLOPTS and THPRES are accessed from it.
     /// \param[in] eclipseState   Processed eclipse state, EQLNUM is accessed from it.
