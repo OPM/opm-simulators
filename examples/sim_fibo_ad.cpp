@@ -31,6 +31,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/thresholdPressures.hpp>
 
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
@@ -187,7 +188,7 @@ try
 
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
 
-    std::vector<double> threshold_pressures;// = getThresholdPressures();
+    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid());
 
     SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
                                              *grid->c_grid(),

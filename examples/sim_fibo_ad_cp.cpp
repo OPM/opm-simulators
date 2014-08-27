@@ -41,8 +41,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/cornerpoint_grid.h>
-
-#include <opm/core/grid/GridManager.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -53,6 +52,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
@@ -68,7 +68,6 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -83,7 +82,6 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-
 
 namespace
 {
@@ -225,7 +223,7 @@ try
 
     Opm::DerivedGeology geology(*grid, *new_props, eclipseState, grav);
 
-    std::vector<double> threshold_pressures;// = getThresholdPressures();
+    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid);
 
     SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                            *grid,
