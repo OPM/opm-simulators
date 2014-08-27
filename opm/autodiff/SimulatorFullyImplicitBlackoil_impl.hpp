@@ -83,7 +83,8 @@ namespace Opm
              bool has_disgas,
              bool has_vapoil,
              std::shared_ptr<EclipseState> eclipse_state,
-             EclipseWriter& output_writer);
+             EclipseWriter& output_writer,
+             const std::vector<double>& threshold_pressures_by_face);
 
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state);
@@ -118,6 +119,8 @@ namespace Opm
         // output_writer
         EclipseWriter& output_writer_;
         RateConverterType rateConverter_;
+        // Threshold pressures.
+        std::vector<double> threshold_pressures_by_face_;
 
         void
         computeRESV(const std::size_t               step,
@@ -140,11 +143,12 @@ namespace Opm
                                                                    const bool has_disgas,
                                                                    const bool has_vapoil,
                                                                    std::shared_ptr<EclipseState> eclipse_state,
-                                                                   EclipseWriter& output_writer)
+                                                                   EclipseWriter& output_writer,
+                                                                   const std::vector<double>& threshold_pressures_by_face)
 
     {
         pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil,
-                              eclipse_state, output_writer));
+                              eclipse_state, output_writer, threshold_pressures_by_face));
     }
 
 
@@ -229,7 +233,8 @@ namespace Opm
                                                const bool has_disgas,
                                                const bool has_vapoil,
                                                std::shared_ptr<EclipseState> eclipse_state,
-                                               EclipseWriter& output_writer)
+                                               EclipseWriter& output_writer,
+                                               const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
           props_(props),
@@ -241,7 +246,8 @@ namespace Opm
           has_vapoil_(has_vapoil),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
-          rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0))
+          rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
+          threshold_pressures_by_face_(threshold_pressures_by_face)
     {
         // For output.
         output_ = param.getDefault("output", true);
@@ -266,6 +272,9 @@ namespace Opm
             allcells_[cell] = cell;
         }
     }
+
+
+
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
@@ -332,6 +341,9 @@ namespace Opm
             // Run a single step of the solver.
             solver_timer.start();
             FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
+            if (!threshold_pressures_by_face_.empty()) {
+                solver.setThresholdPressures(threshold_pressures_by_face_);
+            }
             solver.step(timer.currentStepLength(), state, well_state);
             solver_timer.stop();
 

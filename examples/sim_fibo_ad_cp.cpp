@@ -225,6 +225,8 @@ try
 
     Opm::DerivedGeology geology(*grid, *new_props, eclipseState, grav);
 
+    std::vector<double> threshold_pressures;// = getThresholdPressures();
+
     SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                            *grid,
                                                            geology,
@@ -235,7 +237,8 @@ try
                                                            deck->hasKeyword("DISGAS"),
                                                            deck->hasKeyword("VAPOIL"),
                                                            eclipseState,
-                                                           outputWriter);
+                                                           outputWriter,
+                                                           threshold_pressures);
 
     std::cout << "\n\n================ Starting main simulation loop ===============\n"
               << std::flush;

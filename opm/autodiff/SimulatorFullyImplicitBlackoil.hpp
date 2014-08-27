@@ -74,6 +74,7 @@ namespace Opm
         /// \param[in] vapoil        true for vaporized oil option
         /// \param[in] eclipse_state
         /// \param[in] output_writer
+        /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
         SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                        const Grid& grid,
                                        const DerivedGeology& geo,
@@ -84,7 +85,8 @@ namespace Opm
                                        const bool disgas,
                                        const bool vapoil,
                                        std::shared_ptr<EclipseState> eclipse_state,
-                                       EclipseWriter& output_writer);
+                                       EclipseWriter& output_writer,
+                                       const std::vector<double>& threshold_pressures_by_face);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
