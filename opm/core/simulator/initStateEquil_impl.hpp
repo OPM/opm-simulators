@@ -394,11 +394,20 @@ namespace Opm
 
                 assign(G, opress, z0, cells, press);
 
+
+                const double inf = std::numeric_limits<double>::max();
                 const double woc = reg.zwoc();
-                // Compute Oil pressure at WOC,
-                if      ( woc > span[1] ) { po_woc = std::numeric_limits<double>::max(); }   // WOC above reservoir (model is entirely water filled)
-                else if ( woc < span[0] ) { po_woc = -std::numeric_limits<double>::max(); }  // WOC below reservoir
-                else{
+
+                // Oil pressure at WOC, Pc_ow = Po - Pw, dPc_ow/dSw <= 0
+                if      ( woc < span[0] ) {
+                    // WOC above reservoir (model entirely water filled)
+                    po_woc = - inf;
+                }
+                else if ( woc > span[1] ) {
+                    // WOC below reservoir (no mobile water)
+                    po_woc = inf;
+                }
+                else {
                     // if WOC is within the reservoir.
                     if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
                     else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
@@ -406,10 +415,18 @@ namespace Opm
                 }
 
                 const double goc = reg.zgoc();
-                // Compute Oil pressure at GOC,
-                if      ( goc > span[1] ) { po_goc = -std::numeric_limits<double>::max(); }   // GOC above reservoir
-                else if ( goc < span[0] ) { po_goc = std::numeric_limits<double>::max(); }    // GOC below reservoir (model is entirely gas filled)
-                else{
+
+                // Oil pressure at GOC, Pc_go = Pg - Po, dPc_go/dSg >= 0
+                if      ( goc < span[0] ) {
+                    // GOC above reservoir (no gas phase)
+                    po_goc = -inf;
+                }
+
+                else if ( goc > span[1] ) {
+                    // GOC below reservoir (model entirely gas filled)
+                    po_goc = inf;
+                }
+                else {
                     // if GOC is within the reservoir.
                     if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
                     else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
