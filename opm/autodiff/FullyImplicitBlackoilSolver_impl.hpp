@@ -218,14 +218,18 @@ namespace {
     template<class T>
     void
     FullyImplicitBlackoilSolver<T>::
-    setThresholdPressures(const Eigen::Array<double, Eigen::Dynamic, 1>& threshold_pressures)
+    setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
     {
-        const int ifacesize = ops_.internal_faces.size();
-        if (threshold_pressures.size() != ifacesize) {
-            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures input, must be equal to number of interior faces.");
+        const int num_faces = AutoDiffGrid::numFaces(grid_);
+        if (int(threshold_pressures_by_face.size()) != num_faces) {
+            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures_by_face input, must be equal to number of faces.");
         }
         use_threshold_pressure_ = true;
-        threshold_pressures_by_interior_face_ = threshold_pressures;
+        // Map to interior faces.
+        const int num_ifaces = ops_.internal_faces.size();
+        for (int ii = 0; ii < num_ifaces; ++ii) {
+            threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
+        }
     }
 
 

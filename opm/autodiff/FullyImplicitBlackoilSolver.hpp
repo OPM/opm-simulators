@@ -80,9 +80,9 @@ namespace Opm {
         /// difference is greater, the threshold value is subtracted
         /// before calculating flow. This is treated symmetrically, so
         /// flow is prevented or reduced in both directions equally.
-        /// \param[in]  threshold_pressures   array of size equal to the number of interior faces
+        /// \param[in]  threshold_pressures_by_face   array of size equal to the number of faces
         ///                                   of the grid passed in the constructor.
-        void setThresholdPressures(const Eigen::Array<double, Eigen::Dynamic, 1>& threshold_pressures);
+        void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
