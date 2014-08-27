@@ -898,7 +898,7 @@ namespace Opm
     }
     
     /// Update for max oil saturation.
-    void BlackoilPropsAd::updateSatOilMax(const std::vector<double>& saturation)
+    void BlackoilPropsAd::updateSatOilMax(const std::vector<double>& /*saturation*/)
     {
         OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support this functionality.");
     }
