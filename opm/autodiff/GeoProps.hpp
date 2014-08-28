@@ -32,13 +32,13 @@
 
 #include <Eigen/Eigen>
 
-#include "reenable_warning_pragmas.h"
-
 #ifdef HAVE_DUNE_CORNERPOINT
 #include <dune/common/version.hh>
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 #endif
+
+#include "reenable_warning_pragmas.h"
 
 #include <cstddef>
 
