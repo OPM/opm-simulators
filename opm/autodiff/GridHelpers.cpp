@@ -43,14 +43,14 @@ int dimensions(const UnstructuredGrid& grid)
 }
 */
 Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
-faceCells(const UnstructuredGrid& grid)
+faceCellsToEigen(const UnstructuredGrid& grid)
 {
     typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
     return Eigen::Map<TwoColInt>(grid.face_cells, grid.number_of_faces, 2);
 }
 
 Eigen::Array<double, Eigen::Dynamic, 1>
-cellCentroidsZ(const UnstructuredGrid& grid)
+cellCentroidsZToEigen(const UnstructuredGrid& grid)
 {
     return Eigen::Map<Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
         (grid.cell_centroids, grid.number_of_cells, grid.dimensions).rightCols<1>();
@@ -93,7 +93,7 @@ void extractInternalFaces(const UnstructuredGrid& grid,
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> OneColBool;
     typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
     typedef Eigen::Array<bool, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColBool;
-    TwoColInt nb = faceCells(grid);
+    TwoColInt nb = faceCellsToEigen(grid);
     // std::cout << "nb = \n" << nb << std::endl;
     // Extracts the internal faces of the grid.
     // These are stored in internal_faces.
@@ -201,9 +201,14 @@ double faceArea(const Dune::CpGrid& grid, int face_index)
 namespace AutoDiffGrid
 {
 
+ADFaceCellTraits<Dune::CpGrid>::Type
+faceCellsToEigen(const Dune::CpGrid& grid)
+{
+    return Opm::AutoDiffGrid::FaceCellsContainerProxy(&grid);
+}
 
 Eigen::Array<double, Eigen::Dynamic, 1>
-cellCentroidsZ(const Dune::CpGrid& grid)
+cellCentroidsZToEigen(const Dune::CpGrid& grid)
 {
     // Create an Eigen array of appropriate size
     int rows=numCells(grid);

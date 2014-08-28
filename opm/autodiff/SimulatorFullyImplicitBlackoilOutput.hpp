@@ -60,7 +60,7 @@ namespace Opm
         Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
                                   AutoDiffGrid::numFaces(grid),
                                   AutoDiffGrid::beginFaceCentroids(grid),
-                                  AutoDiffGrid::faceCells(grid),
+                                  UgGridHelpers::faceCells(grid),
                                   AutoDiffGrid::beginCellCentroids(grid),
                                   AutoDiffGrid::beginCellVolumes(grid),
                                   AutoDiffGrid::dimensions(grid),

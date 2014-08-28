@@ -61,7 +61,7 @@ namespace {
 
         std::vector<int> f2hf(2 * numFaces(grid), -1);
         Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
-            face_cells = faceCells(grid);
+            face_cells = faceCellsToEigen(grid);
         
         typedef typename Opm::UgGridHelpers::Cell2FacesTraits<UnstructuredGrid>::Type
             Cell2Faces;

@@ -41,10 +41,6 @@
 namespace Opm
 {
 
-namespace UgGridHelpers
-{
-
-} //end namespace UgGridHelpers
 namespace AutoDiffGrid
 {
 
@@ -58,7 +54,7 @@ struct ADFaceCellTraits
 
 /// \brief Get the z coordinates of the cell centroids of a grid.
 Eigen::Array<double, Eigen::Dynamic, 1>
-cellCentroidsZ(const UnstructuredGrid& grid);
+cellCentroidsZToEigen(const UnstructuredGrid& grid);
 
 /// \brief Get the centroid of a cell.
 /// \param grid The grid whose cell centroid we query.
@@ -396,8 +392,9 @@ namespace AutoDiffGrid
 {
 
 /// \brief Get the z coordinates of the cell centroids of a grid.
+/// \return The z coordinates of the cell centroids in an Eigen array
 Eigen::Array<double, Eigen::Dynamic, 1>
-cellCentroidsZ(const  Dune::CpGrid& grid);
+cellCentroidsZToEigen(const  Dune::CpGrid& grid);
 
 /// \brief Get the centroid of a cell.
 /// \param grid The grid whose cell centroid we query.
@@ -491,11 +488,8 @@ struct ADFaceCellTraits<Dune::CpGrid>
     : public Opm::UgGridHelpers::FaceCellTraits<Dune::CpGrid>
 {};
 /// \brief Get the face to cell mapping of a grid.
-inline ADFaceCellTraits<Dune::CpGrid>::Type
-faceCells(const Dune::CpGrid& grid)
-{
-    return Opm::UgGridHelpers::faceCells(grid);
-}
+ADFaceCellTraits<Dune::CpGrid>::Type
+faceCellsToEigen(const Dune::CpGrid& grid);
 } // end namespace AutoDiffGrid
 } //end namespace OPM
 
@@ -507,6 +501,7 @@ namespace AutoDiffGrid
 
 using Opm::UgGridHelpers::SparseTableView;
 using Opm::UgGridHelpers::numCells;
+using Opm::UgGridHelpers::faceCells;
 using Opm::UgGridHelpers::numFaces;
 using Opm::UgGridHelpers::dimensions;
 using Opm::UgGridHelpers::cartDims;
@@ -526,9 +521,9 @@ struct ADFaceCellTraits<UnstructuredGrid>
 
 /// \brief Get the face to cell mapping of a grid.
 ADFaceCellTraits<UnstructuredGrid>::Type
-faceCells(const UnstructuredGrid& grid);
+faceCellsToEigen(const UnstructuredGrid& grid);
 
-}
-}
+} // end namespace AutoDiffGrid
+} //end namespace OPM
 
 #endif

@@ -164,7 +164,7 @@ try
     if (param.has("init_saturation")) {
         initStateBasic(grid->numCells(), &(grid->globalCell())[0],
                        &(grid->logicalCartesianSize()[0]),
-                       grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                       grid->numFaces(), UgGridHelpers::faceCells(*grid),
                        grid->beginFaceCentroids(),
                        grid->beginCellCentroids(), Dune::CpGrid::dimension,
                        *props, param, gravity[2], state);
@@ -182,7 +182,7 @@ try
         OPM_THROW(std::logic_error, "sim_fibo_ad_cp does not support EQUIL initialization.");
     } else {
         initBlackoilStateFromDeck(grid->numCells(), &(grid->globalCell())[0],
-                                  grid->numFaces(), AutoDiffGrid::faceCells(*grid),
+                                  grid->numFaces(), UgGridHelpers::faceCells(*grid),
                                   grid->beginFaceCentroids(),
                                   grid->beginCellCentroids(), Dune::CpGrid::dimension,
                                   *props, deck, gravity[2], state);

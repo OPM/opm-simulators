@@ -185,7 +185,7 @@ namespace Opm
         // but for scalar lambda and using TPFA it holds.
         const V p1 = Vec(state.pressure().data(), nc, 1);
         const V ndp = (ops_.ngrad * p1.matrix()).array();
-        const V z = cellCentroidsZ(grid_);
+        const V z = cellCentroidsZToEigen(grid_);
         const V ndz = (ops_.ngrad * z.matrix()).array();
         assert(num_internal == ndp.size());
         const double* density = props_.density();
