@@ -243,9 +243,9 @@ namespace Opm
     /// \param[in]     cell   Cell index. 
     /// \param[in]     pcow   P_oil - P_water.
     /// \param[in/out] swat   Water saturation. / Possibly modified Water saturation.      
-    void BlackoilPropertiesBasic::swatInitScaling(const int cell, 
-                                                  const double pcow, 
-                                                  double & swat)
+    void BlackoilPropertiesBasic::swatInitScaling(const int /*cell*/, 
+                                                  const double /*pcow*/, 
+                                                  double& /*swat*/)
     {
         OPM_THROW(std::runtime_error, "BlackoilPropertiesBasic::swatInitScaling()  --  not implemented.");
     }
