@@ -109,7 +109,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         std::vector<WellData>& well_data,
                                         std::map<std::string, int>& well_names_to_index,
                                         const PhaseUsage& phaseUsage,
-                                        std::map<int,int> cartesian_to_compressed,
+                                        const std::map<int,int>& cartesian_to_compressed,
                                         const double* permeability)
 {
     std::vector<std::vector<PerfData> > wellperf_data;

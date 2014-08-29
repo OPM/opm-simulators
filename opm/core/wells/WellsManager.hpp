@@ -166,7 +166,7 @@ namespace Opm
                                    std::vector<WellData>& well_data,
                                    std::map<std::string, int> & well_names_to_index,
                                    const PhaseUsage& phaseUsage,
-                                   const std::map<int,int> cartesian_to_compressed,
+                                   const std::map<int,int>& cartesian_to_compressed,
                                    const double* permeability);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
