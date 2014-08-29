@@ -168,50 +168,127 @@ namespace WellsManagerDetail
 
     } // namespace InjectionControl
 
+    // Compute direction permutation corresponding to completion's
+    // direction.  First two elements of return value are directions
+    // perpendicular to completion while last element is direction
+    // along completion.
+    inline std::array< std::array<double,3>::size_type, 3 >
+    directionIndices(const Opm::CompletionDirection::DirectionEnum direction)
+    {
+        typedef std::array<double,3>::size_type idx_t;
+        typedef std::array<idx_t,3>             permutation;
+
+        switch (direction) {
+        case Opm::CompletionDirection::DirectionEnum::X:
+            return permutation { idx_t(1), idx_t(2), idx_t(0) };
+
+        case Opm::CompletionDirection::DirectionEnum::Y:
+            return permutation { idx_t(2), idx_t(0), idx_t(1) };
+
+        case Opm::CompletionDirection::DirectionEnum::Z:
+            return permutation { idx_t(0), idx_t(1), idx_t(2) };
+        }
+    }
+
+    // Permute (diagonal) permeability components according to
+    // completion's direction.
+    inline std::array<double,3>
+    permComponents(const Opm::CompletionDirection::DirectionEnum direction,
+                   const double*                                 perm)
+    {
+        const auto p = directionIndices(direction);
+        const std::array<double,3>::size_type d = 3;
+
+        std::array<double,3>
+            K = { perm[ p[0]*(d + 1) ] ,
+                  perm[ p[1]*(d + 1) ] ,
+                  perm[ p[2]*(d + 1) ] };
+
+        return K;
+    }
+
+    // Permute cell's geometric extent according to completion's
+    // direction.  Honour net-to-gross ratio.
+    //
+    // Note: 'extent' is intentionally accepted by modifiable value
+    // rather than reference-to-const to support NTG manipulation.
+    inline std::array<double,3>
+    effectiveExtent(const Opm::CompletionDirection::DirectionEnum direction,
+                    const double                                  ntg,
+                    std::array<double,3>                          extent)
+    {
+        // Vertical extent affected by net-to-gross ratio.
+        extent[2] *= ntg;
+
+        const auto p = directionIndices(direction);
+        const std::array<double,3>::size_type d = extent.size();
+
+        std::array<double,3>
+            D = { extent[ p[0]*(d + 1) ] ,
+                  extent[ p[1]*(d + 1) ] ,
+                  extent[ p[2]*(d + 1) ] };
+
+        return D;
+    }
+
+    // Compute Peaceman's effective radius of single completion.
+    inline double
+    effectiveRadius(const std::array<double,3>& K,
+                    const std::array<double,3>& D)
+    {
+        const double K01   = K[0] / K[1];
+        const double K10   = K[1] / K[0];
+
+        const double D0_sq = D[0] * D[0];
+        const double D1_sq = D[1] * D[1];
+
+        const double num = std::sqrt(K10*D0_sq + K01*D1_sq);
+        const double den = std::pow(K01, 0.25) + std::pow(K10, 0.25);
+
+        // Note: Analytic constant 0.28 derived for infintely sized
+        // formation with repeating well placement.
+        return 0.28 * (num / den);
+    }
+
     // Use the Peaceman well model to compute well indices.
     // radius is the radius of the well.
     // cubical contains [dx, dy, dz] of the cell.
     // (Note that the well model asumes that each cell is a cuboid).
     // cell_permeability is the permeability tensor of the given cell.
     // returns the well index of the cell.
-    double computeWellIndex(const double radius,
-                            const std::array<double, 3>& cubical,
-                            const double* cell_permeability,
-                            const double skin_factor)
+    double
+    computeWellIndex(const double                                  radius,
+                     const std::array<double, 3>&                  cubical,
+                     const double*                                 cell_permeability,
+                     const double                                  skin_factor,
+                     const Opm::CompletionDirection::DirectionEnum direction,
+                     const double                                  ntg)
     {
-        using namespace std;
-        // sse: Using the Peaceman model.
-        // NOTE: The formula is valid for cartesian grids, so the result can be a bit
-        // (in worst case: there is no upper bound for the error) off the mark.
-        const double permx = cell_permeability[0];
-        const double permy = cell_permeability[3*1 + 1];
-        double effective_perm = sqrt(permx*permy);
-        // sse: The formula for r_0 can be found on page 39 of
-        // "Well Models for Mimetic Finite Differerence Methods and Improved Representation
-        //  of Wells in Multiscale Methods" by Ingeborg Skjelkvåle Ligaarden.
-        assert(permx > 0.0);
-        assert(permy > 0.0);
-        double kxoy = permx / permy;
-        double kyox = permy / permx;
-        double r0_denominator = pow(kyox, 0.25) + pow(kxoy, 0.25);
-        double r0_numerator = sqrt((sqrt(kyox)*cubical[0]*cubical[0]) +
-                                   (sqrt(kxoy)*cubical[1]*cubical[1]));
-        assert(r0_denominator > 0.0);
-        double r0 = 0.28 * r0_numerator / r0_denominator;
-        assert(radius > 0.0);
-        assert(r0 > 0.0);
-        if (r0 < radius) {
-            std::cout << "ERROR: Too big well radius detected.";
-            std::cout << "Specified well radius is " << radius
-                      << " while r0 is " << r0 << ".\n";
+        const std::array<double,3>& K =
+            permComponents(direction, cell_permeability);
+
+        const std::array<double,3>& D =
+            effectiveExtent(direction, ntg, cubical);
+
+        const double r0 = effectiveRadius(K, D);
+        const double Kh = std::sqrt(K[0] * K[1]) * D[2];
+
+        // Angle of completion exposed to flow.  We assume centre
+        // placement so there's complete exposure (= 2\pi).
+        const double angle =
+            6.2831853071795864769252867665590057683943387987502116419498;
+
+        double rw = radius;
+        if (r0 < rw) {
+            std::cerr << "Completion radius exceeds effective radius\n"
+                      << "Reset to effective\n";
+
+            rw = r0;
         }
-        const long double two_pi = 6.2831853071795864769252867665590057683943387987502116419498;
-        double wi_denominator = log(r0 / radius) + skin_factor;
-        double wi_numerator = two_pi * cubical[2];
-        assert(wi_denominator > 0.0);
-        double wi = effective_perm * wi_numerator / wi_denominator;
-        assert(wi > 0.0);
-        return wi;
+
+        // NOTE: The formula is originally derived and valid for
+        // Cartesian grids only.
+        return (angle * Kh) / (std::log(r0 / rw) + skin_factor);
     }
 
 } // anonymous namespace

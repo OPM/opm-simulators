@@ -50,7 +50,9 @@ namespace WellsManagerDetail
 double computeWellIndex(const double radius,
                         const std::array<double, 3>& cubical,
                         const double* cell_permeability,
-                        const double skin_factor);
+                        const double skin_factor,
+                        const Opm::CompletionDirection::DirectionEnum direction,
+                        const double ntg);
 
 template <int dim, class C2F, class FC>
 std::array<double, dim>
@@ -98,7 +100,7 @@ getCubeDim(const C2F& c2f,
 
 namespace Opm
 {
-template<class C2F, class CC, class FC>
+template<class C2F, class CC, class FC, class NTG>
 void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
                                         const C2F& c2f, 
                                         const int* cart_dims,
@@ -110,7 +112,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         std::map<std::string, int>& well_names_to_index,
                                         const PhaseUsage& phaseUsage,
                                         const std::map<int,int>& cartesian_to_compressed,
-                                        const double* permeability)
+                                        const double* permeability,
+                                        const NTG& ntg)
 {
     if (dimensions != 3) {
         OPM_THROW(std::domain_error,
@@ -174,7 +177,11 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                         WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
 
                     const double* cell_perm = &permeability[dimensions*dimensions*cell];
-                    pd.well_index = WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm, completion->getSkinFactor());
+                    pd.well_index =
+                        WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
+                                                             completion->getSkinFactor(),
+                                                             completion->getDirection(),
+                                                             ntg[cell]);
                 }
                 wellperf_data[well_index].push_back(pd);
             }
@@ -320,13 +327,19 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     well_names.reserve(wells.size());
     well_data.reserve(wells.size());
 
+    typedef GridPropertyAccess::ArrayPolicy::ExtractFromDeck<double> DoubleArray;
+    typedef GridPropertyAccess::Compressed<DoubleArray, GridPropertyAccess::Tag::NTG> NTGArray;
+
+    DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
+    NTGArray    ntg(ntg_glob, global_cell);
+
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
                          cart_dims,
                          begin_face_centroids,
                          begin_cell_centroids,
                          dimensions,
                          well_names, well_data, well_names_to_index,
-                         pu, cartesian_to_compressed, permeability);
+                         pu, cartesian_to_compressed, permeability, ntg);
 
     setupWellControls(wells, timeStep, well_names, pu);
 

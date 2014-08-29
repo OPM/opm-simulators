@@ -27,6 +27,8 @@
 #include <opm/core/wells/WellsGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
+#include <opm/core/utility/CompressedPropertyAccess.hpp>
+
 struct Wells;
 struct UnstructuredGrid;
 
@@ -155,7 +157,8 @@ namespace Opm
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
-        template<class C2F, class CC, class FC>
+
+        template<class C2F, class CC, class FC, class NTG>
         void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
                                    const C2F& cell_to_faces, 
                                    const int* cart_dims,
@@ -167,7 +170,8 @@ namespace Opm
                                    std::map<std::string, int> & well_names_to_index,
                                    const PhaseUsage& phaseUsage,
                                    const std::map<int,int>& cartesian_to_compressed,
-                                   const double* permeability);
+                                   const double* permeability,
+                                   const NTG& ntg);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
         void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
