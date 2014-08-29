@@ -112,6 +112,12 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         const std::map<int,int>& cartesian_to_compressed,
                                         const double* permeability)
 {
+    if (dimensions != 3) {
+        OPM_THROW(std::domain_error,
+                  "WellsManager::createWellsFromSpecs() only "
+                  "supported in three space dimensions");
+    }
+
     std::vector<std::vector<PerfData> > wellperf_data;
     wellperf_data.resize(wells.size());
 
