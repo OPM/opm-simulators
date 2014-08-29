@@ -94,7 +94,7 @@ getCubeDim(const C2F& c2f,
 
     return cube;
 }
-} // end namespace
+} // end namespace WellsManagerDetail
 
 namespace Opm
 {
