@@ -1,7 +1,13 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
 
+#include <opm/core/utility/ErrorMacros.hpp>
+
+#include <algorithm>
 #include <array>
+#include <cstddef>
+#include <exception>
+#include <iterator>
 
 namespace WellsManagerDetail
 {
@@ -46,30 +52,46 @@ double computeWellIndex(const double radius,
                         const double* cell_permeability,
                         const double skin_factor);
 
-template<class C2F, class FC>
-std::array<double, 3> getCubeDim(const C2F& c2f, FC begin_face_centroids, int dimensions, 
-                                 int cell)
+template <int dim, class C2F, class FC>
+std::array<double, dim>
+getCubeDim(const C2F& c2f,
+           FC         begin_face_centroids,
+           int        cell)
 {
-    using namespace std;
-    std::array<double, 3> cube;
-    //typedef Opm::UgGridHelpers::Cell2FacesTraits<UnstructuredGrid>::Type Cell2Faces;
-    //Cell2Faces c2f=Opm::UgGridHelpers::cell2Faces(grid);
-    typedef typename C2F::row_type FaceRow;
-    FaceRow faces=c2f[cell];
-    typename FaceRow::const_iterator face=faces.begin();
-    int num_local_faces = faces.end()-face;
-    vector<double> x(num_local_faces);
-    vector<double> y(num_local_faces);
-    vector<double> z(num_local_faces);
-    for (int lf=0; lf<num_local_faces; ++ lf, ++face) {
-        FC centroid = Opm::UgGridHelpers::increment(begin_face_centroids, *face, dimensions);
-        x[lf] = Opm::UgGridHelpers::getCoordinate(centroid, 0);
-        y[lf] = Opm::UgGridHelpers::getCoordinate(centroid, 1);
-        z[lf] = Opm::UgGridHelpers::getCoordinate(centroid, 2);
+    std::array< std::vector<double>, dim > X;
+    {
+        const std::vector<double>::size_type
+            nf = std::distance(c2f[cell].begin(),
+                               c2f[cell].end  ());
+
+        for (int d = 0; d < dim; ++d) {
+            X[d].reserve(nf);
+        }
     }
-    cube[0] = *max_element(x.begin(), x.end()) - *min_element(x.begin(), x.end());
-    cube[1] = *max_element(y.begin(), y.end()) - *min_element(y.begin(), y.end());
-    cube[2] = *max_element(z.begin(), z.end()) - *min_element(z.begin(), z.end());
+
+    typedef typename C2F::row_type::const_iterator FI;
+
+    for (FI f = c2f[cell].begin(), e = c2f[cell].end(); f != e; ++f) {
+        using Opm::UgGridHelpers::increment;
+        using Opm::UgGridHelpers::getCoordinate;
+
+        const FC& fc = increment(begin_face_centroids, *f, dim);
+
+        for (int d = 0; d < dim; ++d) {
+            X[d].push_back(getCoordinate(fc, d));
+        }
+    }
+
+    std::array<double, dim> cube;
+    for (int d = 0; d < dim; ++d) {
+        typedef std::vector<double>::iterator VI;
+        typedef std::pair<VI,VI>              PVI;
+
+        const PVI m = std::minmax_element(X[d].begin(), X[d].end());
+
+        cube[d] = *m.second - *m.first;
+    }
+
     return cube;
 }
 } // end namespace
@@ -141,8 +163,10 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                         radius = 0.5*unit::feet;
                         OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                     }
-                    std::array<double, 3> cubical = WellsManagerDetail::getCubeDim(c2f, begin_face_centroids,
-                                                                                   dimensions, cell);
+
+                    const std::array<double, 3> cubical =
+                        WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
+
                     const double* cell_perm = &permeability[dimensions*dimensions*cell];
                     pd.well_index = WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm, completion->getSkinFactor());
                 }
