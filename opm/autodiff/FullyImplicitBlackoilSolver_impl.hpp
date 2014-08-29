@@ -190,6 +190,7 @@ namespace {
         , relax_increment_ (0.1)
         , relax_rel_tol_ (0.2)
         , max_iter_ (15)
+        , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
@@ -211,6 +212,28 @@ namespace {
             OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
         }
     }
+
+
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::
+    setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
+    {
+        const int num_faces = AutoDiffGrid::numFaces(grid_);
+        if (int(threshold_pressures_by_face.size()) != num_faces) {
+            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures_by_face input, must be equal to number of faces.");
+        }
+        use_threshold_pressure_ = true;
+        // Map to interior faces.
+        const int num_ifaces = ops_.internal_faces.size();
+        threshold_pressures_by_interior_face_.resize(num_ifaces);
+        for (int ii = 0; ii < num_ifaces; ++ii) {
+            threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
+        }
+    }
+
+
 
 
     template<class T>
@@ -1577,7 +1600,11 @@ namespace {
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rhoavg = ops_.caver * rho;
 
-        const ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+
+        if (use_threshold_pressure_) {
+            applyThresholdPressures(dp);
+        }
 
         head = transi*dp;
         //head      = transi*(ops_.ngrad * phasePressure) + gflux;
@@ -1589,6 +1616,39 @@ namespace {
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
         // DUMP(rq_[ actph ].mob);
         // DUMP(rq_[ actph ].mflux);
+    }
+
+
+
+
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::applyThresholdPressures(ADB& dp)
+    {
+        // We support reversible threshold pressures only.
+        // Method: if the potential difference is lower (in absolute
+        // value) than the threshold for any face, then the potential
+        // (and derivatives) is set to zero. If it is above the
+        // threshold, the threshold pressure is subtracted from the
+        // absolute potential (the potential is moved towards zero).
+
+        // Identify the set of faces where the potential is under the
+        // threshold, that shall have zero flow. Storing the bool
+        // Array as a V (a double Array) with 1 and 0 elements, a
+        // 1 where flow is allowed, a 0 where it is not.
+        const V high_potential = (dp.value().abs() >= threshold_pressures_by_interior_face_).template cast<double>();
+
+        // Create a sparse vector that nullifies the low potential elements.
+        const M keep_high_potential = spdiag(high_potential);
+
+        // The threshold modification must have the sign that reduces the
+        // absolute value of the potential.
+        const V sign_for_mod = (dp.value() < 0).template cast<double>();
+        const V threshold_modification = sign_for_mod * threshold_pressures_by_interior_face_;
+
+        // Modify potential and nullify where appropriate.
+        dp = keep_high_potential * (dp + threshold_modification);
     }
 
 

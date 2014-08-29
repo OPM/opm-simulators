@@ -74,6 +74,16 @@ namespace Opm {
                                     const bool has_disgas,
                                     const bool has_vapoil );
 
+        /// \brief Set threshold pressures that prevent or reduce flow.
+        /// This prevents flow across faces if the potential
+        /// difference is less than the threshold. If the potential
+        /// difference is greater, the threshold value is subtracted
+        /// before calculating flow. This is treated symmetrically, so
+        /// flow is prevented or reduced in both directions equally.
+        /// \param[in]  threshold_pressures_by_face   array of size equal to the number of faces
+        ///                                   of the grid passed in the constructor.
+        void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
+
         /// Take a single forward step, modifiying
         ///   state.pressure()
         ///   state.faceflux()
@@ -155,6 +165,8 @@ namespace Opm {
         double                          relax_increment_;
         double                          relax_rel_tol_;
         int                             max_iter_;
+        bool use_threshold_pressure_;
+        V threshold_pressures_by_interior_face_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
@@ -222,6 +234,8 @@ namespace Opm {
                         const ADB&              kr    ,
                         const ADB&              p     ,
                         const SolutionState&    state );
+
+        void applyThresholdPressures(ADB& dp);
 
         double
         residualNorm() const;
