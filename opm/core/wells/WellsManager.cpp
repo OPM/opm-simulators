@@ -180,13 +180,13 @@ namespace WellsManagerDetail
 
         switch (direction) {
         case Opm::CompletionDirection::DirectionEnum::X:
-            return permutation { idx_t(1), idx_t(2), idx_t(0) };
+            return permutation {{ idx_t(1), idx_t(2), idx_t(0) }};
 
         case Opm::CompletionDirection::DirectionEnum::Y:
-            return permutation { idx_t(2), idx_t(0), idx_t(1) };
+            return permutation {{ idx_t(2), idx_t(0), idx_t(1) }};
 
         case Opm::CompletionDirection::DirectionEnum::Z:
-            return permutation { idx_t(0), idx_t(1), idx_t(2) };
+            return permutation {{ idx_t(0), idx_t(1), idx_t(2) }};
         }
     }
 
@@ -200,9 +200,9 @@ namespace WellsManagerDetail
         const std::array<double,3>::size_type d = 3;
 
         std::array<double,3>
-            K = { perm[ p[0]*(d + 1) ] ,
-                  perm[ p[1]*(d + 1) ] ,
-                  perm[ p[2]*(d + 1) ] };
+            K = {{ perm[ p[0]*(d + 1) ] ,
+                   perm[ p[1]*(d + 1) ] ,
+                   perm[ p[2]*(d + 1) ] }};
 
         return K;
     }
@@ -224,9 +224,9 @@ namespace WellsManagerDetail
         const std::array<double,3>::size_type d = extent.size();
 
         std::array<double,3>
-            D = { extent[ p[0]*(d + 1) ] ,
-                  extent[ p[1]*(d + 1) ] ,
-                  extent[ p[2]*(d + 1) ] };
+            D = {{ extent[ p[0]*(d + 1) ] ,
+                   extent[ p[1]*(d + 1) ] ,
+                   extent[ p[2]*(d + 1) ] }};
 
         return D;
     }
