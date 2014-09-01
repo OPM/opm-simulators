@@ -199,8 +199,8 @@ namespace Opm
 
         bool columnIsMasked_(Opm::DeckConstPtr deck,
                              const std::string& keywordName,
-                             int /* columnIdx */)
-        { return deck->getKeyword(keywordName)->getRecord(0)->getItem(0)->getSIDouble(0) != -1.0; }
+                             int columnIdx)
+        { return deck->getKeyword(keywordName)->getRecord(columnIdx)->getItem(0)->getSIDouble(0) != -1.0; }
     };
 
 
