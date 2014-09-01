@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
 
 #include <iostream>
+#include <map>
 
 namespace Opm
 {
@@ -556,6 +557,12 @@ namespace Opm
         const bool useLiquid = phase_usage_.phase_used[Liquid];
         const bool useVapour = phase_usage_.phase_used[Vapour];
         bool useKeyword = deck->hasKeyword(keyword);
+        bool useStateKeyword = eclState->hasDoubleGridProperty(keyword);
+        const std::map<std::string, int> kw2tab = {
+            {"SWL", 1}, {"SWCR", 2}, {"SWU", 3}, {"SGL", 4},
+            {"SGCR", 5}, {"SGU", 6}, {"SOWCR", 7}, {"SOGCR", 8},
+            {"ISWL", 1}, {"ISWCR", 2}, {"ISWU", 3}, {"ISGL", 4},
+            {"ISGCR", 5}, {"ISGU", 6}, {"ISOWCR", 7}, {"ISOGCR", 8}};
         bool hasENPTVD = deck->hasKeyword("ENPTVD");
         bool hasENKRVD = deck->hasKeyword("ENKRVD");
         int itab = 0;
@@ -564,70 +571,13 @@ namespace Opm
         std::vector<std::string> col_names;
 
         // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
-        int phase_pos_aqua = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-        int phase_pos_vapour = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-        if ((keyword[0] == 'S' && (useKeyword || hasENPTVD)) || (keyword[1] == 'S' && useKeyword) ) {
-            if (keyword == std::string("SWL") || keyword == std::string("ISWL") ) {
-                if (useAqua && (useKeyword || columnIsMasked_(deck, "ENPTVD", 0))) {
-                    itab = 1;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).smin_[phase_pos_aqua];
-                }
-            } else if (keyword == std::string("SWCR") || keyword == std::string("ISWCR") ) {
-                if (useAqua && (useKeyword || columnIsMasked_(deck, "ENPTVD", 1))) {
-                    itab = 2;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).swcr_;
-                }
-            } else if (keyword == std::string("SWU") || keyword == std::string("ISWU") ) {
-                if (useAqua && (useKeyword || columnIsMasked_(deck, "ENPTVD", 2))) {
-                    itab = 3;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).smax_[phase_pos_aqua];
-                }
-            } else if (keyword == std::string("SGL") || keyword == std::string("ISGL") ) {
-                if (useVapour && (useKeyword || columnIsMasked_(deck, "ENPTVD", 3))) {
-                    itab = 4;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).smin_[phase_pos_vapour];
-                }
-            } else if (keyword == std::string("SGCR") || keyword == std::string("ISGCR") ) {
-                if (useVapour && (useKeyword || columnIsMasked_(deck, "ENPTVD", 4))) {
-                    itab = 5;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).sgcr_;
-                }
-            } else if (keyword == std::string("SGU") || keyword == std::string("ISGU") ) {
-                if (useVapour && (useKeyword || columnIsMasked_(deck, "ENPTVD", 5))) {
-                    itab = 6;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).smax_[phase_pos_vapour];
-                }
-            } else if (keyword == std::string("SOWCR") || keyword == std::string("ISOWCR") ) {
-                if (useAqua && (useKeyword || columnIsMasked_(deck, "ENPTVD", 6))) {
-                    itab = 7;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).sowcr_;
-                }
-            } else if (keyword == std::string("SOGCR") || keyword == std::string("ISOGCR") ) {
-                if (useVapour && (useKeyword || columnIsMasked_(deck, "ENPTVD", 7))) {
-                    itab = 8;
-                    scaleparam.resize(number_of_cells);
-                    for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = funcForCell(i).sogcr_;
-                }
-            } else {
-                OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
+        if ((keyword[0] == 'S' && (useStateKeyword || hasENPTVD)) || (keyword[1] == 'S' && useStateKeyword) ) {
+            if (useAqua && (useStateKeyword || columnIsMasked_(deck, "ENPTVD", kw2tab.find(keyword)->second-1))) {
+                itab = kw2tab.find(keyword)->second;
+                scaleparam.resize(number_of_cells);
             }
             if (!useKeyword && itab > 0) {
-                const auto& enptvdTables = eclipseState->getEnptvdTables();
+                const auto& enptvdTables = eclState->getEnptvdTables();
                 int num_tables = enptvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);
@@ -703,7 +653,7 @@ namespace Opm
                     param_col[table_num] = enkrvdTable.getColumn(itab); // itab=[1-7]: krw krg kro krwr krgr krorw krorg
                 }
             }
-         } else if (useKeyword && (keyword[0] == 'P' || keyword[1] == 'P') ) {
+        } else if (useKeyword && (keyword[0] == 'P' || keyword[1] == 'P') ) {
              if (useAqua && (keyword == std::string("PCW") || keyword == std::string("IPCW")) ) {
                  scaleparam.resize(number_of_cells);
                  for (int i=0; i<number_of_cells; ++i)
@@ -717,16 +667,25 @@ namespace Opm
 
         if (scaleparam.empty()) {
             return;
-        } else if (useKeyword) {
+        }
+
+        if (useKeyword || useStateKeyword) {
             // Keyword values from deck
             std::cout << "--- Scaling parameter '" << keyword << "' assigned." << std::endl;
             const int* gc = global_cell;
-            const std::vector<double>& val = deck->getKeyword(keyword)->getSIDoubleData();
+            std::vector<double> val;
+            if (keyword[0] == 'S' || keyword[1] == 'S') { // Saturation from EclipseState
+                val = eclState->getDoubleGridProperty(keyword)->getData();
+            } else {
+                val = deck->getKeyword(keyword)->getSIDoubleData(); //KR and PC directly from deck.
+            }
             for (int c = 0; c < int(scaleparam.size()); ++c) {
                 const int deck_pos = (gc == NULL) ? c : gc[c];
                 scaleparam[c] = val[deck_pos];
             }
-        } else {
+        }
+
+        if (itab > 0) {
             const int dim = dimensions;
             std::vector<int> endnum;
             if ( deck->hasKeyword("ENDNUM")) {
@@ -743,17 +702,39 @@ namespace Opm
                 // Default deck value is one
                 endnum.assign(number_of_cells, 0);
             }
-            for (int cell = 0; cell < number_of_cells; ++cell) {
-                if (endnum[cell] >= 0 && param_col[endnum[cell]][0] >= 0.0) {
-                    double zc = UgGridHelpers
-                        ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
-                                       dim-1);
-                    if (zc >= depth_col[endnum[cell]].front() && zc <= depth_col[endnum[cell]].back()) { //don't want extrap outside depth interval
-                        scaleparam[cell] = linearInterpolation(depth_col[endnum[cell]], param_col[endnum[cell]], zc);
+            if (keyword[0] == 'S' || keyword[1] == 'S') { // From EclipseState
+                for (int cell = 0; cell < number_of_cells; ++cell) {
+                    if (!std::isfinite(scaleparam[cell]) && endnum[cell] >= 0 && param_col[endnum[cell]][0] >= 0.0) {
+                        double zc = UgGridHelpers
+                            ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
+                                           dim-1);
+                        if (zc >= depth_col[endnum[cell]].front() && zc <= depth_col[endnum[cell]].back()) { //don't want extrap outside depth interval
+                            scaleparam[cell] = linearInterpolation(depth_col[endnum[cell]], param_col[endnum[cell]], zc);
+                        }
+                    } else if (!std::isfinite(scaleparam[cell]) && endnum[cell] >= 0) {
+                        // As of 1/9-2014:  Reflects remaining work on opm/parser/eclipse/EclipseState/Grid/GridPropertyInitializers.hpp ...
+                        OPM_THROW(std::runtime_error, " -- Inconsistent EclipseState: '" << keyword << "' (ENPTVD)");
+                    }
+                }
+            } else { //KR and PC from deck.
+                for (int cell = 0; cell < number_of_cells; ++cell) {
+                    if (endnum[cell] >= 0 && param_col[endnum[cell]][0] >= 0.0) {
+                        double zc = UgGridHelpers
+                            ::getCoordinate(UgGridHelpers::increment(begin_cell_centroid, cell, dim),
+                                           dim-1);
+                        if (zc >= depth_col[endnum[cell]].front() && zc <= depth_col[endnum[cell]].back()) { //don't want extrap outside depth interval
+                            scaleparam[cell] = linearInterpolation(depth_col[endnum[cell]], param_col[endnum[cell]], zc);
+                        }
                     }
                 }
             }
         }
+
+//        std::cout << keyword << ":" << std::endl;
+//        for (int c = 0; c < int(scaleparam.size()); ++c) {
+//                std::cout << c << "    " << scaleparam[c] << std::endl;
+//        }
+
     }
 
     // Saturation scaling
