@@ -221,12 +221,11 @@ namespace WellsManagerDetail
         extent[2] *= ntg;
 
         const auto p = directionIndices(direction);
-        const std::array<double,3>::size_type d = extent.size();
 
         std::array<double,3>
-            D = {{ extent[ p[0]*(d + 1) ] ,
-                   extent[ p[1]*(d + 1) ] ,
-                   extent[ p[2]*(d + 1) ] }};
+            D = {{ extent[ p[0] ] ,
+                   extent[ p[1] ] ,
+                   extent[ p[2] ] }};
 
         return D;
     }
