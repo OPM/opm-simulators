@@ -71,6 +71,8 @@ namespace Opm
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
         dm["surfvolume"] = &state.surfacevol();
+        dm["rs"] = &state.gasoilratio();
+        dm["rv"] = &state.rv();
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
                                   AutoDiffGrid::numFaces(grid),
