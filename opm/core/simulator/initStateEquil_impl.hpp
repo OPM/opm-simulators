@@ -394,44 +394,15 @@ namespace Opm
 
                 assign(G, opress, z0, cells, press);
 
-
-                const double inf = std::numeric_limits<double>::max();
                 const double woc = reg.zwoc();
-
-                // Oil pressure at WOC, Pc_ow = Po - Pw, dPc_ow/dSw <= 0
-                if      ( woc < span[0] ) {
-                    // WOC above reservoir (model entirely water filled)
-                    po_woc = - inf;
-                }
-                else if ( woc > span[1] ) {
-                    // WOC below reservoir (no mobile water)
-                    po_woc = inf;
-                }
-                else {
-                    // if WOC is within the reservoir.
-                    if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
-                    else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
-                    else               { po_woc = p0;             } // WOC *at*  datum
-                }
+                if      (z0 > woc) { po_woc = opress[0](woc); } // WOC above datum
+                else if (z0 < woc) { po_woc = opress[1](woc); } // WOC below datum
+                else               { po_woc = p0;             } // WOC *at*  datum
 
                 const double goc = reg.zgoc();
-
-                // Oil pressure at GOC, Pc_go = Pg - Po, dPc_go/dSg >= 0
-                if      ( goc < span[0] ) {
-                    // GOC above reservoir (no gas phase)
-                    po_goc = -inf;
-                }
-
-                else if ( goc > span[1] ) {
-                    // GOC below reservoir (model entirely gas filled)
-                    po_goc = inf;
-                }
-                else {
-                    // if GOC is within the reservoir.
-                    if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
-                    else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
-                    else               { po_goc = p0;             } // GOC *at*  datum
-                }
+                if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
+                else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
+                else               { po_goc = p0;             } // GOC *at*  datum
 
             }
 
@@ -499,33 +470,14 @@ namespace Opm
 
             if (PhaseUsed::water(pu)) {
                 const int wix = PhaseIndex::water(pu);
-
-                // If woc is above or below the reservoar,
-                // po_woc is set to inf and -inf, respectivly
-                // and so is the water pressure
-                if ( std::abs(po_woc) < std::numeric_limits<double>::max() ){
-                    PhasePressure::water(G, reg, span, grav, po_woc,
-                                         cells, press[ wix ]);
-                } else {
-                    press[wix].assign(cells.size(),po_woc);
-                }
-
+                PhasePressure::water(G, reg, span, grav, po_woc,
+                                     cells, press[ wix ]);
             }
 
             if (PhaseUsed::gas(pu)) {
                 const int gix = PhaseIndex::gas(pu);
-
-                // If goc is above or below the reservoar,
-                // po_goc is set to -inf and inf, respectivly
-                // and so is the gas pressure
-
-                if ( std::abs(po_goc) < std::numeric_limits<double>::max()){
-                    PhasePressure::gas(G, reg, span, grav, po_goc,
-                                       cells, press[ gix ]);
-                } else {
-                    press[gix].assign(cells.size(),po_goc);
-                }
-
+                PhasePressure::gas(G, reg, span, grav, po_goc,
+                                   cells, press[ gix ]);
             }
         }
     } // namespace Details
@@ -720,21 +672,23 @@ namespace Opm
                 // Adjust phase pressures for max and min saturation ...
                 double pc[BlackoilPhases::MaxNumPhases];
                 double sat[BlackoilPhases::MaxNumPhases];
-                if (sw > smax[waterpos]-1.0e-6) {
+                double threshold_sat = 1.0e-6;
+
+                if (sw > smax[waterpos]-threshold_sat ) {
                     sat[waterpos] = smax[waterpos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
-                } else if (sg > smax[gaspos]-1.0e-6) {
+                } else if (sg > smax[gaspos]-threshold_sat) {
                     sat[gaspos] = smax[gaspos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
                 }
-                if (sg < smin[gaspos]+1.0e-6) {
+                if (sg < smin[gaspos]+threshold_sat) {
                     sat[gaspos] = smin[gaspos];
                     props.capPress(1, sat, &cell, pc, 0);
                     phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pc[gaspos];
                 }
-                if (sw < smin[waterpos]+1.0e-6) {
+                if (sw < smin[waterpos]+threshold_sat) {
                     sat[waterpos] = smin[waterpos];
                     props.capPress(1, sat, &cell, pc, 0);
                     phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pc[waterpos];
