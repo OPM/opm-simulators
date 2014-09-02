@@ -559,6 +559,10 @@ namespace Opm
             const double zwoc = reg.zwoc ();
             const double zgoc = reg.zgoc ();
 
+            // make sure goc and woc is within the span for the phase pressure calculation
+            span[0] = std::min(span[0],zgoc);
+            span[1] = std::max(span[1],zwoc);
+
             if (! ((zgoc > z0) || (z0 > zwoc))) {
                 // Datum depth in oil zone  (zgoc <= z0 <= zwoc)
                 Details::equilibrateOWG(G, reg, grav, span, cells, press);
