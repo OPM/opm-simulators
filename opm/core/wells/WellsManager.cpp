@@ -241,7 +241,8 @@ namespace WellsManagerDetail
         const double D0_sq = D[0] * D[0];
         const double D1_sq = D[1] * D[1];
 
-        const double num = std::sqrt(K10*D0_sq + K01*D1_sq);
+        const double num = std::sqrt((std::sqrt(K10) * D0_sq) +
+                                     (std::sqrt(K01) * D1_sq));
         const double den = std::pow(K01, 0.25) + std::pow(K10, 0.25);
 
         // Note: Analytic constant 0.28 derived for infintely sized
