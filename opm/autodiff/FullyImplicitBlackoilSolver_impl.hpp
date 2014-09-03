@@ -1642,13 +1642,12 @@ namespace {
         // Create a sparse vector that nullifies the low potential elements.
         const M keep_high_potential = spdiag(high_potential);
 
-        // The threshold modification must have the sign that reduces the
-        // absolute value of the potential.
-        const V sign_for_mod = (dp.value() < 0).template cast<double>();
-        const V threshold_modification = sign_for_mod * threshold_pressures_by_interior_face_;
+        // Find the current sign for the threshold modification
+        const V sign_dp = sign(dp.value());
+        const V threshold_modification = sign_dp * threshold_pressures_by_interior_face_;
 
         // Modify potential and nullify where appropriate.
-        dp = keep_high_potential * (dp + threshold_modification);
+        dp = keep_high_potential * (dp - threshold_modification);
     }
 
 
