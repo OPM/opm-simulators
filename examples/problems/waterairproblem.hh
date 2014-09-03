@@ -109,8 +109,8 @@ SET_INT_PROP(WaterAirBaseProblem, NumericDifferenceMethod, +1);
 // Write newton convergence
 SET_BOOL_PROP(WaterAirBaseProblem, NewtonWriteConvergence, false);
 
-// The default for the end time of the simulation
-SET_SCALAR_PROP(WaterAirBaseProblem, EndTime, 5e3);
+// The default for the end time of the simulation (1 year)
+SET_SCALAR_PROP(WaterAirBaseProblem, EndTime, 1.0 * 365 * 24 * 60 * 60);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);

@@ -3,7 +3,7 @@ DGF
 Interval
 0 0   % first corner
 40 40 % second corner
-64 64 % cells in x and y direction
+8 8 % cells in x and y direction
 #
 
 GridParameter
