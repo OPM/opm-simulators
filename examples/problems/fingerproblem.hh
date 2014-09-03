@@ -119,7 +119,7 @@ SET_INT_PROP(FingerBaseProblem, CellsY, 70);
 SET_INT_PROP(FingerBaseProblem, CellsZ, 1);
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(FingerBaseProblem, EndTime, 1e3);
+SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
