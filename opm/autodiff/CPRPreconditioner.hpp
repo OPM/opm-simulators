@@ -173,7 +173,8 @@ namespace Opm
                 criterion.setNoPreSmoothSteps(smooth_steps);
                 criterion.setNoPostSmoothSteps(smooth_steps);
                 criterion.setGamma(1); // V-cycle; this is the default
-                Precond precond(opAe, criterion);
+                typename Precond::SmootherArgs smootherArgs;
+                Precond precond(opAe, criterion, smootherArgs);
 
                 // Construct linear solver.
                 const double tolerance = 1e-4;
