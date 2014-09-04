@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 IRIS AS.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -69,20 +70,75 @@ namespace Opm
             category = Dune::SolverCategory::sequential
         };
 
+        //! \brief Elliptic Operator
+        typedef Dune::MatrixAdapter<M,X,X> Operator;
+
+        //! \brief ilu-0 preconditioner for the elliptic system
+        typedef Dune::SeqILU0<M,X,X> Preconditioner;
+
+        //! \brief amg preconditioner for the elliptic system
+        typedef Preconditioner Smoother;
+        typedef Dune::Amg::AMG<Operator, X, Smoother> AMG;
+
         /*! \brief Constructor.
 
           Constructor gets all parameters to operate the prec.
-          \param A  The matrix to operate on.
-          \param Ae The top-left elliptic part of A.
-          \param w  The ILU0 relaxation factor.
+          \param A       The matrix to operate on.
+          \param Ae      The top-left elliptic part of A.
+          \param relax   The ILU0 relaxation factor.
+          \param useAMG  if true, AMG is used as a preconditioner for the elliptic sub-system, otherwise ilu-0 (default)
+          \param useBiCG if true, BiCG solver is used (default), otherwise CG solver
         */
-        CPRPreconditioner (const M& A, const M& Ae, const field_type relax)
+        CPRPreconditioner (const M& A, const M& Ae, const field_type relax,
+                           const bool useAMG  = false,
+                           const bool useBiCG = true )
             : A_(A),
-              ILU_(A), // copy A (will be overwritten by ILU decomp)
               Ae_(Ae),
-              relax_(relax)
+              de_( Ae_.N() ),
+              ve_( Ae_.M() ),
+              dmodified_( A_.N() ),
+              opAe_( Ae_ ),
+              precond_( 0 ), // ilu0 preconditioner for elliptic system
+              amg_( 0 ),     // amg  preconditioner for elliptic system
+              ILU_(A), // copy A (will be overwritten by ILU decomp)
+              vilu_( ILU_.N() ),
+              relax_(relax),
+              use_bicg_solver_( useBiCG )
         {
+            // create appropriate preconditioner for elliptic system
+            createPreconditioner( useAMG );
+
             Dune::bilu0_decomposition(ILU_);
+        }
+
+        //! \brief copy constructor
+        CPRPreconditioner( const CPRPreconditioner& other )
+            : A_( other.A_ ),
+              Ae_( other.Ae_ ),
+              de_( Ae_.N() ),
+              ve_( Ae_.M() ),
+              dmodified_( A_.N() ),
+              opAe_( Ae_ ),
+              precond_( 0 ),
+              amg_( 0 ),
+              ILU_( other.ILU_ ),
+              vilu_( ILU_.N() ),
+              relax_( other.relax_ ),
+              use_bicg_solver_( other.use_bicg_solver_ )
+        {
+            // create appropriate preconditioner for elliptic system
+            createPreconditioner( other.amg_ != 0 );
+        }
+
+        //! \brief Destructor
+        virtual ~CPRPreconditioner()
+        {
+          if( precond_ ) {
+              delete precond_ ; precond_ = 0;
+          }
+          if( amg_ ) {
+              delete amg_;  amg_ = 0;
+          }
         }
 
         /*!
@@ -102,27 +158,33 @@ namespace Opm
         virtual void apply (X& v, const Y& d)
         {
             // Extract part of d corresponding to elliptic part.
-            Y de(Ae_.N());
             // Note: Assumes that the elliptic part comes first.
-            std::copy_n(d.begin(), Ae_.N(), de.begin());
+            std::copy_n(d.begin(), de_.size(), de_.begin());
 
             // Solve elliptic part, extend solution to full.
-            Y ve = solveElliptic(de);
-            Y vfull(ILU_.N());
-            vfull = 0.0;
+            // reset result
+            ve_ = 0;
+            //std::copy_n(v.begin(), ve_.size(), ve_.begin());
+            solveElliptic( ve_, de_ );
+
+            //reset return value
+            v = 0.0;
             // Again assuming that the elliptic part comes first.
-            std::copy(ve.begin(), ve.end(), vfull.begin());
+            std::copy(ve_.begin(), ve_.end(), v.begin());
 
             // Subtract elliptic residual from initial residual.
             // dmodified = d - A * vfull
-            Y dmodified = d;
-            A_.mmv(vfull, dmodified);
+            //Y dmodified = d;
+            dmodified_ = d ;
+            A_.mmv(v, dmodified_);
 
             // Apply ILU0.
-            Y vilu(ILU_.N());
-            Dune::bilu_backsolve(ILU_, vilu, dmodified);
-            v = vfull;
-            v += vilu;
+            Dune::bilu_backsolve(ILU_, vilu_, dmodified_);
+            v += vilu_;
+
+            // don't apply relaxation if relax_ == 1 
+            if( std::abs( relax_ - 1.0 ) < 1e-12 ) return ;
+
             v *= relax_;
         }
 
@@ -135,47 +197,105 @@ namespace Opm
         {
         }
 
-    private:
-        Y solveElliptic(Y& de)
+     protected:
+        void solveElliptic(Y& x, Y& de)
         {
-            // std::cout << "solveElliptic()" << std::endl;
-            // Construct operator, scalar product and vectors needed.
-            typedef Dune::MatrixAdapter<M,X,X> Operator;
-            Operator opAe(Ae_);
-            Dune::SeqScalarProduct<X> sp;
-            // Right hand side.
-            // System solution
-            X x(opAe.getmat().M());
-            x = 0.0;
-
-            // Construct preconditioner.
-            typedef typename Dune::SeqILU0<M,X,X> Preconditioner;
-            const double relax = 1.0;
-            Preconditioner precond(Ae_, relax);
-
-            // Construct linear solver.
+            // Linear solver parameters
             const double tolerance = 1e-4;
             const int maxit = 5000;
             const int verbosity = 0;
-            Dune::BiCGSTABSolver<X> linsolve(opAe, sp, precond, tolerance, maxit, verbosity);
 
-            // Solve system.
+            // operator result containing iterations etc.
             Dune::InverseOperatorResult result;
-            linsolve.apply(x, de, result);
+
+            // sequential scalar product
+            Dune::SeqScalarProduct<X> sp;
+            if( amg_ )
+            {
+                // Solve system with AMG
+                if( use_bicg_solver_ ) {
+                    Dune::BiCGSTABSolver<X> linsolve(opAe_, sp, (*amg_), tolerance, maxit, verbosity);
+                    linsolve.apply(x, de, result);
+                }
+                else {
+                    Dune::CGSolver<X> linsolve(opAe_, sp, (*amg_), tolerance, maxit, verbosity);
+                    linsolve.apply(x, de, result);
+                }
+            }
+            else
+            {
+                assert( precond_ );
+                // Solve system with ILU-0
+                if( use_bicg_solver_ ) {
+                    Dune::BiCGSTABSolver<X> linsolve(opAe_, sp, (*precond_), tolerance, maxit, verbosity);
+                    linsolve.apply(x, de, result);
+                }
+                else {
+                    Dune::CGSolver<X> linsolve(opAe_, sp, (*precond_), tolerance, maxit, verbosity);
+                    linsolve.apply(x, de, result);
+                }
+
+            }
+
             if (!result.converged) {
                 OPM_THROW(std::runtime_error, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
-            return x;
         }
 
         //! \brief The matrix for the full linear problem.
         const matrix_type& A_;
+        //! \brief The elliptic part of the matrix.
+        const matrix_type& Ae_;
+
+        //! \brief temporary variables for elliptic solve
+        Y de_, ve_, dmodified_;
+
+        //! \brief elliptic operator
+        Operator opAe_;
+
+        //! \brief ILU0 preconditioner for the elliptic system
+        Preconditioner* precond_;
+        //! \brief AMG preconditioner with ILU0 smoother
+        AMG* amg_;
+
         //! \brief The ILU0 decomposition of the matrix.
         matrix_type ILU_;
-        //! \brief The elliptic part of the matrix.
-        matrix_type Ae_;
+
+        //! \brief temporary variables for ILU solve
+        Y vilu_;
+
         //! \brief The relaxation factor to use.
         field_type relax_;
+
+        //! \brief true if ISTL BiCGSTABSolver is used, otherwise ISTL CGSolver is used
+        const bool use_bicg_solver_ ;
+
+     protected:
+        void createPreconditioner( const bool amg )
+        {
+            if( amg )
+            {
+              typedef Dune::Amg::CoarsenCriterion< Dune::Amg::SymmetricCriterion<M, Dune::Amg::FirstDiagonal> > Criterion;
+              typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments SmootherArgs;
+
+              SmootherArgs smootherArgs;
+
+              smootherArgs.iterations = 1;
+              smootherArgs.relaxationFactor = relax_ ;
+
+              int coarsenTarget=1200;
+              Criterion criterion(15,coarsenTarget);
+              criterion.setDebugLevel( 1 ); // only print hierarchy information
+              criterion.setDefaultValuesIsotropic(2);
+              criterion.setAlpha(.67);
+              criterion.setBeta(1.0e-6);
+              criterion.setMaxLevel(10);
+              amg_ = new AMG(opAe_, criterion, smootherArgs);
+            }
+            else
+              precond_ = new Preconditioner( Ae_, relax_ );
+              //precond_ = new Preconditioner( Ae_, 1, relax_ );
+       }
     };
 
 } // namespace Opm
