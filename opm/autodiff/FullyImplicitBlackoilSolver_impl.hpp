@@ -629,7 +629,7 @@ namespace {
         // b is row major, so can just copy data.
         std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);
         // Extract well connection depths.
-        const V depth = cellCentroidsZ(grid_);
+        const V depth = cellCentroidsZToEigen(grid_);
         const V pdepth = subset(depth, well_cells);
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
         // Surface density.
