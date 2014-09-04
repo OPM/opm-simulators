@@ -158,7 +158,10 @@ namespace Opm
                 typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<M,CouplingMetric> > CriterionBase;
                 // typedef Dune::Amg::UnSymmetricCriterion<M,CouplingMetric> CriterionBase;
                 typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
-                typedef Dune::Amg::FastAMG<Operator,X>   Precond;
+                typedef Dune::SeqILU0<M,X,X>        Smoother;
+                // typedef Dune::SeqSOR<M,X,X>        Smoother;
+
+                typedef Dune::Amg::AMG<Operator,X,Smoother>   Precond;
 
                 // Construct preconditioner.
                 Criterion criterion;
@@ -171,12 +174,7 @@ namespace Opm
                 criterion.setNoPreSmoothSteps(smooth_steps);
                 criterion.setNoPostSmoothSteps(smooth_steps);
                 criterion.setGamma(1); // V-cycle; this is the default
-                Dune::Amg::Parameters parms;
-                parms.setDebugLevel(verbosity);
-                parms.setNoPreSmoothSteps(smooth_steps);
-                parms.setNoPostSmoothSteps(smooth_steps);
-                parms.setProlongationDampingFactor(linsolver_prolongate_factor);
-                Precond precond(opAe, criterion, parms);
+                Precond precond(opAe, criterion);
 
                 // Construct linear solver.
                 const double tolerance = 1e-4;
