@@ -33,7 +33,6 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
-#include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
 #include "reenable_warning_pragmas.h"
