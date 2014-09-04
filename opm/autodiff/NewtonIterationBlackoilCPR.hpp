@@ -42,7 +42,8 @@ namespace Opm
         /// \param[in] param   parameters controlling the behaviour of
         ///                    the preconditioning and choice of
         ///                    linear solvers.
-        ///                    Note: parameters currently unused.
+        ///                    Parameters:
+        ///                        cpr_use_amg   if true, use AMG preconditioner for elliptic part
         NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param);
 
         /// Solve the system of linear equations Ax = b, with A being the
@@ -51,6 +52,9 @@ namespace Opm
         /// \param[in] residual   residual object containing A and b.
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
+
+    private:
+        bool use_amg_;
     };
 
 } // namespace Opm

@@ -33,6 +33,7 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
+#include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
 #include "reenable_warning_pragmas.h"
@@ -75,12 +76,14 @@ namespace Opm
           \param A  The matrix to operate on.
           \param Ae The top-left elliptic part of A.
           \param w  The ILU0 relaxation factor.
+          \param amg  If true, use AMG preconditioner for elliptic part.
         */
-        CPRPreconditioner (const M& A, const M& Ae, const field_type relax)
+        CPRPreconditioner (const M& A, const M& Ae, const field_type relax, const bool amg)
             : A_(A),
               ILU_(A), // copy A (will be overwritten by ILU decomp)
               Ae_(Ae),
-              relax_(relax)
+              relax_(relax),
+              use_amg_(amg)
         {
             Dune::bilu0_decomposition(ILU_);
         }
@@ -148,20 +151,55 @@ namespace Opm
             X x(opAe.getmat().M());
             x = 0.0;
 
-            // Construct preconditioner.
-            typedef typename Dune::SeqILU0<M,X,X> Preconditioner;
-            const double relax = 1.0;
-            Preconditioner precond(Ae_, relax);
-
-            // Construct linear solver.
-            const double tolerance = 1e-4;
-            const int maxit = 5000;
-            const int verbosity = 0;
-            Dune::BiCGSTABSolver<X> linsolve(opAe, sp, precond, tolerance, maxit, verbosity);
-
-            // Solve system.
             Dune::InverseOperatorResult result;
-            linsolve.apply(x, de, result);
+            if (use_amg_) {
+                typedef Dune::Amg::FirstDiagonal CouplingMetric;
+                // typedef Dune::Amg::RowSum        CouplingMetric;
+                typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<M,CouplingMetric> > CriterionBase;
+                // typedef Dune::Amg::UnSymmetricCriterion<M,CouplingMetric> CriterionBase;
+                typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
+                typedef Dune::Amg::FastAMG<Operator,X>   Precond;
+
+                // Construct preconditioner.
+                Criterion criterion;
+                const double linsolver_prolongate_factor = 1.6;
+                const int verbosity = 0;
+                const int smooth_steps = 1;
+                criterion.setDebugLevel(verbosity);
+                criterion.setDefaultValuesAnisotropic(3, 2);
+                criterion.setProlongationDampingFactor(linsolver_prolongate_factor);
+                criterion.setNoPreSmoothSteps(smooth_steps);
+                criterion.setNoPostSmoothSteps(smooth_steps);
+                criterion.setGamma(1); // V-cycle; this is the default
+                Dune::Amg::Parameters parms;
+                parms.setDebugLevel(verbosity);
+                parms.setNoPreSmoothSteps(smooth_steps);
+                parms.setNoPostSmoothSteps(smooth_steps);
+                parms.setProlongationDampingFactor(linsolver_prolongate_factor);
+                Precond precond(opAe, criterion, parms);
+
+                // Construct linear solver.
+                const double tolerance = 1e-4;
+                const int maxit = 5000;
+                Dune::BiCGSTABSolver<X> linsolve(opAe, sp, precond, tolerance, maxit, verbosity);
+                // const int restart = 40;
+                // Dune::RestartedGMResSolver<X> linsolve(opAe, sp, precond, tolerance, restart, maxit, verbosity);
+                // Solve system.
+                linsolve.apply(x, de, result);
+            } else {
+                // Construct preconditioner.
+                typedef typename Dune::SeqILU0<M,X,X> Preconditioner;
+                const double relax = 1.0;
+                Preconditioner precond(Ae_, relax);
+
+                // Construct linear solver.
+                const double tolerance = 1e-4;
+                const int maxit = 5000;
+                const int verbosity = 0;
+                Dune::BiCGSTABSolver<X> linsolve(opAe, sp, precond, tolerance, maxit, verbosity);
+                // Solve system.
+                linsolve.apply(x, de, result);
+            }
             if (!result.converged) {
                 OPM_THROW(std::runtime_error, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
@@ -176,6 +214,8 @@ namespace Opm
         matrix_type Ae_;
         //! \brief The relaxation factor to use.
         field_type relax_;
+        //! \brief If true, use an AMG preconditioner for the elliptic part.
+        bool use_amg_;
     };
 
 } // namespace Opm
