@@ -154,11 +154,11 @@ namespace Opm
             if (use_amg_) {
                 typedef Dune::Amg::FirstDiagonal CouplingMetric;
                 // typedef Dune::Amg::RowSum        CouplingMetric;
-                typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<M,CouplingMetric> > CriterionBase;
-                // typedef Dune::Amg::UnSymmetricCriterion<M,CouplingMetric> CriterionBase;
+                // typedef Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<M,CouplingMetric> > CriterionBase;
+                typedef Dune::Amg::UnSymmetricCriterion<M,CouplingMetric> CriterionBase;
                 typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
-                typedef Dune::SeqILU0<M,X,X>        Smoother;
-                // typedef Dune::SeqSOR<M,X,X>        Smoother;
+                // typedef Dune::SeqILU0<M,X,X>        Smoother;
+                typedef Dune::SeqSOR<M,X,X>        Smoother;
 
                 typedef Dune::Amg::AMG<Operator,X,Smoother>   Precond;
 
