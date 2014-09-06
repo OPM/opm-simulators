@@ -164,8 +164,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                 int cell = cgit->second;
                 PerfData pd;
                 pd.cell = cell;
-                if (completion->getCF() > 0.0) {
-                    pd.well_index = completion->getCF();
+                if (completion->getConnectionTransmissibilityFactor() > 0.0) {
+                    pd.well_index = completion->getConnectionTransmissibilityFactor();
                 } else {
                     double radius = 0.5*completion->getDiameter();
                     if (radius <= 0.0) {
