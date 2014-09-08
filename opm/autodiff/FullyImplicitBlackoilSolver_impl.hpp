@@ -1278,7 +1278,7 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         const double dsmax = dsMax();
-        V so = one;
+        V so;
         V sw;
         V sg;
 
@@ -1306,16 +1306,51 @@ namespace {
                 const int pos = pu.phase_pos[ Water ];
                 const V sw_old = s_old.col(pos);
                 sw = sw_old - step * dsw;
-                so -= sw;
             }
 
             if (active_[Gas]) {
                 const int pos = pu.phase_pos[ Gas ];
                 const V sg_old = s_old.col(pos);
                 sg = sg_old - step * dsg;
-                so -= sg;
+            }
+
+            const int pos = pu.phase_pos[ Oil ];
+            const V so_old = s_old.col(pos);
+            so = so_old - step * dso;
+        }
+
+        auto ixg = sg < 0;
+        for (int c = 0; c < nc; ++c) {
+            if (ixg[c]) {
+                sw[c] = sw[c] / (1-sg[c]);
+                so[c] = so[c] / (1-sg[c]);
+                sg[c] = 0;
             }
         }
+
+
+        auto ixo = so < 0;
+        for (int c = 0; c < nc; ++c) {
+            if (ixo[c]) {
+                sw[c] = sw[c] / (1-so[c]);
+                sg[c] = sg[c] / (1-so[c]);
+                so[c] = 0;
+            }
+        }
+
+        auto ixw = sw < 0;
+        for (int c = 0; c < nc; ++c) {
+            if (ixw[c]) {
+                so[c] = so[c] / (1-sw[c]);
+                sg[c] = sg[c] / (1-sw[c]);
+                sw[c] = 0;
+            }
+        }
+
+        const V sumSat = sw + so + sg;
+        sw = sw / sumSat;
+        so = so / sumSat;
+        sg = sg / sumSat;
 
         const double drsmaxrel = drsMaxRel();
         const double drvmax = 1e9;//% same as in Mrst
@@ -1351,7 +1386,7 @@ namespace {
 
             // keep oil saturated if previous sg is sufficient large:
             const int pos = pu.phase_pos[ Gas ];
-            auto hadGas = (sg < 0 && s_old.col(pos) > epsilon);
+            auto hadGas = (sg <= 0 && s_old.col(pos) > epsilon);
             // Set oil saturated if previous rs is sufficiently large
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
@@ -1374,7 +1409,7 @@ namespace {
 
             // keep oil saturated if previous so is sufficient large:
             const int pos = pu.phase_pos[ Oil ];
-            auto hadOil = (so < 0 && s_old.col(pos) > epsilon );
+            auto hadOil = (so <= 0 && s_old.col(pos) > epsilon );
             // Set oil saturated if previous rv is sufficiently large
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
             auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
@@ -1386,35 +1421,6 @@ namespace {
             }
 
         }
-
-        auto ixg = sg < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixg[c]) {
-                sw[c] = sw[c] / (1-sg[c]);
-                so[c] = so[c] / (1-sg[c]);
-                sg[c] = 0;
-            }
-        }
-
-
-        auto ixo = so < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixo[c]) {
-                sw[c] = sw[c] / (1-so[c]);
-                sg[c] = sg[c] / (1-so[c]);
-                so[c] = 0;
-            }
-        }
-
-        auto ixw = sw < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixw[c]) {
-                so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-sw[c]);
-                sw[c] = 0;
-            }
-        }
-
 
         // Update saturations
 
