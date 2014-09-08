@@ -55,6 +55,7 @@ class EclWellManager
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
@@ -89,6 +90,21 @@ public:
             // specified by the updateWellCompletions_() method
             well->beginSpec();
             well->setName(wellName);
+
+
+                            // overwrite the automatically computed effective
+                            // permeability by the one specified in the deck. Note: this
+                            // is not implemented by opm-parser yet...
+                            //Scalar Kh = completion->getEffectivePermeability();
+                            Scalar Kh = 0.0;
+                            if (Kh > 0.0)
+                                well->setEffectivePermeability(elemCtx, dofIdx, Kh);
+
+                            // overwrite the automatically computed connection
+                            // transmissibilty factor by the one specified in the deck.
+                            Scalar ctf = completion->getConnectionTransmissibilityFactor();
+                            if (ctf > 0.0)
+                                well->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
             well->endSpec();
         }
     }
@@ -127,12 +143,13 @@ public:
             case Opm::WellCommon::AUTO:
                 // TODO: for now, auto means open...
             case Opm::WellCommon::OPEN:
-                well->setOpen(true);
+                well->setWellStatus(Well::Open);
                 break;
             case Opm::WellCommon::STOP:
-                // TODO: cross flow
+                well->setWellStatus(Well::Closed);
+                break;
             case Opm::WellCommon::SHUT:
-                well->setOpen(false);
+                well->setWellStatus(Well::Shut);
                 break;
             }
 
@@ -206,7 +223,10 @@ public:
                 well->setMaximumSurfaceRate(injectProperties.surfaceInjectionRate);
                 well->setMaximumReservoirRate(injectProperties.reservoirInjectionRate);
                 well->setTargetBottomHolePressure(injectProperties.BHPLimit);
-                well->setTargetTopHolePressure(injectProperties.THPLimit);
+
+                // TODO
+                well->setTargetTopHolePressure(1e100);
+                //well->setTargetTopHolePressure(injectProperties.THPLimit);
             }
 
             if (deckWell->isProducer(episodeIdx)) {
@@ -264,7 +284,10 @@ public:
                 }
 
                 well->setTargetBottomHolePressure(producerProperties.BHPLimit);
-                well->setTargetTopHolePressure(producerProperties.THPLimit);
+
+                // TODO
+                well->setTargetTopHolePressure(-1e100);
+                //well->setTargetTopHolePressure(producerProperties.THPLimit);
             }
         }
     }
