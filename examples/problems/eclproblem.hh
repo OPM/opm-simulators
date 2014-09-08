@@ -225,6 +225,8 @@ public:
         readMaterialParameters_();
         readInitialCondition_();
 
+        // initialize the wells. Note that this needs to be done after initializing the
+        // intrinsic permeabilities because the well model uses them...
         wellManager_.init(simulator.gridManager().eclipseState());
 
         // Start the first episode. For this, ask the Eclipse schedule.
