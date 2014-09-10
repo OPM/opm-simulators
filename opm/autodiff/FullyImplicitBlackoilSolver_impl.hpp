@@ -1319,6 +1319,7 @@ namespace {
             so = so_old - step * dso;
         }
 
+        // Appleyard chop process.
         auto ixg = sg < 0;
         for (int c = 0; c < nc; ++c) {
             if (ixg[c]) {
@@ -1352,6 +1353,23 @@ namespace {
         so = so / sumSat;
         sg = sg / sumSat;
 
+        // Update the state
+        for (int c = 0; c < nc; ++c) {
+            state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+        }
+
+        for (int c = 0; c < nc; ++c) {
+            state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+        }
+
+        if (active_[ Oil ]) {
+            const int pos = pu.phase_pos[ Oil ];
+            for (int c = 0; c < nc; ++c) {
+                state.saturation()[c*np + pos] = so[c];
+            }
+        }
+
+        // Update rs and rv
         const double drsmaxrel = drsMaxRel();
         const double drvmax = 1e9;//% same as in Mrst
         V rs;
@@ -1369,10 +1387,16 @@ namespace {
             rv = rv_old - drv_limited;
         }
 
-        // Appleyard chop process.
+        // Update the state
+        if (has_disgas_)
+            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+
+        if (has_vapoil_)
+            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
+
+        // Sg is used as primal variable for water only cells.
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
         auto watOnly = sw >  (1 - epsilon);
-
 
         // phase translation sg <-> rs
         const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
@@ -1421,31 +1445,6 @@ namespace {
             }
 
         }
-
-        // Update saturations
-
-        for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
-        }
-
-        for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
-        }
-
-        if (active_[ Oil ]) {
-            const int pos = pu.phase_pos[ Oil ];
-            for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = so[c];
-            }
-        }
-
-        // Rs and Rv updates
-        if (has_disgas_)
-            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
-
-        if (has_vapoil_)
-            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
-
 
 
         // Qs update.
