@@ -67,24 +67,20 @@ if (Petsc_ROOT)
  set (PETSC_ROOT "${Petsc_ROOT}")
 endif (Petsc_ROOT)
 if (NOT PETSC_NORMAL_INCLUDE_DIR)
-  if (PETSC_ROOT)
 	find_path (PETSC_NORMAL_INCLUDE_DIR
 	  NAMES "petsc.h"
 	  PATHS ${PETSC_ROOT}
 	  PATH_SUFFIXES "petsc-3.4.4" "include"
 	  NO_DEFAULT_PATH
 	  )
-  endif (PETSC_ROOT)
 endif (NOT PETSC_NORMAL_INCLUDE_DIR)
 if (NOT PETSC_MPIUNI_INCLUDE_DIR)
-  if (PETSC_ROOT)
 	find_path (PETSC_MPIUNI_INCLUDE_DIR
 	  NAMES "mpi.h"
 	  PATHS ${PETSC_ROOT}/include
 	  PATH_SUFFIXES "mpiuni"
 	  NO_DEFAULT_PATH
 	  )
-  endif (PETSC_ROOT)
 endif (NOT PETSC_MPIUNI_INCLUDE_DIR)
 # look for actual Petsc library
 if (NOT PETSC_LIBRARY)
