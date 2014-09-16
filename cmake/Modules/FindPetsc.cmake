@@ -70,16 +70,14 @@ if (NOT PETSC_NORMAL_INCLUDE_DIR)
 	find_path (PETSC_NORMAL_INCLUDE_DIR
 	  NAMES "petsc.h"
 	  PATHS ${PETSC_ROOT}
-	  PATH_SUFFIXES "petsc-3.4.4" "include"
-	  NO_DEFAULT_PATH
+	  PATH_SUFFIXES "petsc-3.4.4" "include" "petsc"
 	  )
 endif (NOT PETSC_NORMAL_INCLUDE_DIR)
 if (NOT PETSC_MPIUNI_INCLUDE_DIR)
 	find_path (PETSC_MPIUNI_INCLUDE_DIR
 	  NAMES "mpi.h"
-	  PATHS ${PETSC_ROOT}/include
-	  PATH_SUFFIXES "mpiuni"
-	  NO_DEFAULT_PATH
+	  PATHS ${PETSC_ROOT}
+	  PATH_SUFFIXES "mpiuni" "mpi"
 	  )
 endif (NOT PETSC_MPIUNI_INCLUDE_DIR)
 # look for actual Petsc library
@@ -88,7 +86,6 @@ if (NOT PETSC_LIBRARY)
     NAMES "petsc-3.4.3" "petsc-3.4.4" "petsc" 
     PATHS ${PETSC_ROOT}
     PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-	NO_DEFAULT_PATH
     )
 endif()
 if(NOT PETSC_LIBRARY)
