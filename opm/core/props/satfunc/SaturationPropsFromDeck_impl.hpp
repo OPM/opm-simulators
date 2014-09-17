@@ -29,8 +29,6 @@
 
 #include <opm/parser/eclipse/Utility/EndscaleWrapper.hpp>
 #include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
-#include <opm/parser/eclipse/Utility/EnptvdTable.hpp>
-#include <opm/parser/eclipse/Utility/EnkrvdTable.hpp>
 
 #include <iostream>
 
@@ -63,7 +61,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
-                                                   Opm::EclipseStateConstPtr /*eclState*/,
+                                                   Opm::EclipseStateConstPtr eclState,
                                                    int number_of_cells,
                                                    const int* global_cell,
                                                    const T& begin_cell_centroids,
@@ -130,7 +128,7 @@ namespace Opm
         // Initialize tables.
         satfuncset_.resize(num_tables);
         for (int table = 0; table < num_tables; ++table) {
-            satfuncset_[table].init(deck, table, phase_usage_, samples);
+            satfuncset_[table].init(eclState, table, phase_usage_, samples);
         }
         
         // Check EHYSTR status
@@ -192,7 +190,7 @@ namespace Opm
             // TODO: ENPTVD/ENKRVD: Too few tables gives a cryptical message from parser, 
             //       superfluous tables are ignored by the parser without any warning ...
 
-            initEPS(deck, number_of_cells, global_cell, begin_cell_centroids,
+            initEPS(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
                     dimensions);
 
             if (do_hyst_) {
@@ -233,7 +231,7 @@ namespace Opm
                     //       to be a scaled version of the drainage curve (confer Norne model).
                 }
                 
-                initEPSHyst(deck, number_of_cells, global_cell, begin_cell_centroids,
+                initEPSHyst(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
                             dimensions);
             }
         }
@@ -460,6 +458,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(Opm::DeckConstPtr deck,
+                                                      Opm::EclipseStateConstPtr eclipseState,
                                                       int number_of_cells,
                                                       const int* global_cell,
                                                       const T& begin_cell_centroid,
@@ -470,39 +469,39 @@ namespace Opm
         std::vector<double> pcw, pcg;
         const std::vector<double> dummy;
         // Initialize saturation scaling parameter
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SWL"),   swl);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SWU"),   swu);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SWCR"),  swcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SGL"),   sgl);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SGU"),   sgu);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SGCR"),  sgcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SOWCR"), sowcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("SOGCR"), sogcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRW"),   krw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRG"),   krg);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRO"),   kro);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRWR"),  krwr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRGR"),  krgr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRORW"), krorw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("KRORG"), krorg);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("PCW"), pcw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("PCG"), pcg);
 
         eps_transf_.resize(number_of_cells);
@@ -613,6 +612,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPSHyst(Opm::DeckConstPtr deck,
+                                                      Opm::EclipseStateConstPtr eclipseState,
                                                       int number_of_cells,
                                                       const int* global_cell,
                                                       const T& begin_cell_centroid,
@@ -623,39 +623,39 @@ namespace Opm
         std::vector<double> ipcw, ipcg;
         const std::vector<double> dummy;
         // Initialize hysteresis saturation scaling parameters
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISWL"),   iswl);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISWU"),   iswu);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISWCR"),  iswcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISGL"),   isgl);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISGU"),   isgu);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISGCR"),  isgcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISOWCR"), isowcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("ISOGCR"), isogcr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRW"),   ikrw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRG"),   ikrg);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRO"),   ikro);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRWR"),  ikrwr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRGR"),  ikrgr);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRORW"), ikrorw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IKRORG"), ikrorg);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IPCW"), ipcw);
-        initEPSKey(deck, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+        initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                    std::string("IPCG"), ipcg);
 
         eps_transf_hyst_.resize(number_of_cells);
@@ -767,6 +767,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPSKey(Opm::DeckConstPtr deck,
+                                                         Opm::EclipseStateConstPtr eclipseState,
                                                          int number_of_cells,
                                                          const int* global_cell,
                                                          const T& begin_cell_centroid,
@@ -849,14 +850,15 @@ namespace Opm
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
-                int num_tables = deck->getKeyword("ENPTVD")->size();
+                const auto& enptvdTables = eclipseState->getEnptvdTables();
+                int num_tables = enptvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);
                 col_names.resize(9);
                 for (int table_num=0; table_num<num_tables; ++table_num) {
-                    Opm::SingleRecordTable enptvd(deck->getKeyword("ENPTVD"), col_names, table_num);
-                    depth_col[table_num] = enptvd.getColumn(0); // depth
-                    param_col[table_num] = enptvd.getColumn(itab); // itab=[1-8]: swl swcr swu sgl sgcr sgu sowcr sogcr
+                    const auto& enptvdTable = enptvdTables[table_num];
+                    depth_col[table_num] = enptvdTable.getDepthColumn();
+                    param_col[table_num] = enptvdTable.getColumn(itab); // itab=[1-8]: swl swcr swu sgl sgcr sgu sowcr sogcr
                 }
             }
         } else if ((keyword[0] == 'K' && (useKeyword || hasENKRVD)) || (keyword[1] == 'K' && useKeyword) ) {
@@ -913,14 +915,15 @@ namespace Opm
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
-                int num_tables = deck->getKeyword("ENKRVD")->size();
+                const auto& enkrvdTables = eclipseState->getEnkrvdTables();
+                int num_tables = enkrvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);
                 col_names.resize(8);
                 for (int table_num=0; table_num<num_tables; ++table_num) {
-                    Opm::SingleRecordTable enkrvd(deck->getKeyword("ENKRVD"), col_names, table_num);
-                    depth_col[table_num] = enkrvd.getColumn(0); // depth
-                    param_col[table_num] = enkrvd.getColumn(itab); // itab=[1-7]: krw krg kro krwr krgr krorw krorg
+                    const auto &enkrvdTable = enkrvdTables[table_num];
+                    depth_col[table_num] = enkrvdTable.getDepthColumn();
+                    param_col[table_num] = enkrvdTable.getColumn(itab); // itab=[1-7]: krw krg kro krwr krgr krorw krorg
                 }
             }
          } else if (useKeyword && (keyword[0] == 'P' || keyword[1] == 'P') ) {
