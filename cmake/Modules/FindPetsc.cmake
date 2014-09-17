@@ -73,13 +73,41 @@ if (NOT PETSC_NORMAL_INCLUDE_DIR)
 	  PATH_SUFFIXES "petsc-3.4.4" "include" "petsc"
 	  )
 endif (NOT PETSC_NORMAL_INCLUDE_DIR)
-if (NOT PETSC_MPIUNI_INCLUDE_DIR)
-	find_path (PETSC_MPIUNI_INCLUDE_DIR
-	  NAMES "mpi.h"
-	  PATHS ${PETSC_ROOT}
-	  PATH_SUFFIXES "mpiuni" "mpi"
-	  )
-endif (NOT PETSC_MPIUNI_INCLUDE_DIR)
+
+# if parallel computing is explicitly enabled - reuse the paths and links from
+# OpmMainLib + OpmFind
+# this needs to be called explicitly as FindPetsc runs before OpmMainLib starts
+# looking for MPI (for some reason). Ideally this isn't necessary
+if(USE_MPI)
+    find_package(MPI)
+endif()
+
+set(PETSC_MPI_FOUND ${MPI_FOUND})
+set(PETSC_MPI_INCLUDE_DIRS ${MPI_INCLUDE_PATH})
+set(PETSC_MPI_LIBRARIES ${MPI_LIBRARIES})
+
+# fallback - use the petsc provided implementation of serial MPI.
+if (NOT PETSC_MPI_INCLUDE_DIRS)
+    message(STATUS "Building without MPI support - looking for PETSc provided serial implementation")
+    find_path (PETSC_MPI_INCLUDE_DIRS
+        NAMES "mpi.h"
+        PATHS ${PETSC_ROOT}/include
+        PATH_SUFFIXES "mpiuni"
+        )
+
+    if(PETSC_MPI_INCLUDE_DIRS)
+        # not setting special linkage
+        set(PETSC_MPI_FOUND 1)
+    endif(PETSC_MPI_INCLUDE_DIRS)
+
+endif(NOT PETSC_MPI_INCLUDE_DIRS)
+
+# couldn't find any usable mpi implementation - abort
+if(NOT PETSC_MPI_FOUND)
+    message(STATUS "Could not find any suitable MPI implementation. Is PETSC_ROOT set?")
+    return()
+endif()
+
 # look for actual Petsc library
 if (NOT PETSC_LIBRARY)
   find_library(PETSC_LIBRARY
@@ -92,10 +120,11 @@ if(NOT PETSC_LIBRARY)
   message(STATUS "Could not find the PETSc library")
   return()
 endif()
-list(APPEND CMAKE_REQUIRED_LIBRARIES "${PETSC_LIBRARY}")
 
-if (PETSC_MPIUNI_INCLUDE_DIR AND PETSC_NORMAL_INCLUDE_DIR)
- list (APPEND PETSC_INCLUDE_DIR ${PETSC_MPIUNI_INCLUDE_DIR} ${PETSC_NORMAL_INCLUDE_DIR})
+list(APPEND CMAKE_REQUIRED_LIBRARIES "${PETSC_LIBRARY}" "${PETSC_MPI_LIBRARIES}")
+
+if (PETSC_MPI_INCLUDE_DIRS AND PETSC_NORMAL_INCLUDE_DIR)
+    list (APPEND PETSC_INCLUDE_DIR ${PETSC_MPI_INCLUDE_DIRS} ${PETSC_NORMAL_INCLUDE_DIR})
 endif()
 
 include(FindPackageHandleStandardArgs)
