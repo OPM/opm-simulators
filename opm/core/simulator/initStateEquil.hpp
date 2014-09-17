@@ -27,7 +27,6 @@
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
-#include <opm/parser/eclipse/Utility/SingleRecordTable.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <array>
@@ -279,15 +278,15 @@ namespace Opm
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
                     if (deck->hasKeyword("DISGAS")) {                    
+                        const std::vector<RsvdTable>& rsvdTables = eclipseState->getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
-                                if (deck->hasKeyword("RSVD") &&
-                                    size_t(rec[i].live_oil_table_index) <= deck->getKeyword("RSVD")->size()) { 
-                                    Opm::SingleRecordTable rsvd(deck->getKeyword("RSVD"),std::vector<std::string>{"vd", "rs"},rec[i].live_oil_table_index-1);
-                                    std::vector<double> vd(rsvd.getColumn("vd"));
-                                    std::vector<double> rs(rsvd.getColumn("rs"));
-                                    rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props, cell, vd, rs));
+                                if (rsvdTables.size() > 0 && size_t(rec[i].live_oil_table_index) <= rsvdTables.size()) { 
+                                    rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
+                                                                                           cell,
+                                                                                           rsvdTables[i].getDepthColumn(),
+                                                                                           rsvdTables[i].getRsColumn()));
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
                                 }
@@ -310,15 +309,15 @@ namespace Opm
 
                     rv_func_.reserve(rec.size());
                     if (deck->hasKeyword("VAPOIL")) {                    
+                        const std::vector<RvvdTable>& rvvdTables = eclipseState->getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
-                                if (deck->hasKeyword("RVVD") &&
-                                    size_t(rec[i].wet_gas_table_index) <= deck->getKeyword("RVVD")->size()) { 
-                                    Opm::SingleRecordTable rvvd(deck->getKeyword("RVVD"),std::vector<std::string>{"vd", "rv"},rec[i].wet_gas_table_index-1);                                
-                                    std::vector<double> vd(rvvd.getColumn("vd"));
-                                    std::vector<double> rv(rvvd.getColumn("rv"));
-                                    rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props, cell, vd, rv));
+                                if (rvvdTables.size() > 0 && size_t(rec[i].wet_gas_table_index) <= rvvdTables.size()) { 
+                                    rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props,
+                                                                                           cell,
+                                                                                           rvvdTables[i].getDepthColumn(),
+                                                                                           rvvdTables[i].getRvColumn()));
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
                                 }
