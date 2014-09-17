@@ -108,7 +108,7 @@ try
         // check_well_controls = param.getDefault("check_well_controls", false);
         // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
         // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(deck));
+        rock_comp.reset(new RockCompressibility(deck, eclipseState));
         // Gravity.
         gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
         // Init state variables (saturation and pressure).
