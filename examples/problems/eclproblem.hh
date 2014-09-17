@@ -42,11 +42,7 @@
 // must be available
 #include <dune/grid/CpGrid.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Utility/SgofTable.hpp>
-#include <opm/parser/eclipse/Utility/SwofTable.hpp>
-#include <opm/parser/eclipse/Utility/PvtoTable.hpp>
-#include <opm/parser/eclipse/Utility/PvtwTable.hpp>
-#include <opm/parser/eclipse/Utility/PvdgTable.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -597,14 +593,14 @@ private:
 
         ////////////////////////////////
         // fluid parameters
-        Opm::DeckKeywordConstPtr swofKeyword = deck->getKeyword("SWOF");
-        Opm::DeckKeywordConstPtr sgofKeyword = deck->getKeyword("SGOF");
+        const auto& swofTables = eclipseState->getSwofTables();
+        const auto& sgofTables = eclipseState->getSgofTables();
 
         // the number of tables for the SWOF and the SGOF keywords
         // must be identical
-        assert(Opm::SwofTable::numTables(swofKeyword) == Opm::SgofTable::numTables(sgofKeyword));
+        assert(swofTables.size() == sgofTables.size());
 
-        size_t numSatfuncTables = Opm::SwofTable::numTables(swofKeyword);
+        size_t numSatfuncTables = swofTables.size();
         materialParams_.resize(numSatfuncTables);
 
         typedef typename MaterialLawParams::GasOilParams GasOilParams;
@@ -615,8 +611,8 @@ private:
             OilWaterParams owParams;
             GasOilParams goParams;
 
-            Opm::SwofTable swofTable(swofKeyword, tableIdx);
-            Opm::SgofTable sgofTable(sgofKeyword, tableIdx);
+            const auto& swofTable = swofTables[tableIdx];
+            const auto& sgofTable = sgofTables[tableIdx];
 
             const auto &SwColumn = swofTable.getSwColumn();
             owParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
@@ -667,6 +663,7 @@ private:
     void initFluidSystem_()
     {
         const auto deck = this->simulator().gridManager().deck();
+        const auto eclipseState = this->simulator().gridManager().eclipseState();
 
         FluidSystem::initBegin();
 
@@ -682,13 +679,9 @@ private:
 
             // so far, we require the presence of the PVTO, PVTW and PVDG
             // keywords...
-            Opm::PvtoTable pvtoTable(deck->getKeyword("PVTO"), regionIdx);
-            Opm::PvtwTable pvtwTable(deck->getKeyword("PVTW"), regionIdx);
-            Opm::PvdgTable pvdgTable(deck->getKeyword("PVDG"), regionIdx);
-
-            FluidSystem::setPvtoTable(pvtoTable, regionIdx);
-            FluidSystem::setPvtwTable(pvtwTable, regionIdx);
-            FluidSystem::setPvdgTable(pvdgTable, regionIdx);
+            FluidSystem::setPvtoTable(eclipseState->getPvtoTables()[regionIdx], regionIdx);
+            FluidSystem::setPvtw(deck->getKeyword("PVTW"), regionIdx);
+            FluidSystem::setPvdgTable(eclipseState->getPvdgTables()[regionIdx], regionIdx);
         }
 
         FluidSystem::initEnd();
