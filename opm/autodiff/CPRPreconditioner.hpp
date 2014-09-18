@@ -21,6 +21,7 @@
 #ifndef OPM_CPRPRECONDITIONER_HEADER_INCLUDED
 #define OPM_CPRPRECONDITIONER_HEADER_INCLUDED
 
+#include <memory>
 
 #include "disable_warning_pragmas.h"
 
@@ -53,7 +54,11 @@ namespace Opm
       \tparam Y Type of the defect
     */
     template<class M, class X, class Y>
-    class CPRPreconditioner : public Dune::Preconditioner<X,Y> {
+    class CPRPreconditioner : public Dune::Preconditioner<X,Y>
+    {
+        // prohibit copying for now
+        CPRPreconditioner( const CPRPreconditioner& );
+
     public:
         //! \brief The matrix type the preconditioner is for.
         typedef typename Dune::remove_const<M>::type matrix_type;
@@ -98,9 +103,9 @@ namespace Opm
               ve_( Ae_.M() ),
               dmodified_( A_.N() ),
               opAe_( Ae_ ),
-              precond_( 0 ), // ilu0 preconditioner for elliptic system
-              amg_( 0 ),     // amg  preconditioner for elliptic system
-              ILU_(A), // copy A (will be overwritten by ILU decomp)
+              precond_(), // ilu0 preconditioner for elliptic system
+              amg_(),     // amg  preconditioner for elliptic system
+              ILU_(A),    // copy A (will be overwritten by ILU decomp)
               vilu_( ILU_.N() ),
               relax_(relax),
               use_bicg_solver_( useBiCG )
@@ -109,36 +114,6 @@ namespace Opm
             createPreconditioner( useAMG );
 
             Dune::bilu0_decomposition(ILU_);
-        }
-
-        //! \brief copy constructor
-        CPRPreconditioner( const CPRPreconditioner& other )
-            : A_( other.A_ ),
-              Ae_( other.Ae_ ),
-              de_( Ae_.N() ),
-              ve_( Ae_.M() ),
-              dmodified_( A_.N() ),
-              opAe_( Ae_ ),
-              precond_( 0 ),
-              amg_( 0 ),
-              ILU_( other.ILU_ ),
-              vilu_( ILU_.N() ),
-              relax_( other.relax_ ),
-              use_bicg_solver_( other.use_bicg_solver_ )
-        {
-            // create appropriate preconditioner for elliptic system
-            createPreconditioner( other.amg_ != 0 );
-        }
-
-        //! \brief Destructor
-        virtual ~CPRPreconditioner()
-        {
-          if( precond_ ) {
-              delete precond_ ; precond_ = 0;
-          }
-          if( amg_ ) {
-              delete amg_;  amg_ = 0;
-          }
         }
 
         /*!
@@ -164,7 +139,6 @@ namespace Opm
             // Solve elliptic part, extend solution to full.
             // reset result
             ve_ = 0;
-            //std::copy_n(v.begin(), ve_.size(), ve_.begin());
             solveElliptic( ve_, de_ );
 
             //reset return value
@@ -174,8 +148,7 @@ namespace Opm
 
             // Subtract elliptic residual from initial residual.
             // dmodified = d - A * vfull
-            //Y dmodified = d;
-            dmodified_ = d ;
+            dmodified_ = d;
             A_.mmv(v, dmodified_);
 
             // Apply ILU0.
@@ -183,7 +156,7 @@ namespace Opm
             v += vilu_;
 
             // don't apply relaxation if relax_ == 1 
-            if( std::abs( relax_ - 1.0 ) < 1e-12 ) return ;
+            if( std::abs( relax_ - 1.0 ) < 1e-12 ) return;
 
             v *= relax_;
         }
@@ -254,9 +227,9 @@ namespace Opm
         Operator opAe_;
 
         //! \brief ILU0 preconditioner for the elliptic system
-        Preconditioner* precond_;
+        std::unique_ptr< Preconditioner > precond_;
         //! \brief AMG preconditioner with ILU0 smoother
-        AMG* amg_;
+        std::unique_ptr< AMG > amg_;
 
         //! \brief The ILU0 decomposition of the matrix.
         matrix_type ILU_;
@@ -268,7 +241,7 @@ namespace Opm
         field_type relax_;
 
         //! \brief true if ISTL BiCGSTABSolver is used, otherwise ISTL CGSolver is used
-        const bool use_bicg_solver_ ;
+        const bool use_bicg_solver_;
 
      protected:
         void createPreconditioner( const bool amg )
@@ -281,20 +254,19 @@ namespace Opm
               SmootherArgs smootherArgs;
 
               smootherArgs.iterations = 1;
-              smootherArgs.relaxationFactor = relax_ ;
+              smootherArgs.relaxationFactor = relax_;
 
               int coarsenTarget=1200;
               Criterion criterion(15,coarsenTarget);
-              criterion.setDebugLevel( 1 ); // only print hierarchy information
+              criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
               criterion.setDefaultValuesIsotropic(2);
               criterion.setAlpha(.67);
               criterion.setBeta(1.0e-6);
               criterion.setMaxLevel(10);
-              amg_ = new AMG(opAe_, criterion, smootherArgs);
+              amg_ = std::unique_ptr< AMG > (new AMG(opAe_, criterion, smootherArgs));
             }
             else
-              precond_ = new Preconditioner( Ae_, relax_ );
-              //precond_ = new Preconditioner( Ae_, 1, relax_ );
+              precond_ = std::unique_ptr< Preconditioner > (new Preconditioner( Ae_, relax_ ));
        }
     };
 
