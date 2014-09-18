@@ -1278,7 +1278,7 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         const double dsmax = dsMax();
-        V so = one;
+        V so;
         V sw;
         V sg;
 
@@ -1306,87 +1306,20 @@ namespace {
                 const int pos = pu.phase_pos[ Water ];
                 const V sw_old = s_old.col(pos);
                 sw = sw_old - step * dsw;
-                so -= sw;
             }
 
             if (active_[Gas]) {
                 const int pos = pu.phase_pos[ Gas ];
                 const V sg_old = s_old.col(pos);
                 sg = sg_old - step * dsg;
-                so -= sg;
             }
-        }
 
-        const double drsmaxrel = drsMaxRel();
-        const double drvmax = 1e9;//% same as in Mrst
-        V rs;
-        if (has_disgas_) {
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            const V drs = isRs * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
-            rs = rs_old - drs_limited;
-        }
-        V rv;
-        if (has_vapoil_) {
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
-            const V drv = isRv * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min(drvmax);
-            rv = rv_old - drv_limited;
+            const int pos = pu.phase_pos[ Oil ];
+            const V so_old = s_old.col(pos);
+            so = so_old - step * dso;
         }
 
         // Appleyard chop process.
-        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-        auto watOnly = sw >  (1 - epsilon);
-
-
-        // phase translation sg <-> rs
-        const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-        const V rsSat = fluidRsSat(p, so, cells_);
-
-        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
-
-        if (has_disgas_) {
-            // The obvious case
-            auto hasGas = (sg > 0 && isRs == 0);
-
-            // keep oil saturated if previous sg is sufficient large:
-            const int pos = pu.phase_pos[ Gas ];
-            auto hadGas = (sg < 0 && s_old.col(pos) > epsilon);
-            // Set oil saturated if previous rs is sufficiently large
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
-            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
-
-            auto useSg = watOnly || hasGas || hadGas  || gasVaporized;
-            for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) { rs[c] = rsSat[c];}
-                else { primalVariable_[c] = PrimalVariables::RS; }
-
-            }
-        }
-
-        // phase transitions so <-> rv
-        const V rvSat0 = fluidRvSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-        const V rvSat = fluidRvSat(p, so, cells_);
-
-        if (has_vapoil_) {
-            // The obvious case
-            auto hasOil = (so > 0 && isRv == 0);
-
-            // keep oil saturated if previous so is sufficient large:
-            const int pos = pu.phase_pos[ Oil ];
-            auto hadOil = (so < 0 && s_old.col(pos) > epsilon );
-            // Set oil saturated if previous rv is sufficiently large
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
-            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-            auto useSg = watOnly || hasOil || hadOil || oilCondensed;
-            for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) { rv[c] = rvSat[c]; }
-                else {primalVariable_[c] = PrimalVariables::RV; }
-
-            }
-
-        }
-
         auto ixg = sg < 0;
         for (int c = 0; c < nc; ++c) {
             if (ixg[c]) {
@@ -1415,9 +1348,12 @@ namespace {
             }
         }
 
+        const V sumSat = sw + so + sg;
+        sw = sw / sumSat;
+        so = so / sumSat;
+        sg = sg / sumSat;
 
-        // Update saturations
-
+        // Update the state
         for (int c = 0; c < nc; ++c) {
             state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
         }
@@ -1433,13 +1369,82 @@ namespace {
             }
         }
 
-        // Rs and Rv updates
+        // Update rs and rv
+        const double drsmaxrel = drsMaxRel();
+        const double drvmax = 1e9;//% same as in Mrst
+        V rs;
+        if (has_disgas_) {
+            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V drs = isRs * dxvar;
+            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
+            rs = rs_old - drs_limited;
+        }
+        V rv;
+        if (has_vapoil_) {
+            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            const V drv = isRv * dxvar;
+            const V drv_limited = sign(drv) * drv.abs().min(drvmax);
+            rv = rv_old - drv_limited;
+        }
+
+        // Update the state
         if (has_disgas_)
             std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
 
         if (has_vapoil_)
             std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
 
+        // Sg is used as primal variable for water only cells.
+        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+        auto watOnly = sw >  (1 - epsilon);
+
+        // phase translation sg <-> rs
+        const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rsSat = fluidRsSat(p, so, cells_);
+
+        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+
+        if (has_disgas_) {
+            // The obvious case
+            auto hasGas = (sg > 0 && isRs == 0);
+
+            // keep oil saturated if previous sg is sufficient large:
+            const int pos = pu.phase_pos[ Gas ];
+            auto hadGas = (sg <= 0 && s_old.col(pos) > epsilon);
+            // Set oil saturated if previous rs is sufficiently large
+            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
+
+            auto useSg = watOnly || hasGas || hadGas  || gasVaporized;
+            for (int c = 0; c < nc; ++c) {
+                if (useSg[c]) { rs[c] = rsSat[c];}
+                else { primalVariable_[c] = PrimalVariables::RS; }
+
+            }
+        }
+
+        // phase transitions so <-> rv
+        const V rvSat0 = fluidRvSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+        const V rvSat = fluidRvSat(p, so, cells_);
+
+        if (has_vapoil_) {
+            // The obvious case
+            auto hasOil = (so > 0 && isRv == 0);
+
+            // keep oil saturated if previous so is sufficient large:
+            const int pos = pu.phase_pos[ Oil ];
+            auto hadOil = (so <= 0 && s_old.col(pos) > epsilon );
+            // Set oil saturated if previous rv is sufficiently large
+            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
+            auto useSg = watOnly || hasOil || hadOil || oilCondensed;
+            for (int c = 0; c < nc; ++c) {
+                if (useSg[c]) { rv[c] = rvSat[c]; }
+                else {primalVariable_[c] = PrimalVariables::RV; }
+
+            }
+
+        }
 
 
         // Qs update.
