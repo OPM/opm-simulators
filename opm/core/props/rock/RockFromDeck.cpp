@@ -105,10 +105,9 @@ namespace Opm
                                           double perm_threshold)
     {
         const int dim              = 3;
-        const int num_global_cells = cartdims[0]*cartdims[1]*cartdims[2];
         const int nc = number_of_cells;
 
-        assert(num_global_cells > 0);
+        assert(cartdims[0]*cartdims[1]*cartdims[2] > 0);
 
         permeability_.assign(dim * dim * nc, 0.0);
 

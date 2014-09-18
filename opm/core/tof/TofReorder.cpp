@@ -285,8 +285,7 @@ namespace Opm
                 // Combine locally computed (for each adjacent vertex) terms, with uniform weighting.
                 const int* face_nodes_beg = grid_.face_nodes + grid_.face_nodepos[f];
                 const int* face_nodes_end = grid_.face_nodes + grid_.face_nodepos[f + 1];
-                const int num_terms = face_nodes_end - face_nodes_beg;
-                assert(num_terms == 2 || grid_.dimensions != 2);
+                assert((face_nodes_end - face_nodes_beg) == 2 || grid_.dimensions != 2);
                 for (const int* fn_iter = face_nodes_beg; fn_iter < face_nodes_end; ++fn_iter) {
                     double loc_face_term = 0.0;
                     double loc_cell_term_factor = 0.0;
