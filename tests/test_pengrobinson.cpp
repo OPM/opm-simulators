@@ -72,9 +72,6 @@ Scalar computeSumxg(FluidState &resultFluidState,
     static const int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static const int numComponents = FluidSystem::numComponents;
 
-    typedef Opm::ThreePhaseMaterialTraits<Scalar, waterPhaseIdx, oilPhaseIdx, gasPhaseIdx> MaterialTraits;
-    typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
-    typedef typename MaterialLaw::Params MaterialLawParams;
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
     typedef Opm::NcpFlash<Scalar, FluidSystem> Flash;
 

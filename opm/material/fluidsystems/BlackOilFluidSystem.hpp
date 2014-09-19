@@ -35,9 +35,7 @@
 #include <opm/material/UniformXTabulated2DFunction.hpp>
 
 #if HAVE_OPM_PARSER
-#include <opm/parser/eclipse/Utility/PvtoTable.hpp>
-#include <opm/parser/eclipse/Utility/PvtwTable.hpp>
-#include <opm/parser/eclipse/Utility/PvdgTable.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif // HAVE_OPM_PARSER
 
 #include <array>
@@ -171,7 +169,7 @@ public:
         Scalar rhogRef = referenceDensity(gasPhaseIdx, regionIdx);
 
         // extract the table for the oil formation factor
-        for (int outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
+        for (int outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
             Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
 
             Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
@@ -207,12 +205,14 @@ public:
             // current line. We define master table as the first table which has values
             // for undersaturated oil...
             int masterTableIdx = xIdx + 1;
-            for (; masterTableIdx < pvtoTable.getOuterTable()->numRows(); ++masterTableIdx) {
+            for (; masterTableIdx < static_cast<int>(pvtoTable.getOuterTable()->numRows());
+                 ++masterTableIdx)
+            {
                 if (pvtoTable.getInnerTable(masterTableIdx)->numRows() > 1)
                     break;
             }
 
-            if (masterTableIdx >= pvtoTable.getOuterTable()->numRows())
+            if (masterTableIdx >= static_cast<int>(pvtoTable.getOuterTable()->numRows()))
                 OPM_THROW(std::runtime_error,
                           "PVTO tables are invalid: The last table must exhibit at least one "
                           "entry for undersaturated oil!");
@@ -223,7 +223,10 @@ public:
             // table.
             const auto masterTable = pvtoTable.getInnerTable(masterTableIdx);
             const auto curTable = pvtoTable.getInnerTable(xIdx);
-            for (int newRowIdx = 1; newRowIdx < masterTable->numRows(); ++ newRowIdx) {
+            for (int newRowIdx = 1;
+                 newRowIdx < static_cast<int>(masterTable->numRows());
+                 ++ newRowIdx)
+            {
                 Scalar alphaPo =
                     masterTable->getPressureColumn()[newRowIdx]
                     / masterTable->getPressureColumn()[0];
@@ -253,27 +256,23 @@ public:
      * This function also sets the reference viscosity and the reference
      * density of water, but these can be overwritten using setReference*().
      */
-    static void setPvtwTable(const PvtwTable &pvtwTable, int regionIdx=0)
+    static void setPvtw(DeckKeywordConstPtr pvtwKeyword, int regionIdx=0)
     {
-        assert(pvtwTable.numRows() > 0);
+        assert(static_cast<int>(pvtwKeyword->size()) >= regionIdx);
 
         resizeArrays_(regionIdx);
 
-        // actually the PVTW does not specify a table, but for now we use a table wrapper
-        // anyway because we don't want to break the opm-parser API at this point...
-        std::vector<double> pressureCol = pvtwTable.getPressureColumn();
-        std::vector<double> refBwCol = pvtwTable.getFormationFactorColumn();
-        std::vector<double> compressCol = pvtwTable.getCompressibilityColumn();
-        std::vector<double> viscosityCol = pvtwTable.getViscosityColumn();
-        std::vector<double> viscosibilityCol = pvtwTable.getViscosibilityColumn();
-
-        assert(pressureCol.size() == 1);
-
-        waterReferencePressureScalar_[regionIdx] = pressureCol[0];
-        waterReferenceFormationFactorScalar_[regionIdx] = refBwCol[0];
-        waterCompressibilityScalar_[regionIdx] = compressCol[0];
-        waterViscosityScalar_[regionIdx] = viscosityCol[0];
-        waterViscosibilityScalar_[regionIdx] = viscosibilityCol[0];
+        auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
+        waterReferencePressureScalar_[regionIdx] =
+            pvtwRecord->getItem("P_REF")->getSIDouble(0);
+        waterReferenceFormationFactorScalar_[regionIdx] =
+            pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
+        waterCompressibilityScalar_[regionIdx] =
+            pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
+        waterViscosityScalar_[regionIdx] =
+            pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
+        waterViscosibilityScalar_[regionIdx] =
+            pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
     }
 
     /*!
