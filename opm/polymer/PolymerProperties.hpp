@@ -21,11 +21,7 @@
 #define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Utility/PlymaxTable.hpp>
-#include <opm/parser/eclipse/Utility/TlmixparTable.hpp>
-#include <opm/parser/eclipse/Utility/PlyrockTable.hpp>
-#include <opm/parser/eclipse/Utility/PlyviscTable.hpp>
-#include <opm/parser/eclipse/Utility/PlyadsTable.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <cmath>
 #include <vector>
@@ -86,9 +82,9 @@ namespace Opm
         {
         }
 
-        PolymerProperties(Opm::DeckConstPtr deck)
+        PolymerProperties(Opm::EclipseStateConstPtr eclipseState)
         {
-            readFromDeck(deck);
+            readFromDeck(eclipseState);
         }
 
         void set(double c_max,
@@ -121,11 +117,11 @@ namespace Opm
             shear_vrf_vals_ = shear_vrf_vals;
         }
 
-        void readFromDeck(Opm::DeckConstPtr deck)
+        void readFromDeck(Opm::EclipseStateConstPtr eclipseState)
         {
             // We assume NTMISC=1
-            Opm::PlymaxTable plymaxTable(deck->getKeyword("PLYMAX"), /*tableIdx=*/0);
-            Opm::TlmixparTable tlmixparTable(deck->getKeyword("TLMIXPAR"), /*tableIdx=*/0);
+            const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
+            const auto& tlmixparTable = eclipseState->getTlmixparTables()[0];
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
@@ -135,7 +131,7 @@ namespace Opm
             mix_param_ = tlmixparTable.getViscosityParameterColumn()[0];
 
             // We assume NTSFUN=1
-            Opm::PlyrockTable plyrockTable(deck->getKeyword("PLYROCK"), /*tableIdx=*/0);
+            const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
 
             // We also assume that each table has exactly one row...
             assert(plyrockTable.numRows() == 1);
@@ -147,7 +143,7 @@ namespace Opm
             c_max_ads_ = plyrockTable.getMaxAdsorbtionColumn()[0];
 
             // We assume NTPVT=1
-            Opm::PlyviscTable plyviscTable(deck->getKeyword("PLYVISC"), /*tableIdx=*/0);
+            const auto& plyviscTable = eclipseState->getPlyviscTables()[0];
 
             // We also assume that each table has exactly one row...
             assert(plyviscTable.numRows() == 1);
@@ -156,7 +152,7 @@ namespace Opm
             visc_mult_vals_[0] =  plyviscTable.getViscosityMultiplierColumn()[0];
 
             // We assume NTSFUN=1
-            Opm::PlyadsTable plyadsTable(deck->getKeyword("PLYADS"), /*tableIdx=*/0);
+            const auto& plyadsTable = eclipseState->getPlyadsTables()[0];
 
             // We also assume that each table has exactly one row...
             assert(plyadsTable.numRows() == 1);
