@@ -74,11 +74,6 @@ public:
     void init(Opm::EclipseStateConstPtr eclState)
     {
         const auto &deckSchedule = eclState->getSchedule();
-        const Grid &grid = simulator_.gridManager().grid();
-        const GridView gridView = simulator_.gridManager().gridView();
-
-        elemIsInAWell_.resize(simulator_.model().elementMapper().size());
-        std::fill(elemIsInAWell_.begin(), elemIsInAWell_.end(), false);
 
         // create the wells
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx) {
@@ -89,50 +84,11 @@ public:
             wellNameToIndex_[wellName] = wells_.size();
             wells_.push_back(well);
 
-            // specify the DOFs directly affected by the
-            // well. Probably this could be done quite a bit more
-            // efficiently, but for now it should be Fast Enough (TM).
+            // set the name of the well but not much else. (i.e., if it is not completed,
+            // the well primarily serves as a placeholder.) The big rest of the well is
+            // specified by the updateWellCompletions_() method
             well->beginSpec();
-
             well->setName(wellName);
-
-            ElementContext elemCtx(simulator_);
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                if (elemIt->partitionType() != Dune::InteriorEntity)
-                    continue;
-
-                elemCtx.updateStencil(elemIt);
-                for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
-                    int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                    std::array<int,3> ijk;
-                    // if the compiler complains here, you're not
-                    // using Dune::CpGrid. Other grids are not
-                    // supported by the EclWellsManager, sorry.
-                    grid.getIJK(globalDofIdx, ijk);
-
-                    // TODO: time dependent wells (i.e. move this code into the
-                    // beginEpisode() method!?)
-                    Opm::CompletionSetConstPtr completionSet =
-                        deckWell->getCompletions(/*timeStepIdx=*/0);
-                    for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
-                        Opm::CompletionConstPtr completion =
-                            completionSet->get(complIdx);
-                        if (ijk[0] == completion->getI()
-                            && ijk[1] == completion->getJ()
-                            && ijk[2] == completion->getK())
-                        {
-                            int globalElemIdx = simulator_.model().elementMapper().map(*elemIt);
-                            elemIsInAWell_[globalElemIdx] = true;
-
-                            well->addDof(elemCtx, dofIdx);
-                            well->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
-                        }
-                    }
-                }
-            }
-
             well->endSpec();
         }
     }
@@ -147,9 +103,19 @@ public:
 
         const auto &deckSchedule = eclState->getSchedule();
 
+        // first remove all wells from the reservoir
+        auto wellIt = wells_.begin();
+        const auto wellEndIt = wells_.end();
+        for (; wellIt != wellEndIt; ++wellIt)
+            (*wellIt)->clear();
+
+        // add back the active ones
+        updateWellCompletions_(episodeIdx);
+
+        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(episodeIdx);
         // set the injection data for the respective wells.
-        for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx) {
-            Opm::WellConstPtr deckWell = deckSchedule->getWells()[deckWellIdx];
+        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
+            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
 
             if (!hasWell(deckWell->name()))
                 continue;
@@ -365,8 +331,6 @@ public:
         // iterate over all wells and notify them individually
         for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
             wells_[wellIdx]->beginTimeStep();
-
-        // TODO: adapt well controls
     }
 
     /*!
@@ -388,10 +352,6 @@ public:
         const auto &elemEndIt = simulator_.gridManager().gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             if (elemIt->partitionType() != Dune::InteriorEntity)
-                continue;
-
-            int globalElemIdx = simulator_.model().elementMapper().map(*elemIt);
-            if (!elemIsInAWell_[globalElemIdx])
                 continue;
 
             elemCtx.updateStencil(*elemIt);
@@ -487,10 +447,84 @@ public:
     }
 
 protected:
+    void updateWellCompletions_(int reportStepIdx)
+    {
+        auto eclState = simulator_.gridManager().eclipseState();
+        const auto &deckSchedule = eclState->getSchedule();
+        const Grid &grid = simulator_.gridManager().grid();
+        const GridView gridView = simulator_.gridManager().gridView();
+        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
+        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
+            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
+            const std::string &wellName = deckWell->name();
+
+            if (!hasWell(wellName)) {
+                std::cout << "Well '" << wellName << "' suddenly appears in the completions "
+                          << "for the report step, but has not been previously specified. "
+                          << "Ignoring.\n";
+                continue;
+            }
+
+            auto& eclWell = wells_[wellIndex(wellName)];
+
+            eclWell->beginSpec();
+
+            ElementContext elemCtx(simulator_);
+            auto elemIt = gridView.template begin</*codim=*/0>();
+            const auto elemEndIt = gridView.template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++elemIt) {
+                if (elemIt->partitionType() != Dune::InteriorEntity)
+                    continue;
+
+                elemCtx.updateStencil(elemIt);
+                for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+                    int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                    std::array<int,3> ijk;
+                    // if the compiler complains here, you're not
+                    // using Dune::CpGrid. Other grids are not
+                    // supported by the EclWellsManager, sorry.
+                    grid.getIJK(globalDofIdx, ijk);
+
+                    // TODO: time dependent wells (i.e. move this code into the
+                    // beginEpisode() method!?)
+                    Opm::CompletionSetConstPtr completionSet =
+                        deckWell->getCompletions(/*timeStepIdx=*/0);
+                    for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
+                        Opm::CompletionConstPtr completion =
+                            completionSet->get(complIdx);
+                        if (ijk[0] == completion->getI()
+                            && ijk[1] == completion->getJ()
+                            && ijk[2] == completion->getK())
+                        {
+                            eclWell->addDof(elemCtx, dofIdx);
+
+                            eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
+
+                            // overwrite the automatically computed effective
+                            // permeability by the one specified in the deck. Note: this
+                            // is not implemented by opm-parser yet...
+                            /*
+                            Scalar Kh = completion->getEffectivePermeability();
+                            if (std::isfinite(Kh) && Kh > 0.0)
+                                eclWell->setEffectivePermeability(elemCtx, dofIdx, Kh);
+                            */
+
+                            // overwrite the automatically computed connection
+                            // transmissibilty factor by the one specified in the deck.
+                            Scalar ctf = completion->getConnectionTransmissibilityFactor();
+                            if (std::isfinite(ctf) && ctf > 0.0)
+                                eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
+                        }
+                    }
+                }
+            }
+            eclWell->endSpec();
+        }
+    };
+
     const Simulator &simulator_;
 
     std::vector<std::shared_ptr<Well> > wells_;
-    std::vector<bool> elemIsInAWell_;
     std::map<std::string, int> wellNameToIndex_;
 };
 } // namespace Ewoms

@@ -168,6 +168,12 @@ public:
         injectionFluidState_.setTemperature(273.15 + 25);
     }
 
+    // reset the well to the initial state, i.e. remove all degrees of freedom...
+    void clear()
+    {
+        dofVariables_.clear();
+    }
+
     /*!
      * \brief Begin the specification of the well.
      *
