@@ -28,35 +28,38 @@ if(PETSC_ROOT)
 endif()
 
 # look for a system-wide BLAS library
-find_package(BLAS QUIET)
 set(PETSC_BLAS_LIBRARY "")
-if (BLAS_FOUND)
-    list(APPEND PETSC_BLAS_LIBRARY "${BLAS_LIBRARIES}")
-elseif(PETSC_ROOT)
-    find_library(PETST_BLAS_LIBRARY
-        NAME "blas"
-        PATH ${PETSC_ROOT}
-        PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-        ${_no_default_path} )
-endif()
+find_package(BLAS QUIET)
+list(APPEND PETSC_BLAS_LIBRARY "${BLAS_LIBRARIES}")
+
+# if BLAS wasn't found, look for it in PETSC_ROOT. Won't search if
+# PETSC_BLAS_LIBRARY is set.
+find_library(PETSC_BLAS_LIBRARY
+    NAME "blas"
+    PATH ${PETSC_ROOT}
+    PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+    ${_no_default_path}
+    )
+
 # print message if there was still no blas found!
 if(NOT BLAS_FOUND AND NOT PETSC_BLAS_LIBRARY)
   message(STATUS "BLAS not found but required for PETSC")
   return()
 endif()
 list(APPEND CMAKE_REQUIRED_LIBRARIES "${PETSC_BLAS_LIBRARY}")
-find_package(LAPACK QUIET)
 
 set(PETSC_LAPACK_LIBRARY "")
-if (LAPACK_FOUND)
-    list(APPEND PETSC_LAPACK_LIBRARY "${LAPACK_LIBRARIES}")
-elseif(PETSC_ROOT)
-    find_library(PETST_LAPACK_LIBRARY
-        NAME "lapack"
-        PATH ${PETSC_ROOT}
-        PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-        ${_no_default_path})
-endif()
+find_package(LAPACK QUIET)
+list(APPEND PETSC_LAPACK_LIBRARY "${LAPACK_LIBRARIES}")
+
+# if LAPACK wasn't found, look for it in PETSC_ROOT
+find_library(PETSC_LAPACK_LIBRARY
+    NAME "lapack"
+    PATH ${PETSC_ROOT}
+    PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+    ${_no_default_path}
+    )
+
 # print message if there was still no blas found!
 if(NOT LAPACK_FOUND AND NOT PETSC_LAPACK_LIBRARY)
   message(STATUS "LAPACK not found but required for PETSC")
@@ -69,19 +72,18 @@ if (X11_FOUND)
     list(APPEND PETSC_X11_LIBRARY "${X11_LIBRARIES}")
 endif()
 list(APPEND CMAKE_REQUIRED_LIBRARIES "${PETSC_X11_LIBRARY}")
+
 # only probe if we haven't a path in our cache
 if (Petsc_ROOT)
  set (PETSC_ROOT "${Petsc_ROOT}")
 endif (Petsc_ROOT)
 
-if (NOT PETSC_NORMAL_INCLUDE_DIR)
-	find_path (PETSC_NORMAL_INCLUDE_DIR
-	  NAMES "petsc.h"
-	  PATHS ${PETSC_ROOT}
-	  PATH_SUFFIXES "petsc-3.4.4" "include" "petsc"
-     ${_no_default_path}
-	  )
-endif (NOT PETSC_NORMAL_INCLUDE_DIR)
+find_path (PETSC_NORMAL_INCLUDE_DIR
+    NAMES "petsc.h"
+    PATHS ${PETSC_ROOT}
+    PATH_SUFFIXES "petsc-3.4.4" "include" "petsc"
+    ${_no_default_path}
+    )
 
 # if parallel computing is explicitly enabled - reuse the paths and links from
 # OpmMainLib + OpmFind
@@ -118,14 +120,13 @@ if(NOT PETSC_MPI_FOUND)
 endif()
 
 # look for actual Petsc library
-if (NOT PETSC_LIBRARY)
-  find_library(PETSC_LIBRARY
+find_library(PETSC_LIBRARY
     NAMES "petsc-3.4.3" "petsc-3.4.4" "petsc" 
     PATHS ${PETSC_ROOT}
     PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
     ${_no_default_path}
     )
-endif()
+
 if(NOT PETSC_LIBRARY)
   message(STATUS "Could not find the PETSc library")
   return()
@@ -143,18 +144,10 @@ mark_as_advanced(PETSC_INCLUDE_DIR PETSC_LIBRARY)
 
 # if both headers and library are found, store results
 if(PETSC_FOUND)
-  set(PETSC_INCLUDE_DIRS ${PETSC_INCLUDE_DIR})
+    set(PETSC_INCLUDE_DIRS ${PETSC_INCLUDE_DIR})
+    set(PETSC_LIBRARIES ${PETSC_LIBRARY})
 
-  set(PETSC_LIBRARIES ${PETSC_LIBRARY})
-
-  if (PETSC_BLAS_LIBRARY)
     list(APPEND PETSC_LIBRARIES ${PETSC_BLAS_LIBRARY})
-  endif()
-  if (PETSC_LAPACK_LIBRARY)
     list(APPEND PETSC_LIBRARIES ${PETSC_LAPACK_LIBRARY})
-  endif()
-  if (PETSC_X11_LIBRARY)
     list(APPEND PETSC_LIBRARIES ${PETSC_X11_LIBRARY})
-  endif()
 endif()
-
