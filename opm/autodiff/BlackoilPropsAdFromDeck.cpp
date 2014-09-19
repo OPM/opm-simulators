@@ -34,11 +34,6 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/Utility/PvtoTable.hpp>
-#include <opm/parser/eclipse/Utility/PvtgTable.hpp>
-#include <opm/parser/eclipse/Utility/PvtwTable.hpp>
-#include <opm/parser/eclipse/Utility/PvdoTable.hpp>
-#include <opm/parser/eclipse/Utility/PvcdoTable.hpp>
 
 namespace Opm
 {
@@ -143,19 +138,20 @@ namespace Opm
         if (phase_usage_.phase_used[Liquid]) {
             // for oil, we support the "PVDO", "PVTO" and "PVCDO"
             // keywords...
-            if (deck->hasKeyword("PVDO")) {
-                Opm::DeckKeywordConstPtr pvdoKeyword = deck->getKeyword("PVDO");
+            const auto& pvdoTables = eclState->getPvdoTables();
+            const auto& pvtoTables = eclState->getPvtoTables();
+            if (!pvdoTables.empty()) {
                 if (numSamples > 0) {
                     auto splinePvt = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
-                    splinePvt->initFromOil(pvdoKeyword, numSamples);
+                    splinePvt->initFromOil(pvdoTables, numSamples);
                     props_[phase_usage_.phase_pos[Liquid]] = splinePvt;
                 } else {
                     auto deadPvt = std::shared_ptr<PvtDead>(new PvtDead);
-                    deadPvt->initFromOil(pvdoKeyword);
+                    deadPvt->initFromOil(pvdoTables);
                     props_[phase_usage_.phase_pos[Liquid]] = deadPvt;
                 }
-            } else if (deck->hasKeyword("PVTO")) {
-                props_[phase_usage_.phase_pos[Liquid]].reset(new PvtLiveOil(deck->getKeyword("PVTO")));
+            } else if (!pvtoTables.empty()) {
+                props_[phase_usage_.phase_pos[Liquid]].reset(new PvtLiveOil(pvtoTables));
             } else if (deck->hasKeyword("PVCDO")) {
                 std::shared_ptr<PvtConstCompr> pvcdo(new PvtConstCompr);
                 pvcdo->initFromOil(deck->getKeyword("PVCDO"));
@@ -168,22 +164,22 @@ namespace Opm
         // Gas PVT
         if (phase_usage_.phase_used[Vapour]) {
             // gas can be specified using the "PVDG" or "PVTG" keywords...
-            if (deck->hasKeyword("PVDG")) {
-                Opm::DeckKeywordConstPtr pvdgKeyword = deck->getKeyword("PVDG");
-
+            const auto& pvdgTables = eclState->getPvdgTables();
+            const auto& pvtgTables = eclState->getPvtgTables();
+            if (!pvdgTables.empty()) {
                 if (numSamples > 0) {
                     std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
-                    splinePvt->initFromGas(pvdgKeyword, numSamples);
+                    splinePvt->initFromGas(pvdgTables, numSamples);
 
                     props_[phase_usage_.phase_pos[Vapour]] = splinePvt;
                 } else {
                     std::shared_ptr<PvtDead> deadPvt(new PvtDead);
-                    deadPvt->initFromGas(pvdgKeyword);
+                    deadPvt->initFromGas(pvdgTables);
 
                     props_[phase_usage_.phase_pos[Vapour]] = deadPvt;
                 }
-            } else if (deck->hasKeyword("PVTG")) {
-                props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(deck->getKeyword("PVTG")));
+            } else if (!pvtgTables.empty()) {
+                props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(pvtgTables));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
             }
