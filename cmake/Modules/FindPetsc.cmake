@@ -20,6 +20,13 @@ if (CMAKE_SIZEOF_VOID_P)
   math (EXPR _BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
 endif (CMAKE_SIZEOF_VOID_P)
 
+# if PETSC_ROOT is set, then this is the only place searched for petsc headers
+# and includes
+set(_no_default_path "")
+if(PETSC_ROOT)
+    set (_no_default_path "NO_DEFAULT_PATH")
+endif()
+
 # look for a system-wide BLAS library
 find_package(BLAS QUIET)
 set(PETSC_BLAS_LIBRARY "")
@@ -30,7 +37,7 @@ elseif(PETSC_ROOT)
         NAME "blas"
         PATH ${PETSC_ROOT}
         PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-        NO_DEFAULT_PATH)
+        ${_no_default_path} )
 endif()
 # print message if there was still no blas found!
 if(NOT BLAS_FOUND AND NOT PETSC_BLAS_LIBRARY)
@@ -48,7 +55,7 @@ elseif(PETSC_ROOT)
         NAME "lapack"
         PATH ${PETSC_ROOT}
         PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-        NO_DEFAULT_PATH)
+        ${_no_default_path})
 endif()
 # print message if there was still no blas found!
 if(NOT LAPACK_FOUND AND NOT PETSC_LAPACK_LIBRARY)
@@ -66,11 +73,13 @@ list(APPEND CMAKE_REQUIRED_LIBRARIES "${PETSC_X11_LIBRARY}")
 if (Petsc_ROOT)
  set (PETSC_ROOT "${Petsc_ROOT}")
 endif (Petsc_ROOT)
+
 if (NOT PETSC_NORMAL_INCLUDE_DIR)
 	find_path (PETSC_NORMAL_INCLUDE_DIR
 	  NAMES "petsc.h"
 	  PATHS ${PETSC_ROOT}
 	  PATH_SUFFIXES "petsc-3.4.4" "include" "petsc"
+     ${_no_default_path}
 	  )
 endif (NOT PETSC_NORMAL_INCLUDE_DIR)
 
@@ -93,10 +102,10 @@ if (NOT PETSC_MPI_INCLUDE_DIRS)
         NAMES "mpi.h"
         PATHS ${PETSC_ROOT}/include
         PATH_SUFFIXES "mpiuni"
+        ${_no_default_path}
         )
 
     if(PETSC_MPI_INCLUDE_DIRS)
-        # not setting special linkage
         set(PETSC_MPI_FOUND 1)
     endif(PETSC_MPI_INCLUDE_DIRS)
 
@@ -104,7 +113,7 @@ endif(NOT PETSC_MPI_INCLUDE_DIRS)
 
 # couldn't find any usable mpi implementation - abort
 if(NOT PETSC_MPI_FOUND)
-    message(STATUS "Could not find any suitable MPI implementation. Is PETSC_ROOT set?")
+    message(STATUS "Could not find any suitable MPI implementation.")
     return()
 endif()
 
@@ -114,6 +123,7 @@ if (NOT PETSC_LIBRARY)
     NAMES "petsc-3.4.3" "petsc-3.4.4" "petsc" 
     PATHS ${PETSC_ROOT}
     PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+    ${_no_default_path}
     )
 endif()
 if(NOT PETSC_LIBRARY)
