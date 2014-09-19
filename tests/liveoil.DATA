@@ -1,7 +1,12 @@
+RUNSPEC
+
 TABDIMS
 -- use the defaults of TABDIMS but the keyword must be present in the deck
 -- for it to be usable
 /
+
+DIMENS
+3 3 3 /
 
 OIL
 GAS
@@ -9,18 +14,23 @@ WATER
 
 FIELD
 
+GRID
+
 -- tests for the PVT functions need a grid because the OPM-API for the
 -- PVT functions assumes the presence of compressed grid cells,
 -- i.e. we need to be able to map from compressed to logical cartesian
 -- cell indices to find out the PVT region of a cell
-DIMENS
-3 3 3 /
 DXV
 1 2 3 /
 DYV
 1 2 3 /
 DZV
 1 2 3 /
+
+TOPS
+9*123.456 /
+
+PROPS
 
 PVTO
 --     Rs       Pbub       Bo        Vo
