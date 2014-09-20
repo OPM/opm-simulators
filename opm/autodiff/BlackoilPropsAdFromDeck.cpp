@@ -748,7 +748,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rsSat(n, &pvtTableIdx_[0], po.data(), rbub.data(), drbubdp.data());
+        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, &pvtTableIdx_[0], po.data(), rbub.data(), drbubdp.data());
         return rbub;
     }
 
@@ -780,7 +780,7 @@ namespace Opm
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[Oil]->rsSat(n, &pvtTableIdx_[0], po.value().data(), rbub.data(), drbubdp.data());
+        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, &pvtTableIdx_[0], po.value().data(), rbub.data(), drbubdp.data());
         ADB::M drbubdp_diag = spdiag(drbubdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -820,7 +820,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Gas]->rvSat(n, &pvtTableIdx_[0], po.data(), rv.data(), drvdp.data());
+        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, &pvtTableIdx_[0], po.data(), rv.data(), drvdp.data());
         return rv;
     }
 
@@ -852,7 +852,7 @@ namespace Opm
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[Gas]->rvSat(n, &pvtTableIdx_[0], po.value().data(), rv.data(), drvdp.data());
+        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, &pvtTableIdx_[0], po.value().data(), rv.data(), drvdp.data());
         ADB::M drvdp_diag = spdiag(drvdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
