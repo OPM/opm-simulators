@@ -25,7 +25,7 @@
 
 #include <dune/common/version.hh>
 
-#include "disable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpihelper.hh>
@@ -35,7 +35,7 @@
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/common/GridAdapter.hpp>
 
-#include "reenable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
