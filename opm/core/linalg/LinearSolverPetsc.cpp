@@ -220,24 +220,17 @@ namespace{
 } // anonymous namespace.
 
     LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
-        : ksp_type_("gmres")
-        , pc_type_("sor")
-        , ksp_view_(false)
-        , rtol_(1e-5)
-        , atol_(1e-50)
-        , dtol_(1e5)
-        , maxits_(1e5)
+        : ksp_type_( param.getDefault( std::string( "ksp_type" ), std::string( "gmres" ) ) )
+        , pc_type_( param.getDefault( std::string( "pc_type" ), std::string( "sor" ) ) )
+        , ksp_view_( param.getDefault( std::string( "ksp_view" ), int( false ) ) )
+        , rtol_( param.getDefault( std::string( "ksp_rtol" ), 1e-5 ) )
+        , atol_( param.getDefault( std::string( "ksp_atol" ), 1e-50 ) )
+        , dtol_( param.getDefault( std::string( "ksp_dtol" ), 1e5 ) )
+        , maxits_( param.getDefault( std::string( "ksp_max_it" ), 1e5 ) )
     {
         int argc = 0;
         char** argv = NULL;
         PetscInitialize(&argc, &argv, (char*)0, "Petsc interface for OPM!\n");
-        ksp_type_ = (param.getDefault("ksp_type", std::string(ksp_type_)));
-        pc_type_ = (param.getDefault("pc_type", std::string(pc_type_)));
-        ksp_view_ = (param.getDefault("ksp_view", int(ksp_view_)));
-        rtol_ = param.getDefault("ksp_rtol", rtol_);
-        atol_ = param.getDefault("ksp_atol", atol_);
-        dtol_ = param.getDefault("ksp_dtol", dtol_);
-        maxits_ = param.getDefault("ksp_max_it", maxits_);
     }
 
 
