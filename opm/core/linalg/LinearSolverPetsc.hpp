@@ -33,14 +33,10 @@ namespace Opm
     {
     public:
         /// Default constructor.
-        /// All parameters controlling the solver are defaulted:
-        ///   ksp_type                      gmres
-        ///   pc_type                       jacobi
-        ///   ksp_view                      0
-        ///   ksp_rtol                      1e-5
-        ///   ksp_atol                      1e-50
-        ///   ksp_dtol                      1e5
-        ///   ksp_max_it                    1e5
+        /// Declared, but not implemented. Petsc can only be created through
+        /// the ParameterGroup constructor, everything else is an error. This way
+        /// the error is caught compile time and not rune time, which is nice as
+        /// it is a static error.
         LinearSolverPetsc();
 
         /// Construct from parameters

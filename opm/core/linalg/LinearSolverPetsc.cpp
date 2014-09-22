@@ -219,11 +219,6 @@ namespace{
 
 } // anonymous namespace.
 
-    LinearSolverPetsc::LinearSolverPetsc()
-    {
-        OPM_THROW(std::runtime_error, "Pestc just can be called through paramers.\n");
-    }
-
     LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
         : ksp_type_("gmres")
         , pc_type_("sor")
