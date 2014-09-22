@@ -325,10 +325,11 @@ public:
             // impose a forced flow boundary
             values.setMassRate(massRate);
         }
-        else {
+        else if (onRightBoundary_(pos))
             // free flow boundary with initial condition on the right
             values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidState_);
-        }
+        else
+            values.setNoFlow();
     }
 
     //! \}
