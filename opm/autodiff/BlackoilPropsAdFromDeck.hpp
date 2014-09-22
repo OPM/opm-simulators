@@ -35,9 +35,9 @@
 #include <vector>
 
 #ifdef HAVE_DUNE_CORNERPOINT
-#include "disable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #include <dune/grid/CpGrid.hpp>
-#include "reenable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 #endif
 
 namespace Opm

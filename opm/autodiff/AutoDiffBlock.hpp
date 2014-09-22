@@ -20,12 +20,12 @@
 #ifndef OPM_AUTODIFFBLOCK_HEADER_INCLUDED
 #define OPM_AUTODIFFBLOCK_HEADER_INCLUDED
 
-#include "disable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
-#include "reenable_warning_pragmas.h"
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <vector>
 #include <cassert>
