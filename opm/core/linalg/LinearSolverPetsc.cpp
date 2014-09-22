@@ -19,9 +19,10 @@
 */
 
 #include "config.h"
+#include <cstring>
 #include <opm/core/linalg/LinearSolverPetsc.hpp>
-#include <opm/core/linalg/call_petsc.h>
 #include <unordered_map>
+#define PETSC_CLANGUAGE_CXX 1 //enable CHKERRXX macro.
 #include <petsc.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -116,13 +117,112 @@ namespace{
         Map type_map_;
     };
 
+    struct OEM_DATA {
+        /* Convenience struct to handle automatic (de)allocation of some useful
+         * variables, as well as group them up for easier parameter passing
+         */
+        Vec rhs;
+        Vec solution;
+        Mat A;
+        KSP ksp;
+        PC preconditioner;
+
+        OEM_DATA( const int size ) {
+            CHKERRXX( VecCreate( PETSC_COMM_WORLD, &solution ) );
+            CHKERRXX( VecSetSizes( solution, PETSC_DECIDE, size ) );
+            CHKERRXX( VecSetFromOptions( solution ) );
+            CHKERRXX( VecDuplicate( solution, &rhs ) );
+
+            CHKERRXX( MatCreate( PETSC_COMM_WORLD, &A ) );
+            CHKERRXX( MatSetSizes( A, PETSC_DECIDE, PETSC_DECIDE, size, size ) );
+            CHKERRXX( MatSetFromOptions( A ) );
+            CHKERRXX( MatSetUp( A ) );
+        }
+
+        ~OEM_DATA() {
+            CHKERRXX( VecDestroy( &rhs ) );
+            CHKERRXX( VecDestroy( &solution ) );
+            CHKERRXX( MatDestroy( &A ) );
+            CHKERRXX( KSPDestroy( &ksp ) );
+        }
+    };
+
+    void to_petsc_vec( const double* x, Vec v ) {
+        if( !v ) OPM_THROW( std::runtime_error,
+                    "PETSc CopySolution: Invalid PETSc vector." );
+
+        PetscScalar* vec;
+        PetscInt size;
+
+        CHKERRXX( VecGetLocalSize( v, &size ) );
+        CHKERRXX( VecGetArray( v, &vec ) );
+
+        std::memcpy( vec, x,  size * sizeof( double ) );
+        CHKERRXX( VecRestoreArray( v, &vec ) );
+    }
+
+    void from_petsc_vec( double* x, Vec v ) {
+        if( !v ) OPM_THROW( std::runtime_error,
+                    "PETSc CopySolution: Invalid PETSc vector." );
+
+        PetscScalar* vec;
+        PetscInt size;
+
+        CHKERRXX( VecGetLocalSize( v, &size ) );
+        CHKERRXX( VecGetArray( v, &vec ) );
+
+        std::memcpy( x, vec, size * sizeof( double ) );
+        CHKERRXX( VecRestoreArray( v, &vec ) );
+    }
+
+    void to_petsc_mat( const int size, const int nonzeros,
+            const int* ia, const int* ja, const double* sa, Mat A ) {
+
+        for( int i = 0; i < size; ++i ) {
+            int nrows = ia[ i + 1 ] - ia[ i ];
+
+            if( nrows == 0 ) continue;
+
+            for( int j = ia[ i ]; j < ia[ i + 1 ]; ++j )
+                CHKERRXX( MatSetValues( A, 1, &i, 1, &ja[ j ], &sa[ j ], INSERT_VALUES ) );
+
+            CHKERRXX( MatAssemblyBegin( A, MAT_FINAL_ASSEMBLY ) );
+            CHKERRXX( MatAssemblyEnd( A, MAT_FINAL_ASSEMBLY ) );
+        }
+    }
+
+
+    void solve_system( OEM_DATA& t, KSPType method, PCType pcname,
+            double rtol, double atol, double dtol, int maxits, int ksp_view ) {
+        PetscInt its;
+        PetscReal residual;
+        KSPConvergedReason reason;
+
+        CHKERRXX( KSPCreate( PETSC_COMM_WORLD, &t.ksp ) );
+        CHKERRXX( KSPSetOperators( t.ksp, t.A, t.A, DIFFERENT_NONZERO_PATTERN ) );
+        CHKERRXX( KSPGetPC( t.ksp, &t.preconditioner ) );
+        CHKERRXX( KSPSetType( t.ksp, method ) );
+        CHKERRXX( PCSetType( t.preconditioner, pcname ) );
+        CHKERRXX( KSPSetTolerances( t.ksp, rtol, atol, dtol, maxits ) );
+        CHKERRXX( KSPSetFromOptions( t.ksp ) );
+        CHKERRXX( KSPSetInitialGuessNonzero( t.ksp, PETSC_TRUE ) );
+        CHKERRXX( KSPSolve( t.ksp, t.rhs, t.solution ) );
+        CHKERRXX( KSPGetConvergedReason( t.ksp, &reason ) );
+        CHKERRXX( KSPGetIterationNumber( t.ksp, &its ) );
+        CHKERRXX( KSPGetResidualNorm( t.ksp, &residual ) );
+
+        if( ksp_view )
+            CHKERRXX( KSPView( t.ksp, PETSC_VIEWER_STDOUT_WORLD ) );
+
+        CHKERRXX( PetscPrintf( PETSC_COMM_WORLD, "KSP Iterations %D, Final Residual %G\n", its, residual ) );
+    }
+
 } // anonymous namespace.
 
     LinearSolverPetsc::LinearSolverPetsc()
     {
         OPM_THROW(std::runtime_error, "Pestc just can be called through paramers.\n");
     }
-
 
     LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
         : ksp_type_("gmres")
@@ -166,8 +266,13 @@ namespace{
         KSPType ksp_type = ksp.find(ksp_type_);
         PCTypeMap pc(pc_type_);
         PCType pc_type = pc.find(pc_type_);
-        
-        call_Petsc(size, nonzeros, ia, ja, sa, rhs, solution, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_);
+
+        OEM_DATA t( size );
+        to_petsc_mat( size, nonzeros, ia, ja, sa, t.A );
+        to_petsc_vec( rhs, t.rhs );
+
+        solve_system( t, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_ );
+        from_petsc_vec( solution, t.solution );
 
         LinearSolverReport rep = {};
         rep.converged = true;
@@ -182,7 +287,6 @@ namespace{
     {
         return -1.;
     }
-
 
 } // namespace Opm
 
