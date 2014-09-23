@@ -21,6 +21,8 @@
 #include <cmath>
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 namespace Opm
 {
@@ -57,6 +59,25 @@ namespace Opm
     int PolymerProperties::adsIndex() const
     {
         return ads_index_;
+    }
+    
+    const std::vector<double>&
+    PolymerProperties::shearWaterVelocity() const
+    {
+        return water_vel_vals_;
+    } 
+
+    double
+    PolymerProperties::shearVrf(const double velocity) const
+    {
+        return Opm::linearInterpolation(water_vel_vals_, shear_vrf_vals_, velocity);
+    }
+
+    double
+    PolymerProperties::shearVrfWithDer(const double velocity, double& der) const
+    {
+        der =  Opm::linearInterpolationDerivative(water_vel_vals_, shear_vrf_vals_, velocity);
+        return Opm::linearInterpolation(water_vel_vals_, shear_vrf_vals_, velocity);
     }
 
     double PolymerProperties::viscMult(double c) const

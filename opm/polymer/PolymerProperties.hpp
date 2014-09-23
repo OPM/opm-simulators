@@ -20,10 +20,11 @@
 #ifndef OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 #define OPM_POLYMERPROPERTIES_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <cmath>
 #include <vector>
-#include <opm/core/io/eclipse/EclipseGridParser.hpp>
 
 
 namespace Opm
@@ -49,6 +50,8 @@ namespace Opm
         /// \param[in] visc_mult_vals Array of effective vicosity multiplier
         /// \param[in] c_vals_ads     Array of concentration for adsorption values
         /// \param[in] ads_vals       Array of adsorption values
+        /// \param[in] water_vel_vals_ Array of water phase velocity for shear
+        /// \param[in] shear_vrf_vals_ Array of viscosity reduction factor
         PolymerProperties(double c_max,
                           double mix_param,
                           double rock_density,
@@ -59,7 +62,9 @@ namespace Opm
                           const std::vector<double>& c_vals_visc,
                           const std::vector<double>& visc_mult_vals,
                           const std::vector<double>& c_vals_ads,
-                          const std::vector<double>& ads_vals
+                          const std::vector<double>& ads_vals,
+                          const std::vector<double>& water_vel_vals,
+                          const std::vector<double>& shear_vrf_vals
                           )
             : c_max_(c_max),
               mix_param_(mix_param),
@@ -71,13 +76,15 @@ namespace Opm
               c_vals_visc_(c_vals_visc),
               visc_mult_vals_(visc_mult_vals),
               c_vals_ads_(c_vals_ads),
-              ads_vals_(ads_vals)
+              ads_vals_(ads_vals),
+              water_vel_vals_(water_vel_vals),
+              shear_vrf_vals_(shear_vrf_vals)
         {
         }
 
-        PolymerProperties(const EclipseGridParser& gridparser)
+        PolymerProperties(Opm::EclipseStateConstPtr eclipseState)
         {
-            readFromDeck(gridparser);
+            readFromDeck(eclipseState);
         }
 
         void set(double c_max,
@@ -90,7 +97,9 @@ namespace Opm
                  const std::vector<double>& c_vals_visc,
                  const std::vector<double>& visc_mult_vals,
                  const std::vector<double>& c_vals_ads,
-                 const std::vector<double>& ads_vals
+                 const std::vector<double>& ads_vals,
+                 const std::vector<double>& water_vel_vals,
+                 const std::vector<double>& shear_vrf_vals
                  )
         {
             c_max_ = c_max;
@@ -104,36 +113,52 @@ namespace Opm
             c_vals_ads_ = c_vals_ads;
             ads_vals_ = ads_vals;
             ads_index_ = ads_index;
+            water_vel_vals_ = water_vel_vals;
+            shear_vrf_vals_ = shear_vrf_vals;
         }
 
-        void readFromDeck(const EclipseGridParser& gridparser)
+        void readFromDeck(Opm::EclipseStateConstPtr eclipseState)
         {
-
             // We assume NTMISC=1
-            const std::vector<double>& plymax = gridparser.getPLYMAX().plymax_;
-            c_max_ = plymax[0];
-            const std::vector<double>& tlmixpar = gridparser.getTLMIXPAR().tlmixpar_;
-            mix_param_ = tlmixpar[0];
+            const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
+            const auto& tlmixparTable = eclipseState->getTlmixparTables()[0];
+
+            // We also assume that each table has exactly one row...
+            assert(plymaxTable.numRows() == 1);
+            assert(tlmixparTable.numRows() == 1);
+
+            c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
+            mix_param_ = tlmixparTable.getViscosityParameterColumn()[0];
 
             // We assume NTSFUN=1
-            const std::vector<double>& plyrock = gridparser.getPLYROCK().plyrock_;
-            assert(plyrock.size() == 5);
-            dead_pore_vol_ = plyrock[0];
-            res_factor_ = plyrock[1];
-            rock_density_ = plyrock[2];
-            ads_index_ = static_cast<AdsorptionBehaviour>(plyrock[3]);
-            c_max_ads_ = plyrock[4];
+            const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
+
+            // We also assume that each table has exactly one row...
+            assert(plyrockTable.numRows() == 1);
+
+            dead_pore_vol_ = plyrockTable.getDeadPoreVolumeColumn()[0];
+            res_factor_ = plyrockTable.getResidualResistanceFactorColumn()[0];
+            rock_density_ = plyrockTable.getRockDensityFactorColumn()[0];
+            ads_index_ = static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]);
+            c_max_ads_ = plyrockTable.getMaxAdsorbtionColumn()[0];
 
             // We assume NTPVT=1
-            const PLYVISC& plyvisc = gridparser.getPLYVISC();
-            c_vals_visc_ = plyvisc.concentration_;
-            visc_mult_vals_ = plyvisc.factor_;
+            const auto& plyviscTable = eclipseState->getPlyviscTables()[0];
+
+            // We also assume that each table has exactly one row...
+            assert(plyviscTable.numRows() == 1);
+
+            c_vals_visc_[0] = plyviscTable.getPolymerConcentrationColumn()[0];
+            visc_mult_vals_[0] =  plyviscTable.getViscosityMultiplierColumn()[0];
 
             // We assume NTSFUN=1
-            const PLYADS& plyads = gridparser.getPLYADS();
-            c_vals_ads_ = plyads.local_concentration_;
-            ads_vals_ = plyads.adsorbed_concentration_;
+            const auto& plyadsTable = eclipseState->getPlyadsTables()[0];
 
+            // We also assume that each table has exactly one row...
+            assert(plyadsTable.numRows() == 1);
+
+            c_vals_ads_[0] = plyadsTable.getPolymerConcentrationColumn()[0];
+            ads_vals_[0] = plyadsTable.getAdsorbedPolymerColumn()[0];
         }
 
         double cMax() const;
@@ -149,6 +174,12 @@ namespace Opm
         double cMaxAds() const;
 
         int adsIndex() const;
+        
+        const std::vector<double>& shearWaterVelocity() const;
+
+        double shearVrf(const double velocity) const;
+
+        double shearVrfWithDer(const double velocity, double& der) const;
 
         double viscMult(double c) const;
 
@@ -259,6 +290,8 @@ namespace Opm
         std::vector<double> visc_mult_vals_;
         std::vector<double> c_vals_ads_;
         std::vector<double> ads_vals_;
+        std::vector<double> water_vel_vals_;
+        std::vector<double> shear_vrf_vals_;
         void simpleAdsorptionBoth(double c, double& c_ads,
                                   double& dc_ads_dc, bool if_with_der) const;
         void adsorptionBoth(double c, double cmax,

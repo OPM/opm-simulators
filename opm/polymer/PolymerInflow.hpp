@@ -21,17 +21,13 @@
 #define OPM_POLYMERINFLOW_HEADER_INCLUDED
 
 #include <opm/core/utility/SparseVector.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <vector>
 
 struct Wells;
 
 namespace Opm
 {
-
-    class EclipseGridParser;
-
-
-
     /// @brief Interface for classes encapsulating polymer inflow information.
     class PolymerInflowInterface
     {
@@ -90,7 +86,7 @@ namespace Opm
         /// \param[in]  deck        Input deck expected to contain WPOLYMER.
         /// \param[in]  wells       Wells structure.
         /// \param[in]  num_cells   Number of cells in grid.
-        PolymerInflowFromDeck(const EclipseGridParser& deck,
+        PolymerInflowFromDeck(Opm::DeckConstPtr deck,
                               const Wells& wells,
                               const int num_cells);
 

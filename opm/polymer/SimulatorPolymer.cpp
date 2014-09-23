@@ -140,7 +140,6 @@ namespace Opm
         const PolymerInflowInterface& polymer_inflow_;
         const std::vector<double>& src_;
         const FlowBoundaryConditions* bcs_;
-        const double* gravity_;
         // Solvers
         IncompTpfaPolymer psolver_;
         TransportSolverTwophasePolymer tsolver_;
@@ -204,7 +203,6 @@ namespace Opm
           polymer_inflow_(polymer_inflow),
           src_(src),
           bcs_(bcs),
-          gravity_(gravity),
           psolver_(grid, props, rock_comp_props, poly_props, linsolver,
                    param.getDefault("nl_pressure_residual_tolerance", 0.0),
                    param.getDefault("nl_pressure_change_tolerance", 1.0),
@@ -411,7 +409,7 @@ namespace Opm
                                         wells_, well_state.perfRates(), transport_src);
 
             // Find inflow rate.
-            const double current_time = timer.currentTime();
+            const double current_time = timer.simulationTimeElapsed();
             double stepsize = timer.currentStepLength();
             polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
 
@@ -498,12 +496,12 @@ namespace Opm
                       << std::endl;
             std::cout.precision(8);
 
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
+            watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
                           produced[0]/(produced[0] + produced[1]),
                           tot_produced[0]/tot_porevol_init);
             if (wells_) {
                 wellreport.push(props_, *wells_, state.saturation(),
-                                timer.currentTime() + timer.currentStepLength(),
+                                timer.simulationTimeElapsed() + timer.currentStepLength(),
                                 well_state.bhp(), well_state.perfRates());
             }
         }
@@ -621,7 +619,7 @@ namespace Opm
             Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
             dm["velocity"] = &cell_velocity;
 
-            writeECLData(grid, dm, simtimer.currentStepNum(), simtimer.currentTime(), simtimer.currentDateTime(),
+            writeECLData(grid, dm, simtimer.currentStepNum(), simtimer.simulationTimeElapsed(), simtimer.currentDateTime(),
                          output_dir, "polymer_ecl");
 #else
         OPM_THROW(std::runtime_error, "Cannot call outputStateBinary() without ert library support. Reconfigure with --with-ert and recompile.");

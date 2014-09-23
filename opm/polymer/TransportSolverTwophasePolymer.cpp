@@ -929,7 +929,7 @@ namespace Opm
 		tmp_x[1]=x[1];
 	    }
 	    res_eq.computeJacobiRes(tmp_x, dres_s_dsdc, dres_c_dsdc);
-	    double dFx_dx,dFx_dy,dFy_dx,dFy_dy;
+	    double dFx_dx(0),dFx_dy(0),dFy_dx(0),dFy_dy(0);
 	    double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
 	    if(use_sc){
 		dFx_dx=(dres_s_dsdc[0]-tmp_x[1]*dres_s_dsdc[1]/tmp_x[0]);

@@ -69,8 +69,6 @@ try
     param.disableOutput();
     // std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
-    // If we have a "deck_filename", grid and props will be read from that.
-    boost::scoped_ptr<EclipseGridParser> deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     PolymerState state;
@@ -129,9 +127,15 @@ try
     ads_vals[2] = 0.0025;
     // ads_vals[1] = 0.0;
     // ads_vals[2] = 0.0;
+    std::vector<double> water_vel_vals(2, -1e100);
+    water_vel_vals[0] = 0.0;
+    water_vel_vals[1] = 10.0;
+    std::vector<double> shear_vrf_vals(2, -1e100);
+    shear_vrf_vals[0] = 1.0;
+    shear_vrf_vals[1] = 1.0;
     poly_props.set(c_max, mix_param, rock_density, dead_pore_vol, res_factor, c_max_ads,
                    static_cast<Opm::PolymerProperties::AdsorptionBehaviour>(ads_index),
-                   c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals);
+                   c_vals_visc,  visc_mult_vals, c_vals_ads, ads_vals, water_vel_vals, shear_vrf_vals);
 
     // Initialising src
     int num_cells = grid->c_grid()->number_of_cells;

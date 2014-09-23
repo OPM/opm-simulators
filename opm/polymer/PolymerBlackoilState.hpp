@@ -35,9 +35,14 @@ namespace Opm
     public:
         void init(const UnstructuredGrid& g, int num_phases)
         {
-            state_blackoil_.init(g, num_phases);
-            concentration_.resize(g.number_of_cells, 0.0);
-            cmax_.resize(g.number_of_cells, 0.0);
+            this->init(g.number_of_cells, g.number_of_faces, num_phases);
+        }
+
+        void init(int number_of_cells, int number_of_faces, int num_phases)
+        {
+            state_blackoil_.init(number_of_cells, number_of_faces, num_phases);
+            concentration_.resize(number_of_cells, 0.0);
+            cmax_.resize(number_of_cells, 0.0);
         }
         int numPhases() const
         {
