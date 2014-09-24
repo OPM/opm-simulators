@@ -65,6 +65,22 @@
 namespace Opm
 {
 
+
+
+    namespace 
+    {
+        static void outputStateVtk(const UnstructuredGrid& grid,
+                                   const Opm::PolymerBlackoilState& state,
+                                   const int step,
+                                   const std::string& output_dir);
+        static void outputStateMatlab(const UnstructuredGrid& grid,
+                                      const Opm::PolymerBlackoilState& state,
+                                      const int step,
+                                      const std::string& output_dir);
+        static  void outputWaterCut(const Opm::Watercut& watercut,
+                	            const std::string& output_dir);
+    } // anonymous namespace
+
     class SimulatorFullyImplicitCompressiblePolymer::Impl
     {
     public:
@@ -140,133 +156,6 @@ namespace Opm
 
 
 
-    static void outputStateVtk(const UnstructuredGrid& grid,
-                               const Opm::PolymerBlackoilState& state,
-                               const int step,
-                               const std::string& output_dir)
-    {
-        // Write data in VTK format.
-        std::ostringstream vtkfilename;
-        vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
-        std::ofstream vtkfile(vtkfilename.str().c_str());
-        if (!vtkfile) {
-            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
-        }
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        dm["cmax"] = &state.maxconcentration();
-        dm["concentration"] = &state.concentration();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-        Opm::writeVtkData(grid, dm, vtkfile);
-    }
-
-
-    static void outputStateMatlab(const UnstructuredGrid& grid,
-                                  const Opm::PolymerBlackoilState& state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        dm["cmax"] = &state.maxconcentration();
-        dm["concentration"] = &state.concentration();
-        dm["surfvolume"] = &state.surfacevol();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-#if 0
-
-	//well rate should be modified by using effective viscosity 
-	//and effective relperm for water
-    static void outputWellStateMatlab(const Opm::WellState& well_state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["bhp"] = &well_state.bhp();
-        dm["wellrates"] = &well_state.wellRates();
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-#endif
-    static  void outputWaterCut(const Opm::Watercut& watercut,
-                	            const std::string& output_dir)
-    {
-        // Write water cut curve.
-        std::string fname = output_dir  + "/watercut.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-            watercut.write(os);
-    }
-#if 0
-
-    static void outputWellReport(const Opm::WellReport& wellreport,
-                                 const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-#endif
 
 
     // \TODO: Treat bcs.
@@ -403,7 +292,7 @@ namespace Opm
             	// Process transport sources (to include bdy terms and well flows).
 //            	Opm::computeTransportSource(props_, wells_, well_state, transport_src);
                 // Run solver.
-                const double current_time = timer.currentTime();
+                const double current_time = timer.currentTimeElapsed();
                 double stepsize = timer.currentStepLength();
                 polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
                 solver_timer.start();
@@ -457,7 +346,7 @@ namespace Opm
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
             tot_produced[1] += produced[1];
-         	watercut.push(timer.currentTime() + timer.currentStepLength(),
+         	watercut.push(timer.currentTimeElapsed() + timer.currentStepLength(),
                           	  produced[0]/(produced[0] + produced[1]),
                           	  tot_produced[0]/tot_porevol_init);
             std::cout.precision(5);
@@ -475,52 +364,6 @@ namespace Opm
             std::cout << "    Total prod reservoir volumes:    "
                       << std::setw(width) << tot_produced[0]
                       << std::setw(width) << tot_produced[1] << std::endl;
-            // The reports below are geared towards two phases only.
-#if 0
-            // Report mass balances.
-            double injected[2] = { 0.0 };
-            double produced[2] = { 0.0 };
-            Opm::computeInjectedProduced(props_, state, transport_src, stepsize,
-                                         injected, produced);
-            Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
-            std::cout.precision(5);
-            const int width = 18;
-            std::cout << "\nMass balance report.\n";
-            std::cout << "    Injected surface volumes:      "
-                      << std::setw(width) << injected[0]
-                      << std::setw(width) << injected[1] << std::endl;
-            std::cout << "    Produced surface volumes:      "
-                      << std::setw(width) << produced[0]
-                      << std::setw(width) << produced[1] << std::endl;
-            std::cout << "    Total inj surface volumes:     "
-                      << std::setw(width) << tot_injected[0]
-                      << std::setw(width) << tot_injected[1] << std::endl;
-            std::cout << "    Total prod surface volumes:    "
-                      << std::setw(width) << tot_produced[0]
-                      << std::setw(width) << tot_produced[1] << std::endl;
-            const double balance[2] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
-                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1] };
-            std::cout << "    Initial - inplace + inj - prod: "
-                      << std::setw(width) << balance[0]
-                      << std::setw(width) << balance[1]
-                      << std::endl;
-            std::cout << "    Relative mass error:            "
-                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
-                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
-                      << std::endl;
-            std::cout.precision(8);
-
-            // Make well reports.
-            watercut.push(timer.currentTime() + timer.currentStepLength(),
-                          produced[0]/(produced[0] + produced[1]),
-                          tot_produced[0]/tot_porevol_init);
-            if (wells_) {
-                wellreport.push(props_, *wells_,
-                                state.pressure(), state.surfacevol(), state.saturation(),
-                                timer.currentTime() + timer.currentStepLength(),
-                                well_state.bhp(), well_state.perfRates());
-            }
-#endif
             sreport.total_time =  step_timer.secsSinceStart();
             if (output_) {
                 sreport.reportParam(tstep_os);
@@ -529,20 +372,13 @@ namespace Opm
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            //    outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
                 outputWaterCut(watercut, output_dir_);
-#if 0
-                if (wells_) {
-                    outputWellReport(wellreport, output_dir_);
-                }
-#endif
                 tstep_os.close();
             }
 
             // advance to next timestep before reporting at this location
             ++timer;
 
-            // write an output file for later inspection
         }
 
         total_timer.stop();
@@ -554,5 +390,92 @@ namespace Opm
         return report;
     }
 
+
+
+    namespace
+    {
+
+        static void outputStateVtk(const UnstructuredGrid& grid,
+                                   const Opm::PolymerBlackoilState& state,
+                                   const int step,
+                                   const std::string& output_dir)
+        {
+            // Write data in VTK format.
+            std::ostringstream vtkfilename;
+            vtkfilename << output_dir << "/vtk_files";
+            boost::filesystem::path fpath(vtkfilename.str());
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+            }
+            vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
+            std::ofstream vtkfile(vtkfilename.str().c_str());
+            if (!vtkfile) {
+                OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
+            }
+            Opm::DataMap dm;
+            dm["saturation"] = &state.saturation();
+            dm["pressure"] = &state.pressure();
+            dm["cmax"] = &state.maxconcentration();
+            dm["concentration"] = &state.concentration();
+            std::vector<double> cell_velocity;
+            Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+            dm["velocity"] = &cell_velocity;
+            Opm::writeVtkData(grid, dm, vtkfile);
+        }
+
+
+        static void outputStateMatlab(const UnstructuredGrid& grid,
+                                      const Opm::PolymerBlackoilState& state,
+                                      const int step,
+                                      const std::string& output_dir)
+        {
+            Opm::DataMap dm;
+            dm["saturation"] = &state.saturation();
+            dm["pressure"] = &state.pressure();
+            dm["cmax"] = &state.maxconcentration();
+            dm["concentration"] = &state.concentration();
+            dm["surfvolume"] = &state.surfacevol();
+            std::vector<double> cell_velocity;
+            Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+            dm["velocity"] = &cell_velocity;
+    
+            // Write data (not grid) in Matlab format
+            for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+                std::ostringstream fname;
+                fname << output_dir << "/" << it->first;
+                boost::filesystem::path fpath = fname.str();
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                }
+                fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+                std::ofstream file(fname.str().c_str());
+                if (!file) {
+                    OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
+                }
+                file.precision(15);
+                const std::vector<double>& d = *(it->second);
+                std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+            }
+        }
+
+    
+        static void outputWaterCut(const Opm::Watercut& watercut,
+                    	            const std::string& output_dir)
+        {
+            // Write water cut curve.
+            std::string fname = output_dir  + "/watercut.txt";
+            std::ofstream os(fname.c_str());
+            if (!os) {
+                OPM_THROW(std::runtime_error, "Failed to open " << fname);
+            }
+            watercut.write(os);
+        }
+    }
 
 } // namespace Opm
