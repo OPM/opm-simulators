@@ -187,26 +187,18 @@ struct HelperOps
 
 namespace {
 
-    template <typename Scalar, class IntVec>
-    Eigen::SparseMatrix<Scalar>
-    constructSubsetSparseMatrix(const int full_size, const IntVec& indices)
-    {
-        typedef Eigen::Triplet<Scalar> Tri;
-        const int subset_size = indices.size();
-        std::vector<Tri> triplets(subset_size);
-        for (int i = 0; i < subset_size; ++i) {
-            triplets[i] = Tri(i, indices[i], 1);
-        }
-        Eigen::SparseMatrix<Scalar> sub(subset_size, full_size);
-        sub.setFromTriplets(triplets.begin(), triplets.end());
-        return sub;
-    }
 
     template <typename Scalar, class IntVec>
     Eigen::SparseMatrix<Scalar>
     constructSupersetSparseMatrix(const int full_size, const IntVec& indices)
     {
-        return constructSubsetSparseMatrix<Scalar>(full_size, indices).transpose();
+        const int subset_size = indices.size();
+        Eigen::SparseMatrix<Scalar> mat(full_size, subset_size);
+        mat.reserve(Eigen::VectorXi::Constant(subset_size, 1));
+        for (int i = 0; i < subset_size; ++i) {
+            mat.insert(indices[i], i) = 1;
+        }
+        return mat;
     }
 
 } // anon namespace
@@ -218,7 +210,9 @@ AutoDiffBlock<Scalar>
 subset(const AutoDiffBlock<Scalar>& x,
        const IntVec& indices)
 {
-    return constructSubsetSparseMatrix<Scalar>(x.value().size(), indices) * x;
+    Eigen::SparseMatrix<Scalar> sub
+        = constructSupersetSparseMatrix<Scalar>(x.value().size(), indices).transpose();
+    return sub * x;
 }
 
 
@@ -229,7 +223,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1>
 subset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
        const IntVec& indices)
 {
-    return (constructSubsetSparseMatrix<Scalar>(x.size(), indices) * x.matrix()).array();
+    return (constructSupersetSparseMatrix<Scalar>(x.size(), indices).transpose() * x.matrix()).array();
 }
 
 
