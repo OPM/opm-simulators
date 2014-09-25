@@ -452,11 +452,12 @@ namespace {
         const ADB&              c     = state.concentration;
 
         const std::vector<PhasePresence> cond = phaseCondition();
+		std::vector<ADB> pressure = computePressures(state);
 
         const ADB pv_mult = poroMult(press);
 
         for (int phase = 0; phase < 2; ++phase) {
-            rq_[phase].b = fluidReciprocFVF(phase, press, cond, cells_);
+            rq_[phase].b = fluidReciprocFVF(phase, pressure[phase], cond, cells_);
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
@@ -567,15 +568,16 @@ namespace {
             }
         }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
+		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, state.pressure, cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], cells_);
             cell_rho_total += state.saturation[phase] * cell_rho;
         }
         ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
         assert(np == wells_.number_of_phases);
         const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, state.pressure, cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], cells_);
             const V fraction = compi.col(phase);
             inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
         }
