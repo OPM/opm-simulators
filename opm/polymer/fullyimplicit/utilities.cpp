@@ -23,7 +23,7 @@
 #include <opm/core/linalg/blas_lapack.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/IncompPropsAdInterface.hpp>
+//#include <opm/autodiff/IncompPropsAdInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -120,6 +120,8 @@ namespace Opm
     /// @param[out] produced  must also point to a valid array with P elements.
     /// @param[out] polyinj   injected mass of polymer
     /// @param[out] polyprod  produced mass of polymer
+    // This function need a incompProps based on Ad.
+    /*
     void computeInjectedProduced(const IncompPropsAdInterface& props,
                                  const Opm::PolymerPropsAd& polymer_props,
                                  const PolymerState& state,
@@ -190,7 +192,7 @@ namespace Opm
 		}
     }
 
-
+    */
     /// @brief Computes injected and produced volumes of all phases,
     ///        and injected and produced polymer mass - in the compressible case.
     /// Note 1: assumes that only the first phase is injected.
