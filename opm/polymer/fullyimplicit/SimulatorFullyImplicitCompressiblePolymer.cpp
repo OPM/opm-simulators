@@ -161,6 +161,7 @@ namespace Opm
     // \TODO: Treat bcs.
     SimulatorFullyImplicitCompressiblePolymer::Impl::Impl(const parameter::ParameterGroup& param,
                    			                              const UnstructuredGrid& grid,
+                                                          const DerivedGeology& geo,
                               			                  const BlackoilPropsAdInterface& props,
                                          			      const PolymerPropsAd&    polymer_props,
                                   			              const RockCompressibility* rock_comp_props,
@@ -176,7 +177,7 @@ namespace Opm
           wells_(wells_manager.c_wells()),
           polymer_inflow_(polymer_inflow),
           gravity_(gravity),
-          geo_(grid_, props_, gravity_),
+          geo_(geo),
           solver_(grid_, props_, geo_, rock_comp_props, polymer_props, *wells_manager.c_wells(), linsolver)
 
           /*                   param.getDefault("nl_pressure_residual_tolerance", 0.0),

@@ -32,6 +32,7 @@ namespace Opm
     namespace parameter { class ParameterGroup; }
     class BlackoilPropsAdInterface;
     class RockCompressibility;
+    class DerivedGeology;
     class WellsManager;
     class LinearSolverInterface;
     class SimulatorTimer;
@@ -71,6 +72,7 @@ namespace Opm
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
                         		                  const UnstructuredGrid& grid,
+                                                  const DerivedGeology& geo,
                                    				  const BlackoilPropsAdInterface& props,
                                        			  const PolymerPropsAd&    polymer_props,
                                        			  const RockCompressibility* rock_comp_props,
