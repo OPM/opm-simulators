@@ -840,9 +840,8 @@ namespace {
 		pressure[0] = pressure[0] - pressure[1];
 
         // add the total pressure to the capillary pressures
-        for (int phaseIdx = 0; phaseIdx < 2; ++phaseIdx) {
-            pressure[phaseIdx] += state.pressure;
-        }
+        pressure[0] = state.pressure - pressure[0];
+        pressure[1] = state.pressure + pressure[1];
 
         return pressure;
     }
