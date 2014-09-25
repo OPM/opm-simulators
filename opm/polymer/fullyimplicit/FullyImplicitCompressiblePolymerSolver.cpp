@@ -1,6 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2013 STATOIL ASA.
+  Copyright 2014 STATOIL ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -181,6 +181,7 @@ namespace {
         , wops_  (wells)
         , grav_  (gravityOperator(grid_, ops_, geo_))
 		, cmax_(V::Zero(grid.number_of_cells))
+        , phaseCondition_ (grid.number_of_cells)
         , rq_    (fluid.numPhases() + 1)
         , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
                         ADB::null(),
@@ -449,10 +450,13 @@ namespace {
         const ADB&              press = state.pressure;
         const std::vector<ADB>& sat   = state.saturation;
         const ADB&              c     = state.concentration;
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
         const ADB pv_mult = poroMult(press);
 
         for (int phase = 0; phase < 2; ++phase) {
-            rq_[phase].b = fluidReciprocFVF(phase, press, cells_);
+            rq_[phase].b = fluidReciprocFVF(phase, press, cond, cells_);
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
@@ -478,7 +482,6 @@ namespace {
 		for (int i = 0; i < nc; ++i) {
 			cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
-	//	return ADB::constant(cmax_, c.blockPattern());
 		std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 
     }
@@ -857,16 +860,17 @@ namespace {
                                                  const SolutionState&    state )
     {
         const ADB tr_mult = transMult(state.pressure);
+        const std::vector<PhasePresence> cond = phaseCondition();
 
-        const ADB mu_w = fluidViscosity(0, state.pressure, cells_);
+        const ADB mu_w = fluidViscosity(0, state.pressure, cond, cells_);
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value().data());
         rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
         rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
-        const ADB mu_o = fluidViscosity(1, state.pressure, cells_);
+        const ADB mu_o = fluidViscosity(1, state.pressure, cond, cells_);
         rq_[1].mob = tr_mult * kro / mu_o;
 		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB rho   = fluidDensity(phase, state.pressure, cells_);
+            const ADB rho   = fluidDensity(phase, state.pressure, cond, cells_);
             ADB& head = rq_[ phase ].head;
             // compute gravity potensial using the face average as in eclipse and MRST
             const ADB rhoavg = ops_.caver * rho;
@@ -909,16 +913,17 @@ namespace {
 
 
     ADB
-    FullyImplicitCompressiblePolymerSolver::fluidViscosity(const int               phase,
-		                                                   const ADB&              p    ,
-           			                                       const std::vector<int>& cells) const
+    FullyImplicitCompressiblePolymerSolver::fluidViscosity(const int                         phase,
+		                                                   const ADB&                        p    ,
+                                                           const std::vector<PhasePresence>& cond,
+           			                                       const std::vector<int>&           cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
         case Water:
             return fluid_.muWat(p, cells);
         case Oil: {
-            return fluid_.muOil(p, null, cells);
+            return fluid_.muOil(p, null, cond, cells);
         }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
@@ -930,16 +935,17 @@ namespace {
 
 
     ADB
-    FullyImplicitCompressiblePolymerSolver::fluidReciprocFVF(const int               phase,
-                                                  		     const ADB&              p    ,
-                                                  		     const std::vector<int>& cells) const
+    FullyImplicitCompressiblePolymerSolver::fluidReciprocFVF(const int                         phase,
+                                                  		     const ADB&                        p    ,
+                                                             const std::vector<PhasePresence>& cond
+                                                  		     const std::vector<int>&           cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
         case Water:
             return fluid_.bWat(p, cells);
         case Oil: {
-            return fluid_.bOil(p, null, cells);
+            return fluid_.bOil(p, null, cond, cells);
         }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
@@ -951,12 +957,13 @@ namespace {
 
 
     ADB
-    FullyImplicitCompressiblePolymerSolver::fluidDensity(const int               phase,
-                                              			 const ADB&              p    ,
-                                              		     const std::vector<int>& cells) const
+    FullyImplicitCompressiblePolymerSolver::fluidDensity(const int                         phase,
+                                              			 const ADB&                        p    ,
+                                                         const std::vector<PhasePresence>& cond
+                                              		     const std::vector<int>&           cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidReciprocFVF(phase, p, cells);
+        ADB b = fluidReciprocFVF(phase, p, cond, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
     }
@@ -1027,5 +1034,20 @@ namespace {
         }
     }
 
+
+    void
+    FullyImplicitCompressiblePolymerSolver::classifyCondition(const PolymerBlackoilState& state)
+    {
+        const nc = grid_.number_of_cells;
+        const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, 2);
+        
+        const V so = s.col(1);
+        for (V::Index c = 0; e = so.size(); c != e; ++c) {
+            phaseConditon_[c].setFreeWater();
+            if (so[c] > 0) {
+                phaseCondition_[c].setFreeOil();
+            }
+        }
+    }
 
 } //namespace Opm

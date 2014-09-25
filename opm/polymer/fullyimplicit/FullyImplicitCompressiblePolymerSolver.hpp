@@ -136,7 +136,7 @@ namespace Opm {
         const M                         grav_;
 		V    			 				cmax_;
         std::vector<ReservoirResidualQuant> rq_;
-
+        std::vector<PhasePresence> phaseCondition_;
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.
@@ -217,25 +217,34 @@ namespace Opm {
         residualNorm() const;
 
         ADB
-        fluidViscosity(const int               phase,
-                       const ADB&              p    ,
-                       const std::vector<int>& cells) const;
+        fluidViscosity(const int                         phase,
+                       const ADB&                        p    ,
+                       const std::vector<PhasePresence>& cond,
+                       const std::vector<int>&           cells) const;
 
         ADB
-        fluidReciprocFVF(const int               phase,
-                         const ADB&              p    ,
-                         const std::vector<int>& cells) const;
+        fluidReciprocFVF(const int                         phase,
+                         const ADB&                        p    ,
+                         const std::vector<PhasePresence>& cond
+                         const std::vector<int>&           cells) const;
 
         ADB
-        fluidDensity(const int               phase,
-                     const ADB&              p    ,
-                     const std::vector<int>& cells) const;
+        fluidDensity(const int                         phase,
+                     const ADB&                        p    ,
+                     const std::vector<PhasePresence>& cond,
+                     const std::vector<int>&           cells) const;
 
         ADB
         poroMult(const ADB& p) const;
 
         ADB
         transMult(const ADB& p) const;
+        
+        const std::vector<PhasePresence>
+        phaseCondition() const { return phaseConditon_; }
+        
+        void
+        classifyCondition(const PolymerBlackoilState& state);
     };
 } // namespace Opm
 
