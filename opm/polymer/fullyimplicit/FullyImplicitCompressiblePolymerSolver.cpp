@@ -860,25 +860,25 @@ namespace {
     {
         const ADB tr_mult = transMult(state.pressure);
         const std::vector<PhasePresence> cond = phaseCondition();
+		std::vector<ADB> press = computePressures(state);
 
-        const ADB mu_w = fluidViscosity(0, state.pressure, cond, cells_);
+        const ADB mu_w = fluidViscosity(0, press[0], cond, cells_);
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value().data());
         rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
         rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
-        const ADB mu_o = fluidViscosity(1, state.pressure, cond, cells_);
+        const ADB mu_o = fluidViscosity(1, press[1], cond, cells_);
         rq_[1].mob = tr_mult * kro / mu_o;
-		std::vector<ADB> press = computePressures(state);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB rho   = fluidDensity(phase, state.pressure, cond, cells_);
+            const ADB rho   = fluidDensity(phase, press[phase], cond, cells_);
             ADB& head = rq_[ phase ].head;
             // compute gravity potensial using the face average as in eclipse and MRST
             const ADB rhoavg = ops_.caver * rho;
             const ADB dp = ops_.ngrad * press[phase] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
             head = transi*dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());
-            const ADB& b       = rq_[ phase ].b;
-            const ADB& mob     = rq_[ phase ].mob;
-            rq_[ phase ].mflux = upwind.select(b * mob) * head;
+            const ADB& b       = rq_[phase].b;
+            const ADB& mob     = rq_[phase].mob;
+            rq_[phase].mflux = upwind.select(b * mob) * head;
         }
         rq_[2].b = rq_[0].b;
         rq_[2].head = rq_[0].head;
