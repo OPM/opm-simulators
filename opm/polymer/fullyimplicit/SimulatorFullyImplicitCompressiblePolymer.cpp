@@ -92,7 +92,7 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              PolymerInflowInterface& polymer_inflow,
-             LinearSolverInterface& linsolver,
+             NewtonIterationBlackoilInterface& linsolver,
              const double* gravity);
 
         SimulatorReport run(SimulatorTimer& timer,
@@ -138,7 +138,7 @@ namespace Opm
                                                                    const RockCompressibility* rock_comp_props,
                                                                    WellsManager& wells_manager,
                                                                    PolymerInflowInterface&  polymer_inflow,
-                                                                   LinearSolverInterface& linsolver,
+                                                                   NewtonIterationBlackoilInterface& linsolver,
                                                                    const double* gravity)
 
     {
@@ -169,7 +169,7 @@ namespace Opm
                                   			              const RockCompressibility* rock_comp_props,
                                   		                  WellsManager& wells_manager,
                                  			              PolymerInflowInterface&  polymer_inflow,
-                         			                      LinearSolverInterface& linsolver,
+                         			                      NewtonIterationBlackoilInterface& linsolver,
                                     		              const double* gravity)
         : grid_(grid),
           props_(props),

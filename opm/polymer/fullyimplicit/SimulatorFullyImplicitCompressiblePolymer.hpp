@@ -34,7 +34,7 @@ namespace Opm
     class RockCompressibility;
     class DerivedGeology;
     class WellsManager;
-    class LinearSolverInterface;
+    class NewtonIterationBlackoilInterface;
     class SimulatorTimer;
     class PolymerBlackoilState;
     class WellState;
@@ -78,7 +78,7 @@ namespace Opm
                                        			  const RockCompressibility* rock_comp_props,
                                        			  WellsManager& wells_manager,
                                        			  PolymerInflowInterface& polymer_inflow,
-                                       			  LinearSolverInterface& linsolver,
+                                       			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
 
         /// Run the simulation.

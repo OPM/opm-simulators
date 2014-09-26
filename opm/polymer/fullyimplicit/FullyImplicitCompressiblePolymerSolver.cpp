@@ -168,7 +168,7 @@ namespace {
                                 		   const RockCompressibility*      	rock_comp_props,
                                 		   const PolymerPropsAd&           	polymer_props_ad,
                                 		   const Wells&                    	wells,
-                                		   const LinearSolverInterface&    	linsolver)
+                                		   const NewtonIterationBlackoilInterface&    	linsolver)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -212,7 +212,7 @@ namespace {
         assemble(dt, x, xw, polymer_inflow, src);
 
         const double r0  = residualNorm();
-        const double r_polymer = residual_.mass_balance[2].value().matrix().lpNorm<Eigen::Infinity>();
+        const double r_polymer = residual_.material_balance_eq[2].value().matrix().lpNorm<Eigen::Infinity>();
         int          it  = 0;
         std::cout << "\nIteration         Residual     Polymer Res\n"
                   << std::setw(9) << it << std::setprecision(9)
@@ -227,7 +227,7 @@ namespace {
 
             const double r = residualNorm();
 
-        	const double rr_polymer = residual_.mass_balance[2].value().matrix().lpNorm<Eigen::Infinity>();
+        	const double rr_polymer = residual_.material_balance_eq[2].value().matrix().lpNorm<Eigen::Infinity>();
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
@@ -521,11 +521,11 @@ namespace {
         const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
         const ADB mc = computeMc(state);
         computeMassFlux(trans, mc, kr[1], krw_eff, state);
-        residual_.mass_balance[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
+        residual_.material_balance_eq[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
                                     + ops_.div*rq_[0].mflux;
-        residual_.mass_balance[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
+        residual_.material_balance_eq[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
                                     + ops_.div*rq_[1].mflux;
-        residual_.mass_balance[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) //+ cell / dt * (rq_[2].ads[1] - rq_[2].ads[0])
+        residual_.material_balance_eq[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) //+ cell / dt * (rq_[2].ads[1] - rq_[2].ads[0])
                                     + ops_.div*rq_[2].mflux;
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
@@ -620,7 +620,7 @@ namespace {
             // const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
             // DUMP(well_contribs[phase]);
-            residual_.mass_balance[phase] += well_contribs[phase];
+            residual_.material_balance_eq[phase] += well_contribs[phase];
 			for (int cell = 0; cell < nc; ++cell) {
 				src[cell] += well_contribs[phase].value()[cell];
 			}
@@ -634,7 +634,7 @@ namespace {
 		const V poly_in_c = poly_in_perf;// * poly_mc_cell;
         const V poly_mc = producer.select(poly_mc_cell, poly_in_c);
         
-		residual_.mass_balance[2] += superset(well_perf_rates[0] * poly_mc, well_cells, nc);
+		residual_.material_balance_eq[2] += superset(well_perf_rates[0] * poly_mc, well_cells, nc);
         // Set the well flux equation
         residual_.well_flux_eq = state.qs + well_rates_all;
         // DUMP(residual_.well_flux_eq);
@@ -675,25 +675,7 @@ namespace {
 
     V FullyImplicitCompressiblePolymerSolver::solveJacobianSystem() const
     {
-        ADB mass_res = vertcat(residual_.mass_balance[0], residual_.mass_balance[1]);
-        mass_res = vertcat(mass_res, residual_.mass_balance[2]);
-        const ADB well_res = vertcat(residual_.well_flux_eq, residual_.well_eq);
-        const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
-        // DUMP(total_residual);
-
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
-
-        V dx(V::Zero(total_residual.size()));
-        Opm::LinearSolverInterface::LinearSolverReport rep
-            = linsolver_.solve(matr.rows(), matr.nonZeros(),
-                               matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
-                               total_residual.value().data(), dx.data());
-        if (!rep.converged) {
-            OPM_THROW(std::runtime_error,
-                      "FullyImplicitCompressiblePolymerSolver::solveJacobianSystem(): "
-                      "Linear solver convergence failure.");
-        }
-        return dx;
+        return linsolver_.computeNewtonIncrement(residual_);
     }
 
 
@@ -898,8 +880,8 @@ namespace {
     {
         double r = 0;
         for (std::vector<ADB>::const_iterator
-                 b = residual_.mass_balance.begin(),
-                 e = residual_.mass_balance.end();
+                 b = residual_.material_balance_eq.begin(),
+                 e = residual_.material_balance_eq.end();
              b != e; ++b)
         {
             r = std::max(r, (*b).value().matrix().lpNorm<Eigen::Infinity>());

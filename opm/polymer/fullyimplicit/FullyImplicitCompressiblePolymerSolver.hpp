@@ -24,6 +24,8 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 
@@ -34,7 +36,7 @@ namespace Opm {
 
     class DerivedGeology;
     class RockCompressibility;
-    class LinearSolverInterface;
+    class NewtonIterationBlackoilInterface;
     class PolymerBlackoilState;
     class WellState;
 
@@ -65,7 +67,7 @@ namespace Opm {
                               			       const RockCompressibility*      rock_comp_props,
                                     		   const PolymerPropsAd&           polymer_props_ad,
                                     		   const Wells&                    wells,
-                                    		   const LinearSolverInterface&    linsolver);
+                                    		   const NewtonIterationBlackoilInterface&    linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -129,7 +131,7 @@ namespace Opm {
         const RockCompressibility*      rock_comp_props_;
         const PolymerPropsAd&           polymer_props_ad_;
         const Wells&                    wells_;
-        const LinearSolverInterface&    linsolver_;
+        const NewtonIterationBlackoilInterface&    linsolver_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
         const WellOps                   wops_;
@@ -140,12 +142,7 @@ namespace Opm {
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.
-        struct {
-            std::vector<ADB> mass_balance;
-            ADB well_flux_eq;
-            ADB well_eq;
-        } residual_;
-
+        LinearisedBlackoilResidual  residual_;
         // Private methods.
         SolutionState
         constantState(const PolymerBlackoilState& x,

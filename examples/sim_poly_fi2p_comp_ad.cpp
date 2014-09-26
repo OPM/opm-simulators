@@ -41,6 +41,8 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -156,8 +158,13 @@ try
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
-    // Linear solver.
-    LinearSolverFactory linsolver(param);
+    // Solver for Newton iterations.
+    std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
+    if (param.getDefault("use_cpr", true)) {
+        fis_solver.reset(new NewtonIterationBlackoilCPR(param));
+    } else {
+        fis_solver.reset(new NewtonIterationBlackoilSimple(param));
+    }
 
     // Write parameters used for later reference.
     bool output = param.getDefault("output", true);
@@ -234,7 +241,7 @@ try
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
                                                  wells,
                                                  *polymer_inflow,
-                                                 linsolver,
+                                                 *fis_solver,
                                                  grav);
         if (reportStepIdx == 0) {
             warnIfUnusedParams(param);
