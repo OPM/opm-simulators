@@ -245,12 +245,18 @@ namespace Opm
 				src[cell] = 1.0;
 			}
 		}
+        //Add PhasePresence make muOil() happy.
+        std::vector<PhasePresence> phaseCondition;
+        for (int c = 0; c < num_cells; ++c) {
+            phaseCondition[c].setFreeWater();
+            phaseCondition[c].setFreeOil();
+        }
 		const Selector<double> src_selector(src);
 		const V one = V::Constant(num_cells, 1.0);
 		const V zero = V::Zero(num_cells);
 		const std::vector<V> kr = props.relperm(sw, so, zero, cells);
 		const V muw = props.muWat(p, cells);
-		const V muo = props.muOil(p, zero, cells);
+		const V muo = props.muOil(p, zero, phaseCondition, cells);
         const V krw_eff = polymer_props.effectiveRelPerm(c, cmax, kr[0]);
 		const V inv_muw_eff = polymer_props.effectiveInvWaterVisc(c, muw.data());
 		std::vector<V> mob(np);
