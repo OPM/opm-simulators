@@ -50,15 +50,18 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/polymer/PolymerState.hpp>
+
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/GeoProps.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <boost/scoped_ptr.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <memory>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -96,10 +99,10 @@ try
         OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
                   "Specify the deck with deck_filename=deckname.data (for example).");
     }
-    boost::scoped_ptr<GridManager> grid;
-    boost::scoped_ptr<BlackoilPropertiesInterface> props;
-    boost::scoped_ptr<BlackoilPropsAdInterface> new_props;
-    boost::scoped_ptr<RockCompressibility> rock_comp;
+    std::shared_ptr<GridManager> grid;
+    std::shared_ptr<BlackoilPropertiesInterface> props;
+    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<RockCompressibility> rock_comp;
     Opm::DeckConstPtr deck;
     EclipseStateConstPtr eclipseState;
     PolymerBlackoilState state;
@@ -111,7 +114,12 @@ try
     deck = parser->parseFile(deck_filename);
     eclipseState.reset(new Opm::EclipseState(deck));
     // Grid init
-    grid.reset(new GridManager(deck));
+    std::vector<double> porv;
+    if (eclipseState->hasDoubleGridProperty("PORV")) {
+        porv = eclipseState->getDoubleGridProperty("PORV")->getData();
+    }
+    grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
+//    grid.reset(new GridManager(deck));
 
     // use the capitalized part of the deck's filename between the
     // last '/' and the last '.' character as base name.
@@ -128,16 +136,16 @@ try
     Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
 */
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseStae, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid()));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
-        PolymerProperties polymer_props(eclipseState);
+    PolymerProperties polymer_props(eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
     rock_comp.reset(new RockCompressibility(deck, eclipseState));
     // Gravity.
-    gravity[2] = deck->hasField("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
@@ -169,8 +177,7 @@ try
 
 
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << "                        (number of epochs: "
-              << (deck->numberOfEpochs()) << ")\n\n" << std::flush;
+              << std::flush;
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
@@ -193,8 +200,8 @@ try
         simtimer.setCurrentStepNum(reportStepIdx);
 
         // Report on start of step.
-        std::cout << "\n\n--------------    Starting epoch " << epoch << "    --------------"
-                  << "\n                  (number of steps: "
+        std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
+                  << "\n                  (number of remaining steps: "
                   << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
         // Create new wells, polymer inflow controls.
@@ -221,6 +228,7 @@ try
         Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
         SimulatorFullyImplicitCompressiblePolymer simulator(param,
                                                  *grid->c_grid(),
+                                                 geology,
                                                  *new_props,
                                                  polymer_props_ad,
                                                  rock_comp->isActive() ? rock_comp.get() : 0,
@@ -232,9 +240,6 @@ try
             warnIfUnusedParams(param);
         }
         SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
-        if (output) {
-            epoch_rep.reportParam(epoch_os);
-        }
         // Update total timing report and remember step number.
         rep += epoch_rep;
         step = simtimer.currentStepNum();
