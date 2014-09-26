@@ -86,6 +86,7 @@ namespace Opm
     public:
         Impl(const parameter::ParameterGroup& param,
              const UnstructuredGrid& grid,
+             const DerivedGeology& geo,
              const BlackoilPropsAdInterface& props,
              const PolymerPropsAd&          polymer_props,
              const RockCompressibility* rock_comp_props,
@@ -131,6 +132,7 @@ namespace Opm
     SimulatorFullyImplicitCompressiblePolymer::
     SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
                                                                    const UnstructuredGrid& grid,
+                                                          const DerivedGeology& geo,
                                                                    const BlackoilPropsAdInterface& props,
                                                                    const PolymerPropsAd&    polymer_props,
                                                                    const RockCompressibility* rock_comp_props,
@@ -140,7 +142,7 @@ namespace Opm
                                                                    const double* gravity)
 
     {
-        pimpl_.reset(new Impl(param, grid, props, polymer_props, rock_comp_props, wells_manager, polymer_inflow, linsolver, gravity));
+        pimpl_.reset(new Impl(param, grid, geo, props, polymer_props, rock_comp_props, wells_manager, polymer_inflow, linsolver, gravity));
     }
 
 
@@ -293,7 +295,7 @@ namespace Opm
             	// Process transport sources (to include bdy terms and well flows).
 //            	Opm::computeTransportSource(props_, wells_, well_state, transport_src);
                 // Run solver.
-                const double current_time = timer.currentTimeElapsed();
+                const double current_time = timer.simulationTimeElapsed();
                 double stepsize = timer.currentStepLength();
                 polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
                 solver_timer.start();
@@ -347,7 +349,7 @@ namespace Opm
             tot_injected[1] += injected[1];
             tot_produced[0] += produced[0];
             tot_produced[1] += produced[1];
-         	watercut.push(timer.currentTimeElapsed() + timer.currentStepLength(),
+         	watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
                           	  produced[0]/(produced[0] + produced[1]),
                           	  tot_produced[0]/tot_porevol_init);
             std::cout.precision(5);

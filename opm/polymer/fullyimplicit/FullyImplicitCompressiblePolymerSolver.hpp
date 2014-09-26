@@ -135,8 +135,8 @@ namespace Opm {
         const WellOps                   wops_;
         const M                         grav_;
 		V    			 				cmax_;
-        std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+        std::vector<ReservoirResidualQuant> rq_;
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.
@@ -225,7 +225,7 @@ namespace Opm {
         ADB
         fluidReciprocFVF(const int                         phase,
                          const ADB&                        p    ,
-                         const std::vector<PhasePresence>& cond
+                         const std::vector<PhasePresence>& cond,
                          const std::vector<int>&           cells) const;
 
         ADB
@@ -241,7 +241,7 @@ namespace Opm {
         transMult(const ADB& p) const;
         
         const std::vector<PhasePresence>
-        phaseCondition() const { return phaseConditon_; }
+        phaseCondition() const { return phaseCondition_; }
         
         void
         classifyCondition(const PolymerBlackoilState& state);

@@ -569,15 +569,16 @@ namespace {
         }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
 		std::vector<ADB> press = computePressures(state);
+        const std::vector<PhasePresence> cond = phaseCondition();
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, press[phase], cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], cond, cells_);
             cell_rho_total += state.saturation[phase] * cell_rho;
         }
         ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
         assert(np == wells_.number_of_phases);
         const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, press[phase], cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], cond, cells_);
             const V fraction = compi.col(phase);
             inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
         }
@@ -938,7 +939,7 @@ namespace {
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidReciprocFVF(const int                         phase,
                                                   		     const ADB&                        p    ,
-                                                             const std::vector<PhasePresence>& cond
+                                                             const std::vector<PhasePresence>& cond,
                                                   		     const std::vector<int>&           cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
@@ -960,7 +961,7 @@ namespace {
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidDensity(const int                         phase,
                                               			 const ADB&                        p    ,
-                                                         const std::vector<PhasePresence>& cond
+                                                         const std::vector<PhasePresence>& cond,
                                               		     const std::vector<int>&           cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
@@ -1039,12 +1040,12 @@ namespace {
     void
     FullyImplicitCompressiblePolymerSolver::classifyCondition(const PolymerBlackoilState& state)
     {
-        const nc = grid_.number_of_cells;
+        const int nc = grid_.number_of_cells;
         const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, 2);
         
         const V so = s.col(1);
-        for (V::Index c = 0; e = so.size(); c != e; ++c) {
-            phaseConditon_[c].setFreeWater();
+        for (V::Index c = 0, e = so.size(); c != e; ++c) {
+            phaseCondition_[c].setFreeWater();
             if (so[c] > 0) {
                 phaseCondition_[c].setFreeOil();
             }
