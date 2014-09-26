@@ -19,6 +19,8 @@
 
 #include <config.h>
 
+#include <opm/autodiff/DuneMatrix.hpp>
+
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -29,7 +31,7 @@
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <dune/istl/bvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
+// #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/io.hh>
 #include <dune/istl/owneroverlapcopy.hh>
@@ -465,6 +467,7 @@ namespace Opm
             const int* ia = matrix.outerIndexPtr();
             const int* ja = matrix.innerIndexPtr();
             const double* sa = matrix.valuePtr();
+#if 0
             Mat A(size, size, nonzeros, Mat::row_wise);
             for (Mat::CreateIterator row = A.createbegin(); row != A.createend(); ++row) {
                 const int ri = row.index();
@@ -478,6 +481,8 @@ namespace Opm
                 }
             }
             return A;
+#endif
+            return Opm::DuneMatrix<MatrixBlockType>(size, size, ia, ja, sa);
         }
 
 
