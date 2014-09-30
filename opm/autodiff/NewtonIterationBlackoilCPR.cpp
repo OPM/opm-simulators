@@ -463,25 +463,9 @@ namespace Opm
         {
             // Create ISTL matrix.
             const int size = matrix.rows();
-            const int nonzeros = matrix.nonZeros();
             const int* ia = matrix.outerIndexPtr();
             const int* ja = matrix.innerIndexPtr();
             const double* sa = matrix.valuePtr();
-#if 0
-            Mat A(size, size, nonzeros, Mat::row_wise);
-            for (Mat::CreateIterator row = A.createbegin(); row != A.createend(); ++row) {
-                const int ri = row.index();
-                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
-                    row.insert(ja[i]);
-                }
-            }
-            for (int ri = 0; ri < size; ++ri) {
-                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
-                    A[ri][ja[i]] = sa[i];
-                }
-            }
-            return A;
-#endif
             return Opm::DuneMatrix<MatrixBlockType>(size, size, ia, ja, sa);
         }
 
