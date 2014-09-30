@@ -51,6 +51,7 @@ list (APPEND MAIN_SOURCE_FILES
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
 	tests/test_autodiffhelpers.cpp
+	tests/test_autodiffmatrix.cpp
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
 	tests/test_rateconverter.cpp
@@ -104,6 +105,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AdditionalObjectDeleter.hpp
 	opm/autodiff/AutoDiffBlock.hpp
 	opm/autodiff/AutoDiffHelpers.hpp
+	opm/autodiff/AutoDiffMatrix.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
 	opm/autodiff/BlackoilModel.hpp
