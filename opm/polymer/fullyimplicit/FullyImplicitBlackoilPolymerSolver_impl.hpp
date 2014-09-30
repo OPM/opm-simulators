@@ -649,7 +649,7 @@ namespace {
 
     template<class T>
     void FullyImplicitBlackoilPolymerSolver<T>::computeWellConnectionPressures(const SolutionState& state,
-                                                                        const WellStateFullyImplicitBlackoil& xw)
+                                                                               const WellStateFullyImplicitBlackoil& xw)
     {
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -725,7 +725,8 @@ namespace {
     FullyImplicitBlackoilPolymerSolver<T>::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
-             WellStateFullyImplicitBlackoil& xw  )
+             WellStateFullyImplicitBlackoil& xw,
+             const std::vector<double>& polymer_inflow)
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
@@ -796,7 +797,7 @@ namespace {
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         // Add polymer equation.
-        if (has_polymer) {
+        if (has_polymer_) {
             residula_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
         }
@@ -805,7 +806,7 @@ namespace {
         // a well control is switched.
         updateWellControls(state.bhp, state.qs, xw);
         V aliveWells;
-        addWellEq(state, xw, aliveWells);
+        addWellEq(state, xw, aliveWells, polymer_inflow);
         addWellControlEq(state, xw, aliveWells);
     }
 
@@ -815,8 +816,9 @@ namespace {
 
     template <class T>
     void FullyImplicitBlackoilPolymerSolver<T>::addWellEq(const SolutionState& state,
-                                                   WellStateFullyImplicitBlackoil& xw,
-                                                   V& aliveWells)
+                                                          WellStateFullyImplicitBlackoil& xw,
+                                                          V& aliveWells,
+                                                          const std::vector<double>& polymer_inflow)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells_.number_of_phases;
@@ -998,6 +1000,16 @@ namespace {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
+        // Add well contributions to polymer mass_balance equation
+        if (has_polmer_) {
+            const ADB mc = computeMc(state);
+            const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
+            const V poly_in_perf = subset(polyin, well_cells);
+            const V poly_mc_perf = subset(mc, well_cells).value();
+            residual_.material_balance_eq[poly_pos_] += superset(cq_ps[pu.phase_pos[Water]]*poly_mc_perf
+                                                     + (wops_.w2p * mix_s[pu.phase_pos[Water]])*cqt_is*poly_in_perf,
+                                                     well_cells, nc);
+        }
 
         // Add WELL EQUATIONS
         ADB qs = state.qs;

@@ -102,7 +102,8 @@ namespace Opm {
         void
         step(const double   dt    ,
              PolymerBlackoilState& state ,
-             WellStateFullyImplicitBlackoil&     wstate);
+             WellStateFullyImplicitBlackoil& wstate,
+             const std::vector<double>& polymer_inflow);
 
     private:
         // Types and enums
@@ -211,7 +212,8 @@ namespace Opm {
         void
         addWellEq(const SolutionState& state,
                   WellStateFullyImplicitBlackoil& xw,
-                  V& aliveWells);
+                  V& aliveWells,
+                  const std::vector<double>& polymer_inflow);
 
         void updateWellControls(ADB& bhp,
                                 ADB& well_phase_flow_rate,
@@ -220,7 +222,8 @@ namespace Opm {
         void
         assemble(const V&             dtpv,
                  const PolymerBlackoilState& x,
-                 WellStateFullyImplicitBlackoil& xw);
+                 WellStateFullyImplicitBlackoil& xw,
+                 const std::vector<double>& polymer_inflow);
 
         V solveJacobianSystem() const;
 
