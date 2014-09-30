@@ -27,6 +27,8 @@
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
+
 // Include matrix header with hackery to make it possible to inherit.
 #define private protected
 #include <dune/istl/bcrsmatrix.hh>
@@ -52,9 +54,12 @@ namespace Opm
             this->n = rows;
             this->m = cols;
             this->nnz = ia[rows];
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
             this->allocationSize = this->nnz;
             this->avg = 0;
             this->overflowsize = -1.0;
+#endif
 
             this->a = new B[this->nnz];
             static_assert(sizeof(B) == sizeof(double), "This constructor requires a block type that is the same as a double.");
