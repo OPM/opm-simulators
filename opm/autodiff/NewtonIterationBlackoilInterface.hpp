@@ -38,6 +38,8 @@ namespace Opm
         /// \param[in] residual   residual object containing A and b.
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const = 0;
+
+        virtual int iterationCount () const { return 0; }
     };
 
 } // namespace Opm

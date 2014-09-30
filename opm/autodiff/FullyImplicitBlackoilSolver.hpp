@@ -25,6 +25,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/TimeStepControl.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -93,7 +94,8 @@ namespace Opm {
         /// \param[in] dt        time step size
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
-        void
+        /// \return new suggested time step
+        double 
         step(const double   dt    ,
              BlackoilState& state ,
              WellStateFullyImplicitBlackoil&     wstate);
@@ -175,6 +177,8 @@ namespace Opm {
         LinearisedBlackoilResidual residual_;
 
         std::vector<int>         primalVariable_;
+
+        IterationCountTimeStepControl timeStepControl_;
 
         // Private methods.
         SolutionState

@@ -196,12 +196,13 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
+        , timeStepControl_() 
     {
-        dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
-        ds_max_ = param.getDefault("ds_max", ds_max_);
+        dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
+        ds_max_      = param.getDefault("ds_max", ds_max_);
         drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
-        relax_max_ = param.getDefault("relax_max", relax_max_);
-        max_iter_ = param.getDefault("max_iter", max_iter_);
+        relax_max_   = param.getDefault("relax_max", relax_max_);
+        max_iter_    = param.getDefault("max_iter", max_iter_);
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
@@ -234,10 +235,8 @@ namespace {
     }
 
 
-
-
     template<class T>
-    void
+    double
     FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
@@ -279,9 +278,13 @@ namespace {
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
+        int linearIterations = 0 ;
 
         while ((!converged) && (it < maxIter())) {
             V dx = solveJacobianSystem();
+
+            // store number of linear iterations used
+            linearIterations += linsolver_.iterationCount();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
 
@@ -312,6 +315,9 @@ namespace {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
+
+        std::cout << "Iterations count " << linearIterations << std::endl;
+        return timeStepControl_.computeTimeStepSize( dt, linearIterations );
     }
 
 
