@@ -20,8 +20,13 @@
 #   - CMP0026 to allow access to the LOCATION target property
 #   - CMP0048 to indicate that we want to deal with the *VERSION*
 #     variables ourselves
-cmake_policy(SET CMP0026 OLD)
-cmake_policy(SET CMP0048 OLD)
+if (POLICY CMP0026)
+	cmake_policy(SET CMP0026 OLD)
+endif()
+
+if (POLICY CMP0048)
+	cmake_policy(SET CMP0048 OLD)
+endif()
 
 # include special
 if (CMAKE_VERSION VERSION_LESS "2.8.3")
@@ -78,6 +83,16 @@ include (UseOptimization)
 # turn on all warnings; this must be done before adding any
 # dependencies, in case they alter the list of warnings
 include (UseWarnings)
+
+# parallel computing must be explicitly enabled
+option (USE_MPI "Use Message Passing Interface for parallel computing" OFF)
+if (NOT USE_MPI)
+	set (CMAKE_DISABLE_FIND_PACKAGE_MPI TRUE)
+endif (NOT USE_MPI)
+
+# parallel programming
+include (UseOpenMP)
+find_openmp (${project})
 
 # callback hook to setup additional dependencies
 if (COMMAND prereqs_hook)
