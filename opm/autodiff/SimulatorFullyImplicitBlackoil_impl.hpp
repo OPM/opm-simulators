@@ -291,8 +291,6 @@ namespace Opm
         std::string tstep_filename = output_dir_ + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        double lastSubStep = timer.currentStepLength();
-
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -340,40 +338,13 @@ namespace Opm
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
-            // Run a multiple steps of the solver depending on the time step control.
+            // Run a single step of the solver.
             solver_timer.start();
-
             FullyImplicitBlackoilSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
-
-            const bool subStepping = true;
-            if( subStepping )
-            {
-
-                // create sub step simulator timer with previously used sub step size
-                SubStepSimulatorTimer subStepper( timer, lastSubStep );
-
-                while( ! subStepper.done() )
-                {
-                    const double dt_new = solver.step(subStepper.currentStepLength(), state, well_state);
-                    subStepper.next( dt_new );
-                }
-
-                subStepper.report( std::cout );
-
-                // store last small time step for next reportStep
-                lastSubStep = subStepper.currentStepLength();
-
-                std::cout << "Last suggested step size = " << lastSubStep << std::endl;
-                if( lastSubStep != lastSubStep )
-                    lastSubStep = timer.currentStepLength();
-            }
-            else
-                solver.step(timer.currentStepLength(), state, well_state);
-
-            // take time that was used to solve system for this reportStep
+            solver.step(timer.currentStepLength(), state, well_state);
             solver_timer.stop();
 
             // Report timing.
