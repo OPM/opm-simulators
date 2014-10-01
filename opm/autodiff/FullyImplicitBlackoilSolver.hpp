@@ -25,7 +25,6 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/autodiff/TimeStepControl.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -53,19 +52,40 @@ namespace Opm {
     class FullyImplicitBlackoilSolver
     {
     public:
+        // the Newton relaxation type
+        enum RelaxType { DAMPEN, SOR };
+
+        // class holding the solver parameters
+        struct SolverParameter
+        {
+            double                          dp_max_rel_;
+            double                          ds_max_;
+            double                          drs_max_rel_;
+            enum RelaxType                  relax_type_;
+            double                          relax_max_;
+            double                          relax_increment_;
+            double                          relax_rel_tol_;
+            int                             max_iter_;
+
+            SolverParameter( const parameter::ParameterGroup& param );
+            SolverParameter();
+
+            void reset();
+        };
+
         /// \brief The type of the grid that we use.
         typedef T Grid;
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
-        /// \param[in] param       parameters
+        /// \param[in] param            parameters
         /// \param[in] grid             grid data structure
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
+        FullyImplicitBlackoilSolver(const SolverParameter&          param,
                                     const Grid&                     grid ,
                                     const BlackoilPropsAdInterface& fluid,
                                     const DerivedGeology&           geo  ,
@@ -94,8 +114,7 @@ namespace Opm {
         /// \param[in] dt        time step size
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
-        /// \return new suggested time step
-        double 
+        void
         step(const double   dt    ,
              BlackoilState& state ,
              WellStateFullyImplicitBlackoil&     wstate);
@@ -139,8 +158,6 @@ namespace Opm {
                Oil   = BlackoilPropsAdInterface::Oil  ,
                Gas   = BlackoilPropsAdInterface::Gas  };
 
-        // the Newton relaxation type
-        enum RelaxType { DAMPEN, SOR };
         enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
         // Member data
@@ -159,14 +176,8 @@ namespace Opm {
         const WellOps                   wops_;
         const bool has_disgas_;
         const bool has_vapoil_;
-        double                          dp_max_rel_;
-        double                          ds_max_;
-        double                          drs_max_rel_;
-        enum RelaxType                  relax_type_;
-        double                          relax_max_;
-        double                          relax_increment_;
-        double                          relax_rel_tol_;
-        int                             max_iter_;
+
+        SolverParameter                 param_;
         bool use_threshold_pressure_;
         V threshold_pressures_by_interior_face_;
 
@@ -177,8 +188,6 @@ namespace Opm {
         LinearisedBlackoilResidual residual_;
 
         std::vector<int>         primalVariable_;
-
-        IterationCountTimeStepControl timeStepControl_;
 
         // Private methods.
         SolutionState
@@ -326,14 +335,14 @@ namespace Opm {
 
         void stablizeNewton(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
 
-        double dpMaxRel() const { return dp_max_rel_; }
-        double dsMax() const { return ds_max_; }
-        double drsMaxRel() const { return drs_max_rel_; }
-        enum RelaxType relaxType() const { return relax_type_; }
-        double relaxMax() const { return relax_max_; };
-        double relaxIncrement() const { return relax_increment_; };
-        double relaxRelTol() const { return relax_rel_tol_; };
-        double maxIter() const { return max_iter_; }
+        double dpMaxRel() const { return param_.dp_max_rel_; }
+        double dsMax() const { return param_.ds_max_; }
+        double drsMaxRel() const { return param_.drs_max_rel_; }
+        enum RelaxType relaxType() const { return param_.relax_type_; }
+        double relaxMax() const { return param_.relax_max_; };
+        double relaxIncrement() const { return param_.relax_increment_; };
+        double relaxRelTol() const { return param_.relax_rel_tol_; };
+        double maxIter() const { return param_.max_iter_; }
 
     };
 } // namespace Opm
