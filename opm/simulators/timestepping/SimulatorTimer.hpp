@@ -110,65 +110,6 @@ namespace Opm
         boost::gregorian::date start_date_;
     };
 
-    class SubStepSimulatorTimer
-    {
-    protected:
-        const SimulatorTimer& simulator_timer_;
-        double dt_;
-        double current_time_;
-        const double total_time_;
-        int sub_step_;
-
-        std::vector< double > steps_;
-    public:
-        SubStepSimulatorTimer( const SimulatorTimer& st, const double lastDt )
-            : simulator_timer_( st )
-            , dt_( lastDt )
-            , current_time_( simulator_timer_.simulationTimeElapsed() )
-            , total_time_( current_time_ + simulator_timer_.currentStepLength() )
-            , sub_step_( 0 )
-            , steps_()
-        {
-            steps_.reserve( 10 );
-        }
-
-        void next( const double new_dt )
-        {
-            ++sub_step_;
-            current_time_ += dt_;
-            // store used time step sizes
-            steps_.push_back( dt_ );
-
-            double remaining = total_time_ - current_time_;
-            // set new time step (depending on remaining time)
-            dt_ = ( new_dt > remaining && remaining > 0 ) ? remaining : new_dt ;
-        }
-
-        int currentStepNum () const { return sub_step_; }
-
-        double currentStepLength () const
-        {
-            assert( ! done () );
-            return dt_;
-        }
-
-        double totalTime() const { return total_time_; }
-
-        double simulationTimeElapsed() const { return current_time_; }
-
-        bool done () const { return (current_time_ >= total_time_) ; }
-
-        void report(std::ostream& os) const
-        {
-            os << "Sub steps started at time = " << simulator_timer_.simulationTimeElapsed() << std::endl;
-            for( size_t i=0; i<steps_.size(); ++i )
-            {
-                os << " step[ " << i << " ] = " << steps_[ i ] << std::endl;
-            }
-            std::cout << "sub steps end time = " << simulationTimeElapsed() << std::endl;
-        }
-    };
-
 
 } // namespace Opm
 
