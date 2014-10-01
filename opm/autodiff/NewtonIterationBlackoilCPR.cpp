@@ -192,7 +192,7 @@ namespace Opm
         // Construct linear solver.
         const double tolerance = 1e-3;
         const int maxit = 5000;
-        const int verbosity = 1;
+        const int verbosity = 0;
         const int restart = 40;
         Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
 
@@ -245,7 +245,8 @@ namespace Opm
                 // std::cout << "++++++++++++++++++++++++++++++++++++++++++++\n"
                 //           << D
                 //           << "++++++++++++++++++++++++++++++++++++++++++++\n" << std::endl;
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
@@ -300,7 +301,8 @@ namespace Opm
             // Find inv(D).
             const M& D = equation.derivative()[n];
             if (!isDiagonal(D)) {
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
