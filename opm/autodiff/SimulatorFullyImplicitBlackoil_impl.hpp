@@ -296,6 +296,8 @@ namespace Opm
 
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
 
+        const bool subStepping = param_.getDefault("substepping", bool(false) );
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -351,7 +353,6 @@ namespace Opm
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
 
-            const bool subStepping = true;
             if( subStepping )
             {
 
