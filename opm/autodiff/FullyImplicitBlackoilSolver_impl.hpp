@@ -156,11 +156,57 @@ namespace {
 
 } // Anonymous namespace
 
+    template<class T>
+    void FullyImplicitBlackoilSolver<T>::SolverParameter::
+    reset()
+    {
+        // default values for the solver parameters
+        dp_max_rel_      = 1.0e9;
+        ds_max_          = 0.2;
+        drs_max_rel_     = 1.0e9;
+        relax_type_      = DAMPEN;
+        relax_max_       = 0.5;
+        relax_increment_ = 0.1;
+        relax_rel_tol_   = 0.2;
+        max_iter_        = 15;
+    }
+
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::SolverParameter::
+    SolverParameter()
+    {
+        // set default values
+        reset();
+    }
+
+    template<class T>
+    FullyImplicitBlackoilSolver<T>::SolverParameter::
+    SolverParameter( const parameter::ParameterGroup& param )
+    {
+        // set default values
+        reset();
+
+        // overload with given parameters
+        dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
+        ds_max_      = param.getDefault("ds_max", ds_max_);
+        drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
+        relax_max_   = param.getDefault("relax_max", relax_max_);
+        max_iter_    = param.getDefault("max_iter", max_iter_);
+
+        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
+        if (relaxation_type == "dampen") {
+            relax_type_ = DAMPEN;
+        } else if (relaxation_type == "sor") {
+            relax_type_ = SOR;
+        } else {
+            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
+        }
+    }
 
 
     template<class T>
     FullyImplicitBlackoilSolver<T>::
-    FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
+    FullyImplicitBlackoilSolver(const SolverParameter&          param,
                                 const Grid&                     grid ,
                                 const BlackoilPropsAdInterface& fluid,
                                 const DerivedGeology&           geo  ,
@@ -182,14 +228,7 @@ namespace {
         , wops_  (wells)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
-        , dp_max_rel_ (1.0e9)
-        , ds_max_ (0.2)
-        , drs_max_rel_ (1.0e9)
-        , relax_type_ (DAMPEN)
-        , relax_max_ (0.5)
-        , relax_increment_ (0.1)
-        , relax_rel_tol_ (0.2)
-        , max_iter_ (15)
+        , param_( param )
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
@@ -197,20 +236,6 @@ namespace {
                         ADB::null(),
                         ADB::null() } )
     {
-        dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
-        ds_max_ = param.getDefault("ds_max", ds_max_);
-        drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
-        relax_max_ = param.getDefault("relax_max", relax_max_);
-        max_iter_ = param.getDefault("max_iter", max_iter_);
-
-        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
-        if (relaxation_type == "dampen") {
-            relax_type_ = DAMPEN;
-        } else if (relaxation_type == "sor") {
-            relax_type_ = SOR;
-        } else {
-            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
-        }
     }
 
 
