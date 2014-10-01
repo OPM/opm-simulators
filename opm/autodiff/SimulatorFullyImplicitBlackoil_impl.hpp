@@ -351,7 +351,7 @@ namespace Opm
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
 
-            const bool subStepping = false;
+            const bool subStepping = true;
             if( subStepping )
             {
 
