@@ -235,6 +235,7 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
+        , timeStepControl_()
     {
     }
 
@@ -262,7 +263,7 @@ namespace {
 
 
     template<class T>
-    void
+    double
     FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
@@ -304,9 +305,13 @@ namespace {
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
+        int linearIterations = 0;
 
         while ((!converged) && (it < maxIter())) {
             V dx = solveJacobianSystem();
+
+            // store number of linear iterations used
+            linearIterations += linsolver_.iterations();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
 
@@ -337,6 +342,9 @@ namespace {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
+
+        std::cout << "Linear iterations: " << linearIterations << std::endl;
+        return timeStepControl_.computeTimeStepSize( dt, linearIterations );
     }
 
 

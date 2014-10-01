@@ -54,7 +54,10 @@ namespace Opm
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
 
+        /// \copydoc NewtonIterationBlackoilInterface::iterations
+        virtual int iterations () const { return iterations_; }
     private:
+        mutable int iterations_;
         bool use_amg_;
         bool use_bicgstab_;
     };

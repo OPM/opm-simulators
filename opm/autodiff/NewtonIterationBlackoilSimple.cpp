@@ -30,6 +30,7 @@ namespace Opm
     /// Construct a system solver.
     /// \param[in] linsolver   linear solver to use
     NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param)
+        : iterations_( 0 )
     {
         linsolver_.reset(new LinearSolverFactory(param));
     }
@@ -58,6 +59,10 @@ namespace Opm
             = linsolver_->solve(matr.rows(), matr.nonZeros(),
                                 matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                 total_residual.value().data(), dx.data());
+
+        // store iterations 
+        iterations_ = rep.iterations;
+
         if (!rep.converged) {
             OPM_THROW(std::runtime_error,
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "

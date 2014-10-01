@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -48,8 +49,12 @@ namespace Opm
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
 
+        /// \copydoc NewtonIterationBlackoilInterface::iterations
+        virtual int iterations () const { return iterations_; }
+
     private:
         std::unique_ptr<LinearSolverInterface> linsolver_;
+        mutable int iterations_;
     };
 
 } // namespace Opm
