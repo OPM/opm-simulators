@@ -155,21 +155,27 @@ public:
 
         assert(extrapolate || (yMin(i) <= y && y <= yMax(i)));
 
+        Scalar y1;
+        Scalar y2;
+
         // interval halving
         int lowerIdx = 0;
-        int upperIdx = colSamplePoints.size() - 2;
+        int upperIdx = int(colSamplePoints.size()) - 1;
         int pivotIdx = (lowerIdx + upperIdx) / 2;
         while (lowerIdx + 1 < upperIdx) {
             if (y < std::get<1>(colSamplePoints[pivotIdx]))
                 upperIdx = pivotIdx;
             else
                 lowerIdx = pivotIdx;
-
             pivotIdx = (lowerIdx + upperIdx) / 2;
         }
 
-        Scalar y1 = std::get<1>(colSamplePoints[lowerIdx]);
-        Scalar y2 = std::get<1>(colSamplePoints[lowerIdx + 1]);
+        y1 = std::get<1>(colSamplePoints[lowerIdx]);
+        y2 = std::get<1>(colSamplePoints[lowerIdx + 1]);
+
+        assert(y1 <= y || (extrapolate && lowerIdx == 0));
+        assert(y <= y2 || (extrapolate && lowerIdx == int(colSamplePoints.size()) - 2));
+
         return lowerIdx + (y - y1)/(y2 - y1);
     }
 
@@ -257,15 +263,20 @@ public:
      */
     size_t appendXPos(Scalar nextX)
     {
-#ifndef NDEBUG
-        if (xPos_.size())
-            assert(xPos_.back() < nextX);
-#endif
-
-        xPos_.push_back(nextX);
-        samples_.resize(xPos_.size());
-
-        return xPos_.size() - 1;
+        if (xPos_.empty() || xPos_.back() < nextX) {
+            xPos_.push_back(nextX);
+            samples_.resize(xPos_.size());
+            return xPos_.size() - 1;
+        }
+        else if (xPos_.front() > nextX) {
+            // this is slow, but so what?
+            xPos_.insert(xPos_.begin(), nextX);
+            samples_.insert(samples_.begin(), std::vector<SamplePoint>());
+            return 0;
+        }
+        OPM_THROW(std::invalid_argument,
+                  "Sampling points should be specified either monotonically "
+                  "ascending or descending.");
     }
 
     /*!
@@ -278,9 +289,19 @@ public:
         assert(0 <= i && i < numX());
 
         Scalar x = iToX(i);
-        samples_[i].push_back(SamplePoint(x, y, value));
+        if (samples_[i].empty() || std::get<1>(samples_[i].back()) < y) {
+            samples_[i].push_back(SamplePoint(x, y, value));
+            return samples_[i].size() - 1;
+        }
+        else if (std::get<1>(samples_[i].front()) > y) {
+            // slow, but we still don't care...
+            samples_[i].insert(samples_[i].begin(), SamplePoint(x, y, value));
+            return 0;
+        }
 
-        return samples_[i].size() - 1;
+        OPM_THROW(std::invalid_argument,
+                  "Sampling points should be specified either monotonically "
+                  "ascending or descending.");
     }
 
     /*!
