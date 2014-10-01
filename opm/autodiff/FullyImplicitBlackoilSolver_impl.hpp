@@ -228,6 +228,7 @@ namespace {
         , wops_  (wells)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
+        , param_( param )
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
