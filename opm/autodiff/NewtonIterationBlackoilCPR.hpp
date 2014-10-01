@@ -54,9 +54,7 @@ namespace Opm
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const;
 
-        virtual int iterationCount () const { return iteration_count_; }
     private:
-        mutable int iteration_count_;
         bool use_amg_;
         bool use_bicgstab_;
     };
