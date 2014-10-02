@@ -279,6 +279,8 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
+        // initialize time step control 
+        timeStepControl_.initialize( x );
 
         std::vector<std::vector<double>> residual_history;
 
@@ -344,7 +346,7 @@ namespace {
         }
 
         std::cout << "Linear iterations: " << linearIterations << std::endl;
-        return timeStepControl_.computeTimeStepSize( dt, linearIterations );
+        return timeStepControl_.computeTimeStepSize( dt, linearIterations, x );
     }
 
 

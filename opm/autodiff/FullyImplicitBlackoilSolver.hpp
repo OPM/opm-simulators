@@ -191,7 +191,8 @@ namespace Opm {
 
         std::vector<int>         primalVariable_;
 
-        IterationCountTimeStepControl timeStepControl_;
+        //IterationCountTimeStepControl timeStepControl_;
+        PIDTimeStepControl timeStepControl_;
 
         // Private methods.
         SolutionState

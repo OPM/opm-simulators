@@ -27,7 +27,8 @@ namespace Opm
     protected:    
         TimeStepControlInterface() {}
     public:
-        virtual double computeTimeStepSize( const double dt, const int iterations ) const = 0;
+        virtual void initialize( const SimulatorState& state ) {}
+        virtual double computeTimeStepSize( const double dt, const int iterations, const SimulatorState& ) const = 0;
         virtual ~TimeStepControlInterface () {}
     };
 
@@ -49,7 +50,7 @@ namespace Opm
               upperTargetIterationCount_( 200 ), lowerTargetIterationCount_( 30 )
         {}
 
-        double computeTimeStepSize( const double dt, const int iterations ) const
+        double computeTimeStepSize( const double dt, const int iterations, const SimulatorState& ) const
         {
             // make sure dt is somewhat reliable
             assert( dt > 0 && dt == dt );
@@ -95,6 +96,98 @@ namespace Opm
             prevIterations_ = iterations;
 
             return newDt;
+        }
+    };
+
+    class PIDTimeStepControl : public TimeStepControlInterface
+    {
+    protected:   
+        mutable std::vector<double> p0_;
+        mutable std::vector<double> sat0_;
+
+        mutable double prevDt_;
+        mutable int prevIterations_;
+        const int targetIterationCount_;
+        const double adjustmentFactor_;
+
+        const int upperTargetIterationCount_;
+        const int lowerTargetIterationCount_;
+
+        const double tol_;
+
+        mutable std::vector< double > errors_;
+
+    public:
+        PIDTimeStepControl( const double tol = 8e-4 ) 
+            : p0_(), sat0_(), prevDt_( 0.0 ), prevIterations_( 0 ), 
+              targetIterationCount_( 100 ), adjustmentFactor_( 1.25 ),
+              upperTargetIterationCount_( 200 ), lowerTargetIterationCount_( 30 ),
+              tol_( tol ),
+              errors_( 3, tol_ )
+        {}
+
+        void initialize( const SimulatorState& state ) 
+        {
+            // store current state
+            p0_   = state.pressure();
+            sat0_ = state.saturation();
+        }
+
+        template <class Iterator>
+        double inner_product( Iterator it, const Iterator end ) const 
+        {
+            double product = 0.0 ;
+            for( ; it != end; ++it ) 
+                product += ( *it * *it );
+            return product;
+        }
+
+        double computeTimeStepSize( const double dt, const int iterations, const SimulatorState& state ) const
+        {
+            const size_t size = p0_.size();
+            assert( state.pressure().size() == size );
+            // compute u^n - u^n+1 
+            for( size_t i=0; i<size; ++i ) 
+            {
+                p0_[ i ]   -= state.pressure()[ i ];
+                sat0_[ i ] -= state.saturation()[ i ];
+            }
+
+            // compute || u^n - u^n+1 || 
+            double stateN0  = inner_product( p0_.begin(),   p0_.end() ) +
+                              inner_product( sat0_.begin(), sat0_.end() );
+
+            // compute || u^n+1 || 
+            double stateN   = inner_product( state.pressure().begin(), state.pressure().end() ) +
+                              inner_product( state.saturation().begin(), state.saturation().end() );
+
+
+            for( int i=0; i<2; ++i )
+              errors_[ i ] = errors_[i+1];
+
+            double error = stateN0 / stateN ;
+            errors_[ 2 ] =  error ;
+
+            prevDt_ = dt;
+            prevIterations_ = iterations;
+
+            if( error > tol_ )
+            {
+                // adjust dt by given tolerance 
+                std::cout << "Computed step size (tol): " << (dt * tol_ / error ) << std::endl;
+                return (dt * tol_ / error );
+            }
+            else
+            {
+                const double kP = 0.075 ;
+                const double kI = 0.175 ;
+                const double kD = 0.01 ;
+                double newDt = (dt * std::pow( errors_[ 1 ] / errors_[ 2 ], kP ) *
+                             std::pow( tol_         / errors_[ 2 ], kI ) *
+                             std::pow( (errors_[0]*errors_[0]/errors_[ 1 ]*errors_[ 2 ]), kD ));
+                std::cout << "Computed step size (pow): " << newDt << std::endl;
+                return newDt;
+            }
         }
     };
 

@@ -355,7 +355,6 @@ namespace Opm
 
             if( subStepping )
             {
-
                 // create sub step simulator timer with previously used sub step size
                 SubStepSimulatorTimer subStepper( timer, lastSubStep );
 
@@ -368,7 +367,10 @@ namespace Opm
                 subStepper.report( std::cout );
 
                 // store last small time step for next reportStep
-                lastSubStep = subStepper.currentStepLength();
+                //lastSubStep = subStepper.maxStepLength();
+                //lastSubStep = subStepper.averageStepLength();
+                //lastSubStep = subStepper.suggestedMax();
+                lastSubStep = subStepper.suggestedAverage();
 
                 std::cout << "Last suggested step size = " << lastSubStep << std::endl;
                 if( lastSubStep != lastSubStep )
