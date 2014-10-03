@@ -298,11 +298,12 @@ namespace Opm
 
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
 
+        // sub stepping flag, if false just the normal time steps will be used
         const bool subStepping = param_.getDefault("substepping", bool(false) );
 
         // create time step control object, TODO introduce parameter
         std::unique_ptr< TimeStepControlInterface > 
-            timeStepControl( new PIDAndIterationCountTimeStepControl( 100, 1e-3 ) );
+            timeStepControl( new PIDAndIterationCountTimeStepControl( 50, 8e-4 ) );
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -369,9 +370,9 @@ namespace Opm
                 const double end_time   = start_time + timer.currentStepLength();
                 AdaptiveSimulatorTimer subStepper( start_time, end_time, lastSubStep );
 
-                // copy states in case solver has to be restarted
-                //BlackoilState last_state( state );
-                //WellStateFullyImplicitBlackoil last_well_state( well_state );
+                // copy states in case solver has to be restarted (to be revised)
+                BlackoilState                  last_state( state );
+                WellStateFullyImplicitBlackoil last_well_state( well_state );
 
                 // sub step time loop
                 while( ! subStepper.done() )
@@ -379,9 +380,18 @@ namespace Opm
                     // initialize time step control in case current state is needed later
                     timeStepControl->initialize( state );
 
-                    // keep last state for solver restart and time step control
-                    // (linearIterations < 0 means on convergence in solver)
-                    const int linearIterations = solver.step(subStepper.currentStepLength(), state, well_state);
+                    int linearIterations = -1;
+                    try { 
+                        // (linearIterations < 0 means on convergence in solver)
+                        linearIterations = solver.step(subStepper.currentStepLength(), state, well_state);
+
+                        // report number of linear iterations
+                        std::cout << "Overall linear iterations used: " << linearIterations << std::endl;
+                    }
+                    catch (Opm::NumericalProblem) 
+                    {
+                        // since linearIterations is < 0 this will restart the solver
+                    }
 
                     // (linearIterations < 0 means on convergence in solver)
                     if( linearIterations >= 0 )
@@ -396,16 +406,19 @@ namespace Opm
 
                         // set new time step length
                         subStepper.provideTimeStepEstimate( dtEstimate );
+
+                        // update states 
+                        last_state      = state ;
+                        last_well_state = well_state;
                     }
                     else // in case of no convergence
                     {
                         // we need to revise this
-                        abort();
-                        subStepper.halfTimeStep();
+                        subStepper.provideTimeStepEstimate( 0.1 * subStepper.currentStepLength() );
                         std::cerr << "Solver convergence failed, restarting solver with half time step ("<< subStepper.currentStepLength()<<" days)." << std::endl;
                         // reset states 
-                        // state      = last_state;
-                        // well_state = last_well_state;
+                        state      = last_state;
+                        well_state = last_well_state;
                     }
                 }
 

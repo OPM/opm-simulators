@@ -137,7 +137,7 @@ namespace Opm
                 const double kD = 0.01 ;
                 double newDt = (dt * std::pow( errors_[ 1 ] / errors_[ 2 ], kP ) *
                              std::pow( tol_         / errors_[ 2 ], kI ) *
-                             std::pow( (errors_[0]*errors_[0]/errors_[ 1 ]*errors_[ 2 ]), kD ));
+                             std::pow( errors_[0]*errors_[0]/errors_[ 1 ]/errors_[ 2 ], kD ));
                 if( verbose_ )
                     std::cout << "Computed step size (pow): " << newDt/86400.0 << " (days)" << std::endl;
                 return newDt;
