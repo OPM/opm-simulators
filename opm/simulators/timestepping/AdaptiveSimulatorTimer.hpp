@@ -37,30 +37,6 @@ namespace Opm
     /////////////////////////////////////////////////////////
     class AdaptiveSimulatorTimer
     {
-    protected:
-        const double start_time_;
-        const double total_time_;
-        double current_time_;
-        double dt_;
-        int current_step_;
-
-        std::vector< double > steps_;
-        double suggestedMax_;
-        double suggestedAverage_;
-
-        double computeInitialTimeStep( const double lastDt ) const
-        {
-            const double maxTimeStep = total_time_ - start_time_;
-            const double fraction = (lastDt / maxTimeStep);
-            // when lastDt and maxTimeStep are close together, choose the max time step
-            if( fraction > 0.95 ) return       maxTimeStep;
-            // if lastDt is still pretty large, choose half step size since we have to
-            // do two steps anyway
-            // if( fraction > 0.85 ) return 0.5 * maxTimeStep;
-
-            // otherwise choose lastDt
-            return std::min( lastDt, maxTimeStep );
-        }
     public:
         /// \brief constructor taking a simulator timer to determine start and end time
         ///  \param start_time     start time of timer
@@ -79,9 +55,6 @@ namespace Opm
             // reserve memory for sub steps
             steps_.reserve( 10 );
         }
-
-        /// \brief decrease current time step for factor of two
-        void halfTimeStep() { dt_ *= 0.5; }
 
         /// \brief advance time by currentStepLength
         void advance()
@@ -178,13 +151,35 @@ namespace Opm
         /// \brief report start and end time as well as used steps so far
         void report(std::ostream& os) const
         {
-            const double factor = 24.0 * 3600.0;
+            const double factor = 86400.0;
             os << "Sub steps started at time = " << start_time_/factor << " (days)" << std::endl;
             for( size_t i=0; i<steps_.size(); ++i )
             {
                 os << " step[ " << i << " ] = " << steps_[ i ]/factor << " (days)" << std::endl;
             }
             std::cout << "sub steps end time = " << simulationTimeElapsed()/factor << " (days)" << std::endl;
+        }
+
+    protected:
+        const double start_time_;
+        const double total_time_;
+        double current_time_;
+        double dt_;
+        int current_step_;
+
+        std::vector< double > steps_;
+        double suggestedMax_;
+        double suggestedAverage_;
+
+        double computeInitialTimeStep( const double lastDt ) const
+        {
+            const double maxTimeStep = total_time_ - start_time_;
+            const double fraction = (lastDt / maxTimeStep);
+            // when lastDt and maxTimeStep are close together, choose the max time step
+            if( fraction > 0.95 ) return       maxTimeStep;
+
+            // otherwise choose lastDt
+            return std::min( lastDt, maxTimeStep );
         }
     };
 
