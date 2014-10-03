@@ -300,8 +300,9 @@ namespace Opm
 
         const bool subStepping = param_.getDefault("substepping", bool(false) );
 
+        // create time step control object, TODO introduce parameter
         std::unique_ptr< TimeStepControlInterface > 
-            timeStepControl( new PIDAndIterationCountTimeStepControl( 1e-3, 50 ) );
+            timeStepControl( new PIDAndIterationCountTimeStepControl( 100, 1e-3 ) );
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -391,6 +392,8 @@ namespace Opm
                         // compute new time step estimate
                         const double dtEstimate = 
                             timeStepControl->computeTimeStepSize( subStepper.currentStepLength(), linearIterations, state );
+                        std::cout << "Suggested time step size = " << dtEstimate/86400.0 << " (days)" << std::endl;
+
                         // set new time step length
                         subStepper.provideTimeStepEstimate( dtEstimate );
                     }

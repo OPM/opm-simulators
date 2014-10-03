@@ -164,7 +164,7 @@ namespace Opm
         const int targetIterationCount_;
 
     public:
-        PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
+        explicit PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
                                              const double tol = 1e-3, 
                                              const bool verbose = false) 
             : BaseType( tol, verbose )
