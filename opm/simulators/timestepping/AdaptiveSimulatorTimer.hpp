@@ -32,8 +32,8 @@ namespace Opm
 
     /////////////////////////////////////////////////////////
     ///
-    /// \brief Simulation timer for adaptive time stepping 
-    /// 
+    /// \brief Simulation timer for adaptive time stepping
+    ///
     /////////////////////////////////////////////////////////
     class AdaptiveSimulatorTimer
     {
@@ -48,7 +48,7 @@ namespace Opm
         double suggestedMax_;
         double suggestedAverage_;
 
-        double computeInitialTimeStep( const double lastDt ) const 
+        double computeInitialTimeStep( const double lastDt ) const
         {
             const double maxTimeStep = total_time_ - start_time_;
             const double fraction = (lastDt / maxTimeStep);
@@ -62,7 +62,7 @@ namespace Opm
             return std::min( lastDt, maxTimeStep );
         }
     public:
-        /// \brief constructor taking a simulator timer to determine start and end time 
+        /// \brief constructor taking a simulator timer to determine start and end time
         ///  \param start_time     start time of timer
         ///  \param total_time     total time of timer
         ///  \param lastDt         last suggested length of time step interval
@@ -81,21 +81,21 @@ namespace Opm
         }
 
         /// \brief decrease current time step for factor of two
-        void halfTimeStep() { dt_ *= 0.5; } 
+        void halfTimeStep() { dt_ *= 0.5; }
 
         /// \brief advance time by currentStepLength
-        void advance() 
+        void advance()
         {
             ++current_step_;
             current_time_ += dt_;
             // store used time step sizes
             steps_.push_back( dt_ );
-        }   
+        }
 
         /// \brief provide and estimate for new time step size
-        void provideTimeStepEstimate( const double dt_estimate ) 
+        void provideTimeStepEstimate( const double dt_estimate )
         {
-            // store some information about the time steps suggested 
+            // store some information about the time steps suggested
             suggestedMax_      = std::max( dt_estimate, suggestedMax_ );
             suggestedAverage_ += dt_estimate;
 
@@ -105,7 +105,7 @@ namespace Opm
 
                 // set new time step (depending on remaining time)
                 if( 1.5 * dt_estimate > remaining ) {
-                    dt_ = remaining; 
+                    dt_ = remaining;
                     return ;
                 }
 
@@ -113,7 +113,7 @@ namespace Opm
                 // remaining *= 0.5;
 
                 if( 2.25 * dt_estimate > remaining ) {
-                    dt_ = 0.5 * remaining ;
+                    dt_ = 0.5 * remaining;
                     return ;
                 }
             }
@@ -122,10 +122,10 @@ namespace Opm
             dt_ = dt_estimate;
         }
 
-        /// \brief \copydoc SimulationTimer::currentStepNum 
+        /// \brief \copydoc SimulationTimer::currentStepNum
         int currentStepNum () const { return current_step_; }
 
-        /// \brief \copydoc SimulationTimer::currentStepLength 
+        /// \brief \copydoc SimulationTimer::currentStepLength
         double currentStepLength () const
         {
             assert( ! done () );
@@ -169,10 +169,10 @@ namespace Opm
         double suggestedMax () const { return suggestedMax_; }
 
         /// \brief return average suggested step length
-        double suggestedAverage () const 
-        { 
+        double suggestedAverage () const
+        {
             const int size = steps_.size();
-            return (size > 0 ) ? (suggestedAverage_ / double(size)) : suggestedAverage_; 
+            return (size > 0 ) ? (suggestedAverage_ / double(size)) : suggestedAverage_;
         }
 
         /// \brief report start and end time as well as used steps so far
@@ -187,7 +187,6 @@ namespace Opm
             std::cout << "sub steps end time = " << simulationTimeElapsed()/factor << " (days)" << std::endl;
         }
     };
-
 
 } // namespace Opm
 
