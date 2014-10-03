@@ -411,6 +411,11 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "Currently we do not support well status " << WellCommon::Status2String(well->getStatus( timeStep )));
             }
 
+            if (well->getStatus(timeStep) == WellCommon::SHUT) {
+                well_controls_shut_well( w_->ctrls[well_index] );
+                continue;
+            }
+
             if (well->isInjector(timeStep)) {
                 const WellInjectionProperties& injectionProperties = well->getInjectionProperties(timeStep);
                 int ok = 1;
@@ -484,10 +489,6 @@ namespace Opm
                         OPM_THROW(std::runtime_error, "Control not specified in well " << well_names[well_index]);
                     }
 
-                    // We need to check if the well is shut or not
-                    if (well->getStatus( timeStep ) == WellCommon::SHUT) {
-                        well_controls_shut_well( w_->ctrls[well_index] );
-                    }
                     set_current_control(well_index, cpos, w_);
                 }
 
@@ -619,13 +620,12 @@ namespace Opm
                 if (cpos == -1 && mode != WellsManagerDetail::ProductionControl::GRUP) {
                     OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
                 }
-                // If it's shut, we complement the cpos
-                if (well->getStatus(timeStep) == WellCommon::SHUT) {
-                    well_controls_shut_well( w_->ctrls[well_index] );
-                } else if (cpos == -1 && mode != WellsManagerDetail::ProductionControl::GRUP) {
+                if (cpos == -1 && mode != WellsManagerDetail::ProductionControl::GRUP) {
                     OPM_THROW(std::runtime_error, "Control mode type " << mode << " not present in well " << well_names[well_index]);
                 }
-                set_current_control(well_index, cpos, w_);
+                else {
+                    set_current_control(well_index, cpos, w_);
+                }
 
                 // Set well component fraction to match preferred phase for the well.
                 double cf[3] = { 0.0, 0.0, 0.0 };
