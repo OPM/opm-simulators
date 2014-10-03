@@ -235,7 +235,6 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
-        , timeStepControl_()
     {
     }
 
@@ -263,7 +262,7 @@ namespace {
 
 
     template<class T>
-    double
+    int
     FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
@@ -278,9 +277,6 @@ namespace {
             computeAccum(state, 0);
             computeWellConnectionPressures(state, xw);
         }
-
-        // initialize time step control 
-        timeStepControl_.initialize( x );
 
         std::vector<std::vector<double>> residual_history;
 
@@ -335,18 +331,19 @@ namespace {
 
             converged = getConvergence(dt);
 
-            it += 1;
+            // increase iteration counter
+            ++it;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
 
         if (!converged) {
-            std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
+            std::cerr << "ERROR: Failed to compute converged solution in " << it << " iterations." << std::endl;
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
+            return -1;
         }
 
-        std::cout << "Linear iterations: " << linearIterations << std::endl;
-        return timeStepControl_.computeTimeStepSize( dt, linearIterations, x );
+        return linearIterations;
     }
 
 
@@ -1704,6 +1701,7 @@ namespace {
         for (; quantityIt != endQuantityIt; ++quantityIt) {
             const double quantityResid = (*quantityIt).value().matrix().norm();
             if (!std::isfinite(quantityResid)) {
+                //std::cout << quantityResid << " quantity" << std::endl;
                 const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual in material balance equation "
