@@ -83,24 +83,28 @@ namespace Opm
         /// \brief decrease current time step for factor of two
         void halfTimeStep() { dt_ *= 0.5; } 
 
-        /// \brief advance time by currentStepLength and set new step lenght
-        void advance( const double new_dt )
+        /// \brief advance time by currentStepLength
+        void advance() 
         {
             ++current_step_;
             current_time_ += dt_;
             // store used time step sizes
             steps_.push_back( dt_ );
+        }   
 
+        /// \brief provide and estimate for new time step size
+        void provideTimeStepEstimate( const double dt_estimate ) 
+        {
             // store some information about the time steps suggested 
-            suggestedMax_      = std::max( new_dt, suggestedMax_ );
-            suggestedAverage_ += new_dt;
+            suggestedMax_      = std::max( dt_estimate, suggestedMax_ );
+            suggestedAverage_ += dt_estimate;
 
             double remaining = (total_time_ - current_time_);
 
             if( remaining > 0 ) {
 
                 // set new time step (depending on remaining time)
-                if( 1.5 * new_dt > remaining ) {
+                if( 1.5 * dt_estimate > remaining ) {
                     dt_ = remaining; 
                     return ;
                 }
@@ -108,14 +112,14 @@ namespace Opm
                 // check for half interval step to avoid very small step at the end
                 // remaining *= 0.5;
 
-                if( 2.25 * new_dt > remaining ) {
+                if( 2.25 * dt_estimate > remaining ) {
                     dt_ = 0.5 * remaining ;
                     return ;
                 }
             }
 
-            // otherwise set new_dt as is
-            dt_ = new_dt;
+            // otherwise set dt_estimate as is
+            dt_ = dt_estimate;
         }
 
         /// \brief \copydoc SimulationTimer::currentStepNum 
