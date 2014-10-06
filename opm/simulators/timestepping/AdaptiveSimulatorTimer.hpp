@@ -57,12 +57,13 @@ namespace Opm
         }
 
         /// \brief advance time by currentStepLength
-        void advance()
+        AdaptiveSimulatorTimer& operator++ ()
         {
             ++current_step_;
             current_time_ += dt_;
             // store used time step sizes
             steps_.push_back( dt_ );
+            return *this;
         }
 
         /// \brief provide and estimate for new time step size
