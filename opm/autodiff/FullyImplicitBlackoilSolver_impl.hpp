@@ -580,6 +580,7 @@ namespace {
         const ADB&              rs    = state.rs;
         const ADB&              rv    = state.rv;
 
+        const std::vector<ADB> pressures = computePressures(state);
         const std::vector<PhasePresence> cond = phaseCondition();
 
         const ADB pv_mult = poroMult(press);
@@ -588,7 +589,7 @@ namespace {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, press, rs, rv, cond, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, pressures[pos], rs, rv, cond, cells_);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // DUMP(rq_[pos].b);
                 // DUMP(rq_[pos].accum[aix]);
