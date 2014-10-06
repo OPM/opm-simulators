@@ -64,9 +64,9 @@ namespace Opm
             this->a = new block_type[this->nnz];
             static_assert(sizeof(block_type) == sizeof(double), "This constructor requires a block type that is the same as a double.");
             std::copy(sa, sa + this->nnz, reinterpret_cast<double*>(this->a));
-            this->j.reset(new typename Super::size_type[this->nnz]);
+            this->j.reset(new Super::size_type[this->nnz]);
             std::copy(ja, ja +this-> nnz, this->j.get());
-            this->r = new typename Super::row_type[rows];
+            this->r = new Super::row_type[rows];
             for (int row = 0; row < rows; ++row) {
                 this->r[row].set(ia[row+1] - ia[row], this->a + ia[row], this->j.get() + ia[row]);
             }
