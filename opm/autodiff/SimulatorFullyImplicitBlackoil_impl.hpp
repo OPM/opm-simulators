@@ -28,7 +28,6 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/TimeStepControl.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -47,12 +46,14 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
+
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -294,12 +295,14 @@ namespace Opm
         std::string tstep_filename = output_dir_ + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        double lastSubStep = timer.currentStepLength();
-
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
 
-        // sub stepping flag, if false just the normal time steps will be used
-        const bool subStepping = param_.getDefault("substepping", bool(false) );
+        // sub stepping 
+        std::unique_ptr< AdaptiveTimeStepping > subStepping; 
+        if( param_.getDefault("timestep.adaptive", bool(false) ) )
+        {
+            subStepping = std::unique_ptr< AdaptiveTimeStepping > (new AdaptiveTimeStepping( param_ ));
+        }
 
         // create time step control object, TODO introduce parameter
         std::unique_ptr< TimeStepControlInterface > 
@@ -362,74 +365,12 @@ namespace Opm
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
-            // \Note: The report steps are met in any case
-            if( subStepping )
-            {
-                // create sub step simulator timer with previously used sub step size
-                const double start_time = timer.simulationTimeElapsed();
-                const double end_time   = start_time + timer.currentStepLength();
-                AdaptiveSimulatorTimer subStepper( start_time, end_time, lastSubStep );
-
-                // copy states in case solver has to be restarted (to be revised)
-                BlackoilState                  last_state( state );
-                WellStateFullyImplicitBlackoil last_well_state( well_state );
-
-                // sub step time loop
-                while( ! subStepper.done() )
-                {
-                    // initialize time step control in case current state is needed later
-                    timeStepControl->initialize( state );
-
-                    int linearIterations = -1;
-                    try { 
-                        // (linearIterations < 0 means on convergence in solver)
-                        linearIterations = solver.step(subStepper.currentStepLength(), state, well_state);
-
-                        // report number of linear iterations
-                        std::cout << "Overall linear iterations used: " << linearIterations << std::endl;
-                    }
-                    catch (Opm::NumericalProblem) 
-                    {
-                        // since linearIterations is < 0 this will restart the solver
-                    }
-
-                    // (linearIterations < 0 means on convergence in solver)
-                    if( linearIterations >= 0 )
-                    {
-                        // advance by current dt
-                        subStepper.advance();
-
-                        // compute new time step estimate
-                        const double dtEstimate = 
-                            timeStepControl->computeTimeStepSize( subStepper.currentStepLength(), linearIterations, state );
-                        std::cout << "Suggested time step size = " << dtEstimate/86400.0 << " (days)" << std::endl;
-
-                        // set new time step length
-                        subStepper.provideTimeStepEstimate( dtEstimate );
-
-                        // update states 
-                        last_state      = state ;
-                        last_well_state = well_state;
-                    }
-                    else // in case of no convergence
-                    {
-                        // we need to revise this
-                        subStepper.provideTimeStepEstimate( 0.1 * subStepper.currentStepLength() );
-                        std::cerr << "Solver convergence failed, restarting solver with half time step ("<< subStepper.currentStepLength()<<" days)." << std::endl;
-                        // reset states 
-                        state      = last_state;
-                        well_state = last_well_state;
-                    }
-                }
-
-                subStepper.report( std::cout );
-
-                // store last small time step for next reportStep
-                lastSubStep = subStepper.suggestedAverage();
-                std::cout << "Last suggested step size = " << lastSubStep/86400.0 << " (days)" << std::endl;
-
-                if( ! std::isfinite( lastSubStep ) ) // check for NaN
-                    lastSubStep = timer.currentStepLength();
+            //
+            // \Note: The report steps are met in any case 
+            // \Note: The sub stepping will require a copy of the state variables
+            if( subStepping ) {
+                subStepping->step( solver, state, well_state,
+                        timer.simulationTimeElapsed(), timer.currentStepLength() );
             }
             else {
                 // solve for complete report step
