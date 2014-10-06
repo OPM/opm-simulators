@@ -24,10 +24,9 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
-#include "eclgridmanager.hh"
-
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <ewoms/io/eclgridmanager.hh>
 #include <ewoms/wells/eclwellmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
