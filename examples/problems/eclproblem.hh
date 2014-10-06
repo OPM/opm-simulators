@@ -351,7 +351,7 @@ public:
         // calculate the intersection index
         const auto &scvf = context.stencil(timeIdx).interiorFace(localIntersectionIdx);
 
-        int numElements = this->model().numDof();
+        int numElements = this->model().numGridDof();
 
         size_t interiorElemIdx = context.globalSpaceIndex(scvf.interiorIndex(), timeIdx);
         size_t exteriorElemIdx = context.globalSpaceIndex(scvf.exteriorIndex(), timeIdx);
@@ -501,7 +501,7 @@ private:
         auto eclipseState = this->simulator().gridManager().eclipseState();
         const auto &grid = this->simulator().gridManager().grid();
 
-        size_t numDof = this->model().numDof();
+        size_t numDof = this->model().numGridDof();
 
         intrinsicPermeability_.resize(numDof);
         porosity_.resize(numDof);
@@ -718,7 +718,7 @@ private:
             OPM_THROW(std::runtime_error,
                       "The Eclipse input file requires the RV keyword to be non-present");
 
-        size_t numDof = this->model().numDof();
+        size_t numDof = this->model().numGridDof();
 
         initialFluidStates_.resize(numDof);
 

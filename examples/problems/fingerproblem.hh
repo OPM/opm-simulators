@@ -243,7 +243,7 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes
-        int n = this->model().numDof();
+        int n = this->model().numGridDof();
         materialParams_.resize(n);
         for (int i = 0; i < n; ++i) {
             materialParams_[i].setMicParams(&micParams_);
