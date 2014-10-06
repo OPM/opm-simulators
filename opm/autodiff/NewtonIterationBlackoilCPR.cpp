@@ -466,7 +466,7 @@ namespace Opm
             const int* ia = matrix.outerIndexPtr();
             const int* ja = matrix.innerIndexPtr();
             const double* sa = matrix.valuePtr();
-            return Opm::DuneMatrix<MatrixBlockType>(size, size, ia, ja, sa);
+            return Opm::DuneMatrix(size, size, ia, ja, sa);
         }
 
 
