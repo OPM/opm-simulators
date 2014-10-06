@@ -139,12 +139,12 @@ try
         eclipseState.reset(new EclipseState(deck, parserLog));
     }
     catch (const std::invalid_argument& e) {
-        std::cerr << "error while parsing the deck file: " << e.what() << "\n";
         if (parserLog->size() > 0) {
             std::cerr << "Issues found while parsing the deck file:\n";
             parserLog->printAll(std::cerr);
         }
-        return 1;
+        std::cerr << "error while parsing the deck file: " << e.what() << "\n";
+        return EXIT_FAILURE;
     }
 
     if (parserLog->size() > 0) {
