@@ -297,15 +297,15 @@ namespace Opm
 
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
 
-        // sub stepping 
-        std::unique_ptr< AdaptiveTimeStepping > subStepping; 
+        // adaptive time stepping
+        std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", bool(false) ) )
         {
-            subStepping = std::unique_ptr< AdaptiveTimeStepping > (new AdaptiveTimeStepping( param_ ));
+            adaptiveTimeStepping = std::unique_ptr< AdaptiveTimeStepping > (new AdaptiveTimeStepping( param_ ));
         }
 
         // create time step control object, TODO introduce parameter
-        std::unique_ptr< TimeStepControlInterface > 
+        std::unique_ptr< TimeStepControlInterface >
             timeStepControl( new PIDAndIterationCountTimeStepControl( 50, 8e-4 ) );
 
         // Main simulation loop.
@@ -366,10 +366,10 @@ namespace Opm
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
             //
-            // \Note: The report steps are met in any case 
+            // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
-            if( subStepping ) {
-                subStepping->step( solver, state, well_state,
+            if( adaptiveTimeStepping ) {
+                adaptiveTimeStepping->step( solver, state, well_state,
                         timer.simulationTimeElapsed(), timer.currentStepLength() );
             }
             else {
