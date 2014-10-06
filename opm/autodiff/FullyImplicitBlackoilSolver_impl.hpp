@@ -1702,7 +1702,6 @@ namespace {
         for (; quantityIt != endQuantityIt; ++quantityIt) {
             const double quantityResid = (*quantityIt).value().matrix().norm();
             if (!std::isfinite(quantityResid)) {
-                //std::cout << quantityResid << " quantity" << std::endl;
                 const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual in material balance equation "
