@@ -241,7 +241,8 @@ namespace Opm
                 // std::cout << "++++++++++++++++++++++++++++++++++++++++++++\n"
                 //           << D
                 //           << "++++++++++++++++++++++++++++++++++++++++++++\n" << std::endl;
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
@@ -296,7 +297,8 @@ namespace Opm
             // Find inv(D).
             const M& D = equation.derivative()[n];
             if (!isDiagonal(D)) {
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
