@@ -55,5 +55,16 @@ WCONINJE
    'INJ1' 'WATER' 'OPEN' 'RESV' 10 20 40 /
 /
 
+
+DATES
+ 1 'MAR' 2000 /
+/
+
+
+WCONPROD 
+  'PROD1'  'SHUT' 15* /
+/
+
+
 END
 

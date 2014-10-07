@@ -236,6 +236,19 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
 
 
 
+BOOST_AUTO_TEST_CASE(WellShutOK) {
+    const std::string filename = "wells_manager_data.data";
+    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::DeckConstPtr deck(parser->parseFile(filename));
+
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::GridManager gridManager(deck);
+
+    BOOST_CHECK_NO_THROW( Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL));
+}
+
+
+
 BOOST_AUTO_TEST_CASE(WellHasSTOP_ExceptionIsThrown) {
     const std::string filename = "wells_manager_data_wellSTOP.data";
     Opm::ParserPtr parser(new Opm::Parser());
