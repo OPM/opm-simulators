@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <numeric>
 
+#include <opm/core/utility/Units.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 
 namespace Opm
@@ -131,15 +132,27 @@ namespace Opm
     }
 
     /// \brief report start and end time as well as used steps so far
-    void AdaptiveSimulatorTimer::report(std::ostream& os) const
+    void AdaptiveSimulatorTimer::
+    report(std::ostream& os) const
     {
-        const double factor = 86400.0;
-        os << "Sub steps started at time = " << start_time_/factor << " (days)" << std::endl;
+        os << "Sub steps started at time = " <<  unit::convert::to( start_time_, unit::day ) << " (days)" << std::endl;
         for( size_t i=0; i<steps_.size(); ++i )
         {
-            os << " step[ " << i << " ] = " << steps_[ i ]/factor << " (days)" << std::endl;
+            os << " step[ " << i << " ] = " << unit::convert::to( steps_[ i ], unit::day ) << " (days)" << std::endl;
         }
-        std::cout << "sub steps end time = " << simulationTimeElapsed()/factor << " (days)" << std::endl;
+        std::cout << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
+    }
+
+    double AdaptiveSimulatorTimer::
+    computeInitialTimeStep( const double lastDt ) const
+    {
+        const double maxTimeStep = total_time_ - start_time_;
+        const double fraction = (lastDt / maxTimeStep);
+        // when lastDt and maxTimeStep are close together, choose the max time step
+        if( fraction > 0.95 ) return       maxTimeStep;
+
+        // otherwise choose lastDt
+        return std::min( lastDt, maxTimeStep );
     }
 
 } // namespace Opm

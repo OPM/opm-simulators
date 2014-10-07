@@ -94,16 +94,7 @@ namespace Opm
         double suggestedMax_;
         double suggestedAverage_;
 
-        double computeInitialTimeStep( const double lastDt ) const
-        {
-            const double maxTimeStep = total_time_ - start_time_;
-            const double fraction = (lastDt / maxTimeStep);
-            // when lastDt and maxTimeStep are close together, choose the max time step
-            if( fraction > 0.95 ) return       maxTimeStep;
-
-            // otherwise choose lastDt
-            return std::min( lastDt, maxTimeStep );
-        }
+        double computeInitialTimeStep( const double lastDt ) const;
     };
 
 } // namespace Opm

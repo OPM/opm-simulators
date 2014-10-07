@@ -83,7 +83,7 @@ namespace Opm {
                 const double dtEstimate = 
                     timeStepControl_->computeTimeStepSize( timer.currentStepLength(), linearIterations, state );
                 if( timestep_verbose_ )
-                    std::cout << "Suggested time step size = " << dtEstimate/86400.0 << " (days)" << std::endl;
+                    std::cout << "Suggested time step size = " << unit::convert::to(dtEstimate, unit::day) << " (days)" << std::endl;
 
                 // set new time step length
                 timer.provideTimeStepEstimate( dtEstimate );
@@ -119,7 +119,7 @@ namespace Opm {
         if( timestep_verbose_ )
         {
             timer.report( std::cout );
-            std::cout << "Last suggested step size = " << last_timestep_/86400.0 << " (days)" << std::endl;
+            std::cout << "Last suggested step size = " << unit::convert::to( last_timestep_, unit::day ) << " (days)" << std::endl;
         }
 
         if( ! std::isfinite( last_timestep_ ) ) // check for NaN
