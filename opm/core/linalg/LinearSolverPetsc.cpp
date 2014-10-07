@@ -128,22 +128,24 @@ namespace{
         PC preconditioner;
 
         OEM_DATA( const int size ) {
-            CHKERRXX( VecCreate( PETSC_COMM_WORLD, &solution ) );
-            CHKERRXX( VecSetSizes( solution, PETSC_DECIDE, size ) );
-            CHKERRXX( VecSetFromOptions( solution ) );
-            CHKERRXX( VecDuplicate( solution, &rhs ) );
+            VecCreate( PETSC_COMM_WORLD, &solution );
+            auto err = VecSetSizes( solution, PETSC_DECIDE, size );
+            CHKERRXX( err );
+            VecSetFromOptions( solution );
+            VecDuplicate( solution, &rhs );
 
-            CHKERRXX( MatCreate( PETSC_COMM_WORLD, &A ) );
-            CHKERRXX( MatSetSizes( A, PETSC_DECIDE, PETSC_DECIDE, size, size ) );
-            CHKERRXX( MatSetFromOptions( A ) );
-            CHKERRXX( MatSetUp( A ) );
+            MatCreate( PETSC_COMM_WORLD, &A );
+            err = MatSetSizes( A, PETSC_DECIDE, PETSC_DECIDE, size, size );
+            CHKERRXX( err );
+            MatSetFromOptions( A );
+            MatSetUp( A );
         }
 
         ~OEM_DATA() {
-            CHKERRXX( VecDestroy( &rhs ) );
-            CHKERRXX( VecDestroy( &solution ) );
-            CHKERRXX( MatDestroy( &A ) );
-            CHKERRXX( KSPDestroy( &ksp ) );
+            VecDestroy( &rhs );
+            VecDestroy( &solution );
+            MatDestroy( &A );
+            KSPDestroy( &ksp );
         }
     };
 
@@ -154,11 +156,11 @@ namespace{
         PetscScalar* vec;
         PetscInt size;
 
-        CHKERRXX( VecGetLocalSize( v, &size ) );
-        CHKERRXX( VecGetArray( v, &vec ) );
+        VecGetLocalSize( v, &size );
+        VecGetArray( v, &vec );
 
         std::memcpy( vec, x,  size * sizeof( double ) );
-        CHKERRXX( VecRestoreArray( v, &vec ) );
+        VecRestoreArray( v, &vec );
     }
 
     void from_petsc_vec( double* x, Vec v ) {
@@ -168,11 +170,11 @@ namespace{
         PetscScalar* vec;
         PetscInt size;
 
-        CHKERRXX( VecGetLocalSize( v, &size ) );
-        CHKERRXX( VecGetArray( v, &vec ) );
+        VecGetLocalSize( v, &size );
+        VecGetArray( v, &vec );
 
         std::memcpy( x, vec, size * sizeof( double ) );
-        CHKERRXX( VecRestoreArray( v, &vec ) );
+        VecRestoreArray( v, &vec );
     }
 
     void to_petsc_mat( const int size, const int nonzeros,
@@ -183,11 +185,14 @@ namespace{
 
             if( nrows == 0 ) continue;
 
-            for( int j = ia[ i ]; j < ia[ i + 1 ]; ++j )
-                CHKERRXX( MatSetValues( A, 1, &i, 1, &ja[ j ], &sa[ j ], INSERT_VALUES ) );
+            for( int j = ia[ i ]; j < ia[ i + 1 ]; ++j ) {
+                auto err = MatSetValues( A, 1, &i, 1, &ja[ j ], &sa[ j ], INSERT_VALUES );
+                CHKERRXX( err );
+            }
 
-            CHKERRXX( MatAssemblyBegin( A, MAT_FINAL_ASSEMBLY ) );
-            CHKERRXX( MatAssemblyEnd( A, MAT_FINAL_ASSEMBLY ) );
+            auto err = MatAssemblyBegin( A, MAT_FINAL_ASSEMBLY );
+            CHKERRXX( err );
+            MatAssemblyEnd( A, MAT_FINAL_ASSEMBLY );
         }
     }
 
@@ -198,23 +203,28 @@ namespace{
         PetscReal residual;
         KSPConvergedReason reason;
 
-        CHKERRXX( KSPCreate( PETSC_COMM_WORLD, &t.ksp ) );
-        CHKERRXX( KSPSetOperators( t.ksp, t.A, t.A, DIFFERENT_NONZERO_PATTERN ) );
-        CHKERRXX( KSPGetPC( t.ksp, &t.preconditioner ) );
-        CHKERRXX( KSPSetType( t.ksp, method ) );
-        CHKERRXX( PCSetType( t.preconditioner, pcname ) );
-        CHKERRXX( KSPSetTolerances( t.ksp, rtol, atol, dtol, maxits ) );
-        CHKERRXX( KSPSetFromOptions( t.ksp ) );
-        CHKERRXX( KSPSetInitialGuessNonzero( t.ksp, PETSC_TRUE ) );
-        CHKERRXX( KSPSolve( t.ksp, t.rhs, t.solution ) );
-        CHKERRXX( KSPGetConvergedReason( t.ksp, &reason ) );
-        CHKERRXX( KSPGetIterationNumber( t.ksp, &its ) );
-        CHKERRXX( KSPGetResidualNorm( t.ksp, &residual ) );
+        KSPCreate( PETSC_COMM_WORLD, &t.ksp );
+        KSPSetOperators( t.ksp, t.A, t.A, DIFFERENT_NONZERO_PATTERN );
+        KSPGetPC( t.ksp, &t.preconditioner );
+        auto err = KSPSetType( t.ksp, method );
+        CHKERRXX( err );
+        err = PCSetType( t.preconditioner, pcname );
+        CHKERRXX( err );
+        err = KSPSetTolerances( t.ksp, rtol, atol, dtol, maxits );
+        CHKERRXX( err );
+        err = KSPSetFromOptions( t.ksp );
+        CHKERRXX( err );
+        KSPSetInitialGuessNonzero( t.ksp, PETSC_TRUE );
+        KSPSolve( t.ksp, t.rhs, t.solution );
+        KSPGetConvergedReason( t.ksp, &reason );
+        KSPGetIterationNumber( t.ksp, &its );
+        KSPGetResidualNorm( t.ksp, &residual );
 
         if( ksp_view )
-            CHKERRXX( KSPView( t.ksp, PETSC_VIEWER_STDOUT_WORLD ) );
+            KSPView( t.ksp, PETSC_VIEWER_STDOUT_WORLD );
 
-        CHKERRXX( PetscPrintf( PETSC_COMM_WORLD, "KSP Iterations %D, Final Residual %G\n", its, residual ) );
+        err = PetscPrintf( PETSC_COMM_WORLD, "KSP Iterations %D, Final Residual %G\n", its, residual );
+        CHKERRXX( err );
     }
 
 } // anonymous namespace.
