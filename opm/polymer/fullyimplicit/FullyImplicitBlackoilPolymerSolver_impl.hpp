@@ -599,7 +599,7 @@ namespace {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, pressure, rs, rv, cond, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, pressure[phase], rs, rv, cond, cells_);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // DUMP(rq_[pos].b);
                 // DUMP(rq_[pos].accum[aix]);
