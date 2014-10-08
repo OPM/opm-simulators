@@ -81,7 +81,7 @@ namespace Opm
              const PolymerPropsAd&  polymer_props,
              const RockCompressibility* rock_comp_props,
              NewtonIterationBlackoilInterface& linsolver,
-             PolymerInflowInterface& polymer_inflow,
+             std::shared_ptr<PolymerInflowInterface> polymer_inflow,
              const double* gravity,
              bool has_disgas,
              bool has_vapoil,
@@ -115,7 +115,7 @@ namespace Opm
         // Solvers
         const DerivedGeology& geo_;
         NewtonIterationBlackoilInterface& solver_;
-        PolymerInflowInterface& polymer_inflow_;
+        std::shared_ptr<PolymerInflowInterface> polymer_inflow,
         // Misc. data
         std::vector<int> allcells_;
         const bool has_disgas_;
@@ -147,7 +147,7 @@ namespace Opm
                                                                                     const PolymerPropsAd& polymer_props,
                                                                                     const RockCompressibility* rock_comp_props,
                                                                                     NewtonIterationBlackoilInterface& linsolver,
-                                                                                    const PolymerInflowInterface& polymer_inflow;
+                                                                                    std::shared_ptr<PolymerInflowInterface> polymer_inflow,
                                                                                     const double* gravity,
                                                                                     const bool has_disgas,
                                                                                     const bool has_vapoil,
@@ -240,7 +240,7 @@ namespace Opm
                                                          const PolymerPropdAd& polymer_props,
                                                          const RockCompressibility* rock_comp_props,
                                                          NewtonIterationBlackoilInterface& linsolver,
-                                                         PolymerInflowInterface& polymer_inflow,
+                                                         std::shared_ptr<PolymerInflowInterface> polymer_inflow,
                                                          const double* gravity,
                                                          const bool has_disgas,
                                                          const bool has_vapoil,
@@ -357,6 +357,7 @@ namespace Opm
             // compute polymer inflow
             if (has_polymer_) {
                 std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
+                polymer_inflow_.reset(new PolymerFromDeck(deck, wells, Opm::UgGridHelpers::numCells(grid_)));
                 polymer_inflow_.getInflowValues(timer.simulationTimeElapsed(), 
                                                 timer.simulationTimeElapsed() + timer.currentStepLength(),
                                                 polymer_inflow_c);
