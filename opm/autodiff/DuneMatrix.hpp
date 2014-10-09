@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -26,6 +27,9 @@
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
+#include <Eigen/Eigen>
+#include <Eigen/Sparse>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
@@ -43,9 +47,26 @@ namespace Opm
     {
     public:
         DuneMatrix(const int rows, const int cols, const int* ia, const int* ja, const double* sa)
-            // : build_mode(unknown), ready(built), n(rows), m(cols), nnz(ia[rows]),
-            //   allocationSize(nnz), r(0), a(0),
-            //   avg(0), overflowsize(-1.0)
+        {
+            // create BCRSMatrix from given CSR storage
+            init( rows, cols, ia, ja, sa );
+        }
+
+        /// \brief create an ISTL BCRSMatrix from a Eigen::SparseMatrix
+        DuneMatrix( const Eigen::SparseMatrix<double, Eigen::RowMajor>& matrix )
+        {
+            // Create ISTL matrix.
+            const int rows = matrix.rows();
+            const int cols = matrix.cols();
+            const int* ia = matrix.outerIndexPtr();
+            const int* ja = matrix.innerIndexPtr();
+            const double* sa = matrix.valuePtr();
+            // create BCRSMatrix from Eigen matrix
+            init( rows, cols, ia, ja, sa );
+        }
+
+    protected:
+        void init(const int rows, const int cols, const int* ia, const int* ja, const double* sa)
         {
             typedef Dune::BCRSMatrix< Dune::FieldMatrix<double, 1, 1> > Super;
             typedef Super::block_type block_type;
@@ -61,12 +82,14 @@ namespace Opm
             this->overflowsize = -1.0;
 #endif
 
-            this->a = new block_type[this->nnz];
+            // make sure to use the allocators of this matrix 
+            // because the same allocators are used to deallocate the data
+            this->a = this->allocator_.allocate(this->nnz);
             static_assert(sizeof(block_type) == sizeof(double), "This constructor requires a block type that is the same as a double.");
             std::copy(sa, sa + this->nnz, reinterpret_cast<double*>(this->a));
-            this->j.reset(new Super::size_type[this->nnz]);
+            this->j.reset(this->sizeAllocator_.allocate(this->nnz));
             std::copy(ja, ja +this-> nnz, this->j.get());
-            this->r = new Super::row_type[rows];
+            this->r = rowAllocator_.allocate(rows);
             for (int row = 0; row < rows; ++row) {
                 this->r[row].set(ia[row+1] - ia[row], this->a + ia[row], this->j.get() + ia[row]);
             }
