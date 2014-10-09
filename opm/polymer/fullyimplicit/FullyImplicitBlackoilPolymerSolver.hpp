@@ -68,17 +68,17 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const parameter::ParameterGroup& param,
-                                    const Grid&                     grid ,
-                                    const BlackoilPropsAdInterface& fluid,
-                                    const DerivedGeology&           geo  ,
-                                    const RockCompressibility*      rock_comp_props,
-                                    const PolymerPropsAd&           polymer_props_ad,
-                                    const Wells&                    wells,
-                                    const NewtonIterationBlackoilInterface& linsolver,
-                                    const bool has_disgas,
-                                    const bool has_vapoil,
-                                    const bool has_polymer);
+        FullyImplicitBlackoilPolymerSolver(const parameter::ParameterGroup& param,
+                                           const Grid&                     grid ,
+                                           const BlackoilPropsAdInterface& fluid,
+                                           const DerivedGeology&           geo  ,
+                                           const RockCompressibility*      rock_comp_props,
+                                           const PolymerPropsAd&           polymer_props_ad,
+                                           const Wells&                    wells,
+                                           const NewtonIterationBlackoilInterface& linsolver,
+                                           const bool has_disgas,
+                                           const bool has_vapoil,
+                                           const bool has_polymer);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
         /// This prevents flow across faces if the potential
@@ -251,18 +251,16 @@ namespace Opm {
 
         void
         computeMassFlux(const V&                trans,
-                        const ADB&              mc,
-                        const ADB&              kro,
-                        const ADB&              krw_eff,
-                        const ADB&              krg,
+                        const std::vector<ADB>& kr,
+                        const std::vector<ADB>& phasePressure,
                         const SolutionState&    state);
 
         void
-        computeCmax(PolymerBlackoilState&       state,
-                    const ADB&                  c);
+        computeCmax(PolymerBlackoilState& state,
+                    const ADB&            c);
 
         ADB
-        computeMc(const SolutionState&      state) const;
+        computeMc(const SolutionState& state) const;
 
         ADB
         rockPorosity(const ADB& p) const;
@@ -320,8 +318,6 @@ namespace Opm {
                    const ADB&              so,
                    const std::vector<int>& cells) const;
 
-        ADB
-        computeMc(const SolutionState& state) const;
 
         ADB
         poroMult(const ADB& p) const;
@@ -371,6 +367,6 @@ namespace Opm {
     };
 } // namespace Opm
 
-#include "FullyImplicitBlackoilSolver_impl.hpp"
+#include "FullyImplicitBlackoilPolymerSolver_impl.hpp"
 
-#endif // OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
+#endif // OPM_FULLYIMPLICITBLACKOILPOLYMERSOLVER_HEADER_INCLUDED

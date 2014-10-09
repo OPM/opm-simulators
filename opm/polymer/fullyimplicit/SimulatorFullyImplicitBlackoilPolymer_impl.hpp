@@ -20,8 +20,9 @@
 
 #include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymerOutput.hpp>
 #include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp>
-#include <opm/polymer/fullyimplicit/FullyImplicitBlackoilSolverPolymer.hpp>
+#include <opm/polymer/fullyimplicit/FullyImplicitBlackoilPolymerSolver.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 
@@ -115,7 +116,7 @@ namespace Opm
         // Solvers
         const DerivedGeology& geo_;
         NewtonIterationBlackoilInterface& solver_;
-        std::shared_ptr<PolymerInflowInterface> polymer_inflow,
+        std::shared_ptr<PolymerInflowInterface> polymer_inflow_;
         // Misc. data
         std::vector<int> allcells_;
         const bool has_disgas_;
@@ -237,7 +238,7 @@ namespace Opm
                                                          const Grid& grid,
                                                          const DerivedGeology& geo,
                                                          BlackoilPropsAdInterface& props,
-                                                         const PolymerPropdAd& polymer_props,
+                                                         const PolymerPropsAd& polymer_props,
                                                          const RockCompressibility* rock_comp_props,
                                                          NewtonIterationBlackoilInterface& linsolver,
                                                          std::shared_ptr<PolymerInflowInterface> polymer_inflow,
@@ -355,10 +356,10 @@ namespace Opm
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
             // compute polymer inflow
+            std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
             if (has_polymer_) {
-                std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
-                polymer_inflow_.reset(new PolymerFromDeck(deck, wells, Opm::UgGridHelpers::numCells(grid_)));
-                polymer_inflow_.getInflowValues(timer.simulationTimeElapsed(), 
+                polymer_inflow_.reset(new PolymerInflowFromDeck(deck, wells, Opm::UgGridHelpers::numCells(grid_)));
+                *polymer_inflow_.getInflowValues(timer.simulationTimeElapsed(), 
                                                 timer.simulationTimeElapsed() + timer.currentStepLength(),
                                                 polymer_inflow_c);
             }

@@ -264,7 +264,8 @@ namespace {
     FullyImplicitBlackoilPolymerSolver<T>::
     step(const double   dt,
          PolymerBlackoilState& x ,
-         WellStateFullyImplicitBlackoil& xw)
+         WellStateFullyImplicitBlackoil& xw,
+         const std::vector<double>& polymer_inflow)
     {
         const V pvdt = geo_.poreVolume() / dt;
 
@@ -625,7 +626,6 @@ namespace {
             // compute total phases and determin polymer position.
             rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
-        
     }
 
 
@@ -633,7 +633,7 @@ namespace {
 
 
     template<class T>
-    void FullyImplicitBlackoilPolymerSovler<T>::computeCmax(PolymerBlackoilState& state,
+    void FullyImplicitBlackoilPolymerSolver<T>::computeCmax(PolymerBlackoilState& state,
                                                             const ADB& c)
     {
         const int nc = numCells(grid_);
@@ -724,7 +724,7 @@ namespace {
     void
     FullyImplicitBlackoilPolymerSolver<T>::
     assemble(const V&             pvdt,
-             const BlackoilState& x   ,
+             const PolymerBlackoilState& x   ,
              WellStateFullyImplicitBlackoil& xw,
              const std::vector<double>& polymer_inflow)
     {
@@ -798,7 +798,7 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         // Add polymer equation.
         if (has_polymer_) {
-            residula_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
+            residual_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
         }
 
@@ -1001,7 +1001,7 @@ namespace {
         }
 
         // Add well contributions to polymer mass_balance equation
-        if (has_polmer_) {
+        if (has_polymer_) {
             const ADB mc = computeMc(state);
             const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
             const V poly_in_perf = subset(polyin, well_cells);
@@ -1533,6 +1533,8 @@ namespace {
 
         //Polymer concentration updates.
         if (has_polymer_) {
+            const V dc = subset(dx, Span(nc));
+            int varstart = nc;
             const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
             const V c = (c_old - dc).max(zero);
             std::copy(&c[0], &c[0] + nc, state.concentration().begin());
@@ -1679,13 +1681,6 @@ namespace {
                                                            const std::vector<ADB>& phasePressure,
                                                            const SolutionState&    state)
     {
-        if (has_polymer_) {
-            const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-            ADB krw_eff = ADB::null();
-            const ADB mc = computeMc(state);
-            ADB inv_wat_eff_vis = ADB::null();
-        }
-
         for (int phase  = 0; phase < fluid_.numPhases(); ++phase) {
             const int canonicalPhaseIdx = canph_[phase];
             const std::vector<PhasePresence> cond = phaseCondition();
@@ -1693,14 +1688,21 @@ namespace {
             const ADB tr_mult = transMult(state.pressure);
             const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
             rq_[canonicalPhaseIdx].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
-            if (cononicalPhaseIdx == Water) {
+            if (canonicalPhaseIdx == Water) {
                 if(has_polymer_) {
-                    krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                 cmax,
-                                                                 kr[cononicalPhaseIdx],
-                                                                 state.saturation[cononicalPhaseIdx]);
-                    inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+                    const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+                    const ADB mc = computeMc(state);
+                    ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
+                                                                     cmax,
+                                                                     kr[canonicalPhaseIdx],
+                                                                     state.saturation[canonicalPhaseIdx]);
+                    ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
                     rq_[canonicalPhaseIdx].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                    rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc; 
+                    rq_[poly_pos_].b = rq_[canph_[Water]].b;
+                    rq_[poly_pos_].head = rq_[canph_[Water]].head;
+                    UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
+                    rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
                 }
             }
 
@@ -1726,14 +1728,6 @@ namespace {
             const ADB& mob     = rq_[canonicalPhaseIdx].mob;
             rq_[canonicalPhaseIdx].mflux = upwind.select(b * mob) * head;
         }
-
-        if (has_polymer_) {
-            rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc; 
-            rq_[poly_pos_].b = rq_[canph_[Water]].b;
-            rq_[poly_pos_].head = rq_[canph_[Water]].head;
-            UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
-            rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
-        } 
     }
 
 
@@ -2119,7 +2113,7 @@ namespace {
 
     template<class T>
     ADB
-    FullyImplicitBlackoilPolymerSovler<T>::computeMc(const SolutionState& state) const
+    FullyImplicitBlackoilPolymerSolver<T>::computeMc(const SolutionState& state) const
     {
         return polymer_props_ad_.polymerWaterVelocityRatio(state.concentration);
     }
@@ -2146,7 +2140,7 @@ namespace {
                 jacs[block] = dpm_diag * p.derivative()[block];
             }
             return ADB::function(pm, jacs);
-         else {
+         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
     }

@@ -197,8 +197,9 @@ try
     simtimer.init(timeMap);
     //Check for WPOLYMER presence in last report step to decide
     //polymer injection control type.
-    const bool polymer = deck->hasKeywrod("POLYMER");
+    const bool polymer = deck->hasKeyword("POLYMER");
     const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
+    std::shared_ptr<PolymerInflowInterface> polymer_inflow;
     if (polymer){
         if (!use_wpolymer) {
             OPM_MESSAGE("Warning: simulate polymer injection without WPOLYMER.");
@@ -207,7 +208,6 @@ try
                 OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck."
                             "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
             }
-            std::shared_ptr<PolymerInflowInterface> polymer_inflow;
         }
     } else {
         if (use_wpolymer) {
