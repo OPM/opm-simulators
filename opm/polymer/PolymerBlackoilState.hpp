@@ -75,7 +75,7 @@ namespace Opm
         const std::vector<double>& facepressure() const     { return state_blackoil_.facepressure(); }
         const std::vector<double>& faceflux    () const     { return state_blackoil_.faceflux(); }
         const std::vector<double>& saturation  () const     { return state_blackoil_.saturation(); }
-        const std::vector<double>& gasoilration() const     { return state_blackoil_.gasoilratio(); }
+        const std::vector<double>& gasoilratio() const     { return state_blackoil_.gasoilratio(); }
         const std::vector<double>& rv          () const     { return state_blackoil_.rv(); }
         const std::vector<double>& concentration() const    { return concentration_; }
         const std::vector<double>& maxconcentration() const { return cmax_; }

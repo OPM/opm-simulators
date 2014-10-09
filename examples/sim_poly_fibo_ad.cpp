@@ -155,10 +155,10 @@ try
     } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
         state.init(*grid->c_grid(), props->numPhases());
         const double grav = param.getDefault("gravity", unit::gravity);
-        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state);
+        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state.blackoilState());
         state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state.blackoilState());
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -199,7 +199,6 @@ try
     //polymer injection control type.
     const bool polymer = deck->hasKeyword("POLYMER");
     const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
-    std::shared_ptr<PolymerInflowInterface> polymer_inflow;
     if (polymer){
         if (!use_wpolymer) {
             OPM_MESSAGE("Warning: simulate polymer injection without WPOLYMER.");
@@ -214,32 +213,42 @@ try
             OPM_MESSAGE("Warning: use WPOLYMER in a non-polymer scenario.");
         }
     }
-
-    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
-
-    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid());
-
-    SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
-                                             *grid->c_grid(),
-                                             geology,
-                                             *new_props,
-                                             polymer_props_ad,
-                                             rock_comp->isActive() ? rock_comp.get() : 0,
-                                             *fis_solver,
-                                             polymer_inflow,
-                                             grav,
-                                             deck->hasKeyword("DISGAS"),
-                                             deck->hasKeyword("VAPOIL"),
-                                             polymer,
-                                             eclipseState,
-                                             outputWriter,
-                                             threshold_pressures);
-
     std::cout << "\n\n================ Starting main simulation loop ===============\n"
               << std::flush;
+    SimulatorReport fullReport;
+    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        simtimer.setCurrentStepNum(reportStepIdx);
+        Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
 
-    SimulatorReport fullReport = simulator.run(simtimer, state);
+        std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid());
+        //Create new wells, polymer inflow controls.
+        WellsManager wells(eclipseState, reportStepIdx, *grid->c_grid(), props->permeability());
+        std::shared_ptr<PolymerInflowInterface> polymer_inflow;
+        if (use_wpolymer) {
+            if (wells.c_wells() == 0) {
+                OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
+            }
+            polymer_inflow.reset(new PolymerInflowFromDeck(deck, *wells.c_wells(), props->numCells()));
+        }
+        SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
+                                                 *grid->c_grid(),
+                                                 geology,
+                                                 *new_props,
+                                                 polymer_props_ad,
+                                                 rock_comp->isActive() ? rock_comp.get() : 0,
+                                                 *fis_solver,
+                                                 *polymer_inflow,
+                                                 grav,
+                                                 deck->hasKeyword("DISGAS"),
+                                                 deck->hasKeyword("VAPOIL"),
+                                                 polymer,
+                                                 eclipseState,
+                                                 outputWriter,
+                                                 threshold_pressures);
 
+
+        fullReport = simulator.run(simtimer, state);
+    }
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
 

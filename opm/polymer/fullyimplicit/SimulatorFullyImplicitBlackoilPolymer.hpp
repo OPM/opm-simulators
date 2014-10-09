@@ -85,7 +85,7 @@ namespace Opm
                                               const PolymerPropsAd& polymer_props,
                                               const RockCompressibility* rock_comp_props,
                                               NewtonIterationBlackoilInterface& linsolver,
-                                              std::shared_ptr<PolymerInflowInterface> polymer_inflow,
+                                              const PolymerInflowInterface& polymer_inflow,
                                               const double* gravity,
                                               const bool disgas,
                                               const bool vapoil,

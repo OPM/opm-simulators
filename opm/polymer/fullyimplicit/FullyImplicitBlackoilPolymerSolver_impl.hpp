@@ -195,7 +195,7 @@ namespace {
         , cells_ (buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid)
         , wops_  (wells)
-        , cmax_(V::Zero(numCells(grid)))
+        , cmax_(V::Zero(Opm::AutoDiffGrid::numCells(grid)))
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
         , has_polymer_(has_polymer)
@@ -280,7 +280,7 @@ namespace {
 
         std::vector<std::vector<double>> residual_history;
 
-        assemble(pvdt, x, xw);
+        assemble(pvdt, x, xw, polymer_inflow);
 
 
         bool converged = false;
@@ -319,7 +319,7 @@ namespace {
 
             updateState(dx, x, xw);
 
-            assemble(pvdt, x, xw);
+            assemble(pvdt, x, xw, polymer_inflow);
 
             const double r = residualNorm();
 
@@ -621,7 +621,7 @@ namespace {
             const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
             const ADB ads  = polymer_props_ad_.adsorption(state.concentration, cmax);
             const double rho_rock = polymer_props_ad_.rockDensity();
-            const V phi = Eigen::Map<const V>(& fluid_.porosity()[0], numCells(grid_), 1);
+            const V phi = Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1);
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // compute total phases and determin polymer position.
             rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) + pv_mult * rho_rock * (1. - phi) / phi * ads;
@@ -636,7 +636,7 @@ namespace {
     void FullyImplicitBlackoilPolymerSolver<T>::computeCmax(PolymerBlackoilState& state,
                                                             const ADB& c)
     {
-        const int nc = numCells(grid_);
+        const int nc = AutoDiffGrid::numCells(grid_);
         for (int i = 0; i < nc; ++i) {
             cmax_(i) = std::max(cmax_(i), c.value()(i));
         }
@@ -795,7 +795,6 @@ namespace {
 
         }
 
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         // Add polymer equation.
         if (has_polymer_) {
             residual_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
@@ -1339,10 +1338,10 @@ namespace {
         const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
         varstart += dxvar.size();
 
+        const V dc = null;
         if (has_polymer_) {
             const V dc = subset(dx, Span(nc, 1, varstart));
-        } else {
-            const V dc = null;
+            varstart += dc.size();
         }
         const V dqs = subset(dx, Span(np*nw, 1, varstart));
         varstart += dqs.size();
@@ -1533,8 +1532,6 @@ namespace {
 
         //Polymer concentration updates.
         if (has_polymer_) {
-            const V dc = subset(dx, Span(nc));
-            int varstart = nc;
             const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
             const V c = (c_old - dc).max(zero);
             std::copy(&c[0], &c[0] + nc, state.concentration().begin());
