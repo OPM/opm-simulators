@@ -169,10 +169,10 @@ namespace Opm
         SolutionVector dx(SolutionVector::Zero(b.size()));
 
         // Create ISTL matrix.
-        Mat istlA = makeIstlMatrix(A);
+        DuneMatrix istlA( A );
 
         // Create ISTL matrix for elliptic part.
-        Mat istlAe = makeIstlMatrix(A.topLeftCorner(nc, nc));
+        DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
 
         // Construct operator, scalar product and vectors needed.
         typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
@@ -247,7 +247,8 @@ namespace Opm
                 // std::cout << "++++++++++++++++++++++++++++++++++++++++++++\n"
                 //           << D
                 //           << "++++++++++++++++++++++++++++++++++++++++++++\n" << std::endl;
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
@@ -302,7 +303,8 @@ namespace Opm
             // Find inv(D).
             const M& D = equation.derivative()[n];
             if (!isDiagonal(D)) {
-                OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
+                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
+                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
             }
             V diag = D.diagonal();
             Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
@@ -458,22 +460,6 @@ namespace Opm
             A = L * total_residual.derivative()[0];
             b = L * total_residual.value().matrix();
         }
-
-
-
-
-
-        Mat makeIstlMatrix(const Eigen::SparseMatrix<double, Eigen::RowMajor>& matrix)
-        {
-            // Create ISTL matrix.
-            const int size = matrix.rows();
-            const int* ia = matrix.outerIndexPtr();
-            const int* ja = matrix.innerIndexPtr();
-            const double* sa = matrix.valuePtr();
-            return Opm::DuneMatrix(size, size, ia, ja, sa);
-        }
-
-
 
     } // anonymous namespace
 
