@@ -55,13 +55,16 @@ namespace Opm {
         // sub step time loop
         while( ! timer.done() )
         {
+            // get current delta t
+            const double dt = timer.currentStepLength() ;
+
             // initialize time step control in case current state is needed later
             timeStepControl_->initialize( state );
 
             int linearIterations = -1;
             try { 
                 // (linearIterations < 0 means on convergence in solver)
-                linearIterations = solver.step(timer.currentStepLength(), state, well_state);
+                linearIterations = solver.step( dt, state, well_state);
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
@@ -81,7 +84,7 @@ namespace Opm {
 
                 // compute new time step estimate
                 const double dtEstimate = 
-                    timeStepControl_->computeTimeStepSize( timer.currentStepLength(), linearIterations, state );
+                    timeStepControl_->computeTimeStepSize( dt, linearIterations, state );
                 if( timestep_verbose_ )
                     std::cout << "Suggested time step size = " << unit::convert::to(dtEstimate, unit::day) << " (days)" << std::endl;
 
@@ -99,7 +102,7 @@ namespace Opm {
                     OPM_THROW(Opm::NumericalProblem,"Solver failed to converge after " << restarts << " restarts.");
                 }
 
-                const double newTimeStep = restart_factor_ * timer.currentStepLength();
+                const double newTimeStep = restart_factor_ * dt;
                 // we need to revise this
                 timer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ ) 
