@@ -160,8 +160,10 @@ namespace {
     {
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         int pos = 0;
-        for (int p = 0; p < maxnp; ++p) {
-            pos += pu.phase_used[p];
+        for (int phase = 0; phase < maxnp; ++phase) {
+            if (pu.phase_used[phase]) {
+                pos++;
+            }
         }
 
         return pos;
