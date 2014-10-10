@@ -1740,18 +1740,16 @@ namespace {
         int oscillatePhase = 0;
 
         for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
-            if (active_[phaseIdx]) {
-                double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
-                                               residual_history[it][phaseIdx]);
-                double relChange2 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 1][phaseIdx]) /
-                                               residual_history[it][phaseIdx]);
-                oscillatePhase += (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+            double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                           residual_history[it][phaseIdx]);
+            double relChange2 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 1][phaseIdx]) /
+                                           residual_history[it][phaseIdx]);
+            oscillatePhase += (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
 
-                double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
-                                               residual_history[it - 2][phaseIdx]);
-                if (relChange3 > 1.e-3) {
-                    stagnate = false;
-                }
+            double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
+                                           residual_history[it - 2][phaseIdx]);
+            if (relChange3 > 1.e-3) {
+                stagnate = false;
             }
         }
 
