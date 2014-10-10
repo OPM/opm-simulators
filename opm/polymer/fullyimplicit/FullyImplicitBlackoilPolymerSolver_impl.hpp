@@ -211,7 +211,7 @@ namespace {
         , relax_rel_tol_ (0.2)
         , max_iter_ (15)
         , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases() + 1)
+        , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
@@ -221,6 +221,10 @@ namespace {
             if (!active_[Water]) {
                 OPM_THROW(std::logic_error, "Polymer must solved in water!\n");
             }
+        // If deck has polymer, residual_ should contain polymer equation.
+            rq_.resize(fluid_.numPhases()+1);
+            residual_.material_balance_eq.resize(fluid_.numPhases()+1);
+            assert(poly_pos_ == fluid_.numPhases());
         }
         dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_ = param.getDefault("ds_max", ds_max_);
@@ -278,7 +282,6 @@ namespace {
             computeAccum(state, 0);
             computeWellConnectionPressures(state, xw);
         }
-
 
         std::vector<std::vector<double>> residual_history;
 
@@ -626,8 +629,8 @@ namespace {
             const V phi = Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1);
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // compute total phases and determin polymer position.
-            rq_.resize(fluid_.numPhases()+1);
-            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) + pv_mult * rho_rock * (1. - phi) / phi * ads;
+            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) 
+                                        + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
     }
 
@@ -1002,7 +1005,7 @@ namespace {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
-        // Add well contributions to polymer mass_balance equation
+        // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
             const ADB mc = computeMc(state);
             const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
@@ -1341,11 +1344,9 @@ namespace {
         const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
         varstart += dxvar.size();
 
-        const V dc = null;
-        if (has_polymer_) {
-            const V dc = subset(dx, Span(nc, 1, varstart));
-            varstart += dc.size();
-        }
+        const V dc = (has_polymer_) ? subset(dx, Span(nc, 1, varstart)) : null;
+        varstart += dc.size();
+
         const V dqs = subset(dx, Span(np*nw, 1, varstart));
         varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
@@ -1687,7 +1688,7 @@ namespace {
 
             const ADB tr_mult = transMult(state.pressure);
             const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
-            rq_[canonicalPhaseIdx].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+            rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
             if (canonicalPhaseIdx == Water) {
                 if(has_polymer_) {
                     const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
@@ -1697,10 +1698,10 @@ namespace {
                                                                      kr[canonicalPhaseIdx],
                                                                      state.saturation[canonicalPhaseIdx]);
                     ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
-                    rq_[canonicalPhaseIdx].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                    rq_[phase].mob = tr_mult * krw_eff * inv_wat_eff_visc;
                     rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc; 
-                    rq_[poly_pos_].b = rq_[canph_[Water]].b;
-                    rq_[poly_pos_].head = rq_[canph_[Water]].head;
+                    rq_[poly_pos_].b = rq_[phase].b;
+                    rq_[poly_pos_].head = rq_[phase].head;
                     UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
                     rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
                 }
@@ -1708,7 +1709,7 @@ namespace {
 
             const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
 
-            ADB& head = rq_[canonicalPhaseIdx].head;
+            ADB& head = rq_[phase].head;
 
             // compute gravity potensial using the face average as in eclipse and MRST
             const ADB rhoavg = ops_.caver * rho;
@@ -1724,9 +1725,9 @@ namespace {
 
             UpwindSelector<double> upwind(grid_, ops_, head.value());
 
-            const ADB& b       = rq_[canonicalPhaseIdx].b;
-            const ADB& mob     = rq_[canonicalPhaseIdx].mob;
-            rq_[canonicalPhaseIdx].mflux = upwind.select(b * mob) * head;
+            const ADB& b       = rq_[phase].b;
+            const ADB& mob     = rq_[phase].mob;
+            rq_[phase].mflux = upwind.select(b * mob) * head;
         }
     }
 
