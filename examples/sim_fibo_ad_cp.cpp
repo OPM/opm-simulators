@@ -128,10 +128,29 @@ try
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
 
-    Opm::ParserPtr newParser(new Opm::Parser() );
+    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::ParserLogPtr parserLog(new Opm::ParserLog());
     bool strict_parsing = param.getDefault("strict_parsing", true);
-    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename, strict_parsing);
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
+    Opm::DeckConstPtr deck;
+    std::shared_ptr<EclipseState> eclipseState;
+    try {
+        deck = parser->parseFile(deck_filename, strict_parsing, parserLog);
+        EclipseState::checkDeck(deck, parserLog);
+        eclipseState.reset(new EclipseState(deck, parserLog));
+    }
+    catch (const std::invalid_argument& e) {
+        if (parserLog->size() > 0) {
+            std::cerr << "Issues found while parsing the deck file:\n";
+            parserLog->printAll(std::cerr);
+        }
+        std::cerr << "error while parsing the deck file: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+
+    if (parserLog->size() > 0) {
+        std::cerr << "Issues found while parsing the deck file:\n";
+        parserLog->printAll(std::cerr);
+    }
 
     // Grid init
     grid.reset(new Dune::CpGrid());
