@@ -213,7 +213,7 @@ namespace {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases() + 1)
         , phaseCondition_(AutoDiffGrid::numCells(grid))
-        , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
+        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
     {
@@ -626,6 +626,7 @@ namespace {
             const V phi = Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1);
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // compute total phases and determin polymer position.
+            rq_.resize(fluid_.numPhases()+1);
             rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
     }
