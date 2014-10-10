@@ -72,6 +72,8 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -135,7 +137,7 @@ try
     std::shared_ptr<EclipseState> eclipseState;
     try {
         deck = parser->parseFile(deck_filename, strict_parsing, parserLog);
-        EclipseState::checkDeck(deck, parserLog);
+        checkDeck(deck, parserLog);
         eclipseState.reset(new EclipseState(deck, parserLog));
     }
     catch (const std::invalid_argument& e) {
