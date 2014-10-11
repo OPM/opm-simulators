@@ -1736,6 +1736,7 @@ namespace {
             return;
         }
 
+        stagnate = true;
         int oscillatePhase = 0;
         const std::vector<double>& F0 = residual_history[it];
         const std::vector<double>& F1 = residual_history[it - 1];
@@ -1746,7 +1747,9 @@ namespace {
 
             oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
 
-            stagnate = ! (std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3);
+            // Process is 'stagnate' unless at least one phase
+            // exhibits significant residual change.
+            stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
         }
 
         oscillate = (oscillatePhase > 1);
