@@ -1764,21 +1764,18 @@ namespace {
 
         stagnate = true;
         int oscillatePhase = 0;
+        const std::vector<double>& F0 = residual_history[it];
+        const std::vector<double>& F1 = residual_history[it - 1];
+        const std::vector<double>& F2 = residual_history[it - 2];
+        for (int p= 0; p < fluid_.numPhases(); ++p){
+            const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
+            const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 
-        for (int phaseIdx= 0; phaseIdx < fluid_.numPhases(); ++ phaseIdx){
-            if (active_[phaseIdx]) {
-                double relChange1 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 2][phaseIdx]) /
-                                               residual_history[it][phaseIdx]);
-                double relChange2 = std::fabs((residual_history[it][phaseIdx] - residual_history[it - 1][phaseIdx]) /
-                                               residual_history[it][phaseIdx]);
-                oscillatePhase += (relChange1 < relaxRelTol) && (relChange2 > relaxRelTol);
+            oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
 
-                double relChange3 = std::fabs((residual_history[it - 1][phaseIdx] - residual_history[it - 2][phaseIdx]) /
-                                               residual_history[it - 2][phaseIdx]);
-                if (relChange3 > 1.e-3) {
-                    stagnate = false;
-                }
-            }
+            // Process is 'stagnate' unless at least one phase
+            // exhibits significant residual change.
+            stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
         }
 
         oscillate = (oscillatePhase > 1);
