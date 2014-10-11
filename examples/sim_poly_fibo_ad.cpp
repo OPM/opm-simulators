@@ -223,7 +223,7 @@ try
         std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid());
         //Create new wells, polymer inflow controls.
         WellsManager wells(eclipseState, reportStepIdx, *grid->c_grid(), props->permeability());
-        std::shared_ptr<PolymerInflowInterface> polymer_inflow;
+        std::unique_ptr<PolymerInflowInterface> polymer_inflow;
         if (use_wpolymer) {
             if (wells.c_wells() == 0) {
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
