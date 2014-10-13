@@ -15,11 +15,12 @@ namespace Opm {
     
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param ) 
         : timeStepControl_()
+        , initial_fraction_( param.getDefault("solver.initialfraction", double(0.25) ) )
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
         , solver_restart_max_( param.getDefault("solver.restart", int(3) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(false) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(false) ) )
-        , last_timestep_( std::numeric_limits< double >::max() ) 
+        , last_timestep_( -1.0 )
     {
         // valid are "pid" and "pid+iteration"
         std::string control = param.getDefault("timestep.control", std::string("pid") );
@@ -42,6 +43,10 @@ namespace Opm {
     step( Solver& solver, State& state, WellState& well_state,
           const double time, const double timestep )
     {
+        // init last time step as a fraction of the given time step
+        if( last_timestep_ < 0 )
+            last_timestep_ = initial_fraction_ * timestep ;
+
         // create adaptive step timer with previously used sub step size
         AdaptiveSimulatorTimer timer( time, time+timestep, last_timestep_ );
 
@@ -106,7 +111,8 @@ namespace Opm {
                 // we need to revise this
                 timer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ ) 
-                    std::cerr << "Solver convergence failed, restarting solver with new time step ("<< newTimeStep <<" days)." << std::endl;
+                    std::cerr << "Solver convergence failed, restarting solver with new time step ("
+                              << unit::convert::to( newTimeStep, unit::day ) <<" days)." << std::endl;
 
                 // reset states 
                 state      = last_state;
