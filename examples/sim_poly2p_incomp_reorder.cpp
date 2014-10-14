@@ -119,7 +119,7 @@ try
             initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
         }
         // Init polymer properties.
-        poly_props.readFromDeck(eclipseState);
+        poly_props.readFromDeck(deck, eclipseState);
     } else {
         // Grid init.
         const int nx = param.getDefault("nx", 100);
