@@ -1071,6 +1071,15 @@ namespace Opm
         return wells_group;
     }
 
+
+    /*
+      Wells which are shut with the WELOPEN or WCONPROD keywords
+      typically will not have any valid control settings, it is then
+      impossible to set a valid control mode. The Schedule::Well
+      objects from opm-parser have the possible well controle mode
+      'CMODE_UNDEFINED' - we do not carry that over the specification
+      objects here.
+     */
     std::shared_ptr<WellsGroupInterface> createWellWellsGroup(WellConstPtr well, size_t timeStep, const PhaseUsage& phase_usage )
     {
         InjectionSpecification injection_specification;
@@ -1079,19 +1088,23 @@ namespace Opm
             const WellInjectionProperties& properties = well->getInjectionProperties(timeStep);
             injection_specification.BHP_limit_ = properties.BHPLimit;
             injection_specification.injector_type_ = toInjectorType(WellInjector::Type2String(properties.injectorType));
-            injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(properties.controlMode));
             injection_specification.surface_flow_max_rate_ = properties.surfaceInjectionRate;
             injection_specification.reservoir_flow_max_rate_ = properties.reservoirInjectionRate;
             production_specification.guide_rate_ = 0.0; // We know we're not a producer
+            if (properties.controlMode != WellInjector::CMODE_UNDEFINED) {
+                injection_specification.control_mode_ = toInjectionControlMode(WellInjector::ControlMode2String(properties.controlMode));
+            }
         }
         else if (well->isProducer(timeStep)) {
             const WellProductionProperties& properties = well->getProductionProperties(timeStep);
             production_specification.BHP_limit_ = properties.BHPLimit;
             production_specification.reservoir_flow_max_rate_ = properties.ResVRate;
             production_specification.oil_max_rate_ = properties.OilRate;
-            production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
             production_specification.water_max_rate_ = properties.WaterRate;
             injection_specification.guide_rate_ = 0.0; // we know we're not an injector
+            if (properties.controlMode != WellProducer::CMODE_UNDEFINED) {
+                production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
+            }
         }
         std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), production_specification, injection_specification, phase_usage));
         return wells_group;
