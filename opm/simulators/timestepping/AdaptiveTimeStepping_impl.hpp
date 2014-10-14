@@ -76,9 +76,13 @@ namespace Opm {
                     std::cout << "Overall linear iterations used: " << linearIterations << std::endl;
                 }
             }
-            catch (Opm::NumericalProblem) 
-            {
+            catch (Opm::NumericalProblem e) {
+                std::cerr << e.what() << std::endl;
                 // since linearIterations is < 0 this will restart the solver
+            }
+            catch (std::runtime_error e) {
+                std::cerr << e.what() << std::endl;
+                // also catch linear solver not converged
             }
 
             // (linearIterations < 0 means on convergence in solver)
