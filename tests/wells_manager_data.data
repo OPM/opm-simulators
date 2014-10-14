@@ -43,7 +43,7 @@ WCONINJE
 /
 
 
-DATES
+DATES   -- Step1
  1 'FEB' 2000 /
 /
 
@@ -56,14 +56,49 @@ WCONINJE
 /
 
 
-DATES
+DATES  -- Step2
  1 'MAR' 2000 /
 /
 
 
 WCONPROD 
-  'PROD1'  'SHUT' 15* /
+  'PROD1'  'SHUT' /
 /
+
+
+DATES  -- Step3
+ 1 'APR' 2000 /
+/
+
+WELSPECS
+   'NEW'  'G'   2   2  1*       'OIL'  2*      'STOP'  4* /
+/
+
+COMPDAT
+    'NEW'   2  2 2  2 'OPEN' 1   10.6092   0.5  /
+/
+
+
+WCONHIST
+   'NEW'      'OPEN'      'ORAT'      0.000      0.000      0.000  5* /
+/
+
+
+
+WCONPROD 
+  'NEW'  'SHUT' /
+/
+
+
+
+
+
+WCONPROD 
+  'PROD1'  'SHUT' /
+/
+
+
+
 
 
 END

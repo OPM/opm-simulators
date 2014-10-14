@@ -172,6 +172,23 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
     }
 }
 
+
+void check_controls_epoch3( struct WellControls ** ctrls) {
+    // The new producer
+    const struct WellControls * ctrls1 = ctrls[1];
+    const struct WellControls * ctrls2 = ctrls[2];
+
+    
+    BOOST_CHECK_EQUAL( 0 , well_controls_get_num(ctrls1));   
+    BOOST_CHECK( well_controls_well_is_shut( ctrls1)); 
+    
+    BOOST_CHECK_EQUAL( 0 , well_controls_get_num(ctrls2));   
+    BOOST_CHECK( well_controls_well_is_shut(ctrls2)); 
+}
+
+
+
+
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     const std::string filename = "wells_manager_data.data";
@@ -192,6 +209,20 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
         wells_static_check( wellsManager.c_wells() );
         check_controls_epoch1( wellsManager.c_wells()->ctrls );
     }
+    
+
+    {
+        Opm::WellsManager wellsManager(eclipseState, 3, *gridManager.c_grid(), NULL);
+        const Wells* wells = wellsManager.c_wells();
+
+        BOOST_CHECK_EQUAL(3 , wells->number_of_wells);
+        BOOST_CHECK_EQUAL( wells->name[0] , "INJ1");
+        BOOST_CHECK_EQUAL( wells->name[1] , "PROD1");
+        BOOST_CHECK_EQUAL( wells->name[2] , "NEW");
+
+        check_controls_epoch3( wellsManager.c_wells()->ctrls );
+    }
+    
 }
 
 
