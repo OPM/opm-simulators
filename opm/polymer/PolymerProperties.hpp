@@ -121,13 +121,13 @@ namespace Opm
         {
             // We assume NTMISC=1
             const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
-            const auto tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(0);
+            const auto plmixparRecord = deck->getKeyword("PLMIXPAR")->getRecord(0);
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
 
             c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
-            mix_param_ = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDouble(0);
+            mix_param_ = plmixparRecord->getItem("TODD_LONGSTAFF")->getSIDouble(0);
 
             // We assume NTSFUN=1
             const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
