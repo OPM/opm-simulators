@@ -129,7 +129,7 @@ try
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
-    PolymerProperties polymer_props(eclipseState);
+    PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
