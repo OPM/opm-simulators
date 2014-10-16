@@ -223,7 +223,7 @@ namespace {
             }
         // If deck has polymer, residual_ should contain polymer equation.
             rq_.resize(fluid_.numPhases()+1);
-            residual_.material_balance_eq.resize(fluid_.numPhases()+1);
+            residual_.material_balance_eq.resize(fluid_.numPhases()+1, ADB::null());
             assert(poly_pos_ == fluid_.numPhases());
         }
         dp_max_rel_ = param.getDefault("dp_max_rel", dp_max_rel_);
