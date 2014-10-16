@@ -82,9 +82,9 @@ namespace Opm
         {
         }
 
-        PolymerProperties(Opm::EclipseStateConstPtr eclipseState)
+        PolymerProperties(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclipseState)
         {
-            readFromDeck(eclipseState);
+            readFromDeck(deck, eclipseState);
         }
 
         void set(double c_max,
@@ -117,18 +117,17 @@ namespace Opm
             shear_vrf_vals_ = shear_vrf_vals;
         }
 
-        void readFromDeck(Opm::EclipseStateConstPtr eclipseState)
+        void readFromDeck(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclipseState)
         {
             // We assume NTMISC=1
             const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
-            const auto& tlmixparTable = eclipseState->getTlmixparTables()[0];
+            const auto tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(0);
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
-            assert(tlmixparTable.numRows() == 1);
 
             c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
-            mix_param_ = tlmixparTable.getViscosityParameterColumn()[0];
+            mix_param_ = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDouble(0);
 
             // We assume NTSFUN=1
             const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
