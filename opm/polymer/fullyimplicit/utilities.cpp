@@ -246,8 +246,9 @@ namespace Opm
 			}
 		}
         //Add PhasePresence make muOil() happy.
-        std::vector<PhasePresence> phaseCondition;
+        std::vector<PhasePresence> phaseCondition(num_cells);
         for (int c = 0; c < num_cells; ++c) {
+            phaseCondition[c] = PhasePresence();
             phaseCondition[c].setFreeWater();
             phaseCondition[c].setFreeOil();
         }

@@ -121,14 +121,16 @@ namespace Opm
         {
             // We assume NTMISC=1
             const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
-            const auto tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(0);
+            const auto plmixparRecord = deck->getKeyword("PLMIXPAR")->getRecord(0);
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
 
             c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
-            mix_param_ = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDouble(0);
+            mix_param_ = plmixparRecord->getItem("TODD_LONGSTAFF")->getSIDouble(0);
 
+            std::cout << "Debug output:\n";
+            std::cout << "mix_param: " << mix_param_ <<"    cmax: " << c_max_;
             // We assume NTSFUN=1
             const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
 
@@ -141,23 +143,32 @@ namespace Opm
             ads_index_ = static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]);
             c_max_ads_ = plyrockTable.getMaxAdsorbtionColumn()[0];
 
+            std::cout << " IPV: " << dead_pore_vol_ <<"   rs: " << res_factor_ << "  rock_den: " << rock_density_
+                      << " ads_index: " << ads_index_ << " cmax_ads: " << c_max_ads_ << std::endl; 
             // We assume NTPVT=1
             const auto& plyviscTable = eclipseState->getPlyviscTables()[0];
 
-            // We also assume that each table has exactly one row...
-            assert(plyviscTable.numRows() == 1);
 
-            c_vals_visc_[0] = plyviscTable.getPolymerConcentrationColumn()[0];
-            visc_mult_vals_[0] =  plyviscTable.getViscosityMultiplierColumn()[0];
+            c_vals_visc_ = plyviscTable.getPolymerConcentrationColumn();
+            visc_mult_vals_ =  plyviscTable.getViscosityMultiplierColumn();
+
+            std::cout << "PLYVISC\n";
+            auto N = c_vals_visc_.size();
+            for (size_t i = 0; i < N; ++i) {
+                std::cout << c_vals_visc_[i] << "  " << visc_mult_vals_[i] << "\n";
+            }
 
             // We assume NTSFUN=1
             const auto& plyadsTable = eclipseState->getPlyadsTables()[0];
 
-            // We also assume that each table has exactly one row...
-            assert(plyadsTable.numRows() == 1);
 
-            c_vals_ads_[0] = plyadsTable.getPolymerConcentrationColumn()[0];
-            ads_vals_[0] = plyadsTable.getAdsorbedPolymerColumn()[0];
+            c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
+            ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
+            std::cout << "PLYADS\n";
+            auto M = c_vals_ads_.size();
+            for (size_t i = 0; i < M; ++i) {
+                std::cout << c_vals_ads_[i] << "  " << ads_vals_[i] << "\n";
+            }
         }
 
         double cMax() const;
