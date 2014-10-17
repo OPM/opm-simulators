@@ -60,7 +60,7 @@ namespace Opm
                                 matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                 total_residual.value().data(), dx.data());
 
-        // store iterations 
+        // store iterations
         iterations_ = rep.iterations;
 
         if (!rep.converged) {
