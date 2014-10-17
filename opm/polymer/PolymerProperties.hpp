@@ -144,20 +144,15 @@ namespace Opm
             // We assume NTPVT=1
             const auto& plyviscTable = eclipseState->getPlyviscTables()[0];
 
-            // We also assume that each table has exactly one row...
-            assert(plyviscTable.numRows() == 1);
 
-            c_vals_visc_[0] = plyviscTable.getPolymerConcentrationColumn()[0];
-            visc_mult_vals_[0] =  plyviscTable.getViscosityMultiplierColumn()[0];
+            c_vals_visc_ = plyviscTable.getPolymerConcentrationColumn();
+            visc_mult_vals_ =  plyviscTable.getViscosityMultiplierColumn();
 
             // We assume NTSFUN=1
             const auto& plyadsTable = eclipseState->getPlyadsTables()[0];
 
-            // We also assume that each table has exactly one row...
-            assert(plyadsTable.numRows() == 1);
-
-            c_vals_ads_[0] = plyadsTable.getPolymerConcentrationColumn()[0];
-            ads_vals_[0] = plyadsTable.getAdsorbedPolymerColumn()[0];
+            c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
+            ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
         }
 
         double cMax() const;
