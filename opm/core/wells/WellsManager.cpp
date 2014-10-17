@@ -477,22 +477,19 @@ namespace Opm
                     OPM_THROW(std::runtime_error, "We cannot handle THP limit for well " << well_names[well_index]);
                 }
 
-
                 if (!ok) {
                     OPM_THROW(std::runtime_error, "Failure occured appending controls for well " << well_names[well_index]);
                 }
 
-                
                 if (injectionProperties.controlMode != WellInjector::CMODE_UNDEFINED) {
                     WellsManagerDetail::InjectionControl::Mode mode = WellsManagerDetail::InjectionControl::mode( injectionProperties.controlMode );
                     int cpos = control_pos[mode];
                     if (cpos == -1 && mode != WellsManagerDetail::InjectionControl::GRUP) {
                         OPM_THROW(std::runtime_error, "Control not specified in well " << well_names[well_index]);
                     }
-                    
+
                     set_current_control(well_index, cpos, w_);
                 }
-
 
                 // Set well component fraction.
                 double cf[3] = { 0.0, 0.0, 0.0 };
