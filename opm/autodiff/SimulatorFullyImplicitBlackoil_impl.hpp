@@ -301,12 +301,8 @@ namespace Opm
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", bool(false) ) )
         {
-            adaptiveTimeStepping = std::unique_ptr< AdaptiveTimeStepping > (new AdaptiveTimeStepping( param_ ));
+            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_ ) );
         }
-
-        // create time step control object, TODO introduce parameter
-        std::unique_ptr< TimeStepControlInterface >
-            timeStepControl( new PIDAndIterationCountTimeStepControl( 50, 8e-4 ) );
 
         // Main simulation loop.
         while (!timer.done()) {
