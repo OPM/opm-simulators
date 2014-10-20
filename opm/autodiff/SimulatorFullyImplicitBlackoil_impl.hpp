@@ -299,9 +299,10 @@ namespace Opm
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
-        if( param_.getDefault("timestep.adaptive", bool(false) ) )
+        const parameter::ParameterGroup& timeStepParam = param_.getGroup( "timestep" );
+        if( timeStepParam.getDefault("adaptive", bool(false) ) )
         {
-            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_ ) );
+            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( timeStepParam ) );
         }
 
         // Main simulation loop.
