@@ -1689,6 +1689,21 @@ namespace {
             const ADB tr_mult = transMult(state.pressure);
             const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
             rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+
+            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
+
+            ADB& head = rq_[phase].head;
+
+            // compute gravity potensial using the face average as in eclipse and MRST
+            const ADB rhoavg = ops_.caver * rho;
+
+            ADB dp = ops_.ngrad * phasePressure[canonicalPhaseIdx] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+
+            if (use_threshold_pressure_) {
+                applyThresholdPressures(dp);
+            }
+
+            head = transi*dp;
             if (canonicalPhaseIdx == Water) {
                 if(has_polymer_) {
                     const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
@@ -1706,21 +1721,6 @@ namespace {
                     rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
                 }
             }
-
-            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.rs, state.rv, cond, cells_);
-
-            ADB& head = rq_[phase].head;
-
-            // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rhoavg = ops_.caver * rho;
-
-            ADB dp = ops_.ngrad * phasePressure[canonicalPhaseIdx] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-
-            if (use_threshold_pressure_) {
-                applyThresholdPressures(dp);
-            }
-
-            head = transi*dp;
             //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
             UpwindSelector<double> upwind(grid_, ops_, head.value());
