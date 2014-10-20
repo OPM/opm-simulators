@@ -213,7 +213,7 @@ try
 
         // Create new wells, polymer inflow controls.
         WellsManager wells(eclipseState, reportStepIdx, *grid->c_grid(), props->permeability());
-        boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
+        std::unique_ptr<PolymerInflowInterface> polymer_inflow;
         if (use_wpolymer) {
             if (wells.c_wells() == 0) {
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
