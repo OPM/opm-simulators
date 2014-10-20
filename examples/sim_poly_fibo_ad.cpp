@@ -129,6 +129,8 @@ try
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
+    const bool polymer = deck->hasKeyword("POLYMER");
+    const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
     // check_well_controls = param.getDefault("check_well_controls", false);
@@ -158,6 +160,7 @@ try
         initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state.blackoilState());
         state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
     } else {
+        state.init(*grid->c_grid(), props->numPhases());
         initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state.blackoilState());
     }
 
@@ -197,8 +200,7 @@ try
     simtimer.init(timeMap);
     //Check for WPOLYMER presence in last report step to decide
     //polymer injection control type.
-    const bool polymer = deck->hasKeyword("POLYMER");
-    const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
+    std::cout << polymer << " " << use_wpolymer << std::endl;
     if (polymer){
         if (!use_wpolymer) {
             OPM_MESSAGE("Warning: simulate polymer injection without WPOLYMER.");
@@ -229,6 +231,10 @@ try
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
             }
             polymer_inflow.reset(new PolymerInflowFromDeck(deck, *wells.c_wells(), props->numCells()));
+        } else {
+                polymer_inflow.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
+                                                            1.0*Opm::unit::day,
+                                                            0.0));
         }
         SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
                                                  *grid->c_grid(),

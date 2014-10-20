@@ -292,7 +292,7 @@ namespace Opm
             wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
                             state.saturation(), 0.0, well_state.bhp(), well_state.perfRates());
         }
-        for (; !timer.done(); ++timer) {
+//        for (; !timer.done(); ++timer) {
             // Report timestep and (optionally) write state to disk.
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
@@ -387,6 +387,7 @@ namespace Opm
             const double current_time = timer.simulationTimeElapsed();
             double stepsize = timer.currentStepLength();
             polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
+
 
             // Solve transport.
             transport_timer.start();
@@ -492,7 +493,7 @@ namespace Opm
                             state.saturation(), timer.simulationTimeElapsed() + timer.currentStepLength(),
                             well_state.bhp(), well_state.perfRates());
             }
-        }
+//        }
 
         if (output_) {
             if (output_vtk_) {
