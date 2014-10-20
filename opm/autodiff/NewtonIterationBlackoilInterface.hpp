@@ -40,7 +40,7 @@ namespace Opm
         /// \return               the solution x
         virtual SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const = 0;
 
-        /// \return number of iterations used during last call of computeNewtonIncrement
+        /// \return number of linear iterations used during last call of computeNewtonIncrement
         virtual int iterations () const = 0;
     };
 

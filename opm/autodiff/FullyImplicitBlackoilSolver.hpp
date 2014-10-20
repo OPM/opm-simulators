@@ -114,7 +114,7 @@ namespace Opm {
         /// \param[in] dt        time step size
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
-        /// \return              number of iterations used
+        /// \return              number of linear iterations used
         int
         step(const double   dt    ,
              BlackoilState& state ,
