@@ -64,3 +64,9 @@ endmacro (tests_hook)
 
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
+
+add_custom_target(check-commits
+									COMMAND ${CMAKE_COMMAND}
+													-DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+													-DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
+													-P ${PROJECT_SOURCE_DIR}/cmake/Scripts/CheckCommits.cmake)
