@@ -26,8 +26,9 @@ namespace Opm {
         std::string control = param.getDefault("timestep.control", std::string("pid") );
         
         const double tol = param.getDefault("timestep.control.tol", double(1e-3) );
-        if( control == "pid" ) 
+        if( control == "pid" ) {
             timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol ) );
+        }
         else if ( control == "pid+iteration" ) 
         {
             const int iterations = param.getDefault("timestep.control.targetiteration", int(25) );
@@ -44,8 +45,9 @@ namespace Opm {
           const double time, const double timestep )
     {
         // init last time step as a fraction of the given time step
-        if( last_timestep_ < 0 )
+        if( last_timestep_ < 0 ) {
             last_timestep_ = initial_fraction_ * timestep ;
+        }
 
         // create adaptive step timer with previously used sub step size
         AdaptiveSimulatorTimer timer( time, time+timestep, last_timestep_ );
@@ -85,7 +87,7 @@ namespace Opm {
                 // also catch linear solver not converged
             }
 
-            // (linearIterations < 0 means on convergence in solver)
+            // (linearIterations < 0 means no convergence in solver)
             if( linearIterations >= 0 )
             {
                 // advance by current dt
@@ -104,7 +106,7 @@ namespace Opm {
                 last_state      = state ;
                 last_well_state = well_state;
             }
-            else // in case of no convergence
+            else // in case of no convergence (linearIterations < 0)
             {
                 // increase restart counter
                 if( restarts >= solver_restart_max_ ) {
@@ -135,8 +137,9 @@ namespace Opm {
             std::cout << "Last suggested step size = " << unit::convert::to( last_timestep_, unit::day ) << " (days)" << std::endl;
         }
 
-        if( ! std::isfinite( last_timestep_ ) ) // check for NaN
+        if( ! std::isfinite( last_timestep_ ) ) { // check for NaN
             last_timestep_ = timestep;
+        }
     }
 }
 
