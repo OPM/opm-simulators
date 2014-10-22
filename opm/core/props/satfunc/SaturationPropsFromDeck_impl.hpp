@@ -49,11 +49,11 @@ namespace Opm
     /// Initialize from deck.
     template <class SatFuncSet>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
-                                                   Opm::EclipseStateConstPtr eclState,
+                                                   Opm::EclipseStateConstPtr eclipseState,
                                                    const UnstructuredGrid& grid,
                                                    const int samples)
     {
-        this->init(deck, eclState, grid.number_of_cells,
+        this->init(deck, eclipseState, grid.number_of_cells,
                    grid.global_cell, grid.cell_centroids,
                    grid.dimensions, samples);
     }
@@ -62,7 +62,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
-                                                   Opm::EclipseStateConstPtr eclState,
+                                                   Opm::EclipseStateConstPtr eclipseState,
                                                    int number_of_cells,
                                                    const int* global_cell,
                                                    const T& begin_cell_centroids,
@@ -129,7 +129,7 @@ namespace Opm
         // Initialize tables.
         satfuncset_.resize(num_tables);
         for (int table = 0; table < num_tables; ++table) {
-            satfuncset_[table].init(eclState, table, phase_usage_, samples);
+            satfuncset_[table].init(eclipseState, table, phase_usage_, samples);
         }
         
         // Check EHYSTR status
@@ -194,7 +194,7 @@ namespace Opm
             const std::vector<std::string> eps_kw{"SWL", "SWU", "SWCR", "SGL", "SGU", "SGCR", "SOWCR",
                 "SOGCR", "KRW", "KRG", "KRO", "KRWR", "KRGR", "KRORW", "KRORG", "PCW", "PCG"};
             eps_transf_.resize(number_of_cells);
-            initEPS(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
+            initEPS(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroids,
                     dimensions, eps_kw, eps_transf_);
 
             if (do_hyst_) {
@@ -239,7 +239,7 @@ namespace Opm
                     "ISOGCR", "IKRW", "IKRG", "IKRO", "IKRWR", "IKRGR", "IKRORW", "IKRORG", "IPCW", "IPCG"};
                 eps_transf_hyst_.resize(number_of_cells);
                 sat_hyst_.resize(number_of_cells);                
-                initEPS(deck, eclState, number_of_cells, global_cell, begin_cell_centroids,
+                initEPS(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroids,
                         dimensions, eps_i_kw, eps_transf_hyst_);
             }
         }
@@ -467,7 +467,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPS(Opm::DeckConstPtr deck,
-                                                      Opm::EclipseStateConstPtr eclState,
+                                                      Opm::EclipseStateConstPtr eclipseState,
                                                       int number_of_cells,
                                                       const int* global_cell,
                                                       const T& begin_cell_centroid,
@@ -479,7 +479,7 @@ namespace Opm
         const std::vector<double> dummy;
         
         for (size_t i = 0; i < eps_kw.size(); ++i) {
-            initEPSKey(deck, eclState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
+            initEPSKey(deck, eclipseState, number_of_cells, global_cell, begin_cell_centroid, dimensions,
                        eps_kw[i], eps_vec[i]);
         }
 
@@ -545,7 +545,7 @@ namespace Opm
     template <class SatFuncSet>
     template<class T>
     void SaturationPropsFromDeck<SatFuncSet>::initEPSKey(Opm::DeckConstPtr deck,
-                                                         Opm::EclipseStateConstPtr eclState,
+                                                         Opm::EclipseStateConstPtr eclipseState,
                                                          int number_of_cells,
                                                          const int* global_cell,
                                                          const T& begin_cell_centroid,
@@ -557,7 +557,7 @@ namespace Opm
         const bool useLiquid = phase_usage_.phase_used[Liquid];
         const bool useVapour = phase_usage_.phase_used[Vapour];
         bool useKeyword = deck->hasKeyword(keyword);
-        bool useStateKeyword = eclState->hasDoubleGridProperty(keyword);
+        bool useStateKeyword = eclipseState->hasDoubleGridProperty(keyword);
         const std::map<std::string, int> kw2tab = {
             {"SWL", 1}, {"SWCR", 2}, {"SWU", 3}, {"SGL", 4},
             {"SGCR", 5}, {"SGU", 6}, {"SOWCR", 7}, {"SOGCR", 8},
@@ -577,7 +577,7 @@ namespace Opm
                 scaleparam.resize(number_of_cells);
             }
             if (!useKeyword && itab > 0) {
-                const auto& enptvdTables = eclState->getEnptvdTables();
+                const auto& enptvdTables = eclipseState->getEnptvdTables();
                 int num_tables = enptvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);
@@ -675,7 +675,7 @@ namespace Opm
             const int* gc = global_cell;
             std::vector<double> val;
             if (keyword[0] == 'S' || keyword[1] == 'S') { // Saturation from EclipseState
-                val = eclState->getDoubleGridProperty(keyword)->getData();
+                val = eclipseState->getDoubleGridProperty(keyword)->getData();
             } else {
                 val = deck->getKeyword(keyword)->getSIDoubleData(); //KR and PC directly from deck.
             }
