@@ -412,7 +412,7 @@ namespace Opm
             }
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
-                well_controls_shut_well( w_->ctrls[well_index] );
+                //well_controls_shut_well( w_->ctrls[well_index] );
                 well_index++;
                 continue;
             }

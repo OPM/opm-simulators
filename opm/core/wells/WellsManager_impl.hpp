@@ -127,6 +127,11 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     int well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         WellConstPtr well = (*wellIter);
+
+        if (well->getStatus(timeStep) == WellCommon::SHUT) {
+            continue;
+        }
+
         {   // WELSPECS handling
             well_names_to_index[well->name()] = well_index;
             well_names.push_back(well->name());

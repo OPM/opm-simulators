@@ -275,7 +275,12 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::GridManager gridManager(deck);
 
-    BOOST_CHECK_NO_THROW( Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL));
+    Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL);
+
+    // Shut wells are removed from the deck. i.e number of wells should be 2-1
+    BOOST_CHECK( wellsManager2.c_wells()->number_of_wells == 1);
+
+    //BOOST_CHECK_NO_THROW( Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL));
 }
 
 
