@@ -17,6 +17,7 @@ namespace Opm {
         : timeStepControl_()
         , initial_fraction_( param.getDefault("solver.initialfraction", double(0.25) ) )
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
+        , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
         , solver_restart_max_( param.getDefault("solver.restart", int(3) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(false) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(false) ) )
@@ -36,6 +37,9 @@ namespace Opm {
         }
         else 
             OPM_THROW(std::runtime_error,"Unsupported time step control selected "<< control );
+
+        // make sure growth factor is something reasonable
+        assert( growth_factor_ >= 1.0 );
     }
 
 
@@ -78,11 +82,11 @@ namespace Opm {
                     std::cout << "Overall linear iterations used: " << linearIterations << std::endl;
                 }
             }
-            catch (Opm::NumericalProblem e) {
+            catch (const Opm::NumericalProblem& e) {
                 std::cerr << e.what() << std::endl;
                 // since linearIterations is < 0 this will restart the solver
             }
-            catch (std::runtime_error e) {
+            catch (const std::runtime_error& e) {
                 std::cerr << e.what() << std::endl;
                 // also catch linear solver not converged
             }
@@ -94,8 +98,16 @@ namespace Opm {
                 ++timer;
 
                 // compute new time step estimate
-                const double dtEstimate = 
+                double dtEstimate =
                     timeStepControl_->computeTimeStepSize( dt, linearIterations, state );
+
+                // avoid time step size growth
+                if( restarts > 0 ) {
+                    dtEstimate = std::min( growth_factor_ * dt, dtEstimate );
+                    // solver converged, reset restarts counter
+                    restarts = 0;
+                }
+
                 if( timestep_verbose_ )
                     std::cout << "Suggested time step size = " << unit::convert::to(dtEstimate, unit::day) << " (days)" << std::endl;
 
