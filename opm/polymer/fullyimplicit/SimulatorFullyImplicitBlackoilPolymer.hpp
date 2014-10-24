@@ -37,6 +37,7 @@ namespace Opm
     class SimulatorTimer;
     class PolymerBlackoilState;
     class WellStateFullyImplicitBlackoil;
+    class WellsManager;
     class EclipseState;
     class EclipseWriter;
     class PolymerPropsAd;
@@ -86,6 +87,7 @@ namespace Opm
                                               const RockCompressibility* rock_comp_props,
                                               NewtonIterationBlackoilInterface& linsolver,
                                               const PolymerInflowInterface& polymer_inflow,
+                                              WellsManager& well_manager,
                                               const double* gravity,
                                               const bool disgas,
                                               const bool vapoil,
@@ -102,7 +104,8 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state);
+                            PolymerBlackoilState& state,
+                            WellStateFullyImplicitBlackoil& well_state);
 
     private:
         class Impl;

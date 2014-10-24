@@ -83,6 +83,7 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              NewtonIterationBlackoilInterface& linsolver,
              const PolymerInflowInterface& polymer_inflow,
+             WellsManager& wells_manager,
              const double* gravity,
              bool has_disgas,
              bool has_vapoil,
@@ -92,7 +93,8 @@ namespace Opm
              const std::vector<double>& threshold_pressures_by_face);
 
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state);
+                            PolymerBlackoilState& state,
+                            WellStateFullyImplicitBlackoil& well_state);
 
     private:
         // Data.
@@ -117,6 +119,7 @@ namespace Opm
         const DerivedGeology& geo_;
         NewtonIterationBlackoilInterface& solver_;
         const PolymerInflowInterface& polymer_inflow_;
+        WellsManager& wells_manager_;
         // Misc. data
         std::vector<int> allcells_;
         const bool has_disgas_;
@@ -149,6 +152,7 @@ namespace Opm
                                                                                     const RockCompressibility* rock_comp_props,
                                                                                     NewtonIterationBlackoilInterface& linsolver,
                                                                                     const PolymerInflowInterface& polymer_inflow,
+                                                                                    WellsManager& wells_manager,
                                                                                     const double* gravity,
                                                                                     const bool has_disgas,
                                                                                     const bool has_vapoil,
@@ -158,7 +162,7 @@ namespace Opm
                                                                                     const std::vector<double>& threshold_pressures_by_face)
 
     {
-        pimpl_.reset(new Impl(param, grid, geo, props, polymer_props, rock_comp_props, linsolver, polymer_inflow, gravity, has_disgas, 
+        pimpl_.reset(new Impl(param, grid, geo, props, polymer_props, rock_comp_props, linsolver, polymer_inflow, wells_manager, gravity, has_disgas, 
                               has_vapoil, has_polymer, eclipse_state, output_writer, threshold_pressures_by_face));
     }
 
@@ -168,9 +172,10 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::run(SimulatorTimer& timer,
-                                                                  PolymerBlackoilState& state)
+                                                                  PolymerBlackoilState& state,
+                                                                  WellStateFullyImplicitBlackoil& well_state)
     {
-        return pimpl_->run(timer, state);
+        return pimpl_->run(timer, state, well_state);
     }
 
 
@@ -242,6 +247,7 @@ namespace Opm
                                                          const RockCompressibility* rock_comp_props,
                                                          NewtonIterationBlackoilInterface& linsolver,
                                                          const PolymerInflowInterface& polymer_inflow,
+                                                         WellsManager& wells_manager,
                                                          const double* gravity,
                                                          const bool has_disgas,
                                                          const bool has_vapoil,
@@ -258,6 +264,7 @@ namespace Opm
           geo_(geo),
           solver_(linsolver),
           polymer_inflow_(polymer_inflow),
+          wells_manager_(wells_manager),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           has_polymer_(has_polymer),
@@ -295,7 +302,8 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::Impl::run(SimulatorTimer& timer,
-                                                                        PolymerBlackoilState& state)
+                                                                        PolymerBlackoilState& state,
+                                                                        WellStateFullyImplicitBlackoil& well_state)
     {
         WellStateFullyImplicitBlackoil prev_well_state;
 
@@ -309,29 +317,29 @@ namespace Opm
         std::ofstream tstep_os(tstep_filename.c_str());
 
         // Main simulation loop.
-        while (!timer.done()) {
+//        while (!timer.done()) {
             // Report timestep.
             step_timer.start();
             timer.report(std::cout);
 
             // Create wells and well state.
-            WellsManager wells_manager(eclipse_state_,
-                                       timer.currentStepNum(),
-                                       Opm::UgGridHelpers::numCells(grid_),
-                                       Opm::UgGridHelpers::globalCell(grid_),
-                                       Opm::UgGridHelpers::cartDims(grid_),
-                                       Opm::UgGridHelpers::dimensions(grid_),
-                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
-                                       Opm::UgGridHelpers::cell2Faces(grid_),
-                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
-                                       props_.permeability());
-            const Wells* wells = wells_manager.c_wells();
-            WellStateFullyImplicitBlackoil well_state;
-            well_state.init(wells, state.blackoilState());
-            if (timer.currentStepNum() != 0) {
-                // Transfer previous well state to current.
-                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
-            }
+//            WellsManager wells_manager(eclipse_state_,
+//                                       timer.currentStepNum(),
+//                                       Opm::UgGridHelpers::numCells(grid_),
+//                                       Opm::UgGridHelpers::globalCell(grid_),
+//                                       Opm::UgGridHelpers::cartDims(grid_),
+//                                       Opm::UgGridHelpers::dimensions(grid_),
+//                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
+//                                       Opm::UgGridHelpers::cell2Faces(grid_),
+//                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
+//                                       props_.permeability());
+            const Wells* wells = wells_manager_.c_wells();
+//            WellStateFullyImplicitBlackoil well_state;
+//            well_state.init(wells, state.blackoilState());
+//            if (timer.currentStepNum() != 0) {
+//                // Transfer previous well state to current.
+//                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
+//            }
 
             // Output state at start of time step.
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
@@ -383,19 +391,19 @@ namespace Opm
             }
 
             // Increment timer, remember well state.
-            ++timer;
-            prev_well_state = well_state;
-        }
+//            ++timer;
+//            prev_well_state = well_state;
+//        }
 
         // Write final simulation state.
-        if (output_) {
-            if (output_vtk_) {
-                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-            }
-            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
-        }
+//        if (output_) {
+//            if (output_vtk_) {
+//                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+//            }
+//            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+//            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+//            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
+//        } 
 
         // Stop timer and create timing report
         total_timer.stop();
