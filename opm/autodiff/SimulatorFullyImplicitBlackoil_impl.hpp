@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,7 +18,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include  <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -36,6 +37,7 @@
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -44,12 +46,14 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
+
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -293,6 +297,13 @@ namespace Opm
 
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
 
+        // adaptive time stepping
+        std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
+        if( param_.getDefault("timestep.adaptive", bool(false) ) )
+        {
+            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_ ) );
+        }
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -340,13 +351,29 @@ namespace Opm
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
-            // Run a single step of the solver.
+            // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
+
             FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
-            solver.step(timer.currentStepLength(), state, well_state);
+
+            // If sub stepping is enabled allow the solver to sub cycle
+            // in case the report steps are to large for the solver to converge
+            //
+            // \Note: The report steps are met in any case
+            // \Note: The sub stepping will require a copy of the state variables
+            if( adaptiveTimeStepping ) {
+                adaptiveTimeStepping->step( solver, state, well_state,
+                        timer.simulationTimeElapsed(), timer.currentStepLength() );
+            }
+            else {
+                // solve for complete report step
+                solver.step(timer.currentStepLength(), state, well_state);
+            }
+
+            // take time that was used to solve system for this reportStep
             solver_timer.stop();
 
             // Report timing.

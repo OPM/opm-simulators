@@ -262,7 +262,7 @@ namespace {
 
 
     template<class T>
-    void
+    int
     FullyImplicitBlackoilSolver<T>::
     step(const double   dt,
          BlackoilState& x ,
@@ -277,7 +277,6 @@ namespace {
             computeAccum(state, 0);
             computeWellConnectionPressures(state, xw);
         }
-
 
         std::vector<std::vector<double>> residual_history;
 
@@ -304,9 +303,13 @@ namespace {
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
+        int linearIterations = 0;
 
         while ((!converged) && (it < maxIter())) {
             V dx = solveJacobianSystem();
+
+            // store number of linear iterations used
+            linearIterations += linsolver_.iterations();
 
             detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
 
@@ -328,15 +331,19 @@ namespace {
 
             converged = getConvergence(dt);
 
-            it += 1;
+            // increase iteration counter
+            ++it;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::endl;
         }
 
         if (!converged) {
-            std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
-            // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
+            // the runtime_error is caught by the AdaptiveTimeStepping
+            OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
+            return -1;
         }
+
+        return linearIterations;
     }
 
 

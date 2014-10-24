@@ -110,6 +110,7 @@ namespace Opm
 
     /// Construct a system solver.
     NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
+        : iterations_( 0 )
     {
         use_amg_ = param.getDefault("cpr_use_amg", false);
         use_bicgstab_ = param.getDefault("cpr_use_bicgstab", true);
@@ -193,13 +194,16 @@ namespace Opm
         // Construct linear solver.
         const double tolerance = 1e-3;
         const int maxit = 5000;
-        const int verbosity = 1;
+        const int verbosity = 0;
         const int restart = 40;
         Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
 
         // Solve system.
         Dune::InverseOperatorResult result;
         linsolve.apply(x, istlb, result);
+
+        // store number of iterations
+        iterations_ = result.iterations;
 
         // Check for failure of linear solver.
         if (!result.converged) {
