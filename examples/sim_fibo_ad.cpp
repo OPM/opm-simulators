@@ -129,10 +129,7 @@ try
     }
 
     // Grid init
-    std::vector<double> porv;
-    if (eclipseState->hasDoubleGridProperty("PORV")) {
-        porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-    }
+    std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);

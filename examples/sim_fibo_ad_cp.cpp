@@ -156,10 +156,7 @@ try
 
     // Grid init
     grid.reset(new Dune::CpGrid());
-    std::vector<double> porv;
-    if (eclipseState->hasDoubleGridProperty("PORV")) {
-        porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-    }
+    std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     grid->processEclipseFormat(deck, false, false, false, porv);
 
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
