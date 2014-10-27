@@ -412,8 +412,7 @@ namespace Opm
             }
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
-                //well_controls_shut_well( w_->ctrls[well_index] );
-                well_index++;
+                //SHUT wells are not added to the well list
                 continue;
             }
 
