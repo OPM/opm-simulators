@@ -83,23 +83,5 @@ WCONHIST
    'NEW'      'OPEN'      'ORAT'      0.000      0.000      0.000  5* /
 /
 
-
-
-WCONPROD 
-  'NEW'  'SHUT' /
-/
-
-
-
-
-
-WCONPROD 
-  'PROD1'  'SHUT' /
-/
-
-
-
-
-
 END
 
