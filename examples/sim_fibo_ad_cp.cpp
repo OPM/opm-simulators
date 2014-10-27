@@ -132,11 +132,10 @@ try
 
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParserLogPtr parserLog(new Opm::ParserLog());
-    bool strict_parsing = param.getDefault("strict_parsing", true);
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        deck = parser->parseFile(deck_filename, strict_parsing, parserLog);
+        deck = parser->parseFile(deck_filename, parserLog);
         checkDeck(deck, parserLog);
         eclipseState.reset(new EclipseState(deck, parserLog));
     }

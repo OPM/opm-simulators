@@ -504,21 +504,21 @@ namespace Opm
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Aqua ];
 
-                rates[i] = p.WaterRate;
+                rates[i] = p.waterRate;
             }
 
             if (pu.phase_used[ BlackoilPhases::Liquid ]) {
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Liquid ];
 
-                rates[i] = p.OilRate;
+                rates[i] = p.oilRate;
             }
 
             if (pu.phase_used[ BlackoilPhases::Vapour ]) {
                 const std::vector<double>::size_type
                     i = pu.phase_pos[ BlackoilPhases::Vapour ];
 
-                rates[i] = p.GasRate;
+                rates[i] = p.gasRate;
             }
         }
     } // namespace SimFIBODetails
