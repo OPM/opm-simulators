@@ -1011,7 +1011,7 @@ namespace {
             const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
             const V poly_in_perf = subset(polyin, well_cells);
             const V poly_mc_perf = subset(mc, well_cells).value();
-            residual_.material_balance_eq[poly_pos_] += superset(cq_ps[pu.phase_pos[Water]]*poly_mc_perf
+            residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]]*poly_mc_perf
                                                      + (wops_.w2p * mix_s[pu.phase_pos[Water]])*cqt_is*poly_in_perf,
                                                      well_cells, nc);
         }
