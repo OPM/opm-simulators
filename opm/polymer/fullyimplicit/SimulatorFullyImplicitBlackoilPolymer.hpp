@@ -86,14 +86,13 @@ namespace Opm
                                               const PolymerPropsAd& polymer_props,
                                               const RockCompressibility* rock_comp_props,
                                               NewtonIterationBlackoilInterface& linsolver,
-                                              const PolymerInflowInterface& polymer_inflow,
-                                              WellsManager& well_manager,
                                               const double* gravity,
                                               const bool disgas,
                                               const bool vapoil,
                                               const bool polymer,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               EclipseWriter& output_writer,
+                                              Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
         /// Run the simulation.
@@ -104,8 +103,7 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state,
-                            WellStateFullyImplicitBlackoil& well_state);
+                            PolymerBlackoilState& state);
 
     private:
         class Impl;

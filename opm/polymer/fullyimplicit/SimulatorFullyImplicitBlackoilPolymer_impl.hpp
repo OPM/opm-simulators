@@ -52,6 +52,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -82,19 +83,17 @@ namespace Opm
              const PolymerPropsAd&  polymer_props,
              const RockCompressibility* rock_comp_props,
              NewtonIterationBlackoilInterface& linsolver,
-             const PolymerInflowInterface& polymer_inflow,
-             WellsManager& wells_manager,
              const double* gravity,
              bool has_disgas,
              bool has_vapoil,
              bool has_polymer,
              std::shared_ptr<EclipseState> eclipse_state,
              EclipseWriter& output_writer,
+             Opm::DeckConstPtr& deck,
              const std::vector<double>& threshold_pressures_by_face);
 
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state,
-                            WellStateFullyImplicitBlackoil& well_state);
+                            PolymerBlackoilState& state);
 
     private:
         // Data.
@@ -118,8 +117,6 @@ namespace Opm
         // Solvers
         const DerivedGeology& geo_;
         NewtonIterationBlackoilInterface& solver_;
-        const PolymerInflowInterface& polymer_inflow_;
-        WellsManager& wells_manager_;
         // Misc. data
         std::vector<int> allcells_;
         const bool has_disgas_;
@@ -129,6 +126,7 @@ namespace Opm
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
         EclipseWriter& output_writer_;
+        Opm::DeckConstPtr& deck_;
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
@@ -151,19 +149,18 @@ namespace Opm
                                                                                     const PolymerPropsAd& polymer_props,
                                                                                     const RockCompressibility* rock_comp_props,
                                                                                     NewtonIterationBlackoilInterface& linsolver,
-                                                                                    const PolymerInflowInterface& polymer_inflow,
-                                                                                    WellsManager& wells_manager,
                                                                                     const double* gravity,
                                                                                     const bool has_disgas,
                                                                                     const bool has_vapoil,
                                                                                     const bool has_polymer,
                                                                                     std::shared_ptr<EclipseState> eclipse_state,
                                                                                     EclipseWriter& output_writer,
+                                                                                    Opm::DeckConstPtr& deck,
                                                                                     const std::vector<double>& threshold_pressures_by_face)
 
     {
-        pimpl_.reset(new Impl(param, grid, geo, props, polymer_props, rock_comp_props, linsolver, polymer_inflow, wells_manager, gravity, has_disgas, 
-                              has_vapoil, has_polymer, eclipse_state, output_writer, threshold_pressures_by_face));
+        pimpl_.reset(new Impl(param, grid, geo, props, polymer_props, rock_comp_props, linsolver, gravity, has_disgas, 
+                              has_vapoil, has_polymer, eclipse_state, output_writer, deck, threshold_pressures_by_face));
     }
 
 
@@ -172,10 +169,9 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::run(SimulatorTimer& timer,
-                                                                  PolymerBlackoilState& state,
-                                                                  WellStateFullyImplicitBlackoil& well_state)
+                                                                  PolymerBlackoilState& state)
     {
-        return pimpl_->run(timer, state, well_state);
+        return pimpl_->run(timer, state);
     }
 
 
@@ -246,14 +242,13 @@ namespace Opm
                                                          const PolymerPropsAd& polymer_props,
                                                          const RockCompressibility* rock_comp_props,
                                                          NewtonIterationBlackoilInterface& linsolver,
-                                                         const PolymerInflowInterface& polymer_inflow,
-                                                         WellsManager& wells_manager,
                                                          const double* gravity,
                                                          const bool has_disgas,
                                                          const bool has_vapoil,
                                                          const bool has_polymer,
                                                          std::shared_ptr<EclipseState> eclipse_state,
                                                          EclipseWriter& output_writer,
+                                                         Opm::DeckConstPtr& deck,
                                                          const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
@@ -263,13 +258,12 @@ namespace Opm
           gravity_(gravity),
           geo_(geo),
           solver_(linsolver),
-          polymer_inflow_(polymer_inflow),
-          wells_manager_(wells_manager),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           has_polymer_(has_polymer),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
+          deck_(deck),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face)
     {
@@ -302,8 +296,7 @@ namespace Opm
 
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::Impl::run(SimulatorTimer& timer,
-                                                                        PolymerBlackoilState& state,
-                                                                        WellStateFullyImplicitBlackoil& well_state)
+                                                                        PolymerBlackoilState& state)
     {
         WellStateFullyImplicitBlackoil prev_well_state;
 
@@ -317,30 +310,47 @@ namespace Opm
         std::ofstream tstep_os(tstep_filename.c_str());
 
         // Main simulation loop.
-//        while (!timer.done()) {
+        while (!timer.done()) {
             // Report timestep.
             step_timer.start();
             timer.report(std::cout);
 
             // Create wells and well state.
-//            WellsManager wells_manager(eclipse_state_,
-//                                       timer.currentStepNum(),
-//                                       Opm::UgGridHelpers::numCells(grid_),
-//                                       Opm::UgGridHelpers::globalCell(grid_),
-//                                       Opm::UgGridHelpers::cartDims(grid_),
-//                                       Opm::UgGridHelpers::dimensions(grid_),
-//                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
-//                                       Opm::UgGridHelpers::cell2Faces(grid_),
-//                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
-//                                       props_.permeability());
-            const Wells* wells = wells_manager_.c_wells();
-//            WellStateFullyImplicitBlackoil well_state;
-//            well_state.init(wells, state.blackoilState());
-//            if (timer.currentStepNum() != 0) {
-//                // Transfer previous well state to current.
-//                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
-//            }
-
+            WellsManager wells_manager(eclipse_state_,
+                                       timer.currentStepNum(),
+                                       Opm::UgGridHelpers::numCells(grid_),
+                                       Opm::UgGridHelpers::globalCell(grid_),
+                                       Opm::UgGridHelpers::cartDims(grid_),
+                                       Opm::UgGridHelpers::dimensions(grid_),
+                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
+                                       Opm::UgGridHelpers::cell2Faces(grid_),
+                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
+                                       props_.permeability());
+            const Wells* wells = wells_manager.c_wells();
+            WellStateFullyImplicitBlackoil well_state;
+            well_state.init(wells, state.blackoilState());
+            if (timer.currentStepNum() != 0) {
+                // Transfer previous well state to current.
+                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
+            }
+                
+            // compute polymer inflow
+            std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
+            if (deck_->hasKeyword("WPOLYMER")) {
+                if (wells_manager.c_wells() == 0) {
+                    OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
+                }
+                polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, *wells, Opm::UgGridHelpers::numCells(grid_)));
+            } else {
+                polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
+                                                                1.0*Opm::unit::day,
+                                                                0.0));
+            }
+            std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
+            const PolymerInflowInterface& polymer_inflow = *polymer_inflow_ptr;
+            polymer_inflow.getInflowValues(timer.simulationTimeElapsed(), 
+                                           timer.simulationTimeElapsed() + timer.currentStepLength(),
+                                           polymer_inflow_c);
             // Output state at start of time step.
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
@@ -363,13 +373,6 @@ namespace Opm
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
-            // compute polymer inflow
-            std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
-            if (has_polymer_) {
-                polymer_inflow_.getInflowValues(timer.simulationTimeElapsed(), 
-                                                 timer.simulationTimeElapsed() + timer.currentStepLength(),
-                                                 polymer_inflow_c);
-            }
             // Run a single step of the solver.
             solver_timer.start();
             FullyImplicitBlackoilPolymerSolver<T> solver(param_, grid_, props_, geo_, rock_comp_props_, polymer_props_, *wells, solver_, has_disgas_, has_vapoil_, has_polymer_);
@@ -391,19 +394,19 @@ namespace Opm
             }
 
             // Increment timer, remember well state.
-//            ++timer;
-//            prev_well_state = well_state;
-//        }
+            ++timer;
+            prev_well_state = well_state;
+        }
 
         // Write final simulation state.
-//        if (output_) {
-//            if (output_vtk_) {
-//                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-//            }
-//            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-//            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-//            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
-//        } 
+        if (output_) {
+            if (output_vtk_) {
+                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+            }
+            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
+        } 
 
         // Stop timer and create timing report
         total_timer.stop();
