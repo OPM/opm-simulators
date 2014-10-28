@@ -347,10 +347,9 @@ namespace Opm
                                                                 0.0));
             }
             std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(grid_));
-            const PolymerInflowInterface& polymer_inflow = *polymer_inflow_ptr;
-            polymer_inflow.getInflowValues(timer.simulationTimeElapsed(), 
-                                           timer.simulationTimeElapsed() + timer.currentStepLength(),
-                                           polymer_inflow_c);
+            polymer_inflow_ptr->getInflowValues(timer.simulationTimeElapsed(), 
+                                                timer.simulationTimeElapsed() + timer.currentStepLength(),
+                                                polymer_inflow_c);
             // Output state at start of time step.
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
