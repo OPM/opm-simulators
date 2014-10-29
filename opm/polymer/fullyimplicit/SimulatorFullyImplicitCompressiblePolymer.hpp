@@ -18,11 +18,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
+#ifndef OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <vector>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -33,11 +34,13 @@ namespace Opm
     class BlackoilPropsAdInterface;
     class RockCompressibility;
     class DerivedGeology;
+    class WellStateFullyImplicitBlackoil;
     class WellsManager;
+    class EclipseWriter;
+    class EclipseState;
     class NewtonIterationBlackoilInterface;
     class SimulatorTimer;
     class PolymerBlackoilState;
-    class WellState;
     class PolymerPropsAd;
     class PolymerInflowInterface;
     struct SimulatorReport;
@@ -66,8 +69,9 @@ namespace Opm
         /// \param[in] props         fluid and rock properties
         /// \param[in] polymer_props polymer properties
         /// \param[in] rock_comp_props if non-null, rock compressibility properties
-        /// \param[in] well_manager  well manager, may manage no (null) wells
-        /// \param[in] polymer_inflow polymer influx.
+        /// \param[in] eclipse_state  
+        /// \param[in] eclipse_writer
+        /// \param[in] deck
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
@@ -76,8 +80,9 @@ namespace Opm
                                    				  const BlackoilPropsAdInterface& props,
                                        			  const PolymerPropsAd&    polymer_props,
                                        			  const RockCompressibility* rock_comp_props,
-                                       			  WellsManager& wells_manager,
-                                       			  PolymerInflowInterface& polymer_inflow,
+                                                  std::shared_ptr<EclipseState> eclipse_state,
+                                                  EclipseWriter& eclipse_writer,
+                                                  Opm::DeckConstPtr& deck,
                                        			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
 
@@ -86,18 +91,16 @@ namespace Opm
         /// modify the reservoir and well states.
         /// \param[in,out] timer       governs the requested reporting timesteps
         /// \param[in,out] state       state of reservoir: pressure, fluxes
-        /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state,
-                            WellState& well_state);
+                            PolymerBlackoilState& state);
 
     private:
         class Impl;
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        boost::shared_ptr<Impl> pimpl_;
+        std::shared_ptr<Impl> pimpl_;
     };
 
 } // namespace Opm
 
-#endif // OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
+#endif // OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED

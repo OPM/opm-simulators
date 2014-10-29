@@ -36,6 +36,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -58,7 +59,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -105,45 +106,34 @@ try
     std::shared_ptr<BlackoilPropertiesInterface> props;
     std::shared_ptr<BlackoilPropsAdInterface> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
-    Opm::DeckConstPtr deck;
-    EclipseStateConstPtr eclipseState;
     PolymerBlackoilState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
-    ParserPtr parser(new Opm::Parser());
-    deck = parser->parseFile(deck_filename);
-    eclipseState.reset(new Opm::EclipseState(deck));
+
+    Opm::ParserPtr newParser(new Opm::Parser());
+    bool strict_parsing = param.getDefault("strict_parsing", true);
+    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename, strict_parsing);
+    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
     // Grid init
     std::vector<double> porv;
     if (eclipseState->hasDoubleGridProperty("PORV")) {
         porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     }
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
-//    grid.reset(new GridManager(deck));
-
-    // use the capitalized part of the deck's filename between the
-    // last '/' and the last '.' character as base name.
-/*
-    std::string baseName = deck_filename;
-    auto charPos = baseName.rfind('/');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(charPos + 1);
-    charPos = baseName.rfind('.');
-    if (charPos != std::string::npos)
-        baseName = baseName.substr(0, charPos);
-    baseName = boost::to_upper_copy(baseName);
-
-    Opm::EclipseWriter outputWriter(param, share_obj(*deck), share_obj(*grid->c_grid()));
-*/
+    auto &cGrid = *grid->c_grid();
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+    Opm::EclipseWriter outputWriter(param,
+                                    eclipseState,
+                                    pu,
+                                    cGrid.number_of_cells,
+                                    cGrid.global_cell);
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid()));
+    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
-    // check_well_controls = param.getDefault("check_well_controls", false);
-    // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
     rock_comp.reset(new RockCompressibility(deck, eclipseState));
     // Gravity.
@@ -182,18 +172,14 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
+    Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
+    SimulatorTimer simtimer;
+    simtimer.init(timeMap);
 
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << std::flush;
 
     SimulatorReport rep;
     // With a deck, we may have more epochs etc.
     WellState well_state;
-    int step = 0;
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
-    SimulatorTimer simtimer;
-    simtimer.init(timeMap);
-    const double total_time = simtimer.totalTime();
     // Check for WPOLYMER presence in last epoch to decide
     // polymer injection control type.
     const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
@@ -203,62 +189,32 @@ try
                         "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
         }
     }
-    for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
-        simtimer.setCurrentStepNum(reportStepIdx);
-
-        // Report on start of step.
-        std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
-                  << "\n                  (number of remaining steps: "
-                  << simtimer.numSteps() - step << ")\n\n" << std::flush;
-
-        // Create new wells, polymer inflow controls.
-        WellsManager wells(eclipseState, reportStepIdx, *grid->c_grid(), props->permeability());
-        std::unique_ptr<PolymerInflowInterface> polymer_inflow;
-        if (use_wpolymer) {
-            if (wells.c_wells() == 0) {
-                OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
-            }
-            polymer_inflow.reset(new PolymerInflowFromDeck(deck, *wells.c_wells(), props->numCells()));
-        } else {
-            polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
-                                                        param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
-                                                        param.getDefault("poly_amount", polymer_props.cMax())));
-        }
-        // @@@ HACK: we should really make a new well state and
-        // properly transfer old well state to it every epoch,
-        // since number of wells may change etc.
-        if (reportStepIdx == 0) {
-            well_state.init(wells.c_wells(), state);
-        }
-
-        // Create and run simulator.
-        Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
-        SimulatorFullyImplicitCompressiblePolymer simulator(param,
-                                                 *grid->c_grid(),
-                                                 geology,
-                                                 *new_props,
-                                                 polymer_props_ad,
-                                                 rock_comp->isActive() ? rock_comp.get() : 0,
-                                                 wells,
-                                                 *polymer_inflow,
-                                                 *fis_solver,
-                                                 grav);
-        if (reportStepIdx == 0) {
-            warnIfUnusedParams(param);
-        }
-        SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
-        // Update total timing report and remember step number.
-        rep += epoch_rep;
-        step = simtimer.currentStepNum();
-    }
+    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
+              << std::flush;
+    SimulatorReport fullReport;
+    // Create and run simulator.
+    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
+    SimulatorFullyImplicitCompressiblePolymer simulator(param,
+                                             *grid->c_grid(),
+                                             geology,
+                                             *new_props,
+                                             polymer_props_ad,
+                                             rock_comp->isActive() ? rock_comp.get() : 0,
+                                             eclipseState,
+                                             outputWriter,
+                                             deck,
+                                             *fis_solver,
+                                             grav);
+    fullReport= simulator.run(simtimer, state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
-    rep.report(std::cout);
+    fullReport.report(std::cout);
 
     if (output) {
         std::string filename = output_dir + "/walltime.param";
         std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        rep.reportParam(tot_os);
+        fullReport.reportParam(tot_os);
+        warnIfUnusedParams(param);
     }
 
 }
