@@ -29,7 +29,7 @@
 #include <opm/material/fluidsystems/ParameterCacheBase.hpp>
 
 #include <opm/material/eos/PengRobinson.hpp>
-#include <opm/material/eos/PengRobinsonparamsMixture.hpp>
+#include <opm/material/eos/PengRobinsonParamsMixture.hpp>
 
 namespace Opm {
 
