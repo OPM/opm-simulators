@@ -197,9 +197,8 @@ namespace {
     FullyImplicitCompressiblePolymerSolver::
     step(const double          dt,
          PolymerBlackoilState& x ,
-         WellStateFullyImplicitBlackoil&            xw,
-         const std::vector<double>& polymer_inflow,
-		 std::vector<double>& src)
+         WellStateFullyImplicitBlackoil& xw,
+         const std::vector<double>& polymer_inflow)
     {
 
         const SolutionState state = constantState(x, xw);
@@ -209,7 +208,7 @@ namespace {
         const double atol  = 1.0e-12;
         const double rtol  = 5.0e-8;
         const int    maxit = 15;
-        assemble(dt, x, xw, polymer_inflow, src);
+        assemble(dt, x, xw, polymer_inflow);
 
         const double r0  = residualNorm();
         const double r_polymer = residual_.material_balance_eq[2].value().matrix().lpNorm<Eigen::Infinity>();
@@ -223,7 +222,7 @@ namespace {
             const V dx = solveJacobianSystem();
 
             updateState(dx, x, xw);
-            assemble(dt, x, xw, polymer_inflow, src);
+            assemble(dt, x, xw, polymer_inflow);
 
             const double r = residualNorm();
 
@@ -494,10 +493,9 @@ namespace {
     void
     FullyImplicitCompressiblePolymerSolver::
     assemble(const double             dt,
-             const PolymerBlackoilState& x   ,
-             const WellStateFullyImplicitBlackoil&     xw,
-             const std::vector<double>& polymer_inflow,
-			 std::vector<double>& src)
+             const PolymerBlackoilState& x,
+             const WellStateFullyImplicitBlackoil& xw,
+             const std::vector<double>& polymer_inflow)
     {
         // Create the primary variables.
         //
@@ -541,9 +539,6 @@ namespace {
         const int np = wells_.number_of_phases;
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
-		for (int i = 0; i < nc; ++i) {
-			src[i] = 0.0;
-		}
 
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         const V transw = Eigen::Map<const V>(wells_.WI, nperf);
@@ -621,9 +616,6 @@ namespace {
             well_contribs[phase] = superset(perf_flux*perf_b, well_cells, nc);
             // DUMP(well_contribs[phase]);
             residual_.material_balance_eq[phase] += well_contribs[phase];
-			for (int cell = 0; cell < nc; ++cell) {
-				src[cell] += well_contribs[phase].value()[cell];
-			}
         }
 
         // well rates contribs to polymer mass balance eqn.

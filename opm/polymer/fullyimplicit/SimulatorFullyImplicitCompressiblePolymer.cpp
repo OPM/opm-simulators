@@ -32,7 +32,6 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
-#include <opm/polymer/fullyimplicit/utilities.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
@@ -232,11 +231,9 @@ namespace Opm
         } else {
             computePorevolume(grid_, props_.porosity(), porevol);
         }
-        const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
         std::vector<double> initial_porevol = porevol;
 
         std::vector<double> polymer_inflow_c(grid_.number_of_cells);
-		std::vector<double> transport_src(grid_.number_of_cells);
         // Main simulation loop.
         Opm::time::StopWatch solver_timer;
         double stime = 0.0;
@@ -248,11 +245,11 @@ namespace Opm
 
         //Main simulation loop.
         while (!timer.done()) {
+#if 0
             double tot_injected[2] = { 0.0 };
             double tot_produced[2] = { 0.0 };
             Opm::Watercut watercut;
             watercut.push(0.0, 0.0, 0.0);
-#if 0
             std::vector<double> fractional_flows;
             std::vector<double> well_resflows_phase;
             if (wells_) {
@@ -318,7 +315,7 @@ namespace Opm
             // Run solver.
             solver_timer.start();
             FullyImplicitCompressiblePolymerSolver solver(grid_, props_, geo_, rock_comp_props_, polymer_props_, *wells_manager.c_wells(), linsolver_);
-            solver.step(timer.currentStepLength(), state, well_state, polymer_inflow_c, transport_src);
+            solver.step(timer.currentStepLength(), state, well_state, polymer_inflow_c);
             // Stop timer and report.
             solver_timer.stop();
             const double st = solver_timer.secsSinceStart();
@@ -330,12 +327,11 @@ namespace Opm
                 initial_porevol = porevol;
                 computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
             }
-
+/*
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
     		double polyinj = 0;
     		double polyprod = 0;
-
             Opm::computeInjectedProduced(props_, polymer_props_,
                                          state,
                                          transport_src, polymer_inflow_c, timer.currentStepLength(),
@@ -363,12 +359,12 @@ namespace Opm
             std::cout << "    Total prod reservoir volumes:    "
                       << std::setw(width) << tot_produced[0]
                       << std::setw(width) << tot_produced[1] << std::endl;
+*/
             if (output_) {
                 SimulatorReport step_report;
                 step_report.pressure_time = st;
                 step_report.total_time =  step_timer.secsSinceStart();
                 step_report.reportParam(tstep_os);
-                outputWaterCut(watercut, output_dir_);
             }
             ++timer;
             prev_well_state = well_state;
@@ -464,7 +460,7 @@ namespace Opm
             }
         }
 
-    
+#if 0    
         static void outputWaterCut(const Opm::Watercut& watercut,
                     	            const std::string& output_dir)
         {
@@ -476,6 +472,7 @@ namespace Opm
             }
             watercut.write(os);
         }
+#endif
     }
 
 } // namespace Opm

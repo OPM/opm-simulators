@@ -79,13 +79,11 @@ namespace Opm {
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
         /// \param[in] polymer_inflow	polymer influx
-        /// \param[in] src				to caculate wc
         void
         step(const double   			dt,
              PolymerBlackoilState& 		state ,
-             WellStateFullyImplicitBlackoil&     			wstate,
-             const std::vector<double>& polymer_inflow,
-			 std::vector<double>& 		src);
+             WellStateFullyImplicitBlackoil& wstate,
+             const std::vector<double>& polymer_inflow);
 
     private:
         typedef AutoDiffBlock<double> ADB;
@@ -159,9 +157,8 @@ namespace Opm {
         void
         assemble(const double             	 dt,
                  const PolymerBlackoilState& x,
-                 const WellStateFullyImplicitBlackoil&     		 xw,  
-                 const std::vector<double>&  polymer_inflow,
-				 std::vector<double>& 		 src);
+                 const WellStateFullyImplicitBlackoil& xw,  
+                 const std::vector<double>& polymer_inflow);
 
         V solveJacobianSystem() const;
 
