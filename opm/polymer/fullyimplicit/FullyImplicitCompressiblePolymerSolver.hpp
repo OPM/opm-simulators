@@ -38,7 +38,7 @@ namespace Opm {
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
     class PolymerBlackoilState;
-    class WellState;
+    class WellStateFullyImplicitBlackoil;
 
     /// A fully implicit solver for the oil-water with polymer problem.
     ///
@@ -83,7 +83,7 @@ namespace Opm {
         void
         step(const double   			dt,
              PolymerBlackoilState& 		state ,
-             WellState&     			wstate,
+             WellStateFullyImplicitBlackoil&     			wstate,
              const std::vector<double>& polymer_inflow,
 			 std::vector<double>& 		src);
 
@@ -146,11 +146,11 @@ namespace Opm {
         // Private methods.
         SolutionState
         constantState(const PolymerBlackoilState& x,
-                      const WellState&     xw);
+                      const WellStateFullyImplicitBlackoil&     xw);
 
         SolutionState
         variableState(const PolymerBlackoilState& x,
-                      const WellState&     xw);
+                      const WellStateFullyImplicitBlackoil&     xw);
 
         void
         computeAccum(const SolutionState& state,
@@ -159,7 +159,7 @@ namespace Opm {
         void
         assemble(const double             	 dt,
                  const PolymerBlackoilState& x,
-                 const WellState&     		 xw,  
+                 const WellStateFullyImplicitBlackoil&     		 xw,  
                  const std::vector<double>&  polymer_inflow,
 				 std::vector<double>& 		 src);
 
@@ -167,7 +167,7 @@ namespace Opm {
 
         void updateState(const V& dx,
                          PolymerBlackoilState& state,
-                         WellState& well_state) const;
+                         WellStateFullyImplicitBlackoil& well_state) const;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;

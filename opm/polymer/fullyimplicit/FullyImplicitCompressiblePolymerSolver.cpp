@@ -25,12 +25,12 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
 #include <cassert>
@@ -197,7 +197,7 @@ namespace {
     FullyImplicitCompressiblePolymerSolver::
     step(const double          dt,
          PolymerBlackoilState& x ,
-         WellState&            xw,
+         WellStateFullyImplicitBlackoil&            xw,
          const std::vector<double>& polymer_inflow,
 		 std::vector<double>& src)
     {
@@ -306,7 +306,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::SolutionState
     FullyImplicitCompressiblePolymerSolver::constantState(const PolymerBlackoilState& x,
-                                               			  const WellState&     xw)
+                                               			  const WellStateFullyImplicitBlackoil&     xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -368,7 +368,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::SolutionState
     FullyImplicitCompressiblePolymerSolver::variableState(const PolymerBlackoilState& x,
-                                               			  const WellState&     xw)
+                                               			  const WellStateFullyImplicitBlackoil&     xw)
     {
         const int nc = grid_.number_of_cells;
         const int np = x.numPhases();
@@ -495,7 +495,7 @@ namespace {
     FullyImplicitCompressiblePolymerSolver::
     assemble(const double             dt,
              const PolymerBlackoilState& x   ,
-             const WellState&     xw,
+             const WellStateFullyImplicitBlackoil&     xw,
              const std::vector<double>& polymer_inflow,
 			 std::vector<double>& src)
     {
@@ -695,7 +695,7 @@ namespace {
     void FullyImplicitCompressiblePolymerSolver::
 	updateState(const V& 				dx,
                 PolymerBlackoilState& 	state,
-                WellState& 				well_state) const
+                WellStateFullyImplicitBlackoil& 				well_state) const
     {
         const int np = fluid_.numPhases();
         const int nc = grid_.number_of_cells;
