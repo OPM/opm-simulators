@@ -69,7 +69,6 @@ Scalar computeSumxg(FluidState &resultFluidState,
 {
     static const int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static const int waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static const int numComponents = FluidSystem::numComponents;
 
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
