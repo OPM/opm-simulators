@@ -237,7 +237,7 @@ try
         rep = simulator.run(simtimer, state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
-        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
+        Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
 
         std::cout << "\n\n================    Starting main simulation loop     ===============\n"
                   << "                        (number of report steps: "
