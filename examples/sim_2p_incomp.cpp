@@ -214,14 +214,10 @@ try
         param.writeParam(output_dir + "/simulation.param");
     }
 
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
-
-    std::cout << "\n\n================    Starting main simulation loop     ===============\n"
-              << "                        (number of report steps: "
-              << (use_deck ? timeMap->numTimesteps() : 1) << ")\n\n" << std::flush;
-
     SimulatorReport rep;
     if (!use_deck) {
+        std::cout << "\n\n================    Starting main simulation loop     ===============\n"
+                  << "                        (number of report steps: 1)\n\n" << std::flush;
         // Simple simulation without a deck.
         WellsManager wells; // no wells.
         SimulatorIncompTwophase simulator(param,
@@ -241,6 +237,11 @@ try
         rep = simulator.run(simtimer, state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
+        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
+
+        std::cout << "\n\n================    Starting main simulation loop     ===============\n"
+                  << "                        (number of report steps: "
+                  << timeMap->numTimesteps() << ")\n\n" << std::flush;
         WellState well_state;
         int step = 0;
         SimulatorTimer simtimer;
