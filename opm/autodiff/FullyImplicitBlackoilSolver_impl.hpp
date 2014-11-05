@@ -1420,12 +1420,6 @@ namespace {
             rv = rv_old - drv_limited;
         }
 
-        // Update the state
-        if (has_disgas_)
-            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
-
-        if (has_vapoil_)
-            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
 
         // Sg is used as primal variable for water only cells.
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
@@ -1479,6 +1473,14 @@ namespace {
 
         }
 
+        // Update the state
+        if (has_disgas_) {
+            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+        }
+
+        if (has_vapoil_) {
+            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
+        }
 
         // Qs update.
         // Since we need to update the wellrates, that are ordered by wells,
