@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
 BOOST_AUTO_TEST_CASE (GwsegEPS_A)    
 {
     // This is the eps (but no hysteris) version of the Gwseg model.
-    // However, only default scaling parameters, i.e no scaling.
+    // Scaling parameters from keyword SWL etc.
     
     //std::cout << "==================================== GwsegEPS_A ====================================" << std::endl;
     
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
 BOOST_AUTO_TEST_CASE (GwsegEPS_B)    
 {
     // This is the eps (but no hysteris) version of the Gwseg model.
-    // However, only default scaling parameters, i.e no scaling.
+    // Scaling parameters from ENPTVD table.
     
     //std::cout << "==================================== GwsegEPS_B ====================================" << std::endl;
  /*   
@@ -465,7 +465,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_B)
 BOOST_AUTO_TEST_CASE (GwsegEPS_C)    
 {
     // This is the eps (but no hysteris) version of the Gwseg model.
-    // However, only default scaling parameters, i.e no scaling.
+    // Scaling parameters given the "norne-way", i.e EQUALS, COPY, ADD, MULTIPLY.
     
     //std::cout << "==================================== GwsegEPS_C ====================================" << std::endl;
     
@@ -558,6 +558,91 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     
     }
 
+}
+
+BOOST_AUTO_TEST_CASE (GwsegEPS_D)
+{
+    // This is the eps and hysteris version of the Gwseg model.
+    // However, only default scaling parameters, i.e no scaling.
+    
+    //std::cout << "==================================== GwsegEPS_D ====================================" << std::endl;
+
+    Opm::parameter::ParameterGroup param;
+    
+    Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
+    const UnstructuredGrid& grid = *(gm.c_grid());
+    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_D.DATA");
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
+    
+    const int np = props.numPhases();
+    const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
+    const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
+    const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
+    
+    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(wpos == 0);
+    BOOST_REQUIRE(opos == 1);
+    BOOST_REQUIRE(gpos == 2);
+    
+    const int n=11;
+    double s[n*np];
+    int cells[n];
+    double kr[n*np];
+    double dkrds[n*np*np];
+    
+    for (int i=0; i<n; ++i) {
+      cells[i] = 0;
+      s[i*np+wpos] = i*0.1;
+      s[i*np+opos] = 1.0-s[i*np+wpos];
+      s[i*np+gpos] = 0.0;
+    }
+    
+    props.relperm(n, s, cells, kr, dkrds);
+    
+    double krw[11] = {0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.7};
+    double kro[11] = {1.0, 1.0, 0.8, 0.6, 0.4, 0.3, 0.2, 0.1, 0.0, 0.0, 0.0};
+    double DkrwDsw[11] = {0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0};
+    double DkroDsw[11] = {-2.0, -2.0, -2.0, -2.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0};
+    double DkroDsg[11] = {-5.0, -5.0, -3.0, -2.0, -0.66666666666666741, -0.75, -0.8, 
+                          -0.83333333333333237, 0.14285714285714296, 0.0, 0.0};
+    
+    const double reltol = 1.0e-6;
+    for (int i=0; i<n; ++i) {
+      BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[i], reltol);
+      BOOST_CHECK_CLOSE(kr[i*np+opos], kro[i], reltol);
+      BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
+      BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[i], reltol);
+      BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
+    }
+
+/*    
+    std::cout << std::setw(12) << "sw";
+    std::cout << std::setw(12) << "so";
+    std::cout << std::setw(12) << "sg";
+    std::cout << std::setw(12) << "krw";
+    std::cout << std::setw(12) << "kro";
+    std::cout << std::setw(12) << "krg";
+    std::cout << std::setw(12) << "DkrwDsw";
+    std::cout << std::setw(12) << "DkroDsw";
+    std::cout << std::setw(12) << "DkrgDsw";
+    std::cout << std::setw(12) << "DkrwDso";
+    std::cout << std::setw(12) << "DkroDso";
+    std::cout << std::setw(12) << "DkrgDso";
+    std::cout << std::setw(12) << "DkrwDsg";
+    std::cout << std::setw(12) << "DkroDsg";
+    std::cout << std::setw(12) << "DkrgDsg";
+    std::cout << std::endl;
+    for (int i=0; i<n; ++i) {
+      std::cout << std::setw(12) << s[i*np+wpos] << std::setw(12) << s[i*np+opos] << std::setw(12) << s[i*np+gpos]
+                << std::setw(12) << kr[i*np+wpos] << std::setw(12) << kr[i*np+opos] << std::setw(12) << kr[i*np+gpos];
+      for (int j=0; j<np*np; ++j) {
+        std::cout << std::setw(12) << dkrds[i*np*np+j];
+      }
+      std::cout << std::endl;
+    }
+*/
 }
 
 BOOST_AUTO_TEST_SUITE_END()
