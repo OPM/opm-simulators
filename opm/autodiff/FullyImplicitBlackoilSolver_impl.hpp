@@ -1435,14 +1435,10 @@ namespace {
             // The obvious case
             auto hasGas = (sg > 0 && isRs == 0);
 
-            // keep oil saturated if previous sg is sufficient large:
-            const int pos = pu.phase_pos[ Gas ];
-            auto hadGas = (sg <= 0 && s_old.col(pos) > epsilon);
             // Set oil saturated if previous rs is sufficiently large
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
-
-            auto useSg = watOnly || hasGas || hadGas  || gasVaporized;
+            auto useSg = watOnly || hasGas || gasVaporized;
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) { rs[c] = rsSat[c];}
                 else { primalVariable_[c] = PrimalVariables::RS; }
@@ -1458,13 +1454,10 @@ namespace {
             // The obvious case
             auto hasOil = (so > 0 && isRv == 0);
 
-            // keep oil saturated if previous so is sufficient large:
-            const int pos = pu.phase_pos[ Oil ];
-            auto hadOil = (so <= 0 && s_old.col(pos) > epsilon );
             // Set oil saturated if previous rv is sufficiently large
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
             auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-            auto useSg = watOnly || hasOil || hadOil || oilCondensed;
+            auto useSg = watOnly || hasOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) { rv[c] = rvSat[c]; }
                 else {primalVariable_[c] = PrimalVariables::RV; }
