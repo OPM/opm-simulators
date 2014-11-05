@@ -35,7 +35,7 @@ namespace Opm
         TimeStepControlInterface() {}
     public:
         /// \param state simulation state before computing update in the solver (default is empty)
-        virtual void initialize( const SimulatorState& state ) {}
+        virtual void initialize( const SimulatorState& /*state*/ ) {}
 
         /// compute new time step size suggestions based on the PID controller
         /// \param dt          time step size used in the current step
