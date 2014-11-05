@@ -60,7 +60,7 @@ namespace Opm {
         {
             double                          dp_max_rel_;
             double                          ds_max_;
-            double                          drs_max_rel_;
+            double                          dr_max_rel_;
             enum RelaxType                  relax_type_;
             double                          relax_max_;
             double                          relax_increment_;
@@ -338,7 +338,7 @@ namespace Opm {
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
-        double drsMaxRel() const { return param_.drs_max_rel_; }
+        double drMaxRel() const { return param_.dr_max_rel_; }
         enum RelaxType relaxType() const { return param_.relax_type_; }
         double relaxMax() const { return param_.relax_max_; };
         double relaxIncrement() const { return param_.relax_increment_; };

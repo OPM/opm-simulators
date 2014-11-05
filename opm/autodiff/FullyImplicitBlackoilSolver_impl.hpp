@@ -163,7 +163,7 @@ namespace {
         // default values for the solver parameters
         dp_max_rel_      = 1.0e9;
         ds_max_          = 0.2;
-        drs_max_rel_     = 1.0e9;
+        dr_max_rel_      = 1.0e9;
         relax_type_      = DAMPEN;
         relax_max_       = 0.5;
         relax_increment_ = 0.1;
@@ -189,7 +189,7 @@ namespace {
         // overload with given parameters
         dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_      = param.getDefault("ds_max", ds_max_);
-        drs_max_rel_ = param.getDefault("drs_max_rel", drs_max_rel_);
+        dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
 
@@ -1403,20 +1403,19 @@ namespace {
         }
 
         // Update rs and rv
-        const double drsmaxrel = drsMaxRel();
-        const double drvmax = 1e9;//% same as in Mrst
+        const double drmaxrel = drMaxRel();
         V rs;
         if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drsmaxrel);
+            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
             const V drv = isRv * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min(drvmax);
+            const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
             rv = rv_old - drv_limited;
         }
 
