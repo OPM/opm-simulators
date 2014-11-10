@@ -194,7 +194,7 @@ namespace Opm
 
         // Construct linear solver.
         const double tolerance = 1e-3;
-        const int maxit = 5000;
+        const int maxit = 150;
         const int verbosity = 0;
         const int restart = 40;
         Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
