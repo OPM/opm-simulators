@@ -44,6 +44,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <Eigen/SparseLU>
 
 namespace Opm
 {
@@ -241,17 +242,14 @@ namespace Opm
 
             // Schur complement of (A B ; C D) wrt. D is A - B*inv(D)*C.
             // This is applied to all 2x2 block submatrices.
-            // We require that D is diagonal.
+            // We do not explicitly compute inv(D) instead Du = C is solved
+
             const M& D = eqs[n].derivative()[n];
-            if (!isDiagonal(D)) {
-                // std::cout << "++++++++++++++++++++++++++++++++++++++++++++\n"
-                //           << D
-                //           << "++++++++++++++++++++++++++++++++++++++++++++\n" << std::endl;
-                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
-                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
-            }
-            V diag = D.diagonal();
-            Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
+
+            // Use sparse LU to solve the block submatrices
+            Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
+            solver.compute(D);
+
             std::vector<V> vals(num_eq);              // Number n will remain empty.
             std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
             for (int eq = 0; eq < num_eq; ++eq) {
@@ -265,11 +263,15 @@ namespace Opm
                         continue;
                     }
                     // Create new jacobians.
-                    M schur_jac = eqs[eq].derivative()[var] - B * (invD * eqs[n].derivative()[var]);
+                    const M& C = eqs[n].derivative()[var];
+                    const M u = solver.solve(C);
+                    M schur_jac = eqs[eq].derivative()[var] - B * u;
                     jacs[eq].push_back(schur_jac);
                 }
                 // Update right hand side.
-                vals[eq] = eqs[eq].value().matrix() - B * (invD * eqs[n].value().matrix());
+                Eigen::VectorXd b = eqs[n].value().matrix();
+                Eigen::VectorXd v = solver.solve(b);
+                vals[eq] = eqs[eq].value().matrix() - B * v;
             }
 
             // Create return value.
@@ -292,22 +294,13 @@ namespace Opm
         {
             // The equation to solve for the unknown y (to be recovered) is
             //    Cx + Dy = b
-            //    y = inv(D) (b - Cx)
+            //    Dy = (b - Cx)
             // where D is the eliminated block, C is the jacobian of
             // the eliminated equation with respect to the
             // non-eliminated unknowms, b is the right-hand side of
             // the eliminated equation, and x is the partial solution
             // of the non-eliminated unknowns.
-            // We require that D is diagonal.
-
-            // Find inv(D).
             const M& D = equation.derivative()[n];
-            if (!isDiagonal(D)) {
-                std::cerr << "WARNING (ignored): Cannot do Schur complement with respect to non-diagonal block." << std::endl;
-                //OPM_THROW(std::logic_error, "Cannot do Schur complement with respect to non-diagonal block.");
-            }
-            V diag = D.diagonal();
-            Eigen::DiagonalMatrix<double, Eigen::Dynamic> invD = (1.0 / diag).matrix().asDiagonal();
 
             // Build C.
             std::vector<M> C_jacs = equation.derivative();
@@ -315,8 +308,13 @@ namespace Opm
             ADB eq_coll = collapseJacs(ADB::function(equation.value(), C_jacs));
             const M& C = eq_coll.derivative()[0];
 
+            // Use sparse LU to solve the block submatrices
+            Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
+            solver.compute(D);
+
             // Compute value of eliminated variable.
-            V elim_var = invD * (equation.value().matrix() - C * partial_solution.matrix());
+            Eigen::VectorXd b = (equation.value().matrix() - C * partial_solution.matrix());
+            Eigen::VectorXd elim_var = solver.solve(b);
 
             // Find the relevant sizes to use when reconstructing the full solution.
             const int nelim = equation.size();
