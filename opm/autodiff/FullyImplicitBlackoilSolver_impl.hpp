@@ -1869,11 +1869,13 @@ namespace {
             RG_sum = RG.sum();
         }
 
-        double tempValue = tol_mb * pvSum /dt;
+        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * pvSum / dt;
+        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * pvSum / dt;
+        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * pvSum / dt;
 
-        bool converged_MB = (fabs(BW_avg*RW_sum) < tempValue)
-                         && (fabs(BO_avg*RO_sum) < tempValue)
-                         && (fabs(BG_avg*RG_sum) < tempValue);
+        bool converged_MB = (mass_balance_residual_water < tol_mb)
+                         && (mass_balance_residual_oil< tol_mb)
+                         && (mass_balance_residual_gas < tol_mb);
 
         bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
 
@@ -1886,9 +1888,9 @@ namespace {
 
         std::cout << "\nIteration          OIL        WATER          GAS    WELL-FLOW WELL-CONTROL\n"
                   << std::setw(9) << iteration << std::setprecision(4)
-                  << std::setw(13) << fabs(BW_avg*RW_sum)
-                  << std::setw(13) << fabs(BO_avg*RO_sum)
-                  << std::setw(13) << fabs(BG_avg*RG_sum)
+                  << std::setw(13) << mass_balance_residual_water
+                  << std::setw(13) << mass_balance_residual_oil
+                  << std::setw(13) << mass_balance_residual_gas
                   << std::setw(13) << residualWellFlux
                   << std::setw(13) << residualWell
                   << std::endl;
