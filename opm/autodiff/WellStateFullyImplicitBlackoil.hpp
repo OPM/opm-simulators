@@ -31,6 +31,7 @@
 #include <utility>
 #include <map>
 #include <algorithm>
+#include <array>
 
 namespace Opm
 {
@@ -40,8 +41,9 @@ namespace Opm
     class WellStateFullyImplicitBlackoil
     {
     public:
-        typedef std::pair<int,int> mapentry_t;
+        typedef std::array< int, 2 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
+
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -71,9 +73,8 @@ namespace Opm
                 std::string name( wells->name[ w ] );
                 assert( name.size() > 0 );
                 mapentry_t& wellMapEntry = wellMap_[ name ];
-                assert( wellMapEntry.size() == 0 );
-                wellMapEntry.first  = w ;
-                wellMapEntry.second = wells->well_connpos[w ] ;
+                wellMapEntry[ 0 ] = w ;
+                wellMapEntry[ 1 ] = wells->well_connpos[w ] ;
                 if (well_controls_well_is_shut(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
@@ -98,16 +99,16 @@ namespace Opm
 
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
-            if( prevState.wellMap().size() > 0 ) 
+            if( ! prevState.wellMap().empty() )
             {
-                typedef typename WellMapType :: iterator iterator;
-                const iterator end = prevState.wellMap().end();
+                typedef typename WellMapType :: const_iterator const_iterator;
+                const_iterator end = prevState.wellMap().end();
                 for (int w = 0; w < nw; ++w) {
                     std::string name( wells->name[ w ] );
-                    iterator it = prevState.wellMap().find( name );
+                    const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
-                        const int oldIndex = (*it).second.first;
+                        const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
                         // bhp
@@ -120,7 +121,7 @@ namespace Opm
                         }
 
                         // perfPhaseRates
-                        int oldPerf = (*it).second.second * np;
+                        int oldPerf = (*it).second[ 1 ] * np;
                         for (int perf = wells->well_connpos[ newIndex ]*np;
                              perf < wells->well_connpos[ newIndex + 1]*np; ++perf, ++oldPerf )
                         {
@@ -168,50 +169,13 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
-        WellMapType& wellMap() const { return wellMap_; }
-
-        /// Copy data for the first num_wells_to_copy from source,
-        /// overwriting any data in this object associated with those
-        /// wells. Assumes that the number of phases are the same,
-        /// that the number of perforations associated with the wells
-        /// is unchanging, and that both objects contain at least
-        /// num_wells_to_copy wells.
-        void partialCopy(const WellStateFullyImplicitBlackoil& source,
-                         const Wells& wells,
-                         const int num_wells_to_copy)
-        {
-            std::abort();
-
-            if (numPhases() != source.numPhases()) {
-                OPM_THROW(std::logic_error, "partialCopy(): source and destination have different number of phases.");
-            }
-            if (num_wells_to_copy > numWells() || num_wells_to_copy > source.numWells()) {
-                OPM_THROW(std::logic_error, "partialCopy(): trying to copy too many wells.");
-            }
-            // bhp
-            std::copy(source.bhp().begin(),
-                      source.bhp().begin() + num_wells_to_copy,
-                      bhp().begin());
-            // wellRates
-            std::copy(source.wellRates().begin(),
-                      source.wellRates().begin() + numPhases()*num_wells_to_copy,
-                      wellRates().begin());
-            // perfPhaseRates
-            const int num_perfs_to_copy = wells.well_connpos[num_wells_to_copy];
-            std::copy(source.perfPhaseRates().begin(),
-                      source.perfPhaseRates().begin() + numPhases()*num_perfs_to_copy,
-                      perfPhaseRates().begin());
-            // currentControls
-            std::copy(source.currentControls().begin(),
-                      source.currentControls().begin() + num_wells_to_copy,
-                      currentControls().begin());
-        }
+        const WellMapType& wellMap() const { return wellMap_; }
 
     private:
         WellState basic_well_state_;
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
-        mutable WellMapType wellMap_;
+        WellMapType wellMap_;
     };
 
 } // namespace Opm
