@@ -1887,7 +1887,7 @@ namespace {
         bool converged = converged_MB && converged_CNV && converged_Well;
 
         if (iteration == 0) {
-            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVW  WELL-FLOW WELL-CNTRL\n";
+            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
         }
         const std::streamsize oprec = std::cout.precision(3);
         const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
