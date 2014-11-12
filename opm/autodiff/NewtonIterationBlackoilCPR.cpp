@@ -241,14 +241,18 @@ namespace Opm
             }
 
             // Schur complement of (A B ; C D) wrt. D is A - B*inv(D)*C.
-            // This is applied to all 2x2 block submatrices.
+            // This is applied to all 2x2 block submatrices
+            // The right hand side is modified accordingly. bi = bi - B * inv(D)* bn;
             // We do not explicitly compute inv(D) instead Du = C is solved
 
-            const M& D = eqs[n].derivative()[n];
+            // Extract the submatrix
+            const std::vector<M>& Jn = eqs[n].derivative();
 
-            // Use sparse LU to solve the block submatrices
-            Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
-            solver.compute(D);
+            // Use sparse LU to solve the block submatrices i.e compute inv(D)
+            const Eigen::SparseLU< M > solver(Jn[n]);
+
+            // compute inv(D)*bn for the update of the right hand side
+            const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
 
             std::vector<V> vals(num_eq);              // Number n will remain empty.
             std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
@@ -256,22 +260,26 @@ namespace Opm
                 if (eq == n) {
                     continue;
                 }
+                const std::vector<M>& Je = eqs[eq].derivative();
+                const M& B = Je[n];
+
                 jacs[eq].reserve(num_eq - 1);
-                const M& B = eqs[eq].derivative()[n];
                 for (int var = 0; var < num_eq; ++var) {
                     if (var == n) {
                         continue;
                     }
+
                     // Create new jacobians.
-                    const M& C = eqs[n].derivative()[var];
-                    const M u = solver.solve(C);
-                    M schur_jac = eqs[eq].derivative()[var] - B * u;
-                    jacs[eq].push_back(schur_jac);
+                    // Add A
+                    jacs[eq].push_back(Je[var]);
+                    M& J = jacs[eq].back();
+                    // solve Du = C
+                    const M& u = solver.solve(Jn[var]);
+                    // Subtract Bu (B*inv(D))
+                    J -= B * u;
                 }
                 // Update right hand side.
-                Eigen::VectorXd b = eqs[n].value().matrix();
-                Eigen::VectorXd v = solver.solve(b);
-                vals[eq] = eqs[eq].value().matrix() - B * v;
+                vals[eq] = eqs[eq].value().matrix() - B * Dibn;
             }
 
             // Create return value.
@@ -300,8 +308,8 @@ namespace Opm
             // non-eliminated unknowms, b is the right-hand side of
             // the eliminated equation, and x is the partial solution
             // of the non-eliminated unknowns.
-            const M& D = equation.derivative()[n];
 
+            const M& D = equation.derivative()[n];
             // Build C.
             std::vector<M> C_jacs = equation.derivative();
             C_jacs.erase(C_jacs.begin() + n);
@@ -309,12 +317,11 @@ namespace Opm
             const M& C = eq_coll.derivative()[0];
 
             // Use sparse LU to solve the block submatrices
-            Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
-            solver.compute(D);
+            const Eigen::SparseLU< M > solver(D);
 
             // Compute value of eliminated variable.
-            Eigen::VectorXd b = (equation.value().matrix() - C * partial_solution.matrix());
-            Eigen::VectorXd elim_var = solver.solve(b);
+            const Eigen::VectorXd b = (equation.value().matrix() - C * partial_solution.matrix());
+            const Eigen::VectorXd elim_var = solver.solve(b);
 
             // Find the relevant sizes to use when reconstructing the full solution.
             const int nelim = equation.size();
