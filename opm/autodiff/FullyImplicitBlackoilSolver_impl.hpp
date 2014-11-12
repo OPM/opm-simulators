@@ -1886,20 +1886,23 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
-        std::cout << "\nIteration          OIL        WATER          GAS    WELL-FLOW WELL-CONTROL\n"
-                  << std::setw(9) << iteration << std::setprecision(4)
-                  << std::setw(13) << mass_balance_residual_water
-                  << std::setw(13) << mass_balance_residual_oil
-                  << std::setw(13) << mass_balance_residual_gas
-                  << std::setw(13) << residualWellFlux
-                  << std::setw(13) << residualWell
+        if (iteration == 0) {
+            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+        }
+        const std::streamsize oprec = std::cout.precision(3);
+        const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+        std::cout << std::setw(4) << iteration
+                  << std::setw(11) << mass_balance_residual_water
+                  << std::setw(11) << mass_balance_residual_oil
+                  << std::setw(11) << mass_balance_residual_gas
+                  << std::setw(11) << CNVW
+                  << std::setw(11) << CNVO
+                  << std::setw(11) << CNVG
+                  << std::setw(11) << residualWellFlux
+                  << std::setw(11) << residualWell
                   << std::endl;
-
-#ifdef OPM_VERBOSE
-        std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
-        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
-                  << " converged_Well " << converged_Well << " converged " << converged << std::endl;
-#endif
+        std::cout.precision(oprec);
+        std::cout.flags(oflags);
         return converged;
     }
 
