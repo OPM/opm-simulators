@@ -139,6 +139,8 @@ namespace{
             CHKERRXX( err );
             MatSetFromOptions( A );
             MatSetUp( A );
+
+            KSPCreate( PETSC_COMM_WORLD, &ksp );
         }
 
         ~OEM_DATA() {
@@ -203,7 +205,6 @@ namespace{
         PetscReal residual;
         KSPConvergedReason reason;
 
-        KSPCreate( PETSC_COMM_WORLD, &t.ksp );
         KSPSetOperators( t.ksp, t.A, t.A, DIFFERENT_NONZERO_PATTERN );
         KSPGetPC( t.ksp, &t.preconditioner );
         auto err = KSPSetType( t.ksp, method );
