@@ -1887,7 +1887,7 @@ namespace {
         bool converged = converged_MB && converged_CNV && converged_Well;
 
         if (iteration == 0) {
-            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVO       CNVO       CNVW  WELL-FLOW WELL-CNTRL\n";
+            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVW  WELL-FLOW WELL-CNTRL\n";
         }
         std::cout << std::setw(4) << iteration << std::setprecision(4)
                   << std::setw(11) << mass_balance_residual_water
