@@ -1889,7 +1889,9 @@ namespace {
         if (iteration == 0) {
             std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVW  WELL-FLOW WELL-CNTRL\n";
         }
-        std::cout << std::setw(4) << iteration << std::setprecision(4)
+        const std::streamsize oprec = std::cout.precision(3);
+        const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+        std::cout << std::setw(4) << iteration
                   << std::setw(11) << mass_balance_residual_water
                   << std::setw(11) << mass_balance_residual_oil
                   << std::setw(11) << mass_balance_residual_gas
@@ -1899,6 +1901,8 @@ namespace {
                   << std::setw(11) << residualWellFlux
                   << std::setw(11) << residualWell
                   << std::endl;
+        std::cout.precision(oprec);
+        std::cout.flags(oflags);
         return converged;
     }
 
