@@ -1869,9 +1869,9 @@ namespace {
             RG_sum = RG.sum();
         }
 
-        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * pvSum / dt;
-        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * pvSum / dt;
-        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * pvSum / dt;
+        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * dt / pvSum;
+        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * dt / pvSum;
+        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * dt / pvSum;
 
         bool converged_MB = (mass_balance_residual_water < tol_mb)
                          && (mass_balance_residual_oil< tol_mb)
