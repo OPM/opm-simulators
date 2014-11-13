@@ -44,7 +44,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
-#include <Eigen/SparseLU>
+#include <Eigen/UmfPackSupport>
 
 namespace Opm
 {
@@ -249,7 +249,10 @@ namespace Opm
             const std::vector<M>& Jn = eqs[n].derivative();
 
             // Use sparse LU to solve the block submatrices i.e compute inv(D)
-            const Eigen::SparseLU< M > solver(Jn[n]);
+            const Eigen::UmfPackLU< M > solver(Jn[n]);
+            M id(Jn[n].rows(), Jn[n].cols());
+            id.setIdentity();
+            const M Di = solver.solve(id);
 
             // compute inv(D)*bn for the update of the right hand side
             const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
@@ -257,29 +260,32 @@ namespace Opm
             std::vector<V> vals(num_eq);              // Number n will remain empty.
             std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
             for (int eq = 0; eq < num_eq; ++eq) {
-                if (eq == n) {
-                    continue;
-                }
+                jacs[eq].reserve(num_eq - 1);
                 const std::vector<M>& Je = eqs[eq].derivative();
                 const M& B = Je[n];
-
-                jacs[eq].reserve(num_eq - 1);
-                for (int var = 0; var < num_eq; ++var) {
-                    if (var == n) {
+                // Update right hand side.
+                vals[eq] = eqs[eq].value().matrix() - B * Dibn;
+            }
+            for (int var = 0; var < num_eq; ++var) {
+                if (var == n) {
+                    continue;
+                }
+                // solve Du = C
+                const M u = Di * Jn[var]; // solver.solve(Jn[var]);
+                for (int eq = 0; eq < num_eq; ++eq) {
+                    if (eq == n) {
                         continue;
                     }
+                    const std::vector<M>& Je = eqs[eq].derivative();
+                    const M& B = Je[n];
 
                     // Create new jacobians.
                     // Add A
                     jacs[eq].push_back(Je[var]);
                     M& J = jacs[eq].back();
-                    // solve Du = C
-                    const M& u = solver.solve(Jn[var]);
-                    // Subtract Bu (B*inv(D))
+                    // Subtract Bu (B*inv(D)*C)
                     J -= B * u;
                 }
-                // Update right hand side.
-                vals[eq] = eqs[eq].value().matrix() - B * Dibn;
             }
 
             // Create return value.
@@ -317,7 +323,7 @@ namespace Opm
             const M& C = eq_coll.derivative()[0];
 
             // Use sparse LU to solve the block submatrices
-            const Eigen::SparseLU< M > solver(D);
+            const Eigen::UmfPackLU< M > solver(D);
 
             // Compute value of eliminated variable.
             const Eigen::VectorXd b = (equation.value().matrix() - C * partial_solution.matrix());
