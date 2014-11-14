@@ -328,12 +328,7 @@ namespace Opm
                                        props_.permeability());
             const Wells* wells = wells_manager.c_wells();
             WellStateFullyImplicitBlackoil well_state;
-            well_state.init(wells, state.blackoilState());
-            if (timer.currentStepNum() != 0) {
-                // Transfer previous well state to current.
-                well_state.partialCopy(prev_well_state, *wells, prev_well_state.numWells());
-            }
-                
+            well_state.init(wells, state.blackoilState(), prev_well_state);
             // compute polymer inflow
             std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
             if (deck_->hasKeyword("WPOLYMER")) {
