@@ -279,6 +279,7 @@ namespace {
 
         {
             const SolutionState state = constantState(x, xw);
+		    computeCmax(x, state.concentration);
             computeAccum(state, 0);
             computeWellConnectionPressures(state, xw);
         }
