@@ -55,6 +55,10 @@ namespace Opm
             state2p_.setFirstSat(cells, props, static_cast<TwophaseState::ExtremalSat>(es));
         }
 
+        inline int numPhases() const
+        {
+            return state2p_.numPhases();
+        }
         std::vector<double>& pressure    ()     { return state2p_.pressure(); }
         std::vector<double>& facepressure()     { return state2p_.facepressure(); }
         std::vector<double>& faceflux    ()     { return state2p_.faceflux(); }
@@ -71,7 +75,7 @@ namespace Opm
 
         TwophaseState& twophaseState() { return state2p_; }
         const TwophaseState& twophaseState() const { return state2p_; }
-
+        
     private:
         TwophaseState state2p_;
         std::vector<double> concentration_;

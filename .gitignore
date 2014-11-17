@@ -69,3 +69,9 @@ examples/grdecldips
 data
 steadystate_test_implicit
 steadystate_test_explicit
+=======
+*.iml
+.idea
+*/opm-simulation
+
+

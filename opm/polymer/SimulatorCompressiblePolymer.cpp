@@ -292,206 +292,205 @@ namespace Opm
             wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
                             state.saturation(), 0.0, well_state.bhp(), well_state.perfRates());
         }
-        for (; !timer.done(); ++timer) {
-            // Report timestep and (optionally) write state to disk.
-            timer.report(std::cout);
-            if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
-                if (output_vtk_) {
-                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+        // Report timestep and (optionally) write state to disk.
+        timer.report(std::cout);
+        if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
+            if (output_vtk_) {
+                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+            }
+            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+        }
+
+        initial_pressure = state.pressure();
+
+        // Solve pressure equation.
+        if (check_well_controls_) {
+            computeFractionalFlow(props_, poly_props_, allcells_,
+                                  state.pressure(), state.surfacevol(), state.saturation(),
+                                  state.concentration(), state.maxconcentration(),
+                                  fractional_flows);
+            wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
+        }
+        bool well_control_passed = !check_well_controls_;
+        int well_control_iteration = 0;
+        do {
+            // Run solver
+            pressure_timer.start();
+            psolver_.solve(timer.currentStepLength(), state, well_state);
+
+            // Renormalize pressure if both fluids and rock are
+            // incompressible, and there are no pressure
+            // conditions (bcs or wells).  It is deemed sufficient
+            // for now to renormalize using geometric volume
+            // instead of pore volume.
+            if (psolver_.singularPressure()) {
+                // Compute average pressures of previous and last
+                // step, and total volume.
+                double av_prev_press = 0.0;
+                double av_press = 0.0;
+                double tot_vol = 0.0;
+                const int num_cells = grid_.number_of_cells;
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    av_prev_press += initial_pressure[cell]*grid_.cell_volumes[cell];
+                    av_press      += state.pressure()[cell]*grid_.cell_volumes[cell];
+                    tot_vol       += grid_.cell_volumes[cell];
                 }
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                // Renormalization constant
+                const double ren_const = (av_prev_press - av_press)/tot_vol;
+                for (int cell = 0; cell < num_cells; ++cell) {
+                    state.pressure()[cell] += ren_const;
+                }
+                const int num_wells = (wells_ == NULL) ? 0 : wells_->number_of_wells;
+                for (int well = 0; well < num_wells; ++well) {
+                    well_state.bhp()[well] += ren_const;
+                }
             }
 
-            initial_pressure = state.pressure();
+            // Stop timer and report
+            pressure_timer.stop();
+            double pt = pressure_timer.secsSinceStart();
+            std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
+            ptime += pt;
 
-            // Solve pressure equation.
+            // Optionally, check if well controls are satisfied.
             if (check_well_controls_) {
-                computeFractionalFlow(props_, poly_props_, allcells_,
-                                      state.pressure(), state.surfacevol(), state.saturation(),
-                                      state.concentration(), state.maxconcentration(),
-                                      fractional_flows);
-                wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
-            }
-            bool well_control_passed = !check_well_controls_;
-            int well_control_iteration = 0;
-            do {
-                // Run solver
-                pressure_timer.start();
-                psolver_.solve(timer.currentStepLength(), state, well_state);
-
-                // Renormalize pressure if both fluids and rock are
-                // incompressible, and there are no pressure
-                // conditions (bcs or wells).  It is deemed sufficient
-                // for now to renormalize using geometric volume
-                // instead of pore volume.
-                if (psolver_.singularPressure()) {
-                    // Compute average pressures of previous and last
-                    // step, and total volume.
-                    double av_prev_press = 0.0;
-                    double av_press = 0.0;
-                    double tot_vol = 0.0;
-                    const int num_cells = grid_.number_of_cells;
-                    for (int cell = 0; cell < num_cells; ++cell) {
-                        av_prev_press += initial_pressure[cell]*grid_.cell_volumes[cell];
-                        av_press      += state.pressure()[cell]*grid_.cell_volumes[cell];
-                        tot_vol       += grid_.cell_volumes[cell];
-                    }
-                    // Renormalization constant
-                    const double ren_const = (av_prev_press - av_press)/tot_vol;
-                    for (int cell = 0; cell < num_cells; ++cell) {
-                        state.pressure()[cell] += ren_const;
-                    }
-                    const int num_wells = (wells_ == NULL) ? 0 : wells_->number_of_wells;
-                    for (int well = 0; well < num_wells; ++well) {
-                        well_state.bhp()[well] += ren_const;
-                    }
+                Opm::computePhaseFlowRatesPerWell(*wells_,
+                                                  well_state.perfRates(),
+                                                  fractional_flows,
+                                                  well_resflows_phase);
+                std::cout << "Checking well conditions." << std::endl;
+                // For testing we set surface := reservoir
+                well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
+                ++well_control_iteration;
+                if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
+                    OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
                 }
-
-                // Stop timer and report
-                pressure_timer.stop();
-                double pt = pressure_timer.secsSinceStart();
-                std::cout << "Pressure solver took:  " << pt << " seconds." << std::endl;
-                ptime += pt;
-
-                // Optionally, check if well controls are satisfied.
-                if (check_well_controls_) {
-                    Opm::computePhaseFlowRatesPerWell(*wells_,
-                                                      well_state.perfRates(),
-                                                      fractional_flows,
-                                                      well_resflows_phase);
-                    std::cout << "Checking well conditions." << std::endl;
-                    // For testing we set surface := reservoir
-                    well_control_passed = wells_manager_.conditionsMet(well_state.bhp(), well_resflows_phase, well_resflows_phase);
-                    ++well_control_iteration;
-                    if (!well_control_passed && well_control_iteration > max_well_control_iterations_) {
-                        OPM_THROW(std::runtime_error, "Could not satisfy well conditions in " << max_well_control_iterations_ << " tries.");
-                    }
-                    if (!well_control_passed) {
-                        std::cout << "Well controls not passed, solving again." << std::endl;
-                    } else {
-                        std::cout << "Well conditions met." << std::endl;
-                    }
-                }
-            } while (!well_control_passed);
-
-            // Update pore volumes if rock is compressible.
-            if (rock_comp_props_ && rock_comp_props_->isActive()) {
-                initial_porevol = porevol;
-                computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
-            }
-
-            // Process transport sources (to include bdy terms and well flows).
-            Opm::computeTransportSource(props_, wells_, well_state, transport_src);
-
-            // Find inflow rate.
-            const double current_time = timer.simulationTimeElapsed();
-            double stepsize = timer.currentStepLength();
-            polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
-
-            // Solve transport.
-            transport_timer.start();
-            if (num_transport_substeps_ != 1) {
-                stepsize /= double(num_transport_substeps_);
-                std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
-            }
-            double injected[2] = { 0.0 };
-            double produced[2] = { 0.0 };
-            double polyinj = 0.0;
-            double polyprod = 0.0;
-            for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], initial_pressure,
-                               state.pressure(), &initial_porevol[0], &porevol[0],
-                               &transport_src[0], &polymer_inflow_c[0], stepsize,
-                               state.saturation(), state.surfacevol(),
-                               state.concentration(), state.maxconcentration());
-                double substep_injected[2] = { 0.0 };
-                double substep_produced[2] = { 0.0 };
-                double substep_polyinj = 0.0;
-                double substep_polyprod = 0.0;
-                Opm::computeInjectedProduced(props_, poly_props_,
-                                             state,
-                                             transport_src, polymer_inflow_c, stepsize,
-                                             substep_injected, substep_produced,
-                                             substep_polyinj, substep_polyprod);
-                injected[0] += substep_injected[0];
-                injected[1] += substep_injected[1];
-                produced[0] += substep_produced[0];
-                produced[1] += substep_produced[1];
-                polyinj += substep_polyinj;
-                polyprod += substep_polyprod;
-                if (gravity_ != 0 && use_segregation_split_) {
-                    tsolver_.solveGravity(columns_, stepsize,
-                                          state.saturation(), state.surfacevol(),
-                                          state.concentration(), state.maxconcentration());
+                if (!well_control_passed) {
+                    std::cout << "Well controls not passed, solving again." << std::endl;
+                } else {
+                    std::cout << "Well conditions met." << std::endl;
                 }
             }
-            transport_timer.stop();
-            double tt = transport_timer.secsSinceStart();
-            std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
-            ttime += tt;
+        } while (!well_control_passed);
 
-            // Report volume balances.
-            Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
-            polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
-            polymass_adsorbed = Opm::computePolymerAdsorbed(grid_, props_, poly_props_,
-                                                            state, rock_comp_props_);
-            tot_injected[0] += injected[0];
-            tot_injected[1] += injected[1];
-            tot_produced[0] += produced[0];
-            tot_produced[1] += produced[1];
-            tot_polyinj += polyinj;
-            tot_polyprod += polyprod;
-            std::cout.precision(5);
-            const int width = 18;
-            std::cout << "\nMass balance:        "
-                "                   water(surfvol)      oil(surfvol)       polymer(kg)\n";
-            std::cout << "    In-place:                       "
-                      << std::setw(width) << inplace_surfvol[0]
-                      << std::setw(width) << inplace_surfvol[1]
-                      << std::setw(width) << polymass << std::endl;
-            std::cout << "    Adsorbed:                       "
-                      << std::setw(width) << 0.0
-                      << std::setw(width) << 0.0
-                      << std::setw(width) << polymass_adsorbed << std::endl;
-            std::cout << "    Injected:                       "
-                      << std::setw(width) << injected[0]
-                      << std::setw(width) << injected[1]
-                      << std::setw(width) << polyinj << std::endl;
-            std::cout << "    Produced:                       "
-                      << std::setw(width) << produced[0]
-                      << std::setw(width) << produced[1]
-                      << std::setw(width) << polyprod << std::endl;
-            std::cout << "    Total inj:                      "
-                      << std::setw(width) << tot_injected[0]
-                      << std::setw(width) << tot_injected[1]
-                      << std::setw(width) << tot_polyinj << std::endl;
-            std::cout << "    Total prod:                     "
-                      << std::setw(width) << tot_produced[0]
-                      << std::setw(width) << tot_produced[1]
-                      << std::setw(width) << tot_polyprod << std::endl;
-            const double balance[3] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
-                                        init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1],
-                                        init_polymass - polymass - tot_polyprod + tot_polyinj - polymass_adsorbed };
-            std::cout << "    Initial - inplace + inj - prod: "
-                      << std::setw(width) << balance[0]
-                      << std::setw(width) << balance[1]
-                      << std::setw(width) << balance[2]
-                      << std::endl;
-            std::cout << "    Relative mass error:            "
-                      << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
-                      << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
-                      << std::setw(width) << balance[2]/(init_polymass + tot_polyinj)
-                      << std::endl;
-            std::cout.precision(8);
+        // Update pore volumes if rock is compressible.
+        if (rock_comp_props_ && rock_comp_props_->isActive()) {
+            initial_porevol = porevol;
+            computePorevolume(grid_, props_.porosity(), *rock_comp_props_, state.pressure(), porevol);
+        }
 
-            watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
-                          produced[0]/(produced[0] + produced[1]),
-                          tot_produced[0]/tot_porevol_init);
-            if (wells_) {
-            wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
-                            state.saturation(), timer.simulationTimeElapsed() + timer.currentStepLength(),
-                            well_state.bhp(), well_state.perfRates());
+        // Process transport sources (to include bdy terms and well flows).
+        Opm::computeTransportSource(props_, wells_, well_state, transport_src);
+
+        // Find inflow rate.
+        const double current_time = timer.simulationTimeElapsed();
+        double stepsize = timer.currentStepLength();
+        polymer_inflow_.getInflowValues(current_time, current_time + stepsize, polymer_inflow_c);
+
+
+        // Solve transport.
+        transport_timer.start();
+        if (num_transport_substeps_ != 1) {
+            stepsize /= double(num_transport_substeps_);
+            std::cout << "Making " << num_transport_substeps_ << " transport substeps." << std::endl;
+        }
+        double injected[2] = { 0.0 };
+        double produced[2] = { 0.0 };
+        double polyinj = 0.0;
+        double polyprod = 0.0;
+        for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
+            tsolver_.solve(&state.faceflux()[0], initial_pressure,
+                           state.pressure(), &initial_porevol[0], &porevol[0],
+                           &transport_src[0], &polymer_inflow_c[0], stepsize,
+                           state.saturation(), state.surfacevol(),
+                           state.concentration(), state.maxconcentration());
+            double substep_injected[2] = { 0.0 };
+            double substep_produced[2] = { 0.0 };
+            double substep_polyinj = 0.0;
+            double substep_polyprod = 0.0;
+            Opm::computeInjectedProduced(props_, poly_props_,
+                                         state,
+                                         transport_src, polymer_inflow_c, stepsize,
+                                         substep_injected, substep_produced,
+                                         substep_polyinj, substep_polyprod);
+            injected[0] += substep_injected[0];
+            injected[1] += substep_injected[1];
+            produced[0] += substep_produced[0];
+            produced[1] += substep_produced[1];
+            polyinj += substep_polyinj;
+            polyprod += substep_polyprod;
+            if (gravity_ != 0 && use_segregation_split_) {
+                tsolver_.solveGravity(columns_, stepsize,
+                                      state.saturation(), state.surfacevol(),
+                                      state.concentration(), state.maxconcentration());
             }
+        }
+        transport_timer.stop();
+        double tt = transport_timer.secsSinceStart();
+        std::cout << "Transport solver took: " << tt << " seconds." << std::endl;
+        ttime += tt;
+
+        // Report volume balances.
+        Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
+        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        polymass_adsorbed = Opm::computePolymerAdsorbed(grid_, props_, poly_props_,
+                                                        state, rock_comp_props_);
+        tot_injected[0] += injected[0];
+        tot_injected[1] += injected[1];
+        tot_produced[0] += produced[0];
+        tot_produced[1] += produced[1];
+        tot_polyinj += polyinj;
+        tot_polyprod += polyprod;
+        std::cout.precision(5);
+        const int width = 18;
+        std::cout << "\nMass balance:        "
+            "                   water(surfvol)      oil(surfvol)       polymer(kg)\n";
+        std::cout << "    In-place:                       "
+                  << std::setw(width) << inplace_surfvol[0]
+                  << std::setw(width) << inplace_surfvol[1]
+                  << std::setw(width) << polymass << std::endl;
+        std::cout << "    Adsorbed:                       "
+                  << std::setw(width) << 0.0
+                  << std::setw(width) << 0.0
+                  << std::setw(width) << polymass_adsorbed << std::endl;
+        std::cout << "    Injected:                       "
+                  << std::setw(width) << injected[0]
+                  << std::setw(width) << injected[1]
+                  << std::setw(width) << polyinj << std::endl;
+        std::cout << "    Produced:                       "
+                  << std::setw(width) << produced[0]
+                  << std::setw(width) << produced[1]
+                  << std::setw(width) << polyprod << std::endl;
+        std::cout << "    Total inj:                      "
+                  << std::setw(width) << tot_injected[0]
+                  << std::setw(width) << tot_injected[1]
+                  << std::setw(width) << tot_polyinj << std::endl;
+        std::cout << "    Total prod:                     "
+                  << std::setw(width) << tot_produced[0]
+                  << std::setw(width) << tot_produced[1]
+                  << std::setw(width) << tot_polyprod << std::endl;
+        const double balance[3] = { init_surfvol[0] - inplace_surfvol[0] - tot_produced[0] + tot_injected[0],
+                                    init_surfvol[1] - inplace_surfvol[1] - tot_produced[1] + tot_injected[1],
+                                    init_polymass - polymass - tot_polyprod + tot_polyinj - polymass_adsorbed };
+        std::cout << "    Initial - inplace + inj - prod: "
+                  << std::setw(width) << balance[0]
+                  << std::setw(width) << balance[1]
+                  << std::setw(width) << balance[2]
+                  << std::endl;
+        std::cout << "    Relative mass error:            "
+                  << std::setw(width) << balance[0]/(init_surfvol[0] + tot_injected[0])
+                  << std::setw(width) << balance[1]/(init_surfvol[1] + tot_injected[1])
+                  << std::setw(width) << balance[2]/(init_polymass + tot_polyinj)
+                  << std::endl;
+        std::cout.precision(8);
+
+        watercut.push(timer.simulationTimeElapsed() + timer.currentStepLength(),
+                      produced[0]/(produced[0] + produced[1]),
+                      tot_produced[0]/tot_porevol_init);
+        if (wells_) {
+        wellreport.push(props_, *wells_, state.pressure(), state.surfacevol(),
+                        state.saturation(), timer.simulationTimeElapsed() + timer.currentStepLength(),
+                        well_state.bhp(), well_state.perfRates());
         }
 
         if (output_) {
