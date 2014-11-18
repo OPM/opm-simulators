@@ -63,7 +63,7 @@ class EclWellManager
     typedef Ewoms::EclPeacemanWell<TypeTag> Well;
 
 public:
-    EclWellManager(const Simulator &simulator)
+    EclWellManager(Simulator &simulator)
         : simulator_(simulator)
     { }
 
@@ -480,6 +480,9 @@ public:
 protected:
     void updateWellCompletions_(int reportStepIdx)
     {
+        auto& model = simulator_.model();
+        model.clearAuxiliaryModules();
+
         auto eclState = simulator_.gridManager().eclipseState();
         const auto &deckSchedule = eclState->getSchedule();
         const Grid &grid = simulator_.gridManager().grid();
@@ -550,10 +553,12 @@ protected:
                 }
             }
             eclWell->endSpec();
-        }
-    };
 
-    const Simulator &simulator_;
+            model.addAuxiliaryModule(eclWell);
+        }
+    }
+
+    Simulator &simulator_;
 
     std::vector<std::shared_ptr<Well> > wells_;
     std::map<std::string, int> wellNameToIndex_;
