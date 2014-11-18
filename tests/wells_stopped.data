@@ -1,0 +1,58 @@
+RUNSPEC
+
+OIL
+GAS
+WATER
+
+
+DIMENS
+   10 10  1  /
+
+GRID
+
+DXV
+10*1000.0
+/
+
+DYV
+10*1000.0
+/
+
+DZ
+100*20.0 
+/
+
+TOPS
+100*10
+/
+
+
+SCHEDULE
+
+WELSPECS
+    'INJ1' 'G'    1  1    8335 'GAS'  /
+    'PROD1' 'G'   10 10    8400 'OIL'  /
+/
+
+COMPDAT
+    'INJ1'   1  1 1  1 'OPEN' 1   10.6092   0.5  /
+    'PROD1'  10 1 1  1 'OPEN' 0   10.6092   0.5  /
+/
+
+WCONPROD
+     'PROD1' 'OPEN' 'ORAT' 20000  4* 1000 /
+/
+
+WCONINJE
+     'INJ1' 'GAS' 'OPEN' 'RATE' 100 200 400 /
+/
+
+
+TSTEP
+  1 /
+
+WELOPEN
+   'INJ1' 'STOP' 5* /
+/
+
+END
