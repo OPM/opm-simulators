@@ -18,6 +18,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <cmath>
 #include <vector>
 #include <opm/autodiff/AutoDiffBlock.hpp>
