@@ -294,6 +294,6 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];
 
-    BOOST_CHECK(well_controls_well_is_shut(ctrls0)); // The first well is closed
+    BOOST_CHECK(well_controls_well_is_stopped(ctrls0)); // The first well is closed
     BOOST_CHECK(well_controls_well_is_open(ctrls1));  // The second well is open
 }

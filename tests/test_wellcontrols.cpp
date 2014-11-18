@@ -103,15 +103,15 @@ BOOST_AUTO_TEST_CASE(OpenClose)
     struct WellControls * ctrls = well_controls_create();
 
     BOOST_CHECK_EQUAL( true , well_controls_well_is_open(ctrls) );
-    BOOST_CHECK_EQUAL( false , well_controls_well_is_shut(ctrls) );
+    BOOST_CHECK_EQUAL( false , well_controls_well_is_stopped(ctrls) );
 
     well_controls_open_well( ctrls );
     BOOST_CHECK_EQUAL( true   , well_controls_well_is_open(ctrls) );
-    BOOST_CHECK_EQUAL( false  , well_controls_well_is_shut(ctrls) );
+    BOOST_CHECK_EQUAL( false  , well_controls_well_is_stopped(ctrls) );
 
-    well_controls_shut_well( ctrls );
+    well_controls_stop_well( ctrls );
     BOOST_CHECK_EQUAL( false   , well_controls_well_is_open(ctrls) );
-    BOOST_CHECK_EQUAL( true    , well_controls_well_is_shut(ctrls) );
+    BOOST_CHECK_EQUAL( true    , well_controls_well_is_stopped(ctrls) );
     
     well_controls_destroy( ctrls );
 }

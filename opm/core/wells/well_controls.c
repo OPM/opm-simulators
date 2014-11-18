@@ -228,7 +228,7 @@ well_controls_clone(const struct WellControls *ctrl)
                     well_controls_open_well(new);
                 }
                 else {
-                    well_controls_shut_well(new);
+                    well_controls_stop_well(new);
                 }
             }
         }
@@ -254,7 +254,7 @@ well_controls_set_current( struct WellControls * ctrl, int current) {
     ctrl->current = current;
 }
 
-bool well_controls_well_is_shut(const struct WellControls * ctrl) {
+bool well_controls_well_is_stopped(const struct WellControls * ctrl) {
     return !ctrl->well_is_open;
 }
 
@@ -266,7 +266,7 @@ void well_controls_open_well( struct WellControls * ctrl) {
     ctrl->well_is_open = true;
 }
 
-void well_controls_shut_well( struct WellControls * ctrl) {
+void well_controls_stop_well( struct WellControls * ctrl) {
     ctrl->well_is_open = false;
 }
 

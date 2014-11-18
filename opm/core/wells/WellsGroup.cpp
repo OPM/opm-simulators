@@ -747,7 +747,7 @@ namespace Opm
     void WellNode::shutWell()
     {
         if (shut_well_) {
-            well_controls_shut_well( wells_->ctrls[self_index_]);
+            well_controls_stop_well( wells_->ctrls[self_index_]);
         }
         else {
             const double target = 0.0;

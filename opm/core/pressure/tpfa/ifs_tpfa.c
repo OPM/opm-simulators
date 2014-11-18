@@ -363,7 +363,7 @@ assemble_well_contrib(int                   nc ,
     for (w = 0; w < W->number_of_wells; w++) {
         ctrls = W->ctrls[ w ];
 
-        if (well_controls_well_is_shut(ctrls) ) {
+        if (well_controls_well_is_stopped(ctrls) ) {
 
             /* Treat this well as a shut well, isolated from the domain. */
 

@@ -414,7 +414,7 @@ namespace Opm
 
             if (well->getStatus(timeStep) == WellCommon::STOP) {
                 // STOPed wells are added to the well list with the given controll and closed.
-                well_controls_shut_well(w_->ctrls[well_index]);
+                well_controls_stop_well(w_->ctrls[well_index]);
             }
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {

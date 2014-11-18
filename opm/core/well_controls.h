@@ -70,7 +70,7 @@ well_controls_set_current( struct WellControls * ctrl, int current);
 
 
 bool 
-well_controls_well_is_shut(const struct WellControls * ctrl);
+well_controls_well_is_stopped(const struct WellControls * ctrl);
 
 bool 
 well_controls_well_is_open(const struct WellControls * ctrl);
@@ -79,7 +79,7 @@ void
 well_controls_open_well( struct WellControls * ctrl);
 
 void 
-well_controls_shut_well( struct WellControls * ctrl);
+well_controls_stop_well( struct WellControls * ctrl);
 
 int
 well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl);
