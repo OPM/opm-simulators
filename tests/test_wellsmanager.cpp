@@ -280,7 +280,7 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
 
 
 
-BOOST_AUTO_TEST_CASE(WellHasSTOP_ExceptionIsThrown) {
+BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const std::string filename = "wells_manager_data_wellSTOP.data";
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckConstPtr deck(parser->parseFile(filename));
@@ -288,5 +288,12 @@ BOOST_AUTO_TEST_CASE(WellHasSTOP_ExceptionIsThrown) {
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::GridManager gridManager(deck);
 
-    BOOST_CHECK_THROW( new Opm::WellsManager(eclipseState, 0, *gridManager.c_grid(), NULL), std::runtime_error );
+    Opm::WellsManager wellsManager(eclipseState , 0 , *gridManager.c_grid(), NULL);
+
+    const Wells* wells = wellsManager.c_wells();
+    const struct WellControls* ctrls0 = wells->ctrls[0];
+    const struct WellControls* ctrls1 = wells->ctrls[1];
+
+    BOOST_CHECK(well_controls_well_is_shut(ctrls0)); // The first well is closed
+    BOOST_CHECK(well_controls_well_is_open(ctrls1));  // The second well is open
 }

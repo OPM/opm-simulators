@@ -34,6 +34,15 @@ COMPDAT
     'PROD1'  10 3 3  3 'OPEN' 0   10.6092   0.5  /
 /
 
+WCONPROD
+     'PROD1' 'OPEN' 'ORAT' 20000  4* 1000 /
+/
+
+WCONINJE
+     'INJ1' 'GAS' 'OPEN' 'RATE' 100 200 400 /
+/
+
+
 WELOPEN
    'INJ1' 'STOP' 5* /
 /
