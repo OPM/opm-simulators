@@ -44,7 +44,11 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
+#else
+#include <Eigen/SparseLU>
+#endif
 
 namespace Opm
 {
@@ -249,7 +253,11 @@ namespace Opm
             const std::vector<M>& Jn = eqs[n].derivative();
 
             // Use sparse LU to solve the block submatrices i.e compute inv(D)
+#if HAVE_UMFPACK
             const Eigen::UmfPackLU< M > solver(Jn[n]);
+#else
+            const Eigen::SparseLU< M > solver(Jn[n]);
+#endif
             M id(Jn[n].rows(), Jn[n].cols());
             id.setIdentity();
             const M Di = solver.solve(id);
@@ -323,7 +331,11 @@ namespace Opm
             const M& C = eq_coll.derivative()[0];
 
             // Use sparse LU to solve the block submatrices
+#if HAVE_UMFPACK
             const Eigen::UmfPackLU< M > solver(D);
+#else
+            const Eigen::SparseLU< M > solver(D);
+#endif
 
             // Compute value of eliminated variable.
             const Eigen::VectorXd b = (equation.value().matrix() - C * partial_solution.matrix());
