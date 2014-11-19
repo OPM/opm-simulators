@@ -18,6 +18,8 @@
 */
 
 
+#include <config.h>
+
 #include <opm/polymer/TransportSolverTwophasePolymer.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/grid.h>

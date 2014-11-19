@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
 
 #include <opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
