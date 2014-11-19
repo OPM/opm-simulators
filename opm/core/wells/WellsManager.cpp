@@ -188,6 +188,11 @@ namespace WellsManagerDetail
         case Opm::CompletionDirection::DirectionEnum::Z:
             return permutation {{ idx_t(0), idx_t(1), idx_t(2) }};
         }
+        // All enum values should be handled above. Therefore
+        // we should never reach this one. Anyway for the sake
+        // of reduced warnings we throw an exception.
+        throw std::invalid_argument("unhandled enum value");
+
     }
 
     // Permute (diagonal) permeability components according to
