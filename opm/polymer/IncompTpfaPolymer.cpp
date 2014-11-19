@@ -18,6 +18,8 @@
 */
 
 
+#include <config.h>
+
 #include <opm/polymer/IncompTpfaPolymer.hpp>
 
 #include <opm/core/props/IncompPropertiesInterface.hpp>
