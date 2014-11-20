@@ -29,6 +29,7 @@
 
 #include <opm/core/tof/AnisotropicEikonal.hpp>
 #include <opm/core/grid/GridManager.hpp>
+#include <cmath>
 
 using namespace Opm;
 
@@ -36,10 +37,17 @@ BOOST_AUTO_TEST_CASE(cartesian_2d)
 {
     const GridManager gm(2, 2);
     const UnstructuredGrid& grid = *gm.c_grid();
-}
+    AnisotropicEikonal2d ae(grid);
 
-BOOST_AUTO_TEST_CASE(cartesian_3d)
-{
-    const GridManager gm(3, 2, 2);
-    const UnstructuredGrid& grid = *gm.c_grid();
+    const std::vector<double> metric = {
+	1, 0, 0, 1,
+	1, 0, 0, 1,
+	1, 0, 0, 1
+    };
+    const std::vector<int> start = { 0 };
+    std::vector<double> sol;
+    ae.solve(metric.data(), start, sol);
+    BOOST_REQUIRE(!sol.empty());
+    std::vector<double> truth = { 0, 1, 1, std::sqrt(2) };
+    BOOST_CHECK_EQUAL_COLLECTIONS(sol.begin(), sol.end(), truth.begin(), truth.end());
 }
