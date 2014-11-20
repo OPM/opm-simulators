@@ -22,7 +22,12 @@
 
 #include <opm/core/utility/SparseVector.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellPolymerProperties.hpp>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 struct Wells;
 
@@ -90,6 +95,16 @@ namespace Opm
                               const Wells& wells,
                               const int num_cells);
 
+        /// Constructor.
+        /// \param[in]  deck        Input deck expected to contain WPOLYMER.
+        /// \param[in]  wells       Wells structure.
+        /// \param[in]  num_cells   Number of cells in grid.
+        /// \param[in]  currentStep Number of current simulation step.
+        PolymerInflowFromDeck(Opm::DeckConstPtr deck,
+                              const Wells& wells,
+                              const int num_cells,
+                              size_t currentStep);
+
         /// Get inflow concentrations for all cells.
         /// \param[in]  step_start     Start of timestep.
         /// \param[in]  step_end       End of timestep.
@@ -100,6 +115,10 @@ namespace Opm
                                      std::vector<double>& poly_inflow_c) const;
     private:
         SparseVector<double> sparse_inflow_;
+        
+        std::unordered_map<std::string, double> wellPolymerRate_;
+        void setInflowValues(Opm::DeckConstPtr deck,
+                             size_t currentStep);
     };
 
 

@@ -20,8 +20,15 @@
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/core/wells.h>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellPolymerProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellInjectionProperties.hpp>
 #include <map>
-
+#include <unordered_map>
+#include <memory>
 namespace Opm
 {
 
@@ -103,6 +110,74 @@ namespace Opm
         }
     }
 
+    void
+    PolymerInflowFromDeck::setInflowValues(Opm::DeckConstPtr deck,
+                                           size_t currentStep)
+    {
+        Opm::DeckKeywordConstPtr keyword = deck->getKeyword("WPOLYMER");
+        
+        Schedule schedule(deck);
+        for (size_t recordNr = 0; recordNr < keyword->size(); recordNr++) {
+            DeckRecordConstPtr record = keyword->getRecord(recordNr);
+
+            const std::string& wellNamesPattern = record->getItem("WELL")->getTrimmedString(0);
+            std::string wellName = record->getItem("WELL")->getTrimmedString(0);
+            std::vector<WellPtr> wells = schedule.getWells(wellNamesPattern);
+            for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter) {
+                WellPtr well = *wellIter;
+                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+                if (injection.injectorType == WellInjector::WATER) {
+                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
+                    wellPolymerRate_.insert(std::make_pair<std::string, double>(wellName, polymer.m_polymerConcentration));
+                } else {
+                 OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+                }
+            }
+        }
+    }
+
+    /// Constructor.
+    /// @param[in]  deck     Input deck expected to contain WPOLYMER.
+    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::DeckConstPtr deck,
+                                                 const Wells& wells,
+                                                 const int num_cells,
+                                                 size_t currentStep)
+        : sparse_inflow_(num_cells)
+    {
+        if (!deck->hasKeyword("WPOLYMER")) {
+            OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
+            return;
+        }
+        setInflowValues(deck, currentStep);
+        
+        std::unordered_map<std::string, double>::const_iterator map_it;
+        // Extract concentrations and put into cell->concentration map.
+        std::map<int, double> perfcell_conc;
+        for (size_t i = 0; i < wellPolymerRate_.size(); ++i) {
+            // Only use well name and polymer concentration.
+            // That is, we ignore salt concentration and group
+            // names.
+            int wix = 0;
+            for (; wix < wells.number_of_wells; ++wix) {
+                map_it = wellPolymerRate_.find(wells.name[wix]);
+                if (map_it == wellPolymerRate_.end()) {
+                    OPM_THROW(std::runtime_error, "Could not find a match for well from WPOLYMER.");
+                } else {
+                    break;
+                }
+            }
+            for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
+                const int perf_cell = wells.well_cells[j];
+                perfcell_conc[perf_cell] = map_it->second;
+            }
+        }
+
+        // Build sparse vector from map.
+        std::map<int, double>::const_iterator it = perfcell_conc.begin();
+        for (; it != perfcell_conc.end(); ++it) {
+            sparse_inflow_.addElement(it->second, it->first);
+        }
+    }
 
     void PolymerInflowFromDeck::getInflowValues(const double /*step_start*/,
                                                 const double /*step_end*/,

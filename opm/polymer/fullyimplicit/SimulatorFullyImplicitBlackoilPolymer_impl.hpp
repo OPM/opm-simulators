@@ -335,7 +335,8 @@ namespace Opm
                 if (wells_manager.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, *wells, Opm::UgGridHelpers::numCells(grid_)));
+//                polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, *wells, Opm::UgGridHelpers::numCells(grid_)));
+                polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, *wells, Opm::UgGridHelpers::numCells(grid_), timer.currentStepNum()));
             } else {
                 polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
                                                                 1.0*Opm::unit::day,
