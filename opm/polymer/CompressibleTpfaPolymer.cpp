@@ -131,12 +131,13 @@ namespace Opm
         const int nc = grid_.number_of_cells;
         const int np = props_.numPhases();
         const double* cell_p = &state.pressure()[0];
+        const double* cell_T = &state.temperature()[0];
         const double* cell_z = &state.surfacevol()[0];
         cell_A_.resize(nc*np*np);
         cell_dA_.resize(nc*np*np);
-        props_.matrix(nc, cell_p, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
+        props_.matrix(nc, cell_p, cell_T, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
         cell_viscosity_.resize(nc*np);
-        props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
+        props_.viscosity(nc, cell_p, cell_T, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
         for (int cell = 0; cell < nc; ++cell) {
             poly_props_.effectiveVisc((*c_)[cell], &cell_viscosity_[np*cell + 0], cell_eff_viscosity_[np*cell + 0]);
