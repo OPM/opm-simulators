@@ -106,11 +106,13 @@ namespace Opm
             template <class Density>
             class Water {
             public:
-                Water(const Density& rho,
+                Water(const double   temp,
+                      const Density& rho,
                       const int      np,
                       const int      ix,
                       const double   norm_grav)
-                    : rho_(rho)
+                    : temp_(temp)
+                    , rho_(rho)
                     , svol_(np, 0)
                     , ix_(ix)
                     , g_(norm_grav)
@@ -126,6 +128,7 @@ namespace Opm
                 }
 
             private:
+                const double        temp_;
                 const Density&      rho_;
                 std::vector<double> svol_;
                 const int           ix_;
@@ -134,7 +137,7 @@ namespace Opm
                 double
                 density(const double press) const
                 {
-                    const std::vector<double>& rho = rho_(press, svol_);
+                    const std::vector<double>& rho = rho_(press, temp_, svol_);
 
                     return rho[ix_];
                 }
@@ -143,13 +146,15 @@ namespace Opm
             template <class Density, class RS>
             class Oil {
             public:
-                Oil(const Density& rho,
+                Oil(const double   temp,
+                    const Density& rho,
                     const RS&      rs,
                     const int      np,
                     const int      oix,
                     const int      gix,
                     const double   norm_grav)
-                    : rho_(rho)
+                    : temp_(temp)
+                    , rho_(rho)
                     , rs_(rs)
                     , svol_(np, 0)
                     , oix_(oix)
@@ -167,6 +172,7 @@ namespace Opm
                 }
 
             private:
+                const double                temp_;
                 const Density&              rho_;
                 const RS&                   rs_;
                 mutable std::vector<double> svol_;
@@ -179,10 +185,10 @@ namespace Opm
                         const double press) const
                 {
                     if (gix_ >= 0) {
-                        svol_[gix_] = rs_(depth, press);
+                        svol_[gix_] = rs_(depth, press, temp_);
                     }
 
-                    const std::vector<double>& rho = rho_(press, svol_);
+                    const std::vector<double>& rho = rho_(press, temp_, svol_);
                     return rho[oix_];
                 }
             };
@@ -190,13 +196,15 @@ namespace Opm
             template <class Density, class RV>
             class Gas {
             public:
-                Gas(const Density& rho,
+                Gas(const double   temp,
+                    const Density& rho,
                     const RV&      rv,
                     const int      np,
                     const int      gix,
                     const int      oix,
                     const double   norm_grav)
-                    : rho_(rho)
+                    : temp_(temp)
+                    , rho_(rho)
                     , rv_(rv)
                     , svol_(np, 0)
                     , gix_(gix)
@@ -214,6 +222,7 @@ namespace Opm
                 }
 
             private:
+                const double                temp_;
                 const Density&              rho_;
                 const RV&                   rv_;
                 mutable std::vector<double> svol_;
@@ -226,10 +235,10 @@ namespace Opm
                         const double press) const
                 {
                     if (oix_ >= 0) {
-                        svol_[oix_] = rv_(depth, press);
+                        svol_[oix_] = rv_(depth, press, temp_);
                     }
 
-                    const std::vector<double>& rho = rho_(press, svol_);
+                    const std::vector<double>& rho = rho_(press, temp_, svol_);
                     return rho[gix_];
                 }
             };
@@ -333,7 +342,8 @@ namespace Opm
                 const PhaseUsage& pu = reg.phaseUsage();
 
                 const int wix = PhaseIndex::water(pu);
-                ODE drho(reg.densityCalculator(), pu.num_phases, wix, grav);
+                const double T = 273.15 + 20; // standard temperature for now
+                ODE drho(T, reg.densityCalculator(), pu.num_phases, wix, grav);
 
                 const double z0 = reg.zwoc();
                 const double p0 = po_woc - reg.pcow_woc(); // Pcow = Po - Pw
@@ -373,7 +383,9 @@ namespace Opm
 
                 const int oix = PhaseIndex::oil(pu);
                 const int gix = PhaseIndex::gas(pu);
-                ODE drho(reg.densityCalculator(),
+                const double T = 273.15 + 20; // standard temperature for now
+                ODE drho(T,
+                         reg.densityCalculator(),
                          reg.dissolutionCalculator(),
                          pu.num_phases, oix, gix, grav);
 
@@ -426,7 +438,9 @@ namespace Opm
                 const int gix = PhaseIndex::gas(pu);
                 const int oix = PhaseIndex::oil(pu);
 
-                ODE drho(reg.densityCalculator(),
+                const double T = 273.15 + 20; // standard temperature for now
+                ODE drho(T,
+                         reg.densityCalculator(),
                          reg.evaporationCalculator(),
                          pu.num_phases, gix, oix, grav);
 
@@ -573,8 +587,16 @@ namespace Opm
             return press;
         }
 
-
-
+        template <class Region,
+                  class CellRange>
+        std::vector<double>
+        temperature(const UnstructuredGrid& G,
+                    const Region&           reg,
+                    const CellRange&        cells)
+        {
+            // use the standard temperature for everything for now
+            return std::vector<double>(cells.size(), 273.15 + 20.0);
+        }
 
         template <class Region, class CellRange>
         std::vector< std::vector<double> >
@@ -716,6 +738,7 @@ namespace Opm
          * \param[in] cells           Range that spans the cells of the current
          *                            equilibration region.
          * \param[in] oil_pressure    Oil pressure for each cell in range.
+         * \param[in] temperature     Temperature for each cell in range.
          * \param[in] rs_func         Rs as function of pressure and depth.
          * \return                    Rs values, one for each cell in the 'cells' range.
          */
@@ -723,6 +746,7 @@ namespace Opm
         std::vector<double> computeRs(const UnstructuredGrid& grid,
                                       const CellRangeType& cells,
                                       const std::vector<double> oil_pressure,
+                                      const std::vector<double>& temperature,
                                       const Miscibility::RsFunction& rs_func,
                                       const std::vector<double> gas_saturation)
         {
@@ -731,7 +755,7 @@ namespace Opm
             int count = 0;
             for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
                 const double depth = grid.cell_centroids[3*(*it) + 2];
-                rs[count] = rs_func(depth, oil_pressure[count], gas_saturation[count]);
+                rs[count] = rs_func(depth, oil_pressure[count], temperature[count], gas_saturation[count]);
             }
             return rs;
         }

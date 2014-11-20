@@ -122,12 +122,15 @@ namespace Opm
              *
              * \param[in] p Fluid pressure.
              *
+             * \param[in] T Temperature.
+             *
              * \param[in] z Surface volumes of all phases.
              *
              * \return Phase densities at phase point.
              */
             std::vector<double>
             operator()(const double               p,
+                       const double               T,
                        const std::vector<double>& z) const
             {
                 const int np = props_.numPhases();
@@ -136,7 +139,7 @@ namespace Opm
                 assert (z.size() == std::vector<double>::size_type(np));
 
                 double* dAdp = 0;
-                props_.matrix(1, &p, &z[0], &c_[0], &A[0], dAdp);
+                props_.matrix(1, &p, &T, &z[0], &c_[0], &A[0], dAdp);
 
                 std::vector<double> rho(np, 0.0);
                 props_.density(1, &A[0], &c_[0], &rho[0]);
@@ -171,11 +174,15 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RS
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RS
+                 * value.
+                 *
                  * \return Dissolved gas-oil ratio (RS) at depth @c
                  * depth and pressure @c press.
                  */
                 virtual double operator()(const double depth,
                                           const double press,
+                                          const double temp,
                                           const double sat = 0.0) const = 0;
             };
 
@@ -194,6 +201,9 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RS
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RS
+                 * value.
+                 *
                  * \return Dissolved gas-oil ratio (RS) at depth @c
                  * depth and pressure @c press.  In "no mixing
                  * policy", this is identically zero.
@@ -201,6 +211,7 @@ namespace Opm
                 double
                 operator()(const double /* depth */,
                            const double /* press */,
+                           const double /* temp */,
                            const double /* sat */ = 0.0) const
                 {
                     return 0.0;
@@ -247,18 +258,22 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RS
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RS
+                 * value.
+                 *
                  * \return Dissolved gas-oil ratio (RS) at depth @c
                  * depth and pressure @c press.
                  */
                 double
                 operator()(const double depth,
                            const double press,
+                           const double temp,
                            const double sat_gas = 0.0) const
                 {
                     if (sat_gas > 0.0) {
-                        return satRs(press);
+                        return satRs(press, temp);
                     } else {
-                        return std::min(satRs(press), linearInterpolation(depth_, rs_, depth));
+                        return std::min(satRs(press, temp), linearInterpolation(depth_, rs_, depth));
                     }
                 }
 
@@ -270,9 +285,9 @@ namespace Opm
                 double z_[BlackoilPhases::MaxNumPhases];
                 mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
-                double satRs(const double press) const
+                double satRs(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
                     // Rs/Bo is in the gas row and oil column of A_.
                     // 1/Bo is in the oil row and column.
                     // Recall also that it is stored in column-major order.
@@ -323,18 +338,22 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RV
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RV
+                 * value.
+                 *
                  * \return Vaporized oil-gas ratio (RV) at depth @c
                  * depth and pressure @c press.
                  */
                 double
                 operator()(const double depth,
                            const double press,
+                           const double temp,
                            const double sat_oil = 0.0 ) const
                 {
                     if (sat_oil > 0.0) {
-                        return satRv(press);
+                        return satRv(press, temp);
                     } else {
-                        return std::min(satRv(press), linearInterpolation(depth_, rv_, depth));
+                        return std::min(satRv(press, temp), linearInterpolation(depth_, rv_, depth));
                     }
                 }
 
@@ -346,9 +365,9 @@ namespace Opm
                 double z_[BlackoilPhases::MaxNumPhases];
                 mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
-                double satRv(const double press) const
+                double satRv(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
                     // Rv/Bg is in the oil row and gas column of A_.
                     // 1/Bg is in the gas row and column.
                     // Recall also that it is stored in column-major order.
@@ -382,15 +401,16 @@ namespace Opm
                  * \param[in] props      property object
                  * \param[in] cell       any cell in the pvt region
                  * \param[in] p_contact  oil pressure at the contact
+                 * \param[in] T_contact  temperature at the contact
                  */
-                RsSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact)
+                RsSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact,  const double T_contact)
                     : props_(props), cell_(cell)
                 {
                     auto pu = props_.phaseUsage();
                     std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
                     z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1e100;
                     z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
-                    rs_sat_contact_ = satRs(p_contact);
+                    rs_sat_contact_ = satRs(p_contact, T_contact);
                 }
 
                 /**
@@ -402,18 +422,22 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RS
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RS
+                 * value.
+                 *
                  * \return Dissolved gas-oil ratio (RS) at depth @c
                  * depth and pressure @c press.
                  */
                 double
                 operator()(const double /* depth */,
                            const double press,
+                           const double temp,
                            const double sat_gas = 0.0) const
                 {                     
                     if (sat_gas > 0.0) {
-                        return satRs(press);
+                        return satRs(press, temp);
                     } else {
-                        return std::min(satRs(press), rs_sat_contact_);
+                        return std::min(satRs(press, temp), rs_sat_contact_);
                     }
                 }
 
@@ -424,9 +448,9 @@ namespace Opm
                 double rs_sat_contact_;
                 mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
-                double satRs(const double press) const
+                double satRs(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
                     // Rs/Bo is in the gas row and oil column of A_.
                     // 1/Bo is in the oil row and column.
                     // Recall also that it is stored in column-major order.
@@ -460,15 +484,16 @@ namespace Opm
                  * \param[in] props      property object
                  * \param[in] cell       any cell in the pvt region
                  * \param[in] p_contact  oil pressure at the contact
+                 * \param[in] T_contact  temperature at the contact
                  */
-                RvSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact)
+                RvSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact, const double T_contact)
                     : props_(props), cell_(cell)
                 {
                     auto pu = props_.phaseUsage();
                     std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
                     z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
                     z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1e100;
-                    rv_sat_contact_ = satRv(p_contact);
+                    rv_sat_contact_ = satRv(p_contact, T_contact);
                 }
 
                 /**
@@ -480,18 +505,22 @@ namespace Opm
                  * \param[in] press Pressure at which to calculate RV
                  * value.
                  *
+                 * \param[in] temp Temperature at which to calculate RV
+                 * value.
+                 *
                  * \return Dissolved oil-gas ratio (RV) at depth @c
                  * depth and pressure @c press.
                  */
                 double
                 operator()(const double /*depth*/,
                            const double press,
+                           const double temp,
                            const double sat_oil = 0.0) const
                 {
                     if (sat_oil > 0.0) {
-                        return satRv(press);
+                        return satRv(press, temp);
                     } else {
-                        return std::min(satRv(press), rv_sat_contact_);
+                        return std::min(satRv(press, temp), rv_sat_contact_);
                     }
                 }
 
@@ -502,9 +531,9 @@ namespace Opm
                 double rv_sat_contact_;
                 mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
-                double satRv(const double press) const
+                double satRv(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, z_, &cell_, A_, 0);
+                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
                     // Rv/Bg is in the oil row and gas column of A_.
                     // 1/Bg is in the gas row and column.
                     // Recall also that it is stored in column-major order.
