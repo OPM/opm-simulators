@@ -358,7 +358,7 @@ namespace Opm
             // Solve pressure equation.
             if (check_well_controls_) {
                 computeFractionalFlow(props_, allcells_,
-                                      state.pressure(), state.surfacevol(), state.saturation(),
+                                      state.pressure(), state.temperature(), state.surfacevol(), state.saturation(),
                                       fractional_flows);
                 wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
             }
@@ -445,7 +445,7 @@ namespace Opm
             double injected[2] = { 0.0 };
             double produced[2] = { 0.0 };
             for (int tr_substep = 0; tr_substep < num_transport_substeps_; ++tr_substep) {
-                tsolver_.solve(&state.faceflux()[0], &state.pressure()[0],
+                tsolver_.solve(&state.faceflux()[0], &state.pressure()[0], &state.temperature()[0],
                                &initial_porevol[0], &porevol[0], &transport_src[0], stepsize,
                                state.saturation(), state.surfacevol());
                 double substep_injected[2] = { 0.0 };
