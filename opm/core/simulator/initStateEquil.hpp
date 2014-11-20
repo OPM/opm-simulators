@@ -171,6 +171,7 @@ namespace Opm
          * \param[in] cells           Range that spans the cells of the current
          *                            equilibration region.
          * \param[in] oil_pressure    Oil pressure for each cell in range.
+         * \param[in] temperature     Temperature for each cell in range.
          * \param[in] rs_func         Rs as function of pressure and depth.
          * \return                    Rs values, one for each cell in the 'cells' range.
          */
@@ -178,6 +179,7 @@ namespace Opm
         std::vector<double> computeRs(const UnstructuredGrid& grid,
                                       const CellRangeType& cells,
                                       const std::vector<double> oil_pressure,
+                                      const std::vector<double>& temperature,
                                       const Miscibility::RsFunction& rs_func,
                                       const std::vector<double> gas_saturation);
 
@@ -298,7 +300,8 @@ namespace Opm
                                               "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                                 }
                                 const double p_contact = rec[i].main.press;
-                                rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact));
+                                const double T_contact = 273.15 + 20; // standard temperature for now
+                                rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact, T_contact));
                             }
                         }
                     } else {
@@ -329,7 +332,8 @@ namespace Opm
                                               "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                                 }
                                 const double p_contact = rec[i].main.press + rec[i].goc.press;
-                                rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact>(props, cell, p_contact));
+                                const double T_contact = 273.15 + 20; // standard temperature for now
+                                rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact>(props, cell, p_contact, T_contact));
                             }
                         }
                     } else {
@@ -399,6 +403,7 @@ namespace Opm
                                           props.phaseUsage());
                    
                         PVec press = phasePressures(G, eqreg, cells, grav);
+                        const std::vector<double>& temp = temperature(G, eqreg, cells);
 
                         const PVec sat = phaseSaturations(G, eqreg, cells, props, swat_init_, press);
 
@@ -411,8 +416,8 @@ namespace Opm
                             && props.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
                             const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
                             const int gaspos = props.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                            const Vec rs = computeRs(G, cells, press[oilpos], *(rs_func_[r]), sat[gaspos]);
-                            const Vec rv = computeRs(G, cells, press[gaspos], *(rv_func_[r]), sat[oilpos]);
+                            const Vec rs = computeRs(G, cells, press[oilpos], temp, *(rs_func_[r]), sat[gaspos]);
+                            const Vec rv = computeRs(G, cells, press[gaspos], temp, *(rv_func_[r]), sat[oilpos]);
                             copyFromRegion(rs, cells, rs_);
                             copyFromRegion(rv, cells, rv_);
                         }
