@@ -237,7 +237,7 @@ namespace Opm
             for (int j = wells_->well_connpos[w]; j < wells_->well_connpos[w + 1]; ++j) {
                 const int cell = wells_->well_cells[j];
                 const double cell_depth = grid_.cell_centroids[dim * cell + dim - 1];
-                props_.matrix(1, &state.pressure()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
+                props_.matrix(1, &state.pressure()[cell], &state.temperature()[cell], &state.surfacevol()[np*cell], &cell, &A[0], 0);
                 props_.density(1, &A[0], &cell, &rho[0]);
                 for (int phase = 0; phase < np; ++phase) {
                     const double s_phase = state.saturation()[np*cell + phase];
@@ -309,13 +309,14 @@ namespace Opm
         const int nc = grid_.number_of_cells;
         const int np = props_.numPhases();
         const double* cell_p = &state.pressure()[0];
+        const double* cell_T = &state.temperature()[0];
         const double* cell_z = &state.surfacevol()[0];
         const double* cell_s = &state.saturation()[0];
         cell_A_.resize(nc*np*np);
         cell_dA_.resize(nc*np*np);
-        props_.matrix(nc, cell_p, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
+        props_.matrix(nc, cell_p, cell_T, cell_z, &allcells_[0], &cell_A_[0], &cell_dA_[0]);
         cell_viscosity_.resize(nc*np);
-        props_.viscosity(nc, cell_p, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
+        props_.viscosity(nc, cell_p, cell_T, cell_z, &allcells_[0], &cell_viscosity_[0], 0);
         cell_phasemob_.resize(nc*np);
         props_.relperm(nc, cell_s, &allcells_[0], &cell_phasemob_[0], 0);
         std::transform(cell_phasemob_.begin(), cell_phasemob_.end(),
@@ -481,13 +482,14 @@ namespace Opm
                 } else {
                     const double bhp = well_state.bhp()[w];
                     double perf_p = bhp + wellperf_wdp_[j];
+                    const double perf_T = well_state.temperature()[w];
                     // Hack warning: comp_frac is used as a component
                     // surface-volume variable in calls to matrix() and
                     // viscosity(), but as a saturation in the call to
                     // relperm(). This is probably ok as long as injectors
                     // only inject pure fluids.
-                    props_.matrix(1, &perf_p, comp_frac, &c, wpA, NULL);
-                    props_.viscosity(1, &perf_p, comp_frac, &c, &mu[0], NULL);
+                    props_.matrix(1, &perf_p,  &perf_T, comp_frac, &c, wpA, NULL);
+                    props_.viscosity(1, &perf_p, &perf_T, comp_frac, &c, &mu[0], NULL);
                     assert(std::fabs(std::accumulate(comp_frac, comp_frac + np, 0.0) - 1.0) < 1e-6);
                     props_.relperm  (1, comp_frac, &c, wpM , NULL);
                     for (int phase = 0; phase < np; ++phase) {

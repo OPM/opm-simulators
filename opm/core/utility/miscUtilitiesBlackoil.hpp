@@ -92,12 +92,14 @@ namespace Opm
     /// @param[in]  props     rock and fluid properties
     /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  p         pressure (one value per cell)
+    /// @param[in]  T         temperature (one value per cell)
     /// @param[in]  z         surface-volume values (for all P phases)
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] pmobc     phase mobilities (for all phases).
     void computePhaseMobilities(const Opm::BlackoilPropertiesInterface& props,
                                 const std::vector<int>&                 cells,
                                 const std::vector<double>&              p,
+                                const std::vector<double>&              T,
                                 const std::vector<double>&              z,
                                 const std::vector<double>&              s,
                                 std::vector<double>&                    pmobc);
@@ -107,12 +109,14 @@ namespace Opm
     /// @param[in]  props            rock and fluid properties
     /// @param[in]  cells            cells with which the saturation values are associated
     /// @param[in]  p                pressure (one value per cell)
+    /// @param[in]  T                temperature(one value per cell)
     /// @param[in]  z                surface-volume values (for all P phases)
     /// @param[in]  s                saturation values (for all phases)
     /// @param[out] fractional_flow  the fractional flow for each phase for each cell.
     void computeFractionalFlow(const Opm::BlackoilPropertiesInterface& props,
                                const std::vector<int>& cells,
                                const std::vector<double>& p,
+                               const std::vector<double>& T,
                                const std::vector<double>& z,
                                const std::vector<double>& s,
                                std::vector<double>& fractional_flows);

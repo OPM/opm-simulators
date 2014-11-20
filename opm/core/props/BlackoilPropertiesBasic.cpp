@@ -91,6 +91,7 @@ namespace Opm
 
     /// \param[in]  n      Number of data points.
     /// \param[in]  p      Array of n pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  z      Array of nP surface volume values.
     /// \param[in]  cells  Array of n cell indices to be associated with the p and z values.
     /// \param[out] mu     Array of nP viscosity values, array must be valid before calling.
@@ -98,6 +99,7 @@ namespace Opm
     ///                    array must be valid before calling.
     void BlackoilPropertiesBasic::viscosity(const int n,
                                             const double* p,
+                                            const double* T,
                                             const double* z,
                                             const int* /*cells*/,
                                             double* mu,
@@ -106,12 +108,13 @@ namespace Opm
         if (dmudp) {
             OPM_THROW(std::runtime_error, "BlackoilPropertiesBasic::viscosity()  --  derivatives of viscosity not yet implemented.");
         } else {
-            pvt_.mu(n, p, z, mu);
+            pvt_.mu(n, p, T, z, mu);
         }
     }
 
     /// \param[in]  n      Number of data points.
     /// \param[in]  p      Array of n pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  z      Array of nP surface volume values.
     /// \param[in]  cells  Array of n cell indices to be associated with the p and z values.
     /// \param[out] A      Array of nP^2 values, array must be valid before calling.
@@ -121,7 +124,8 @@ namespace Opm
     ///                    array must be valid before calling. The matrices are output
     ///                    in Fortran order.
     void BlackoilPropertiesBasic::matrix(const int n,
-                                         const double* /*p*/,
+                                         const double* p,
+                                         const double* T,
                                          const double* /*z*/,
                                          const int* /*cells*/,
                                          double* A,
@@ -130,7 +134,7 @@ namespace Opm
         const int np = numPhases();
         assert(np <= 2);
         double B[2]; // Must be enough since component classes do not handle more than 2.
-        pvt_.B(1, 0, 0, B);
+        pvt_.B(1, p, T, 0, B);
         // Compute A matrix
 // #pragma omp parallel for
         for (int i = 0; i < n; ++i) {

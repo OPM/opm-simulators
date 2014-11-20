@@ -636,7 +636,7 @@ namespace Opm
                     double mob[max_np];
                     props.relperm(1, &s[np*cell], &cell, mob, 0);
                     double visc[max_np];
-                    props.viscosity(1, &p[cell], &z[np*cell], &cell, visc, 0);
+                    props.viscosity(1, &p[cell], 0, &z[np*cell], &cell, visc, 0);
                     double tmob = 0;
                     for(int i = 0; i < np; ++i) {
                         mob[i] /= visc[i];

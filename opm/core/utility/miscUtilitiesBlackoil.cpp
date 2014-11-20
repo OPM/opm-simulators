@@ -74,6 +74,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& press = state.pressure();
+        const std::vector<double>& temp = state.temperature();
         const std::vector<double>& s = state.saturation();
         const std::vector<double>& z = state.surfacevol();
         std::fill(injected, injected + np, 0.0);
@@ -94,8 +95,8 @@ namespace Opm
                 const double flux = -transport_src[c]*dt;
                 const double* sat = &s[np*c];
                 props.relperm(1, sat, &c, &mob[0], 0);
-                props.viscosity(1, &press[c], &z[np*c], &c, &visc[0], 0);
-                props.matrix(1, &press[c], &z[np*c], &c, &A[0], 0);
+                props.viscosity(1, &press[c], &temp[c], &z[np*c], &c, &visc[0], 0);
+                props.matrix(1, &press[c], &temp[c], &z[np*c], &c, &A[0], 0);
                 double totmob = 0.0;
                 for (int p = 0; p < np; ++p) {
                     mob[p] /= visc[p];
@@ -121,19 +122,21 @@ namespace Opm
     /// @param[in]  props     rock and fluid properties
     /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  p         pressure (one value per cell)
+    /// @param[in]  temp      temperature (one value per cell)
     /// @param[in]  z         surface-volume values (for all P phases)
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] totmob    total mobilities.
     void computeTotalMobility(const Opm::BlackoilPropertiesInterface& props,
                               const std::vector<int>& cells,
                               const std::vector<double>& press,
+                              const std::vector<double>& temp,
                               const std::vector<double>& z,
                               const std::vector<double>& s,
                               std::vector<double>& totmob)
     {
         std::vector<double> pmobc;
 
-        computePhaseMobilities(props, cells, press, z, s, pmobc);
+        computePhaseMobilities(props, cells, press, temp, z, s, pmobc);
 
         const std::size_t                 np = props.numPhases();
         const std::vector<int>::size_type nc = cells.size();
@@ -193,12 +196,14 @@ namespace Opm
     /// @param[in]  props     rock and fluid properties
     /// @param[in]  cells     cells with which the saturation values are associated
     /// @param[in]  p         pressure (one value per cell)
+    /// @param[in]  T         temperature (one value per cell)
     /// @param[in]  z         surface-volume values (for all P phases)
     /// @param[in]  s         saturation values (for all phases)
     /// @param[out] pmobc     phase mobilities (for all phases).
     void computePhaseMobilities(const Opm::BlackoilPropertiesInterface& props,
                                 const std::vector<int>&                 cells,
                                 const std::vector<double>&              p,
+                                const std::vector<double>&              T,
                                 const std::vector<double>&              z,
                                 const std::vector<double>&              s,
                                 std::vector<double>&                    pmobc)
@@ -209,7 +214,7 @@ namespace Opm
         assert(int(s.size()) == nc * np);
 
         std::vector<double> mu(nc*np);
-        props.viscosity(nc, &p[0], &z[0], &cells[0], &mu[0], 0);
+        props.viscosity(nc, &p[0], &T[0], &z[0], &cells[0], &mu[0], 0);
 
         pmobc.clear();
         pmobc.resize(nc*np, 0.0);
@@ -227,19 +232,21 @@ namespace Opm
     /// @param[in]  props            rock and fluid properties
     /// @param[in]  cells            cells with which the saturation values are associated
     /// @param[in]  p                pressure (one value per cell)
+    /// @param[in]  T                temperature (one value per cell)
     /// @param[in]  z                surface-volume values (for all P phases)
     /// @param[in]  s                saturation values (for all phases)
     /// @param[out] fractional_flow  the fractional flow for each phase for each cell.
     void computeFractionalFlow(const Opm::BlackoilPropertiesInterface& props,
                                const std::vector<int>& cells,
                                const std::vector<double>& p,
+                               const std::vector<double>& T,
                                const std::vector<double>& z,
                                const std::vector<double>& s,
                                std::vector<double>& fractional_flows)
     {
         const int num_phases = props.numPhases();
 
-        computePhaseMobilities(props, cells, p, z, s, fractional_flows);
+        computePhaseMobilities(props, cells, p, T, z, s, fractional_flows);
 
         for (std::vector<int>::size_type i = 0; i < cells.size(); ++i) {
             double phase_sum = 0.0;
@@ -299,7 +306,7 @@ namespace Opm
         //std::vector<double> res_vol(np);
         const std::vector<double>& z = state.surfacevol();
 
-        props.matrix(nc, &state.pressure()[0], &z[0], &allcells[0], &allA[0], 0);
+        props.matrix(nc, &state.pressure()[0], &state.temperature()[0], &z[0], &allcells[0], &allA[0], 0);
 
         // Linear solver.
         MAT_SIZE_T n = np;
@@ -388,7 +395,7 @@ namespace Opm
                         } else {
                             assert(std::fabs(comp_frac[0] + comp_frac[1] - 1.0) < 1e-6);
                             perf_rate *= comp_frac[0]; // Water reservoir volume rate.
-                            props.matrix(1, &well_state.perfPress()[perf], comp_frac, &perf_cell, &A[0], 0);
+                            props.matrix(1, &well_state.perfPress()[perf], &well_state.temperature()[w], comp_frac, &perf_cell, &A[0], 0);
                             perf_rate *= A[0];         // Water surface volume rate.
                         }
                     }

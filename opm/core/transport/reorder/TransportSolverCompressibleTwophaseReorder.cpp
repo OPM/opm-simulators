@@ -80,6 +80,7 @@ namespace Opm
 
     void TransportSolverCompressibleTwophaseReorder::solve(const double* darcyflux,
                                                    const double* pressure,
+                                                   const double* temperature,
                                                    const double* porevolume0,
                                                    const double* porevolume,
                                                    const double* source,
@@ -95,8 +96,8 @@ namespace Opm
         dt_ = dt;
         toWaterSat(saturation, saturation_);
 
-        props_.viscosity(props_.numCells(), pressure, NULL, &allcells_[0], &visc_[0], NULL);
-        props_.matrix(props_.numCells(), pressure, NULL, &allcells_[0], &A_[0], NULL);
+        props_.viscosity(props_.numCells(), pressure, temperature, NULL, &allcells_[0], &visc_[0], NULL);
+        props_.matrix(props_.numCells(), pressure, temperature, NULL, &allcells_[0], &A_[0], NULL);
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {

@@ -44,7 +44,7 @@ namespace Opm
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
         }
         viscosity_.resize(pvt_.numPhases());
-        pvt_.mu(1, 0, 0, &viscosity_[0]);
+        pvt_.mu(1, 0, 0, 0, &viscosity_[0]);
     }
 
     IncompPropertiesBasic::IncompPropertiesBasic(const int num_phases,
@@ -64,7 +64,7 @@ namespace Opm
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");
         }
         viscosity_.resize(pvt_.numPhases());
-        pvt_.mu(1, 0, 0, &viscosity_[0]);
+        pvt_.mu(1, 0, 0, 0, &viscosity_[0]);
     }
 
     IncompPropertiesBasic::~IncompPropertiesBasic()

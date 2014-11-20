@@ -125,6 +125,7 @@ namespace Opm
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  p      Array of n pressure values.
+        /// \param[in]  T      Array of n temperature values.
         /// \param[in]  z      Array of nP surface volume values.
         /// \param[in]  cells  Array of n cell indices to be associated with the p and z values.
         /// \param[out] mu     Array of nP viscosity values, array must be valid before calling.
@@ -132,6 +133,7 @@ namespace Opm
         ///                    array must be valid before calling.
         virtual void viscosity(const int n,
                                const double* p,
+                               const double* T,
                                const double* z,
                                const int* cells,
                                double* mu,
@@ -139,6 +141,7 @@ namespace Opm
 
         /// \param[in]  n      Number of data points.
         /// \param[in]  p      Array of n pressure values.
+        /// \param[in]  T      Array of n temperature values.
         /// \param[in]  z      Array of nP surface volume values.
         /// \param[in]  cells  Array of n cell indices to be associated with the p and z values.
         /// \param[out] A      Array of nP^2 values, array must be valid before calling.
@@ -149,6 +152,7 @@ namespace Opm
         ///                    in Fortran order.
         virtual void matrix(const int n,
                             const double* p,
+                            const double* T,
                             const double* z,
                             const int* cells,
                             double* A,

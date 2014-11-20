@@ -48,6 +48,7 @@ namespace Opm
         /// Solve for saturation at next timestep.
         /// \param[in] darcyflux         Array of signed face fluxes.
         /// \param[in] pressure          Array of cell pressures
+        /// \param[in] temperature       Array of cell temperatures
         /// \param[in] surfacevol0       Array of surface volumes at start of timestep
         /// \param[in] porevolume0       Array of pore volumes at start of timestep.
         /// \param[in] porevolume        Array of pore volumes at end of timestep.
@@ -57,6 +58,7 @@ namespace Opm
         /// \param[in, out] surfacevol   Surface volume densities for each phase.
         void solve(const double* darcyflux,
                    const double* pressure,
+                   const double* temperature,
                    const double* porevolume0,
                    const double* porevolume,
                    const double* source,

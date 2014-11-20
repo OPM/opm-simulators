@@ -29,7 +29,7 @@ namespace Opm
 
     /// Class collecting simple pvt properties for 1-3 phases.
     /// All phases are incompressible and have constant viscosities.
-    /// For all the methods, the following apply: p and z are unused.
+    /// For all the methods, the following apply: p, T and z are unused.
     /// Output arrays shall be of size n*numPhases(), and must be valid
     /// before calling the method.
     /// NOTE: This class is intentionally similar to BlackoilPvtProperties.
@@ -62,21 +62,24 @@ namespace Opm
         /// \return  Array of size numPhases().
         const double* surfaceDensities() const;
 
-        /// Viscosity as a function of p and z.
+        /// Viscosity as a function of p, T and z.
         void mu(const int n,
                 const double* p,
+                const double* T,
                 const double* z,
                 double* output_mu) const;
 
-        /// Formation volume factor as a function of p and z.
+        /// Formation volume factor as a function of p, T and z.
         void B(const int n,
                const double* p,
+               const double* T,
                const double* z,
                double* output_B) const;
 
-        /// Formation volume factor and p-derivative as functions of p and z.
+        /// Formation volume factor and p-derivative as functions of p, T and z.
         void dBdp(const int n,
                   const double* p,
+                  const double* T,
                   const double* z,
                   double* output_B,
                   double* output_dBdp) const;

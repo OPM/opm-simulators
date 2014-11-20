@@ -174,7 +174,7 @@ namespace Opm
         {
             const BlackoilPropertiesInterface& props_;
             Density(const BlackoilPropertiesInterface& props) : props_(props) {}
-            double operator()(const double pressure, const int phase)
+            double operator()(const double pressure, const double temperature, const int phase)
             {
                 assert(props_.numPhases() == 2);
                 const double surfvol[2][2] = { { 1.0, 0.0 },
@@ -182,7 +182,7 @@ namespace Opm
                 // We do not handle multi-region PVT/EQUIL at this point.
                 const int* cells = 0;
                 double A[4] = { 0.0 };
-                props_.matrix(1, &pressure, surfvol[phase], cells, A, 0);
+                props_.matrix(1, &pressure, &temperature, surfvol[phase], cells, A, 0);
                 double rho[2] = { 0.0 };
                 props_.density(1, A, cells, rho);
                 return rho[phase];
@@ -233,11 +233,12 @@ namespace Opm
             int phase = (datum_z > woc) ? 0 : 1;
             int num_steps = int(std::ceil(std::fabs(woc - datum_z)/hmin));
             double pval = datum_p;
+            double Tval = 273.15 + 20; // standard temperature
             double zval = datum_z;
             double h = (woc - datum_z)/double(num_steps);
             for (int i = 0; i < num_steps; ++i) {
                 zval += h;
-                const double dp = rho(pval, phase)*gravity;
+                const double dp = rho(pval, Tval, phase)*gravity;
                 pval += h*dp;
                 press_by_z[zval] = pval;
             }
@@ -251,7 +252,7 @@ namespace Opm
             h = (z_end - datum_z)/double(num_steps);
             for (int i = 0; i < num_steps; ++i) {
                 zval += h;
-                const double dp = rho(pval, phase)*gravity;
+                const double dp = rho(pval, Tval, phase)*gravity;
                 pval += h*dp;
                 press_by_z[zval] = pval;
             }
@@ -265,7 +266,7 @@ namespace Opm
             h = (z_end - datum_z)/double(num_steps);
             for (int i = 0; i < num_steps; ++i) {
                 zval += h;
-                const double dp = rho(pval, phase)*gravity;
+                const double dp = rho(pval, Tval, phase)*gravity;
                 pval += h*dp;
                 press_by_z[zval] = pval;
             }
@@ -699,7 +700,7 @@ namespace Opm
         // Assuming that using the saturation as z argument here does not change
         // the outcome. This is not guaranteed unless we have only a single phase
         // per cell.
-        props.matrix(nc, &state.pressure()[0], &state.surfacevol()[0], &allcells[0], &allA[0], 0);
+        props.matrix(nc, &state.pressure()[0], &state.temperature()[0], &state.surfacevol()[0], &allcells[0], &allA[0], 0);
         for (int c = 0; c < nc; ++c) {
             // Using z = As
             double* z = &state.surfacevol()[c*np];
@@ -783,7 +784,7 @@ namespace Opm
                    z_init[c*np + p] = z_tmp;
                }
            }
-        props.matrix(number_of_cells, &state.pressure()[0], &z_init[0], &allcells[0], &allA_a[0], 0);
+        props.matrix(number_of_cells, &state.pressure()[0], &state.temperature()[0], &z_init[0], &allcells[0], &allA_a[0], 0);
 
         // Liquid phase
         if(pu.phase_used[BlackoilPhases::Liquid]){
@@ -805,7 +806,7 @@ namespace Opm
                 }
             }
         }
-        props.matrix(number_of_cells, &state.pressure()[0], &z_init[0], &allcells[0], &allA_l[0], 0);
+        props.matrix(number_of_cells, &state.pressure()[0], &state.temperature()[0], &z_init[0], &allcells[0], &allA_l[0], 0);
 
         if(pu.phase_used[BlackoilPhases::Vapour]){
             for (int c = 0; c <  number_of_cells ; ++c){
@@ -826,7 +827,7 @@ namespace Opm
                 }
             }
         }
-        props.matrix(number_of_cells, &state.pressure()[0], &z_init[0], &allcells[0], &allA_v[0], 0);
+        props.matrix(number_of_cells, &state.pressure()[0], &state.temperature()[0], &z_init[0], &allcells[0], &allA_v[0], 0);
 
         for (int c = 0; c < number_of_cells; ++c) {
             // Using z = As

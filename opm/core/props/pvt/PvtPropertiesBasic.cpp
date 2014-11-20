@@ -113,6 +113,7 @@ namespace Opm
 
     void PvtPropertiesBasic::mu(const int n,
                                 const double* /*p*/,
+                                const double* /*T*/,
                                 const double* /*z*/,
                                 double* output_mu) const
     {
@@ -127,6 +128,7 @@ namespace Opm
 
     void PvtPropertiesBasic::B(const int n,
                                const double* /*p*/,
+                               const double* /*T*/,
                                const double* /*z*/,
                                double* output_B) const
     {
@@ -141,6 +143,7 @@ namespace Opm
 
     void PvtPropertiesBasic::dBdp(const int n,
                                   const double* /*p*/,
+                                  const double* /*T*/,
                                   const double* /*z*/,
                                   double* output_B,
                                   double* output_dBdp) const
