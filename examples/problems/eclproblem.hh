@@ -27,6 +27,7 @@
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include <ewoms/io/eclgridmanager.hh>
+#include <ewoms/io/eclipsesummarywriter.hh>
 #include <ewoms/wells/eclwellmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
@@ -139,6 +140,9 @@ SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 // ... but enable the Eclipse output by default
 SET_BOOL_PROP(EclBaseProblem, EnableEclipseOutput, true);
 
+// also enable the summary output.
+SET_BOOL_PROP(EclBaseProblem, EnableEclipseSummaryOutput, true);
+
 // The default DGF file to load
 SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 }} // namespace Properties, Opm
@@ -181,6 +185,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
+    typedef Ewoms::EclipseSummaryWriter<TypeTag> EclipseSummaryWriter;
+
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
 public:
@@ -204,6 +210,7 @@ public:
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
         , wellManager_(simulator)
+        , summaryWriter_(simulator)
     { }
 
     /*!
@@ -290,6 +297,10 @@ public:
      */
     void endEpisode()
     {
+        // first, write the summary information ...
+        summaryWriter_.write(wellManager_);
+
+        // ... then proceed to the next report step
         Simulator &simulator = this->simulator();
         Opm::EclipseStateConstPtr eclipseState = this->simulator().gridManager().eclipseState();
         Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
@@ -960,6 +971,7 @@ private:
     Scalar temperature_;
 
     EclWellManager<TypeTag> wellManager_;
+    EclipseSummaryWriter summaryWriter_;
 };
 } // namespace Ewoms
 
