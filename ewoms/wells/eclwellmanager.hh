@@ -25,6 +25,7 @@
 #define EWOMS_ECL_WELL_MANAGER_HH
 
 #include <ewoms/wells/eclpeacemanwell.hh>
+#include <ewoms/disc/common/fvbaseproperties.hh>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -90,21 +91,6 @@ public:
             // specified by the updateWellCompletions_() method
             well->beginSpec();
             well->setName(wellName);
-
-
-                            // overwrite the automatically computed effective
-                            // permeability by the one specified in the deck. Note: this
-                            // is not implemented by opm-parser yet...
-                            //Scalar Kh = completion->getEffectivePermeability();
-                            Scalar Kh = 0.0;
-                            if (Kh > 0.0)
-                                well->setEffectivePermeability(elemCtx, dofIdx, Kh);
-
-                            // overwrite the automatically computed connection
-                            // transmissibilty factor by the one specified in the deck.
-                            Scalar ctf = completion->getConnectionTransmissibilityFactor();
-                            if (ctf > 0.0)
-                                well->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
             well->endSpec();
         }
     }
