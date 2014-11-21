@@ -45,10 +45,19 @@ namespace Opm
         /// \param[out] solution          Array of solution to the eikonal equation.
         void solve(const double* metric,
 		   const std::vector<int>& startcells,
-		   std::vector<double>& solution) const;
+		   std::vector<double>& solution);
     private:
 	const UnstructuredGrid& grid_;
 	SparseTable<int> cell_neighbours_;
+	typedef std::pair<double, int> ValueAndCell;
+	std::vector<ValueAndCell> considered_;
+	std::vector<char> is_considered_;
+
+	double computeValue(const int cell) const;
+
+	const ValueAndCell& topConsidered() const;
+	void pushConsidered(const ValueAndCell& vc);
+	void popConsidered();
     };
 
 } // namespace Opm
