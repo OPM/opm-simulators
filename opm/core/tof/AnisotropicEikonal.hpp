@@ -66,9 +66,9 @@ namespace Opm
 	std::vector<char> is_considered_;
 
         bool isClose(const int c1, const int c2, const double* metric) const;
-	double computeValue(const int cell, const double* metric) const;
-	double computeFromLine(const int cell, const int from, const double* metric) const;
-	double computeFromTri(const int cell, const int n0, const int n1, const double* metric) const;
+	double computeValue(const int cell, const double* metric, const double* solution) const;
+	double computeFromLine(const int cell, const int from, const double* metric, const double* solution) const;
+	double computeFromTri(const int cell, const int n0, const int n1, const double* metric, const double* solution) const;
 
 	const ValueAndCell& topConsidered() const;
 	void pushConsidered(const ValueAndCell& vc);
