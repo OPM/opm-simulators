@@ -62,12 +62,12 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
-    const int np = props.numPhases();
+    const int np = 3;
     const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
     const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
     const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
     
-    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(np == props.numPhases());
     BOOST_REQUIRE(wpos == 0);
     BOOST_REQUIRE(opos == 1);
     BOOST_REQUIRE(gpos == 2);
@@ -147,12 +147,12 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
-    const int np = props.numPhases();
+    const int np = 3;
     const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
     const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
     const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
     
-    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(np == props.numPhases());
     BOOST_REQUIRE(wpos == 0);
     BOOST_REQUIRE(opos == 1);
     BOOST_REQUIRE(gpos == 2);
@@ -232,12 +232,12 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
-    const int np = props.numPhases();
+    const int np = 3;
     const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
     const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
     const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
     
-    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(np == props.numPhases());
     BOOST_REQUIRE(wpos == 0);
     BOOST_REQUIRE(opos == 1);
     BOOST_REQUIRE(gpos == 2);
@@ -478,12 +478,12 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
-    const int np = props.numPhases();
+    const int np = 3;
     const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
     const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
     const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
     
-    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(np == props.numPhases());
     BOOST_REQUIRE(wpos == 0);
     BOOST_REQUIRE(opos == 1);
     BOOST_REQUIRE(gpos == 2);
@@ -576,12 +576,12 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
-    const int np = props.numPhases();
+    const int np = 3;
     const int wpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Aqua];
     const int opos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Liquid];
     const int gpos = props.phaseUsage().phase_pos[Opm::BlackoilPhases::Vapour];
     
-    BOOST_REQUIRE(np == 3);
+    BOOST_REQUIRE(np == props.numPhases());
     BOOST_REQUIRE(wpos == 0);
     BOOST_REQUIRE(opos == 1);
     BOOST_REQUIRE(gpos == 2);
