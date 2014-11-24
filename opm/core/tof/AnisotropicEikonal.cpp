@@ -35,7 +35,6 @@ namespace Opm
 	}
 	cell_neighbours_ = vertexNeighbours(grid);
 	orderCounterClockwise(grid, cell_neighbours_);
-	considered_.reserve(100);
     }
 
     /// Solve the eikonal equation.
@@ -69,18 +68,21 @@ namespace Opm
 	const double inf = 1e100;
 	solution.clear();
 	solution.resize(num_cells, inf);
+	is_accepted_.clear();
+	is_accepted_.resize(num_cells, false);
+        accepted_front_.clear();
 	considered_.clear();
+        considered_handles_.clear();
 	is_considered_.clear();
 	is_considered_.resize(num_cells, false);
 
 	// 2. Move the startcells to Accepted. U_i = q(x_i)
-	std::vector<char> accepted(num_cells, false);
 	const int num_startcells = startcells.size();
 	for (int ii = 0; ii < num_startcells; ++ii) {
-	    accepted[startcells[ii]] = true;
+	    is_accepted_[startcells[ii]] = true;
 	    solution[startcells[ii]] = 0.0;
 	}
-	std::set<int> accepted_front(startcells.begin(), startcells.end());
+	accepted_front_.insert(startcells.begin(), startcells.end());
 
 	// 3. Move cells adjacent to startcells to Considered, evaluate
 	//    U_i = min_{(x_j,x_k) \in NF(x_i)} G_{j,k}
@@ -89,24 +91,69 @@ namespace Opm
 	    const int num_nb = cell_neighbours_[scell].size();
 	    for (int nb = 0; nb < num_nb; ++nb) {
 		const int nb_cell = cell_neighbours_[scell][nb];
-		if (!is_considered_[nb_cell]) {
-		    const double value = computeValue(nb_cell);
+		if (!is_accepted_[nb_cell] && !is_considered_[nb_cell]) {
+		    const double value = computeValue(nb_cell, metric);
 		    pushConsidered(std::make_pair(value, nb_cell));
-		    is_considered_[nb_cell] = true;
 		}
 	    }
 	}
 
-	// 4. Find the Considered cell with the smallest value: r.
+        while (!considered_.empty()) {
+            // 4. Find the Considered cell with the smallest value: r.
+            const ValueAndCell r = topConsidered();
 
-	// 5. Move cell r to Accepted. Update AcceptedFront.
+            // 5. Move cell r to Accepted. Update AcceptedFront.
+            const int rcell = r.second;
+            is_accepted_[rcell] = true;
+            solution[rcell] = r.first;
+            popConsidered();
+            accepted_front_.insert(rcell);
+            for (auto it = accepted_front_.begin(); it != accepted_front_.end();) {
+                // Note that loop increment happens in the body of this loop.
+                const int cell = *it;
+                bool on_front = false;
+                for (auto it2 = cell_neighbours_[cell].begin(); it2 != cell_neighbours_[cell].end(); ++it2) {
+                    if (!is_accepted_[*it2]) {
+                        on_front = true;
+                        break;
+                    }
+                }
+                if (!on_front) {
+                    accepted_front_.erase(it++);
+                } else {
+                    ++it;
+                }
+            }
 
-	// 6. Move cells adjacent to r from Far to Considered.
+            // 6. Move cells adjacent to r from Far to Considered.
+            for (auto it = cell_neighbours_[rcell].begin(); it != cell_neighbours_[rcell].end(); ++it) {
+                const int nb_cell = *it;
+                if (!is_accepted_[nb_cell] && !is_considered_[nb_cell]) {
+                    assert(solution[nb_cell] == inf);
+                    const double value = computeValue(nb_cell, metric);
+                    pushConsidered(std::make_pair(value, nb_cell));
+                }
+            }
 
-	// 7. Recompute the value for all Considered cells within
-	//    distance h * F_2/F1 from x_r. Use min of previous and new.
+            // 7. Recompute the value for all Considered cells within
+            //    distance h * F_2/F1 from x_r. Use min of previous and new.
+            for (auto it = considered_.begin(); it != considered_.end(); ++it) {
+                const int ccell = it->second;
+                if (isClose(rcell, ccell, metric)) {
+                    const double value = computeValue(ccell, metric);
+                    if (value < it->first) {
+                        // Update value for considered cell.
+                        // Note that as solution values decrease, their
+                        // goodness w.r.t. the heap comparator increase,
+                        // therefore we may safely call the increase()
+                        // modificator below.
+                        considered_.increase(considered_handles_[ccell], std::make_pair(value, ccell));
+                    }
+                }
+            }
 
-	// 8. If Considered is not empty, go to step 4.
+            // 8. If Considered is not empty, go to step 4.
+        }
 
     }
 
@@ -114,16 +161,71 @@ namespace Opm
 
 
 
-    double AnisotropicEikonal2d::computeValue(const int cell) const
+    bool AnisotropicEikonal2d::isClose(const int c1,
+                                       const int c2,
+                                       const double* metric) const
+    {
+        return true;
+    }
+
+
+
+
+
+    double AnisotropicEikonal2d::computeValue(const int cell,
+                                              const double* metric) const
     {
 	const auto& nbs = cell_neighbours_[cell];
 	const int num_nbs = nbs.size();
-	double val = 1e100;
+        const double inf = 1e100;
+	double val = inf;
 	for (int ii = 0; ii < num_nbs; ++ii) {
 	    const int n[2] = { nbs[ii], nbs[(ii+1) % num_nbs] };
-	    // if ... accepted front
+            if (accepted_front_.count(n[0]) && accepted_front_.count(n[1])) {
+                const double cand_val = computeFromTri(cell, n[0], n[1], metric);
+                val = std::min(val, cand_val);
+            }
 	}
+        if (val == inf) {
+            // Failed to find two accepted front nodes adjacent to this,
+            // so we go for a single-neighbour update.
+            for (int ii = 0; ii < num_nbs; ++ii) {
+                if (accepted_front_.count(nbs[ii])) {
+                    const double cand_val = computeFromLine(cell, nbs[ii], metric);
+                    val = std::min(val, cand_val);
+                }
+            }
+        }
+        assert(val != inf);
 	return val;
+    }
+
+
+
+
+
+    double AnisotropicEikonal2d::computeFromLine(const int cell,
+                                                 const int from,
+                                                 const double* metric) const
+    {
+        assert(!is_accepted_[cell]);
+        assert(is_accepted_[from]);
+        return 2.0;
+    }
+
+
+
+
+
+    double AnisotropicEikonal2d::computeFromTri(const int cell,
+                                                const int n0,
+                                                const int n1,
+                                                const double* metric) const
+    {
+        assert(!is_accepted_[cell]);
+        assert(is_accepted_[n0]);
+        assert(is_accepted_[n1]);
+        return 1.0;
     }
 
 
@@ -132,7 +234,7 @@ namespace Opm
 
     const AnisotropicEikonal2d::ValueAndCell& AnisotropicEikonal2d::topConsidered() const
     {
-	return considered_.front();
+	return considered_.top();
     }
 
 
@@ -141,8 +243,9 @@ namespace Opm
 
     void AnisotropicEikonal2d::pushConsidered(const ValueAndCell& vc)
     {
-	considered_.push_back(vc);
-	std::push_heap(considered_.begin(), considered_.end());
+	HeapHandle h = considered_.push(vc);
+        considered_handles_[vc.second] = h;
+        is_considered_[vc.second] = true;
     }
 
 
@@ -151,8 +254,9 @@ namespace Opm
 
     void AnisotropicEikonal2d::popConsidered()
     {
-	std::pop_heap(considered_.begin(), considered_.end());
-	considered_.pop_back();
+        is_considered_[considered_.top().second] = false;
+        considered_handles_.erase(considered_.top().second);
+	considered_.pop();
     }
 
 

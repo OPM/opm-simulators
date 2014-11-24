@@ -22,6 +22,7 @@
 
 #include <opm/core/utility/SparseTable.hpp>
 #include <vector>
+#include <boost/heap/fibonacci_heap.hpp>
 
 struct UnstructuredGrid;
 
@@ -47,13 +48,27 @@ namespace Opm
 		   const std::vector<int>& startcells,
 		   std::vector<double>& solution);
     private:
+        // Grid and topology.
 	const UnstructuredGrid& grid_;
 	SparseTable<int> cell_neighbours_;
+
+        // Keep track of accepted cells.
+	std::vector<char> is_accepted_;
+        std::set<int> accepted_front_;
+
+        // Keep track of considered cells.
 	typedef std::pair<double, int> ValueAndCell;
-	std::vector<ValueAndCell> considered_;
+        typedef boost::heap::compare<std::greater<ValueAndCell>> Comparator;
+        typedef boost::heap::fibonacci_heap<ValueAndCell, Comparator> Heap;
+        Heap considered_;
+        typedef Heap::handle_type HeapHandle;
+        std::map<int, HeapHandle> considered_handles_;
 	std::vector<char> is_considered_;
 
-	double computeValue(const int cell) const;
+        bool isClose(const int c1, const int c2, const double* metric) const;
+	double computeValue(const int cell, const double* metric) const;
+	double computeFromLine(const int cell, const int from, const double* metric) const;
+	double computeFromTri(const int cell, const int n0, const int n1, const double* metric) const;
 
 	const ValueAndCell& topConsidered() const;
 	void pushConsidered(const ValueAndCell& vc);
