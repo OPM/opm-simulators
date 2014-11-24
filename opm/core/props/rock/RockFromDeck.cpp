@@ -108,6 +108,7 @@ namespace Opm
         const int nc = number_of_cells;
 
         assert(cartdims[0]*cartdims[1]*cartdims[2] > 0);
+        static_cast<void>(cartdims); // Squash warning in release mode.
 
         permeability_.assign(dim * dim * nc, 0.0);
 
