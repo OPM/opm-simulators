@@ -953,7 +953,9 @@ public:
      */
     void endTimeStep()
     {
-        if (simulator_.gridView().comm().rank() == 0) {
+        // we use a condition that is always false here to prevent the code below from
+        // bitrotting. (i.e., at least it stays compileable)
+        if (false && simulator_.gridView().comm().rank() == 0) {
             std::cout << "Well '" << name() << "':\n";
             std::cout << " Control mode: " << controlMode_ << "\n";
             std::cout << " BHP limit: " << bhpLimit_/1e5 << " bar\n";
