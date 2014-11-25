@@ -145,6 +145,9 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         // the depth of the centroid of the DOF
         Scalar depth;
 
+        // the volume in m^3 of the DOF
+        Scalar totalVolume;
+
         // the effective size of an element in each direction. This is defined as the
         // distance of the face centers along the respective axis.
         std::array<Scalar, dimWorld> effectiveSize;
@@ -289,7 +292,7 @@ public:
         int wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
 
-        Scalar wellResid = wellResidual(actualBottomHolePressure_);
+        Scalar wellResid = wellResidual_(actualBottomHolePressure_);
         residual[wellGlobalDofIdx][0] = wellResid;
 
         auto &diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
@@ -317,14 +320,14 @@ public:
             for (int priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
                 // primary variable using forward differences
-                Scalar eps = 1e-8*std::max(1.0, priVars[priVarIdx]);
+                Scalar eps = 1e-6*std::max(1.0, priVars[priVarIdx]);
                 priVars[priVarIdx] += eps;
 
                 elemCtx.updateIntensiveQuantities(priVars, dofVars.localDofIdx, /*timeIdx=*/0);
                 tmpDofVars.update(elemCtx.intensiveQuantities(dofVars.localDofIdx, /*timeIdx=*/0));
 
                 Scalar dWellEq_dPV =
-                    (wellResidual(actualBottomHolePressure_, &tmpDofVars, gridDofIdx) - wellResid)
+                    (wellResidual_(actualBottomHolePressure_, &tmpDofVars, gridDofIdx) - wellResid)
                     / eps;
                 curBlock[0][priVarIdx] = dWellEq_dPV;
 
@@ -371,16 +374,15 @@ public:
             Valgrind::CheckDefined(q);
             auto &matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
-            Scalar gridDofVolume = simulator_.model().dofTotalVolume(gridDofIdx);
             for (int eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
-                matrixEntry[eqIdx][0] = - q[eqIdx]/gridDofVolume;
+                matrixEntry[eqIdx][0] = - q[eqIdx]/dofVars.totalVolume;
             //
             /////////////
         }
 
         // effect of changing the well's bottom hole pressure on the well equation
         Scalar eps = std::min(1e8, std::max(1e6, targetBottomHolePressure_))*1e-8;
-        Scalar wellResidStar = wellResidual(actualBottomHolePressure_ + eps);
+        Scalar wellResidStar = wellResidual_(actualBottomHolePressure_ + eps);
         diagBlock[0][0] = (wellResidStar - wellResid)/eps;
     }
 
@@ -573,6 +575,9 @@ public:
             }
         }
 
+        // the volume associated with the DOF
+        dofVars.totalVolume = context.model().dofTotalVolume(globalDofIdx);
+
         // the depth of the degree of freedom
         dofVars.depth /= 2;
 
@@ -703,10 +708,24 @@ public:
     { return dofVariables_.count(globalDofIdx) > 0; }
 
     /*!
-     * \brief Set the maximum bottom hole pressure [Pa] of the well.
+     * \brief Set the maximum/minimum bottom hole pressure [Pa] of the well.
      */
     void setTargetBottomHolePressure(Scalar val)
     { bhpLimit_ = val; }
+
+    /*!
+     * \brief Return the maximum/minimum bottom hole pressure [Pa] of the well.
+     *
+     * For injectors, this is the maximum, for producers it's the minimum.
+     */
+    Scalar targetBottomHolePressure() const
+    { return thpLimit_; }
+
+    /*!
+     * \brief Return the maximum/minimum bottom hole pressure [Pa] of the well.
+     */
+    Scalar bottomHolePressure() const
+    { return actualBottomHolePressure_; }
 
     /*!
      * \brief Set the top hole pressure [Pa] of the well.
@@ -715,16 +734,75 @@ public:
     { thpLimit_ = val; }
 
     /*!
+     * \brief Return the maximum/minimum top hole pressure [Pa] of the well.
+     *
+     * For injectors, this is the maximum, for producers it's the minimum.
+     */
+    Scalar targetTopHolePressure() const
+    { return thpLimit_; }
+
+    /*!
+     * \brief Return the maximum/minimum top hole pressure [Pa] of the well.
+     */
+    Scalar topHolePressure() const
+    {
+        // warning: this is a bit hacky...
+        Scalar rho = 650; // kg/m^3
+        Scalar g = 9.81; // m/s^2
+        return actualBottomHolePressure_ + rho*bottomDepth_*g;
+    }
+
+    /*!
      * \brief Set the maximum combined rate of the fluids at the surface.
      */
     void setMaximumSurfaceRate(Scalar value)
     { maximumSurfaceRate_ = value; }
 
     /*!
+     * \brief Return the weighted maximum surface rate [m^3/s] of the well.
+     */
+    Scalar maximumSurfaceRate() const
+    { return maximumSurfaceRate_; }
+
+    /*!
      * \brief Set the maximum combined rate of the fluids at the surface.
      */
     void setMaximumReservoirRate(Scalar value)
     { maximumReservoirRate_ = value; }
+
+    /*!
+     * \brief Return the weighted maximum reservoir rate [m^3/s] of the well.
+     */
+    Scalar maximumReservoirRate() const
+    { return maximumReservoirRate_; }
+
+    /*!
+     * \brief Return the reservoir rate [m^3/s] actually seen by the well in the current time
+     *        step.
+     */
+    Scalar reservoirRate() const
+    { return actualWeightedResvRate_; }
+
+    /*!
+     * \brief Return the weighted surface rate [m^3/s] actually seen by the well in the current time
+     *        step.
+     */
+    Scalar surfaceRate() const
+    { return actualWeightedSurfaceRate_; }
+
+    /*!
+     * \brief Return the reservoir rate [m^3/s] of a given fluid which is actually seen
+     *        by the well in the current time step.
+     */
+    Scalar reservoirRate(int phaseIdx) const
+    { return actualResvRates_[phaseIdx]; }
+
+    /*!
+     * \brief Return the weighted surface rate [m^3/s] of a given fluid which is actually
+     *        seen by the well in the current time step.
+     */
+    Scalar surfaceRate(int phaseIdx) const
+    { return actualSurfaceRates_[phaseIdx]; }
 
     /*!
      * \brief Set the skin factor of the well
@@ -743,6 +821,12 @@ public:
     }
 
     /*!
+     * \brief Return the well's skin factor at a DOF [-].
+     */
+    Scalar skinFactor(int gridDofIdx) const
+    { return dofVariables_.at(gridDofIdx).skinFactor_; }
+
+    /*!
      * \brief Set the borehole radius of the well
      *
      * Note: The connection transmissibility factor is updated after calling this method,
@@ -757,6 +841,12 @@ public:
 
         computeConnectionTransmissibilityFactor_(globalDofIdx);
     }
+
+    /*!
+     * \brief Return the well's radius at a cell [m].
+     */
+    Scalar radius(int gridDofIdx) const
+    { return dofVariables_.at(gridDofIdx).radius_; }
 
     /*!
      * \brief Informs the well that a time step has just begun.
@@ -798,12 +888,7 @@ public:
      * things.
      */
     void beginIterationPreProcess()
-    {
-        // retrieve the bottom hole pressure from the global system of equations
-        auto &sol = simulator_.model().solution(/*timeIdx=*/0);
-        int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
-        actualBottomHolePressure_ = sol[wellGlobalDof][0];
-    }
+    { }
 
     /*!
      * \brief Do the DOF specific part at the beginning of each iteration
@@ -840,64 +925,21 @@ public:
      */
     void beginIterationPostProcess()
     {
-        // this if is slightly hacky because it logically belongs to the applyInitial()
-        // method. The problem with applyInitial() is that the DOF variables are not yet
-        // available there. (and cannot be because the DOF variables depend on the
-        // solution!)
-        if (actualBottomHolePressure_ < 1e5) {
-            auto &sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
-            int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
+        auto &sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
+        int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
-            actualBottomHolePressure_ = targetBottomHolePressure_;
-            actualBottomHolePressure_ = computeActualBhp_();
-            sol[wellGlobalDof][0] = actualBottomHolePressure_;
-        }
+        // retrieve the bottom hole pressure from the global system of equations
+        actualBottomHolePressure_ = sol[wellGlobalDof][0];
+        actualBottomHolePressure_ = computeRateEquivalentBhp_();
 
-        actualWeightedRate_ =
-            computeOverallWeightedRate_(actualBottomHolePressure_, actualSurfaceRates_);
-    }
+        sol[wellGlobalDof][0] = actualBottomHolePressure_;
 
-    // compute the bottom hole pressure of the well which adheres to the specified rate
-    // and pressure constraints. a single degree of freedom may be different from the
-    // evaluation point.
-    Scalar computeActualBhp_(const DofVariables &evalDofVars, int globalEvalDofIdx) const
-    {
-        static std::array<Scalar, numPhases> dummySurfaceRates;
-        Scalar bhp = computeRateEquivalentBhp_(maximumSurfaceRate_,
-                                               evalDofVars,
-                                               globalEvalDofIdx);
-        if (wellType() == Injector && bhp > targetBottomHolePressure_) {
-            // ensure that there is never a net production for injector wells.
-            bhp = targetBottomHolePressure_;
-            Scalar rate = computeOverallWeightedRate_(bhp,
-                                                      dummySurfaceRates,
-                                                      evalDofVars,
-                                                      globalEvalDofIdx);
-            if (rate < 0)
-                return computeRateEquivalentBhp_(0, evalDofVars, globalEvalDofIdx);
-        }
-        else if (wellType() == Producer && bhp < targetBottomHolePressure_) {
-            // ensure that there is never a net injection for production wells.
-            bhp = targetBottomHolePressure_;
-            Scalar rate = computeOverallWeightedRate_(bhp,
-                                                      dummySurfaceRates,
-                                                      evalDofVars,
-                                                      globalEvalDofIdx);
-            if (rate > 0)
-                return computeRateEquivalentBhp_(0, evalDofVars, globalEvalDofIdx);
-        }
+        computeOverallRates_(actualBottomHolePressure_,
+                             actualResvRates_,
+                             actualSurfaceRates_);
 
-        return bhp;
-    }
-
-    // this is a more convenient version of the method above if all degrees of freedom
-    // are supposed to be at their evaluation points.
-    Scalar computeActualBhp_() const
-    {
-        // create a dummy DofVariables object and call the method above using an index
-        // that is guaranteed to never be part of a well...
-        static DofVariables dummyDofVars;
-        return computeActualBhp_(dummyDofVars, /*globalEvalDofIdx=*/-1);
+        actualWeightedResvRate_ = computeWeightedRate_(actualResvRates_);
+        actualWeightedSurfaceRate_ = computeWeightedRate_(actualSurfaceRates_);
     }
 
     /*!
@@ -917,8 +959,8 @@ public:
             std::cout << " BHP limit: " << bhpLimit_/1e5 << " bar\n";
             std::cout << " Observed BHP: " << actualBottomHolePressure_/1e5 << " bar\n";
             std::cout << " Weighted surface rate limit: " << maximumSurfaceRate_ << "\n";
-            std::cout << " Weighted surface rate: " << std::abs(actualWeightedRate_) << " (="
-                      << 100*std::abs(actualWeightedRate_)/maximumSurfaceRate_ << "%)\n";
+            std::cout << " Weighted surface rate: " << std::abs(actualWeightedSurfaceRate_) << " (="
+                      << 100*std::abs(actualWeightedSurfaceRate_)/maximumSurfaceRate_ << "%)\n";
 
             std::cout << " Surface rates:\n";
             std::cout << "  oil: "
@@ -1208,21 +1250,22 @@ protected:
     }
 
     /*!
-     * \brief Compute the weighted volumetric rate of the complete well given a bottom
-     *        hole pressure.
+     * \brief Compute the volumetric phase rate of the complete well given a bottom hole
+     *        pressure.
      *
      * A single degree of freedom may be different from the evaluation point.
      */
-    Scalar computeOverallWeightedRate_(Scalar bottomHolePressure,
-                                       std::array<Scalar, numPhases>& overallSurfaceRates,
-                                       const DofVariables &evalDofVars,
-                                       int globalEvalDofIdx) const
+    void computeOverallRates_(Scalar bottomHolePressure,
+                              std::array<Scalar, numPhases>& overallResvRates,
+                              std::array<Scalar, numPhases>& overallSurfaceRates,
+                              const DofVariables *evalDofVars = 0,
+                              int globalEvalDofIdx = -1) const
 
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            overallResvRates[phaseIdx] = 0.0;
             overallSurfaceRates[phaseIdx] = 0.0;
-
-        Scalar totalWeightedRate = 0.0;
+        }
 
         auto dofVarsIt = dofVariables_.begin();
         const auto &dofVarsEndIt = dofVariables_.end();
@@ -1230,7 +1273,7 @@ protected:
             std::array<Scalar, numPhases> volumetricReservoirRates;
             const DofVariables *tmp;
             if (dofVarsIt->first == globalEvalDofIdx)
-                tmp = &evalDofVars;
+                tmp = evalDofVars;
             else
                 tmp = &dofVarsIt->second;
 
@@ -1239,26 +1282,46 @@ protected:
             std::array<Scalar, numPhases> volumetricSurfaceRates;
             computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, *tmp);
 
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                overallResvRates[phaseIdx] += volumetricReservoirRates[phaseIdx];
                 overallSurfaceRates[phaseIdx] += volumetricSurfaceRates[phaseIdx];
-
-            totalWeightedRate += computeWeightedRate_(volumetricSurfaceRates);
+            }
         }
-        return totalWeightedRate;
+    }
+
+    /*!
+     * \brief Compute the weighted volumetric rate of the complete well given a bottom
+     *        hole pressure.
+     *
+     * A single degree of freedom may be different from the evaluation point.
+     */
+    Scalar computeOverallWeightedSurfaceRate_(Scalar bottomHolePressure,
+                                              std::array<Scalar, numPhases>& overallSurfaceRates,
+                                              const DofVariables &evalDofVars,
+                                              int globalEvalDofIdx) const
+
+    {
+        static std::array<Scalar, numPhases> resvRatesDummy;
+        computeOverallRates_(bottomHolePressure,
+                             overallSurfaceRates,
+                             resvRatesDummy,
+                             evalDofVars,
+                             globalEvalDofIdx);
+        return computeWeightedRate_(overallSurfaceRates);
     }
 
     // this is a more convenient version of the method above if all degrees of freedom
     // are supposed to be at their evaluation points.
-    Scalar computeOverallWeightedRate_(Scalar bottomHolePressure,
-                                       std::array<Scalar, numPhases>& overallSurfaceRates) const
+    Scalar computeOverallWeightedSurfaceRate_(Scalar bottomHolePressure,
+                                              std::array<Scalar, numPhases>& overallSurfaceRates) const
     {
         // create a dummy DofVariables object and call the method above using an index
         // that is guaranteed to never be part of a well...
         static DofVariables dummyDofVars;
-        return computeOverallWeightedRate_(bottomHolePressure,
-                                           overallSurfaceRates,
-                                           dummyDofVars,
-                                           /*globalEvalDofIdx=*/-1);
+        return computeOverallWeightedSurfaceRate_(bottomHolePressure,
+                                                  overallSurfaceRates,
+                                                  dummyDofVars,
+                                                  /*globalEvalDofIdx=*/-1);
     }
 
     /*!
@@ -1268,20 +1331,12 @@ protected:
      * targeted. This is zero of the "rate-equivalent bottom hole pressure" would be
      * smaller than 1 bar.
      */
-    Scalar computeRateEquivalentBhp_(Scalar targetSurfaceRate,
-                                     const DofVariables &evalDofVars,
-                                     int globalEvalDofIdx) const
+    Scalar computeRateEquivalentBhp_() const
     {
-        static std::array<Scalar, numPhases> dummyVolRates;
-
-        if (wellStatus() == Shut) {
+        if (wellStatus() == Shut)
             // there is no flow happening in the well, so the "BHP" is the pressure of
             // the well's lowest DOF!
-            if (globalEvalDofIdx == bottomDofGlobalIdx_)
-                return evalDofVars.pressure[oilPhaseIdx];
-            else
-                return dofVariables_.at(bottomDofGlobalIdx_).pressure[oilPhaseIdx];
-        }
+            return dofVariables_.at(bottomDofGlobalIdx_).pressure[oilPhaseIdx];
 
         // initialize the bottom hole pressure which we would like to calculate
         Scalar bhp = actualBottomHolePressure_;
@@ -1295,23 +1350,12 @@ protected:
         // final pressure would be below 1 bar...
         bool onBail = false;
 
-        if (wellStatus() == Closed)
-            targetSurfaceRate = 0.0;
-
-        // Producers exhibit negative rates
-        if (wellType_ == Producer)
-            targetSurfaceRate *= -1;
-
         // Newton-Raphson method
         for (int iterNum = 0; iterNum < 20; ++iterNum) {
             Scalar eps = 1e-9*std::abs(bhp);
 
-            Scalar f =
-                computeOverallWeightedRate_(bhp, dummyVolRates, evalDofVars, globalEvalDofIdx)
-                - targetSurfaceRate;
-            Scalar fStar =
-                computeOverallWeightedRate_(bhp + eps, dummyVolRates, evalDofVars, globalEvalDofIdx)
-                - targetSurfaceRate;
+            Scalar f = wellResidual_(bhp);
+            Scalar fStar = wellResidual_(bhp + eps);
             Scalar fPrime = (fStar - f)/eps;
 
             assert(std::abs(fPrime) > 1e-20);
@@ -1337,13 +1381,15 @@ protected:
                   << "' within 20 iterations.");
     }
 
-    Scalar wellResidual(Scalar bhp,
-                        const DofVariables *replacementDofVars = 0,
-                        int replacedGridIdx = -1) const
+    Scalar wellResidual_(Scalar bhp,
+                         const DofVariables *replacementDofVars = 0,
+                         int replacedGridIdx = -1) const
     {
         // compute the volumetric reservoir and surface rates for the complete well
         Scalar resvRate = 0.0;
-        Scalar surfaceRate = 0.0;
+
+        std::array<Scalar, numPhases> totalSurfaceRates;
+        std::fill(totalSurfaceRates.begin(), totalSurfaceRates.end(), 0.0);
 
         auto dofVarsIt = dofVariables_.begin();
         const auto &dofVarsEndIt = dofVariables_.end();
@@ -1354,20 +1400,16 @@ protected:
                 dofVars = replacementDofVars;
             computeVolumetricDofRates_(resvRates, bhp, *dofVars);
 
-
             std::array<Scalar, numPhases> surfaceRates;
             computeSurfaceRates_(surfaceRates, resvRates, dofVarsIt->second);
 
-            if (wellType_ == Injector) {
-                resvRate += computeWeightedRate_(resvRates);
-                surfaceRate += computeWeightedRate_(surfaceRates);
-            }
-            else {
-                assert(wellType_ == Producer);
-                resvRate -= computeWeightedRate_(resvRates);
-                surfaceRate -= computeWeightedRate_(surfaceRates);
-            }
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                totalSurfaceRates[phaseIdx] += surfaceRates[phaseIdx];
+
+            resvRate += computeWeightedRate_(resvRates);
         }
+
+        Scalar surfaceRate = computeWeightedRate_(totalSurfaceRates);
 
         // compute the residual of well equation. we currently use max(rateMax - rate,
         // bhp - targetBhp) for producers and max(rateMax - rate, bhp - targetBhp) for
@@ -1380,15 +1422,35 @@ protected:
         Valgrind::CheckDefined(resvRate);
 
         Scalar result = 1e100;
-        result = std::min(maximumSurfaceRate_ - surfaceRate, result);
-        result = std::min(maximumReservoirRate_ - resvRate, result);
 
-        if (wellType_ == Injector)
-            // for injectors the target BHP is the maximum pressure ...
+        Scalar maxSurfaceRate = maximumSurfaceRate_;
+        Scalar maxResvRate = maximumReservoirRate_;
+        if (wellStatus() == Closed) {
+            // make the weight of the fluids on the surface equal and require that no
+            // fluids are produced on the surface...
+            maxSurfaceRate = 0.0;
+            surfaceRate = 0;
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                surfaceRate += totalSurfaceRates[phaseIdx];
+
+            // don't care about the reservoir rate...
+            maxResvRate = 1e100;
+        }
+
+
+        if (wellType_ == Injector) {
+            // for injectors the computed rates are positive and the target BHP is the
+            // maximum allowed pressure ...
+            result = std::min(maxSurfaceRate - surfaceRate, result);
+            result = std::min(maxResvRate - resvRate, result);
             result = std::min(1e-7*(targetBottomHolePressure_ - bhp), result);
+        }
         else {
             assert(wellType_ == Producer);
-            // ... for producers it is the minimum
+            // ... for producers the rates are negative and the bottom hole pressure is
+            // is the minimum
+            result = std::min(maxSurfaceRate + surfaceRate, result);
+            result = std::min(maxResvRate + resvRate, result);
             result = std::min(1e-7*(bhp - targetBottomHolePressure_), result);
         }
 
@@ -1438,9 +1500,13 @@ protected:
     // can produce or inject the given amount.
     Scalar maximumReservoirRate_;
 
-    // The weighted volumetric surface rate which is actually observed in the well
-    Scalar actualWeightedRate_;
+    // The volumetric surface rate which is actually observed in the well
+    Scalar actualWeightedSurfaceRate_;
     std::array<Scalar, numPhases> actualSurfaceRates_;
+
+    // The volumetric reservoir rate which is actually observed in the well
+    Scalar actualWeightedResvRate_;
+    std::array<Scalar, numPhases> actualResvRates_;
 
     // Specifies whether the well is currently open, closed or shut. The difference
     // between "closed" and "shut" is that for the former, the well is assumed to be
