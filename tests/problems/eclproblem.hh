@@ -627,6 +627,7 @@ private:
             const auto& sgofTable = sgofTables[tableIdx];
 
             const auto &SwColumn = swofTable.getSwColumn();
+
             owParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
             owParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
             owParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
@@ -642,6 +643,11 @@ private:
 
             owParams.finalize();
             goParams.finalize();
+
+            // compute the connate water saturation. In Eclipse decks that is defined as
+            // the first saturation value of the SWOF keyword.
+            Scalar Swco = SwColumn.front();
+            materialParams_[tableIdx].setConnateWaterSaturation(Swco);
 
             materialParams_[tableIdx].setOilWaterParams(owParams);
             materialParams_[tableIdx].setGasOilParams(goParams);
