@@ -29,3 +29,6 @@ test_vec
 
 # Mac OS X debug info
 *.dSYM
+
+# emacs directory setting:
+.dir-locals.el
