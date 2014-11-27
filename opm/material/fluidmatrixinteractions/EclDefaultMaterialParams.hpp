@@ -90,6 +90,26 @@ public:
     void setOilWaterParams(const OilWaterParams& val)
     { oilWaterParams_ = val; }
 
+    /*!
+     * \brief Set the saturation of "connate" water.
+     *
+     * According to
+     *
+     * http://www.glossary.oilfield.slb.com/en/Terms/c/connate_water.aspx
+     *
+     * the connate water is the water which is trapped in the pores of the rock during
+     * the rock's formation. For our application, this is basically a reduction of the
+     * rock's porosity...
+     */
+    void setConnateWaterSaturation(Scalar val)
+    { connateWaterSaturation_ = val; }
+
+    /*!
+     * \brief Return the saturation of "connate" water.
+     */
+    Scalar connateWaterSaturation() const
+    { assertFinalized_(); return connateWaterSaturation_; }
+
 private:
 #ifndef NDEBUG
     void assertFinalized_() const
@@ -103,6 +123,8 @@ private:
 
     GasOilParams gasOilParams_;
     OilWaterParams oilWaterParams_;
+
+    Scalar connateWaterSaturation_;
 };
 } // namespace Opm
 
