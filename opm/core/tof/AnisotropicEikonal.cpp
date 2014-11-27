@@ -250,9 +250,11 @@ namespace Opm
         const double* g;
         double operator()(const double theta) const
         {
-            double a[2] = { x[0] - (1-theta)*x1[0] + theta*x2[0], x[1] - (1-theta)*x1[1] + theta*x2[1] };
-            double b[2] = { x1[0] - x2[0], x1[1] - x2[1] };
-            return u2 - u1 + 2*(a[0]*b[0]*g[0] + a[0]*b[1]*g[1] + a[1]*b[0]*g[2] + a[1]*b[1]*g[3]);
+            const double a[2] = { x[0] - (1-theta)*x1[0] + theta*x2[0], x[1] - (1-theta)*x1[1] + theta*x2[1] };
+            const double b[2] = { x1[0] - x2[0], x1[1] - x2[1] };
+            const double val =  u2 - u1 + 2*(a[0]*b[0]*g[0] + a[0]*b[1]*g[1] + a[1]*b[0]*g[2] + a[1]*b[1]*g[3]);
+            std::cout << theta << "   " << val << std::endl;
+            return val;
         }
     };
 
