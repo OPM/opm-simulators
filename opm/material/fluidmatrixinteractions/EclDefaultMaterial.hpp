@@ -267,22 +267,23 @@ public:
     static Scalar krn(const Params &params,
                       const FluidState &fluidState)
     {
-        Scalar Sw = std::min(1.0, std::max(0.0, fluidState.saturation(waterPhaseIdx)));
-        Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oilPhaseIdx)));
+        Scalar Swco = params.connateWaterSaturation();
+
+        Scalar Sw = std::min(1.0, std::max(Swco, fluidState.saturation(waterPhaseIdx)));
+        //Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oilPhaseIdx)));
         Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gasPhaseIdx)));
-
-        // connate water. According to the Eclipse TD, this is
-        // probably only relevant if hysteresis is enabled...
-        Scalar Swco = 0; // todo!
-
-        Scalar krog = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So + Swco);
-        Scalar krow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), 1 - So);
 
         if (Sg + Sw - Swco < 1e-30)
             return 1.0; // avoid division by zero
         else {
-            Scalar tmp = (Sg*krog + (Sw - Swco)*krow) / (Sg + Sw - Swco);
-            return std::min(1.0, std::max(0.0, tmp));
+            Scalar kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sg + Sw);
+            Scalar kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Sw + Swco);
+
+            Scalar weightOilWater = (Sg - Swco)/(Sg + Sw - Swco);
+            Scalar weightGasOil = 1 - weightOilWater;
+
+            Scalar kro = weightOilWater*kro_ow + weightGasOil*kro_go;
+            return std::min(1.0, std::max(0.0, kro));
         }
     }
 
