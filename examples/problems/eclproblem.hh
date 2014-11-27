@@ -631,11 +631,11 @@ private:
             owParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
             owParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
 
-            // convert the saturations from gas to oil saturations
-            auto SoSamples = sgofTable.getSgColumn();
-            for (size_t sampleIdx = 0; sampleIdx < SoSamples.size(); ++ sampleIdx) {
-                SoSamples[sampleIdx] = 1 - SoSamples[sampleIdx];
-            }
+            // convert the saturations of the SGOF keyword from gas to oil saturations
+            std::vector<double> SoSamples(sgofTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
+                SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+
             goParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
             goParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
             goParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
