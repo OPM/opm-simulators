@@ -24,11 +24,14 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
+#include "eclgridmanager.hh"
+#include "eclwellmanager.hh"
+#include "eclwriter.hh"
+#include "eclsummarywriter.hh"
+#include "ecloutputblackoilmodule.hh"
+
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include <ewoms/io/eclgridmanager.hh>
-#include <ewoms/io/eclipsesummarywriter.hh>
-#include <ewoms/wells/eclwellmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/SplineTwoPhaseMaterial.hpp>
@@ -60,7 +63,7 @@ class EclProblem;
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager));
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
 
 // The temperature inside the reservoir
 NEW_PROP_TAG(Temperature);
@@ -137,11 +140,11 @@ SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 // Disable the VTK output by default for this problem ...
 SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 
-// ... but enable the Eclipse output by default
-SET_BOOL_PROP(EclBaseProblem, EnableEclipseOutput, true);
+// ... but enable the ECL output by default
+SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
 
 // also enable the summary output.
-SET_BOOL_PROP(EclBaseProblem, EnableEclipseSummaryOutput, true);
+SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
 
 // The default DGF file to load
 SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
@@ -151,8 +154,8 @@ namespace Ewoms {
 /*!
  * \ingroup TestProblems
  *
- * \brief This problem uses a deck in the format of the Eclipse
- *        simulator.
+ * \brief This problem simulates an input file given in the data format used by the
+ *        commercial ECLiPSE simulator.
  */
 template <class TypeTag>
 class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
@@ -185,7 +188,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
-    typedef Ewoms::EclipseSummaryWriter<TypeTag> EclipseSummaryWriter;
+    typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
 
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
@@ -197,11 +200,16 @@ public:
     {
         ParentType::registerParameters();
 
+        Ewoms::EclOutputBlackOilModule<TypeTag>::registerParameters();
+
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
                              "The temperature [K] in the reservoir");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
                              "report steps");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
+                             "Write binary output which is compatible with the commercial "
+                             "Eclipse simulator");
     }
 
     /*!
@@ -210,8 +218,12 @@ public:
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
         , wellManager_(simulator)
+        , eclWriter_(simulator)
         , summaryWriter_(simulator)
-    { }
+    {
+        // add the output module for the Ecl binary output
+        simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
+    }
 
     /*!
      * \copydoc FvBaseProblem::finishInit
@@ -234,9 +246,9 @@ public:
 
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities because the well model uses them...
-        wellManager_.init(simulator.gridManager().eclipseState());
+        wellManager_.init(simulator.gridManager().eclState());
 
-        // Start the first episode. For this, ask the Eclipse schedule.
+        // Start the first episode. For this, ask the ECL schedule.
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
 
@@ -261,7 +273,7 @@ public:
      * \brief Called by the simulator before an episode begins.
      */
     void beginEpisode()
-    { wellManager_.beginEpisode(this->simulator().gridManager().eclipseState()); }
+    { wellManager_.beginEpisode(this->simulator().gridManager().eclState()); }
 
     /*!
      * \brief Called by the simulator before each time integration.
@@ -302,8 +314,8 @@ public:
 
         // ... then proceed to the next report step
         Simulator &simulator = this->simulator();
-        Opm::EclipseStateConstPtr eclipseState = this->simulator().gridManager().eclipseState();
-        Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
+        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
+        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
 
         // TimeMap deals with points in time, so the number of time
         // intervals (i.e., report steps) is one less!
@@ -337,6 +349,29 @@ public:
             return true;
 
         return this->simulator().episodeWillBeOver();
+    }
+
+    /*!
+     * \brief Write the requested quantities of the current solution into the output
+     *        files.
+     */
+    void writeOutput(bool verbose = true)
+    {
+        // calculate the time _after_ the time was updated
+        Scalar t = this->simulator().time() + this->simulator().timeStepSize();
+
+        // prepare the ECL and the VTK writers
+        if (enableEclOutput_())
+            eclWriter_.beginWrite(t);
+
+        // use the generic code to prepare the output fields and to
+        // write the desired VTK files.
+        ParentType::writeOutput(verbose);
+
+        if (enableEclOutput_()) {
+            this->model().appendOutputFields(eclWriter_);
+            eclWriter_.endWrite();
+        }
     }
 
     /*!
@@ -453,7 +488,7 @@ public:
     /*!
      * \copydoc FvBaseProblem::boundary
      *
-     * Eclipse uses no-flow conditions for all boundaries. \todo really?
+     * ECLiPSE uses no-flow conditions for all boundaries. \todo really?
      */
     template <class Context>
     void boundary(BoundaryRateVector &values,
@@ -506,10 +541,13 @@ public:
     //! \}
 
 private:
+    static bool enableEclOutput_()
+    { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+
     void readMaterialParameters_()
     {
         auto deck = this->simulator().gridManager().deck();
-        auto eclipseState = this->simulator().gridManager().eclipseState();
+        auto eclState = this->simulator().gridManager().eclState();
         const auto &grid = this->simulator().gridManager().grid();
 
         size_t numDof = this->model().numGridDof();
@@ -521,18 +559,18 @@ private:
         ////////////////////////////////
         // permeability
 
-        // read the intrinsic permeabilities from the eclipseState. Note that all arrays
-        // provided by eclipseState are one-per-cell of "uncompressed" grid, whereas the
+        // read the intrinsic permeabilities from the eclState. Note that all arrays
+        // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // dune-cornerpoint grid object might remove a few elements...
-        if (eclipseState->hasDoubleGridProperty("PERMX")) {
+        if (eclState->hasDoubleGridProperty("PERMX")) {
             const std::vector<double> &permxData =
-                eclipseState->getDoubleGridProperty("PERMX")->getData();
+                eclState->getDoubleGridProperty("PERMX")->getData();
             std::vector<double> permyData(permxData);
-            if (eclipseState->hasDoubleGridProperty("PERMY"))
-                permyData = eclipseState->getDoubleGridProperty("PERMY")->getData();
+            if (eclState->hasDoubleGridProperty("PERMY"))
+                permyData = eclState->getDoubleGridProperty("PERMY")->getData();
             std::vector<double> permzData(permxData);
-            if (eclipseState->hasDoubleGridProperty("PERMZ"))
-                permzData = eclipseState->getDoubleGridProperty("PERMZ")->getData();
+            if (eclState->hasDoubleGridProperty("PERMZ"))
+                permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 int cartesianElemIdx = grid.globalCell()[dofIdx];
@@ -546,13 +584,13 @@ private:
         }
         else
             OPM_THROW(std::logic_error,
-                      "Can't read the intrinsic permeability from the eclipse state. "
+                      "Can't read the intrinsic permeability from the ecl state. "
                       "(The PERM{X,Y,Z} keywords are missing)");
 
         // apply the NTG keyword to the X and Y permeabilities
-        if (eclipseState->hasDoubleGridProperty("NTG")) {
+        if (eclState->hasDoubleGridProperty("NTG")) {
             const std::vector<double> &ntgData =
-                eclipseState->getDoubleGridProperty("NTG")->getData();
+                eclState->getDoubleGridProperty("NTG")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 int cartesianElemIdx = grid.globalCell()[dofIdx];
@@ -567,9 +605,9 @@ private:
 
         ////////////////////////////////
         // compute the porosity
-        if (eclipseState->hasDoubleGridProperty("PORO")) {
+        if (eclState->hasDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
-                eclipseState->getDoubleGridProperty("PORO")->getData();
+                eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 int cartesianElemIdx = grid.globalCell()[dofIdx];
@@ -577,14 +615,14 @@ private:
             }
         }
         else
-            OPM_THROW(std::logic_error,
-                      "Can't read the porosity from the eclipse state. "
+            OPM_THROW(std::runtime_error,
+                      "Can't read the porosity from the ECL state object. "
                       "(The PORO keyword is missing)");
 
         // apply the NTG keyword to the porosity
-        if (eclipseState->hasDoubleGridProperty("NTG")) {
+        if (eclState->hasDoubleGridProperty("NTG")) {
             const std::vector<double> &ntgData =
-                eclipseState->getDoubleGridProperty("NTG")->getData();
+                eclState->getDoubleGridProperty("NTG")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 int cartesianElemIdx = grid.globalCell()[dofIdx];
@@ -593,9 +631,9 @@ private:
         }
 
         // apply the MULTPV keyword to the porosity
-        if (eclipseState->hasDoubleGridProperty("MULTPV")) {
+        if (eclState->hasDoubleGridProperty("MULTPV")) {
             const std::vector<double> &multpvData =
-                eclipseState->getDoubleGridProperty("MULTPV")->getData();
+                eclState->getDoubleGridProperty("MULTPV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 int cartesianElemIdx = grid.globalCell()[dofIdx];
@@ -605,8 +643,8 @@ private:
 
         ////////////////////////////////
         // fluid parameters
-        const auto& swofTables = eclipseState->getSwofTables();
-        const auto& sgofTables = eclipseState->getSgofTables();
+        const auto& swofTables = eclState->getSwofTables();
+        const auto& sgofTables = eclState->getSgofTables();
 
         // the number of tables for the SWOF and the SGOF keywords
         // must be identical
@@ -644,7 +682,7 @@ private:
             owParams.finalize();
             goParams.finalize();
 
-            // compute the connate water saturation. In Eclipse decks that is defined as
+            // compute the connate water saturation. In ECL decks that is defined as
             // the first saturation value of the SWOF keyword.
             Scalar Swco = SwColumn.front();
             materialParams_[tableIdx].setConnateWaterSaturation(Swco);
@@ -656,9 +694,9 @@ private:
         }
 
         // set the index of the table to be used
-        if (eclipseState->hasIntGridProperty("SATNUM")) {
+        if (eclState->hasIntGridProperty("SATNUM")) {
             const std::vector<int> &satnumData =
-                eclipseState->getIntGridProperty("SATNUM")->getData();
+                eclState->getIntGridProperty("SATNUM")->getData();
 
             materialParamTableIdx_.resize(numDof);
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
@@ -668,7 +706,7 @@ private:
                 assert(1 <= satnumData[dofIdx]);
                 assert(satnumData[dofIdx] <= static_cast<int>(numSatfuncTables));
 
-                // Eclipse uses Fortran-style indices which start at
+                // ECL uses Fortran-style indices which start at
                 // 1, but this here is C++...
                 materialParamTableIdx_[dofIdx] = satnumData[cartesianElemIdx] - 1;
             }
@@ -681,7 +719,7 @@ private:
     void initFluidSystem_()
     {
         const auto deck = this->simulator().gridManager().deck();
-        const auto eclipseState = this->simulator().gridManager().eclipseState();
+        const auto eclState = this->simulator().gridManager().eclState();
 
         FluidSystem::initBegin();
 
@@ -697,9 +735,9 @@ private:
 
             // so far, we require the presence of the PVTO, PVTW and PVDG
             // keywords...
-            FluidSystem::setPvtoTable(eclipseState->getPvtoTables()[regionIdx], regionIdx);
+            FluidSystem::setPvtoTable(eclState->getPvtoTables()[regionIdx], regionIdx);
             FluidSystem::setPvtw(deck->getKeyword("PVTW"), regionIdx);
-            FluidSystem::setPvdgTable(eclipseState->getPvdgTables()[regionIdx], regionIdx);
+            FluidSystem::setPvdgTable(eclState->getPvdgTables()[regionIdx], regionIdx);
         }
 
         FluidSystem::initEnd();
@@ -713,11 +751,11 @@ private:
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
             OPM_THROW(std::runtime_error,
-                      "So far, the Eclipse input file requires the presence of the SWAT "
+                      "So far, the ECL input file requires the presence of the SWAT "
                       "and SGAS keywords");
         if (!deck->hasKeyword("PRESSURE"))
             OPM_THROW(std::runtime_error,
-                      "So far, the Eclipse input file requires the presence of the PRESSURE "
+                      "So far, the ECL input file requires the presence of the PRESSURE "
                       "keyword");
         if (!deck->hasKeyword("DISGAS"))
             OPM_THROW(std::runtime_error,
@@ -725,7 +763,7 @@ private:
                       " (DISGAS keyword is missing)");
         if (!deck->hasKeyword("RS"))
             OPM_THROW(std::runtime_error,
-                      "The Eclipse input file requires the presence of the RS keyword");
+                      "The ECL input file requires the presence of the RS keyword");
 
         if (deck->hasKeyword("VAPOIL"))
             OPM_THROW(std::runtime_error,
@@ -733,7 +771,7 @@ private:
                       " (The VAPOIL keyword is unsupported)");
         if (deck->hasKeyword("RV"))
             OPM_THROW(std::runtime_error,
-                      "The Eclipse input file requires the RV keyword to be non-present");
+                      "The ECL input file requires the RV keyword to be non-present");
 
         size_t numDof = this->model().numGridDof();
 
@@ -845,7 +883,7 @@ private:
 
     void computeFaceIntrinsicPermeabilities_()
     {
-        auto eclipseState = this->simulator().gridManager().eclipseState();
+        auto eclState = this->simulator().gridManager().eclState();
         const auto &grid = this->simulator().gridManager().grid();
 
         int numElements = this->gridView().size(/*codim=*/0);
@@ -859,18 +897,18 @@ private:
 
         // retrieve the transmissibility multiplier keywords. Note that we use them as
         // permeability multipliers...
-        if (eclipseState->hasDoubleGridProperty("MULTX"))
-            multx = eclipseState->getDoubleGridProperty("MULTX")->getData();
-        if (eclipseState->hasDoubleGridProperty("MULTX-"))
-            multxMinus = eclipseState->getDoubleGridProperty("MULTX-")->getData();
-        if (eclipseState->hasDoubleGridProperty("MULTY"))
-            multy = eclipseState->getDoubleGridProperty("MULTY")->getData();
-        if (eclipseState->hasDoubleGridProperty("MULTY-"))
-            multyMinus = eclipseState->getDoubleGridProperty("MULTY-")->getData();
-        if (eclipseState->hasDoubleGridProperty("MULTZ"))
-            multz = eclipseState->getDoubleGridProperty("MULTZ")->getData();
-        if (eclipseState->hasDoubleGridProperty("MULTZ-"))
-            multzMinus = eclipseState->getDoubleGridProperty("MULTZ-")->getData();
+        if (eclState->hasDoubleGridProperty("MULTX"))
+            multx = eclState->getDoubleGridProperty("MULTX")->getData();
+        if (eclState->hasDoubleGridProperty("MULTX-"))
+            multxMinus = eclState->getDoubleGridProperty("MULTX-")->getData();
+        if (eclState->hasDoubleGridProperty("MULTY"))
+            multy = eclState->getDoubleGridProperty("MULTY")->getData();
+        if (eclState->hasDoubleGridProperty("MULTY-"))
+            multyMinus = eclState->getDoubleGridProperty("MULTY-")->getData();
+        if (eclState->hasDoubleGridProperty("MULTZ"))
+            multz = eclState->getDoubleGridProperty("MULTZ")->getData();
+        if (eclState->hasDoubleGridProperty("MULTZ-"))
+            multzMinus = eclState->getDoubleGridProperty("MULTZ-")->getData();
 
         // resize the hash map to a appropriate size for a conforming 3D grid
         float maxLoadFactor = intersectionIntrinsicPermeability_.max_load_factor();
@@ -977,7 +1015,9 @@ private:
     Scalar temperature_;
 
     EclWellManager<TypeTag> wellManager_;
-    EclipseSummaryWriter summaryWriter_;
+
+    EclWriter<TypeTag> eclWriter_;
+    EclSummaryWriter summaryWriter_;
 };
 } // namespace Ewoms
 

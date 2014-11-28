@@ -24,7 +24,8 @@
 #ifndef EWOMS_ECL_WELL_MANAGER_HH
 #define EWOMS_ECL_WELL_MANAGER_HH
 
-#include <ewoms/wells/eclpeacemanwell.hh>
+#include "eclpeacemanwell.hh"
+
 #include <ewoms/disc/common/fvbaseproperties.hh>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -469,9 +470,9 @@ protected:
         auto& model = simulator_.model();
         model.clearAuxiliaryModules();
 
-        auto eclState = simulator_.gridManager().eclipseState();
-        const auto &deckSchedule = eclState->getSchedule();
-        const Grid &grid = simulator_.gridManager().grid();
+        auto eclStatePtr = simulator_.gridManager().eclState();
+        const auto& deckSchedule = eclStatePtr->getSchedule();
+        const Grid& grid = simulator_.gridManager().grid();
         const GridView gridView = simulator_.gridManager().gridView();
         const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
