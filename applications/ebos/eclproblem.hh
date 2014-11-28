@@ -137,6 +137,10 @@ SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 // not millions of trillions of years, that is...)
 SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 
+// increase the default raw tolerance for the newton solver to 10^-4 because this is what
+// everone else seems to be doing...
+SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-4);
+
 // Disable the VTK output by default for this problem ...
 SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 
