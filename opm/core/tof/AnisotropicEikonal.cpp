@@ -101,7 +101,7 @@ namespace Opm
         while (!considered_.empty()) {
             // 4. Find the Considered cell with the smallest value: r.
             const ValueAndCell r = topConsidered();
-            std::cout << "Accepting cell " << r.second << std::endl;
+            // std::cout << "Accepting cell " << r.second << std::endl;
 
             // 5. Move cell r to Accepted. Update AcceptedFront.
             const int rcell = r.second;
@@ -131,7 +131,7 @@ namespace Opm
             for (auto it = considered_.begin(); it != considered_.end(); ++it) {
                 const int ccell = it->second;
                 if (isClose(rcell, ccell, metric)) {
-                    const double value = computeValue(ccell, metric, solution.data());
+                    const double value = computeValueUpdate(ccell, metric, solution.data(), rcell);
                     if (value < it->first) {
                         // Update value for considered cell.
                         // Note that as solution values decrease, their
@@ -177,7 +177,7 @@ namespace Opm
                                               const double* metric,
                                               const double* solution) const
     {
-        std::cout << "++++ computeValue(), cell = " << cell << std::endl;
+        // std::cout << "++++ computeValue(), cell = " << cell << std::endl;
 	const auto& nbs = cell_neighbours_[cell];
 	const int num_nbs = nbs.size();
         const double inf = 1e100;
@@ -200,7 +200,43 @@ namespace Opm
             }
         }
         assert(val != inf);
-        std::cout << "---> " << val << std::endl;
+        // std::cout << "---> " << val << std::endl;
+	return val;
+    }
+
+
+
+
+
+    double AnisotropicEikonal2d::computeValueUpdate(const int cell,
+                                                    const double* metric,
+                                                    const double* solution,
+                                                    const int new_cell) const
+    {
+        // std::cout << "++++ computeValueUpdate(), cell = " << cell << std::endl;
+	const auto& nbs = cell_neighbours_[cell];
+	const int num_nbs = nbs.size();
+        const double inf = 1e100;
+	double val = inf;
+	for (int ii = 0; ii < num_nbs; ++ii) {
+	    const int n[2] = { nbs[ii], nbs[(ii+1) % num_nbs] };
+            if ((n[0] == new_cell || n[1] == new_cell)
+                && accepted_front_.count(n[0]) && accepted_front_.count(n[1])) {
+                const double cand_val = computeFromTri(cell, n[0], n[1], metric, solution);
+                val = std::min(val, cand_val);
+            }
+	}
+        if (val == inf) {
+            // Failed to find two accepted front nodes adjacent to this,
+            // so we go for a single-neighbour update.
+            for (int ii = 0; ii < num_nbs; ++ii) {
+                if (nbs[ii] == new_cell && accepted_front_.count(nbs[ii])) {
+                    const double cand_val = computeFromLine(cell, nbs[ii], metric, solution);
+                    val = std::min(val, cand_val);
+                }
+            }
+        }
+        // std::cout << "---> " << val << std::endl;
 	return val;
     }
 
@@ -258,7 +294,7 @@ namespace Opm
             const double b[2] = { x1[0] - x2[0], x1[1] - x2[1] };
             const double dQdtheta = 2*(a[0]*b[0]*g[0] + a[0]*b[1]*g[1] + a[1]*b[0]*g[2] + a[1]*b[1]*g[3]);
             const double val =  u2 - u1 + dQdtheta/(2*distanceAniso(x, xt, g));
-            std::cout << theta << "   " << val << std::endl;
+            // std::cout << theta << "   " << val << std::endl;
             return val;
         }
     };
@@ -273,7 +309,7 @@ namespace Opm
                                                 const double* metric,
                                                 const double* solution) const
     {
-        std::cout << "====  cell = " << cell << "   n0 = " << n0 << "   n1 = " << n1 << std::endl;
+        // std::cout << "====  cell = " << cell << "   n0 = " << n0 << "   n1 = " << n1 << std::endl;
         assert(!is_accepted_[cell]);
         assert(is_accepted_[n0]);
         assert(is_accepted_[n1]);
