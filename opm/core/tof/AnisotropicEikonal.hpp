@@ -36,44 +36,44 @@ namespace Opm
     class AnisotropicEikonal2d
     {
     public:
-	/// Construct solver.
+        /// Construct solver.
         /// \param[in] grid      A 2d grid.
         explicit AnisotropicEikonal2d(const UnstructuredGrid& grid);
 
         /// Solve the eikonal equation.
-	/// \param[in]  metric            Array of metric tensors, M, for each cell.
+        /// \param[in]  metric            Array of metric tensors, M, for each cell.
         /// \param[in]  startcells        Array of cells where u = 0 at the centroid.
         /// \param[out] solution          Array of solution to the eikonal equation.
         void solve(const double* metric,
-		   const std::vector<int>& startcells,
-		   std::vector<double>& solution);
+                   const std::vector<int>& startcells,
+                   std::vector<double>& solution);
     private:
         // Grid and topology.
-	const UnstructuredGrid& grid_;
-	SparseTable<int> cell_neighbours_;
+        const UnstructuredGrid& grid_;
+        SparseTable<int> cell_neighbours_;
 
         // Keep track of accepted cells.
-	std::vector<char> is_accepted_;
+        std::vector<char> is_accepted_;
         std::set<int> accepted_front_;
 
         // Keep track of considered cells.
-	typedef std::pair<double, int> ValueAndCell;
+        typedef std::pair<double, int> ValueAndCell;
         typedef boost::heap::compare<std::greater<ValueAndCell>> Comparator;
         typedef boost::heap::fibonacci_heap<ValueAndCell, Comparator> Heap;
         Heap considered_;
         typedef Heap::handle_type HeapHandle;
         std::map<int, HeapHandle> considered_handles_;
-	std::vector<char> is_considered_;
+        std::vector<char> is_considered_;
 
         bool isClose(const int c1, const int c2, const double* metric) const;
-	double computeValue(const int cell, const double* metric, const double* solution) const;
-	double computeValueUpdate(const int cell, const double* metric, const double* solution, const int new_cell) const;
-	double computeFromLine(const int cell, const int from, const double* metric, const double* solution) const;
-	double computeFromTri(const int cell, const int n0, const int n1, const double* metric, const double* solution) const;
+        double computeValue(const int cell, const double* metric, const double* solution) const;
+        double computeValueUpdate(const int cell, const double* metric, const double* solution, const int new_cell) const;
+        double computeFromLine(const int cell, const int from, const double* metric, const double* solution) const;
+        double computeFromTri(const int cell, const int n0, const int n1, const double* metric, const double* solution) const;
 
-	const ValueAndCell& topConsidered() const;
-	void pushConsidered(const ValueAndCell& vc);
-	void popConsidered();
+        const ValueAndCell& topConsidered() const;
+        void pushConsidered(const ValueAndCell& vc);
+        void popConsidered();
     };
 
 } // namespace Opm
