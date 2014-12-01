@@ -101,6 +101,7 @@ namespace Opm
         while (!considered_.empty()) {
             // 4. Find the Considered cell with the smallest value: r.
             const ValueAndCell r = topConsidered();
+            std::cout << "Accepting cell " << r.second << std::endl;
 
             // 5. Move cell r to Accepted. Update AcceptedFront.
             const int rcell = r.second;
@@ -176,6 +177,7 @@ namespace Opm
                                               const double* metric,
                                               const double* solution) const
     {
+        std::cout << "++++ computeValue(), cell = " << cell << std::endl;
 	const auto& nbs = cell_neighbours_[cell];
 	const int num_nbs = nbs.size();
         const double inf = 1e100;
@@ -198,6 +200,7 @@ namespace Opm
             }
         }
         assert(val != inf);
+        std::cout << "---> " << val << std::endl;
 	return val;
     }
 
@@ -250,9 +253,11 @@ namespace Opm
         const double* g;
         double operator()(const double theta) const
         {
-            const double a[2] = { x[0] - (1-theta)*x1[0] + theta*x2[0], x[1] - (1-theta)*x1[1] + theta*x2[1] };
+            const double xt[2] = { (1-theta)*x1[0] + theta*x2[0], (1-theta)*x1[1] + theta*x2[1] };
+            const double a[2] = { x[0] - xt[0], x[1] - xt[1] };
             const double b[2] = { x1[0] - x2[0], x1[1] - x2[1] };
-            const double val =  u2 - u1 + 2*(a[0]*b[0]*g[0] + a[0]*b[1]*g[1] + a[1]*b[0]*g[2] + a[1]*b[1]*g[3]);
+            const double dQdtheta = 2*(a[0]*b[0]*g[0] + a[0]*b[1]*g[1] + a[1]*b[0]*g[2] + a[1]*b[1]*g[3]);
+            const double val =  u2 - u1 + dQdtheta/(2*distanceAniso(x, xt, g));
             std::cout << theta << "   " << val << std::endl;
             return val;
         }
@@ -268,6 +273,7 @@ namespace Opm
                                                 const double* metric,
                                                 const double* solution) const
     {
+        std::cout << "====  cell = " << cell << "   n0 = " << n0 << "   n1 = " << n1 << std::endl;
         assert(!is_accepted_[cell]);
         assert(is_accepted_[n0]);
         assert(is_accepted_[n1]);
