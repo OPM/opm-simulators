@@ -33,7 +33,7 @@ namespace Opm
 	if (grid.dimensions != 2) {
 	    OPM_THROW(std::logic_error, "Grid for AnisotropicEikonal2d must be 2d.");
 	}
-	cell_neighbours_ = vertexNeighbours(grid);
+	cell_neighbours_ = cellNeighboursAcrossVertices(grid);
 	orderCounterClockwise(grid, cell_neighbours_);
     }
 
