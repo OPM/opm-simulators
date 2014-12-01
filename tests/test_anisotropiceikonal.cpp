@@ -41,10 +41,10 @@ BOOST_AUTO_TEST_CASE(cartesian_2d_a)
     AnisotropicEikonal2d ae(grid);
 
     const std::vector<double> metric = {
-	1, 0, 0, 1,
-	1, 0, 0, 1,
-	1, 0, 0, 1,
-	1, 0, 0, 1
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1
     };
     BOOST_REQUIRE_EQUAL(metric.size(), grid.number_of_cells*grid.dimensions*grid.dimensions);
     const std::vector<int> start = { 0 };
@@ -57,26 +57,26 @@ BOOST_AUTO_TEST_CASE(cartesian_2d_a)
 }
 
 
-// BOOST_AUTO_TEST_CASE(cartesian_2d_b)
-// {
-//     const GridManager gm(3, 2, 1.0, 2.0);
-//     const UnstructuredGrid& grid = *gm.c_grid();
-//     AnisotropicEikonal2d ae(grid);
+BOOST_AUTO_TEST_CASE(cartesian_2d_b)
+{
+    const GridManager gm(3, 2, 1.0, 2.0);
+    const UnstructuredGrid& grid = *gm.c_grid();
+    AnisotropicEikonal2d ae(grid);
 
-//     const std::vector<double> metric = {
-// 	1, 0, 0, 1,
-// 	1, 0, 0, 1,
-// 	1, 0, 0, 1,
-// 	1, 0, 0, 1,
-// 	1, 0, 0, 1,
-// 	1, 0, 0, 1
-//     };
-//     BOOST_REQUIRE_EQUAL(metric.size(), grid.number_of_cells*grid.dimensions*grid.dimensions);
-//     const std::vector<int> start = { 0 };
-//     std::vector<double> sol;
-//     ae.solve(metric.data(), start, sol);
-//     BOOST_REQUIRE(!sol.empty());
-//     BOOST_CHECK_EQUAL(sol.size(), grid.number_of_cells);
-//     std::vector<double> truth = { 0, 1, 2, 2, std::sqrt(5), std::sqrt(8) };
-//     BOOST_CHECK_EQUAL_COLLECTIONS(sol.begin(), sol.end(), truth.begin(), truth.end());
-// }
+    const std::vector<double> metric = {
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1,
+        1, 0, 0, 1
+    };
+    BOOST_REQUIRE_EQUAL(metric.size(), grid.number_of_cells*grid.dimensions*grid.dimensions);
+    const std::vector<int> start = { 0 };
+    std::vector<double> sol;
+    ae.solve(metric.data(), start, sol);
+    BOOST_REQUIRE(!sol.empty());
+    BOOST_CHECK_EQUAL(sol.size(), grid.number_of_cells);
+    std::vector<double> truth = { 0, 1, 2, 2, std::sqrt(5), std::sqrt(8) };
+    BOOST_CHECK_EQUAL_COLLECTIONS(sol.begin(), sol.end(), truth.begin(), truth.end());
+}
