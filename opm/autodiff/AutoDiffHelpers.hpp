@@ -70,7 +70,7 @@ struct HelperOps
         TwoColInt nbi;
         extractInternalFaces(grid, internal_faces, nbi);
         int num_internal=internal_faces.size();
-        
+
         // std::cout << "nbi = \n" << nbi << std::endl;
         // Create matrices.
         ngrad.resize(num_internal, nc);
@@ -361,9 +361,10 @@ spdiag(const AutoDiffBlock<double>::V& d)
 
 
 /// Returns the input expression, but with all Jacobians collapsed to one.
+template <class Matrix>
 inline
-AutoDiffBlock<double>
-collapseJacs(const AutoDiffBlock<double>& x)
+void
+collapseJacs(const AutoDiffBlock<double>& x, Matrix& jacobian)
 {
     typedef AutoDiffBlock<double> ADB;
     const int nb = x.numBlocks();
@@ -387,9 +388,21 @@ collapseJacs(const AutoDiffBlock<double>& x)
         block_col_start += jac.cols();
     }
     // Build final jacobian.
+    jacobian = Matrix(x.size(), block_col_start);
+    jacobian.setFromTriplets(t.begin(), t.end());
+}
+
+
+
+/// Returns the input expression, but with all Jacobians collapsed to one.
+inline
+AutoDiffBlock<double>
+collapseJacs(const AutoDiffBlock<double>& x)
+{
+    typedef AutoDiffBlock<double> ADB;
+    // Build final jacobian.
     std::vector<ADB::M> jacs(1);
-    jacs[0].resize(x.size(), block_col_start);
-    jacs[0].setFromTriplets(t.begin(), t.end());
+    collapseJacs( x, jacs[ 0 ] );
     return ADB::function(x.value(), jacs);
 }
 
