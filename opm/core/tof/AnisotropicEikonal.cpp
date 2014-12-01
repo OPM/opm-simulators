@@ -58,9 +58,9 @@ namespace Opm
 	//    U_i = min_{(x_j,x_k) \in NF(x_i)} G_{j,k}
 	// 4. Find the Considered cell with the smallest value: r.
 	// 5. Move cell r to Accepted. Update AcceptedFront.
-	// 6. Move cells adjacent to r from Far to Considered.
-	// 7. Recompute the value for all Considered cells within
+	// 6. Recompute the value for all Considered cells within
 	//    distance h * F_2/F1 from x_r. Use min of previous and new.
+	// 7. Move cells adjacent to r from Far to Considered.
 	// 8. If Considered is not empty, go to step 4.
 
 	// 1. Put all cells in Far. U_i = \inf.
@@ -126,17 +126,7 @@ namespace Opm
                 }
             }
 
-            // 6. Move cells adjacent to r from Far to Considered.
-            for (auto it = cell_neighbours_[rcell].begin(); it != cell_neighbours_[rcell].end(); ++it) {
-                const int nb_cell = *it;
-                if (!is_accepted_[nb_cell] && !is_considered_[nb_cell]) {
-                    assert(solution[nb_cell] == inf);
-                    const double value = computeValue(nb_cell, metric, solution.data());
-                    pushConsidered(std::make_pair(value, nb_cell));
-                }
-            }
-
-            // 7. Recompute the value for all Considered cells within
+            // 6. Recompute the value for all Considered cells within
             //    distance h * F_2/F1 from x_r. Use min of previous and new.
             for (auto it = considered_.begin(); it != considered_.end(); ++it) {
                 const int ccell = it->second;
@@ -150,6 +140,16 @@ namespace Opm
                         // modificator below.
                         considered_.increase(considered_handles_[ccell], std::make_pair(value, ccell));
                     }
+                }
+            }
+
+            // 7. Move cells adjacent to r from Far to Considered.
+            for (auto it = cell_neighbours_[rcell].begin(); it != cell_neighbours_[rcell].end(); ++it) {
+                const int nb_cell = *it;
+                if (!is_accepted_[nb_cell] && !is_considered_[nb_cell]) {
+                    assert(solution[nb_cell] == inf);
+                    const double value = computeValue(nb_cell, metric, solution.data());
+                    pushConsidered(std::make_pair(value, nb_cell));
                 }
             }
 
