@@ -22,6 +22,7 @@
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
+#include <opm/autodiff/ConservativeSparseSparseProduct.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
@@ -102,7 +103,7 @@ namespace Opm
         }
 
         /// Create an AutoDiffBlock representing a constant.
-        /// \param[in] val         values 
+        /// \param[in] val         values
         static AutoDiffBlock constant(const V& val)
         {
             return AutoDiffBlock(val);
@@ -112,7 +113,7 @@ namespace Opm
         /// This variant requires specifying the block sizes used
         /// for the Jacobians even though the Jacobian matrices
         /// themselves will be zero.
-        /// \param[in] val         values 
+        /// \param[in] val         values
         /// \param[in] blocksizes  block pattern
         static AutoDiffBlock constant(const V& val, const std::vector<int>& blocksizes)
         {
@@ -129,7 +130,7 @@ namespace Opm
 
         /// Create an AutoDiffBlock representing a single variable block.
         /// \param[in] index       index of the variable you are constructing
-        /// \param[in] val         values 
+        /// \param[in] val         values
         /// \param[in] blocksizes  block pattern
         /// The resulting object will have size() equal to block_pattern[index].
         /// Its jacobians will all be zero, except for derivative()[index], which
@@ -154,7 +155,7 @@ namespace Opm
         }
 
         /// Create an AutoDiffBlock by directly specifying values and jacobians.
-        /// \param[in] val         values 
+        /// \param[in] val         values
         /// \param[in] jac         vector of jacobians
         static AutoDiffBlock function(const V& val, const std::vector<M>& jac)
         {
