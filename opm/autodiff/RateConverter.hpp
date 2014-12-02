@@ -286,6 +286,7 @@ namespace Opm {
             defineState(const BlackoilState& state)
             {
                 averagePressure(state);
+                averageTemperature(state);
                 calcRmax();
             }
 
