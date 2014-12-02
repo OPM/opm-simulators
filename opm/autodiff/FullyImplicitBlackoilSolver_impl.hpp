@@ -357,6 +357,7 @@ namespace {
     template<class T>
     FullyImplicitBlackoilSolver<T>::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
+        , temperature(   ADB::null())
         , saturation(np, ADB::null())
         , rs        (    ADB::null())
         , rv        (    ADB::null())
@@ -413,6 +414,7 @@ namespace {
         // automatically consistent with variableState() (and doing
         // things automatically is all the rage in this module ;)
         state.pressure = ADB::constant(state.pressure.value());
+        state.temperature = ADB::constant(state.temperature.value());
         state.rs = ADB::constant(state.rs.value());
         state.rv = ADB::constant(state.rv.value());
         for (int phaseIdx= 0; phaseIdx < x.numPhases(); ++ phaseIdx)
@@ -512,6 +514,10 @@ namespace {
         int nextvar = 0;
         state.pressure = vars[ nextvar++ ];
 
+        // temperature
+        const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
+        state.temperature = ADB::constant(temp);
+
         // Saturations
         const std::vector<int>& bpat = vars[0].blockPattern();
         {
@@ -573,6 +579,7 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const ADB&              press = state.pressure;
+        const ADB&              temp  = state.temperature;
         const std::vector<ADB>& sat   = state.saturation;
         const ADB&              rs    = state.rs;
         const ADB&              rv    = state.rv;
@@ -586,7 +593,7 @@ namespace {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, pressures[phase], rs, rv, cond, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, pressures[phase], temp, rs, rv, cond, cells_);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // DUMP(rq_[pos].b);
                 // DUMP(rq_[pos].accum[aix]);
@@ -620,6 +627,7 @@ namespace {
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         // Compute b, rsmax, rvmax values for perforations.
         const ADB perf_press = subset(state.pressure, well_cells);
+        const ADB perf_temp = subset(state.temperature, well_cells);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
         for (int perf = 0; perf < nperf; ++perf) {
@@ -630,21 +638,21 @@ namespace {
         std::vector<double> rssat_perf(nperf, 0.0);
         std::vector<double> rvsat_perf(nperf, 0.0);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const ADB bw = fluid_.bWat(perf_press, well_cells);
+            const ADB bw = fluid_.bWat(perf_press, perf_temp, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw.value();
         }
         assert(active_[Oil]);
         const ADB perf_so =  subset(state.saturation[pu.phase_pos[Oil]], well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = subset(state.rs, well_cells);
-            const ADB bo = fluid_.bOil(perf_press, perf_rs, perf_cond, well_cells);
+            const ADB bo = fluid_.bOil(perf_press, perf_temp, perf_rs, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo.value();
             const V rssat = fluidRsSat(perf_press.value(), perf_so.value(), well_cells);
             rssat_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
-            const ADB bg = fluid_.bGas(perf_press, perf_rv, perf_cond, well_cells);
+            const ADB bg = fluid_.bGas(perf_press, perf_temp, perf_rv, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg.value();
             const V rvsat = fluidRvSat(perf_press.value(), perf_so.value(), well_cells);
             rvsat_perf.assign(rvsat.data(), rvsat.data() + nperf);
@@ -1611,11 +1619,11 @@ namespace {
         const std::vector<PhasePresence> cond = phaseCondition();
 
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.rs, state.rv,cond, cells_);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
         rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.rs, state.rv,cond, cells_);
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
         ADB& head = rq_[ actph ].head;
 
@@ -1910,7 +1918,8 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidViscosity(const int               phase,
-                                                const ADB&              p    ,
+                                                   const ADB&              p    ,
+                                                   const ADB&              temp ,
                                                 const ADB&              rs   ,
                                                 const ADB&              rv   ,
                                                 const std::vector<PhasePresence>& cond,
@@ -1918,12 +1927,12 @@ namespace {
     {
         switch (phase) {
         case Water:
-            return fluid_.muWat(p, cells);
+            return fluid_.muWat(p, temp, cells);
         case Oil: {
-            return fluid_.muOil(p, rs, cond, cells);
+            return fluid_.muOil(p, temp, rs, cond, cells);
         }
         case Gas:
-            return fluid_.muGas(p, rv, cond, cells);
+            return fluid_.muGas(p, temp, rv, cond, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -1937,6 +1946,7 @@ namespace {
     ADB
     FullyImplicitBlackoilSolver<T>::fluidReciprocFVF(const int               phase,
                                                   const ADB&              p    ,
+                                                  const ADB&              temp ,
                                                   const ADB&              rs   ,
                                                   const ADB&              rv   ,
                                                   const std::vector<PhasePresence>& cond,
@@ -1944,12 +1954,12 @@ namespace {
     {
         switch (phase) {
         case Water:
-            return fluid_.bWat(p, cells);
+            return fluid_.bWat(p, temp, cells);
         case Oil: {
-            return fluid_.bOil(p, rs, cond, cells);
+            return fluid_.bOil(p, temp, rs, cond, cells);
         }
         case Gas:
-            return fluid_.bGas(p, rv, cond, cells);
+            return fluid_.bGas(p, temp, rv, cond, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -1962,14 +1972,15 @@ namespace {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidDensity(const int               phase,
-                                              const ADB&              p    ,
+                                                 const ADB&              p    ,
+                                                 const ADB&              temp ,
                                               const ADB&              rs   ,
                                               const ADB&              rv   ,
                                               const std::vector<PhasePresence>& cond,
                                               const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidReciprocFVF(phase, p, rs, rv, cond, cells);
+        ADB b = fluidReciprocFVF(phase, p, temp, rs, rv, cond, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         if (phase == Oil && active_[Gas]) {
             // It is correct to index into rhos with canonical phase indices.

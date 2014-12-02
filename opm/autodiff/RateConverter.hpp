@@ -267,6 +267,7 @@ namespace Opm {
                 , repcells_(Details::representative<typename Property::Cells>(rmap_))
                 , ncells_  (Details::countCells(rmap_))
                 , p_avg_   (rmap_.numRegions())
+                , T_avg_   (rmap_.numRegions())
                 , Rmax_    (rmap_.numRegions(), props.numPhases())
             {}
 
@@ -327,6 +328,7 @@ namespace Opm {
 
                 const PhaseUsage&               pu = props_.phaseUsage();
                 const V&                        p  = getRegPress(r);
+                const V&                        T  = getRegTemp(r);
                 const typename Property::Cells& c  = getRegCell (r);
 
                 const int iw = Details::PhasePos::water(pu);
@@ -338,7 +340,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const V& bw = props_.bWat(p, c);
+                    const V& bw = props_.bWat(p, T, c);
 
                     coeff[iw] = 1.0 / bw(0);
                 }
@@ -351,7 +353,7 @@ namespace Opm {
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const V&     bo  = props_.bOil(p, m.rs, m.cond, c);
+                    const V&     bo  = props_.bOil(p, T, m.rs, m.cond, c);
                     const double den = bo(0) * detR;
 
                     coeff[io] += 1.0 / den;
@@ -364,7 +366,7 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const V&     bg  = props_.bGas(p, m.rv, m.cond, c);
+                    const V&     bg  = props_.bGas(p, T, m.rv, m.cond, c);
                     const double den = bg(0) * detR;
 
                     coeff[ig] += 1.0 / den;
@@ -403,6 +405,11 @@ namespace Opm {
              * Average hydrocarbon pressure in each FIP region.
              */
             Eigen::ArrayXd p_avg_;
+
+            /**
+             * Average temperature in each FIP region.
+             */
+            Eigen::ArrayXd T_avg_;
 
             /**
              * Maximum dissolution and evaporation ratios at average
@@ -475,6 +482,26 @@ namespace Opm {
             }
 
             /**
+             * Compute average temperature in all regions.
+             *
+             * \param[in] state Dynamic reservoir state.
+             */
+            void
+            averageTemperature(const BlackoilState& state)
+            {
+                T_avg_.setZero();
+
+                const std::vector<double>& T = state.temperature();
+                for (std::vector<double>::size_type
+                         i = 0, n = T.size(); i < n; ++i)
+                {
+                    T_avg_(rmap_.region(i)) += T[i];
+                }
+
+                T_avg_ /= ncells_;
+            }
+
+            /**
              * Compute maximum dissolution and evaporation ratios at
              * average hydrocarbon pressure.
              *
@@ -499,8 +526,8 @@ namespace Opm {
                     // pressure into account.  This facility uses the
                     // average *hydrocarbon* pressure rather than
                     // average phase pressure.
-                    Rmax_.col(io) = props_.rsSat(p_avg_, repcells_);
-                    Rmax_.col(ig) = props_.rvSat(p_avg_, repcells_);
+                    Rmax_.col(io) = props_.rsSat(p_avg_, T_avg_, repcells_);
+                    Rmax_.col(ig) = props_.rvSat(p_avg_, T_avg_, repcells_);
                 }
             }
 
@@ -589,6 +616,22 @@ namespace Opm {
                 p << p_avg_(r);
 
                 return p;
+            }
+
+            /**
+             * Retrieve average temperature in region.
+             *
+             * \param[in] r Particular region.
+             *
+             * \return Average temperature in region \c r.
+             */
+            typename Property::V
+            getRegTemp(const RegionId r) const
+            {
+                typename Property::V T(1);
+                T << T_avg_(r);
+
+                return T;
             }
 
             /**

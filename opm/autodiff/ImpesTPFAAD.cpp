@@ -280,8 +280,9 @@ namespace {
         }
         V cell_rho_total = V::Zero(nc,1);
         const Eigen::Map<const V> p(state.pressure().data(), nc, 1);
+        const Eigen::Map<const V> T(state.temperature().data(), nc, 1);
         for (int phase = 0; phase < np; ++phase) {
-            const V cell_rho = fluidRho(phase, p, cells);
+            const V cell_rho = fluidRho(phase, p, T, cells);
             const V cell_s = s.col(phase);
             cell_rho_total += cell_s * cell_rho;
         }
@@ -318,10 +319,12 @@ namespace {
 
         // Initialize AD variables: p (cell pressures) and bhp (well bhp).
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V T0 = Eigen::Map<const V>(&state.temperature()[0], nc, 1);
         const V bhp0 = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
         std::vector<V> vars0 = { p0, bhp0 };
         std::vector<ADB> vars = ADB::variables(vars0);
         const ADB& p = vars[0];
+        const ADB T = ADB::constant(T0);
         const ADB& bhp = vars[1];
         std::vector<int> bpat = p.blockPattern();
 
@@ -331,6 +334,7 @@ namespace {
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(p, well_cells);
+        const ADB T_perfcell = subset(T, well_cells);
         // Construct matrix to map wells->perforations.
         M well_to_perf(well_cells.size(), nw);
         typedef Eigen::Triplet<double> Tri;
@@ -352,20 +356,20 @@ namespace {
         ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
         qs_ = ADB::constant(V::Zero(nw*np, 1), bpat);
         for (int phase = 0; phase < np; ++phase) {
-            const ADB cell_b = fluidFvf(phase, p, cells);
-            const ADB cell_rho = fluidRho(phase, p, cells);
-            const ADB well_b = fluidFvf(phase, p_perfwell, well_cells);
+            const ADB cell_b = fluidFvf(phase, p, T, cells);
+            const ADB cell_rho = fluidRho(phase, p, T, cells);
+            const ADB well_b = fluidFvf(phase, p_perfwell, T_perfcell, well_cells);
             const V kr = fluidKr(phase);
             // Explicitly not asking for derivatives of viscosity,
             // since they are not available yet.
-            const V mu = fluidMu(phase, p.value(), cells);
+            const V mu = fluidMu(phase, p.value(), T.value(), cells);
             const V cell_mob = kr / mu;
             const ADB head_diff_grav = (grav_ * cell_rho);
             const ADB head = nkgradp + (grav_ * cell_rho);
             const UpwindSelector<double> upwind(grid_, ops_, head.value());
             const V face_mob = upwind.select(cell_mob);
             const V well_kr = fluidKrWell(phase);
-            const V well_mu = fluidMu(phase, p_perfwell.value(), well_cells);
+            const V well_mu = fluidMu(phase, p_perfwell.value(), T_perfcell.value(), well_cells);
             const V well_mob = well_kr / well_mu;
             const V perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
             const ADB flux = face_mob * head;
@@ -499,9 +503,11 @@ namespace {
         const V transw = Eigen::Map<const V>(wells_.WI, nperf, 1);
 
         const V p = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V T = Eigen::Map<const V>(&state.temperature()[0], nc, 1);
         const V bhp = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
 
         const V p_perfcell = subset(p, well_cells);
+        const V T_perfcell = subset(T, well_cells);
 
         const V transi  = subset(geo_.transmissibility(),
                                  ops_.internal_faces);
@@ -515,15 +521,15 @@ namespace {
         V perf_flux = V::Zero(nperf, 1);
 
         for (int phase = 0; phase < np; ++phase) {
-            const V cell_rho = fluidRho(phase, p, cells);
+            const V cell_rho = fluidRho(phase, p, T, cells);
             const V head = nkgradp + (grav_ * cell_rho.matrix()).array();
             const UpwindSelector<double> upwind(grid_, ops_, head);
             const V kr = fluidKr(phase);
-            const V mu = fluidMu(phase, p, cells);
+            const V mu = fluidMu(phase, p, T, cells);
             const V cell_mob = kr / mu;
             const V face_mob = upwind.select(cell_mob);
             const V well_kr = fluidKrWell(phase);
-            const V well_mu = fluidMu(phase, p_perfwell, well_cells);
+            const V well_mu = fluidMu(phase, p_perfwell, T_perfcell, well_cells);
             const V well_mob = well_kr / well_mu;
             const V perf_mob = cell_to_well_selector.select(subset(cell_mob, well_cells), well_mob);
 
@@ -545,19 +551,19 @@ namespace {
 
 
 
-    V ImpesTPFAAD::fluidMu(const int phase, const V& p, const std::vector<int>& cells) const
+    V ImpesTPFAAD::fluidMu(const int phase, const V& p, const V& T, const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
-            return fluid_.muWat(p, cells);
+            return fluid_.muWat(p, T, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
             std::vector<PhasePresence> cond(dummy_rs.size());
 
-            return fluid_.muOil(p, dummy_rs, cond, cells);
+            return fluid_.muOil(p, T, dummy_rs, cond, cells);
         }
         case Gas:
-            return fluid_.muGas(p, cells);
+            return fluid_.muGas(p, T, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -567,19 +573,19 @@ namespace {
 
 
 
-    ADB ImpesTPFAAD::fluidMu(const int phase, const ADB& p, const std::vector<int>& cells) const
+    ADB ImpesTPFAAD::fluidMu(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
-            return fluid_.muWat(p, cells);
+            return fluid_.muWat(p, T, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
             std::vector<PhasePresence> cond(dummy_rs.size());
 
-            return fluid_.muOil(p, dummy_rs, cond, cells);
+            return fluid_.muOil(p, T, dummy_rs, cond, cells);
         }
         case Gas:
-            return fluid_.muGas(p, cells);
+            return fluid_.muGas(p, T, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -589,19 +595,19 @@ namespace {
 
 
 
-    V ImpesTPFAAD::fluidFvf(const int phase, const V& p, const std::vector<int>& cells) const
+    V ImpesTPFAAD::fluidFvf(const int phase, const V& p, const V& T, const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
-            return fluid_.bWat(p, cells);
+            return fluid_.bWat(p, T, cells);
         case Oil: {
             V dummy_rs = V::Zero(p.size(), 1) * p;
             std::vector<PhasePresence> cond(dummy_rs.size());
 
-            return fluid_.bOil(p, dummy_rs, cond, cells);
+            return fluid_.bOil(p, T, dummy_rs, cond, cells);
         }
         case Gas:
-            return fluid_.bGas(p, cells);
+            return fluid_.bGas(p, T, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -611,19 +617,19 @@ namespace {
 
 
 
-    ADB ImpesTPFAAD::fluidFvf(const int phase, const ADB& p, const std::vector<int>& cells) const
+    ADB ImpesTPFAAD::fluidFvf(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const
     {
         switch (phase) {
         case Water:
-            return fluid_.bWat(p, cells);
+            return fluid_.bWat(p, T, cells);
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
             std::vector<PhasePresence> cond(dummy_rs.size());
 
-            return fluid_.bOil(p, dummy_rs, cond, cells);
+            return fluid_.bOil(p, T, dummy_rs, cond, cells);
         }
         case Gas:
-            return fluid_.bGas(p, cells);
+            return fluid_.bGas(p, T, cells);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -633,10 +639,10 @@ namespace {
 
 
 
-    V ImpesTPFAAD::fluidRho(const int phase, const V& p, const std::vector<int>& cells) const
+    V ImpesTPFAAD::fluidRho(const int phase, const V& p, const V& T, const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        V b = fluidFvf(phase, p, cells);
+        V b = fluidFvf(phase, p, T, cells);
         V rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
     }
@@ -645,10 +651,10 @@ namespace {
 
 
 
-    ADB ImpesTPFAAD::fluidRho(const int phase, const ADB& p, const std::vector<int>& cells) const
+    ADB ImpesTPFAAD::fluidRho(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidFvf(phase, p, cells);
+        ADB b = fluidFvf(phase, p, T, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
     }
