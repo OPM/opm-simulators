@@ -125,8 +125,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
     Vpw[4] = 16*Opm::unit::barsa;
 
     // standard temperature
-    V T;
-    T.resize(cells.size(), 273.15+20);
+    V T = V::Constant(cells.size(), 273.15+20);
 
     const Opm::BlackoilPropsAd::V VmuWat = boprops_ad.muWat(Vpw, T, cells);
 
@@ -154,8 +153,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
     Vpw[4] = 16*Opm::unit::barsa;
 
     // standard temperature
-    V T;
-    T.resize(cells.size(), 273.15+20);
+    V T = V::Constant(cells.size(), 273.15+20);
 
     typedef Opm::BlackoilPropsAd::ADB ADB;
 
