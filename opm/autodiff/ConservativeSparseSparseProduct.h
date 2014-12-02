@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <iterator>
 #include <functional>
+#include <vector>
 
 #include <Eigen/Core>
 
