@@ -590,8 +590,8 @@ namespace Opm
         template <class Region,
                   class CellRange>
         std::vector<double>
-        temperature(const UnstructuredGrid& G,
-                    const Region&           reg,
+        temperature(const UnstructuredGrid& /* G */,
+                    const Region&           /* reg */,
                     const CellRange&        cells)
         {
             // use the standard temperature for everything for now
