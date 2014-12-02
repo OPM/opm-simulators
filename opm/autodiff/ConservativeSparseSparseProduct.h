@@ -88,24 +88,29 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
   // we compute each column of the result, one after the other
   for (Index j=0; j<cols; ++j)
   {
-    res.startVec(j);
     Index nnz = 0;
     for (typename Rhs::InnerIterator rhsIt(rhs, j); rhsIt; ++rhsIt)
     {
       const Scalar y = rhsIt.value();
-      for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
+      if( y != 0.0 )
       {
-        const Index i = lhsIt.index();
-        const Scalar x = lhsIt.value();
-        if(!mask[i])
+        for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
         {
-          mask[i] = true;
-          values[i] = x * y;
-          indices[nnz] = i;
-          ++nnz;
+          const Index i = lhsIt.index();
+          const Scalar x = lhsIt.value();
+          if( x != 0.0 )
+          {
+            if(!mask[i])
+            {
+              mask[i] = true;
+              values[i] = x * y;
+              indices[nnz] = i;
+              ++nnz;
+            }
+            else
+              values[i] += x * y;
+          }
         }
-        else
-          values[i] += x * y;
       }
     }
 
@@ -115,6 +120,7 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
       QuickSort< 1 >::sort( indices.data(), indices.data()+nnz );
     }
 
+    res.startVec(j);
     // ordered insertion
     // still using insertBackByOuterInnerUnordered since we know what we are doing
     for(Index k=0; k<nnz; ++k)
