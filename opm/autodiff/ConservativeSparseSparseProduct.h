@@ -53,6 +53,7 @@ struct QuickSort< 0 >
   template <typename T>
   static inline void sort(T begin, T end)
   {
+    // fall back to standard insertion sort
     std::sort( begin, end );
   }
 };
