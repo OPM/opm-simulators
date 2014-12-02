@@ -107,6 +107,7 @@ namespace Opm {
         struct SolutionState {
             SolutionState(const int np);
             ADB              pressure;
+            ADB              temperature;
             std::vector<ADB> saturation;
             ADB              concentration;
             ADB              qs;
@@ -213,18 +214,21 @@ namespace Opm {
         ADB
         fluidViscosity(const int                         phase,
                        const ADB&                        p    ,
+                       const ADB&                        T    ,
                        const std::vector<PhasePresence>& cond,
                        const std::vector<int>&           cells) const;
 
         ADB
         fluidReciprocFVF(const int                         phase,
                          const ADB&                        p    ,
+                         const ADB&                        T    ,
                          const std::vector<PhasePresence>& cond,
                          const std::vector<int>&           cells) const;
 
         ADB
         fluidDensity(const int                         phase,
                      const ADB&                        p    ,
+                     const ADB&                        T    ,
                      const std::vector<PhasePresence>& cond,
                      const std::vector<int>&           cells) const;
 

@@ -143,6 +143,7 @@ namespace Opm
                                const Opm::PolymerProperties& polyprops,
                                const std::vector<int>& cells,
                                const std::vector<double>& p,
+                               const std::vector<double>& T,
                                const std::vector<double>& z,
                                const std::vector<double>& s,
                                const std::vector<double>& c,
@@ -159,7 +160,7 @@ namespace Opm
 	std::vector<double> kr(num_cells*num_phases);
 	props.relperm(num_cells, &s[0], &cells[0], &kr[0], 0);
 	std::vector<double> mu(num_cells*num_phases);
-	props.viscosity(num_cells, &p[0], &z[0], &cells[0], &mu[0], 0);
+	props.viscosity(num_cells, &p[0], &T[0], &z[0], &cells[0], &mu[0], 0);
         double mob[2]; // here we assume num_phases=2
 	for (int cell = 0; cell < num_cells; ++cell) {
             double* kr_cell = &kr[2*cell];
@@ -278,6 +279,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& press = state.pressure();
+        const std::vector<double>& temp = state.temperature();
         const std::vector<double>& s = state.saturation();
         const std::vector<double>& z = state.surfacevol();
         const std::vector<double>& c = state.concentration();
@@ -305,8 +307,8 @@ namespace Opm
                 const double flux = -transport_src[cell]*dt;
                 const double* sat = &s[np*cell];
                 props.relperm(1, sat, &cell, &kr_cell[0], 0);
-                props.viscosity(1, &press[cell], &z[np*cell], &cell, &visc[0], 0);
-                props.matrix(1, &press[cell], &z[np*cell], &cell, &A[0], 0);
+                props.viscosity(1, &press[cell], &temp[cell], &z[np*cell], &cell, &visc[0], 0);
+                props.matrix(1, &press[cell], &temp[cell], &z[np*cell], &cell, &A[0], 0);
                 polyprops.effectiveMobilities(c[cell], cmax[cell], &visc[0],
                                               &kr_cell[0], &mob[0]);
                 double totmob = 0.0;

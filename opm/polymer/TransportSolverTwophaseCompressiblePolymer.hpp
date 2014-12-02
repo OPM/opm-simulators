@@ -74,6 +74,7 @@ namespace Opm
 	/// \param[in] darcyflux           Array of signed face fluxes.
 	/// \param[in] initial_pressure    Array with pressure at start of timestep.
 	/// \param[in] pressure            Array with pressure.
+	/// \param[in] temperature         Array with temperature.
 	/// \param[in] porevolume0         Array with pore volume at start of timestep.
 	/// \param[in] porevolume          Array with pore volume.
 	/// \param[in] source              Transport source term, to be interpreted by sign:
@@ -91,6 +92,7 @@ namespace Opm
 	void solve(const double* darcyflux,
                    const std::vector<double>& initial_pressure,
                    const std::vector<double>& pressure,
+                   const std::vector<double>& temperature,
                    const double* porevolume0,
                    const double* porevolume,
 		   const double* source,
