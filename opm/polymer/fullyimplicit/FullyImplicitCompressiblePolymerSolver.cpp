@@ -263,6 +263,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
+        , temperature(   ADB::null())
         , saturation(np, ADB::null())
         , concentration( ADB::null())
         , qs        (    ADB::null())
@@ -330,6 +331,10 @@ namespace {
         assert (not x.pressure().empty());
         const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
         state.pressure = ADB::constant(p, bpat);
+
+        // Temperature.
+        const V T = Eigen::Map<const V>(& x.temperature()[0], nc, 1);
+        state.temperature = ADB::constant(T);
 
         // Saturation.
         assert (not x.saturation().empty());
@@ -449,6 +454,7 @@ namespace {
     {
 
         const ADB&              press = state.pressure;
+        const ADB&              temp  = state.temperature;
         const std::vector<ADB>& sat   = state.saturation;
         const ADB&              c     = state.concentration;
 
@@ -458,7 +464,7 @@ namespace {
         const ADB pv_mult = poroMult(press);
 
         for (int phase = 0; phase < 2; ++phase) {
-            rq_[phase].b = fluidReciprocFVF(phase, pressure[phase], cond, cells_);
+            rq_[phase].b = fluidReciprocFVF(phase, pressure[phase], temp, cond, cells_);
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
@@ -566,16 +572,17 @@ namespace {
         }
         ADB cell_rho_total = ADB::constant(V::Zero(nc), state.pressure.blockPattern());
 		std::vector<ADB> press = computePressures(state);
+        const ADB& temp = state.temperature;
         const std::vector<PhasePresence> cond = phaseCondition();
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, press[phase], cond, cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], temp, cond, cells_);
             cell_rho_total += state.saturation[phase] * cell_rho;
         }
         ADB inj_rho_total = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
         assert(np == wells_.number_of_phases);
         const DataBlock compi = Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np);
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB cell_rho = fluidDensity(phase, press[phase], cond, cells_);
+            const ADB cell_rho = fluidDensity(phase, press[phase], temp, cond, cells_);
             const V fraction = compi.col(phase);
             inj_rho_total += (wops_.w2p * fraction.matrix()).array() * subset(cell_rho, well_cells);
         }
@@ -840,15 +847,16 @@ namespace {
         const ADB tr_mult = transMult(state.pressure);
         const std::vector<PhasePresence> cond = phaseCondition();
 		std::vector<ADB> press = computePressures(state);
+		const ADB& temp = state.temperature;
 
-        const ADB mu_w = fluidViscosity(0, press[0], cond, cells_);
+        const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
         ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value().data());
         rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
         rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
-        const ADB mu_o = fluidViscosity(1, press[1], cond, cells_);
+        const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
         rq_[1].mob = tr_mult * kro / mu_o;
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB rho   = fluidDensity(phase, press[phase], cond, cells_);
+            const ADB rho   = fluidDensity(phase, press[phase], temp, cond, cells_);
             ADB& head = rq_[ phase ].head;
             // compute gravity potensial using the face average as in eclipse and MRST
             const ADB rhoavg = ops_.caver * rho;
@@ -893,15 +901,16 @@ namespace {
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidViscosity(const int                         phase,
 		                                                   const ADB&                        p    ,
+		                                                   const ADB&                        T    ,
                                                            const std::vector<PhasePresence>& cond,
            			                                       const std::vector<int>&           cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
         case Water:
-            return fluid_.muWat(p, cells);
+            return fluid_.muWat(p, T, cells);
         case Oil: {
-            return fluid_.muOil(p, null, cond, cells);
+            return fluid_.muOil(p, T, null, cond, cells);
         }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
@@ -915,15 +924,16 @@ namespace {
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidReciprocFVF(const int                         phase,
                                                   		     const ADB&                        p    ,
+                                                             const ADB&                        T    ,
                                                              const std::vector<PhasePresence>& cond,
                                                   		     const std::vector<int>&           cells) const
     {
         const ADB null = ADB::constant(V::Zero(grid_.number_of_cells, 1), p.blockPattern());
         switch (phase) {
         case Water:
-            return fluid_.bWat(p, cells);
+            return fluid_.bWat(p, T, cells);
         case Oil: {
-            return fluid_.bOil(p, null, cond, cells);
+            return fluid_.bOil(p, T, null, cond, cells);
         }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
@@ -937,11 +947,12 @@ namespace {
     ADB
     FullyImplicitCompressiblePolymerSolver::fluidDensity(const int                         phase,
                                               			 const ADB&                        p    ,
+                                                         const ADB&                        T    ,
                                                          const std::vector<PhasePresence>& cond,
                                               		     const std::vector<int>&           cells) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidReciprocFVF(phase, p, cond, cells);
+        ADB b = fluidReciprocFVF(phase, p, T, cond, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
     }

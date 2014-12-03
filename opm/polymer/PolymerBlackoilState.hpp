@@ -61,6 +61,7 @@ namespace Opm
         }
 
         std::vector<double>& pressure    ()     { return state_blackoil_.pressure(); }
+        std::vector<double>& temperature ()     { return state_blackoil_.temperature(); }
         std::vector<double>& surfacevol  ()     { return state_blackoil_.surfacevol(); }
         std::vector<double>& facepressure()     { return state_blackoil_.facepressure(); }
         std::vector<double>& faceflux    ()     { return state_blackoil_.faceflux(); }
@@ -71,6 +72,7 @@ namespace Opm
         std::vector<double>& maxconcentration() { return cmax_; }
 
         const std::vector<double>& pressure    () const     { return state_blackoil_.pressure(); }
+        const std::vector<double>& temperature () const     { return state_blackoil_.temperature(); }
         const std::vector<double>& surfacevol  () const     { return state_blackoil_.surfacevol(); }
         const std::vector<double>& facepressure() const     { return state_blackoil_.facepressure(); }
         const std::vector<double>& faceflux    () const     { return state_blackoil_.faceflux(); }

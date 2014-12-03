@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
 
 #include <opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
@@ -214,6 +215,7 @@ namespace Opm
     void TransportSolverTwophaseCompressiblePolymer::solve(const double* darcyflux,
                                                   const std::vector<double>& initial_pressure,
                                                   const std::vector<double>& pressure,
+                                                  const std::vector<double>& temperature,
                                                   const double* porevolume0,
                                                   const double* porevolume,
                                                   const double* source,
@@ -238,9 +240,9 @@ namespace Opm
         res_counts.clear();
 #endif
 
-        props_.viscosity(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &visc_[0], NULL);
-        props_.matrix(grid_.number_of_cells, &initial_pressure[0], NULL, &allcells_[0], &A0_[0], NULL);
-        props_.matrix(grid_.number_of_cells, &pressure[0], NULL, &allcells_[0], &A_[0], NULL);
+        props_.viscosity(grid_.number_of_cells, &pressure[0], &temperature[0], NULL, &allcells_[0], &visc_[0], NULL);
+        props_.matrix(grid_.number_of_cells, &initial_pressure[0], &temperature[0], NULL, &allcells_[0], &A0_[0], NULL);
+        props_.matrix(grid_.number_of_cells, &pressure[0], &temperature[0], NULL, &allcells_[0], &A_[0], NULL);
 
         // Check immiscibility requirement (only done for first cell).
         if (A_[1] != 0.0 || A_[2] != 0.0) {

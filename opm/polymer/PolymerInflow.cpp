@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/core/wells.h>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
