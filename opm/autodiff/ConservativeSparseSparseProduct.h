@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <iterator>
 #include <functional>
+#include <limits>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -53,6 +55,7 @@ struct QuickSort< 0 >
   template <typename T>
   static inline void sort(T begin, T end)
   {
+    // fall back to standard insertion sort
     std::sort( begin, end );
   }
 };
@@ -61,6 +64,11 @@ struct QuickSort< 0 >
 template<typename Lhs, typename Rhs, typename ResultType>
 static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 {
+  // if one of the matrices does not contain non zero elements
+  // the result will only contain an empty matrix
+  if( lhs.nonZeros() == 0 || rhs.nonZeros() == 0 )
+    return ;
+
   typedef typename remove_all<Lhs>::type::Scalar Scalar;
   typedef typename remove_all<Lhs>::type::Index Index;
 
@@ -83,10 +91,13 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
 
   res.setZero();
   res.reserve(Index(estimated_nnz_prod));
+
+  //const Scalar epsilon = std::numeric_limits< Scalar >::epsilon();
+  const Scalar epsilon = 1e-15 ;
+
   // we compute each column of the result, one after the other
   for (Index j=0; j<cols; ++j)
   {
-    res.startVec(j);
     Index nnz = 0;
     for (typename Rhs::InnerIterator rhsIt(rhs, j); rhsIt; ++rhsIt)
     {
@@ -94,16 +105,19 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
       for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
       {
         const Index i = lhsIt.index();
-        const Scalar x = lhsIt.value();
-        if(!mask[i])
+        const Scalar val = lhsIt.value() * y;
+        if( std::abs( val ) > epsilon )
         {
-          mask[i] = true;
-          values[i] = x * y;
-          indices[nnz] = i;
-          ++nnz;
+          if(!mask[i])
+          {
+            mask[i] = true;
+            values[i] = val;
+            indices[nnz] = i;
+            ++nnz;
+          }
+          else
+            values[i] += val;
         }
-        else
-          values[i] += x * y;
       }
     }
 
@@ -113,6 +127,7 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
       QuickSort< 1 >::sort( indices.data(), indices.data()+nnz );
     }
 
+    res.startVec(j);
     // ordered insertion
     // still using insertBackByOuterInnerUnordered since we know what we are doing
     for(Index k=0; k<nnz; ++k)
@@ -163,7 +178,6 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
   }
   res.finalize();
 }
-
 
 } // end namespace internal
 
