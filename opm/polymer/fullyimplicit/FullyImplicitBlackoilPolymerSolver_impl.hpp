@@ -531,7 +531,7 @@ namespace {
 
         // Temperature.
         const V temp = Eigen::Map<const V>(& x.temperature()[0], nc, 1);
-        state.pressure = ADB::constant(temp);
+        state.temperature = ADB::constant(temp);
 
         // Saturations
         const std::vector<int>& bpat = vars[0].blockPattern();
