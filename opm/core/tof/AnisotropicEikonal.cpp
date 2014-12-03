@@ -25,6 +25,37 @@
 namespace Opm
 {
 
+    namespace
+    {
+        /// Euclidean (isotropic) distance.
+        double distanceIso(const double v1[2],
+                           const double v2[2])
+        {
+            const double d[2] = { v2[0] - v1[0], v2[1] - v1[1] };
+            const double dist = std::sqrt(d[0]*d[0] + d[1]*d[1]);
+            return dist;
+        }
+
+        /// Anisotropic distance with respect to a metric g.
+        /// If d = v2 - v1, the distance is sqrt(d^T g d).
+        double distanceAniso(const double v1[2],
+                             const double v2[2],
+                             const double g[4])
+        {
+            const double d[2] = { v2[0] - v1[0], v2[1] - v1[1] };
+            const double dist = std::sqrt(+ g[0] * d[0] * d[0]
+                                          + g[1] * d[0] * d[1]
+                                          + g[2] * d[1] * d[0]
+                                          + g[3] * d[1] * d[1]);
+            return dist;
+        }
+    } // anonymous namespace
+
+
+
+
+
+
     /// Construct solver.
     /// \param[in] grid      A 2d grid.
     AnisotropicEikonal2d::AnisotropicEikonal2d(const UnstructuredGrid& grid)
@@ -35,6 +66,7 @@ namespace Opm
         }
         cell_neighbours_ = cellNeighboursAcrossVertices(grid);
         orderCounterClockwise(grid, cell_neighbours_);
+        computeGridRadius();
     }
 
     /// Solve the eikonal equation.
@@ -166,7 +198,10 @@ namespace Opm
                                        const int c2,
                                        const double* metric) const
     {
-        return true;
+        const double* v[] = { grid_.cell_centroids + 2*c1,
+                              grid_.cell_centroids + 2*c2 };
+        const double* m = metric + 4*c1;
+        return distanceAniso(v[0], v[1], m) < 3.0 * grid_radius_[c1];
     }
 
 
@@ -238,22 +273,6 @@ namespace Opm
         }
         // std::cout << "---> " << val << std::endl;
         return val;
-    }
-
-
-
-
-
-    double distanceAniso(const double v1[2],
-                         const double v2[2],
-                         const double g[4])
-    {
-        const double d[2] = { v2[0] - v1[0], v2[1] - v1[1] };
-        const double dist = std::sqrt(+ g[0] * d[0] * d[0]
-                                      + g[1] * d[0] * d[1]
-                                      + g[2] * d[1] * d[0]
-                                      + g[3] * d[1] * d[1]);
-        return dist;
     }
 
 
@@ -359,6 +378,25 @@ namespace Opm
         is_considered_[considered_.top().second] = false;
         considered_handles_.erase(considered_.top().second);
         considered_.pop();
+    }
+
+
+
+
+    void AnisotropicEikonal2d::computeGridRadius()
+    {
+        const int num_cells = cell_neighbours_.size();
+        grid_radius_.resize(num_cells);
+        for (int cell = 0; cell < num_cells; ++cell) {
+            double radius = 0.0;
+            const double* v1 = grid_.cell_centroids + 2*cell;
+            const auto& nb = cell_neighbours_[cell];
+            for (auto it = nb.begin(); it != nb.end(); ++it) {
+                const double* v2 = grid_.cell_centroids + 2*(*it);
+                radius = std::max(radius, distanceIso(v1, v2));
+            }
+            grid_radius_[cell] = radius;
+        }
     }
 
 

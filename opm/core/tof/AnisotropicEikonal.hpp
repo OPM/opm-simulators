@@ -55,6 +55,7 @@ namespace Opm
         // Keep track of accepted cells.
         std::vector<char> is_accepted_;
         std::set<int> accepted_front_;
+        std::vector<double> grid_radius_;
 
         // Keep track of considered cells.
         typedef std::pair<double, int> ValueAndCell;
@@ -74,6 +75,8 @@ namespace Opm
         const ValueAndCell& topConsidered() const;
         void pushConsidered(const ValueAndCell& vc);
         void popConsidered();
+
+        void computeGridRadius();
     };
 
 } // namespace Opm
