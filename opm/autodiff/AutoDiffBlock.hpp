@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <cassert>
+#include <iostream>
 
 namespace Opm
 {
@@ -293,7 +294,17 @@ namespace Opm
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
-                jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
+                if( jac_[block].nonZeros() == 0 && rhs.jac_[block].nonZeros() == 0 ) {
+                    jac[block] = M( D2.rows(), jac_[block].cols() );
+                }
+                else if( jac_[block].nonZeros() == 0 )
+                    jac[block] = D1*rhs.jac_[block];
+                else if ( rhs.jac_[block].nonZeros() == 0 ) {
+                    jac[block] = D2*jac_[block];
+                }
+                else {
+                    jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
+                }
             }
             return function(val_ * rhs.val_, jac);
         }
@@ -320,7 +331,20 @@ namespace Opm
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
-                jac[block] = D3 * (D2*jac_[block] - D1*rhs.jac_[block]);
+                if( jac_[block].nonZeros() == 0 && rhs.jac_[block].nonZeros() == 0 ) {
+                    jac[block] = M( D3.rows(), jac_[block].cols() );
+                }
+                else if( jac_[block].nonZeros() == 0 ) {
+                    jac[block] = D3 * ( D1*rhs.jac_[block]);
+                    jac[block] *= -1.0;
+                }
+                else if ( rhs.jac_[block].nonZeros() == 0 )
+                {
+                    jac[block] = D3 * (D2*jac_[block]);
+                }
+                else {
+                    jac[block] = D3 * (D2*jac_[block] - D1*rhs.jac_[block]);
+                }
             }
             return function(val_ / rhs.val_, jac);
         }
