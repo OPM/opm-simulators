@@ -130,9 +130,9 @@ namespace Opm
                 WellInjectionProperties injection = well->getInjectionProperties(currentStep);
                 if (injection.injectorType == WellInjector::WATER) {
                     WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                    wellPolymerRate_.insert(std::make_pair<std::string, double>(wellName, polymer.m_polymerConcentration));
+                    wellPolymerRate_.insert(std::make_pair(wellName, polymer.m_polymerConcentration));
                 } else {
-                 OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+                    OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
                 }
             }
         }
