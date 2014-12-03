@@ -260,7 +260,7 @@ namespace Opm
 #endif
             M id(Jn[n].rows(), Jn[n].cols());
             id.setIdentity();
-            const M Di = solver.solve(id);
+            const Eigen::SparseMatrix<typename M::Scalar, Eigen::ColMajor> Di = solver.solve(id);
 
             // compute inv(D)*bn for the update of the right hand side
             const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());

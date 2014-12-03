@@ -103,9 +103,11 @@ namespace Opm
 
     /// Water viscosity.
     /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAd::muWat(const V& pw,
+                             const V& T,
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
@@ -116,17 +118,19 @@ namespace Opm
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
-        props_.viscosity(n, pw.data(), z.data(), cells.data(), mu.data(), 0);
+        props_.viscosity(n, pw.data(), T.data(), z.data(), cells.data(), mu.data(), 0);
         return mu.col(pu_.phase_pos[Water]);
     }
 
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rs     Array of n gas solution factor values.
     /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAd::muOil(const V& po,
+                             const V& T,
                              const V& rs,
                              const std::vector<PhasePresence>& /*cond*/,
                              const Cells& cells) const
@@ -145,15 +149,17 @@ namespace Opm
             z.col(pu_.phase_pos[Gas]) = rs;
         }
         Block mu(n, np);
-        props_.viscosity(n, po.data(), z.data(), cells.data(), mu.data(), 0);
+        props_.viscosity(n, po.data(), T.data(), z.data(), cells.data(), mu.data(), 0);
         return mu.col(pu_.phase_pos[Oil]);
     }
 
     /// Gas viscosity.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     V BlackoilPropsAd::muGas(const V& pg,
+                             const V& T,
                              const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
@@ -164,17 +170,19 @@ namespace Opm
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block mu(n, np);
-        props_.viscosity(n, pg.data(), z.data(), cells.data(), mu.data(), 0);
+        props_.viscosity(n, pg.data(), T.data(), z.data(), cells.data(), mu.data(), 0);
         return mu.col(pu_.phase_pos[Gas]);
     }
 
     /// Gas viscosity.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rv     Array of n vapor oil/gas ratio
     /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::muGas(const V& pg,
+                             const V& T,
                              const V& rv,
                              const std::vector<PhasePresence>& /*cond*/,
                              const Cells& cells) const
@@ -193,19 +201,21 @@ namespace Opm
             z.col(pu_.phase_pos[Gas]) = V::Ones(n, 1);
         }
         Block mu(n, np);
-        props_.viscosity(n, pg.data(), z.data(), cells.data(), mu.data(), 0);
+        props_.viscosity(n, pg.data(), T.data(), z.data(), cells.data(), mu.data(), 0);
         return mu.col(pu_.phase_pos[Gas]);
     }
 
     /// Water viscosity.
     /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAd::muWat(const ADB& pw,
+                               const ADB& T,
                                const Cells& cells) const
     {
 #if 1
-        return ADB::constant(muWat(pw.value(), cells), pw.blockPattern());
+        return ADB::constant(muWat(pw.value(), T.value(), cells), pw.blockPattern());
 #else
         if (!pu_.phase_used[Water]) {
             OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
@@ -216,7 +226,7 @@ namespace Opm
         Block z = Block::Zero(n, np);
         Block mu(n, np);
         Block dmu(n, np);
-        props_.viscosity(n, pw.value().data(), z.data(), cells.data(), mu.data(), dmu.data());
+        props_.viscosity(n, pw.value().data(), T.data(), z.data(), cells.data(), mu.data(), dmu.data());
         ADB::M dmu_diag = spdiag(dmu.col(pu_.phase_pos[Water]));
         const int num_blocks = pw.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -229,17 +239,19 @@ namespace Opm
 
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rs     Array of n gas solution factor values.
     /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAd::muOil(const ADB& po,
+                               const ADB& T,
                                const ADB& rs,
                                const std::vector<PhasePresence>& cond,
                                const Cells& cells) const
     {
 #if 1
-        return ADB::constant(muOil(po.value(), rs.value(), cond, cells), po.blockPattern());
+        return ADB::constant(muOil(po.value(), T.value(), rs.value(), cond, cells), po.blockPattern());
 #else
         if (!pu_.phase_used[Oil]) {
             OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
@@ -272,13 +284,15 @@ namespace Opm
 
     /// Gas viscosity.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAd::muGas(const ADB& pg,
+                               const ADB& T,
                                const Cells& cells) const
     {
 #if 1
-        return ADB::constant(muGas(pg.value(), cells), pg.blockPattern());
+        return ADB::constant(muGas(pg.value(), T.value(), cells), pg.blockPattern());
 #else
         if (!pu_.phase_used[Gas]) {
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
@@ -301,17 +315,19 @@ namespace Opm
     }
     /// Gas viscosity.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rv     Array of n vapor oil/gas ratio
     /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n viscosity values.
     ADB BlackoilPropsAd::muGas(const ADB& pg,
+                               const ADB& T,
                                const ADB& rv,
                                const std::vector<PhasePresence>& cond,
                                const Cells& cells) const
     {
 #if 1
-        return ADB::constant(muGas(pg.value(), rv.value(),cond,cells), pg.blockPattern());
+        return ADB::constant(muGas(pg.value(), T.value(), rv.value(),cond,cells), pg.blockPattern());
 #else
         if (!pu_.phase_used[Gas]) {
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
@@ -359,9 +375,11 @@ namespace Opm
 
     /// Water formation volume factor.
     /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bWat(const V& pw,
+                            const V& T,
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
@@ -372,18 +390,20 @@ namespace Opm
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
-        props_.matrix(n, pw.data(), z.data(), cells.data(), matrix.data(), 0);
+        props_.matrix(n, pw.data(), T.data(), z.data(), cells.data(), matrix.data(), 0);
         const int wi = pu_.phase_pos[Water];
         return matrix.col(wi*np + wi);
     }
 
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rs     Array of n gas solution factor values.
     /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bOil(const V& po,
+                            const V& T,
                             const V& rs,
                             const std::vector<PhasePresence>& /*cond*/,
                             const Cells& cells) const
@@ -402,16 +422,18 @@ namespace Opm
             z.col(pu_.phase_pos[Gas]) = rs;
         }
         Block matrix(n, np*np);
-        props_.matrix(n, po.data(), z.data(), cells.data(), matrix.data(), 0);
+        props_.matrix(n, po.data(), T.data(), z.data(), cells.data(), matrix.data(), 0);
         const int oi = pu_.phase_pos[Oil];
         return matrix.col(oi*np + oi);
     }
 
     /// Gas formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bGas(const V& pg,
+                            const V& T,
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
@@ -422,18 +444,20 @@ namespace Opm
         const int np = props_.numPhases();
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
-        props_.matrix(n, pg.data(), z.data(), cells.data(), matrix.data(), 0);
+        props_.matrix(n, pg.data(), pg.data(), z.data(), cells.data(), matrix.data(), 0);
         const int gi = pu_.phase_pos[Gas];
         return matrix.col(gi*np + gi);
     }
 
     /// Gas formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rv     Array of n vapor oil/gas ratio
     /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bGas(const V& pg,
+                            const V& T,
                             const V& rv,
                             const std::vector<PhasePresence>& /*cond*/,
                             const Cells& cells) const
@@ -452,16 +476,18 @@ namespace Opm
             z.col(pu_.phase_pos[Gas]) = V::Ones(n, 1);
         }
         Block matrix(n, np*np);
-        props_.matrix(n, pg.data(), z.data(), cells.data(), matrix.data(), 0);
+        props_.matrix(n, pg.data(), T.data(), z.data(), cells.data(), matrix.data(), 0);
         const int gi = pu_.phase_pos[Gas];
         return matrix.col(gi*np + gi);
     }
 
     /// Water formation volume factor.
     /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAd::bWat(const ADB& pw,
+                              const ADB& T,
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Water]) {
@@ -473,7 +499,7 @@ namespace Opm
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
         Block dmatrix(n, np*np);
-        props_.matrix(n, pw.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
+        props_.matrix(n, pw.value().data(), T.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
         const int phase_ind = pu_.phase_pos[Water];
         const int column = phase_ind*np + phase_ind; // Index of our sought diagonal column.
         ADB::M db_diag = spdiag(dmatrix.col(column));
@@ -487,11 +513,13 @@ namespace Opm
 
     /// Oil formation volume factor.
     /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rs     Array of n gas solution factor values.
     /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAd::bOil(const ADB& po,
+                              const ADB& T,
                               const ADB& rs,
                               const std::vector<PhasePresence>& /*cond*/,
                               const Cells& cells) const
@@ -511,7 +539,7 @@ namespace Opm
         }
         Block matrix(n, np*np);
         Block dmatrix(n, np*np);
-        props_.matrix(n, po.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
+        props_.matrix(n, po.value().data(), T.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
         const int phase_ind = pu_.phase_pos[Oil];
         const int column = phase_ind*np + phase_ind; // Index of our sought diagonal column.
         ADB::M db_diag = spdiag(dmatrix.col(column));
@@ -528,9 +556,11 @@ namespace Opm
 
     /// Gas formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAd::bGas(const ADB& pg,
+                              const ADB& T,
                               const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
@@ -542,7 +572,7 @@ namespace Opm
         Block z = Block::Zero(n, np);
         Block matrix(n, np*np);
         Block dmatrix(n, np*np);
-        props_.matrix(n, pg.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
+        props_.matrix(n, pg.value().data(), T.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
         const int phase_ind = pu_.phase_pos[Gas];
         const int column = phase_ind*np + phase_ind; // Index of our sought diagonal column.
         ADB::M db_diag = spdiag(dmatrix.col(column));
@@ -556,11 +586,13 @@ namespace Opm
 
     /// Gas formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rv     Array of n vapor oil/gas ratio
     /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAd::bGas(const ADB& pg,
+                              const ADB& T,
                               const ADB& rv,
                               const std::vector<PhasePresence>& /*cond*/,
                               const Cells& cells) const
@@ -580,7 +612,7 @@ namespace Opm
         }
         Block matrix(n, np*np);
         Block dmatrix(n, np*np);
-        props_.matrix(n, pg.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
+        props_.matrix(n, pg.value().data(), T.value().data(), z.data(), cells.data(), matrix.data(), dmatrix.data());
         const int phase_ind = pu_.phase_pos[Gas];
         const int column = phase_ind*np + phase_ind; // Index of our sought diagonal column.
         ADB::M db_diag = spdiag(dmatrix.col(column));

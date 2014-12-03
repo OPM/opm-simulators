@@ -124,7 +124,10 @@ BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
     Vpw[3] =  8*Opm::unit::barsa;
     Vpw[4] = 16*Opm::unit::barsa;
 
-    const Opm::BlackoilPropsAd::V VmuWat = boprops_ad.muWat(Vpw, cells);
+    // standard temperature
+    V T = V::Constant(cells.size(), 273.15+20);
+
+    const Opm::BlackoilPropsAd::V VmuWat = boprops_ad.muWat(Vpw, T, cells);
 
     // Zero pressure dependence in water viscosity
     for (V::Index i = 0, n = VmuWat.size(); i < n; ++i) {
@@ -149,16 +152,20 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
     Vpw[3] =  8*Opm::unit::barsa;
     Vpw[4] = 16*Opm::unit::barsa;
 
+    // standard temperature
+    V T = V::Constant(cells.size(), 273.15+20);
+
     typedef Opm::BlackoilPropsAd::ADB ADB;
 
-    const V VmuWat = boprops_ad.muWat(Vpw, cells);
+    const V VmuWat = boprops_ad.muWat(Vpw, T, cells);
     for (V::Index i = 0, n = Vpw.size(); i < n; ++i) {
         const std::vector<int> bp(1, grid.c_grid()->number_of_cells);
 
         const Opm::BlackoilPropsAd::Cells c(1, 0);
         const V   pw     = V(1, 1) * Vpw[i];
         const ADB Apw    = ADB::variable(0, pw, bp);
-        const ADB AmuWat = boprops_ad.muWat(Apw, c);
+        const ADB AT     = ADB::constant(T);
+        const ADB AmuWat = boprops_ad.muWat(Apw, AT, c);
 
         BOOST_CHECK_EQUAL(AmuWat.value()[0], VmuWat[i]);
     }
