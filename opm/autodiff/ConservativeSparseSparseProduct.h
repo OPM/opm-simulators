@@ -15,10 +15,7 @@
 #include <algorithm>
 #include <iterator>
 #include <functional>
-<<<<<<< HEAD
 #include <limits>
-=======
->>>>>>> 54feee5987a5b84c4f3d3b283d03f574c325d466
 #include <vector>
 
 #include <Eigen/Core>
@@ -67,14 +64,11 @@ struct QuickSort< 0 >
 template<typename Lhs, typename Rhs, typename ResultType>
 static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 {
-<<<<<<< HEAD
   // if one of the matrices does not contain non zero elements
   // the result will only contain an empty matrix
   if( lhs.nonZeros() == 0 || rhs.nonZeros() == 0 )
     return ;
 
-=======
->>>>>>> 54feee5987a5b84c4f3d3b283d03f574c325d466
   typedef typename remove_all<Lhs>::type::Scalar Scalar;
   typedef typename remove_all<Lhs>::type::Index Index;
 
@@ -97,13 +91,10 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
 
   res.setZero();
   res.reserve(Index(estimated_nnz_prod));
-<<<<<<< HEAD
 
   //const Scalar epsilon = std::numeric_limits< Scalar >::epsilon();
   const Scalar epsilon = 1e-15 ;
 
-=======
->>>>>>> 54feee5987a5b84c4f3d3b283d03f574c325d466
   // we compute each column of the result, one after the other
   for (Index j=0; j<cols; ++j)
   {
@@ -111,7 +102,6 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
     for (typename Rhs::InnerIterator rhsIt(rhs, j); rhsIt; ++rhsIt)
     {
       const Scalar y = rhsIt.value();
-<<<<<<< HEAD
       for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
       {
         const Index i = lhsIt.index();
@@ -127,26 +117,6 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
           }
           else
             values[i] += val;
-=======
-      if( y != 0.0 )
-      {
-        for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
-        {
-          const Index i = lhsIt.index();
-          const Scalar x = lhsIt.value();
-          if( x != 0.0 )
-          {
-            if(!mask[i])
-            {
-              mask[i] = true;
-              values[i] = x * y;
-              indices[nnz] = i;
-              ++nnz;
-            }
-            else
-              values[i] += x * y;
-          }
->>>>>>> 54feee5987a5b84c4f3d3b283d03f574c325d466
         }
       }
     }
@@ -209,10 +179,6 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
   res.finalize();
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 54feee5987a5b84c4f3d3b283d03f574c325d466
 } // end namespace internal
 
 namespace internal {
