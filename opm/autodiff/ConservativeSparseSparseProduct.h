@@ -104,10 +104,10 @@ static void conservative_sparse_sparse_product_impl(const Lhs& lhs, const Rhs& r
       const Scalar y = rhsIt.value();
       for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
       {
-        const Index i = lhsIt.index();
         const Scalar val = lhsIt.value() * y;
         if( std::abs( val ) > epsilon )
         {
+          const Index i = lhsIt.index();
           if(!mask[i])
           {
             mask[i] = true;
