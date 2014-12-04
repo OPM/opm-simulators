@@ -239,7 +239,7 @@ try
     } else {
         // With a deck, we may have more report steps etc.
         WellState well_state;
-        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
+        Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
         SimulatorTimer simtimer;
         for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
             // Report on start of report step.
