@@ -80,9 +80,13 @@ namespace Opm
 
         //! \brief ilu-0 preconditioner for the elliptic system
         typedef Dune::SeqILU0<M,X,X> Preconditioner;
+        //typedef Dune::SeqILUn<M,X,X> Preconditioner;
+
+        //! \brief ilu-0 preconditioner for the elliptic system
+        typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
 
         //! \brief amg preconditioner for the elliptic system
-        typedef Preconditioner Smoother;
+        typedef EllipticPreconditioner Smoother;
         typedef Dune::Amg::AMG<Operator, X, Smoother> AMG;
 
         /*! \brief Constructor.
@@ -105,15 +109,14 @@ namespace Opm
               opAe_( Ae_ ),
               precond_(), // ilu0 preconditioner for elliptic system
               amg_(),     // amg  preconditioner for elliptic system
-              ILU_(A),    // copy A (will be overwritten by ILU decomp)
-              vilu_( ILU_.N() ),
+              //pre_(A, relax, 0), // copy A will be made be the preconditioner
+              pre_(A, relax), // copy A will be made be the preconditioner
+              vilu_( A_.N() ),
               relax_(relax),
               use_bicg_solver_( useBiCG )
         {
             // create appropriate preconditioner for elliptic system
             createPreconditioner( useAMG );
-
-            Dune::bilu0_decomposition(ILU_);
         }
 
         /*!
@@ -151,11 +154,11 @@ namespace Opm
             dmodified_ = d;
             A_.mmv(v, dmodified_);
 
-            // Apply ILU0.
-            Dune::bilu_backsolve(ILU_, vilu_, dmodified_);
+            // Apply Preconditioner for whole system
+            pre_.apply( vilu_, dmodified_);
             v += vilu_;
 
-            // don't apply relaxation if relax_ == 1 
+            // don't apply relaxation if relax_ == 1
             if( std::abs( relax_ - 1.0 ) < 1e-12 ) return;
 
             v *= relax_;
@@ -227,12 +230,12 @@ namespace Opm
         Operator opAe_;
 
         //! \brief ILU0 preconditioner for the elliptic system
-        std::unique_ptr< Preconditioner > precond_;
+        std::unique_ptr< EllipticPreconditioner > precond_;
         //! \brief AMG preconditioner with ILU0 smoother
         std::unique_ptr< AMG > amg_;
 
-        //! \brief The ILU0 decomposition of the matrix.
-        matrix_type ILU_;
+        //! \brief The preconditioner for the whole system
+        Preconditioner pre_;
 
         //! \brief temporary variables for ILU solve
         Y vilu_;
@@ -266,7 +269,7 @@ namespace Opm
               amg_ = std::unique_ptr< AMG > (new AMG(opAe_, criterion, smootherArgs));
             }
             else
-              precond_ = std::unique_ptr< Preconditioner > (new Preconditioner( Ae_, relax_ ));
+              precond_ = std::unique_ptr< EllipticPreconditioner > (new EllipticPreconditioner( Ae_, relax_ ));
        }
     };
 
