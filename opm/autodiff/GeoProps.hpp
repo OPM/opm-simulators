@@ -61,7 +61,10 @@ namespace Opm
         DerivedGeology(const Grid&              grid,
                        const Props&             props ,
                        Opm::EclipseStateConstPtr eclState,
-                       const double*            grav = 0)
+                       const bool               use_local_perm,
+                       const double*            grav = 0
+
+                )
             : pvol_ (Opm::AutoDiffGrid::numCells(grid))
             , trans_(Opm::AutoDiffGrid::numFaces(grid))
             , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
@@ -101,8 +104,18 @@ namespace Opm
 
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
-            //tpfa_htrans_compute(ug, props.permeability(), htrans.data());
-            tpfa_loc_trans_compute_(grid,props.permeability(),htrans);
+
+#ifdef HAVE_DUNE_CORNERPOINT
+            if (std::is_same<Grid, Dune::CpGrid>::value) {
+                if (use_local_perm)
+                    OPM_THROW(std::runtime_error, "Local coordinate permeability not supported for CpGrid");
+            }
+#endif
+
+            if (not use_local_perm)
+                tpfa_htrans_compute(ug, props.permeability(), htrans.data());
+            else
+                tpfa_loc_trans_compute_(grid,props.permeability(),htrans);
 
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
@@ -295,6 +308,8 @@ namespace Opm
                     case 8:
                         OPM_MESSAGE("Warning: negative Z-transmissibility value in cell: " << cellIdx << " replace by absolute value") ;
                                 break;
+                    default:
+                        OPM_THROW(std::logic_error, "Inconsitancy in the faceTag in cell: " << cellIdx);
 
                     }
                     cn = -cn;
