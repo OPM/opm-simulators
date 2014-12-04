@@ -196,6 +196,11 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
+    struct RockParams {
+        Scalar referencePressure;
+        Scalar compressibility;
+    };
+
 public:
     /*!
      * \copydoc FvBaseProblem::registerParameters
@@ -245,6 +250,7 @@ public:
         this->gravity_[dim - 1] *= -1;
 
         initFluidSystem_();
+        readRockParameters_();
         readMaterialParameters_();
         readInitialCondition_();
 
@@ -424,6 +430,42 @@ public:
     }
 
     /*!
+     * \copydoc BlackoilProblem::rockCompressibility
+     */
+    template <class Context>
+    Scalar rockCompressibility(const Context &context, int spaceIdx, int timeIdx) const
+    {
+        if (rockParams_.empty())
+            return 0.0;
+
+        int tableIdx = 0;
+        if (!rockTableIdx_.empty()) {
+            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            tableIdx = rockTableIdx_[globalSpaceIdx];
+        }
+
+        return rockParams_[tableIdx].compressibility;
+    }
+
+    /*!
+     * \copydoc BlackoilProblem::rockReferencePressure
+     */
+    template <class Context>
+    Scalar rockReferencePressure(const Context &context, int spaceIdx, int timeIdx) const
+    {
+        if (rockParams_.empty())
+            return 1e5;
+
+        int tableIdx = 0;
+        if (!rockTableIdx_.empty()) {
+            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            tableIdx = rockTableIdx_[globalSpaceIdx];
+        }
+
+        return rockParams_[tableIdx].referencePressure;
+    }
+
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
@@ -547,6 +589,38 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+
+    void readRockParameters_()
+    {
+        auto deck = this->simulator().gridManager().deck();
+        auto eclState = this->simulator().gridManager().eclState();
+
+        // the ROCK keyword has not been specified, so we don't need
+        // to read rock parameters
+        if (!deck->hasKeyword("ROCK"))
+            return;
+
+        const auto rockKeyword = deck->getKeyword("ROCK");
+        rockParams_.resize(rockKeyword->size());
+        for (int rockRecordIdx = 0; rockRecordIdx < rockKeyword->size(); ++ rockRecordIdx) {
+            const auto rockRecord = rockKeyword->getRecord(rockRecordIdx);
+            rockParams_[rockRecordIdx].referencePressure =
+                rockRecord->getItem("PREF")->getSIDouble(0);
+            rockParams_[rockRecordIdx].compressibility =
+                rockRecord->getItem("COMPRESSIBILITY")->getSIDouble(0);
+        }
+
+        // ROCKTAB has not been specified, so everything is in the
+        // first region and we don't need to care...
+        if (!eclState->hasIntGridProperty("ROCKTAB"))
+            return;
+
+        const std::vector<int>& rocktabData =
+            eclState->getIntGridProperty("ROCKTAB")->getData();
+        for (size_t elemIdx = 0; elemIdx < rocktabData.size(); ++ elemIdx)
+            // reminder: Eclipse uses FORTRAN indices
+            rockTableIdx_[elemIdx] = rocktabData[elemIdx] - 1;
+    }
 
     void readMaterialParameters_()
     {
@@ -1013,6 +1087,9 @@ private:
 
     std::vector<unsigned short> materialParamTableIdx_;
     std::vector<MaterialLawParams> materialParams_;
+
+    std::vector<unsigned short> rockTableIdx_;
+    std::vector<RockParams> rockParams_;
 
     std::vector<BlackOilFluidState> initialFluidStates_;
 
