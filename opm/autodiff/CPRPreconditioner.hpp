@@ -121,7 +121,7 @@ namespace Opm
                 pre_.reset( new Dune::SeqILU0<M,X,X>( A_, relax_) );
             }
             else {
-                pre_.reset( new Dune::SeqILUn<M,X,X>( A_, relax_, ilu_n) );
+                pre_.reset( new Dune::SeqILUn<M,X,X>( A_, ilu_n, relax_) );
             }
         }
 
