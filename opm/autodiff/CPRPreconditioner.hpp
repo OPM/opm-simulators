@@ -80,13 +80,9 @@ namespace Opm
 
         //! \brief ilu-0 preconditioner for the elliptic system
         typedef Dune::SeqILU0<M,X,X> Preconditioner;
-        //typedef Dune::SeqILUn<M,X,X> Preconditioner;
-
-        //! \brief ilu-0 preconditioner for the elliptic system
-        typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
 
         //! \brief amg preconditioner for the elliptic system
-        typedef EllipticPreconditioner Smoother;
+        typedef Preconditioner Smoother;
         typedef Dune::Amg::AMG<Operator, X, Smoother> AMG;
 
         /*! \brief Constructor.
@@ -99,6 +95,7 @@ namespace Opm
           \param useBiCG if true, BiCG solver is used (default), otherwise CG solver
         */
         CPRPreconditioner (const M& A, const M& Ae, const field_type relax,
+                           const unsigned int n = 0, // ILU(n)
                            const bool useAMG  = false,
                            const bool useBiCG = true )
             : A_(A),
@@ -109,14 +106,24 @@ namespace Opm
               opAe_( Ae_ ),
               precond_(), // ilu0 preconditioner for elliptic system
               amg_(),     // amg  preconditioner for elliptic system
-              //pre_(A, relax, 0), // copy A will be made be the preconditioner
-              pre_(A, relax), // copy A will be made be the preconditioner
+              ILU_(),     // storage for the ilu decomposition
               vilu_( A_.N() ),
               relax_(relax),
               use_bicg_solver_( useBiCG )
         {
             // create appropriate preconditioner for elliptic system
             createPreconditioner( useAMG );
+
+            if( n == 0 )
+            {
+                ILU_ = A_;
+                bilu0_decomposition(ILU_);
+            }
+            else
+            {
+                ILU_ = matrix_type( A_.N(),A_.M(),matrix_type::row_wise );
+                bilu_decomposition( A_,n, ILU_);
+            }
         }
 
         /*!
@@ -154,8 +161,8 @@ namespace Opm
             dmodified_ = d;
             A_.mmv(v, dmodified_);
 
-            // Apply Preconditioner for whole system
-            pre_.apply( vilu_, dmodified_);
+            // Apply ILU0.
+            Dune::bilu_backsolve(ILU_, vilu_, dmodified_);
             v += vilu_;
 
             // don't apply relaxation if relax_ == 1
@@ -230,12 +237,12 @@ namespace Opm
         Operator opAe_;
 
         //! \brief ILU0 preconditioner for the elliptic system
-        std::unique_ptr< EllipticPreconditioner > precond_;
+        std::unique_ptr< Preconditioner > precond_;
         //! \brief AMG preconditioner with ILU0 smoother
         std::unique_ptr< AMG > amg_;
 
         //! \brief The preconditioner for the whole system
-        Preconditioner pre_;
+        matrix_type ILU_;
 
         //! \brief temporary variables for ILU solve
         Y vilu_;
@@ -269,7 +276,7 @@ namespace Opm
               amg_ = std::unique_ptr< AMG > (new AMG(opAe_, criterion, smootherArgs));
             }
             else
-              precond_ = std::unique_ptr< EllipticPreconditioner > (new EllipticPreconditioner( Ae_, relax_ ));
+              precond_ = std::unique_ptr< Preconditioner > (new Preconditioner( Ae_, relax_ ));
        }
     };
 

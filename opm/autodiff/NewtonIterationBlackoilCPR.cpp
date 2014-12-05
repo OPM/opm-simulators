@@ -117,7 +117,8 @@ namespace Opm
     NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
         : iterations_( 0 )
     {
-        use_amg_ = param.getDefault("cpr_use_amg", false);
+        ilu_n_        = param.getDefault("cpr_ilu_n", 0);
+        use_amg_      = param.getDefault("cpr_use_amg", false);
         use_bicgstab_ = param.getDefault("cpr_use_bicgstab", true);
     }
 
@@ -194,7 +195,7 @@ namespace Opm
         // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
         typedef Opm::CPRPreconditioner<Mat,Vector,Vector> Preconditioner;
         const double relax = 1.0;
-        Preconditioner precond(istlA, istlAe, relax, use_amg_, use_bicgstab_);
+        Preconditioner precond(istlA, istlAe, relax, ilu_n_, use_amg_, use_bicgstab_);
 
         // Construct linear solver.
         const double tolerance = 1e-3;

@@ -43,6 +43,7 @@ namespace Opm
         ///                    the preconditioning and choice of
         ///                    linear solvers.
         ///                    Parameters:
+        ///                        cpr_ilu_n        (default 0) use ILU(n) for preconditioning of the linear system
         ///                        cpr_use_amg      (default false) if true, use AMG preconditioner for elliptic part
         ///                        cpr_use_bicgstab (default true)  if true, use BiCGStab (else use CG) for elliptic part
         NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param);
@@ -58,6 +59,7 @@ namespace Opm
         virtual int iterations () const { return iterations_; }
     private:
         mutable int iterations_;
+        unsigned int ilu_n_;
         bool use_amg_;
         bool use_bicgstab_;
     };
