@@ -392,7 +392,7 @@ namespace Opm
         const int num_blocks = pw.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dmudp_diag * pw.derivative()[block];
+            fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
         }
         return ADB::function(mu, jacs);
     }
@@ -427,7 +427,10 @@ namespace Opm
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dmudp_diag * po.derivative()[block] + dmudr_diag * rs.derivative()[block];
+            fastSparseProduct(dmudp_diag, po.derivative()[block], jacs[block]);
+            ADB::M temp;
+            fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
+            jacs[block] += temp;
         }
         return ADB::function(mu, jacs);
     }
@@ -458,7 +461,7 @@ namespace Opm
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dmudp_diag * pg.derivative()[block];
+            fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
         }
         return ADB::function(mu, jacs);
     }
@@ -493,7 +496,10 @@ namespace Opm
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dmudp_diag * pg.derivative()[block] + dmudr_diag * rv.derivative()[block];
+            fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
+            ADB::M temp;
+            fastSparseProduct(dmudr_diag, rv.derivative()[block], temp);
+            jacs[block] += temp;
         }
         return ADB::function(mu, jacs);
     }
@@ -653,7 +659,7 @@ namespace Opm
         const int num_blocks = pw.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dbdp_diag * pw.derivative()[block];
+            fastSparseProduct(dbdp_diag, pw.derivative()[block], jacs[block]);
         }
         return ADB::function(b, jacs);
     }
@@ -689,7 +695,10 @@ namespace Opm
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dbdp_diag * po.derivative()[block] + dbdr_diag * rs.derivative()[block];
+            fastSparseProduct(dbdp_diag, po.derivative()[block], jacs[block]);
+            ADB::M temp;
+            fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
+            jacs[block] += temp;
         }
         return ADB::function(b, jacs);
     }
@@ -721,7 +730,7 @@ namespace Opm
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dbdp_diag * pg.derivative()[block];
+            fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
         }
         return ADB::function(b, jacs);
     }
@@ -753,11 +762,14 @@ namespace Opm
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
-        ADB::M dmudr_diag = spdiag(dbdr);
+        ADB::M dbdr_diag = spdiag(dbdr);
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = dbdp_diag * pg.derivative()[block] + dmudr_diag * rv.derivative()[block];;
+            fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
+            ADB::M temp;
+            fastSparseProduct(dbdr_diag, rv.derivative()[block], temp);
+            jacs[block] += temp;
         }
         return ADB::function(b, jacs);
     }
@@ -817,7 +829,7 @@ namespace Opm
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = drbubdp_diag * po.derivative()[block];
+            fastSparseProduct(drbubdp_diag, po.derivative()[block], jacs[block]);
         }
         return ADB::function(rbub, jacs);
     }
@@ -889,7 +901,7 @@ namespace Opm
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            jacs[block] = drvdp_diag * po.derivative()[block];
+            fastSparseProduct(drvdp_diag, po.derivative()[block], jacs[block]);
         }
         return ADB::function(rv, jacs);
     }
@@ -1004,7 +1016,9 @@ namespace Opm
                     const int column = phase1_pos + np*phase2_pos; // Recall: Fortran ordering from props_.relperm()
                     ADB::M dkr1_ds2_diag = spdiag(dkr.col(column));
                     for (int block = 0; block < num_blocks; ++block) {
-                        jacs[block] += dkr1_ds2_diag * s[phase2]->derivative()[block];
+                        ADB::M temp;
+                        fastSparseProduct(dkr1_ds2_diag, s[phase2]->derivative()[block], temp);
+                        jacs[block] += temp;
                     }
                 }
                 relperms.emplace_back(ADB::function(kr.col(phase1_pos), jacs));
@@ -1062,7 +1076,9 @@ namespace Opm
                     const int column = phase1_pos + numActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
                     ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
                     for (int block = 0; block < numBlocks; ++block) {
-                        jacs[block] += dpc1_ds2_diag * s[phase2]->derivative()[block];
+                        ADB::M temp;
+                        fastSparseProduct(dpc1_ds2_diag, s[phase2]->derivative()[block], temp);
+                        jacs[block] += temp;
                     }
                 }
                 adbCapPressures.emplace_back(ADB::function(pc.col(phase1_pos), jacs));
