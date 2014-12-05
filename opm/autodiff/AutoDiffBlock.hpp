@@ -22,9 +22,9 @@
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
-#include <opm/autodiff/ConservativeSparseSparseProduct.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
+#include <opm/autodiff/fastSparseProduct.hpp>
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
@@ -441,7 +441,8 @@ namespace Opm
         std::vector<typename AutoDiffBlock<Scalar>::M> jac(num_blocks);
         assert(lhs.cols() == rhs.value().rows());
         for (int block = 0; block < num_blocks; ++block) {
-            jac[block] = lhs*rhs.derivative()[block];
+            // jac[block] = lhs*rhs.derivative()[block];
+            fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
         }
         typename AutoDiffBlock<Scalar>::V val = lhs*rhs.value().matrix();
         return AutoDiffBlock<Scalar>::function(val, jac);
