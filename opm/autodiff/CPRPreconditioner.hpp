@@ -117,12 +117,12 @@ namespace Opm
             if( n == 0 )
             {
                 ILU_ = A_;
-                bilu0_decomposition(ILU_);
+                Dune::bilu0_decomposition(ILU_);
             }
             else
             {
                 ILU_ = matrix_type( A_.N(),A_.M(),matrix_type::row_wise );
-                bilu_decomposition( A_,n, ILU_);
+                Dune::bilu_decomposition( A_,n, ILU_);
             }
         }
 
