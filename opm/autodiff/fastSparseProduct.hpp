@@ -102,10 +102,10 @@ void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
       const Scalar y = rhsIt.value();
       for (typename Lhs::InnerIterator lhsIt(lhs, rhsIt.index()); lhsIt; ++lhsIt)
       {
-        const Index i = lhsIt.index();
         const Scalar val = lhsIt.value() * y;
         if( std::abs( val ) > epsilon )
         {
+          const Index i = lhsIt.index();
           if(!mask[i])
           {
             mask[i] = true;
