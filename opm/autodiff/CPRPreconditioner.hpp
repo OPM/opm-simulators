@@ -78,11 +78,14 @@ namespace Opm
         //! \brief Elliptic Operator
         typedef Dune::MatrixAdapter<M,X,X> Operator;
 
+        //! \brief preconditioner for the whole system (here either ILU(0) or ILU(n)
+        typedef Dune::Preconditioner<X,X> WholeSystemPreconditioner;
+
         //! \brief ilu-0 preconditioner for the elliptic system
-        typedef Dune::SeqILU0<M,X,X> Preconditioner;
+        typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
 
         //! \brief amg preconditioner for the elliptic system
-        typedef Preconditioner Smoother;
+        typedef EllipticPreconditioner Smoother;
         typedef Dune::Amg::AMG<Operator, X, Smoother> AMG;
 
         /*! \brief Constructor.
@@ -95,9 +98,9 @@ namespace Opm
           \param useBiCG if true, BiCG solver is used (default), otherwise CG solver
         */
         CPRPreconditioner (const M& A, const M& Ae, const field_type relax,
-                           const unsigned int n = 0, // ILU(n)
-                           const bool useAMG  = false,
-                           const bool useBiCG = true )
+                           const unsigned int ilu_n,
+                           const bool useAMG,
+                           const bool useBiCG )
             : A_(A),
               Ae_(Ae),
               de_( Ae_.N() ),
@@ -106,7 +109,7 @@ namespace Opm
               opAe_( Ae_ ),
               precond_(), // ilu0 preconditioner for elliptic system
               amg_(),     // amg  preconditioner for elliptic system
-              ILU_(),     // storage for the ilu decomposition
+              pre_(), // copy A will be made be the preconditioner
               vilu_( A_.N() ),
               relax_(relax),
               use_bicg_solver_( useBiCG )
@@ -114,15 +117,11 @@ namespace Opm
             // create appropriate preconditioner for elliptic system
             createPreconditioner( useAMG );
 
-            if( n == 0 )
-            {
-                ILU_ = A_;
-                Dune::bilu0_decomposition(ILU_);
+            if( ilu_n == 0 ) {
+                pre_.reset( new Dune::SeqILU0<M,X,X>( A_, relax_) );
             }
-            else
-            {
-                ILU_ = matrix_type( A_.N(),A_.M(),matrix_type::row_wise );
-                Dune::bilu_decomposition( A_,n, ILU_);
+            else {
+                pre_.reset( new Dune::SeqILUn<M,X,X>( A_, relax_, ilu_n) );
             }
         }
 
@@ -161,14 +160,17 @@ namespace Opm
             dmodified_ = d;
             A_.mmv(v, dmodified_);
 
-            // Apply ILU0.
-            Dune::bilu_backsolve(ILU_, vilu_, dmodified_);
-            v += vilu_;
+            // Apply Preconditioner for whole system (relax will be applied already)
+            pre_->apply( vilu_, dmodified_);
 
             // don't apply relaxation if relax_ == 1
-            if( std::abs( relax_ - 1.0 ) < 1e-12 ) return;
-
-            v *= relax_;
+            if( std::abs( relax_ - 1.0 ) < 1e-12 ) {
+                v += vilu_;
+            }
+            else {
+                v *= relax_;
+                v += vilu_;
+            }
         }
 
         /*!
@@ -237,12 +239,12 @@ namespace Opm
         Operator opAe_;
 
         //! \brief ILU0 preconditioner for the elliptic system
-        std::unique_ptr< Preconditioner > precond_;
+        std::unique_ptr< EllipticPreconditioner > precond_;
         //! \brief AMG preconditioner with ILU0 smoother
         std::unique_ptr< AMG > amg_;
 
         //! \brief The preconditioner for the whole system
-        matrix_type ILU_;
+        std::unique_ptr< WholeSystemPreconditioner > pre_;
 
         //! \brief temporary variables for ILU solve
         Y vilu_;
@@ -276,7 +278,7 @@ namespace Opm
               amg_ = std::unique_ptr< AMG > (new AMG(opAe_, criterion, smootherArgs));
             }
             else
-              precond_ = std::unique_ptr< Preconditioner > (new Preconditioner( Ae_, relax_ ));
+              precond_ = std::unique_ptr< EllipticPreconditioner > (new EllipticPreconditioner( Ae_, relax_ ));
        }
     };
 

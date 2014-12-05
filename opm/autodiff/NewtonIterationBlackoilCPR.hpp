@@ -59,9 +59,10 @@ namespace Opm
         virtual int iterations () const { return iterations_; }
     private:
         mutable int iterations_;
-        unsigned int ilu_n_;
-        bool use_amg_;
-        bool use_bicgstab_;
+        double cpr_relax_;
+        unsigned int cpr_ilu_n_;
+        bool cpr_use_amg_;
+        bool cpr_use_bicgstab_;
     };
 
 } // namespace Opm
