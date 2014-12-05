@@ -59,9 +59,9 @@ struct QuickSort< 0 >
 template<typename Lhs, typename Rhs, typename ResultType>
 void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 {
-    using namespace Eigen;
-    typedef SparseMatrix<typename ResultType::Scalar,ColMajor,typename ResultType::Index> ColMajorMatrix;
-    res = ColMajorMatrix(lhs.rows(), rhs.cols());
+  // initialize result
+  res = ResultType(lhs.rows(), rhs.cols());
+
   // if one of the matrices does not contain non zero elements
   // the result will only contain an empty matrix
   if( lhs.nonZeros() == 0 || rhs.nonZeros() == 0 )
@@ -76,8 +76,8 @@ void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
   eigen_assert(lhs.outerSize() == rhs.innerSize());
 
   std::vector<bool> mask(rows,false);
-  Matrix<Scalar,Dynamic,1> values(rows);
-  Matrix<Index,Dynamic,1>  indices(rows);
+  Eigen::Matrix<Scalar,Eigen::Dynamic,1> values(rows);
+  Eigen::Matrix<Index, Eigen::Dynamic,1> indices(rows);
 
   // estimate the number of non zero entries
   // given a rhs column containing Y non zeros, we assume that the respective Y columns
@@ -122,8 +122,8 @@ void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
     if( nnz > 1 )
     {
       // sort indices for sorted insertion to avoid later copying
-        // QuickSort< 1 >::sort( indices.data(), indices.data()+nnz );
-      std::sort( indices.data(), indices.data()+nnz );
+      QuickSort< 1 >::sort( indices.data(), indices.data()+nnz );
+      //std::sort( indices.data(), indices.data()+nnz );
     }
 
     res.startVec(j);
