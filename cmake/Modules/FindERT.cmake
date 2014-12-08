@@ -69,6 +69,15 @@ find_library (ERT_LIBRARY_ECL
   DOC "Path to ERT Eclipse library archive/shared object files"
   ${_no_default_path}
   )
+find_library (ERT_LIBRARY_ECL_WELL
+  NAMES "ecl_well"
+  HINTS "${ERT_ROOT}"
+  PATHS "${PROJECT_BINARY_DIR}/../ert" "${PROJECT_BINARY_DIR}/../ert-build"
+        "${PROJECT_BINARY_DIR}/../ert/devel"
+  PATH_SUFFIXES "lib" "lib${_BITS}" "lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+  DOC "Path to ERT Eclipse library archive/shared object files"
+  ${_no_default_path}
+  )
 find_library (ERT_LIBRARY_GEOMETRY
   NAMES "ert_geometry"
   HINTS "${ERT_ROOT}"
@@ -95,6 +104,7 @@ list (APPEND ERT_INCLUDE_DIR
   )
 list (APPEND ERT_LIBRARY
   ${ERT_LIBRARY_ECL}
+  ${ERT_LIBRARY_ECL_WELL}
   ${ERT_LIBRARY_GEOMETRY}
   ${ERT_LIBRARY_UTIL}
   )
@@ -181,6 +191,16 @@ if (UNIX)
 	)
   list (APPEND ERT_LIBRARIES ${MATH_LIBRARY})
 endif (UNIX)
+
+# if shared libraries are disabled on linux, explcitly linking to the
+# pthreads library is required by ERT
+find_package(Threads ${ERT_QUIET})
+if (CMAKE_THREAD_LIBS_INIT)
+  list (APPEND ERT_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+# Platform specific library where dlopen with friends lives
+list (APPEND ERT_LIBRARIES ${CMAKE_DL_LIBS})
 
 # since OpenMP often implies pthreads, we need to tidy up
 # (last instance of library must be left standing, thus reversing that
