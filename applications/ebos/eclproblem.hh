@@ -98,11 +98,11 @@ private:
                                           /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
                                           /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
-    //typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
-    //typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
+    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
+    typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
 
-    typedef typename Opm::SplineTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
-    typedef typename Opm::SplineTwoPhaseMaterial<GasOilTraits> GasOilLaw;
+//    typedef typename Opm::SplineTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
+//    typedef typename Opm::SplineTwoPhaseMaterial<GasOilTraits> GasOilLaw;
 
 public:
     typedef Opm::EclDefaultMaterial<Traits, GasOilLaw, OilWaterLaw> type;
