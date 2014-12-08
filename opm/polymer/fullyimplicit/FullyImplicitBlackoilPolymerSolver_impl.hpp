@@ -275,15 +275,16 @@ namespace {
     {
         const V pvdt = geo_.poreVolume() / dt;
 
+        // Initial max concentration of this time step from PolymerBlackoilState.
+        cmax_ = Eigen::Map<V>(&x.maxconcentration()[0], Opm::AutoDiffGrid::numCells(grid_));
+
         if (active_[Gas]) { updatePrimalVariableFromState(x); }
 
         {
             const SolutionState state = constantState(x, xw);
-		    computeCmax(x, state.concentration);
             computeAccum(state, 0);
             computeWellConnectionPressures(state, xw);
         }
-
         std::vector<std::vector<double>> residual_history;
 
         assemble(pvdt, x, xw, polymer_inflow);
@@ -342,6 +343,8 @@ namespace {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
+        // Update max concentration.
+        computeCmax(x);
     }
 
 
@@ -647,14 +650,14 @@ namespace {
 
 
     template<class T>
-    void FullyImplicitBlackoilPolymerSolver<T>::computeCmax(PolymerBlackoilState& state,
-                                                            const ADB& c)
+    void FullyImplicitBlackoilPolymerSolver<T>::computeCmax(PolymerBlackoilState& state)
     {
         const int nc = AutoDiffGrid::numCells(grid_);
+        V tmp = V::Zero(nc);
         for (int i = 0; i < nc; ++i) {
-            cmax_(i) = std::max(cmax_(i), c.value()(i));
+            tmp[i] = std::max(state.maxconcentration()[i], state.concentration()[i]);
         }
-        std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
+        std::copy(&tmp[0], &tmp[0] + nc, state.maxconcentration().begin());
     }
 
 
