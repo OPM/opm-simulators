@@ -38,7 +38,7 @@ class PiecewiseLinearTwoPhaseMaterialParams
     typedef typename TraitsT::Scalar Scalar;
 
 public:
-    typedef std::vector<Scalar> SamplePoints;
+    typedef std::vector<Scalar> ValueVector;
 
     typedef TraitsT Traits;
 
@@ -79,21 +79,15 @@ public:
     /*!
      * \brief Return the wetting-phase saturation values of all sampling points.
      */
-    const SamplePoints& SwSamples() const
+    const ValueVector& SwSamples() const
     { assertFinalized_(); return SwSamples_; }
-
-    /*!
-     * \brief Set the wetting-phase saturation values of all sampling points.
-     */
-    void setSwSamples(const SamplePoints& samples)
-    { SwSamples_ = samples; }
 
     /*!
      * \brief Return the sampling points for the capillary pressure curve.
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& pcnwSamples() const
+    const ValueVector& pcnwSamples() const
     { assertFinalized_(); return pcwnSamples_; }
 
     /*!
@@ -101,8 +95,8 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setPcnwSamples(const SamplePoints& samples)
-    { pcwnSamples_ = samples; }
+    void setPcnwSamples(const ValueVector& SwValues, const ValueVector& values)
+    { SwSamples_ = SwValues; pcwnSamples_ = values; }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -110,7 +104,7 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& krwSamples() const
+    const ValueVector& krwSamples() const
     { assertFinalized_(); return krwSamples_; }
 
     /*!
@@ -119,8 +113,8 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrwSamples(const SamplePoints& samples)
-    { krwSamples_ = samples; }
+    void setKrwSamples(const ValueVector& SwValues, const ValueVector& values)
+    { SwSamples_ = SwValues; krwSamples_ = values; }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -128,7 +122,7 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    const SamplePoints& krnSamples() const
+    const ValueVector& krnSamples() const
     { assertFinalized_(); return krnSamples_; }
 
     /*!
@@ -137,8 +131,8 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrnSamples(const SamplePoints& samples)
-    { krnSamples_ = samples; }
+    void setKrnSamples(const ValueVector& SwValues, const ValueVector& values)
+    { SwSamples_ = SwValues; krnSamples_ = values; }
 
 private:
 #ifndef NDEBUG
@@ -151,10 +145,10 @@ private:
     { }
 #endif
 
-    SamplePoints SwSamples_;
-    SamplePoints pcwnSamples_;
-    SamplePoints krwSamples_;
-    SamplePoints krnSamples_;
+    ValueVector SwSamples_;
+    ValueVector pcwnSamples_;
+    ValueVector krwSamples_;
+    ValueVector krnSamples_;
 };
 } // namespace Opm
 

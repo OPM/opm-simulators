@@ -46,7 +46,7 @@ namespace Opm {
 template <class TraitsT, class ParamsT = PiecewiseLinearTwoPhaseMaterialParams<TraitsT> >
 class PiecewiseLinearTwoPhaseMaterial : public TraitsT
 {
-    typedef typename ParamsT::SamplePoints SamplePoints;
+    typedef typename ParamsT::ValueVector ValueVector;
 
 public:
     //! The traits class for this material law
@@ -360,50 +360,50 @@ public:
     }
 
 private:
-    static Scalar eval_(const SamplePoints &xSamples,
-                        const SamplePoints &ySamples,
+    static Scalar eval_(const ValueVector &xValues,
+                        const ValueVector &yValues,
                         Scalar x)
     {
-        int segIdx = findSegmentIndex_(xSamples, x);
+        int segIdx = findSegmentIndex_(xValues, x);
 
-        Scalar x0 = xSamples[segIdx];
-        Scalar x1 = xSamples[segIdx + 1];
+        Scalar x0 = xValues[segIdx];
+        Scalar x1 = xValues[segIdx + 1];
 
-        Scalar y0 = ySamples[segIdx];
-        Scalar y1 = ySamples[segIdx + 1];
+        Scalar y0 = yValues[segIdx];
+        Scalar y1 = yValues[segIdx + 1];
 
         return y0 + (y1 - y0)*(x - x0)/(x1 - x0);
     }
 
-    static Scalar evalDeriv_(const SamplePoints &xSamples,
-                             const SamplePoints &ySamples,
+    static Scalar evalDeriv_(const ValueVector &xValues,
+                             const ValueVector &yValues,
                              Scalar x)
     {
-        int segIdx = findSegmentIndex_(xSamples, x);
+        int segIdx = findSegmentIndex_(xValues, x);
 
-        Scalar x0 = xSamples[segIdx];
-        Scalar x1 = xSamples[segIdx + 1];
+        Scalar x0 = xValues[segIdx];
+        Scalar x1 = xValues[segIdx + 1];
 
-        Scalar y0 = ySamples[segIdx];
-        Scalar y1 = ySamples[segIdx + 1];
+        Scalar y0 = yValues[segIdx];
+        Scalar y1 = yValues[segIdx + 1];
 
         return (y1 - y0)/(x1 - x0);
     }
 
-    static int findSegmentIndex_(const SamplePoints &xSamples, Scalar x)
+    static int findSegmentIndex_(const ValueVector &xValues, Scalar x)
     {
-        int n = xSamples.size() - 1;
+        int n = xValues.size() - 1;
         assert(n >= 1); // we need at least two sampling points!
-        if (xSamples[n] < x)
+        if (xValues[n] < x)
             return n - 1;
-        else if (xSamples[0] > x)
+        else if (xValues[0] > x)
             return 0;
 
         // bisection
         int lowIdx = 0, highIdx = n;
         while (lowIdx + 1 < highIdx) {
             int curIdx = (lowIdx + highIdx)/2;
-            if (xSamples[curIdx] < x)
+            if (xValues[curIdx] < x)
                 lowIdx = curIdx;
             else
                 highIdx = curIdx;
