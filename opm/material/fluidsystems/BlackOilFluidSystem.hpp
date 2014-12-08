@@ -359,8 +359,8 @@ public:
         size_t nRs = 20;
         size_t nP = samplePoints.size()*2;
 
-	Scalar rhogRef = referenceDensity(gasPhaseIdx, regionIdx);
-	Scalar rhooRef = referenceDensity(oilPhaseIdx, regionIdx);
+        Scalar rhogRef = referenceDensity(gasPhaseIdx, regionIdx);
+        Scalar rhooRef = referenceDensity(oilPhaseIdx, regionIdx);
 
         Spline oilFormationVolumeFactorSpline;
         oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
@@ -1007,11 +1007,19 @@ private:
 
     static Scalar waterViscosity_(Scalar pressure, int regionIdx)
     {
-        Scalar muRef = waterViscosityScalar_[regionIdx];
-        Scalar Cnu = waterViscosibilityScalar_[regionIdx];
+        // Eclipse calculates the viscosity in a weird way: it
+        // calcultes the product of B_w and mu_w and then divides the
+        // result by B_w...
+        Scalar BwMuwRef =
+            waterViscosityScalar_[regionIdx]
+            * waterReferenceFormationFactorScalar_[regionIdx];
+        Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
+
         Scalar pRef = waterReferencePressureScalar_[regionIdx];
-        Scalar deltamu = (pressure - pRef)*Cnu*muRef;
-        return muRef + deltamu;
+        Scalar Y =
+            (waterCompressibilityScalar_[regionIdx] - waterViscosibilityScalar_[regionIdx])
+            * (pressure - pRef);
+        return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
     }
 
     static std::vector<TabulatedFunction> inverseOilFormationVolumeFactor_;
