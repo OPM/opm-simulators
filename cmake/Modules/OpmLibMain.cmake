@@ -15,6 +15,19 @@
 #	tests_hook      Do special processing before tests are compiled
 #	files_hook      Do special processing before final targets are added
 
+# for CMake >= 3.0, we need to change a few policies:
+#
+#   - CMP0026 to allow access to the LOCATION target property
+#   - CMP0048 to indicate that we want to deal with the *VERSION*
+#     variables ourselves
+if (POLICY CMP0026)
+	cmake_policy(SET CMP0026 OLD)
+endif()
+
+if (POLICY CMP0048)
+	cmake_policy(SET CMP0048 OLD)
+endif()
+
 # include special
 if (CMAKE_VERSION VERSION_LESS "2.8.3")
 	message (STATUS "Enabling compatibility modules for CMake 2.8.3")

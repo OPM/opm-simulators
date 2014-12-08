@@ -133,19 +133,23 @@ CHECK_CXX_SOURCE_RUNS("
     #include <regex>
     int main(void)
     {
-      std::regex r(\"AB.*|BC+\", std::regex::extended);
+      std::regex r(\"AB.*|BC+|DE.+\", std::regex::extended);
       if (!std::regex_match(\"AB\", r))
            return 1;
       if (!std::regex_match(\"ABC\", r))
-           return 1;
+           return 2;
       if (!std::regex_match(\"ABC!#\", r))
-           return 1;
+           return 3;
       if (std::regex_match(\"B\", r))
-           return 1;
+           return 4;
       if (!std::regex_match(\"BC\", r))
-           return 1;
+           return 5;
       if (std::regex_match(\"BCE\", r))
-           return 1;
+           return 6;
+      if (std::regex_match(\"DE\", r))
+           return 7;
+      if (!std::regex_match(\"DEF\", r))
+           return 8;
       return 0;
     }
 "  HAVE_REGEX

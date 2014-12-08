@@ -9,6 +9,12 @@
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
+include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag("-Werror -fext-numeric-literals" HAVE_EXTENDED_NUMERIC_LITERALS)
+if (HAVE_EXTENDED_NUMERIC_LITERALS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals")
+endif()
 
 cmake_push_check_state()
 list(APPEND CMAKE_REQUIRED_LIBRARIES "quadmath")

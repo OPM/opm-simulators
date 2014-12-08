@@ -28,7 +28,7 @@ set (opm-core_DEPS
 	# xml processing (for config parsing)
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)
-	"ERT"
+	"ERT REQUIRED"
 	# Look for MPI support
 	"MPI"
 	# DUNE dependency
