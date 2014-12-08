@@ -135,12 +135,7 @@ namespace Opm
         if (ads_index_ == Desorption) {
             simpleAdsorptionBoth(c, c_ads, dc_ads_dc, if_with_der);
         } else if (ads_index_ == NoDesorption) {
-            if (c < cmax) {
-                simpleAdsorption(cmax, c_ads);
-                dc_ads_dc = 0.;
-            } else {
-                simpleAdsorptionBoth(c, c_ads, dc_ads_dc, if_with_der);
-            }
+            simpleAdsorptionBoth(std::max(c, cmax), c_ads, dc_ads_dc, if_with_der);
         } else {
             OPM_THROW(std::runtime_error, "Invalid Adsoption index");
         }
