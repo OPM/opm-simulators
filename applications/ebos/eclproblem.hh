@@ -602,7 +602,7 @@ private:
 
         const auto rockKeyword = deck->getKeyword("ROCK");
         rockParams_.resize(rockKeyword->size());
-        for (int rockRecordIdx = 0; rockRecordIdx < rockKeyword->size(); ++ rockRecordIdx) {
+        for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword->size(); ++ rockRecordIdx) {
             const auto rockRecord = rockKeyword->getRecord(rockRecordIdx);
             rockParams_[rockRecordIdx].referencePressure =
                 rockRecord->getItem("PREF")->getSIDouble(0);
