@@ -46,7 +46,7 @@
 struct SetupSimple {
     SetupSimple()
     {
-        Opm::ParserPtr parser(new Opm::Parser());
+        parser.reset(new Opm::Parser());
         deck = parser->parseFile("fluid.data");
         eclState.reset(new Opm::EclipseState(deck));
 
@@ -58,6 +58,7 @@ struct SetupSimple {
     }
 
     Opm::parameter::ParameterGroup  param;
+    Opm::ParserPtr                  parser;
     Opm::DeckConstPtr               deck;
     Opm::EclipseStateConstPtr       eclState;
 };
