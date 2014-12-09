@@ -292,16 +292,11 @@ namespace {
 
         bool converged = false;
         double omega = 1.;
-        const double r0  = residualNorm();
 
         residual_history.push_back(residuals());
 
-        converged = getConvergence(dt);
-
         int          it  = 0;
-        std::cout << "\nIteration         Residual\n"
-                  << std::setw(9) << it << std::setprecision(9)
-                  << std::setw(18) << r0 << std::endl;
+        converged = getConvergence(dt, it);
 
         const int sizeNonLinear = residual_.sizeNonLinear();
 
@@ -328,15 +323,11 @@ namespace {
 
             assemble(pvdt, x, xw, polymer_inflow);
 
-            const double r = residualNorm();
-
             residual_history.push_back(residuals());
 
-            converged = getConvergence(dt);
+            ++it;
 
-            it += 1;
-            std::cout << std::setw(9) << it << std::setprecision(9)
-                      << std::setw(18) << r << std::endl;
+            converged = getConvergence(dt, it);
         }
 
         if (!converged) {
@@ -1904,7 +1895,7 @@ namespace {
 
     template<class T>
     bool
-    FullyImplicitBlackoilPolymerSolver<T>::getConvergence(const double dt)
+    FullyImplicitBlackoilPolymerSolver<T>::getConvergence(const double dt, const int iteration)
     {
         const double tol_mb = 1.0e-7;
         const double tol_cnv = 1.0e-3;
@@ -1920,10 +1911,12 @@ namespace {
         double CNVW = 0.;
         double CNVO = 0.;
         double CNVG = 0.;
+        double CNVP = 0.;
 
         double RW_sum = 0.;
         double RO_sum = 0.;
         double RG_sum = 0.;
+        double RP_sum = 0.;
 
         double BW_avg = 0.;
         double BO_avg = 0.;
@@ -1933,7 +1926,7 @@ namespace {
             const int pos = pu.phase_pos[Water];
             const ADB& tempBW = rq_[pos].b;
             V BW = 1./tempBW.value();
-            V RW = residual_.material_balance_eq[Water].value();
+            V RW = residual_.material_balance_eq[pos].value();
             BW_avg = BW.sum()/nc;
             const V tempV = RW.abs()/pv;
 
@@ -1946,7 +1939,7 @@ namespace {
             const int pos = pu.phase_pos[Oil];
             const ADB& tempBO = rq_[pos].b;
             V BO = 1./tempBO.value();
-            V RO = residual_.material_balance_eq[Oil].value();
+            V RO = residual_.material_balance_eq[pos].value();
             BO_avg = BO.sum()/nc;
             const V tempV = RO.abs()/pv;
 
@@ -1959,7 +1952,7 @@ namespace {
             const int pos = pu.phase_pos[Gas];
             const ADB& tempBG = rq_[pos].b;
             V BG = 1./tempBG.value();
-            V RG = residual_.material_balance_eq[Gas].value();
+            V RG = residual_.material_balance_eq[pos].value();
             BG_avg = BG.sum()/nc;
             const V tempV = RG.abs()/pv;
 
@@ -1967,13 +1960,28 @@ namespace {
             RG_sum = RG.sum();
         }
 
-        double tempValue = tol_mb * pvSum /dt;
+        if (has_polymer_) {
+            const ADB& tempBW = rq_[poly_pos_].b;
+            V BW = 1./tempBW.value();
+            V RP = residual_.material_balance_eq[poly_pos_].value();
+            BW_avg = BW.sum()/nc;
+            const V tempV = RP.abs()/pv;
 
-        bool converged_MB = (fabs(BW_avg*RW_sum) < tempValue)
-                         && (fabs(BO_avg*RO_sum) < tempValue)
-                         && (fabs(BG_avg*RG_sum) < tempValue);
+            CNVP = BW_avg * dt * tempV.maxCoeff();
+            RP_sum = RP.sum();
+        }
 
-        bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
+        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * dt / pvSum;
+        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * dt / pvSum;
+        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * dt / pvSum;
+        const double mass_balance_residual_polymer = fabs(BW_avg*RP_sum) * dt / pvSum;
+
+        bool converged_MB = (mass_balance_residual_water < tol_mb)
+                         && (mass_balance_residual_oil< tol_mb)
+                         && (mass_balance_residual_gas < tol_mb)
+                         && (mass_balance_residual_polymer < tol_mb);
+
+        bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv) && (CNVP < tol_cnv);
 
         double residualWellFlux = residual_.well_flux_eq.value().matrix().template lpNorm<Eigen::Infinity>();
         double residualWell = residual_.well_eq.value().matrix().template lpNorm<Eigen::Infinity>();
@@ -1982,11 +1990,25 @@ namespace {
 
         bool converged = converged_MB && converged_CNV && converged_Well;
 
-#ifdef OPM_VERBOSE
-        std::cout << " CNVW " << CNVW << " CNVO " << CNVO << " CNVG " << CNVG << std::endl;
-        std::cout << " converged_MB " << converged_MB << " converged_CNV " << converged_CNV
-                  << " converged_Well " << converged_Well << " converged " << converged << std::endl;
-#endif
+        if (iteration == 0) {
+            std::cout << "\nIter   MB(OIL)   MB(WATER)  MB(GAS)    MB(POLYMER)     CNVW       CNVO       CNVG     CNVP    WELL-FLOW WELL-CNTRL\n";
+        }
+        const std::streamsize oprec = std::cout.precision(3);
+        const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+        std::cout << std::setw(4) << iteration
+                  << std::setw(11) << mass_balance_residual_water
+                  << std::setw(11) << mass_balance_residual_oil
+                  << std::setw(11) << mass_balance_residual_gas
+                  << std::setw(11) << mass_balance_residual_polymer
+                  << std::setw(11) << CNVW
+                  << std::setw(11) << CNVO
+                  << std::setw(11) << CNVG
+                  << std::setw(11) << CNVP
+                  << std::setw(11) << residualWellFlux
+                  << std::setw(11) << residualWell
+                  << std::endl;
+        std::cout.precision(oprec);
+        std::cout.flags(oflags);
         return converged;
     }
 
