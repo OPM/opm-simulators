@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
     ParserPtr parser(new Parser());
 
     std::cout << "Parsing input file ............: " << input_file << std::endl;
-    DeckConstPtr deck = parser->parseFile(input_file, false);
+    DeckConstPtr deck = parser->parseFile(input_file);
     std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( deck );
     
     std::cout << "Loading eclipse INIT file .....: " << init_file << std::endl;
