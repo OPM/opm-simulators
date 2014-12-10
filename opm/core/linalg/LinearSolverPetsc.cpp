@@ -201,7 +201,7 @@ namespace{
         CHKERRXX( err );
         err = KSPSetFromOptions( t.ksp );
         CHKERRXX( err );
-        KSPSetInitialGuessNonzero( t.ksp, PETSC_TRUE );
+        KSPSetInitialGuessNonzero( t.ksp, PETSC_FALSE );
         KSPSolve( t.ksp, t.x, t.b );
         KSPGetConvergedReason( t.ksp, &reason );
         KSPGetIterationNumber( t.ksp, &its );
