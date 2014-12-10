@@ -122,27 +122,24 @@ namespace{
         /* Convenience struct to handle automatic (de)allocation of some useful
          * variables, as well as group them up for easier parameter passing
          */
-        Vec rhs;
-        Vec solution;
+        Vec x;
+        Vec b;
         Mat A;
         KSP ksp;
         PC preconditioner;
 
         OEM_DATA( const int size ) {
-            VecCreate( PETSC_COMM_WORLD, &solution );
-            auto err = VecSetSizes( solution, PETSC_DECIDE, size );
+            VecCreate( PETSC_COMM_WORLD, &b );
+            auto err = VecSetSizes( b, PETSC_DECIDE, size );
             CHKERRXX( err );
-            VecSetFromOptions( solution );
-            VecDuplicate( solution, &rhs );
-
             VecSetFromOptions( b );
 
             KSPCreate( PETSC_COMM_WORLD, &ksp );
         }
 
         ~OEM_DATA() {
-            VecDestroy( &rhs );
-            VecDestroy( &solution );
+            VecDestroy( &x );
+            VecDestroy( &b );
             MatDestroy( &A );
             KSPDestroy( &ksp );
         }
@@ -203,7 +200,7 @@ namespace{
         err = KSPSetFromOptions( t.ksp );
         CHKERRXX( err );
         KSPSetInitialGuessNonzero( t.ksp, PETSC_TRUE );
-        KSPSolve( t.ksp, t.rhs, t.solution );
+        KSPSolve( t.ksp, t.x, t.b );
         KSPGetConvergedReason( t.ksp, &reason );
         KSPGetIterationNumber( t.ksp, &its );
         KSPGetResidualNorm( t.ksp, &residual );
@@ -255,10 +252,10 @@ namespace{
 
         OEM_DATA t( size );
         t.A = to_petsc_mat( size, nonzeros, ia, ja, sa );
-        t.rhs = to_petsc_vec( rhs, size );
+        t.x = to_petsc_vec( rhs, size );
 
         solve_system( t, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_ );
-        from_petsc_vec( solution, t.solution );
+        from_petsc_vec( solution, t.b );
 
         LinearSolverReport rep = {};
         rep.converged = true;
