@@ -150,6 +150,7 @@ namespace{
         PetscScalar* vec;
         Vec v;
 
+        VecCreate( PETSC_COMM_WORLD, &v );
         VecSetSizes( v, PETSC_DECIDE, size );
         VecSetFromOptions( v );
 
