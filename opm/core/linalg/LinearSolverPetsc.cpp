@@ -142,6 +142,7 @@ namespace{
             VecDestroy( &b );
             MatDestroy( &A );
             KSPDestroy( &ksp );
+            PCDestroy( &preconditioner );
         }
     };
 
