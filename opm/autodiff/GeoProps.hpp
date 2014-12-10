@@ -228,9 +228,26 @@ namespace Opm
                     break;
                 }
 
-                // Multiplier contribution on this face
+                // Multiplier contribution on this face for MULT[XYZ] logical cartesian multipliers
                 intersectionTransMult[faceIdx] *=
                     multipliers->getMultiplier(cartesianCellIdx, faceDirection);
+
+                // Multiplier contribution on this fase for region multipliers
+                const int cellIdxInside = grid.face_cells[2*faceIdx];
+                const int cellIdxOutside = grid.face_cells[2*faceIdx + 1];
+
+                // Do not apply region multipliers in the case of boundary connections
+                if (cellIdxInside < 0 || cellIdxOutside < 0) {
+                    continue;
+                }
+                const int cartesianCellIdxInside = grid.global_cell[cellIdxInside];
+                const int cartesianCellIdxOutside = grid.global_cell[cellIdxOutside];
+                //  Only apply the region multipliers from the inside
+                if (cartesianCellIdx == cartesianCellIdxInside) {
+                    intersectionTransMult[faceIdx] *= multipliers->getRegionMultiplier(cartesianCellIdxInside,cartesianCellIdxOutside,faceDirection);
+                }
+
+
             }
         }
     }
