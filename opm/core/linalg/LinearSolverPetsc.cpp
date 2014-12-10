@@ -134,11 +134,7 @@ namespace{
             VecSetFromOptions( solution );
             VecDuplicate( solution, &rhs );
 
-            MatCreate( PETSC_COMM_WORLD, &A );
-            err = MatSetSizes( A, PETSC_DECIDE, PETSC_DECIDE, size, size );
-            CHKERRXX( err );
-            MatSetFromOptions( A );
-            MatSetUp( A );
+            VecSetFromOptions( b );
 
             KSPCreate( PETSC_COMM_WORLD, &ksp );
         }
@@ -179,23 +175,13 @@ namespace{
         VecRestoreArray( v, &vec );
     }
 
-    void to_petsc_mat( const int size, const int nonzeros,
-            const int* ia, const int* ja, const double* sa, Mat A ) {
+    Mat to_petsc_mat( const int size, const int nonzeros,
+            const int* ia, const int* ja, const double* sa ) {
 
-        for( int i = 0; i < size; ++i ) {
-            int nrows = ia[ i + 1 ] - ia[ i ];
-
-            if( nrows == 0 ) continue;
-
-            for( int j = ia[ i ]; j < ia[ i + 1 ]; ++j ) {
-                auto err = MatSetValues( A, 1, &i, 1, &ja[ j ], &sa[ j ], INSERT_VALUES );
-                CHKERRXX( err );
-            }
-
-            auto err = MatAssemblyBegin( A, MAT_FINAL_ASSEMBLY );
-            CHKERRXX( err );
-            MatAssemblyEnd( A, MAT_FINAL_ASSEMBLY );
-        }
+        Mat A;
+        auto err = MatCreateSeqAIJWithArrays( PETSC_COMM_WORLD, size, size, (int*)ia, (int*)ja, (double*)sa, &A );
+        CHKERRXX( err );
+        return A;
     }
 
 
@@ -267,7 +253,7 @@ namespace{
         PCType pc_type = pc.find(pc_type_);
 
         OEM_DATA t( size );
-        to_petsc_mat( size, nonzeros, ia, ja, sa, t.A );
+        t.A = to_petsc_mat( size, nonzeros, ia, ja, sa );
         to_petsc_vec( rhs, t.rhs );
 
         solve_system( t, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_ );
