@@ -107,15 +107,18 @@ namespace Opm
 
 #ifdef HAVE_DUNE_CORNERPOINT
             if (std::is_same<Grid, Dune::CpGrid>::value) {
-                if (use_local_perm)
+                if (use_local_perm) {
                     OPM_THROW(std::runtime_error, "Local coordinate permeability not supported for CpGrid");
+                }
             }
 #endif
 
-            if (not use_local_perm)
+            if (! use_local_perm) {
                 tpfa_htrans_compute(ug, props.permeability(), htrans.data());
-            else
+            }
+            else {
                 tpfa_loc_trans_compute_(grid,props.permeability(),htrans);
+            }
 
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
@@ -309,7 +312,7 @@ namespace Opm
                         OPM_MESSAGE("Warning: negative Z-transmissibility value in cell: " << cellIdx << " replace by absolute value") ;
                                 break;
                     default:
-                        OPM_THROW(std::logic_error, "Inconsitancy in the faceTag in cell: " << cellIdx);
+                        OPM_THROW(std::logic_error, "Inconsistency in the faceTag in cell: " << cellIdx);
 
                     }
                     cn = -cn;
