@@ -28,7 +28,7 @@
 
 namespace Opm
 {
-    
+
 namespace{
 
     class KSPTypeMap {
@@ -52,8 +52,8 @@ namespace{
             type_map_.insert(std::make_pair("cr", KSPCR));
             type_map_.insert(std::make_pair("preonly", KSPPREONLY));
         }
-          
-        KSPType 
+
+        KSPType
         find(const std::string& type) const
         {
             Map::const_iterator it = type_map_.find(type);
@@ -61,7 +61,7 @@ namespace{
             if (it == type_map_.end()) {
                 it = type_map_.find(default_type_);
             }
-        
+
             if (it == type_map_.end()) {
                 OPM_THROW(std::runtime_error, "Unknown KSPType: '" << type << "'");
             }
@@ -95,8 +95,8 @@ namespace{
             type_map_.insert(std::make_pair("cholesky", PCCHOLESKY));
             type_map_.insert(std::make_pair("none", PCNONE));
         }
-            
-        PCType 
+
+        PCType
         find(const std::string& type) const
         {
             Map::const_iterator it = type_map_.find(type);
@@ -104,10 +104,11 @@ namespace{
             if (it == type_map_.end()) {
                 it = type_map_.find(default_type_);
             }
-       
+
             if (it == type_map_.end()) {
                 OPM_THROW(std::runtime_error, "Unknown PCType: '" << type << "'");
             }
+
             return it->second;
         }
     private:
