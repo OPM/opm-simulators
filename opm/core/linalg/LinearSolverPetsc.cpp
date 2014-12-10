@@ -148,18 +148,18 @@ namespace{
         }
     };
 
-    void to_petsc_vec( const double* x, Vec v ) {
-        if( !v ) OPM_THROW( std::runtime_error,
-                    "PETSc CopySolution: Invalid PETSc vector." );
-
+    Vec to_petsc_vec( const double* x, int size ) {
         PetscScalar* vec;
-        PetscInt size;
+        Vec v;
 
-        VecGetLocalSize( v, &size );
+        VecSetSizes( v, PETSC_DECIDE, size );
+        VecSetFromOptions( v );
+
         VecGetArray( v, &vec );
-
         std::memcpy( vec, x,  size * sizeof( double ) );
+
         VecRestoreArray( v, &vec );
+        return v;
     }
 
     void from_petsc_vec( double* x, Vec v ) {
@@ -255,7 +255,7 @@ namespace{
 
         OEM_DATA t( size );
         t.A = to_petsc_mat( size, nonzeros, ia, ja, sa );
-        to_petsc_vec( rhs, t.rhs );
+        t.rhs = to_petsc_vec( rhs, size );
 
         solve_system( t, ksp_type, pc_type, rtol_, atol_, dtol_, maxits_, ksp_view_ );
         from_petsc_vec( solution, t.solution );
