@@ -113,8 +113,7 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr newParser(new Opm::Parser());
-    bool strict_parsing = param.getDefault("strict_parsing", true);
-    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename, strict_parsing);
+    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename);
     std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
     // Grid init
     std::vector<double> porv;
