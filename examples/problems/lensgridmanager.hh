@@ -125,10 +125,9 @@ public:
         Dune::FieldVector<int, dim> cellRes;
 #endif
 
-        Dune::FieldVector<Scalar, dim> upperRight;
-        Dune::FieldVector<Scalar, dim> lowerLeft;
+        typedef double GridScalar;
+        Dune::FieldVector<GridScalar, dim> upperRight;
 
-        lowerLeft[1] = 0.0;
         upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
         upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
 
@@ -140,13 +139,17 @@ public:
         }
 
         unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
+        gridPtr_.reset(new Dune::YaspGrid<dim>(upperRight, cellRes));
+#else
         gridPtr_.reset(new Dune::YaspGrid<dim>(
 #ifdef HAVE_MPI
-            /*mpiCommunicator=*/Dune::MPIHelper::getCommunicator(),
+                           /*mpiCommunicator=*/Dune::MPIHelper::getCommunicator(),
 #endif
-            /*upperRightCorner=*/upperRight,
-            /*numCells=*/cellRes, isPeriodic,
-            /*overlap=*/1));
+                           /*upperRightCorner=*/upperRight,
+                           /*numCells=*/cellRes, isPeriodic,
+                           /*overlap=*/1));
+#endif
         gridPtr_->globalRefine(numRefinements);
 
         this->finalizeInit_();
