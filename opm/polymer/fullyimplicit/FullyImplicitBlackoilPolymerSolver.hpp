@@ -257,8 +257,7 @@ namespace Opm {
                         const SolutionState&    state);
 
         void
-        computeCmax(PolymerBlackoilState& state,
-                    const ADB&            c);
+        computeCmax(PolymerBlackoilState& state);
 
         ADB
         computeMc(const SolutionState& state) const;
@@ -351,7 +350,7 @@ namespace Opm {
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
-        bool getConvergence(const double dt);
+        bool getConvergence(const double dt, const int it);
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,

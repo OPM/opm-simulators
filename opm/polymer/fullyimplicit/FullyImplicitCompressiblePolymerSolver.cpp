@@ -202,9 +202,10 @@ namespace {
          WellStateFullyImplicitBlackoil& xw,
          const std::vector<double>& polymer_inflow)
     {
+        // Initial max concentration of this time step from PolymerBlackoilState.
+        cmax_ = Eigen::Map<V>(&x.maxconcentration()[0], Opm::AutoDiffGrid::numCells(grid_));
 
         const SolutionState state = constantState(x, xw);
-		computeCmax(x, state.concentration);
         computeAccum(state, 0);
 
         const double atol  = 1.0e-12;
@@ -241,6 +242,9 @@ namespace {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
+
+        // Update max concentration.
+        computeCmax(x);
     }
 
 
@@ -483,15 +487,15 @@ namespace {
 
     void 
     FullyImplicitCompressiblePolymerSolver::
-    computeCmax(PolymerBlackoilState& state,
-				const ADB& c)
+    computeCmax(PolymerBlackoilState& state)
     {
         const int nc = grid_.number_of_cells;
-		for (int i = 0; i < nc; ++i) {
-			cmax_(i) = std::max(cmax_(i), c.value()(i));
+        V tmp = V::Zero(nc);
+        for (int i = 0; i < nc; ++i) {
+            tmp[i] = std::max(state.maxconcentration()[i], state.concentration()[i]);
         }
-		std::copy(&cmax_[0], &cmax_[0] + nc, state.maxconcentration().begin());
 
+        std::copy(&tmp[0], &tmp[0] + nc, state.maxconcentration().begin());
     }
 
 
