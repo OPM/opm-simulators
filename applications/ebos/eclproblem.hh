@@ -1003,8 +1003,13 @@ private:
                     continue;
 
                 // calculate the "intersection index"
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
+                size_t interiorElemIdx = this->elementMapper().index(intersectIt->inside());
+                size_t exteriorElemIdx = this->elementMapper().index(intersectIt->outside());
+#else
                 size_t interiorElemIdx = this->elementMapper().map(intersectIt->inside());
                 size_t exteriorElemIdx = this->elementMapper().map(intersectIt->outside());
+#endif
 
                 size_t elem1Idx = std::min(interiorElemIdx, exteriorElemIdx);
                 size_t elem2Idx = std::max(interiorElemIdx, exteriorElemIdx);
