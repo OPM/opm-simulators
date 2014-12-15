@@ -204,7 +204,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 public:
     enum ControlMode {
         BottomHolePressure,
-        TopHolePressure,
+        TubingHeadPressure,
         VolumetricSurfaceRate,
         VolumetricReservoirRate
     };
@@ -444,22 +444,22 @@ public:
      *
      * // set the minimum pressure at the bottom of the well (Pa,
      * // optional, if not specified, the well is assumes it estimates
-     * // the bottom hole pressure based on the top hole pressure
+     * // the bottom hole pressure based on the tubing head pressure
      * // assuming hydrostatic conditions.)
      * setMinimumBottomHolePressure(somePressure);
      *
      * // set the pressure at the top of the well (Pa,
-     * // optional, if not specified, the top hole pressure is
+     * // optional, if not specified, the tubing head pressure is
      * // assumed to be 1 bar)
-     * setTopHolePressure(somePressure);
+     * setTubingHeadPressure(somePressure);
      *
      * // set the control mode of the well [m].
      * // optional, if not specified, it is assumed to be "BottomHolePressure"
-     * setControlMode(Well::TopHolePressure);
+     * setControlMode(Well::TubingHeadPressure);
      *
-     * // set the top hole pressure of the well [Pa]
-     * // only require  if the control mode is "TopHolePressure"
-     * setTopHolePressure(1e5);
+     * // set the tubing head pressure of the well [Pa]
+     * // only require  if the control mode is "TubingHeadPressure"
+     * setTubingHeadPressure(1e5);
      */
     void beginSpec()
     {
@@ -470,7 +470,7 @@ public:
         // By default, take the bottom hole pressure as a given
         controlMode_ = ControlMode::BottomHolePressure;
 
-        // use one bar for the default bottom and top hole
+        // use one bar for the default bottom hole and tubing head
         // pressures. For the bottom hole pressure, this is probably
         // off by at least one magnitude...
         bhpLimit_ = 1e5;
@@ -728,23 +728,23 @@ public:
     { return actualBottomHolePressure_; }
 
     /*!
-     * \brief Set the top hole pressure [Pa] of the well.
+     * \brief Set the tubing head pressure [Pa] of the well.
      */
-    void setTargetTopHolePressure(Scalar val)
+    void setTargetTubingHeadPressure(Scalar val)
     { thpLimit_ = val; }
 
     /*!
-     * \brief Return the maximum/minimum top hole pressure [Pa] of the well.
+     * \brief Return the maximum/minimum tubing head pressure [Pa] of the well.
      *
      * For injectors, this is the maximum, for producers it's the minimum.
      */
-    Scalar targetTopHolePressure() const
+    Scalar targetTubingHeadPressure() const
     { return thpLimit_; }
 
     /*!
-     * \brief Return the maximum/minimum top hole pressure [Pa] of the well.
+     * \brief Return the maximum/minimum tubing head pressure [Pa] of the well.
      */
-    Scalar topHolePressure() const
+    Scalar tubingHeadPressure() const
     {
         // warning: this is a bit hacky...
         Scalar rho = 650; // kg/m^3
@@ -854,7 +854,7 @@ public:
     void beginTimeStep()
     {
         // calculate the bottom hole pressure to be actually used
-        if (controlMode_ == ControlMode::TopHolePressure) {
+        if (controlMode_ == ControlMode::TubingHeadPressure) {
             // assume a density of 650 kg/m^3 for the bottom hole pressure
             // calculation
             Scalar rho = 650.0;
@@ -863,7 +863,7 @@ public:
         else if (controlMode_ == ControlMode::BottomHolePressure)
             targetBottomHolePressure_ = bhpLimit_;
         else
-            // TODO: also take the top hole pressure limit into account...
+            // TODO: also take the tubing head pressure limit into account...
             targetBottomHolePressure_ = bhpLimit_;
 
         // make it very likely that we screw up if we control for {surface,reservoir}
@@ -878,7 +878,7 @@ public:
      * \brief Informs the well that an iteration has just begun.
      *
      * The beginIteration*() methods, the well calculates the bottom
-     * and top hole pressures, the actual unconstraint production and
+     * and tubing head pressures, the actual unconstraint production and
      * injection rates, etc. The callback is split into three parts as
      * this arrangement avoids iterating over the whole grid and to
      * re-calculate the volume variables for each well.
@@ -1469,7 +1469,7 @@ protected:
     // the sum of the total volumes of all the degrees of freedoms that interact with the well
     Scalar wellTotalVolume_;
 
-    // The assumed bottom and top hole pressures as specified by the user
+    // The assumed bottom hole and tubing head pressures as specified by the user
     Scalar bhpLimit_;
     Scalar thpLimit_;
 
@@ -1482,7 +1482,7 @@ protected:
     WellType wellType_;
 
     // The bottom hole pressure to be targeted by the well model. This may be computed
-    // from the top hole pressure (if the control mode is TopHolePressure), or it may be
+    // from the tubing head pressure (if the control mode is TubingHeadPressure), or it may be
     // just the user-specified bottom hole pressure if the control mode is
     // BottomHolePressure.
     Scalar targetBottomHolePressure_;

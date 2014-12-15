@@ -181,7 +181,7 @@ public:
                     break;
 
                 case Opm::WellInjector::THP:
-                    well->setControlMode(Well::ControlMode::TopHolePressure);
+                    well->setControlMode(Well::ControlMode::TubingHeadPressure);
                     break;
 
                 case Opm::WellInjector::GRUP:
@@ -216,8 +216,8 @@ public:
                 well->setTargetBottomHolePressure(injectProperties.BHPLimit);
 
                 // TODO
-                well->setTargetTopHolePressure(1e100);
-                //well->setTargetTopHolePressure(injectProperties.THPLimit);
+                well->setTargetTubingHeadPressure(1e100);
+                //well->setTargetTubingHeadPressure(injectProperties.THPLimit);
             }
 
             if (deckWell->isProducer(episodeIdx)) {
@@ -266,7 +266,7 @@ public:
                     break;
 
                 case Opm::WellProducer::THP:
-                    well->setControlMode(Well::ControlMode::TopHolePressure);
+                    well->setControlMode(Well::ControlMode::TubingHeadPressure);
                     break;
 
                 case Opm::WellProducer::GRUP:
@@ -281,8 +281,8 @@ public:
                 well->setTargetBottomHolePressure(producerProperties.BHPLimit);
 
                 // TODO
-                well->setTargetTopHolePressure(-1e100);
-                //well->setTargetTopHolePressure(producerProperties.THPLimit);
+                well->setTargetTubingHeadPressure(-1e100);
+                //well->setTargetTubingHeadPressure(producerProperties.THPLimit);
             }
         }
     }
@@ -354,9 +354,8 @@ public:
     /*!
      * \brief Informs the well that an iteration has just begun.
      *
-     * In this method, the well calculates the bottom and top hole
-     * pressures, the actual unconstraint production and injection
-     * rates, etc.
+     * In this method, the well calculates the bottom hole and tubing head pressures, the
+     * actual unconstraint production and injection rates, etc.
      */
     void beginIteration()
     {
