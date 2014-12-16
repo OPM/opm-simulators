@@ -37,6 +37,7 @@
 #include <ewoms/models/pvs/pvsproperties.hh>
 
 #include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>

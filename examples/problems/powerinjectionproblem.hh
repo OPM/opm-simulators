@@ -34,6 +34,8 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
+
+#include <dune/grid/yaspgrid.hh>
 #include <ewoms/io/cubegridmanager.hh>
 
 #include <dune/common/version.hh>
