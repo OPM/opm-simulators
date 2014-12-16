@@ -154,7 +154,7 @@ try
     // With a deck, we may have more epochs etc.
     WellState well_state;
     Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
-    Opm::DerivedGeology geology(*grid->c_grid(), *props, eclipseState);
+    Opm::DerivedGeology geology(*grid->c_grid(), *props, eclipseState,false);
     SimulatorTimer simtimer;
 
     for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {

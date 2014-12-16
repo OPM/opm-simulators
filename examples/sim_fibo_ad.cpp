@@ -207,7 +207,8 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
+    bool use_local_perm = param.getDefault("use_local_perm", true);
+    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
 
     // TODO: also do this in sim_fibo_ad_cp
     bool writeTrans = param.getDefault("write_transmissibilities", false);

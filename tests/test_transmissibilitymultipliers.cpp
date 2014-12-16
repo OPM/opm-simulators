@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     auto origGridManager = std::make_shared<Opm::GridManager>(origEclipseState->getEclipseGrid());
     auto origProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(origDeck, origEclipseState, *(origGridManager->c_grid()));
 
-    Opm::DerivedGeology origGeology(*(origGridManager->c_grid()), *origProps, origEclipseState);
+    Opm::DerivedGeology origGeology(*(origGridManager->c_grid()), *origProps, origEclipseState, false);
     /////
 
     /////
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     auto multGridManager = std::make_shared<Opm::GridManager>(multEclipseState->getEclipseGrid());
     auto multProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multDeck, multEclipseState, *(multGridManager->c_grid()));
 
-    Opm::DerivedGeology multGeology(*(multGridManager->c_grid()), *multProps, multEclipseState);
+    Opm::DerivedGeology multGeology(*(multGridManager->c_grid()), *multProps, multEclipseState, false);
     /////
 
     /////
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     auto multMinusGridManager = std::make_shared<Opm::GridManager>(multMinusEclipseState->getEclipseGrid());
     auto multMinusProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multMinusDeck, multMinusEclipseState, *(multMinusGridManager->c_grid()));
 
-    Opm::DerivedGeology multMinusGeology(*(multMinusGridManager->c_grid()), *multMinusProps, multMinusEclipseState);
+    Opm::DerivedGeology multMinusGeology(*(multMinusGridManager->c_grid()), *multMinusProps, multMinusEclipseState, false);
     /////
 
     /////
@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     auto ntgGridManager = std::make_shared<Opm::GridManager>(ntgEclipseState->getEclipseGrid());
     auto ntgProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(ntgDeck, ntgEclipseState, *(ntgGridManager->c_grid()));
 
-    Opm::DerivedGeology ntgGeology(*(ntgGridManager->c_grid()), *ntgProps, ntgEclipseState);
+    Opm::DerivedGeology ntgGeology(*(ntgGridManager->c_grid()), *ntgProps, ntgEclipseState, false);
     /////
 
     // compare the transmissibilities (note that for this we assume that the multipliers

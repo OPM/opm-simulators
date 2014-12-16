@@ -61,7 +61,10 @@ namespace Opm
         DerivedGeology(const Grid&              grid,
                        const Props&             props ,
                        Opm::EclipseStateConstPtr eclState,
-                       const double*            grav = 0)
+                       const bool               use_local_perm,
+                       const double*            grav = 0
+
+                )
             : pvol_ (Opm::AutoDiffGrid::numCells(grid))
             , trans_(Opm::AutoDiffGrid::numFaces(grid))
             , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
@@ -98,9 +101,24 @@ namespace Opm
             }
 
             // Transmissibility
+
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
-            tpfa_htrans_compute(ug, props.permeability(), htrans.data());
+
+#ifdef HAVE_DUNE_CORNERPOINT
+            if (std::is_same<Grid, Dune::CpGrid>::value) {
+                if (use_local_perm) {
+                    OPM_THROW(std::runtime_error, "Local coordinate permeability not supported for CpGrid");
+                }
+            }
+#endif
+
+            if (! use_local_perm) {
+                tpfa_htrans_compute(ug, props.permeability(), htrans.data());
+            }
+            else {
+                tpfa_loc_trans_compute_(grid,props.permeability(),htrans);
+            }
 
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
@@ -161,12 +179,22 @@ namespace Opm
                                         Vector &halfIntersectTransmissibility,
                                         std::vector<double> &intersectionTransMult);
 
+        template <class Grid>
+        void tpfa_loc_trans_compute_(const Grid &grid,
+                                     const double* perm,
+                                     Vector &hTrans);
+
         Vector pvol_ ;
         Vector trans_;
         Vector gpot_ ;
         Vector z_;
         double gravity_[3]; // Size 3 even if grid is 2-dim.
+
+
+
+
     };
+
 
     template <>
     inline void DerivedGeology::multiplyHalfIntersections_<UnstructuredGrid>(const UnstructuredGrid &grid,
@@ -251,6 +279,67 @@ namespace Opm
             }
         }
     }
+
+    template <>
+    inline void DerivedGeology::tpfa_loc_trans_compute_<UnstructuredGrid>(const UnstructuredGrid &grid,
+                                                                         const double* perm,
+                                                                         Vector &hTrans){
+
+        // Using Local coordinate system for the transmissibility calculations
+        // hTrans(cellFaceIdx) = K(cellNo,j) * sum( C(:,i) .* N(:,j), 2) / sum(C.*C, 2)
+        // where K is a diagonal permeability tensor, C is the distance from cell centroid
+        // to face centroid and N is the normal vector  pointing outwards with norm equal to the face area.
+        // Off-diagonal permeability values are ignored without warning
+        int numCells = AutoDiffGrid::numCells(grid);
+        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            // loop over all logically-Cartesian faces of the current cell
+            for (int cellFaceIdx = grid.cell_facepos[cellIdx];
+                 cellFaceIdx < grid.cell_facepos[cellIdx + 1];
+                 ++ cellFaceIdx)
+            {
+                // The index of the face in the compressed grid
+                const int faceIdx = grid.cell_faces[cellFaceIdx];
+
+                // the logically-Cartesian direction of the face
+                const int faceTag = grid.cell_facetag[cellFaceIdx];
+
+                // d = 0: XPERM d = 4: YPERM d = 8: ZPERM ignores off-diagonal permeability values.
+                const int d = std::floor(faceTag/2) * 4;
+
+                // compute the half transmissibility
+                double dist = 0.0;
+                double cn = 0.0;
+                double sgn = 2.0 * (grid.face_cells[2*faceIdx + 0] == cellIdx) - 1;
+                const int dim = grid.dimensions;
+                for (int indx = 0; indx < dim; ++indx) {
+                    const double Ci = grid.face_centroids[faceIdx*dim + indx] - grid.cell_centroids[cellIdx*dim + indx];
+                    dist += Ci*Ci;
+                    cn += sgn * Ci * grid.face_normals[faceIdx*dim + indx];
+                }
+
+                if (cn < 0){
+                    switch (d) {
+                    case 0:
+                        OPM_MESSAGE("Warning: negative X-transmissibility value in cell: " << cellIdx << " replace by absolute value") ;
+                                break;
+                    case 4:
+                        OPM_MESSAGE("Warning: negative Y-transmissibility value in cell: " << cellIdx << " replace by absolute value") ;
+                                break;
+                    case 8:
+                        OPM_MESSAGE("Warning: negative Z-transmissibility value in cell: " << cellIdx << " replace by absolute value") ;
+                                break;
+                    default:
+                        OPM_THROW(std::logic_error, "Inconsistency in the faceTag in cell: " << cellIdx);
+
+                    }
+                    cn = -cn;
+                }
+                hTrans[cellFaceIdx] = perm[cellIdx*dim*dim + d] * cn / dist;
+            }
+        }
+
+    }
+
 
 #ifdef HAVE_DUNE_CORNERPOINT
     template <>
