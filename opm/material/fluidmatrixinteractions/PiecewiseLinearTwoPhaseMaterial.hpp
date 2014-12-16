@@ -354,6 +354,8 @@ public:
 
     static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
     {
+        if (Sw < params.SwSamples().front() || Sw > params.SwSamples().back())
+            return 0.0;
         return evalDeriv_(params.SwSamples(),
                           params.krnSamples(),
                           Sw);
@@ -364,6 +366,11 @@ private:
                         const ValueVector &yValues,
                         Scalar x)
     {
+        if (x < xValues.front())
+            return yValues.front();
+        if (x > xValues.back())
+            return yValues.back();
+
         int segIdx = findSegmentIndex_(xValues, x);
 
         Scalar x0 = xValues[segIdx];
