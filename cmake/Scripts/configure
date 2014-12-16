@@ -318,7 +318,7 @@ for OPT in "$@"; do
               pkgname=""
               ;;
             strip-debug  )
-              use_lto=" -DSTRIP_DEBUGGING_SYMBOLS=OFF"
+              strip_debug=" -DSTRIP_DEBUGGING_SYMBOLS=OFF"
               pkgname=""
               ;;
             openmp)
@@ -405,7 +405,7 @@ for OPT in "$@"; do
               shared=""
               ;;
             strip-debug  )
-              use_lto=" -DSTRIP_DEBUGGING_SYMBOLS=ON"
+              strip_debug=" -DSTRIP_DEBUGGING_SYMBOLS=ON"
               pkgname=""
               ;;
             tests)
