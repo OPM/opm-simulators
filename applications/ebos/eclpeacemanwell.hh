@@ -1155,7 +1155,14 @@ protected:
                 paramCache.updateAll(injectionFluidState_);
 
                 rho = FluidSystem::density(injectionFluidState_, paramCache, phaseIdx);
-                lambda = 1.0/FluidSystem::viscosity(injectionFluidState_, paramCache, phaseIdx);
+                // use the total mobility, i.e. the sum of all phase mobilities at the
+                // injector cell. this seems a bit weird: at the wall of the borehole,
+                // there should only be injected phase present, so its mobility should be
+                // 1/viscosity...
+                lambda = 0.0;
+                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    lambda += dofVars.mobility[phaseIdx];
+                }
             }
             else
                 OPM_THROW(std::logic_error,
