@@ -273,13 +273,13 @@ public:
         //Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oilPhaseIdx)));
         Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gasPhaseIdx)));
 
-        if (Sg + Sw - Swco < 1e-30)
+        if (Sg + Sw - Swco < 1e-50)
             return 1.0; // avoid division by zero
         else {
             Scalar kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sg + Sw);
             Scalar kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Sw + Swco);
 
-            Scalar weightOilWater = (Sg - Swco)/(Sg + Sw - Swco);
+            Scalar weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
             Scalar weightGasOil = 1 - weightOilWater;
 
             Scalar kro = weightOilWater*kro_ow + weightGasOil*kro_go;
