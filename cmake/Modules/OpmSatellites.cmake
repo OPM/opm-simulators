@@ -70,8 +70,10 @@ macro (opm_compile_satellites opm satellite excl_all test_regexp)
 	  set (_test_lib "")
 	endif (NOT "${test_regexp}" STREQUAL "")
 	target_link_libraries (${_sat_NAME} ${${opm}_TARGET} ${${opm}_LIBRARIES} ${_test_lib})
-	strip_debug_symbols (${_sat_NAME} _sat_DEBUG)
-	list (APPEND ${satellite}_DEBUG ${_sat_DEBUG})
+        if (STRIP_DEBUGGING_SYMBOLS)
+	  strip_debug_symbols (${_sat_NAME} _sat_DEBUG)
+	  list (APPEND ${satellite}_DEBUG ${_sat_DEBUG})
+        endif()
 
 	# variable with regular expression doubles as a flag for
 	# whether tests should be setup or not
