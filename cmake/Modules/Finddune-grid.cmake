@@ -11,6 +11,9 @@
 # This code is licensed under The GNU General Public License v3.0
 
 include (OpmPackage)
+
+set(DUNE_GRID_EXPERIMENTAL_GRID_EXTENSIONS 1)
+
 find_opm_package (
   # module name
   "dune-grid"
@@ -52,7 +55,8 @@ int main (void) {
    HAVE_PSURFACE;
    HAVE_AMIRAMESH;
    HAVE_ALBERTA;
-   HAVE_STDINT_H
+   HAVE_STDINT_H;
+   DUNE_GRID_EXPERIMENTAL_GRID_EXTENSIONS
   ")
 
 #debug_find_vars ("dune-grid")
