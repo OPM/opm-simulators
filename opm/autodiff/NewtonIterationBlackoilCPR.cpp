@@ -261,7 +261,7 @@ namespace Opm
 #endif
             M id(Jn[n].rows(), Jn[n].cols());
             id.setIdentity();
-            const M Di = solver.solve(id);
+            const Eigen::SparseMatrix<M::Scalar, Eigen::ColMajor> Di = solver.solve(id);
 
             // compute inv(D)*bn for the update of the right hand side
             const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
@@ -280,7 +280,9 @@ namespace Opm
                     continue;
                 }
                 // solve Du = C
-                const M u = Di * Jn[var]; // solver.solve(Jn[var]);
+                // const M u = Di * Jn[var]; // solver.solve(Jn[var]);
+                M u;
+                fastSparseProduct(Di, Jn[var], u); // solver.solve(Jn[var]);
                 for (int eq = 0; eq < num_eq; ++eq) {
                     if (eq == n) {
                         continue;
@@ -293,7 +295,9 @@ namespace Opm
                     jacs[eq].push_back(Je[var]);
                     M& J = jacs[eq].back();
                     // Subtract Bu (B*inv(D)*C)
-                    J -= B * u;
+                    M Bu;
+                    fastSparseProduct(B, u, Bu);
+                    J -= Bu;
                 }
             }
 
@@ -398,6 +402,7 @@ namespace Opm
         void formEllipticSystem(const int num_phases,
                                 const std::vector<ADB>& eqs_in,
                                 Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                // M& A,
                                 V& b)
         {
             if (num_phases != 3) {

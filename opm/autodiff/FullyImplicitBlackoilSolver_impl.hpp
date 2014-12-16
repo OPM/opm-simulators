@@ -2059,7 +2059,7 @@ namespace {
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
-                jacs[block] = dpm_diag * p.derivative()[block];
+                fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
             return ADB::function(pm, jacs);
         } else {
@@ -2087,7 +2087,7 @@ namespace {
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
-                jacs[block] = dtm_diag * p.derivative()[block];
+                fastSparseProduct(dtm_diag, p.derivative()[block], jacs[block]);
             }
             return ADB::function(tm, jacs);
         } else {
