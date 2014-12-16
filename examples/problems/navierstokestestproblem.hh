@@ -35,6 +35,7 @@
 #include <dune/alugrid/dgf.hh>
 #else
 #include <dune/grid/alugrid/2d/alugrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfalu.hh>
 #endif
 
 #include <dune/common/version.hh>

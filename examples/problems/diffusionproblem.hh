@@ -25,6 +25,8 @@
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
 #include <ewoms/models/ncp/ncpproperties.hh>
+
+#include <dune/grid/yaspgrid.hh>
 #include <ewoms/io/cubegridmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>

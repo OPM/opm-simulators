@@ -33,6 +33,7 @@
 #include <opm/material/heatconduction/Somerton.hpp>
 
 #include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>

@@ -31,6 +31,7 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
 
+#include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <dune/common/version.hh>

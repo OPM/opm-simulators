@@ -37,6 +37,7 @@
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 
 #include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
