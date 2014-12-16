@@ -131,27 +131,27 @@ try
     std::string deck_filename = param.get<std::string>("deck_filename");
 
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::ParserLogPtr parserLog(new Opm::ParserLog());
+    Opm::LoggerPtr logger(new Opm::Logger());
     bool strict_parsing = param.getDefault("strict_parsing", true);
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        deck = parser->parseFile(deck_filename, parserLog);
-        checkDeck(deck, parserLog);
-        eclipseState.reset(new EclipseState(deck, parserLog));
+        deck = parser->parseFile(deck_filename, logger);
+        checkDeck(deck, logger);
+        eclipseState.reset(new EclipseState(deck, logger));
     }
     catch (const std::invalid_argument& e) {
-        if (parserLog->size() > 0) {
+        if (logger->size() > 0) {
             std::cerr << "Issues found while parsing the deck file:\n";
-            parserLog->printAll(std::cerr);
+            logger->printAll(std::cerr);
         }
         std::cerr << "error while parsing the deck file: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
 
-    if (parserLog->size() > 0) {
+    if (logger->size() > 0) {
         std::cerr << "Issues found while parsing the deck file:\n";
-        parserLog->printAll(std::cerr);
+        logger->printAll(std::cerr);
     }
 
     // Grid init
