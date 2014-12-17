@@ -280,10 +280,18 @@ namespace Opm
         }
     }
 
+    template <class GridType>
+    inline void DerivedGeology::tpfa_loc_trans_compute_(const GridType& /* grid */,
+                                                        const double* /* perm */,
+                                                        Vector& /* hTrans */)
+    {
+        OPM_THROW(std::logic_error, "No generic implementation exists for tpfa_loc_trans_compute_().");
+    }
+
     template <>
-    inline void DerivedGeology::tpfa_loc_trans_compute_<UnstructuredGrid>(const UnstructuredGrid &grid,
+    inline void DerivedGeology::tpfa_loc_trans_compute_<UnstructuredGrid>(const UnstructuredGrid& grid,
                                                                          const double* perm,
-                                                                         Vector &hTrans){
+                                                                         Vector& hTrans){
 
         // Using Local coordinate system for the transmissibility calculations
         // hTrans(cellFaceIdx) = K(cellNo,j) * sum( C(:,i) .* N(:,j), 2) / sum(C.*C, 2)
