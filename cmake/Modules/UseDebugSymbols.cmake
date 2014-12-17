@@ -18,12 +18,10 @@ if (CXX_COMPAT_GCC)
   # default debug level, if not specified by the user
   set_default_option (CXX _dbg_flag "-ggdb3" "(^|\ )-g")
 
-  # add debug symbols to *all* targets, regardless. there WILL come a
-  # time when you need to find a bug which only manifests itself in a
-  # release target on a production system!
+  # add debug symbols to *all* targets if the build mode is either "Debug" or "RelWithDebInfo"
   if (_dbg_flag)
 	message (STATUS "Generating debug symbols: ${_dbg_flag}")
-	add_options (ALL_LANGUAGES ALL_BUILDS "${_dbg_flag}")
+	add_options (ALL_LANGUAGES "Debug;RelWithDebInfo" "${_dbg_flag}")
   endif (_dbg_flag)
 
   # extracting the debug info is done by a separate utility in the GNU
