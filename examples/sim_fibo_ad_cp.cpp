@@ -243,7 +243,7 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    Opm::DerivedGeology geology(*grid, *new_props, eclipseState, grav);
+    Opm::DerivedGeology geology(*grid, *new_props, eclipseState, false, grav);
 
     std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid);
 
