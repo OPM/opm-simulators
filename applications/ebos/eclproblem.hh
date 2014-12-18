@@ -150,7 +150,11 @@ SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
 // also enable the summary output.
 SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
 
-// The default DGF file to load
+// the cache for intensive quantities can be used for ECL problems and also yields a
+// decent speedup...
+SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
+
+// The default name of the data file to load
 SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 }} // namespace Properties, Opm
 
