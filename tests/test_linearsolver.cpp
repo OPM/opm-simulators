@@ -184,3 +184,16 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
 }
 #endif
 #endif
+
+#if HAVE_PETSC
+BOOST_AUTO_TEST_CASE(PETScTest)
+{
+    Opm::parameter::ParameterGroup param;
+    param.insertParameter(std::string("linsolver"), std::string("petsc"));
+    param.insertParameter(std::string("ksp_type"), std::string("cg"));
+    param.insertParameter(std::string("pc_type"), std::string("jacobi"));
+    param.insertParameter(std::string("ksp_rtol"), std::string("1e-10"));
+    param.insertParameter(std::string("ksp_view"), std::string("0"));
+    run_test(param);
+}
+#endif

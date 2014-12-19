@@ -1,5 +1,6 @@
 /*
-  Copyright 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 STATOIL ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,48 +18,34 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_LINEARSOLVERFACTORY_HEADER_INCLUDED
-#define OPM_LINEARSOLVERFACTORY_HEADER_INCLUDED
-
-
+#ifndef OPM_LINEARSOLVERPETSC_HEADER_INCLUDED
+#define OPM_LINEARSOLVERPETSC_HEADER_INCLUDED
 #include <opm/core/linalg/LinearSolverInterface.hpp>
-#include <memory>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <string>
 
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
 
-
-    /// Concrete class encapsulating any available linear solver.
-    /// For the moment, this means UMFPACK and dune-istl.
-    /// Since both are optional dependencies, either or both
-    /// may be unavailable, depending on configuration.
-    class LinearSolverFactory : public LinearSolverInterface
+    /// Concrete class encapsulating some Petsc linear solvers.
+    class LinearSolverPetsc : public LinearSolverInterface
     {
     public:
         /// Default constructor.
-        LinearSolverFactory();
+        /// Declared, but not implemented. Petsc can only be created through
+        /// the ParameterGroup constructor, everything else is an error. This way
+        /// the error is caught compile time and not rune time, which is nice as
+        /// it is a static error.
+        LinearSolverPetsc();
 
-        /// Construct from parameters.
-        /// The accepted parameters are (default) (allowed values):
-        ///    linsolver ("umfpack")   ("umfpack", "istl", "petsc")
-        /// For the umfpack solver to be available, this class must be
-        /// compiled with UMFPACK support, as indicated by the
-        /// variable HAVE_SUITESPARSE_UMFPACK_H in config.h.
-        /// For the istl solver to be available, this class must be
-        /// compiled with dune-istl support, as indicated by the
-        /// variable HAVE_DUNE_ISTL in config.h.
-        /// For the petsc solver to be available, this class must be
-        /// compiled with petsc support, as indicated by the
-        /// variable HAVE_PETSC in config.h.
-        /// Any further parameters are passed on to the constructors
-        /// of the actual solver used, see LinearSolverUmfpack,
-        /// LinearSolverIstl and LinearSolverPetsc for details.
-        LinearSolverFactory(const parameter::ParameterGroup& param);
+        /// Construct from parameters
+        /// Accepted parameters are, with defaults, listed in the
+        /// default constructor.
+        LinearSolverPetsc(const parameter::ParameterGroup& param);
 
         /// Destructor.
-        virtual ~LinearSolverFactory();
+        virtual ~LinearSolverPetsc();
 
         using LinearSolverInterface::solve;
 
@@ -78,24 +65,28 @@ namespace Opm
                                          const double* sa,
                                          const double* rhs,
                                          double* solution,
-                                         const boost::any& add=boost::any()) const;
+                                         const boost::any&) const;
 
-        /// Set tolerance for the linear solver.
+        /// Set tolerance for the residual in dune istl linear solver.
         /// \param[in] tol         tolerance value
-        /// Not used for LinearSolverFactory
         virtual void setTolerance(const double tol);
 
-        /// Get tolerance for the linear solver.
+        /// Get tolerance ofthe linear solver.
         /// \param[out] tolerance value
-        /// Not used for LinearSolverFactory. Returns -1.
         virtual double getTolerance() const;
-
     private:
-        std::shared_ptr<LinearSolverInterface> solver_;
+        std::string     ksp_type_;
+        std::string     pc_type_;
+        int             ksp_view_;
+        double          rtol_;
+        double          atol_;
+        double          dtol_;
+        int             maxits_;
     };
 
 
 } // namespace Opm
 
 
-#endif // OPM_LINEARSOLVERFACTORY_HEADER_INCLUDED
+
+#endif // OPM_LINEARSOLVERPETSC_HEADER_INCLUDED
