@@ -91,7 +91,7 @@ public:
 // Enable gravitational acceleration
 SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 
-// Enable partial reassembly of the linearization
+// Only relinearize the parts where the current solution is sufficiently "bad"
 SET_BOOL_PROP(RichardsLensProblem, EnablePartialRelinearization, true);
 
 // Enable re-use of the linearization of the last iteration of the
