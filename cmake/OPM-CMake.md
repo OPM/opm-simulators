@@ -226,10 +226,7 @@ Default is OFF.
 
 ### Project-specific Files
 
-All of these files are in the project root, except for `opm-xxx.m4`
-which is in the `m4` directory. (`dunecontrol` always adds this
-subdirectory for all the prerequisites listed in `dune.module`, to the
-search path).
+All of these files are in the project root.
 
 <table><thead><tr><th>File<th>Description<tbody>
 <tr>
@@ -267,18 +264,6 @@ dependencies is taken from opm-xxx-prereqs.cmake and not from here).
 Since this file must be present before the build starts (for dunecontrol),
 the version information is kept here.
 
-<tr>
-<td>	opm_xxx.m4
-<td>
-Tell the generic opm.m4 module which name it should request pkg-config
-for. This module is used by autotools-projects which link to OPM.
-Notice that dashes is replaced by underscore in the filename to be
-compatible with M4. (The actual name of the file doesn't matter to the
-autotools build system). The contents of this file is mostly boiler-plate
-where the names need to be changed to the project in question. (The
-DUNE build system assumes the presence of macros based on the project
-name).
-	
 </table>
 
 ### Project Modules
