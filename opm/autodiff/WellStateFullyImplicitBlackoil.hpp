@@ -75,7 +75,7 @@ namespace Opm
                 mapentry_t& wellMapEntry = wellMap_[ name ];
                 wellMapEntry[ 0 ] = w ;
                 wellMapEntry[ 1 ] = wells->well_connpos[w ] ;
-                if (well_controls_well_is_shut(ctrl)) {
+                if (well_controls_well_is_stopped(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
                     // Open well: Initialize perfphaserates_ to well
