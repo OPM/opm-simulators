@@ -114,7 +114,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 // Reuse the last linearization if possible?
 SET_BOOL_PROP(EclBaseProblem, EnableLinearizationRecycling, true);
 
-// Re-assemble the linearization only for the cells which have changed?
+// Only relinearize the parts where the current solution is sufficiently "bad"
 SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, true);
 
 // only write the solutions for the report steps to disk
