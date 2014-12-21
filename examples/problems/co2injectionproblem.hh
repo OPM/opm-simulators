@@ -25,6 +25,7 @@
 #define EWOMS_CO2_INJECTION_PROBLEM_HH
 
 #include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <ewoms/linear/parallelamgbackend.hh>
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidsystems/BrineCO2FluidSystem.hpp>
@@ -130,6 +131,9 @@ public:
     // define the material law parameterized by absolute saturations
     typedef Opm::Somerton<FluidSystem, Scalar> type;
 };
+
+// Use the algebraic multi-grid linear solver for this problem
+SET_TAG_PROP(Co2InjectionBaseProblem, LinearSolverSplice, ParallelAmgLinearSolver);
 
 // Write the Newton convergence behavior to disk?
 SET_BOOL_PROP(Co2InjectionBaseProblem, NewtonWriteConvergence, false);

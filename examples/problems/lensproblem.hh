@@ -27,7 +27,6 @@
 #include "lensgridmanager.hh"
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
-#include <ewoms/linear/parallelamgbackend.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -107,9 +106,6 @@ public:
     // define the material law parameterized by absolute saturations
     typedef Opm::EffToAbsLaw<EffectiveLaw> type;
 };
-
-// Use the algebraic multi-grid linear solver for this problem
-SET_TAG_PROP(LensBaseProblem, LinearSolverSplice, ParallelAmgLinearSolver);
 
 // Write the solutions of individual newton iterations?
 SET_BOOL_PROP(LensBaseProblem, NewtonWriteConvergence, false);
