@@ -403,15 +403,15 @@ public:
      * // add degrees of freedom to the well
      * for (dof in wellDofs)
      *    addDof(dof);
-     *
-     *    // set the radius of the well at the dof [m].
-     *    // optional, if not specified, it is assumed to be 0.1524m
-     *    setRadius(dof, someRadius);
-     *
-     *    // set the skin factor of the well.
-     *    // optional, if not specified, it is assumed to be 0
-     *    setSkinFactor(dof, someSkinFactor);
      * endSpec()
+     *
+     * // set the radius of the well at the dof [m].
+     * // optional, if not specified, it is assumed to be 0.1524m
+     * setRadius(dof, someRadius);
+     *
+     * // set the skin factor of the well.
+     * // optional, if not specified, it is assumed to be 0
+     * setSkinFactor(dof, someSkinFactor);
      *
      * // specify the phase which is supposed to be injected. (Optional,
      * // if unspecified, the well will throw an

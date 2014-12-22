@@ -64,6 +64,8 @@ class EclWellManager
 
     typedef Ewoms::EclPeacemanWell<TypeTag> Well;
 
+    typedef std::map<int, std::pair<const Opm::Completion*, std::shared_ptr<Well> > > WellCompletionsMap;
+
 public:
     EclWellManager(Simulator &simulator)
         : simulator_(simulator)
@@ -105,15 +107,15 @@ public:
         int episodeIdx = simulator_.episodeIndex();
 
         const auto &deckSchedule = eclState->getSchedule();
+        WellCompletionsMap wellCompMap;
+        computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
-        // first remove all wells from the reservoir
-        auto wellIt = wells_.begin();
-        const auto wellEndIt = wells_.end();
-        for (; wellIt != wellEndIt; ++wellIt)
-            (*wellIt)->clear();
+        if (wellTopologyChanged_(eclState, episodeIdx))
+            updateWellTopology_(episodeIdx, wellCompMap);
 
-        // add back the active ones
-        updateWellCompletions_(episodeIdx);
+        // set those parameters of the wells which do not change the topology of the
+        // linearized system of equations
+        updateWellCompletions_(wellCompMap);
 
         const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(episodeIdx);
         // set the injection data for the respective wells.
@@ -464,19 +466,136 @@ public:
     }
 
 protected:
-    void updateWellCompletions_(int reportStepIdx)
+    bool wellTopologyChanged_(Opm::EclipseStateConstPtr eclState, int reportStepIdx) const
+    {
+        if (reportStepIdx == 0) {
+            // the well topology has always been changed relative to before the
+            // simulation is started
+            return true;
+        }
+
+        auto deckSchedule = eclState->getSchedule();
+        const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
+        const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
+
+        if (curDeckWells.size() != prevDeckWells.size())
+            // the number of wells changed
+            return true;
+
+        auto curWellIt = curDeckWells.begin();
+        const auto& curWellEndIt = curDeckWells.end();
+        for (; curWellIt != curWellEndIt; ++curWellIt) {
+            // find the well in the previous time step
+            auto prevWellIt = prevDeckWells.begin();
+            const auto& prevWellEndIt = prevDeckWells.end();
+            for (; ; ++prevWellIt) {
+                if (prevWellIt == prevWellEndIt)
+                    // current well has not been featured in previous report step, i.e.,
+                    // the well topology has changed...
+                    return true;
+
+                if ((*prevWellIt)->name() == (*curWellIt)->name())
+                    // the previous report step had a well with the same name as the
+                    // current one!
+                    break;
+            }
+
+            // make sure that the wells exhibit the same completions!
+            const auto curCompletionSet = (*curWellIt)->getCompletions(reportStepIdx);
+            const auto prevCompletionSet = (*prevWellIt)->getCompletions(reportStepIdx);
+
+            if (curCompletionSet->size() != prevCompletionSet->size())
+                // number of completions of the well has changed!
+                return true;
+
+            for (size_t curWellComplIdx = 0;
+                 curWellComplIdx < curCompletionSet->size();
+                 ++ curWellComplIdx)
+            {
+                Opm::CompletionConstPtr curCompletion = curCompletionSet->get(curWellComplIdx);
+
+                for (size_t prevWellComplIdx = 0;; ++ prevWellComplIdx)
+                {
+                    if (prevWellComplIdx == prevCompletionSet->size())
+                        // a new completion has appeared in the current report step
+                        return true;
+
+                    Opm::CompletionConstPtr prevCompletion = prevCompletionSet->get(curWellComplIdx);
+
+                    if (curCompletion->getI() == prevCompletion->getI()
+                        && curCompletion->getJ() == prevCompletion->getJ()
+                        && curCompletion->getK() == prevCompletion->getK())
+                        // completion is present in both wells, look at next completion!
+                        break;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void updateWellTopology_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
         auto& model = simulator_.model();
-        model.clearAuxiliaryModules();
 
+        // first, remove all wells from the reservoir
+        model.clearAuxiliaryModules();
+        auto wellIt = wells_.begin();
+        const auto wellEndIt = wells_.end();
+        for (; wellIt != wellEndIt; ++wellIt)
+            (*wellIt)->clear();
+
+        // tell the active wells which DOFs they contain
+        const auto& grid = simulator_.gridManager().grid();
+        const auto gridView = simulator_.gridManager().gridView();
+        ElementContext elemCtx(simulator_);
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto elemEndIt = gridView.template end</*codim=*/0>();
+        std::set<std::shared_ptr<Well> > wells;
+        for (; elemIt != elemEndIt; ++elemIt) {
+            if (elemIt->partitionType() != Dune::InteriorEntity)
+                continue; // non-local entities need to be skipped
+
+            elemCtx.updateStencil(elemIt);
+            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                int cartesianDofIdx = grid.globalCell()[globalDofIdx];
+
+                if (wellCompletions.count(cartesianDofIdx) == 0)
+                    // the current DOF is not contained in any well, so we must skip
+                    // it...
+                    continue;
+
+                auto eclWell = wellCompletions.at(cartesianDofIdx).second;
+                eclWell->addDof(elemCtx, dofIdx);
+
+                wells.insert(eclWell);
+            }
+        }
+
+        // register all wells at the model as auxiliary equations
+        auto wellIt2 = wells.begin();
+        const auto& wellEndIt2 = wells.end();
+        for (; wellIt2 != wellEndIt2; ++wellIt2)
+            model.addAuxiliaryModule(*wellIt2);
+    }
+
+    void computeWellCompletionsMap_(int reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
+    {
         auto eclStatePtr = simulator_.gridManager().eclState();
-        const auto& deckSchedule = eclStatePtr->getSchedule();
-        const Grid& grid = simulator_.gridManager().grid();
-        const GridView gridView = simulator_.gridManager().gridView();
+        auto deckSchedule = eclStatePtr->getSchedule();
+        auto eclGrid = eclStatePtr->getEclipseGrid();
+
+        int nx = eclGrid->getNX();
+        int ny = eclGrid->getNY();
+        //int nz = eclGrid->getNZ();
+
+        // compute the mapping from logically Cartesian indices to the well the
+        // respective completion.
         const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
             Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
-            const std::string &wellName = deckWell->name();
+            const std::string& wellName = deckWell->name();
 
             if (!hasWell(wellName)) {
                 std::cout << "Well '" << wellName << "' suddenly appears in the completions "
@@ -485,62 +604,68 @@ protected:
                 continue;
             }
 
-            auto& eclWell = wells_[wellIndex(wellName)];
+            // set the well parameters defined by the current set of completions
+            Opm::CompletionSetConstPtr completionSet = deckWell->getCompletions(reportStepIdx);
+            for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
+                Opm::CompletionConstPtr completion = completionSet->get(complIdx);
+                int cartIdx = completion->getI() + completion->getJ()*nx + completion->getK()*nx*ny;
 
-            eclWell->beginSpec();
+                // in this code we only support each cell to be part of at most a single
+                // well. TODO (?) change this?
+                assert(cartesianIdxToCompletionMap.count(cartIdx) == 0);
 
-            ElementContext elemCtx(simulator_);
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                if (elemIt->partitionType() != Dune::InteriorEntity)
+                auto eclWell = wells_[wellIndex(wellName)];
+                cartesianIdxToCompletionMap[cartIdx] = std::make_pair(&(*completion), eclWell);
+            }
+        }
+    }
+
+    void updateWellCompletions_(const WellCompletionsMap& wellCompletions)
+    {
+        // associate the well completions with grid cells and register them in the
+        // Peaceman well object
+        const Grid& grid = simulator_.gridManager().grid();
+        const GridView gridView = simulator_.gridManager().gridView();
+
+        ElementContext elemCtx(simulator_);
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto elemEndIt = gridView.template end</*codim=*/0>();
+
+        for (; elemIt != elemEndIt; ++elemIt) {
+            if (elemIt->partitionType() != Dune::InteriorEntity)
+                continue; // non-local entities need to be skipped
+
+            elemCtx.updateStencil(elemIt);
+            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                int cartesianDofIdx = grid.globalCell()[globalDofIdx];
+
+                if (wellCompletions.count(cartesianDofIdx) == 0)
+                    // the current DOF is not contained in any well, so we must skip
+                    // it...
                     continue;
 
-                elemCtx.updateStencil(elemIt);
-                for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
-                    int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                    std::array<int,3> ijk;
-                    // if the compiler complains here, you're not
-                    // using Dune::CpGrid. Other grids are not
-                    // supported by the EclWellsManager, sorry.
-                    grid.getIJK(globalDofIdx, ijk);
+                const auto& compInfo = wellCompletions.at(cartesianDofIdx);
+                const Opm::Completion* completion = compInfo.first;
+                std::shared_ptr<Well> eclWell = compInfo.second;
 
-                    // TODO: time dependent wells (i.e. move this code into the
-                    // beginEpisode() method!?)
-                    Opm::CompletionSetConstPtr completionSet =
-                        deckWell->getCompletions(/*timeStepIdx=*/0);
-                    for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
-                        Opm::CompletionConstPtr completion =
-                            completionSet->get(complIdx);
-                        if (ijk[0] == completion->getI()
-                            && ijk[1] == completion->getJ()
-                            && ijk[2] == completion->getK())
-                        {
-                            eclWell->addDof(elemCtx, dofIdx);
+                eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
 
-                            eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
+                // overwrite the automatically computed effective
+                // permeability by the one specified in the deck. Note: this
+                // is not implemented by opm-parser yet...
+                /*
+                  Scalar Kh = completion->getEffectivePermeability();
+                  if (std::isfinite(Kh) && Kh > 0.0)
+                      eclWell->setEffectivePermeability(elemCtx, dofIdx, Kh);
+                */
 
-                            // overwrite the automatically computed effective
-                            // permeability by the one specified in the deck. Note: this
-                            // is not implemented by opm-parser yet...
-                            /*
-                            Scalar Kh = completion->getEffectivePermeability();
-                            if (std::isfinite(Kh) && Kh > 0.0)
-                                eclWell->setEffectivePermeability(elemCtx, dofIdx, Kh);
-                            */
-
-                            // overwrite the automatically computed connection
-                            // transmissibilty factor by the one specified in the deck.
-                            Scalar ctf = completion->getConnectionTransmissibilityFactor();
-                            if (std::isfinite(ctf) && ctf > 0.0)
-                                eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
-                        }
-                    }
-                }
+                // overwrite the automatically computed connection
+                // transmissibilty factor by the one specified in the deck.
+                Scalar ctf = completion->getConnectionTransmissibilityFactor();
+                if (std::isfinite(ctf) && ctf > 0.0)
+                    eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
             }
-            eclWell->endSpec();
-
-            model.addAuxiliaryModule(eclWell);
         }
     }
 
