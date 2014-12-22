@@ -63,7 +63,7 @@ template <class TypeTag>
 class EcfvDiscretization;
 
 /*!
- * \ingroup EclOutput
+ * \ingroup EclBlackOilSimulator
  *
  * \brief Output module for the results black oil model writing in
  *        ECL binary format.

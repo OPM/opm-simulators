@@ -160,7 +160,7 @@ SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 
 namespace Ewoms {
 /*!
- * \ingroup TestProblems
+ * \ingroup EclBlackOilSimulator
  *
  * \brief This problem simulates an input file given in the data format used by the
  *        commercial ECLiPSE simulator.

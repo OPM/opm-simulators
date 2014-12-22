@@ -55,6 +55,8 @@ template <class TypeTag>
 class EcfvDiscretization;
 
 /*!
+ * \ingroup EclBlackOilSimulator
+ *
  * \brief The well model of Peaceman.
  *
  * This class is tailored for the element centered finite volume

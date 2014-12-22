@@ -48,6 +48,8 @@ NEW_PROP_TAG(Grid);
 
 namespace Ewoms {
 /*!
+ * \ingroup EclBlackOilSimulator
+ *
  * \brief A class which handles well controls as specified by an
  *        Eclipse deck
  */
