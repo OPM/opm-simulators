@@ -3,6 +3,7 @@ RUNSPEC
 
 OIL
 WATER
+GAS
 
 METRIC
 
@@ -47,7 +48,17 @@ PVCDO
     1  1      0 1000  0
 /
 
+PVDG
+-- Pg Bg(Pg) mug
+    1   1     1
+/
+
 SWOF
+0 0 1 0
+1 1 0 0
+/
+
+SGOF
 0 0 1 0
 1 1 0 0
 /

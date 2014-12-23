@@ -28,7 +28,7 @@
 
 #include <opm/autodiff/RateConverter.hpp>
 
-#include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -69,8 +69,7 @@ struct TestFixture : public Setup
     TestFixture()
         : Setup()
         , grid (deck)
-        , props(deck, eclState, *grid.c_grid(), param,
-                param.getDefault("init_rock", false))
+        , ad_props(deck, eclState, *grid.c_grid(), param.getDefault("init_rock", false))
     {
     }
 
@@ -78,20 +77,19 @@ struct TestFixture : public Setup
     using Setup::deck;
     using Setup::eclState;
 
-    Opm::GridManager                grid;
-    Opm::BlackoilPropertiesFromDeck props;
+    Opm::GridManager             grid;
+    Opm::BlackoilPropsAdFromDeck ad_props;
 };
 
 
 BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 {
     typedef std::vector<int>                     Region;
-    typedef Opm::BlackoilPropsAd                 Props;
+    typedef Opm::BlackoilPropsAdFromDeck         Props;
     typedef Opm::RateConverter::
         SurfaceToReservoirVoidage<Props, Region> RCvrt;
 
     Region reg{ 0 };
-    Props  ad_props(props);
     RCvrt  cvrt(ad_props, reg);
 }
 
@@ -100,12 +98,11 @@ BOOST_FIXTURE_TEST_CASE(TwoPhaseII, TestFixture<SetupSimple>)
 {
     // Immiscible and incompressible two-phase fluid
     typedef std::vector<int>                     Region;
-    typedef Opm::BlackoilPropsAd                 Props;
+    typedef Opm::BlackoilPropsAdFromDeck         Props;
     typedef Opm::RateConverter::
         SurfaceToReservoirVoidage<Props, Region> RCvrt;
 
     Region reg{ 0 };
-    Props  ad_props(props);
     RCvrt  cvrt(ad_props, reg);
 
     Opm::BlackoilState x;
