@@ -992,9 +992,14 @@ private:
         if (eclState->hasDoubleGridProperty("MULTZ-"))
             multzMinus = eclState->getDoubleGridProperty("MULTZ-")->getData();
 
+        // making this specific to clang or gcc > 4.7 is slightly hacky, but this call is
+        // only an optimization anyway...
+#if defined __clang__ || (__GNUC__ > 4 && __GNUC_MINOR__ >= 7)
         // resize the hash map to a appropriate size for a conforming 3D grid
         float maxLoadFactor = intersectionIntrinsicPermeability_.max_load_factor();
+
         intersectionIntrinsicPermeability_.reserve(numElements * 6 / maxLoadFactor * 1.05 );
+#endif
 
         auto elemIt = this->gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
