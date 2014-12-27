@@ -29,6 +29,9 @@
 #include "eclwriter.hh"
 #include "eclsummarywriter.hh"
 #include "ecloutputblackoilmodule.hh"
+#include "ecltransmissibility.hh"
+#include "ecldummygradientcalculator.hh"
+#include "eclfluxmodule.hh"
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
@@ -154,6 +157,12 @@ SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
 // decent speedup...
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
 
+// Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
+SET_TYPE_PROP(EclBaseProblem, VelocityModule, Ewoms::EclTransVelocityModule<TypeTag>);
+
+// Use the dummy gradient calculator in order not to do unnecessary work.
+SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);
+
 // The default name of the data file to load
 SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 }} // namespace Properties, Opm
@@ -230,6 +239,7 @@ public:
      */
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
+        , transmissibilities_(simulator)
         , wellManager_(simulator)
         , eclWriter_(simulator)
         , summaryWriter_(simulator)
@@ -253,9 +263,15 @@ public:
         // (z coodinates represent depth, not height.)
         this->gravity_[dim - 1] *= -1;
 
+        // the "NOGRAV" keyword from Frontsim disables gravity...
+        const auto& deck = simulator.gridManager().deck();
+        if (deck->hasKeyword("NOGRAV"))
+            this->gravity_ = 0.0;
+
         initFluidSystem_();
         readRockParameters_();
         readMaterialParameters_();
+        transmissibilities_.finishInit();
         readInitialCondition_();
 
         // initialize the wells. Note that this needs to be done after initializing the
@@ -401,27 +417,19 @@ public:
     }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::intersectionIntrinsicPermeability
+     * \brief This method returns the intrinsic permeability tensor
+     *        given a global element index.
+     *
+     * Its main (only?) usage is the ECL transmissibility calculation code...
      */
-    template <class Context>
-    void intersectionIntrinsicPermeability(DimMatrix &result,
-                                           const Context &context,
-                                           int localIntersectionIdx, int timeIdx) const
-    {
-        // calculate the intersection index
-        const auto &scvf = context.stencil(timeIdx).interiorFace(localIntersectionIdx);
+    const DimMatrix &intrinsicPermeability(int globalElemIdx) const
+    { return intrinsicPermeability_[globalElemIdx]; }
 
-        int numElements = this->model().numGridDof();
-
-        size_t interiorElemIdx = context.globalSpaceIndex(scvf.interiorIndex(), timeIdx);
-        size_t exteriorElemIdx = context.globalSpaceIndex(scvf.exteriorIndex(), timeIdx);
-
-        size_t elem1Idx = std::min(interiorElemIdx, exteriorElemIdx);
-        size_t elem2Idx = std::max(interiorElemIdx, exteriorElemIdx);
-
-        size_t globalIntersectionIdx = elem1Idx*numElements + elem2Idx;
-        result = intersectionIntrinsicPermeability_.at(globalIntersectionIdx);
-    }
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::transmissibility
+     */
+    Scalar transmissibility(int elem1Idx, int elem2Idx) const
+    { return transmissibilities_.transmissibility(elem1Idx, elem2Idx); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -668,20 +676,6 @@ private:
             OPM_THROW(std::logic_error,
                       "Can't read the intrinsic permeability from the ecl state. "
                       "(The PERM{X,Y,Z} keywords are missing)");
-
-        // apply the NTG keyword to the X and Y permeabilities
-        if (eclState->hasDoubleGridProperty("NTG")) {
-            const std::vector<double> &ntgData =
-                eclState->getDoubleGridProperty("NTG")->getData();
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
-                intrinsicPermeability_[dofIdx][0][0] *= ntgData[cartesianElemIdx];
-                intrinsicPermeability_[dofIdx][1][1] *= ntgData[cartesianElemIdx];
-            }
-        }
-
-        computeFaceIntrinsicPermeabilities_();
         ////////////////////////////////
 
 
@@ -963,141 +957,9 @@ private:
         }
     }
 
-    void computeFaceIntrinsicPermeabilities_()
-    {
-        auto eclState = this->simulator().gridManager().eclState();
-        const auto &grid = this->simulator().gridManager().grid();
-
-        int numElements = this->gridView().size(/*codim=*/0);
-
-        std::vector<double> multx(numElements, 1.0);
-        std::vector<double> multy(numElements, 1.0);
-        std::vector<double> multz(numElements, 1.0);
-        std::vector<double> multxMinus(numElements, 1.0);
-        std::vector<double> multyMinus(numElements, 1.0);
-        std::vector<double> multzMinus(numElements, 1.0);
-
-        // retrieve the transmissibility multiplier keywords. Note that we use them as
-        // permeability multipliers...
-        if (eclState->hasDoubleGridProperty("MULTX"))
-            multx = eclState->getDoubleGridProperty("MULTX")->getData();
-        if (eclState->hasDoubleGridProperty("MULTX-"))
-            multxMinus = eclState->getDoubleGridProperty("MULTX-")->getData();
-        if (eclState->hasDoubleGridProperty("MULTY"))
-            multy = eclState->getDoubleGridProperty("MULTY")->getData();
-        if (eclState->hasDoubleGridProperty("MULTY-"))
-            multyMinus = eclState->getDoubleGridProperty("MULTY-")->getData();
-        if (eclState->hasDoubleGridProperty("MULTZ"))
-            multz = eclState->getDoubleGridProperty("MULTZ")->getData();
-        if (eclState->hasDoubleGridProperty("MULTZ-"))
-            multzMinus = eclState->getDoubleGridProperty("MULTZ-")->getData();
-
-        // making this specific to clang or gcc > 4.7 is slightly hacky, but this call is
-        // only an optimization anyway...
-#if defined __clang__ || (__GNUC__ > 4 && __GNUC_MINOR__ >= 7)
-        // resize the hash map to a appropriate size for a conforming 3D grid
-        float maxLoadFactor = intersectionIntrinsicPermeability_.max_load_factor();
-
-        intersectionIntrinsicPermeability_.reserve(numElements * 6 / maxLoadFactor * 1.05 );
-#endif
-
-        auto elemIt = this->gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            auto intersectIt = elemIt->ileafbegin();
-            const auto &intersectEndIt = elemIt->ileafend();
-            for (; intersectIt != intersectEndIt; ++intersectIt) {
-                if (!intersectIt->neighbor())
-                    // skip boundary intersections...
-                    continue;
-
-                // calculate the "intersection index"
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
-                size_t interiorElemIdx = this->elementMapper().index(intersectIt->inside());
-                size_t exteriorElemIdx = this->elementMapper().index(intersectIt->outside());
-#else
-                size_t interiorElemIdx = this->elementMapper().map(intersectIt->inside());
-                size_t exteriorElemIdx = this->elementMapper().map(intersectIt->outside());
-#endif
-
-                size_t elem1Idx = std::min(interiorElemIdx, exteriorElemIdx);
-                size_t elem2Idx = std::max(interiorElemIdx, exteriorElemIdx);
-
-                size_t intersectIdx = elem1Idx*numElements + elem2Idx;
-
-                // do nothing if this intersection was already seen "from the other side"
-                if (intersectionIntrinsicPermeability_.count(intersectIdx) > 0)
-                    continue;
-
-                auto K1 = intrinsicPermeability_[interiorElemIdx];
-                auto K2 = intrinsicPermeability_[exteriorElemIdx];
-
-                int interiorElemCartIdx = grid.globalCell()[interiorElemIdx];
-                int exteriorElemCartIdx = grid.globalCell()[exteriorElemIdx];
-
-                // local index of the face of the interior element which contains the
-                // intersection
-                int insideFaceIdx = intersectIt->indexInInside();
-
-                // take the transmissibility multipliers into account (i.e., the
-                // MULT[XYZ]-? keywords)
-                if (insideFaceIdx == 1) { // right
-                    K1 *= multx[interiorElemCartIdx];
-                    K2 *= multxMinus[exteriorElemCartIdx];
-                }
-                else if (insideFaceIdx == 0) { // left
-                    K1 *= multxMinus[interiorElemCartIdx];
-                    K2 *= multx[exteriorElemCartIdx];
-                }
-
-                else if (insideFaceIdx == 3) { // back
-                    K1 *= multy[interiorElemCartIdx];
-                    K2 *= multyMinus[exteriorElemCartIdx];
-                }
-                else if (insideFaceIdx == 2) { // front
-                    K1 *= multyMinus[interiorElemCartIdx];
-                    K2 *= multy[exteriorElemCartIdx];
-                }
-
-                else if (insideFaceIdx == 5) { // top
-                    K1 *= multz[interiorElemCartIdx];
-                    K2 *= multzMinus[exteriorElemCartIdx];
-                }
-                else if (insideFaceIdx == 4) { // bottom
-                    K1 *= multzMinus[interiorElemCartIdx];
-                    K2 *= multz[exteriorElemCartIdx];
-                }
-
-                // element-wise harmonic average
-                auto &K = intersectionIntrinsicPermeability_[intersectIdx];
-                K = 0.0;
-                for (int i = 0; i < dimWorld; ++i)
-                    for (int j = 0; j < dimWorld; ++j)
-                        K[i][j] = Opm::utils::harmonicAverage(K1[i][j], K2[i][j]);
-            }
-        }
-    }
-
     std::vector<Scalar> porosity_;
     std::vector<DimMatrix> intrinsicPermeability_;
-
-    // the intrinsic permeabilities for interior faces. since grids may be
-    // non-conforming, and there does not seem to be a mapper for interfaces in DUNE,
-    // these transmissibilities are accessed via the (elementIndex1, elementIndex2) pairs
-    // of the interfaces where
-    //
-    // elementIndex1 = min(interiorElementIndex, exteriorElementIndex)
-    //
-    // and
-    //
-    // elementIndex2 = max(interiorElementIndex, exteriorElementIndex)
-    //
-    // To make this perform better, this is first mingled into a single index using
-    //
-    // intersectionIndex = elementIndex1*numElements + elementIndex2
-    //
-    // as the index for the hash map.
-    std::unordered_map<size_t, DimMatrix> intersectionIntrinsicPermeability_;
+    EclTransmissibility<TypeTag> transmissibilities_;
 
     std::vector<unsigned short> materialParamTableIdx_;
     std::vector<MaterialLawParams> materialParams_;
