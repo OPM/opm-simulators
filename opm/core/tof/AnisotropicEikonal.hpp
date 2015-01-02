@@ -55,7 +55,11 @@ namespace Opm
         // Keep track of accepted cells.
         std::vector<char> is_accepted_;
         std::set<int> accepted_front_;
+
+        // Quantities relating to anisotropy.
         std::vector<double> grid_radius_;
+        std::vector<double> aniso_ratio_;
+        const double safety_factor_;
 
         // Keep track of considered cells.
         typedef std::pair<double, int> ValueAndCell;
@@ -66,7 +70,7 @@ namespace Opm
         std::map<int, HeapHandle> considered_handles_;
         std::vector<char> is_considered_;
 
-        bool isClose(const int c1, const int c2, const double* metric) const;
+        bool isClose(const int c1, const int c2) const;
         double computeValue(const int cell, const double* metric, const double* solution) const;
         double computeValueUpdate(const int cell, const double* metric, const double* solution, const int new_cell) const;
         double computeFromLine(const int cell, const int from, const double* metric, const double* solution) const;
@@ -77,6 +81,7 @@ namespace Opm
         void popConsidered();
 
         void computeGridRadius();
+        void computeAnisoRatio(const double* metric);
     };
 
 } // namespace Opm

@@ -59,7 +59,8 @@ namespace Opm
     /// Construct solver.
     /// \param[in] grid      A 2d grid.
     AnisotropicEikonal2d::AnisotropicEikonal2d(const UnstructuredGrid& grid)
-        : grid_(grid)
+        : grid_(grid),
+          safety_factor_(1.2)
     {
         if (grid.dimensions != 2) {
             OPM_THROW(std::logic_error, "Grid for AnisotropicEikonal2d must be 2d.");
@@ -77,6 +78,9 @@ namespace Opm
                                      const std::vector<int>& startcells,
                                      std::vector<double>& solution)
     {
+        // Compute anisotropy ratios to be used by isClose().
+        computeAnisoRatio(metric);
+
         // The algorithm used is described in J.A. Sethian and A. Vladimirsky,
         // "Ordered Upwind Methods for Static Hamilton-Jacobi Equations".
         // Notation in comments is as used in that paper: U is the solution,
@@ -162,7 +166,7 @@ namespace Opm
             //    distance h * F_2/F1 from x_r. Use min of previous and new.
             for (auto it = considered_.begin(); it != considered_.end(); ++it) {
                 const int ccell = it->second;
-                if (isClose(rcell, ccell, metric)) {
+                if (isClose(rcell, ccell)) {
                     const double value = computeValueUpdate(ccell, metric, solution.data(), rcell);
                     if (value < it->first) {
                         // Update value for considered cell.
@@ -195,13 +199,11 @@ namespace Opm
 
 
     bool AnisotropicEikonal2d::isClose(const int c1,
-                                       const int c2,
-                                       const double* metric) const
+                                       const int c2) const
     {
         const double* v[] = { grid_.cell_centroids + 2*c1,
                               grid_.cell_centroids + 2*c2 };
-        const double* m = metric + 4*c1;
-        return distanceAniso(v[0], v[1], m) < 3.0 * grid_radius_[c1];
+        return distanceIso(v[0], v[1]) < safety_factor_ * aniso_ratio_[c1] * grid_radius_[c1];
     }
 
 
@@ -396,6 +398,25 @@ namespace Opm
                 radius = std::max(radius, distanceIso(v1, v2));
             }
             grid_radius_[cell] = radius;
+        }
+    }
+
+
+
+
+    void AnisotropicEikonal2d::computeAnisoRatio(const double* metric)
+    {
+        const int num_cells = cell_neighbours_.size();
+        aniso_ratio_.resize(num_cells);
+        for (int cell = 0; cell < num_cells; ++cell) {
+            const double* m = metric + 4*cell;
+            // Find the two eigenvalues from trace and determinant.
+            const double t = m[0] + m[3];
+            const double d = m[0]*m[3] - m[1]*m[2];
+            const double sd = std::sqrt(t*t/4.0 - d);
+            const double eig[2] = { t/2.0 - sd, t/2.0 + sd };
+            // Anisotropy ratio is the max ratio of the eigenvalues.
+            aniso_ratio_[cell] = std::max(eig[0]/eig[1], eig[1]/eig[0]);
         }
     }
 
