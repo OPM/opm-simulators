@@ -651,7 +651,15 @@ protected:
                 const Opm::Completion* completion = compInfo.first;
                 std::shared_ptr<Well> eclWell = compInfo.second;
 
-                eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
+                // the catch is a hack for a ideosyncrasy of opm-parser with regard to
+                // defaults handling: if the deck did not specify a radius for the
+                // completion, there seems to be no other way to detect this except for
+                // catching the exception
+                try {
+                    eclWell->setRadius(elemCtx, dofIdx, 0.5*completion->getDiameter());
+                }
+                catch (const std::logic_error& e)
+                {}
 
                 // overwrite the automatically computed effective
                 // permeability by the one specified in the deck. Note: this
