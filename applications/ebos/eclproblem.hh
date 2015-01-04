@@ -158,7 +158,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-SET_TYPE_PROP(EclBaseProblem, VelocityModule, Ewoms::EclTransVelocityModule<TypeTag>);
+SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
 SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalculator<TypeTag>);

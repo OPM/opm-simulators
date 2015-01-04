@@ -20,9 +20,9 @@
  * \file
  *
  * \brief This file contains the flux module which is used for ECL problems
- *        two-point flux approximation
  *
- * This is used by the ECL blackoil simulator
+ * This approach to fluxes is very specific to two-point flux approximation and applies
+ * what the Eclipse Technical Description calls the "NEWTRAN" tramsmissibilty approach.
  */
 #ifndef EWOMS_ECL_FLUX_MODULE_HH
 #define EWOMS_ECL_FLUX_MODULE_HH
@@ -49,17 +49,17 @@ class EclTransBaseProblem;
 
 /*!
  * \ingroup EclTransmissibility
- * \brief Specifies a velocity module which uses the transmissibilities.
+ * \brief Specifies a flux module which uses ECL transmissibilities.
  */
 template <class TypeTag>
-struct EclTransVelocityModule
+struct EclTransFluxModule
 {
-    typedef EclTransIntensiveQuantities<TypeTag> VelocityIntensiveQuantities;
-    typedef EclTransExtensiveQuantities<TypeTag> VelocityExtensiveQuantities;
-    typedef EclTransBaseProblem<TypeTag> VelocityBaseProblem;
+    typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
+    typedef EclTransExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
+    typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
 
     /*!
-     * \brief Register all run-time parameters for the velocity module.
+     * \brief Register all run-time parameters for the flux module.
      */
     static void registerParameters()
     { }
@@ -76,7 +76,7 @@ class EclTransBaseProblem
 
 /*!
  * \ingroup EclTransmissibility
- * \brief Provides the intensive quantities for the Darcy velocity module
+ * \brief Provides the intensive quantities for the ECL flux module
  */
 template <class TypeTag>
 class EclTransIntensiveQuantities
@@ -89,7 +89,7 @@ protected:
 
 /*!
  * \ingroup EclTransmissibility
- * \brief Provides the ECL "velocity module"
+ * \brief Provides the ECL flux module
  */
 template <class TypeTag>
 class EclTransExtensiveQuantities
@@ -134,8 +134,8 @@ public:
     }
 
     /*!
-     * \brief Return the filter velocity of a fluid phase at the
-     *        face's integration point [m/s]
+     * \brief Return the filter velocity of a fluid phase at the face's integration point
+     *        [m/s]
      *
      * \param phaseIdx The index of the fluid phase
      */
@@ -237,9 +237,9 @@ protected:
     }
 
     /*!
-     * \brief Update the velocities for all fluid phases on the interior faces of the context
+     * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateVelocities_(const ElementContext &elemCtx, int scvfIdx, int timeIdx)
+    void calculateFluxes_(const ElementContext &elemCtx, int scvfIdx, int timeIdx)
     { }
 
     // the local indices of the interior and exterior degrees of freedom
