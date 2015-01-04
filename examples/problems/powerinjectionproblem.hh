@@ -229,8 +229,8 @@ public:
     {
         std::ostringstream oss;
         oss << "powerinjection_";
-        if (std::is_same<typename GET_PROP_TYPE(TypeTag, VelocityModule),
-                         Ewoms::DarcyVelocityModule<TypeTag> >::value)
+        if (std::is_same<typename GET_PROP_TYPE(TypeTag, FluxModule),
+                         Ewoms::DarcyFluxModule<TypeTag> >::value)
             oss << "darcy";
         else
             oss << "forchheimer";

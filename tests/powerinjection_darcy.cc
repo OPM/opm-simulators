@@ -29,11 +29,11 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(PowerInjectionProblem, INHERITS_FROM(ImmiscibleTwoPhaseModel,
-                                                  PowerInjectionBaseProblem));
+NEW_TYPE_TAG(PowerInjectionProblem,
+             INHERITS_FROM(ImmiscibleTwoPhaseModel,
+                           PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionProblem, VelocityModule,
-              Ewoms::DarcyVelocityModule<TypeTag>);
+SET_TYPE_PROP(PowerInjectionProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
 }}
 
 int main(int argc, char **argv)
