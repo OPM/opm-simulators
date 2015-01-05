@@ -50,7 +50,6 @@ class EclTransmissibility
     typedef typename GridView::Intersection Intersection;
 
     // Grid and world dimension
-    enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
