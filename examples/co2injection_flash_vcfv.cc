@@ -50,6 +50,10 @@ SET_TYPE_PROP(
 // else we increase the tolerance of the Newton solver
 #if HAVE_QUAD
 SET_TYPE_PROP(Co2InjectionFlashVcfvProblem, Scalar, quad);
+
+// the default linear solver used for this problem (-> AMG) cannot be used with quadruple
+// precision scalars... (this seems to only apply to Dune >= 2.4)
+SET_TAG_PROP(Co2InjectionFlashVcfvProblem, LinearSolverSplice, ParallelIterativeLinearSolver);
 #else
 SET_SCALAR_PROP(Co2InjectionFlashVcfvProblem, NewtonRawTolerance, 1e-5);
 #endif
