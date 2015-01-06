@@ -337,7 +337,8 @@ namespace Opm
                 if (timer.currentStepNum() == 0) {
                     output_writer_.writeInit(timer);
                 }
-                output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
+                if( ! adaptiveTimeStepping )
+                    output_writer_.writeTimeStep(timer, state, well_state);
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -361,8 +362,9 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( solver, state, well_state,
-                        timer.simulationTimeElapsed(), timer.currentStepLength() );
+                //adaptiveTimeStepping->step( solver, state, well_state,
+                //        timer.simulationTimeElapsed(), timer.currentStepLength() );
+                adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
             }
             else {
                 // solve for complete report step
@@ -395,7 +397,9 @@ namespace Opm
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-            output_writer_.writeTimeStep(timer, state, prev_well_state.basicWellState());
+            if( ! adaptiveTimeStepping )
+            //std::cout << "Write last step" << std::endl;
+                output_writer_.writeTimeStep(timer, state, prev_well_state);
         }
 
         // Stop timer and create timing report

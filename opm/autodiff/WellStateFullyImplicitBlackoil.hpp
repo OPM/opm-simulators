@@ -39,11 +39,15 @@ namespace Opm
     /// The state of a set of wells, tailored for use by the fully
     /// implicit blackoil simulator.
     class WellStateFullyImplicitBlackoil
+        : public WellState
     {
+        typedef WellState  BaseType;
     public:
         typedef std::array< int, 2 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
 
+        using BaseType :: wellRates;
+        using BaseType :: bhp;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -60,7 +64,7 @@ namespace Opm
 
             // We use the WellState::init() function to do bhp and well rates init.
             // The alternative would be to copy that function wholesale.
-            basic_well_state_.init(wells, state);
+            BaseType :: init(wells, state);
 
             // Initialize perfphaserates_, which must be done here.
             const int nw = wells->number_of_wells;
@@ -135,14 +139,6 @@ namespace Opm
             }
         }
 
-        /// One bhp pressure per well.
-        std::vector<double>& bhp() { return basic_well_state_.bhp(); }
-        const std::vector<double>& bhp() const { return basic_well_state_.bhp(); }
-
-        /// One rate per well and phase.
-        std::vector<double>& wellRates() { return basic_well_state_.wellRates(); }
-        const std::vector<double>& wellRates() const { return basic_well_state_.wellRates(); }
-
         /// One rate per phase and well connection.
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
@@ -150,12 +146,6 @@ namespace Opm
         /// One current control per well.
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
-
-        /// For interfacing with functions that take a WellState.
-        const WellState& basicWellState() const
-        {
-            return basic_well_state_;
-        }
 
         /// The number of wells present.
         int numWells() const
@@ -172,7 +162,6 @@ namespace Opm
         const WellMapType& wellMap() const { return wellMap_; }
 
     private:
-        WellState basic_well_state_;
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         WellMapType wellMap_;
