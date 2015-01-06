@@ -25,6 +25,8 @@
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 
+#include <cassert>
+
 namespace Opm
 {
 // forward declaration

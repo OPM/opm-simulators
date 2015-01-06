@@ -26,6 +26,7 @@
 #include <opm/core/utility/Spline.hpp>
 
 #include <vector>
+#include <cassert>
 
 namespace Opm {
 /*!

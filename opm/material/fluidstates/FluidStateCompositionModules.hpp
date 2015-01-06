@@ -49,7 +49,7 @@ class FluidStateExplicitCompositionModule
 public:
     FluidStateExplicitCompositionModule()
     {
-        Valgrind::SetUndefined(moleFraction_);
+        Valgrind::SetDefined(moleFraction_);
         Valgrind::SetUndefined(averageMolarMass_);
         Valgrind::SetUndefined(sumMoleFractions_);
     }

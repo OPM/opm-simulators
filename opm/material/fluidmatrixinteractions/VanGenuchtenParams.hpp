@@ -23,6 +23,8 @@
 #ifndef VAN_GENUCHTEN_PARAMS_HPP
 #define VAN_GENUCHTEN_PARAMS_HPP
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

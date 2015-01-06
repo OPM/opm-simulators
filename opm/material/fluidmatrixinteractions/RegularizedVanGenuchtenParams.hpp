@@ -29,6 +29,8 @@
 
 #include <opm/core/utility/Spline.hpp>
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

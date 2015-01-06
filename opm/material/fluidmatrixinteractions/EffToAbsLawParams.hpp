@@ -23,6 +23,8 @@
 #ifndef OPM_EFF_TO_ABS_LAW_PARAMS_HPP
 #define OPM_EFF_TO_ABS_LAW_PARAMS_HPP
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

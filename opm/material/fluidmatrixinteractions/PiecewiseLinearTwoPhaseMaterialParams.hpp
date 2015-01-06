@@ -25,6 +25,8 @@
 
 #include <vector>
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -62,11 +64,11 @@ public:
         // revert the order of the sampling points if they were given
         // in reverse direction.
         if (SwSamples_.front() > SwSamples_.back()) {
-            for (size_t origSampleIdx = 0;
+            for (unsigned origSampleIdx = 0;
                  origSampleIdx < SwSamples_.size() / 2;
                  ++ origSampleIdx)
             {
-                size_t newSampleIdx = SwSamples_.size() - origSampleIdx - 1;
+                unsigned newSampleIdx = SwSamples_.size() - origSampleIdx - 1;
 
                 std::swap(SwSamples_[origSampleIdx], SwSamples_[newSampleIdx]);
                 std::swap(pcwnSamples_[origSampleIdx], pcwnSamples_[newSampleIdx]);

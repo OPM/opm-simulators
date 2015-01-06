@@ -31,6 +31,8 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

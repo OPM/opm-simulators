@@ -25,6 +25,8 @@
 
 #include "BrooksCoreyParams.hpp"
 
+#include <cassert>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions

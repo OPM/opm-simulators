@@ -23,6 +23,8 @@
 #ifndef OPM_LINEAR_MATERIAL_PARAMS_HPP
 #define OPM_LINEAR_MATERIAL_PARAMS_HPP
 
+#include <cassert>
+
 namespace Opm {
 
 /*!
