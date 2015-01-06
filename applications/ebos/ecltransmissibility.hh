@@ -86,7 +86,7 @@ public:
         // ECFV spatial discretization with TPFA). if you try to use
         // it with something else, you're currently out of luck,
         // sorry!
-        assert(simulator_.model().numGridDof() == numElements);
+        assert((int) simulator_.model().numGridDof() == numElements);
 
         // calculate the axis specific centroids of all elements
         std::array<std::vector<DimVector>, dimWorld> axisCentroids;
@@ -140,12 +140,15 @@ public:
         const std::vector<double>& ntg =
             eclState->getDoubleGridProperty("NTG")->getData();
 
-        // reserving some space in the hashmap upfront saves quite a
-        // bit of time because resizes are costly for hashmaps and
-        // there would be quite a few of them if we would not have a
-        // rough idea of how large the final map will be (the rough
-        // idea is a conforming Cartesian grid)
+        // reserving some space in the hashmap upfront saves quite a bit of time because
+        // resizes are costly for hashmaps and there would be quite a few of them if we
+        // would not have a rough idea of how large the final map will be (the rough idea
+        // is a conforming Cartesian grid). unfortunately, this method is not available
+        // in GCC 4.4. (but I cannot say for sure when it became available so I play safe
+        // and limit it to GCC >= 4.8)
+#if defined __clang__ || (__GNUC__ > 4 && __GNUC_MINOR__ >= 8)
         trans_.reserve(numElements*3*1.05);
+#endif
 
         // compute the transmissibilities for all intersections
         elemIt = gridView.template begin</*codim=*/ 0>();
