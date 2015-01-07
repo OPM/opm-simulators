@@ -290,13 +290,6 @@ public:
         // we want the episode index to be the same as the report step
         // index to make things simpler...
         simulator.setEpisodeIndex(0);
-
-        // the user-specified initial time step can be shorter than
-        // the initial report step size given in the deck, but it
-        // can't be longer.
-        Scalar dt = simulator.timeStepSize();
-        if (dt > simulator.episodeLength())
-            simulator.setTimeStepSize(simulator.episodeLength());
     }
 
     /*!
