@@ -413,7 +413,7 @@ namespace Opm
             WellConstPtr well = (*wellIter);
 
             if (well->getStatus(timeStep) == WellCommon::STOP) {
-                // STOPed wells are added to the well list with the given controll and closed.
+                // STOPed wells are kept in the well list but marked as stopped.
                 well_controls_stop_well(w_->ctrls[well_index]);
             }
 
