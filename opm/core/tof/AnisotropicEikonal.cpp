@@ -431,14 +431,19 @@ namespace Opm
 
 #else // BOOST_HEAP_AVAILABLE is false
 
+namespace {
+    const char* AnisotropicEikonal2derrmsg =
+        "\n********************************************************************************\n"
+        "This library has not been compiled with support for the AnisotropicEikonal2d\n"
+        "class, due to too old version of the boost libraries (Boost.Heap from boost\n"
+        "version 1.49 or newer is required.\n"
+        "To use this class you must recompile opm-core on a system with sufficiently new\n"
+        "version of the boost libraries."
+        "\n********************************************************************************\n";
+}
+
 namespace Opm
 {
-    const char* AnisotropicEikonal2derrmsg =
-        "This library has not been compiled with support for the"
-        "AnisotropicEikonal2d class, due to too old version of the boost libraries. "
-        "Boost.Heap from boost version 1.49 or newer is required. "
-        "To use this class you must recompile opm-core on a system with sufficiently "
-        "new version of boost.";
 
     AnisotropicEikonal2d::AnisotropicEikonal2d(const UnstructuredGrid&)
     {
