@@ -364,9 +364,8 @@ assemble_well_contrib(int                   nc ,
         ctrls = W->ctrls[ w ];
 
         if (well_controls_well_is_stopped(ctrls) ) {
-
+            fprintf(stderr, "Stopped well detected: will be treated as completely shut\n");
             /* Treat this well as a shut well, isolated from the domain. */
-
             assemble_shut_well(nc, w, W, mt, h);
 
         } else {
