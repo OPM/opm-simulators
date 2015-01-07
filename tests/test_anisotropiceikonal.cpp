@@ -34,6 +34,8 @@
 
 using namespace Opm;
 
+#if BOOST_HEAP_AVAILABLE
+
 BOOST_AUTO_TEST_CASE(cartesian_2d_a)
 {
     const GridManager gm(2, 2);
@@ -84,3 +86,12 @@ BOOST_AUTO_TEST_CASE(cartesian_2d_b)
         BOOST_CHECK_CLOSE(sol[cell], expected[cell], 1e-5);
     }
 }
+
+#else // BOOST_HEAP_AVAILABLE is false
+
+BOOST_AUTO_TEST_CASE(dummy)
+{
+    BOOST_CHECK(true);
+}
+
+#endif // BOOST_HEAP_AVAILABLE
