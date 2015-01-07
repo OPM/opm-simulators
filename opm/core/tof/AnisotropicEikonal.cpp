@@ -22,6 +22,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/RootFinders.hpp>
 
+#if BOOST_HEAP_AVAILABLE
+
 namespace Opm
 {
 
@@ -425,3 +427,30 @@ namespace Opm
 
 
 } // namespace Opm
+
+
+#else // BOOST_HEAP_AVAILABLE is false
+
+namespace Opm
+{
+    const char* AnisotropicEikonal2derrmsg =
+        "This library has not been compiled with support for the"
+        "AnisotropicEikonal2d class, due to too old version of the boost libraries. "
+        "Boost.Heap from boost version 1.49 or newer is required. "
+        "To use this class you must recompile opm-core on a system with sufficiently "
+        "new version of boost.";
+
+    AnisotropicEikonal2d::AnisotropicEikonal2d(const UnstructuredGrid&)
+    {
+        OPM_THROW(std::logic_error, AnisotropicEikonal2derrmsg);
+    }
+
+    void AnisotropicEikonal2d::solve(const double*,
+                                     const std::vector<int>&,
+                                     std::vector<double>&)
+    {
+        OPM_THROW(std::logic_error, AnisotropicEikonal2derrmsg);
+    }
+}
+
+#endif // BOOST_HEAP_AVAILABLE

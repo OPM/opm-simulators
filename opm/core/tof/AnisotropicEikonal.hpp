@@ -22,7 +22,16 @@
 
 #include <opm/core/utility/SparseTable.hpp>
 #include <vector>
+#include <set>
+#include <map>
+
+#include <boost/version.hpp>
+
+#define BOOST_HEAP_AVAILABLE ((BOOST_VERSION / 100 % 1000) >= 49)
+
+#if BOOST_HEAP_AVAILABLE
 #include <boost/heap/fibonacci_heap.hpp>
+#endif
 
 struct UnstructuredGrid;
 
@@ -48,6 +57,7 @@ namespace Opm
                    const std::vector<int>& startcells,
                    std::vector<double>& solution);
     private:
+#if BOOST_HEAP_AVAILABLE
         // Grid and topology.
         const UnstructuredGrid& grid_;
         SparseTable<int> cell_neighbours_;
@@ -82,6 +92,7 @@ namespace Opm
 
         void computeGridRadius();
         void computeAnisoRatio(const double* metric);
+#endif // BOOST_HEAP_AVAILABLE
     };
 
 } // namespace Opm
