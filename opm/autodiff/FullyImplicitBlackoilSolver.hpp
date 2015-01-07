@@ -236,6 +236,12 @@ namespace Opm {
         computePressures(const SolutionState& state) const;
 
         std::vector<ADB>
+        computePressures(const ADB& po,
+                         const ADB& sw,
+                         const ADB& so,
+                         const ADB& sg) const;
+
+        std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
 
         std::vector<ADB>
