@@ -119,7 +119,7 @@ public:
 
         // set those parameters of the wells which do not change the topology of the
         // linearized system of equations
-        updateWellCompletions_(wellCompMap);
+        updateWellParameters_(episodeIdx, wellCompMap);
 
         const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(episodeIdx);
         // set the injection data for the respective wells.
@@ -626,8 +626,21 @@ protected:
         }
     }
 
-    void updateWellCompletions_(const WellCompletionsMap& wellCompletions)
+    void updateWellParameters_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
+        auto eclStatePtr = simulator_.gridManager().eclState();
+        auto deckSchedule = eclStatePtr->getSchedule();
+        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
+
+        // set the reference depth for all wells
+        for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
+            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
+            const std::string& wellName = deckWell->name();
+
+            if (!deckWell->getRefDepthDefaulted())
+                wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
+        }
+
         // associate the well completions with grid cells and register them in the
         // Peaceman well object
         const GridView gridView = simulator_.gridManager().gridView();

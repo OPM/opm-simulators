@@ -465,9 +465,8 @@ public:
      */
     void beginSpec()
     {
-        // this is going to be increased by any realistic grid. Shall we bet?
-        bottomDepth_ = -1e100;
-        bottomDofGlobalIdx_ = -1;
+        // this is going to be set to a real value by any realistic grid. Shall we bet?
+        refDepth_ = 1e100;
 
         // By default, take the bottom hole pressure as a given
         controlMode_ = ControlMode::BottomHolePressure;
@@ -610,10 +609,8 @@ public:
 
         // we assume that the z-coordinate represents depth (and not
         // height) here...
-        if (dofPos[2] > bottomDepth_) {
-            bottomDofGlobalIdx_ = globalDofIdx;
-            bottomDepth_ = dofPos[2];
-        }
+        if (dofPos[2] < refDepth_)
+            refDepth_ = dofPos[2];
     }
 
     /*!
@@ -624,7 +621,7 @@ public:
         const auto& comm = simulator_.gridView().comm();
 
         // determine the maximum depth of the well over all processes
-        bottomDepth_ = comm.max(bottomDepth_);
+        refDepth_ = comm.min(refDepth_);
 
         // the total volume of the well must also be summed over all processes
         wellTotalVolume_ = comm.sum(wellTotalVolume_);
@@ -690,10 +687,16 @@ public:
     { injectedPhaseIdx_ = injPhaseIdx; }
 
     /*!
-     * \brief The Z-coordinate of the well's deepest degree of freedom
+     * \brief Sets the reference depth for the bottom hole pressure [m]
      */
-    Scalar bottomDepth() const
-    { return bottomDepth_; }
+    void setReferenceDepth(Scalar value)
+    { refDepth_ = value; }
+
+    /*!
+     * \brief The reference depth for the bottom hole pressure [m]
+     */
+    Scalar referenceDepth() const
+    { return refDepth_; }
 
     /*!
      * \brief Set whether the well is open,closed or shut
@@ -756,7 +759,7 @@ public:
         // warning: this is a bit hacky...
         Scalar rho = 650; // kg/m^3
         Scalar g = 9.81; // m/s^2
-        return actualBottomHolePressure_ + rho*bottomDepth_*g;
+        return actualBottomHolePressure_ + rho*refDepth_*g;
     }
 
     /*!
@@ -865,7 +868,7 @@ public:
             // assume a density of 650 kg/m^3 for the bottom hole pressure
             // calculation
             Scalar rho = 650.0;
-            targetBottomHolePressure_ = thpLimit_ + rho*bottomDepth_;
+            targetBottomHolePressure_ = thpLimit_ + rho*refDepth_;
         }
         else if (controlMode_ == ControlMode::BottomHolePressure)
             targetBottomHolePressure_ = bhpLimit_;
@@ -1181,10 +1184,10 @@ protected:
             Valgrind::CheckDefined(rho);
             Valgrind::CheckDefined(lambda);
             Valgrind::CheckDefined(depth);
-            Valgrind::CheckDefined(bottomDepth_);
+            Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
-            Scalar ph = pbh + rho*g*(bottomDepth_ - depth);
+            Scalar ph = pbh + rho*g*(refDepth_ - depth);
 
             // volumetric flux of the phase from the well to the reservoir
             volRates[phaseIdx] = Twj*lambda*(ph - p);
@@ -1350,9 +1353,8 @@ protected:
     Scalar computeRateEquivalentBhp_() const
     {
         if (wellStatus() == Shut)
-            // there is no flow happening in the well, so the "BHP" is the pressure of
-            // the well's lowest DOF!
-            return dofVariables_.at(bottomDofGlobalIdx_).pressure[oilPhaseIdx];
+            // there is no flow happening in the well, so we return 0...
+            return 0.0;
 
         // initialize the bottom hole pressure which we would like to calculate
         Scalar bhp = actualBottomHolePressure_;
@@ -1543,12 +1545,9 @@ protected:
 
     int injectedPhaseIdx_;
 
-    // the depth of the deepest DOF. (actually, the center of this
-    // DOF, but the difference should be minimal.)
-    Scalar bottomDepth_;
-
-    // global index of the DOF at the bottom of the well
-    int bottomDofGlobalIdx_;
+    // the reference depth for the bottom hole pressure. if not specified otherwise, this
+    // is the position of the _highest_ DOF in the well.
+    Scalar refDepth_;
 };
 } // namespace Ewoms
 
