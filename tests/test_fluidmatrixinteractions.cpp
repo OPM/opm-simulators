@@ -126,18 +126,6 @@ void testGenericApi()
         MaterialLaw::capillaryPressures(destValues, paramsConst, fs);
         MaterialLaw::saturations(destValues, paramsConst, fs);
         MaterialLaw::relativePermeabilities(destValues, paramsConst, fs);
-
-        std::array<Scalar, numPhases> dpc;
-        MaterialLaw::dCapillaryPressures_dSaturation(dpc, paramsConst, fs, /*phaseIdx=*/0);
-        MaterialLaw::dCapillaryPressures_dPressure(dpc, paramsConst, fs, /*phaseIdx=*/0);
-        MaterialLaw::dCapillaryPressures_dTemperature(dpc, paramsConst, fs);
-        MaterialLaw::dCapillaryPressures_dMoleFraction(dpc, paramsConst, fs, /*phaseIdx=*/0, /*compIdx=*/0);
-
-        std::array<Scalar, numPhases> dkr;
-        MaterialLaw::dRelativePermeabilities_dSaturation(dkr, paramsConst, fs, /*phaseIdx=*/0);
-        MaterialLaw::dRelativePermeabilities_dPressure(dkr, paramsConst, fs, /*phaseIdx=*/0);
-        MaterialLaw::dRelativePermeabilities_dTemperature(dkr, paramsConst, fs);
-        MaterialLaw::dRelativePermeabilities_dMoleFraction(dkr, paramsConst, fs, /*phaseIdx=*/0, /*compIdx=*/0);
     }
 }
 
