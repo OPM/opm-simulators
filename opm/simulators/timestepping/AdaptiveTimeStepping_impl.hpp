@@ -1,3 +1,21 @@
+/*
+  Copyright 2014 IRIS AS
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #ifndef OPM_ADAPTIVETIMESTEPPING_IMPL_HEADER_INCLUDED
 #define OPM_ADAPTIVETIMESTEPPING_IMPL_HEADER_INCLUDED
 
@@ -48,10 +66,7 @@ namespace Opm {
     void AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state )
     {
-        const double time     = simulatorTimer.simulationTimeElapsed();
-        const double timestep = simulatorTimer.currentStepLength();
-
-        step( solver, state, well_state, time, timestep );
+        stepImpl( simulatorTimer, solver, state, well_state );
     }
 
     template <class Solver, class State, class WellState>
@@ -59,37 +74,25 @@ namespace Opm {
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state,
           OutputWriter& outputWriter )
     {
-        const double time     = simulatorTimer.simulationTimeElapsed();
-        const double timestep = simulatorTimer.currentStepLength();
-
-        stepImpl( solver, state, well_state, time, timestep, &simulatorTimer, &outputWriter );
-    }
-
-    // implementation of the step method
-    template <class Solver, class State, class WellState>
-    void AdaptiveTimeStepping::
-    step( Solver& solver, State& state, WellState& well_state,
-          const double time, const double timestep )
-    {
-        stepImpl( solver, state, well_state, time, timestep,
-                  (SimulatorTimer *) 0, (OutputWriter *) 0 );
+        stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
     }
 
     // implementation of the step method
     template <class Solver, class State, class WState>
     void AdaptiveTimeStepping::
-    stepImpl( Solver& solver, State& state, WState& well_state,
-              const double time, const double timestep,
-              const SimulatorTimer* simulatorTimer,
+    stepImpl( const SimulatorTimer& simulatorTimer,
+              Solver& solver, State& state, WState& well_state,
               OutputWriter* outputWriter )
     {
+        const double timestep = simulatorTimer.currentStepLength();
+
         // init last time step as a fraction of the given time step
         if( last_timestep_ < 0 ) {
-            last_timestep_ = initial_fraction_ * timestep ;
+            last_timestep_ = initial_fraction_ * timestep;
         }
 
         // create adaptive step timer with previously used sub step size
-        AdaptiveSimulatorTimer substepTimer( time, time+timestep, last_timestep_ );
+        AdaptiveSimulatorTimer substepTimer( simulatorTimer, last_timestep_ );
 
         // copy states in case solver has to be restarted (to be revised)
         State  last_state( state );
@@ -145,8 +148,10 @@ namespace Opm {
 
                 if( timestep_verbose_ )
                 {
-                    std::cout << "Substep[ " << substepTimer.currentStepNum() << " ] " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl;
-                    std::cout << "Suggested time step size = " << unit::convert::to(dtEstimate, unit::day) << " (days)" << std::endl;
+                    std::cout << std::endl
+                              <<"Substep( " << substepTimer.currentStepNum()
+                                            << " ): Current time (days)         "  << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl
+                                  << "               Current stepsize est (days) " << unit::convert::to(dtEstimate, unit::day) << std::endl;
                 }
 
                 // set new time step length
@@ -158,8 +163,7 @@ namespace Opm {
 
                 // write data if outputWriter was provided
                 if( outputWriter ) {
-                    assert( simulatorTimer );
-                    outputWriter->writeTimeStep( *simulatorTimer, substepTimer, state, well_state );
+                    outputWriter->writeTimeStep( substepTimer, state, well_state );
                 }
             }
             else // in case of no convergence (linearIterations < 0)
