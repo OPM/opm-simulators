@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 IRIS AS
+  Copyright (c) 2014 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -30,11 +30,13 @@
 namespace Opm
 {
     AdaptiveSimulatorTimer::
-    AdaptiveSimulatorTimer( const double start_time, const double total_time, const double lastDt )
-        : start_time_( start_time )
-        , total_time_( total_time )
+    AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer, const double lastStepTaken )
+        : start_date_( timer.startDate() )
+        , start_time_( timer.simulationTimeElapsed() )
+        , total_time_( start_time_ + timer.currentStepLength() )
+        , report_step_( timer.reportStepNum() )
         , current_time_( start_time_ )
-        , dt_( computeInitialTimeStep( lastDt ) )
+        , dt_( computeInitialTimeStep( lastStepTaken ) )
         , current_step_( 0 )
         , steps_()
         , suggestedMax_( 0.0 )
@@ -86,11 +88,22 @@ namespace Opm
     int AdaptiveSimulatorTimer::
     currentStepNum () const { return current_step_; }
 
+    int AdaptiveSimulatorTimer::
+    reportStepNum () const { return report_step_; }
+
     double AdaptiveSimulatorTimer::currentStepLength () const
     {
         assert( ! done () );
         return dt_;
     }
+
+    double AdaptiveSimulatorTimer::stepLengthTaken() const
+    {
+        assert( ! steps_.empty() );
+        return *(steps_.rbegin());
+    }
+
+
 
     double AdaptiveSimulatorTimer::totalTime() const { return total_time_; }
 
@@ -141,6 +154,11 @@ namespace Opm
             os << " step[ " << i << " ] = " << unit::convert::to( steps_[ i ], unit::day ) << " (days)" << std::endl;
         }
         std::cout << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
+    }
+
+    boost::gregorian::date AdaptiveSimulatorTimer::startDate() const
+    {
+        return start_date_;
     }
 
     double AdaptiveSimulatorTimer::

@@ -21,20 +21,23 @@
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 #include <iosfwd>
 #include <vector>
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace Opm
 {
 
     namespace parameter { class ParameterGroup; }
 
-    class SimulatorTimer
+    class SimulatorTimer : public SimulatorTimerInterface
     {
     public:
+        // use default implementation of these methods
+        using SimulatorTimerInterface::currentDateTime;
+        using SimulatorTimerInterface::currentPosixTime;
+
         /// Default constructor.
         SimulatorTimer();
 
@@ -72,19 +75,15 @@ namespace Opm
         /// it is an error to call stepLengthTaken().
         double stepLengthTaken () const;
 
-        /// Time elapsed since the start of the POSIX epoch (Jan 1st,
-        /// 1970) until the current time step begins [s].
-        time_t currentPosixTime() const;
-
         /// Time elapsed since the start of the simulation until the
         /// beginning of the current time step [s].
         double simulationTimeElapsed() const;
 
-        /// Return the current time as a posix time object.
-        boost::posix_time::ptime currentDateTime() const;
-
         /// Total time.
         double totalTime() const;
+
+        /// Return start date of simulation
+        boost::gregorian::date startDate() const;
 
         /// Set total time.
         /// This is primarily intended for multi-epoch schedules,

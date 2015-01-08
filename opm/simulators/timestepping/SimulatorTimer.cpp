@@ -100,18 +100,10 @@ namespace Opm
         return current_time_;
     }
 
-    /// time elapsed since the start of the POSIX epoch (Jan 1st, 1970) [s].
-    time_t SimulatorTimer::currentPosixTime() const
+    boost::gregorian::date SimulatorTimer::startDate() const
     {
-        tm t = boost::posix_time::to_tm(currentDateTime());
-        return std::mktime(&t);
+        return start_date_;
     }
-
-    boost::posix_time::ptime SimulatorTimer::currentDateTime() const
-    {
-        return boost::posix_time::ptime(start_date_) + boost::posix_time::seconds( (int) current_time_ );
-    }
-
 
 
     /// Total time.

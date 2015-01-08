@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+
 namespace Opm
 {
 
@@ -35,14 +37,12 @@ namespace Opm
     /// \brief Simulation timer for adaptive time stepping
     ///
     /////////////////////////////////////////////////////////
-    class AdaptiveSimulatorTimer
+    class AdaptiveSimulatorTimer : public SimulatorTimerInterface
     {
     public:
         /// \brief constructor taking a simulator timer to determine start and end time
-        ///  \param start_time     start time of timer
-        ///  \param total_time     total time of timer
-        ///  \param lastDt         last suggested length of time step interval
-        AdaptiveSimulatorTimer( const double start_time, const double total_time, const double lastDt );
+        ///  \param timer   in case of sub stepping this is the outer timer
+        explicit AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer, const double lastStepTaken );
 
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();
@@ -52,6 +52,9 @@ namespace Opm
 
         /// \brief \copydoc SimulationTimer::currentStepNum
         int currentStepNum () const;
+
+        /// \brief return current report step
+        int reportStepNum() const;
 
         /// \brief \copydoc SimulationTimer::currentStepLength
         double currentStepLength () const;
@@ -80,12 +83,22 @@ namespace Opm
         /// \brief return average suggested step length
         double suggestedAverage () const;
 
+        /// \brief Previous step length. This is the length of the step that
+        ///        was taken to arrive at this time.
+        double stepLengthTaken () const;
+
         /// \brief report start and end time as well as used steps so far
         void report(std::ostream& os) const;
 
+        /// \brief start date of simulation
+        boost::gregorian::date startDate() const;
+
     protected:
+        const boost::gregorian::date start_date_;
         const double start_time_;
         const double total_time_;
+        const int report_step_;
+
         double current_time_;
         double dt_;
         int current_step_;
