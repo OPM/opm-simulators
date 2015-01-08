@@ -23,20 +23,21 @@
 #ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 #define OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Spline.hpp>
-
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/Constants.hpp>
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/fluidsystems/BaseFluidSystem.hpp>
 #include <opm/material/fluidsystems/NullParameterCache.hpp>
 #include <opm/material/UniformXTabulated2DFunction.hpp>
+#include <opm/material/Tabulated1DFunction.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif // HAVE_OPM_PARSER
+
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Spline.hpp>
 
 #include <array>
 #include <vector>
@@ -52,10 +53,11 @@ template <class Scalar>
 class BlackOil
     : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
+    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef Opm::Spline<Scalar> Spline;
-    typedef std::vector<std::pair<Scalar, Scalar> > SplineSamplingPoints;
 
-    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedFunction;
+    typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
@@ -157,12 +159,11 @@ public:
 
         auto& oilViscosity = oilViscosity_[regionIdx];
         auto& invOilFormationVolumeFactor = inverseOilFormationVolumeFactor_[regionIdx];
-        auto& gasDissolutionFactorSpline = gasDissolutionFactorSpline_[regionIdx];
+        auto& gasDissolutionFactor = gasDissolutionFactor_[regionIdx];
 
-        gasDissolutionFactorSpline.setXYArrays(saturatedTable->numRows(),
-                                               saturatedTable->getPressureColumn(),
-                                               saturatedTable->getGasSolubilityColumn(),
-                                               /*type=*/Spline::Monotonic);
+        gasDissolutionFactor.setXYArrays(saturatedTable->numRows(),
+                                         saturatedTable->getPressureColumn(),
+                                         saturatedTable->getGasSolubilityColumn());
         updateSaturationPressureSpline_(regionIdx);
 
         // extract the table for the oil formation factor
@@ -286,15 +287,13 @@ public:
 
         resizeArrays_(regionIdx);
 
-        gasFormationVolumeFactorSpline_[regionIdx].setXYArrays(numSamples,
-                                                               pvdgTable.getPressureColumn(),
-                                                               pvdgTable.getFormationFactorColumn(),
-                                                               /*type=*/Spline::Monotonic);
+        gasFormationVolumeFactor_[regionIdx].setXYArrays(numSamples,
+                                                         pvdgTable.getPressureColumn(),
+                                                         pvdgTable.getFormationFactorColumn());
 
-        gasViscositySpline_[regionIdx].setXYArrays(numSamples,
-                                                   pvdgTable.getPressureColumn(),
-                                                   pvdgTable.getViscosityColumn(),
-                                                   /*type=*/Spline::Monotonic);
+        gasViscosity__[regionIdx].setXYArrays(numSamples,
+                                              pvdgTable.getPressureColumn(),
+                                              pvdgTable.getViscosityColumn());
     }
 #endif
 
@@ -318,40 +317,37 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the gas dissolution factor \f$R_s\f$
+     * \brief Initialize the function for the gas dissolution factor \f$R_s\f$
      *
-     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
+     * \param samplePoints A container of (x,y) values.
      */
-    static void setSaturatedOilGasDissolutionFactor(const SplineSamplingPoints &samplePoints,
+    static void setSaturatedOilGasDissolutionFactor(const SamplingPoints &samplePoints,
                                                     int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        gasDissolutionFactorSpline_[regionIdx].setContainerOfTuples(samplePoints,
-                                                                    /*type=*/Spline::Monotonic);
-        assert(gasDissolutionFactorSpline_[regionIdx].monotonic());
-
+        gasDissolutionFactor_[regionIdx].setContainerOfTuples(samplePoints);
         updateSaturationPressureSpline_(regionIdx);
     }
 
     /*!
-     * \brief Initialize the spline for the oil formation volume factor
+     * \brief Initialize the function for the oil formation volume factor
      *
      * The oil density/volume factor is a function of (p_o, X_o^G), but this method here
      * only requires the volume factor of gas-saturated oil (which only depends on
      * pressure) while the dependence on the gas mass fraction is estimated...
      */
-    static void setSaturatedOilFormationVolumeFactor(const SplineSamplingPoints &samplePoints,
+    static void setSaturatedOilFormationVolumeFactor(const SamplingPoints &samplePoints,
                                                      int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
         auto& invOilFormationVolumeFactor = inverseOilFormationVolumeFactor_[regionIdx];
 
-        auto &RsSpline = gasDissolutionFactorSpline_[regionIdx];
+        auto &Rs = gasDissolutionFactor_[regionIdx];
 
         Scalar RsMin = 0.0;
-        Scalar RsMax = RsSpline.eval(gasDissolutionFactorSpline_[regionIdx].xMax());
+        Scalar RsMax = Rs.eval(gasDissolutionFactor_[regionIdx].xMax());
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -369,7 +365,7 @@ public:
         // fraction
         for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
             Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
-	    Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
+            Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
 
             invOilFormationVolumeFactor.appendXPos(Rs);
 
@@ -393,7 +389,7 @@ public:
      *
      * This is a function of (Rs, po)...
      */
-    static void setInverseOilFormationVolumeFactor(const TabulatedFunction &invBo, int regionIdx=0)
+    static void setInverseOilFormationVolumeFactor(const TabulatedTwoDFunction &invBo, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -401,12 +397,11 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the viscosity of gas-saturated
-     *        oil.
+     * \brief Initialize the spline for the viscosity of gas-saturated oil.
      *
      * This is a function of (Rs, po)...
      */
-    static void setOilViscosity(const TabulatedFunction &muo, int regionIdx=0)
+    static void setOilViscosity(const TabulatedTwoDFunction &muo, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -420,14 +415,14 @@ public:
      * the viscosity of gas-saturated oil (which only depends on pressure) while the
      * dependence on the gas mass fraction is assumed to be zero...
      */
-    static void setSaturatedOilViscosity(const SplineSamplingPoints &samplePoints, int regionIdx=0)
+    static void setSaturatedOilViscosity(const SamplingPoints &samplePoints, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        auto& gasDissolutionFactorSpline = gasDissolutionFactorSpline_[regionIdx];
+        auto& gasDissolutionFactor = gasDissolutionFactor_[regionIdx];
 
         Scalar RsMin = 0.0;
-        Scalar RsMax = gasDissolutionFactorSpline.eval(gasDissolutionFactorSpline_[regionIdx].xMax());
+        Scalar RsMax = gasDissolutionFactor.eval(gasDissolutionFactor_[regionIdx].xMax());
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -458,32 +453,28 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the formation volume factor of dry gas
+     * \brief Initialize the function for the formation volume factor of dry gas
      *
-     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
+     * \param samplePoints A container of (x,y) values
      */
-    static void setGasFormationVolumeFactor(const SplineSamplingPoints &samplePoints,
-                                            int regionIdx=0)
+    static void setGasFormationVolumeFactor(const SamplingPoints &samplePoints, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        gasFormationVolumeFactorSpline_[regionIdx].setContainerOfTuples(samplePoints,
-                                                                        /*type=*/Spline::Monotonic);
-        assert(gasFormationVolumeFactorSpline_[regionIdx].monotonic());
+        gasFormationVolumeFactor_[regionIdx].setContainerOfTuples(samplePoints);
+        assert(gasFormationVolumeFactor_[regionIdx].monotonic());
     }
 
     /*!
-     * \brief Initialize the spline for the viscosity of dry gas
+     * \brief Initialize the function for the viscosity of dry gas
      *
-     * \param samplePoints A container of (x,y) values which is suitable to be passed to a spline.
+     * \param samplePoints A container of (x,y) values
      */
-    static void setGasViscosity(const SplineSamplingPoints &samplePoints, int regionIdx=0)
+    static void setGasViscosity(const SamplingPoints &samplePoints, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        gasViscositySpline_[regionIdx].setContainerOfTuples(samplePoints,
-                                                            /*type=*/Spline::Monotonic);
-        assert(gasViscositySpline_[regionIdx].monotonic());
+        gasViscosity__[regionIdx].setContainerOfTuples(samplePoints);
     }
 
     /*!
@@ -720,10 +711,7 @@ public:
      * \brief Return the formation volume factor of gas.
      */
     static Scalar gasFormationVolumeFactor(Scalar pressure, int regionIdx=0)
-    {
-        Scalar BgRaw = gasFormationVolumeFactorSpline_[regionIdx].eval(pressure, /*extrapolate=*/true);
-        return BgRaw;
-    }
+    { return gasFormationVolumeFactor_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Return the formation volume factor of water.
@@ -746,7 +734,7 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     static Scalar gasDissolutionFactor(Scalar pressure, int regionIdx=0)
-    { return gasDissolutionFactorSpline_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    { return gasDissolutionFactor_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the fugacity coefficient of a given component in the water phase
@@ -826,8 +814,7 @@ public:
      */
     static Scalar oilSaturationPressure(Scalar X_oG, int regionIdx=0)
     {
-        // use the saturation pressure spline to get a pretty good
-        // initial value
+        // use the saturation pressure spline to get a pretty good initial value
         Scalar pSat = saturationPressureSpline_[regionIdx].eval(X_oG, /*extrapolate=*/true);
 
         // Newton method to do the remaining work. If the initial
@@ -962,10 +949,10 @@ private:
         if (static_cast<int>(oilViscosity_.size()) <= regionIdx) {
             int numRegions = regionIdx + 1;
             inverseOilFormationVolumeFactor_.resize(numRegions);
-            gasFormationVolumeFactorSpline_.resize(numRegions);
+            gasFormationVolumeFactor_.resize(numRegions);
             oilViscosity_.resize(numRegions);
-            gasViscositySpline_.resize(numRegions);
-            gasDissolutionFactorSpline_.resize(numRegions);
+            gasViscosity__.resize(numRegions);
+            gasDissolutionFactor_.resize(numRegions);
             saturationPressureSpline_.resize(numRegions);
             waterReferencePressureScalar_.resize(numRegions);
             waterReferenceFormationFactorScalar_.resize(numRegions);
@@ -981,18 +968,17 @@ private:
     {
         resizeArrays_(regionIdx);
 
-        auto& gasDissolutionFactorSpline = gasDissolutionFactorSpline_[regionIdx];
+        auto& gasDissolutionFactor = gasDissolutionFactor_[regionIdx];
 
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
-        int n = gasDissolutionFactorSpline.numSamples()*5;
-        int delta =
-            (gasDissolutionFactorSpline.xMax() - gasDissolutionFactorSpline.xMin())/(n + 1);
+        int n = gasDissolutionFactor.numSamples()*5;
+        int delta = (gasDissolutionFactor.xMax() - gasDissolutionFactor.xMin())/(n + 1);
 
-        SplineSamplingPoints pSatSamplePoints;
+        SamplingPoints pSatSamplePoints;
         Scalar X_oG = 0;
         for (int i=0; i <= n; ++ i) {
-            Scalar pSat = gasDissolutionFactorSpline.xMin() + i*delta;
+            Scalar pSat = gasDissolutionFactor.xMin() + i*delta;
             X_oG = saturatedOilGasMassFraction(pSat, regionIdx);
 
             std::pair<Scalar, Scalar> val(X_oG, pSat);
@@ -1003,7 +989,7 @@ private:
     }
 
     static Scalar gasViscosity_(Scalar pressure, int regionIdx)
-    { return gasViscositySpline_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    { return gasViscosity__[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     static Scalar waterViscosity_(Scalar pressure, int regionIdx)
     {
@@ -1022,13 +1008,13 @@ private:
         return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
     }
 
-    static std::vector<TabulatedFunction> inverseOilFormationVolumeFactor_;
-    static std::vector<TabulatedFunction> oilViscosity_;
-    static std::vector<Spline> gasDissolutionFactorSpline_;
+    static std::vector<TabulatedTwoDFunction> inverseOilFormationVolumeFactor_;
+    static std::vector<TabulatedTwoDFunction> oilViscosity_;
+    static std::vector<TabulatedOneDFunction> gasDissolutionFactor_;
     static std::vector<Spline> saturationPressureSpline_;
 
-    static std::vector<Spline> gasFormationVolumeFactorSpline_;
-    static std::vector<Spline> gasViscositySpline_;
+    static std::vector<TabulatedOneDFunction> gasFormationVolumeFactor_;
+    static std::vector<TabulatedOneDFunction> gasViscosity__;
 
     static std::vector<Scalar> waterReferencePressureScalar_;
     static std::vector<Scalar> waterReferenceFormationFactorScalar_;
@@ -1049,28 +1035,28 @@ const Scalar
 BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
 
 template <class Scalar>
-std::vector<typename BlackOil<Scalar>::TabulatedFunction>
+std::vector<typename BlackOil<Scalar>::TabulatedTwoDFunction>
 BlackOil<Scalar>::inverseOilFormationVolumeFactor_;
 
 template <class Scalar>
-std::vector<typename BlackOil<Scalar>::TabulatedFunction>
+std::vector<typename BlackOil<Scalar>::TabulatedTwoDFunction>
 BlackOil<Scalar>::oilViscosity_;
 
 template <class Scalar>
-std::vector<typename BlackOil<Scalar>::Spline>
-BlackOil<Scalar>::gasDissolutionFactorSpline_;
+std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
+BlackOil<Scalar>::gasDissolutionFactor_;
 
 template <class Scalar>
-std::vector<typename BlackOil<Scalar>::Spline>
-BlackOil<Scalar>::gasFormationVolumeFactorSpline_;
+std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
+BlackOil<Scalar>::gasFormationVolumeFactor_;
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::Spline>
 BlackOil<Scalar>::saturationPressureSpline_;
 
 template <class Scalar>
-std::vector<typename BlackOil<Scalar>::Spline>
-BlackOil<Scalar>::gasViscositySpline_;
+std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
+BlackOil<Scalar>::gasViscosity__;
 
 template <class Scalar>
 std::vector<Scalar>
