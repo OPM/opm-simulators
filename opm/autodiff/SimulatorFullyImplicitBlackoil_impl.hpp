@@ -102,10 +102,12 @@ namespace Opm
         const parameter::ParameterGroup param_;
 
         // Parameters for output.
-        bool output_;
-        bool output_vtk_;
-        std::string output_dir_;
-        int output_interval_;
+        const bool output_;
+        const bool output_vtk_;
+        const bool output_matlab_;
+        const std::string output_dir_;
+        const int output_interval_;
+
         // Observed objects.
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
@@ -240,6 +242,11 @@ namespace Opm
                                                EclipseWriter& output_writer,
                                                const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
+          output_( param.getDefault("output", true) ),
+          output_vtk_(param.getDefault("output_vtk",true) ),
+          output_matlab_(param.getDefault("output_matlab", true)),
+          output_dir_(param.getDefault("output_dir", std::string("output"))),
+          output_interval_(param.getDefault("output_interval", 1)),
           grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -254,10 +261,7 @@ namespace Opm
           threshold_pressures_by_face_(threshold_pressures_by_face)
     {
         // For output.
-        output_ = param.getDefault("output", true);
         if (output_) {
-            output_vtk_ = param.getDefault("output_vtk", true);
-            output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
             boost::filesystem::path fpath(output_dir_);
             try {
@@ -266,7 +270,6 @@ namespace Opm
             catch (...) {
                 OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
-            output_interval_ = param.getDefault("output_interval", 1);
         }
 
         // Misc init.
@@ -330,8 +333,10 @@ namespace Opm
                 if (output_vtk_) {
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                if (output_matlab_) {
+                    outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                    outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                }
             }
             if (output_) {
                 if (timer.currentStepNum() == 0) {
@@ -395,8 +400,10 @@ namespace Opm
             if (output_vtk_) {
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
-            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+            if (output_matlab_) {
+                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+            }
             if( ! adaptiveTimeStepping )
             //std::cout << "Write last step" << std::endl;
                 output_writer_.writeTimeStep(timer, state, prev_well_state);
