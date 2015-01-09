@@ -342,7 +342,7 @@ namespace Opm
                 if (timer.currentStepNum() == 0) {
                     output_writer_.writeInit(timer);
                 }
-                if( ! adaptiveTimeStepping )
+                if( ! adaptiveTimeStepping || timer.currentStepNum() == 0 )
                     output_writer_.writeTimeStep(timer, state, well_state);
             }
 
