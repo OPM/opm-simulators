@@ -100,9 +100,9 @@ namespace Opm
         return current_time_;
     }
 
-    boost::gregorian::date SimulatorTimer::startDate() const
+    boost::posix_time::ptime SimulatorTimer::startDateTime() const
     {
-        return start_date_;
+        return boost::posix_time::ptime(start_date_);
     }
 
 

@@ -83,7 +83,7 @@ namespace Opm
         double totalTime() const;
 
         /// Return start date of simulation
-        boost::gregorian::date startDate() const;
+        boost::posix_time::ptime startDateTime() const;
 
         /// Set total time.
         /// This is primarily intended for multi-epoch schedules,

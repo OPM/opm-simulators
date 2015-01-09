@@ -151,7 +151,12 @@ namespace Opm {
                     std::cout << std::endl
                               <<"Substep( " << substepTimer.currentStepNum()
                                             << " ): Current time (days)         "  << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl
-                                  << "               Current stepsize est (days) " << unit::convert::to(dtEstimate, unit::day) << std::endl;
+                                  << "              Current stepsize est (days) " << unit::convert::to(dtEstimate, unit::day) << std::endl;
+                }
+
+                // write data if outputWriter was provided
+                if( outputWriter ) {
+                    outputWriter->writeTimeStep( substepTimer, state, well_state );
                 }
 
                 // set new time step length
@@ -161,10 +166,6 @@ namespace Opm {
                 last_state      = state ;
                 last_well_state = well_state;
 
-                // write data if outputWriter was provided
-                if( outputWriter ) {
-                    outputWriter->writeTimeStep( substepTimer, state, well_state );
-                }
             }
             else // in case of no convergence (linearIterations < 0)
             {

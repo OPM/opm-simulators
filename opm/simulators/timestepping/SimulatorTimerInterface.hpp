@@ -37,6 +37,9 @@ namespace Opm
         SimulatorTimerInterface() {}
 
     public:
+        /// destructor
+        virtual ~SimulatorTimerInterface() {}
+
         /// Current step number. This is the number of timesteps that
         /// has been completed from the start of the run. The time
         /// after initialization but before the simulation has started
@@ -60,6 +63,14 @@ namespace Opm
         /// it is an error to call stepLengthTaken().
         virtual double stepLengthTaken () const = 0;
 
+        /// Previous report step length. This is the length of the step that
+        /// was taken to arrive at this report step time.
+        ///
+        /// @note if no increments have been done (i.e. the timer is
+        /// still in its constructed state and reportStepNum() == 0),
+        /// it is an error to call stepLengthTaken().
+        virtual double reportStepLengthTaken () const { return stepLengthTaken(); }
+
         /// Time elapsed since the start of the simulation until the
         /// beginning of the current time step [s].
         virtual double simulationTimeElapsed() const = 0;
@@ -68,12 +79,13 @@ namespace Opm
         virtual bool done() const = 0;
 
         /// Return start date of simulation
-        virtual boost::gregorian::date startDate() const = 0;
+        virtual boost::posix_time::ptime startDateTime() const = 0;
 
         /// Return the current time as a posix time object.
         virtual boost::posix_time::ptime currentDateTime() const
         {
-           return boost::posix_time::ptime(startDate()) +  boost::posix_time::seconds( (int) simulationTimeElapsed());
+           return startDateTime() + boost::posix_time::seconds( (int) simulationTimeElapsed());
+               //boost::posix_time::ptime(startDate()) +  boost::posix_time::seconds( (int) simulationTimeElapsed());
         }
 
         /// Time elapsed since the start of the POSIX epoch (Jan 1st,
@@ -83,10 +95,6 @@ namespace Opm
             tm t = boost::posix_time::to_tm(currentDateTime());
             return std::mktime(&t);
         }
-
-        /// Print a report with current and total time etc.
-        /// Note: if done(), it is an error to call report().
-        //virtual void report(std::ostream& os) const = 0;
     };
 
 

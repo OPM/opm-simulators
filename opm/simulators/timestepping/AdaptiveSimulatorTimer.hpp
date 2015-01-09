@@ -89,11 +89,11 @@ namespace Opm
         /// \brief report start and end time as well as used steps so far
         void report(std::ostream& os) const;
 
-        /// \brief start date of simulation
-        boost::gregorian::date startDate() const;
+        /// \brief start date time of simulation
+        boost::posix_time::ptime startDateTime() const;
 
     protected:
-        const boost::gregorian::date start_date_;
+        const boost::posix_time::ptime start_date_time_;
         const double start_time_;
         const double total_time_;
         const int report_step_;

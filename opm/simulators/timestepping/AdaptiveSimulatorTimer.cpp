@@ -31,7 +31,7 @@ namespace Opm
 {
     AdaptiveSimulatorTimer::
     AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer, const double lastStepTaken )
-        : start_date_( timer.startDate() )
+        : start_date_time_( timer.startDateTime() )
         , start_time_( timer.simulationTimeElapsed() )
         , total_time_( start_time_ + timer.currentStepLength() )
         , report_step_( timer.reportStepNum() )
@@ -156,9 +156,9 @@ namespace Opm
         std::cout << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
     }
 
-    boost::gregorian::date AdaptiveSimulatorTimer::startDate() const
+    boost::posix_time::ptime AdaptiveSimulatorTimer::startDateTime() const
     {
-        return start_date_;
+        return start_date_time_;
     }
 
     double AdaptiveSimulatorTimer::
