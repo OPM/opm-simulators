@@ -521,41 +521,49 @@ namespace {
         // Saturations
         const std::vector<int>& bpat = vars[0].blockPattern();
         {
-            ADB so  = ADB::constant(V::Ones(nc, 1), bpat);
+
+            ADB so = ADB::constant(V::Ones(nc, 1), bpat);
 
             if (active_[ Water ]) {
                 ADB& sw = vars[ nextvar++ ];
                 state.saturation[pu.phase_pos[ Water ]] = sw;
-                so = so - sw;
+                so -= sw;
             }
 
-            if (active_[ Gas]) {
+            if (active_[ Gas ]) {
                 // Define Sg Rs and Rv in terms of xvar.
+                // Xvar is only defined if gas phase is active
                 const ADB& xvar = vars[ nextvar++ ];
-                const ADB& sg = isSg*xvar + isRv* so;
-                state.saturation[ pu.phase_pos[ Gas ] ] = sg;
-                so = so - sg;
-                const ADB rsSat = fluidRsSat(state.pressure, so, cells_);
-                const ADB rvSat = fluidRvSat(state.pressure, so, cells_);
+                ADB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
+                sg = isSg*xvar + isRv* so;
+                so -= sg;
 
-                if (has_disgas_) {
-                    state.rs = (1-isRs) * rsSat + isRs*xvar;
-                } else {
-                    state.rs = rsSat;
-                }
-                if (has_vapoil_) {
-                    state.rv = (1-isRv) * rvSat + isRv*xvar;
-                } else {
-                    state.rv = rvSat;
+                if (active_[ Oil ]) {
+                    // RS and RV is only defined if both oil and gas phase are active.
+                    const ADB& sw = (active_[ Water ]
+                                             ? state.saturation[ pu.phase_pos[ Water ] ]
+                                             : ADB::constant(V::Zero(nc, 1), bpat));
+                    const std::vector<ADB> pressures = computePressures(state.pressure, sw, so, sg);
+                    const ADB rsSat = fluidRsSat(pressures[ Oil ], so , cells_);
+                    if (has_disgas_) {
+                        state.rs = (1-isRs) * rsSat + isRs*xvar;
+                    } else {
+                        state.rs = rsSat;
+                    }
+                    const ADB rvSat = fluidRvSat(pressures[ Gas ], so , cells_);
+                    if (has_vapoil_) {
+                        state.rv = (1-isRv) * rvSat + isRv*xvar;
+                    } else {
+                        state.rv = rvSat;
+                    }
                 }
             }
 
             if (active_[ Oil ]) {
                 // Note that so is never a primary variable.
-                state.saturation[ pu.phase_pos[ Oil ] ] = so;
+                state.saturation[pu.phase_pos[ Oil ]] = so;
             }
         }
-
         // Qs.
         state.qs = vars[ nextvar++ ];
 
@@ -626,7 +634,7 @@ namespace {
         const int nperf = wells_.well_connpos[wells_.number_of_wells];
         const std::vector<int> well_cells(wells_.well_cells, wells_.well_cells + nperf);
         // Compute b, rsmax, rvmax values for perforations.
-        const ADB perf_press = subset(state.pressure, well_cells);
+        const std::vector<ADB> pressures = computePressures(state);
         const ADB perf_temp = subset(state.temperature, well_cells);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
@@ -638,6 +646,7 @@ namespace {
         std::vector<double> rssat_perf(nperf, 0.0);
         std::vector<double> rvsat_perf(nperf, 0.0);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const ADB perf_press = subset(pressures[ Water ], well_cells);
             const ADB bw = fluid_.bWat(perf_press, perf_temp, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw.value();
         }
@@ -645,6 +654,7 @@ namespace {
         const ADB perf_so =  subset(state.saturation[pu.phase_pos[Oil]], well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = subset(state.rs, well_cells);
+            const ADB perf_press = subset(pressures[ Oil ], well_cells);
             const ADB bo = fluid_.bOil(perf_press, perf_temp, perf_rs, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo.value();
             const V rssat = fluidRsSat(perf_press.value(), perf_so.value(), well_cells);
@@ -652,6 +662,7 @@ namespace {
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
+            const ADB perf_press = subset(pressures[ Gas ], well_cells);
             const ADB bg = fluid_.bGas(perf_press, perf_temp, perf_rv, perf_cond, well_cells);
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg.value();
             const V rvsat = fluidRvSat(perf_press.value(), perf_so.value(), well_cells);
@@ -1258,6 +1269,8 @@ namespace {
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
         const V one = V::Constant(nc, 1.0);
+        const SolutionState sol_state_old = constantState(state, well_state);
+        const std::vector<ADB> pressures_old = computePressures(sol_state_old);
 
         // store cell status in vectors
         V isRs = V::Zero(nc,1);
@@ -1423,12 +1436,11 @@ namespace {
         auto watOnly = sw >  (1 - epsilon);
 
         // phase translation sg <-> rs
-        const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-        const V rsSat = fluidRsSat(p, so, cells_);
-
         std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
 
         if (has_disgas_) {
+            const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
+            const V rsSat = fluidRsSat(p, so, cells_);
             // The obvious case
             auto hasGas = (sg > 0 && isRs == 0);
 
@@ -1437,17 +1449,24 @@ namespace {
             auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasGas || gasVaporized;
             for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) { rs[c] = rsSat[c];}
-                else { primalVariable_[c] = PrimalVariables::RS; }
-
+                if (useSg[c]) {
+                    rs[c] = rsSat[c];
+                } else {
+                    primalVariable_[c] = PrimalVariables::RS;
+                }
             }
+
         }
 
         // phase transitions so <-> rv
-        const V rvSat0 = fluidRvSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-        const V rvSat = fluidRvSat(p, so, cells_);
-
         if (has_vapoil_) {
+
+            // The gas pressure is needed for the rvSat calculations
+            const SolutionState sol_state = constantState(state, well_state);
+            const std::vector<ADB> pressures = computePressures(sol_state);
+            const V rvSat0 = fluidRvSat(pressures_old[ Gas ].value(), s_old.col(pu.phase_pos[Oil]), cells_);
+            const V rvSat = fluidRvSat(pressures[ Gas ].value(), so, cells_);
+
             // The obvious case
             auto hasOil = (so > 0 && isRv == 0);
 
@@ -1456,9 +1475,11 @@ namespace {
             auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) { rv[c] = rvSat[c]; }
-                else {primalVariable_[c] = PrimalVariables::RV; }
-
+                if (useSg[c]) {
+                    rv[c] = rvSat[c];
+                } else {
+                    primalVariable_[c] = PrimalVariables::RV;
+                }
             }
 
         }
@@ -1534,18 +1555,29 @@ namespace {
         const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
+        const ADB& sw = (active_[ Water ]
                         ? state.saturation[ pu.phase_pos[ Water ] ]
                         : null);
 
-        const ADB so = (active_[ Oil ]
+        const ADB& so = (active_[ Oil ]
                         ? state.saturation[ pu.phase_pos[ Oil ] ]
                         : null);
 
-        const ADB sg = (active_[ Gas ]
+        const ADB& sg = (active_[ Gas ]
                         ? state.saturation[ pu.phase_pos[ Gas ] ]
                         : null);
+        return computePressures(state.pressure, sw, so, sg);
 
+
+    }
+    template <class T>
+    std::vector<ADB>
+    FullyImplicitBlackoilSolver<T>::
+    computePressures(const ADB& po,
+                     const ADB& sw,
+                     const ADB& so,
+                     const ADB& sg) const
+    {
         // convert the pressure offsets to the capillary pressures
         std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
@@ -1562,15 +1594,14 @@ namespace {
         // This is an unfortunate inconsistency, but a convention we must handle.
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
             if (phaseIdx == BlackoilPhases::Aqua) {
-                pressure[phaseIdx] = state.pressure - pressure[phaseIdx];
+                pressure[phaseIdx] = po - pressure[phaseIdx];
             } else {
-                pressure[phaseIdx] += state.pressure;
+                pressure[phaseIdx] += po;
             }
         }
 
         return pressure;
     }
-
 
 
 
