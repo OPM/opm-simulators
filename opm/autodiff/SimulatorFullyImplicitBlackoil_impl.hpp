@@ -367,8 +367,6 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                //adaptiveTimeStepping->step( solver, state, well_state,
-                //        timer.simulationTimeElapsed(), timer.currentStepLength() );
                 adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
             }
             else {
