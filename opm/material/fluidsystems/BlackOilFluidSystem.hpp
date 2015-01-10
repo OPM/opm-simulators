@@ -157,24 +157,23 @@ public:
 
         resizeArrays_(regionIdx);
 
-        auto& oilViscosity = oilViscosity_[regionIdx];
-        auto& invOilFormationVolumeFactor = inverseOilFormationVolumeFactor_[regionIdx];
+        auto& oilMu = oilMu_[regionIdx];
+        auto& invOilB = inverseOilB_[regionIdx];
         auto& gasDissolutionFactor = gasDissolutionFactor_[regionIdx];
 
         gasDissolutionFactor.setXYArrays(saturatedTable->numRows(),
                                          saturatedTable->getPressureColumn(),
                                          saturatedTable->getGasSolubilityColumn());
-        updateSaturationPressureSpline_(regionIdx);
 
         // extract the table for the oil formation factor
         for (int outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
             Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
 
-            invOilFormationVolumeFactor.appendXPos(Rs);
-            oilViscosity.appendXPos(Rs);
+            invOilB.appendXPos(Rs);
+            oilMu.appendXPos(Rs);
 
-            assert(invOilFormationVolumeFactor.numX() == outerIdx + 1);
-            assert(oilViscosity.numX() == outerIdx + 1);
+            assert(invOilB.numX() == outerIdx + 1);
+            assert(oilMu.numX() == outerIdx + 1);
 
             const auto underSaturatedTable = pvtoTable.getInnerTable(outerIdx);
             for (int innerIdx = underSaturatedTable->numRows() - 1; innerIdx >= 0; -- innerIdx) {
@@ -182,19 +181,19 @@ public:
                 Scalar Bo = underSaturatedTable->getOilFormationFactorColumn()[innerIdx];
                 Scalar muo = underSaturatedTable->getOilViscosityColumn()[innerIdx];
 
-                invOilFormationVolumeFactor.appendSamplePoint(outerIdx, po, 1.0/Bo);
-                oilViscosity.appendSamplePoint(outerIdx, po, muo);
+                invOilB.appendSamplePoint(outerIdx, po, 1.0/Bo);
+                oilMu.appendSamplePoint(outerIdx, po, muo);
             }
         }
 
         // make sure to have at least two sample points per mole fraction
-        for (int xIdx = 0; xIdx < invOilFormationVolumeFactor.numX(); ++xIdx) {
+        for (int xIdx = 0; xIdx < invOilB.numX(); ++xIdx) {
             // a single sample point is definitely needed
-            assert(invOilFormationVolumeFactor.numY(xIdx) > 0);
+            assert(invOilB.numY(xIdx) > 0);
 
             // everything is fine if the current table has two or more sampling points
             // for a given mole fraction
-            if (invOilFormationVolumeFactor.numY(xIdx) > 1)
+            if (invOilB.numY(xIdx) > 1)
                 continue;
 
             // find the master table which will be used as a template to extend the
@@ -239,8 +238,8 @@ public:
                 Scalar newBo = curTable->getOilFormationFactorColumn()[0]*alphaBo;
                 Scalar newMuo = curTable->getOilViscosityColumn()[0]*alphaMuo;
 
-                invOilFormationVolumeFactor.appendSamplePoint(xIdx, newPo, 1/newBo);
-                oilViscosity.appendSamplePoint(xIdx, newPo, newMuo);
+                invOilB.appendSamplePoint(xIdx, newPo, 1.0/newBo);
+                oilMu.appendSamplePoint(xIdx, newPo, newMuo);
             }
         }
     }
@@ -259,15 +258,15 @@ public:
         resizeArrays_(regionIdx);
 
         auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
-        waterReferencePressureScalar_[regionIdx] =
+        waterReferencePressure_[regionIdx] =
             pvtwRecord->getItem("P_REF")->getSIDouble(0);
-        waterReferenceFormationFactorScalar_[regionIdx] =
+        waterReferenceFormationFactor_[regionIdx] =
             pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
-        waterCompressibilityScalar_[regionIdx] =
+        waterCompressibility_[regionIdx] =
             pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
-        waterViscosityScalar_[regionIdx] =
+        waterViscosity__[regionIdx] =
             pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
-        waterViscosibilityScalar_[regionIdx] =
+        waterViscosibility_[regionIdx] =
             pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
     }
 
@@ -287,13 +286,16 @@ public:
 
         resizeArrays_(regionIdx);
 
-        gasFormationVolumeFactor_[regionIdx].setXYArrays(numSamples,
-                                                         pvdgTable.getPressureColumn(),
-                                                         pvdgTable.getFormationFactorColumn());
+        // say 99.97% of all time: "premature optimization is the root of all
+        // evil". Eclipse does it this way for no good reason!
+        std::vector<Scalar> invB(pvdgTable.numRows());
+        const auto& Bg = pvdgTable.getFormationFactorColumn();
+        for (unsigned i = 0; i < Bg.size(); ++ i) {
+            invB[i] = 1.0/Bg[i];
+        }
 
-        gasViscosity__[regionIdx].setXYArrays(numSamples,
-                                              pvdgTable.getPressureColumn(),
-                                              pvdgTable.getViscosityColumn());
+        inverseGasB_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), invB);
+        gasMu_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), pvdgTable.getViscosityColumn());
     }
 #endif
 
@@ -327,7 +329,6 @@ public:
         resizeArrays_(regionIdx);
 
         gasDissolutionFactor_[regionIdx].setContainerOfTuples(samplePoints);
-        updateSaturationPressureSpline_(regionIdx);
     }
 
     /*!
@@ -342,7 +343,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        auto& invOilFormationVolumeFactor = inverseOilFormationVolumeFactor_[regionIdx];
+        auto& invOilB = inverseOilB_[regionIdx];
 
         auto &Rs = gasDissolutionFactor_[regionIdx];
 
@@ -361,13 +362,15 @@ public:
         Spline oilFormationVolumeFactorSpline;
         oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
 
+        updateSaturationPressureSpline_(regionIdx);
+
         // calculate a table of estimated densities depending on pressure and gas mass
         // fraction
         for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
             Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
             Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
 
-            invOilFormationVolumeFactor.appendXPos(Rs);
+            invOilB.appendXPos(Rs);
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
@@ -379,7 +382,7 @@ public:
 
                 Scalar Bo = referenceDensity(oilPhaseIdx, regionIdx)/rhoo;
 
-                invOilFormationVolumeFactor.appendSamplePoint(RsIdx, po, 1.0/Bo);
+                invOilB.appendSamplePoint(RsIdx, po, 1.0/Bo);
             }
         }
     }
@@ -393,7 +396,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        inverseOilFormationVolumeFactor_[regionIdx] = invBo;
+        inverseOilB_[regionIdx] = invBo;
     }
 
     /*!
@@ -405,7 +408,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        oilViscosity_[regionIdx] = muo;
+        oilMu_[regionIdx] = muo;
     }
 
     /*!
@@ -430,8 +433,6 @@ public:
         size_t nRs = 20;
         size_t nP = samplePoints.size()*2;
 
-        auto& oilViscosity = oilViscosity_[regionIdx];
-
         Spline muoSpline;
         muoSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
 
@@ -440,15 +441,14 @@ public:
         for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
             Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
 
-            oilViscosity.appendXPos(Rs);
+            oilMu_[regionIdx].appendXPos(Rs);
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
                 Scalar muo = muoSpline.eval(po);
 
-                oilViscosity.appendSamplePoint(RsIdx, po, muo);
+                oilMu_[regionIdx].appendSamplePoint(RsIdx, po, muo);
             }
-
         }
     }
 
@@ -461,8 +461,14 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        gasFormationVolumeFactor_[regionIdx].setContainerOfTuples(samplePoints);
-        assert(gasFormationVolumeFactor_[regionIdx].monotonic());
+        SamplingPoints tmp(samplePoints);
+        auto it = tmp.begin();
+        const auto& endIt = tmp.end();
+        for (; it != endIt; ++ it)
+            std::get<1>(*it) = 1.0/std::get<1>(*it);
+
+        inverseGasB_[regionIdx].setContainerOfTuples(tmp);
+        assert(inverseGasB_[regionIdx].monotonic());
     }
 
     /*!
@@ -474,7 +480,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        gasViscosity__[regionIdx].setContainerOfTuples(samplePoints);
+        gasMu_[regionIdx].setContainerOfTuples(samplePoints);
     }
 
     /*!
@@ -484,7 +490,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        waterReferencePressureScalar_[regionIdx] = p;
+        waterReferencePressure_[regionIdx] = p;
     }
 
     /*!
@@ -494,7 +500,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        waterReferenceFormationFactorScalar_[regionIdx] = BwRef;
+        waterReferenceFormationFactor_[regionIdx] = BwRef;
     }
 
     /*!
@@ -504,7 +510,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        waterViscosityScalar_[regionIdx] = muWater;
+        waterViscosity__[regionIdx] = muWater;
     }
 
     /*!
@@ -514,7 +520,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        waterViscosibilityScalar_[regionIdx] = muCompWater;
+        waterViscosibility_[regionIdx] = muCompWater;
     }
 
     /*!
@@ -524,7 +530,7 @@ public:
     {
         resizeArrays_(regionIdx);
 
-        waterCompressibilityScalar_[regionIdx] = cWater;
+        waterCompressibility_[regionIdx] = cWater;
     }
 
     /*!
@@ -532,6 +538,48 @@ public:
      */
     static void initEnd()
     {
+        // calculate the final 2D functions which are used for interpolation.
+        int numRegions = oilMu_.size();
+        for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+            // calculate the table which stores the inverse of the product of the oil
+            // formation factor and the oil viscosity
+            const auto& oilMu = oilMu_[regionIdx];
+            const auto& invOilB = inverseOilB_[regionIdx];
+            assert(oilMu.numX() == invOilB.numX());
+
+            auto& invOilBMu = inverseOilBMu_[regionIdx];
+
+            for (int rsIdx = 0; rsIdx < oilMu.numX(); ++rsIdx) {
+                invOilBMu.appendXPos(oilMu.xAt(rsIdx));
+
+                assert(oilMu.numY(rsIdx) == invOilB.numY(rsIdx));
+
+                int numPressures = oilMu.numY(rsIdx);
+                for (int pIdx = 0; pIdx < numPressures; ++pIdx)
+                    invOilBMu.appendSamplePoint(rsIdx,
+                                                oilMu.yAt(rsIdx, pIdx),
+                                                invOilB.valueAt(rsIdx, pIdx)*
+                                                1/oilMu.valueAt(rsIdx, pIdx));
+            }
+
+            // calculate the table which stores the inverse of the product of the gas
+            // formation factor and the gas viscosity
+            const auto& gasMu = gasMu_[regionIdx];
+            const auto& invGasB = inverseGasB_[regionIdx];
+            assert(gasMu.numSamples() == invGasB.numSamples());
+
+            std::vector<Scalar> pressureValues(gasMu.numSamples());
+            std::vector<Scalar> invGasBMuValues(gasMu.numSamples());
+            for (int pIdx = 0; pIdx < gasMu.numSamples(); ++pIdx) {
+                pressureValues[pIdx] = invGasB.xAt(pIdx);
+                invGasBMuValues[pIdx] = invGasB.valueAt(pIdx) * (1.0/gasMu.valueAt(pIdx));
+            }
+
+            inverseGasBMu_[regionIdx].setXYContainers(pressureValues, invGasBMuValues);
+
+            updateSaturationPressureSpline_(regionIdx);
+        }
+
         // calculate molar masses
 
         // water is simple: 18 g/mol
@@ -673,8 +721,7 @@ public:
                 * referenceDensity(oilPhaseIdx)
                 / referenceDensity(gasPhaseIdx);
 
-            // ATTENTION: XoG is represented by the _first_ axis!
-            return oilViscosity_[regionIdx].eval(Rs, p);
+            return oilViscosityRs_(p, Rs, regionIdx);
         }
         case waterPhaseIdx: return waterViscosity_(p, regionIdx);
         case gasPhaseIdx: return gasViscosity_(p, regionIdx);
@@ -704,14 +751,8 @@ public:
         Scalar XoG = saturatedOilGasMassFraction(pressure, regionIdx);
 
         // ATTENTION: XoG is represented by the _first_ axis!
-        return inverseOilFormationVolumeFactor_[regionIdx].eval(XoG, pressure);
+        return inverseOilB_[regionIdx].eval(XoG, pressure);
     }
-
-    /*!
-     * \brief Return the formation volume factor of gas.
-     */
-    static Scalar gasFormationVolumeFactor(Scalar pressure, int regionIdx=0)
-    { return gasFormationVolumeFactor_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Return the formation volume factor of water.
@@ -719,10 +760,10 @@ public:
     static Scalar waterFormationVolumeFactor(Scalar pressure, int regionIdx=0)
     {
         // cf. ECLiPSE 2011 technical description, p. 116
-        Scalar pRef = waterReferencePressureScalar_[regionIdx];
-        Scalar X = waterCompressibilityScalar_[regionIdx]*(pressure - pRef);
+        Scalar pRef = waterReferencePressure_[regionIdx];
+        Scalar X = waterCompressibility_[regionIdx]*(pressure - pRef);
 
-        Scalar BwRef = waterReferenceFormationFactorScalar_[regionIdx];
+        Scalar BwRef = waterReferenceFormationFactor_[regionIdx];
 
         // TODO (?): consider the salt concentration of the brine
         return BwRef/(1 + X*(1 + X/2));
@@ -877,8 +918,7 @@ public:
         Scalar Rs = XoG/(1 - XoG)*referenceDensity(oilPhaseIdx)/referenceDensity(gasPhaseIdx);
 
         // ATTENTION: Rs is represented by the _first_ axis!
-        Scalar invBoRaw = inverseOilFormationVolumeFactor_[regionIdx].eval(Rs, oilPressure);
-        return 1.0 / invBoRaw;
+        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
     }
 
     /*!
@@ -888,8 +928,7 @@ public:
     static Scalar oilFormationVolumeFactorRs(Scalar oilPressure, Scalar Rs, int regionIdx=0)
     {
         // ATTENTION: Rs is represented by the _first_ axis!
-        Scalar invBoRaw = inverseOilFormationVolumeFactor_[regionIdx].eval(Rs, oilPressure);
-        return 1.0 / invBoRaw;
+        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
     }
 
     /*!
@@ -924,12 +963,18 @@ public:
     }
 
     /*!
+     * \brief Return the formation volume factor of gas.
+     */
+    static Scalar gasFormationVolumeFactor(Scalar pressure, int regionIdx=0)
+    { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+
+    /*!
      * \brief Return the density of dry gas.
      */
-    static Scalar gasDensity(Scalar pressure, int regionIdx)
+    static Scalar gasDensity(Scalar gasPressure, int regionIdx)
     {
         // gas formation volume factor at reservoir pressure
-        Scalar Bg = gasFormationVolumeFactor(pressure, regionIdx);
+        Scalar Bg = gasFormationVolumeFactor(gasPressure, regionIdx);
         return referenceDensity_[regionIdx][gasPhaseIdx]/Bg;
     }
 
@@ -946,19 +991,21 @@ public:
 private:
     static void resizeArrays_(int regionIdx)
     {
-        if (static_cast<int>(oilViscosity_.size()) <= regionIdx) {
+        if (static_cast<int>(inverseOilB_.size()) <= regionIdx) {
             int numRegions = regionIdx + 1;
-            inverseOilFormationVolumeFactor_.resize(numRegions);
-            gasFormationVolumeFactor_.resize(numRegions);
-            oilViscosity_.resize(numRegions);
-            gasViscosity__.resize(numRegions);
+            inverseOilB_.resize(numRegions);
+            inverseGasB_.resize(numRegions);
+            inverseGasBMu_.resize(numRegions);
+            inverseOilBMu_.resize(numRegions);
+            oilMu_.resize(numRegions);
+            gasMu_.resize(numRegions);
             gasDissolutionFactor_.resize(numRegions);
             saturationPressureSpline_.resize(numRegions);
-            waterReferencePressureScalar_.resize(numRegions);
-            waterReferenceFormationFactorScalar_.resize(numRegions);
-            waterCompressibilityScalar_.resize(numRegions);
-            waterViscosityScalar_.resize(numRegions);
-            waterViscosibilityScalar_.resize(numRegions);
+            waterReferencePressure_.resize(numRegions);
+            waterReferenceFormationFactor_.resize(numRegions);
+            waterCompressibility_.resize(numRegions);
+            waterViscosity__.resize(numRegions);
+            waterViscosibility_.resize(numRegions);
 
             referenceDensity_.resize(numRegions);
         }
@@ -988,39 +1035,53 @@ private:
                                                                   /*type=*/Spline::Monotonic);
     }
 
-    static Scalar gasViscosity_(Scalar pressure, int regionIdx)
-    { return gasViscosity__[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    static Scalar oilViscosityRs_(Scalar oilPressure, Scalar Rs, int regionIdx)
+    {
+        // ATTENTION: Rs is the first axis!
+        Scalar invBo = inverseOilB_[regionIdx].eval(Rs, oilPressure);
+        Scalar invMuoBo = inverseOilBMu_[regionIdx].eval(Rs, oilPressure);
+
+        return invBo/invMuoBo;
+    }
+
+    static Scalar gasViscosity_(Scalar gasPressure, int regionIdx)
+    {
+        Scalar invBg = inverseGasB_[regionIdx].eval(gasPressure);
+        Scalar invMugBg = inverseGasBMu_[regionIdx].eval(gasPressure);
+
+        return invBg/invMugBg;
+    }
 
     static Scalar waterViscosity_(Scalar pressure, int regionIdx)
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
-        Scalar BwMuwRef =
-            waterViscosityScalar_[regionIdx]
-            * waterReferenceFormationFactorScalar_[regionIdx];
+        Scalar BwMuwRef = waterViscosity__[regionIdx]*waterReferenceFormationFactor_[regionIdx];
         Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
 
-        Scalar pRef = waterReferencePressureScalar_[regionIdx];
+        Scalar pRef = waterReferencePressure_[regionIdx];
         Scalar Y =
-            (waterCompressibilityScalar_[regionIdx] - waterViscosibilityScalar_[regionIdx])
+            (waterCompressibility_[regionIdx] - waterViscosibility_[regionIdx])
             * (pressure - pRef);
         return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
     }
 
-    static std::vector<TabulatedTwoDFunction> inverseOilFormationVolumeFactor_;
-    static std::vector<TabulatedTwoDFunction> oilViscosity_;
+    static std::vector<TabulatedTwoDFunction> inverseOilB_;
+    static std::vector<TabulatedTwoDFunction> oilMu_;
+    static std::vector<TabulatedTwoDFunction> inverseOilBMu_;
     static std::vector<TabulatedOneDFunction> gasDissolutionFactor_;
     static std::vector<Spline> saturationPressureSpline_;
 
-    static std::vector<TabulatedOneDFunction> gasFormationVolumeFactor_;
-    static std::vector<TabulatedOneDFunction> gasViscosity__;
+    static std::vector<TabulatedOneDFunction> inverseGasB_;
+    static std::vector<TabulatedOneDFunction> gasMu_;
+    static std::vector<TabulatedOneDFunction> inverseGasBMu_;
 
-    static std::vector<Scalar> waterReferencePressureScalar_;
-    static std::vector<Scalar> waterReferenceFormationFactorScalar_;
-    static std::vector<Scalar> waterCompressibilityScalar_;
-    static std::vector<Scalar> waterViscosityScalar_;
-    static std::vector<Scalar> waterViscosibilityScalar_;
+    static std::vector<Scalar> waterReferencePressure_;
+    static std::vector<Scalar> waterReferenceFormationFactor_;
+    static std::vector<Scalar> waterCompressibility_;
+    static std::vector<Scalar> waterViscosity__;
+    static std::vector<Scalar> waterViscosibility_;
 
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
     // here, because GCC 4.4 seems to be unable to determine the number of phases from
@@ -1036,19 +1097,15 @@ BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::TabulatedTwoDFunction>
-BlackOil<Scalar>::inverseOilFormationVolumeFactor_;
+BlackOil<Scalar>::inverseOilB_;
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::TabulatedTwoDFunction>
-BlackOil<Scalar>::oilViscosity_;
+BlackOil<Scalar>::inverseOilBMu_;
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
 BlackOil<Scalar>::gasDissolutionFactor_;
-
-template <class Scalar>
-std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
-BlackOil<Scalar>::gasFormationVolumeFactor_;
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::Spline>
@@ -1056,27 +1113,39 @@ BlackOil<Scalar>::saturationPressureSpline_;
 
 template <class Scalar>
 std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
-BlackOil<Scalar>::gasViscosity__;
+BlackOil<Scalar>::inverseGasB_;
+
+template <class Scalar>
+std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
+BlackOil<Scalar>::inverseGasBMu_;
+
+template <class Scalar>
+std::vector<typename BlackOil<Scalar>::TabulatedOneDFunction>
+BlackOil<Scalar>::gasMu_;
+
+template <class Scalar>
+std::vector<typename BlackOil<Scalar>::TabulatedTwoDFunction>
+BlackOil<Scalar>::oilMu_;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterReferencePressureScalar_;
+BlackOil<Scalar>::waterReferencePressure_;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterReferenceFormationFactorScalar_;
+BlackOil<Scalar>::waterReferenceFormationFactor_;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterCompressibilityScalar_;
+BlackOil<Scalar>::waterCompressibility_;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterViscosityScalar_;
+BlackOil<Scalar>::waterViscosity__;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterViscosibilityScalar_;
+BlackOil<Scalar>::waterViscosibility_;
 
 template <class Scalar>
 std::vector<std::array<Scalar, 3> >
