@@ -44,6 +44,7 @@
 #include <dune/grid/CpGrid.hpp>
 #endif
 
+#include <opm/core/grid/GridHelpers.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <string>
@@ -135,6 +136,24 @@ std::string ntgDeckString =
     deckPostMult;
 
 
+/// \brief The check of the transmissibility values
+///
+/// Written along the UgGridHelpers interface to make it usable for both
+/// UnstructuredGrid and CpGrid.
+/// \tparam Grid The type of the grid.
+/// \param grid The grid where the transmissibility values live
+/// \param origGeology The originaly geology without multipliers.
+/// \param multGeology The geology using posititve multipliers.
+/// \param multMinusGeology The geology uing negative multipliers
+/// \param ntgGeology
+template<class G>
+void checkTransmissibilityValues(const G&                  grid,
+                                 const Opm::DerivedGeology& origGeology,
+                                 const Opm::DerivedGeology& multGeology,
+                                 const Opm::DerivedGeology& multMinusGeology,
+                                 const Opm::DerivedGeology& ntgGeology);
+
+
 BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
 {
     Opm::parameter::ParameterGroup param;
@@ -185,18 +204,30 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     Opm::DerivedGeology ntgGeology(*(ntgGridManager->c_grid()), *ntgProps, ntgEclipseState, false);
     /////
 
+    checkTransmissibilityValues(*(origGridManager->c_grid()), origGeology, multGeology,
+                                multMinusGeology, ntgGeology);
+}
+
+template<class G>
+void checkTransmissibilityValues(const G&                  grid,
+                                 const Opm::DerivedGeology& origGeology,
+                                 const Opm::DerivedGeology& multGeology,
+                                 const Opm::DerivedGeology& multMinusGeology,
+                                 const Opm::DerivedGeology& ntgGeology)
+{
     // compare the transmissibilities (note that for this we assume that the multipliers
     // do not change the grid topology)
-    const UnstructuredGrid cGrid =  *(origGridManager->c_grid());
-    int numFaces = cGrid.number_of_faces;
+    int numFaces=Opm::UgGridHelpers::numFaces(grid);
+    typename Opm::UgGridHelpers::FaceCellTraits<G>::Type face_cells=
+        Opm::UgGridHelpers::faceCells(grid);
     for (int faceIdx = 0; faceIdx < numFaces; ++ faceIdx) {
         // in DUNE-speak, a face here is more like an intersection which is not specific
         // to a codim-0 entity (i.e., cell)
 
         // get the cell indices of the compressed grid for the face's interior and
         // exterior cell
-        int insideCellIdx = cGrid.face_cells[2*faceIdx + 0];
-        int outsideCellIdx = cGrid.face_cells[2*faceIdx + 1];
+        int insideCellIdx  = face_cells(faceIdx, 0);
+        int outsideCellIdx = face_cells(faceIdx, 1);
 
         if (insideCellIdx < 0 || outsideCellIdx < 0) {
             // do not consider cells at the domain boundary: Their would only be used for
@@ -206,9 +237,11 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
         }
 
         // translate these to canonical indices (i.e., the logically Cartesian ones used by the deck)
-        if (cGrid.global_cell) {
-            insideCellIdx = cGrid.global_cell[insideCellIdx];
-            outsideCellIdx = cGrid.global_cell[outsideCellIdx];
+        const int* global_cell=Opm::UgGridHelpers::globalCell(grid);
+
+        if (global_cell) {
+            insideCellIdx = global_cell[insideCellIdx];
+            outsideCellIdx = global_cell[outsideCellIdx];
         }
 
         double origTrans = origGeology.transmissibility()[faceIdx];
@@ -218,8 +251,9 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
         BOOST_CHECK_CLOSE(origTrans*(insideCellIdx + 1), multTrans, 1e-6);
         BOOST_CHECK_CLOSE(origTrans*(outsideCellIdx + 1), multMinusTrans, 1e-6);
 
-        int insideCellKIdx = insideCellIdx/(cGrid.cartdims[0]*cGrid.cartdims[1]);
-        int outsideCellKIdx = outsideCellIdx/(cGrid.cartdims[0]*cGrid.cartdims[1]);
+        const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
+        int insideCellKIdx = insideCellIdx/(cartdims[0]*cartdims[1]);
+        int outsideCellKIdx = outsideCellIdx/(cartdims[0]*cartdims[1]);
         if (insideCellKIdx == outsideCellKIdx)
             // NTG only reduces the permebility of the X-Y plane
             BOOST_CHECK_CLOSE(origTrans*0.5, ntgTrans, 1e-6);
@@ -298,55 +332,11 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
     Opm::DerivedGeology ntgGeology(*ntgGrid, *ntgProps, ntgEclipseState, false);
     /////
 
-    // compare the transmissibilities (note that for this we assume that the multipliers
-    // do not change the grid topology)
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,3)
-    auto gridView = origGrid->leafGridView();
-#else
-    auto gridView = origGrid->leafView();
-#endif
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView,
-                                                      Dune::MCMGElementLayout> ElementMapper;
-    ElementMapper elementMapper(gridView);
-    auto eIt = gridView.begin<0>();
-    const auto& eEndIt = gridView.end<0>();
-    for (; eIt < eEndIt; ++ eIt) {
-        // loop over the intersections of the current element
-        auto isIt = gridView.ibegin(*eIt);
-        const auto& isEndIt = gridView.iend(*eIt);
-        for (; isIt != isEndIt; ++isIt) {
-            if (isIt->boundary())
-                continue; // ignore domain the boundaries
-
-            // get the cell indices of the compressed grid for the face's interior and
-            // exterior cell
-            int insideCellIdx = elementMapper.map(*isIt->inside());
-            int outsideCellIdx = elementMapper.map(*isIt->outside());
-
-            // translate these to canonical indices (i.e., the logically Cartesian ones used by the deck)
-            insideCellIdx = origGrid->globalCell()[insideCellIdx];
-            outsideCellIdx = origGrid->globalCell()[outsideCellIdx];
-
-#warning TODO: how to get the intersection index for the compressed grid??
-#if 0
-            int globalIsIdx = 0; // <- how to get this??
-            double origTrans = origGeology.transmissibility()[globalIsIdx];
-            double multTrans = multGeology.transmissibility()[globalIsIdx];
-            double multMinusTrans = multMinusGeology.transmissibility()[globalIsIdx];
-            double ntgTrans = ntgGeology.transmissibility()[globalIsIdx];
-            BOOST_CHECK_CLOSE(origTrans*(insideCellIdx + 1), multTrans, 1e-6);
-            BOOST_CHECK_CLOSE(origTrans*(outsideCellIdx + 1), multMinusTrans, 1e-6);
-
-            std::array<int, 3> ijkInside, ijkOutside;
-            origGrid->getIJK(insideCellIdx, ijkInside);
-            origGrid->getIJK(outsideCellIdx, ijkOutside);
-            if (ijkInside[2] == ijkOutside[2])
-                // NTG only reduces the permebility of the X-Y plane
-                BOOST_CHECK_CLOSE(origTrans*0.5, ntgTrans, 1e-6);
-#endif
+    return checkTransmissibilityValues(*origGrid, origGeology, multGeology,
+                                       multMinusGeology, ntgGeology);
         }
     }
-#endif
+#endif // there seems to be some index mess-up in DerivedGeology in the case of Dune::CpGrid
 }
 
 #endif
