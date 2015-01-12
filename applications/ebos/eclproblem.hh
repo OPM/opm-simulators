@@ -265,7 +265,7 @@ public:
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
         const auto& deck = simulator.gridManager().deck();
-        if (deck->hasKeyword("NOGRAV"))
+        if (deck->hasKeyword("NOGRAV") || !EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_ = 0.0;
 
         initFluidSystem_();
