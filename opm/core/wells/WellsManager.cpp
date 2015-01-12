@@ -173,19 +173,19 @@ namespace WellsManagerDetail
     // perpendicular to completion while last element is direction
     // along completion.
     inline std::array< std::array<double,3>::size_type, 3 >
-    directionIndices(const Opm::CompletionDirection::DirectionEnum direction)
+    directionIndices(const Opm::WellCompletion::DirectionEnum direction)
     {
         typedef std::array<double,3>::size_type idx_t;
         typedef std::array<idx_t,3>             permutation;
 
         switch (direction) {
-        case Opm::CompletionDirection::DirectionEnum::X:
+        case Opm::WellCompletion::DirectionEnum::X:
             return permutation {{ idx_t(1), idx_t(2), idx_t(0) }};
 
-        case Opm::CompletionDirection::DirectionEnum::Y:
+        case Opm::WellCompletion::DirectionEnum::Y:
             return permutation {{ idx_t(2), idx_t(0), idx_t(1) }};
 
-        case Opm::CompletionDirection::DirectionEnum::Z:
+        case Opm::WellCompletion::DirectionEnum::Z:
             return permutation {{ idx_t(0), idx_t(1), idx_t(2) }};
         }
         // All enum values should be handled above. Therefore
@@ -198,7 +198,7 @@ namespace WellsManagerDetail
     // Permute (diagonal) permeability components according to
     // completion's direction.
     inline std::array<double,3>
-    permComponents(const Opm::CompletionDirection::DirectionEnum direction,
+    permComponents(const Opm::WellCompletion::DirectionEnum direction,
                    const double*                                 perm)
     {
         const auto p = directionIndices(direction);
@@ -218,7 +218,7 @@ namespace WellsManagerDetail
     // Note: 'extent' is intentionally accepted by modifiable value
     // rather than reference-to-const to support NTG manipulation.
     inline std::array<double,3>
-    effectiveExtent(const Opm::CompletionDirection::DirectionEnum direction,
+    effectiveExtent(const Opm::WellCompletion::DirectionEnum direction,
                     const double                                  ntg,
                     std::array<double,3>                          extent)
     {
@@ -266,7 +266,7 @@ namespace WellsManagerDetail
                      const std::array<double, 3>&                  cubical,
                      const double*                                 cell_permeability,
                      const double                                  skin_factor,
-                     const Opm::CompletionDirection::DirectionEnum direction,
+                     const Opm::WellCompletion::DirectionEnum direction,
                      const double                                  ntg)
     {
         const std::array<double,3>& K =
