@@ -51,7 +51,7 @@ double computeWellIndex(const double radius,
                         const std::array<double, 3>& cubical,
                         const double* cell_permeability,
                         const double skin_factor,
-                        const Opm::CompletionDirection::DirectionEnum direction,
+                        const Opm::WellCompletion::DirectionEnum direction,
                         const double ntg);
 
 template <int dim, class C2F, class FC>
