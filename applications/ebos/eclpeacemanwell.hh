@@ -1137,7 +1137,7 @@ protected:
         Scalar depth = dofVars.depth;
 
         // gravity constant
-        Scalar g = 9.81;
+        Scalar g = simulator_.problem().gravity()[dimWorld - 1];
 
         typename FluidSystem::ParameterCache paramCache;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
