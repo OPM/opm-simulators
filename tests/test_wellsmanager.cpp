@@ -41,7 +41,7 @@
 void wells_static_check(const Wells* wells) {
     BOOST_CHECK_EQUAL(2 , wells->number_of_wells);
     BOOST_CHECK_EQUAL(3 , wells->number_of_phases);
-    
+
     BOOST_CHECK_EQUAL("INJ1" , wells->name[0]);
     BOOST_CHECK_EQUAL("PROD1" , wells->name[1]);
 
@@ -49,11 +49,11 @@ void wells_static_check(const Wells* wells) {
     BOOST_CHECK_EQUAL(0 , wells->well_connpos[0]);
     BOOST_CHECK_EQUAL(1 , wells->well_connpos[1]);
     BOOST_CHECK_EQUAL(2 , wells->well_connpos[2]);
-    
+
     /* Connection factor */
     BOOST_CHECK_CLOSE(1.2279166666666664e-12 , wells->WI[0] , 0.001);
     BOOST_CHECK_CLOSE(1.2279166666666664e-12 , wells->WI[1] , 0.001);
-    
+
     /* Completed cells */
     BOOST_CHECK_EQUAL(0 , wells->well_cells[0]);
     BOOST_CHECK_EQUAL(9 + 2*10 + 2*10*10 , wells->well_cells[1]);
@@ -84,7 +84,7 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
 
         // Which control is active
         BOOST_CHECK_EQUAL( 0 , well_controls_get_current(ctrls0) );
-        
+
         // The phase distribution in the active target
         {
              const double * distr = well_controls_iget_distr( ctrls0 , 0 );
@@ -93,7 +93,7 @@ void check_controls_epoch0( struct WellControls ** ctrls) {
              BOOST_CHECK_EQUAL( 1 , distr[2] );  // Gas
         }
     }
-    
+
     // The producer
     {
         const struct WellControls * ctrls1 = ctrls[1];
@@ -146,7 +146,7 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
             BOOST_CHECK_EQUAL( 0 , distr[2] );  // Gas
         }
     }
-    
+
     // The producer
     {
         const struct WellControls * ctrls1 = ctrls[1];
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
         wells_static_check( wellsManager.c_wells() );
         check_controls_epoch1( wellsManager.c_wells()->ctrls );
     }
-    
+
 
     {
         Opm::WellsManager wellsManager(eclipseState, 3, *gridManager.c_grid(), NULL);
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
         check_controls_epoch3( wellsManager.c_wells()->ctrls );
     }
-    
+
 }
 
 

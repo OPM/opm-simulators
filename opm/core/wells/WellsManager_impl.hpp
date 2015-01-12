@@ -102,9 +102,9 @@ namespace Opm
 {
 template<class C2F, class CC, class FC, class NTG>
 void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
-                                        const C2F& c2f, 
+                                        const C2F& c2f,
                                         const int* cart_dims,
-                                        FC begin_face_centroids, 
+                                        FC begin_face_centroids,
                                         CC begin_cell_centroids,
                                         int dimensions,
                                         std::vector<std::string>& well_names,
