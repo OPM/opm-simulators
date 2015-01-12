@@ -1139,7 +1139,6 @@ protected:
         // gravity constant
         Scalar g = simulator_.problem().gravity()[dimWorld - 1];
 
-        typename FluidSystem::ParameterCache paramCache;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // well model due to Peaceman; see Chen et al., p. 449
 
@@ -1147,11 +1146,10 @@ protected:
             Scalar p = dofVars.pressure[phaseIdx];
 
             // density and mobility of fluid phase
-            Scalar rho;
+            Scalar rho = dofVars.density[phaseIdx];
             Scalar lambda;
             if (wellType_ == Producer) {
                 //assert(p < pbh);
-                rho = dofVars.density[phaseIdx];
                 lambda = dofVars.mobility[phaseIdx];
             }
             else if (wellType_ == Injector) {
@@ -1159,20 +1157,13 @@ protected:
                 if (phaseIdx != injectedPhaseIdx_)
                     continue;
 
-                injectionFluidState_.setPressure(phaseIdx, p);
-
-                typename FluidSystem::ParameterCache paramCache;
-                paramCache.updateAll(injectionFluidState_);
-
-                rho = FluidSystem::density(injectionFluidState_, paramCache, phaseIdx);
                 // use the total mobility, i.e. the sum of all phase mobilities at the
                 // injector cell. this seems a bit weird: at the wall of the borehole,
                 // there should only be injected phase present, so its mobility should be
                 // 1/viscosity...
                 lambda = 0.0;
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                     lambda += dofVars.mobility[phaseIdx];
-                }
             }
             else
                 OPM_THROW(std::logic_error,
