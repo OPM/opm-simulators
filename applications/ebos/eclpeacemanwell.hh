@@ -127,6 +127,11 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
         // retrieve the solution dependent quantities from the IntensiveQuantities of the
         // model
+        void updateBeginTimestep(const IntensiveQuantities& intQuants)
+        { }
+
+        // retrieve the solution dependent quantities from the IntensiveQuantities of the
+        // model
         void update(const IntensiveQuantities& intQuants)
         {
             permeability = intQuants.intrinsicPermeability();
@@ -882,6 +887,9 @@ public:
             maximumReservoirRate_ = 1e100;
         else if (controlMode_ == ControlMode::VolumetricReservoirRate)
             maximumSurfaceRate_ = 1e100;
+
+        // reset the iteration index
+        iterationIdx_ = 0;
     }
 
     /*!
@@ -913,17 +921,11 @@ public:
 
             DofVariables &dofVars = dofVariables_.at(globalDofIdx);
             const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
-            const auto& fs = intQuants.fluidState();
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                dofVars.pressure[phaseIdx] = fs.pressure(phaseIdx);
-                dofVars.density[phaseIdx] = fs.density(phaseIdx);
-                dofVars.mobility[phaseIdx] = intQuants.mobility(phaseIdx);
-            }
 
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
-                dofVars.oilMassFraction[compIdx] = fs.massFraction(oilPhaseIdx, compIdx);
-                dofVars.gasMassFraction[compIdx] = fs.massFraction(gasPhaseIdx, compIdx);
-            }
+            if (iterationIdx_ == 0)
+                dofVars.updateBeginTimestep(intQuants);
+
+            dofVars.update(intQuants);
         }
     }
 
@@ -956,7 +958,7 @@ public:
      * \brief Called by the simulator after each Newton-Raphson iteration.
      */
     void endIteration()
-    { }
+    { ++ iterationIdx_; }
 
     /*!
      * \brief Called by the simulator after each time step.
@@ -1019,10 +1021,8 @@ public:
 
         tmp.update(context.intensiveQuantities(dofIdx, timeIdx));
 
-        Scalar bhp = actualBottomHolePressure_;
-
         std::array<Scalar, numPhases> volumetricRates;
-        computeVolumetricDofRates_(volumetricRates, bhp, tmp);
+        computeVolumetricDofRates_(volumetricRates, actualBottomHolePressure_, tmp);
 
         // convert to mass rates
         RateVector modelRate;
@@ -1481,6 +1481,10 @@ protected:
     std::string name_;
 
     std::unordered_map<int, DofVariables> dofVariables_;
+
+    // the number of times beginIteration*() was called for the current time step
+    int iterationIdx_;
+
 
     // the sum of the total volumes of all the degrees of freedoms that interact with the well
     Scalar wellTotalVolume_;
