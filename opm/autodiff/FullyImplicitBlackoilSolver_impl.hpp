@@ -613,8 +613,12 @@ namespace {
             const int po = pu.phase_pos[ Oil ];
             const int pg = pu.phase_pos[ Gas ];
 
+            // Temporary copy to avoid contribution of dissolved gas in the vaporized oil
+            // when both dissolved gas and vaporized oil are present.
+            const ADB accum_gas_copy =rq_[pg].accum[aix];
+
             rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
-            rq_[po].accum[aix] += state.rv * rq_[pg].accum[aix];
+            rq_[po].accum[aix] += state.rv * accum_gas_copy;
             //DUMP(rq_[pg].accum[aix]);
         }
     }
