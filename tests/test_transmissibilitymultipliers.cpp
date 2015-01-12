@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
                                                                     origEclipseState,
                                                                     *origGrid);
 
-    Opm::DerivedGeology origGeology(*origGrid, *origProps, origEclipseState);
+    Opm::DerivedGeology origGeology(*origGrid, *origProps, origEclipseState, false);
     /////
 
     /////
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     auto multProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multDeck, multEclipseState, *multGrid);
 
-    Opm::DerivedGeology multGeology(*multGrid, *multProps, multEclipseState);
+    Opm::DerivedGeology multGeology(*multGrid, *multProps, multEclipseState, false);
     /////
 
     /////
@@ -281,7 +281,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     auto multMinusProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multMinusDeck, multMinusEclipseState, *multMinusGrid);
 
-    Opm::DerivedGeology multMinusGeology(*multMinusGrid, *multMinusProps, multMinusEclipseState);
+    Opm::DerivedGeology multMinusGeology(*multMinusGrid, *multMinusProps, multMinusEclipseState,
+                                         false);
     /////
 
     /////
