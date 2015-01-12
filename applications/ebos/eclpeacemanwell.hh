@@ -1178,9 +1178,9 @@ protected:
             Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
-            Scalar ph = pbh + rho*g*(refDepth_ - depth);
+            Scalar ph = pbh + rho*g*(depth - refDepth_);
 
-            // volumetric flux of the phase from the well to the reservoir
+            // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
 
             Valgrind::CheckDefined(g);
