@@ -936,7 +936,7 @@ private:
             // mass fractions.
             Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
             Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-            Scalar XoGReal = RsReal*rhogRef / (RsReal*rhogRef + rhooRef);
+            Scalar XoGReal = RsReal/(RsReal + rhooRef/rhogRef);
 
             // convert mass to mole fractions
             Scalar MG = FluidSystem::molarMass(gasCompIdx);
