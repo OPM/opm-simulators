@@ -176,7 +176,8 @@ public:
             assert(oilMu.numX() == outerIdx + 1);
 
             const auto underSaturatedTable = pvtoTable.getInnerTable(outerIdx);
-            for (int innerIdx = underSaturatedTable->numRows() - 1; innerIdx >= 0; -- innerIdx) {
+            int numRows = underSaturatedTable->numRows();
+            for (int innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
                 Scalar po = underSaturatedTable->getPressureColumn()[innerIdx];
                 Scalar Bo = underSaturatedTable->getOilFormationFactorColumn()[innerIdx];
                 Scalar muo = underSaturatedTable->getOilViscosityColumn()[innerIdx];
@@ -715,9 +716,9 @@ public:
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
+            Scalar XoG = fluidState.massFraction(oilPhaseIdx, gasCompIdx);
             Scalar Rs =
-                fluidState.massFraction(oilPhaseIdx, gasCompIdx)
-                / fluidState.massFraction(oilPhaseIdx, oilCompIdx)
+                XoG/(1 - XoG)
                 * referenceDensity(oilPhaseIdx)
                 / referenceDensity(gasPhaseIdx);
 
@@ -915,7 +916,7 @@ public:
      */
     static Scalar oilFormationVolumeFactor(Scalar oilPressure, Scalar XoG, int regionIdx=0)
     {
-        Scalar Rs = XoG/(1 - XoG)*referenceDensity(oilPhaseIdx)/referenceDensity(gasPhaseIdx);
+        Scalar Rs = XoG/(1-XoG)*referenceDensity(oilPhaseIdx)/referenceDensity(gasPhaseIdx);
 
         // ATTENTION: Rs is represented by the _first_ axis!
         return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
@@ -946,7 +947,7 @@ public:
         // volume factor. WTF? While I have no idea why this should be there, it is
         // analogous to what's done in opm-autodiff which seems to be in agreement what
         // the commercial simulator does...
-        Scalar Rs = XoG*rhooRef / ((1-XoG)*rhogRef);
+        Scalar Rs = XoG/(1 - XoG) * rhooRef/rhogRef;
         rhoo += rhogRef*Rs/Bo;
 
         return rhoo;
