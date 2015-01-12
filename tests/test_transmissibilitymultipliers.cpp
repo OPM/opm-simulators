@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     auto ntgProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(ntgDeck, ntgEclipseState, *ntgGrid);
 
-    Opm::DerivedGeology ntgGeology(*ntgGrid, *ntgProps, ntgEclipseState);
+    Opm::DerivedGeology ntgGeology(*ntgGrid, *ntgProps, ntgEclipseState, false);
     /////
 
     // compare the transmissibilities (note that for this we assume that the multipliers
