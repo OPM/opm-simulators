@@ -386,6 +386,12 @@ faceCells(const Dune::CpGrid& grid);
 const double* faceNormal(const Dune::CpGrid& grid, int face_index);
 
 double faceArea(const Dune::CpGrid& grid, int face_index);
+
+/// \brief Get Eclipse Cartesian tag of a face
+/// \param grid The grid that the face is part of.
+/// \param face_index The index of the face in the grid.
+/// \return 0, 1, 2, 3, 4, 5 for I-, I+, J-, J+, K-, K+
+int faceTag(const Dune::CpGrid& grid, int face_index);
 } // end namespace UgGridHelperHelpers
 
 namespace AutoDiffGrid
