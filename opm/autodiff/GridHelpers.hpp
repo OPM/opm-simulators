@@ -359,8 +359,8 @@ beginCellCentroids(const Dune::CpGrid& grid);
 /// \brief grid The grid.
 /// \brief cell_index The index of the specific cell.
 /// \breif coordinate The coordinate index.
-double cellCentroidCoordinate(const UnstructuredGrid& grid, int cell_index,
-                                 int coordinate);
+double cellCentroidCoordinate(const Dune::CpGrid& grid, int cell_index,
+                              int coordinate);
 
 template<>
 struct FaceCentroidTraits<Dune::CpGrid>

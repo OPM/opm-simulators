@@ -135,7 +135,7 @@ namespace Opm
 
             // Compute z coordinates
             for (int c = 0; c<numCells; ++c){
-                z_[c] = AutoDiffGrid::cellCentroid(grid, c)[2];
+                z_[c] = Opm::UgGridHelpers::cellCentroidCoordinate(grid, c, 2);
             }
 
 
