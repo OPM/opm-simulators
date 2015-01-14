@@ -105,14 +105,6 @@ namespace Opm
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
 
-#ifdef HAVE_DUNE_CORNERPOINT
-            if (std::is_same<Grid, Dune::CpGrid>::value) {
-                if (use_local_perm) {
-                    OPM_THROW(std::runtime_error, "Local coordinate permeability not supported for CpGrid");
-                }
-            }
-#endif
-
             if (! use_local_perm) {
                 tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             }
