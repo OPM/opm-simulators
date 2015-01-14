@@ -47,10 +47,13 @@ namespace Opm
             auto eqlopts = deck->getKeyword("EQLOPTS");
             auto rec = eqlopts->getRecord(0);
             for (size_t i = 0; i < rec->size(); ++i) {
-                if (rec->getItem(i)->getString(0) == "THPRES") {
-                    has_thpres_option = true;
-                } else if (rec->getItem(i)->getString(0) == "IRREVERS") {
-                    OPM_THROW(std::runtime_error, "Cannot use IRREVERS version of THPRES option, not implemented.");
+                auto item = rec->getItem(i);
+                if (item->hasValue(0)) {
+                    if (item->getString(0) == "THPRES") {
+                        has_thpres_option = true;
+                    } else if (item->getString(0) == "IRREVERS") {
+                        OPM_THROW(std::runtime_error, "Cannot use IRREVERS version of THPRES option, not implemented.");
+                    }
                 }
             }
         }
@@ -77,14 +80,23 @@ namespace Opm
             const int num_records = thpres->size();
             for (int rec_ix = 0; rec_ix < num_records; ++rec_ix) {
                 auto rec = thpres->getRecord(rec_ix);
-                const int r1 = rec->getItem("REGION1")->getInt(0) - 1;
-                const int r2 = rec->getItem("REGION2")->getInt(0) - 1;
-                const double p = rec->getItem("THPRES")->getSIDouble(0);
-                if (r1 >= max_eqlnum || r2 >= max_eqlnum) {
-                    OPM_THROW(std::runtime_error, "Too high region numbers in THPRES keyword.");
+                auto region1Item = rec->getItem("REGION1");
+                auto region2Item = rec->getItem("REGION2");
+                auto thpressItem = rec->getItem("THPRES");
+
+                if (region1Item->hasValue(0) && region2Item->hasValue(0) && thpressItem->hasValue(0)) {
+                    const int r1 = region1Item->getInt(0) - 1;
+                    const int r2 = region2Item->getInt(0) - 1;
+                    const double p = thpressItem->getSIDouble(0);
+
+                    if (r1 >= max_eqlnum || r2 >= max_eqlnum) {
+                        OPM_THROW(std::runtime_error, "Too high region numbers in THPRES keyword.");
+                    }
+                    thp_table[r1 + max_eqlnum*r2] = p;
+                    thp_table[r2 + max_eqlnum*r1] = p;
+                } else {
+                    OPM_THROW(std::runtime_error, "Missing data for use of the THPRES keyword.");
                 }
-                thp_table[r1 + max_eqlnum*r2] = p;
-                thp_table[r2 + max_eqlnum*r1] = p;
             }
 
             // Set values for each face.
