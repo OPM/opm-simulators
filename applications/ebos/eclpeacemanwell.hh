@@ -1410,7 +1410,7 @@ protected:
             computeVolumetricDofRates_(resvRates, bhp, *dofVars);
 
             std::array<Scalar, numPhases> surfaceRates;
-            computeSurfaceRates_(surfaceRates, resvRates, dofVarsIt->second);
+            computeSurfaceRates_(surfaceRates, resvRates, *dofVars);
 
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 totalSurfaceRates[phaseIdx] += surfaceRates[phaseIdx];
