@@ -388,7 +388,7 @@ public:
         }
 
         // effect of changing the well's bottom hole pressure on the well equation
-        Scalar eps = std::min(1e8, std::max(1e6, targetBottomHolePressure_))*1e-8;
+        Scalar eps = std::min(1e7, std::max(1e6, targetBottomHolePressure_))*1e-8;
         Scalar wellResidStar = wellResidual_(actualBottomHolePressure_ + eps);
         diagBlock[0][0] = (wellResidStar - wellResid)/eps;
     }
