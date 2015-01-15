@@ -100,7 +100,7 @@ namespace Opm
     double AdaptiveSimulatorTimer::stepLengthTaken() const
     {
         assert( ! steps_.empty() );
-        return *(steps_.rbegin());
+        return steps_.back();
     }
 
 
