@@ -941,7 +941,7 @@ public:
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
         // retrieve the bottom hole pressure from the global system of equations
-        actualBottomHolePressure_ = sol[wellGlobalDof][0];
+        actualBottomHolePressure_ = dofVariables_.begin()->second.pressure[0];
         actualBottomHolePressure_ = computeRateEquivalentBhp_();
 
         sol[wellGlobalDof][0] = actualBottomHolePressure_;
