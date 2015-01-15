@@ -793,9 +793,9 @@ public:
         // 30 kPa to ease interpreting the results.)
         const Scalar pvWater = 30e3;
         if (compIdx == oilCompIdx)
-            return 1e3*pvWater / pressure;
-        else if (compIdx == gasCompIdx)
             return 1e6*pvWater / pressure;
+        else if (compIdx == gasCompIdx)
+            return 1.01e6*pvWater / pressure;
 
         return pvWater / pressure;
     }
@@ -808,7 +808,9 @@ public:
      */
     static Scalar fugCoefficientInGas(int compIdx, Scalar pressure, int regionIdx=0)
     {
-        // assume an ideal gas
+        // make the gas component more affine to the gas phase than the other components
+        if (compIdx == gasCompIdx)
+            return 1e-3;
         return 1.0;
     }
 
