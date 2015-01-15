@@ -438,24 +438,29 @@ public:
 private:
     int findSegmentIndex_(Scalar x) const
     {
-        int n = xValues_.size() - 1;
-        assert(n >= 1); // we need at least two sampling points!
-        if (xValues_[n] < x)
-            return n - 1;
-        else if (xValues_[0] > x)
+        // we need at least two sampling points!
+        assert(xValues_.size() >= 2);
+
+        if (x <= xValues_[1])
             return 0;
+        else if (x >= xValues_[xValues_.size() - 2])
+            return xValues_.size() - 2;
+        else {
+            // bisection
+            int segmentIdx = 1;
+            int upperIdx = xValues_.size() - 2;
+            while (segmentIdx + 1 < upperIdx) {
+                int pivotIdx = (segmentIdx + upperIdx) / 2;
+                if (x < xValues_[pivotIdx])
+                    upperIdx = pivotIdx;
+                else
+                    segmentIdx = pivotIdx;
+            }
 
-        // bisection
-        int lowIdx = 0, highIdx = n;
-        while (lowIdx + 1 < highIdx) {
-            int curIdx = (lowIdx + highIdx)/2;
-            if (xValues_[curIdx] < x)
-                lowIdx = curIdx;
-            else
-                highIdx = curIdx;
+            assert(xValues_[segmentIdx] <= x);
+            assert(x <= xValues_[segmentIdx + 1]);
+            return segmentIdx;
         }
-
-        return lowIdx;
     }
 
     Scalar evalDerivative_(Scalar x, int segIdx) const

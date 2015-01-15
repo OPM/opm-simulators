@@ -140,22 +140,33 @@ public:
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
-        // interval halving
-        int lowerIdx = 0;
-        int upperIdx = xPos_.size() - 2;
-        int pivotIdx = (lowerIdx + upperIdx) / 2;
-        while (lowerIdx + 1 < upperIdx) {
-            if (x < xPos_[pivotIdx])
-                upperIdx = pivotIdx;
-            else
-                lowerIdx = pivotIdx;
+        // we need at least two sampling points!
+        assert(xPos_.size() >= 2);
 
-            pivotIdx = (lowerIdx + upperIdx) / 2;
+        int segmentIdx;
+        if (x <= xPos_[1])
+            segmentIdx = 0;
+        else if (x >= xPos_[xPos_.size() - 2])
+            segmentIdx = xPos_.size() - 2;
+        else {
+            // bisection
+            segmentIdx = 1;
+            int upperIdx = xPos_.size() - 2;
+            while (segmentIdx + 1 < upperIdx) {
+                int pivotIdx = (segmentIdx + upperIdx) / 2;
+                if (x < xPos_[pivotIdx])
+                    upperIdx = pivotIdx;
+                else
+                    segmentIdx = pivotIdx;
+            }
+
+            assert(xPos_[segmentIdx] <= x);
+            assert(x <= xPos_[segmentIdx + 1]);
         }
 
-        Scalar x1 = xPos_[lowerIdx];
-        Scalar x2 = xPos_[lowerIdx + 1];
-        return lowerIdx + (x - x1)/(x2 - x1);
+        Scalar x1 = xPos_[segmentIdx];
+        Scalar x2 = xPos_[segmentIdx + 1];
+        return segmentIdx + (x - x1)/(x2 - x1);
     }
 
     /*!
