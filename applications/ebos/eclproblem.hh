@@ -566,7 +566,8 @@ public:
     {
         int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
-        values.assignNaive(initialFluidStates_[globalDofIdx]);
+        const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
+        values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
     }
 
     /*!
