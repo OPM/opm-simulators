@@ -102,10 +102,12 @@ namespace Opm
         const parameter::ParameterGroup param_;
 
         // Parameters for output.
-        bool output_;
-        bool output_vtk_;
-        std::string output_dir_;
-        int output_interval_;
+        const bool output_;
+        const bool output_vtk_;
+        const bool output_matlab_;
+        const std::string output_dir_;
+        const int output_interval_;
+
         // Observed objects.
         const Grid& grid_;
         BlackoilPropsAdInterface& props_;
@@ -240,6 +242,11 @@ namespace Opm
                                                EclipseWriter& output_writer,
                                                const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
+          output_( param.getDefault("output", true) ),
+          output_vtk_( output_ ? param.getDefault("output_vtk",true) : false ),
+          output_matlab_( output_ ? param.getDefault("output_matlab", true) : false ),
+          output_dir_( output_ ? param.getDefault("output_dir", std::string("output")) : "" ),
+          output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
           grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -254,10 +261,7 @@ namespace Opm
           threshold_pressures_by_face_(threshold_pressures_by_face)
     {
         // For output.
-        output_ = param.getDefault("output", true);
         if (output_) {
-            output_vtk_ = param.getDefault("output_vtk", true);
-            output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
             boost::filesystem::path fpath(output_dir_);
             try {
@@ -266,7 +270,6 @@ namespace Opm
             catch (...) {
                 OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
             }
-            output_interval_ = param.getDefault("output_interval", 1);
         }
 
         // Misc init.
@@ -330,14 +333,17 @@ namespace Opm
                 if (output_vtk_) {
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                if (output_matlab_) {
+                    outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                    outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
+                }
             }
             if (output_) {
                 if (timer.currentStepNum() == 0) {
                     output_writer_.writeInit(timer);
                 }
-                output_writer_.writeTimeStep(timer, state, well_state.basicWellState());
+                if( ! adaptiveTimeStepping || timer.currentStepNum() == 0 )
+                    output_writer_.writeTimeStep(timer, state, well_state);
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -361,8 +367,7 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( solver, state, well_state,
-                        timer.simulationTimeElapsed(), timer.currentStepLength() );
+                adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
             }
             else {
                 // solve for complete report step
@@ -393,9 +398,13 @@ namespace Opm
             if (output_vtk_) {
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
-            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-            output_writer_.writeTimeStep(timer, state, prev_well_state.basicWellState());
+            if (output_matlab_) {
+                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+                outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
+            }
+            if( ! adaptiveTimeStepping )
+            //std::cout << "Write last step" << std::endl;
+                output_writer_.writeTimeStep(timer, state, prev_well_state);
         }
 
         // Stop timer and create timing report
