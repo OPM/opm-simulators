@@ -273,9 +273,6 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
     Opm::parameter::ParameterGroup param;
     Opm::ParserPtr parser(new Opm::Parser() );
 
-#warning TODO: there seems to be some index mess-up in DerivedGeology in the case of Dune::CpGrid
-#if 0
-
     /////
     // create a DerivedGeology object without any multipliers involved
     Opm::DeckConstPtr origDeck = parser->parseString(origDeckString);
@@ -334,9 +331,6 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     return checkTransmissibilityValues(*origGrid, origGeology, multGeology,
                                        multMinusGeology, ntgGeology);
-        }
-    }
-#endif // there seems to be some index mess-up in DerivedGeology in the case of Dune::CpGrid
 }
 
 #endif
