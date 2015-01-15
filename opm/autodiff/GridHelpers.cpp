@@ -196,6 +196,12 @@ double faceArea(const Dune::CpGrid& grid, int face_index)
 {
     return grid.faceArea(face_index);
 }
+
+int faceTag(const Dune::CpGrid& grid,
+            const Opm::AutoDiffGrid::Cell2FacesRow::iterator& cell_face)
+{
+    return grid.faceTag(cell_face);
+}
 } // end namespace UgGridHelpers
 
 namespace AutoDiffGrid
