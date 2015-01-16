@@ -191,12 +191,12 @@ namespace Opm {
         }
 
 
-        // store last small time step for next reportStep
-        last_timestep_ = substepTimer.suggestedAverage();
+        // store max of the small time step for next reportStep
+        last_timestep_ = substepTimer.maxStepLength();
         if( timestep_verbose_ )
         {
             substepTimer.report( std::cout );
-            std::cout << "Last suggested step size = " << unit::convert::to( last_timestep_, unit::day ) << " (days)" << std::endl;
+            std::cout << "Suggested next step size = " << unit::convert::to( last_timestep_, unit::day ) << " (days)" << std::endl;
         }
 
         if( ! std::isfinite( last_timestep_ ) ) { // check for NaN
