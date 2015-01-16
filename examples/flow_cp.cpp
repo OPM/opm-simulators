@@ -72,6 +72,9 @@
 
 #include <opm/core/utility/share_obj.hpp>
 
+#include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
+#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
+#include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
@@ -131,28 +134,44 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
+    bool output = param.getDefault("output", true);
+    std::string output_dir;
+    if (output) {
+        // Create output directory if needed.
+        output_dir =
+            param.getDefault("output_dir", std::string("output"));
+        boost::filesystem::path fpath(output_dir);
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+        }
+        // Write simulation parameters.
+        param.writeParam(output_dir + "/simulation.param");
+    }
 
-    Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::LoggerPtr logger(new Opm::Logger());
+    std::string logFile = output_dir + "/LOGFILE.txt";
+    Opm::ParserPtr parser(new Opm::Parser());
+    {
+        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
+        std::shared_ptr<Opm::CounterLog> counterLog = std::make_shared<Opm::CounterLog>(Opm::Log::DefaultMessageTypes);
+
+        Opm::OpmLog::addBackend( "STREAM" , streamLog );
+        Opm::OpmLog::addBackend( "COUNTER" , counterLog );
+    }
+
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        deck = parser->parseFile(deck_filename, logger);
-        checkDeck(deck, logger);
-        eclipseState.reset(new EclipseState(deck, logger));
+        deck = parser->parseFile(deck_filename);
+        Opm::checkDeck(deck, logger);
+        eclipseState.reset(new Opm::EclipseState(deck));
     }
     catch (const std::invalid_argument& e) {
-        if (logger->size() > 0) {
-            std::cerr << "Issues found while parsing the deck file:\n";
-            logger->printAll(std::cerr);
-        }
-        std::cerr << "error while parsing the deck file: " << e.what() << "\n";
+        std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;
+        std::cerr << "Exception caught: " << e.what() << std::endl;
         return EXIT_FAILURE;
-    }
-
-    if (logger->size() > 0) {
-        std::cerr << "Issues found while parsing the deck file:\n";
-        logger->printAll(std::cerr);
     }
 
     // Grid init
