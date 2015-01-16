@@ -51,8 +51,9 @@ namespace Opm {
         }
         else if ( control == "pid+iteration" )
         {
-            const int iterations = param.getDefault("timestep.control.targetiteration", int(25) );
-            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol ) );
+            const int iterations   = param.getDefault("timestep.control.targetiteration", int(25) );
+            const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(3.0) );
+            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth ) );
         }
         else
             OPM_THROW(std::runtime_error,"Unsupported time step control selected "<< control );
@@ -150,7 +151,7 @@ namespace Opm {
                 {
                     std::cout << std::endl
                               <<"Substep( " << substepTimer.currentStepNum()
-                                            << " ): Current time (days)         "  << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl
+                                            << " ): Current time (days)         " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl
                                   << "              Current stepsize est (days) " << unit::convert::to(dtEstimate, unit::day) << std::endl;
                 }
 

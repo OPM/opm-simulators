@@ -105,8 +105,6 @@ namespace Opm
         std::vector< double > steps_;
         double suggestedMax_;
         double suggestedAverage_;
-
-        double computeInitialTimeStep( const double lastDt ) const;
     };
 
 } // namespace Opm

@@ -36,7 +36,7 @@ namespace Opm
         , total_time_( start_time_ + timer.currentStepLength() )
         , report_step_( timer.reportStepNum() )
         , current_time_( start_time_ )
-        , dt_( computeInitialTimeStep( lastStepTaken ) )
+        , dt_( 0.0 )
         , current_step_( 0 )
         , steps_()
         , suggestedMax_( 0.0 )
@@ -44,6 +44,9 @@ namespace Opm
     {
         // reserve memory for sub steps
         steps_.reserve( 10 );
+
+        // set appropriate value for dt_
+        provideTimeStepEstimate( lastStepTaken );
     }
 
     AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
@@ -159,18 +162,6 @@ namespace Opm
     boost::posix_time::ptime AdaptiveSimulatorTimer::startDateTime() const
     {
         return start_date_time_;
-    }
-
-    double AdaptiveSimulatorTimer::
-    computeInitialTimeStep( const double lastDt ) const
-    {
-        const double maxTimeStep = total_time_ - start_time_;
-        const double fraction = (lastDt / maxTimeStep);
-        // when lastDt and maxTimeStep are close together, choose the max time step
-        if( fraction > 0.95 ) return       maxTimeStep;
-
-        // otherwise choose lastDt
-        return std::min( lastDt, maxTimeStep );
     }
 
 } // namespace Opm
