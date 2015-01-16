@@ -66,6 +66,24 @@ public:
     { return xPos_.back(); }
 
     /*!
+     * \brief Returns the value of the X coordinate of the sampling points.
+     */
+    Scalar xAt(int i) const
+    { return xPos_[i]; }
+
+    /*!
+     * \brief Returns the value of the Y coordinate of a sampling point.
+     */
+    Scalar yAt(int i, int j) const
+    { return std::get<1>(samples_[i][j]); }
+
+    /*!
+     * \brief Returns the value of a sampling point.
+     */
+    Scalar valueAt(int i, int j) const
+    { return std::get<2>(samples_[i][j]); }
+
+    /*!
      * \brief Returns the number of sampling points in X direction.
      */
     int numX() const
@@ -235,25 +253,9 @@ public:
         beta2 -= j2;
 
         // bi-linear interpolation
-        Scalar s1 = getSamplePoint(i, j1)*(1.0 - beta1) + getSamplePoint(i, j1 + 1)*beta1;
-        Scalar s2 = getSamplePoint(i + 1, j2)*(1.0 - beta2) + getSamplePoint(i + 1, j2 + 1)*beta2;
+        Scalar s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
+        Scalar s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
         return s1*(1.0 - alpha) + s2*alpha;
-    }
-
-    /*!
-     * \brief Get the value of the sample point which is at the
-     *         intersection of the \f$i\f$-th interval of the x-Axis
-     *         and the \f$j\f$-th of the y-Axis.
-     */
-    Scalar getSamplePoint(int i, int j) const
-    {
-        assert(0 <= i && i < numX());
-
-        const auto &colSamples = samples_[i];
-
-        assert(0 <= j && size_t(j) < colSamples.size());
-
-        return std::get<2>(colSamples[j]);
     }
 
     /*!

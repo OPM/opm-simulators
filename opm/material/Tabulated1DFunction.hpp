@@ -206,6 +206,18 @@ public:
     { return xValues_[numSamples() - 1]; }
 
     /*!
+     * \brief Return the x value of the a sample point with a given index.
+     */
+    Scalar xAt(int i) const
+    { return xValues_[i]; }
+
+    /*!
+     * \brief Return the value of the a sample point with a given index.
+     */
+    Scalar valueAt(int i) const
+    { return yValues_[i]; }
+
+    /*!
      * \brief Return true iff the given x is in range [x1, xn].
      */
     bool applies(Scalar x) const
