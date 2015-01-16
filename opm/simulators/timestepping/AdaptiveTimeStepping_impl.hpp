@@ -111,6 +111,12 @@ namespace Opm {
             // initialize time step control in case current state is needed later
             timeStepControl_->initialize( state );
 
+            if( timestep_verbose_ )
+            {
+                std::cout <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
+                          << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
+            }
+
             int linearIterations = -1;
             try {
                 // (linearIterations < 0 means on convergence in solver)
@@ -149,10 +155,8 @@ namespace Opm {
 
                 if( timestep_verbose_ )
                 {
-                    std::cout << std::endl
-                              <<"Substep( " << substepTimer.currentStepNum()
-                                            << " ): Current time (days)         " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << std::endl
-                                  << "              Current stepsize est (days) " << unit::convert::to(dtEstimate, unit::day) << std::endl;
+                    std::cout << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
+                                             << " ) finished at time " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << " (days)." << std::endl << std::endl;
                 }
 
                 // write data if outputWriter was provided
