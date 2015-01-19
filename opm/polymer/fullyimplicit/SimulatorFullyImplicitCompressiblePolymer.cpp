@@ -306,7 +306,7 @@ namespace Opm
                 if (timer.currentStepNum() == 0) {
                     output_writer_.writeInit(timer);
                 }
-                output_writer_.writeTimeStep(timer, state.blackoilState(), well_state.basicWellState());
+                output_writer_.writeTimeStep(timer, state.blackoilState(), well_state);
             }
             // Run solver.
             solver_timer.start();
@@ -371,7 +371,7 @@ namespace Opm
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
+            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state);
         }
 
         total_timer.stop();
