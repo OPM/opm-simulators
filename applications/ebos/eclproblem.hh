@@ -588,6 +588,8 @@ public:
     {
         int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
+        values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
+
         const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
     }
