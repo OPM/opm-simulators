@@ -78,7 +78,12 @@ namespace Opm
         // ------ Canonical named indices for each phase ------
 
         /// Canonical named indices for each phase.
-        enum PhaseIndex { Water = 0, Oil = 1, Gas = 2 };
+        enum PhaseIndex { Water = BlackoilPhases::Aqua, Oil = BlackoilPhases::Liquid,
+                          Gas = BlackoilPhases::Vapour,
+                          Aqua = BlackoilPhases::Aqua,
+                          Liquid = BlackoilPhases::Liquid,
+                          Vapour = BlackoilPhases::Vapour,
+                          MaxNumPhases = BlackoilPhases::MaxNumPhases};
 
         // ------ Density ------
 
