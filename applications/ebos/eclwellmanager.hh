@@ -106,7 +106,7 @@ public:
      * \brief This should be called the problem before each simulation
      *        episode to adapt the well controls.
      */
-    void beginEpisode(Opm::EclipseStateConstPtr eclState)
+    void beginEpisode(Opm::EclipseStateConstPtr eclState, bool wasRestarted=false)
     {
         int episodeIdx = simulator_.episodeIndex();
 
@@ -114,8 +114,9 @@ public:
         WellCompletionsMap wellCompMap;
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
-        if (wellTopologyChanged_(eclState, episodeIdx))
+        if (wasRestarted || wellTopologyChanged_(eclState, episodeIdx)) {
             updateWellTopology_(episodeIdx, wellCompMap);
+        }
 
         // set those parameters of the wells which do not change the topology of the
         // linearized system of equations
@@ -445,9 +446,7 @@ public:
     template <class Restarter>
     void serialize(Restarter &res)
     {
-        // iterate over all wells and serialize them individually
-        for (int wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
-            wells_[wellIdx]->serialize(res);
+        /* do nothing: Everything which we need here is provided by the deck... */
     }
 
     /*!
@@ -459,15 +458,8 @@ public:
     template <class Restarter>
     void deserialize(Restarter &res)
     {
-        // iterate over all wells and deserialize them individually
-        for (int wellIdx = 0; wellIdx < wells_.size(); ++wellIdx) {
-            std::shared_ptr<Well> well(new Well(simulator_));
-
-            well->deserialize(res);
-
-            wells_.push_back(well);
-            wellNameToIndex_[well->name()] = wells_.size() - 1;
-        }
+        // initialize the wells for the current episode
+        beginEpisode(simulator_.gridManager().eclState(), /*wasRestarted=*/true);
     }
 
 protected:

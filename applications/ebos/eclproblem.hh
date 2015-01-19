@@ -293,6 +293,28 @@ public:
     }
 
     /*!
+     * \brief This method restores the complete state of the well
+     *        from disk.
+     *
+     * It is the inverse of the serialize() method.
+     *
+     * \tparam Restarter The deserializer type
+     *
+     * \param res The deserializer object
+     */
+    template <class Restarter>
+    void deserialize(Restarter &res)
+    { wellManager_.deserialize(res); }
+
+    /*!
+     * \brief This method writes the complete state of the well
+     *        to the harddisk.
+     */
+    template <class Restarter>
+    void serialize(Restarter &res)
+    { wellManager_.serialize(res); }
+
+    /*!
      * \brief Called by the simulator before an episode begins.
      */
     void beginEpisode()
@@ -362,7 +384,7 @@ public:
      * For the ECL simulator we only write at the end of
      * episodes/report steps...
      */
-    bool shouldWriteOutput()
+    bool shouldWriteOutput() const
     {
         if (this->simulator().timeStepIndex() < 0)
             // always write the initial solution
@@ -799,9 +821,9 @@ private:
             Opm::DeckRecordConstPtr densityRecord =
                 deck->getKeyword("DENSITY")->getRecord(regionIdx);
             FluidSystem::setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
-                                             densityRecord->getItem("WATER")->getSIDouble(0),
-                                             densityRecord->getItem("GAS")->getSIDouble(0),
-                                             regionIdx);
+                                               densityRecord->getItem("WATER")->getSIDouble(0),
+                                               densityRecord->getItem("GAS")->getSIDouble(0),
+                                               regionIdx);
 
             // so far, we require the presence of the PVTO, PVTW and PVDG
             // keywords...

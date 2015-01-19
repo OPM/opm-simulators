@@ -1034,63 +1034,6 @@ public:
         Valgrind::CheckDefined(q);
     }
 
-    /*!
-     * \brief This method writes the complete state of the well
-     *        to the harddisk.
-     */
-    template <class Restarter>
-    void serialize(Restarter &res)
-    {
-        res.serializeSectionBegin("PeacemanWell");
-
-        res.serializeStream()
-            << thpLimit_ << " "
-            << bhpLimit_ << " "
-            << controlMode_ << " "
-            << wellType_ << " "
-            << maximumSurfaceRate_ << " "
-            << maximumReservoirRate_ << " "
-            << wellStatus_ << " "
-            << injectedPhaseIdx_ << " ";
-
-        // fluid state
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-            res.serializeStream()
-                << volumetricWeight_[phaseIdx] << " ";
-        res.serializeSectionEnd();
-    }
-
-    /*!
-     * \brief This method restores the complete state of the well
-     *        from disk.
-     *
-     * It is the inverse of the serialize() method.
-     *
-     * \tparam Restarter The deserializer type
-     *
-     * \param res The deserializer object
-     */
-    template <class Restarter>
-    void deserialize(Restarter &res)
-    {
-        res.deserializeSectionBegin("PeacemanWell");
-        res.deserializeStream()
-            >> thpLimit_
-            >> bhpLimit_
-            >> controlMode_
-            >> wellType_
-            >> maximumSurfaceRate_
-            >> maximumReservoirRate_
-            >> wellStatus_
-            >> injectedPhaseIdx_;
-
-        // fluid state
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-            res.serializeStream()
-                >> volumetricWeight_[phaseIdx];
-        res.deserializeSectionEnd();
-    }
-
 protected:
     // compute the connection transmissibility factor based on the effective permeability
     // of a connection, the radius of the borehole and the skin factor.
