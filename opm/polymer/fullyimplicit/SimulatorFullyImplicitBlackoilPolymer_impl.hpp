@@ -357,7 +357,7 @@ namespace Opm
                 if (timer.currentStepNum() == 0) {
                     output_writer_.writeInit(timer);
                 }
-                output_writer_.writeTimeStep(timer, state.blackoilState(), well_state.basicWellState());
+                output_writer_.writeTimeStep(timer, state.blackoilState(), well_state);
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -399,7 +399,7 @@ namespace Opm
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state.basicWellState());
+            output_writer_.writeTimeStep(timer, state.blackoilState(), prev_well_state);
         } 
 
         // Stop timer and create timing report
