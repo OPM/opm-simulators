@@ -97,14 +97,15 @@ public:
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& entity = *elemIt;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            int elemIdx = elementMapper.index(elemIt);
+            int elemIdx = elementMapper.index( entity );
 #else
-            int elemIdx = elementMapper.map(elemIt);
+            int elemIdx = elementMapper.map( entity );
 #endif
 
             // get the geometry of the current element
-            const auto& geom = elemIt->geometry();
+            const auto& geom = entity.geometry();
 
             // compute the axis specific "centroids" used for the
             // transmissibilities
@@ -153,19 +154,25 @@ public:
         // compute the transmissibilities for all intersections
         elemIt = gridView.template begin</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            auto isIt = elemIt->ileafbegin();
-            const auto& isEndIt = elemIt->ileafend();
+            const auto& entity = *elemIt;
+            auto isIt = gridView.ibegin( entity );
+            const auto& isEndIt = gridView.iend( entity );
             for (; isIt != isEndIt; ++ isIt) {
+                // store intersection, this might be costly
+                const auto& intersection = *isIt;
+
                 // ignore boundary intersections for now (TODO?)
-                if (isIt->boundary())
+                if (intersection.boundary())
                     continue;
 
+                const auto& inside  = intersection.inside();
+                const auto& outside = intersection.outside();
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                int insideElemIdx = elementMapper.index(*isIt->inside());
-                int outsideElemIdx = elementMapper.index(*isIt->outside());
+                int insideElemIdx  = elementMapper.index( *inside );
+                int outsideElemIdx = elementMapper.index( *outside);
 #else
-                int insideElemIdx = elementMapper.map(*isIt->inside());
-                int outsideElemIdx = elementMapper.map(*isIt->outside());
+                int insideElemIdx  = elementMapper.map( *inside );
+                int outsideElemIdx = elementMapper.map( *outside);
 #endif
 
                 // we only need to calculate a face's transmissibility
@@ -175,25 +182,25 @@ public:
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
-                int insideFaceIdx = isIt->indexInInside();
-                int outsideFaceIdx = isIt->indexInOutside();
+                int insideFaceIdx  = intersection.indexInInside();
+                int outsideFaceIdx = intersection.indexInOutside();
 
                 Scalar halfTrans1;
                 Scalar halfTrans2;
 
                 computeHalfTrans_(halfTrans1,
-                                  *isIt,
+                                  intersection,
                                   insideFaceIdx,
-                                  distanceVector_(*isIt,
-                                                  isIt->indexInInside(),
+                                  distanceVector_(intersection,
+                                                  intersection.indexInInside(),
                                                   insideElemIdx,
                                                   axisCentroids),
                                   problem.intrinsicPermeability(insideElemIdx));
                 computeHalfTrans_(halfTrans2,
-                                  *isIt,
+                                  intersection,
                                   outsideFaceIdx,
-                                  distanceVector_(*isIt,
-                                                  isIt->indexInOutside(),
+                                  distanceVector_(intersection,
+                                                  intersection.indexInOutside(),
                                                   outsideElemIdx,
                                                   axisCentroids),
                                   problem.intrinsicPermeability(outsideElemIdx));

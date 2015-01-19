@@ -539,6 +539,7 @@ protected:
     void updateWellTopology_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
         auto& model = simulator_.model();
+        const auto& cartesianCellId = simulator_.gridManager().cartesianCellId();
 
         // first, remove all wells from the reservoir
         model.clearAuxiliaryModules();
@@ -548,20 +549,20 @@ protected:
             (*wellIt)->clear();
 
         // tell the active wells which DOFs they contain
-        const auto& grid = simulator_.gridManager().grid();
         const auto gridView = simulator_.gridManager().gridView();
         ElementContext elemCtx(simulator_);
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto elemEndIt = gridView.template end</*codim=*/0>();
         std::set<std::shared_ptr<Well> > wells;
         for (; elemIt != elemEndIt; ++elemIt) {
-            if (elemIt->partitionType() != Dune::InteriorEntity)
+            const auto& entity = *elemIt;
+            if (entity.partitionType() != Dune::InteriorEntity)
                 continue; // non-local entities need to be skipped
 
-            elemCtx.updateStencil(elemIt);
+            elemCtx.updateStencil( entity );
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = grid.globalCell()[globalDofIdx];
+                int cartesianDofIdx = cartesianCellId[globalDofIdx];
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip
@@ -626,21 +627,22 @@ protected:
     {
         // associate the well completions with grid cells and register them in the
         // Peaceman well object
-        const Grid& grid = simulator_.gridManager().grid();
         const GridView gridView = simulator_.gridManager().gridView();
+        const auto& cartesianCellId = simulator_.gridManager().cartesianCellId();
 
         ElementContext elemCtx(simulator_);
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto elemEndIt = gridView.template end</*codim=*/0>();
 
         for (; elemIt != elemEndIt; ++elemIt) {
-            if (elemIt->partitionType() != Dune::InteriorEntity)
+            const auto& entity = *elemIt;
+            if (entity.partitionType() != Dune::InteriorEntity)
                 continue; // non-local entities need to be skipped
 
-            elemCtx.updateStencil(elemIt);
+            elemCtx.updateStencil( entity );
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = grid.globalCell()[globalDofIdx];
+                int cartesianDofIdx = cartesianCellId[globalDofIdx];
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip

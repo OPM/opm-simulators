@@ -503,12 +503,12 @@ public:
         if (!deck->hasKeyword("PVTNUM"))
             return 0;
 
-        const auto &grid = this->simulator().gridManager().grid();
+        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
 
         // this is quite specific to the ECFV discretization. But so is everything in an
         // ECL deck, i.e., we don't need to care here...
         int compressedDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        int cartesianDofIdx = grid.globalCell()[compressedDofIdx];
+        int cartesianDofIdx = cartesianCellId[compressedDofIdx];
 
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
@@ -638,7 +638,7 @@ private:
     {
         auto deck = this->simulator().gridManager().deck();
         auto eclState = this->simulator().gridManager().eclState();
-        const auto &grid = this->simulator().gridManager().grid();
+        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
 
         size_t numDof = this->model().numGridDof();
 
@@ -663,7 +663,7 @@ private:
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                int cartesianElemIdx = cartesianCellId[dofIdx];
                 intrinsicPermeability_[dofIdx] = 0.0;
                 intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
                 intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
@@ -686,7 +686,7 @@ private:
                 eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                int cartesianElemIdx = cartesianCellId[dofIdx];
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
@@ -701,7 +701,7 @@ private:
                 eclState->getDoubleGridProperty("NTG")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                int cartesianElemIdx = cartesianCellId[dofIdx];
                 porosity_[dofIdx] *= ntgData[cartesianElemIdx];
             }
         }
@@ -712,7 +712,7 @@ private:
                 eclState->getDoubleGridProperty("MULTPV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                int cartesianElemIdx = cartesianCellId[dofIdx];
                 porosity_[dofIdx] *= multpvData[cartesianElemIdx];
             }
         }
@@ -776,7 +776,7 @@ private:
 
             materialParamTableIdx_.resize(numDof);
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = grid.globalCell()[dofIdx];
+                int cartesianElemIdx = cartesianCellId[dofIdx];
 
                 // make sure that all values are in the correct range
                 assert(1 <= satnumData[dofIdx]);
@@ -822,7 +822,7 @@ private:
     void readInitialCondition_()
     {
         const auto deck = this->simulator().gridManager().deck();
-        const auto &grid = this->simulator().gridManager().grid();
+        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
 
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
@@ -864,7 +864,7 @@ private:
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
-        const auto &cartSize = grid.logicalCartesianSize();
+        const auto &cartSize = this->simulator().gridManager().logicalCartesianSize();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
@@ -876,7 +876,7 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
 
-            size_t cartesianDofIdx = grid.globalCell()[dofIdx];
+            size_t cartesianDofIdx = cartesianCellId[dofIdx];
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
 
@@ -928,7 +928,7 @@ private:
 
             if (RsReal > RsSat) {
                 std::array<int, 3> ijk;
-                grid.getIJK(dofIdx, ijk);
+                // grid.getIJK(dofIdx, ijk);
                 std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
                           << " than the maximium\n"
                           << "         amount which can be dissolved in oil"
