@@ -142,17 +142,23 @@ namespace Opm
         for (int phase = 0; phase < np; ++phase) {
             eqs.push_back(residual.material_balance_eq[phase]);
         }
-        eqs.push_back(residual.well_flux_eq);
-        eqs.push_back(residual.well_eq);
 
-        // Eliminate the well-related unknowns, and corresponding equations.
+        // check if wells are present
+        const bool hasWells = residual.well_flux_eq.size() > 0 ;
         std::vector<ADB> elim_eqs;
-        elim_eqs.reserve(2);
-        elim_eqs.push_back(eqs[np]);
-        eqs = eliminateVariable(eqs, np); // Eliminate well flux unknowns.
-        elim_eqs.push_back(eqs[np]);
-        eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
-        assert(int(eqs.size()) == np);
+        if( hasWells )
+        {
+            eqs.push_back(residual.well_flux_eq);
+            eqs.push_back(residual.well_eq);
+
+            // Eliminate the well-related unknowns, and corresponding equations.
+            elim_eqs.reserve(2);
+            elim_eqs.push_back(eqs[np]);
+            eqs = eliminateVariable(eqs, np); // Eliminate well flux unknowns.
+            elim_eqs.push_back(eqs[np]);
+            eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
+            assert(int(eqs.size()) == np);
+        }
 
         // Scale material balance equations.
         const double matbalscale[3] = { 1.1169, 1.0031, 0.0031 }; // HACK hardcoded instead of computed.
@@ -219,10 +225,13 @@ namespace Opm
         // Copy solver output to dx.
         std::copy(x.begin(), x.end(), dx.data());
 
-        // Compute full solution using the eliminated equations.
-        // Recovery in inverse order of elimination.
-        dx = recoverVariable(elim_eqs[1], dx, np);
-        dx = recoverVariable(elim_eqs[0], dx, np);
+        if( hasWells )
+        {
+            // Compute full solution using the eliminated equations.
+            // Recovery in inverse order of elimination.
+            dx = recoverVariable(elim_eqs[1], dx, np);
+            dx = recoverVariable(elim_eqs[0], dx, np);
+        }
         return dx;
     }
 
