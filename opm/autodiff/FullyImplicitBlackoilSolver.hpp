@@ -20,6 +20,8 @@
 #ifndef OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
 
+#include <cassert>
+
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -198,7 +200,7 @@ namespace Opm {
         // return true if wells are available
         bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
         // return wells object
-        const Wells& wells () const { assert( wells_ ); return *wells_; }
+        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
 
         SolutionState
         constantState(const BlackoilState& x,
