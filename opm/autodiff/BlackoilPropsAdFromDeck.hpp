@@ -109,12 +109,6 @@ namespace Opm
         /// \return   Object describing the active phases.
         PhaseUsage phaseUsage() const;
 
-        // ------ Canonical named indices for each phase ------
-
-        /// Canonical named indices for each phase.
-        enum PhaseIndex { Water = 0, Oil = 1, Gas = 2 };
-
-
         // ------ Density ------
 
         /// Densities of stock components at surface conditions.

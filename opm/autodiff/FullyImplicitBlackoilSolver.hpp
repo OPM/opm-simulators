@@ -156,9 +156,11 @@ namespace Opm {
             M p2w;              // perf -> well (gather)
         };
 
-        enum { Water = BlackoilPropsAdInterface::Water,
-               Oil   = BlackoilPropsAdInterface::Oil  ,
-               Gas   = BlackoilPropsAdInterface::Gas  };
+        enum { Water        = BlackoilPropsAdInterface::Water,
+               Oil          = BlackoilPropsAdInterface::Oil  ,
+               Gas          = BlackoilPropsAdInterface::Gas  ,
+               MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases
+         };
 
         enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 

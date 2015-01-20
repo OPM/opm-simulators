@@ -41,9 +41,6 @@ namespace Opm
     typedef BlackoilPropsAdFromDeck::ADB ADB;
     typedef BlackoilPropsAdFromDeck::V V;
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
-    enum { Aqua = BlackoilPhases::Aqua,
-           Liquid = BlackoilPhases::Liquid,
-           Vapour = BlackoilPhases::Vapour };
 
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
