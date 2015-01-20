@@ -28,6 +28,8 @@
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
+#include <array>
+
 struct UnstructuredGrid;
 struct Wells;
 
@@ -350,6 +352,16 @@ namespace Opm {
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt, const int iteration);
+
+        /// Compute the reduction within the convergence check.
+        void
+        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
+                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
+                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
+                             std::array<double,MaxNumPhases>& B_avg,
+                             std::array<double,MaxNumPhases>& maxCoeff,
+                             std::array<double,MaxNumPhases>& R_sum,
+                             int nc) const;
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,

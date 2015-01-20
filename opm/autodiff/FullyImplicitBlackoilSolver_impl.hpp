@@ -1886,6 +1886,30 @@ namespace {
     }
 
     template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
+                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
+                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
+                                                         std::array<double,MaxNumPhases>& R_sum,
+                                                         std::array<double,MaxNumPhases>& maxCoeff,
+                                                         std::array<double,MaxNumPhases>& B_avg,
+                                                         int nc) const
+    {
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        // Do the global reductions
+        for(int idx=0; idx<MaxNumPhases; ++idx)
+        {
+            if (active_[idx]) {
+                B_avg[pu.phase_pos[idx]] = B.sum()/nc;
+                maxCoeff[pu.phase_pos[idx]]=tempV.col(pu.phase_pos[idx]).maxCoeff();
+                R_sum[pu.phase_pos[idx]] = R.col(pu.phase_pos[idx]).sum();
+            }else{
+                R_sum[pu.phase_pos[idx]] = B_avg[pu.phase_pos[idx]] = maxCoeff[pu.phase_pos[idx]] =0.;
+            }
+        }
+    }
+
+    template<class T>
     bool
     FullyImplicitBlackoilSolver<T>::getConvergence(const double dt, const int iteration)
     {
@@ -1900,11 +1924,11 @@ namespace {
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        double CNV[MaxNumPhases] = {0., 0., 0.};
-        double R_sum[MaxNumPhases] = {0., 0., 0.};
-        double B_avg[MaxNumPhases] = {0., 0., 0.};
-        double maxCoeff[MaxNumPhases] = {0., 0., 0.};
-        double mass_balance_residual[MaxNumPhases] = {0., 0., 0.};
+        std::array<double,MaxNumPhases> CNV                   = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B;
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R;
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV;
@@ -1919,17 +1943,8 @@ namespace {
                 tempV.col(pu.phase_pos[idx]) = R.col(pu.phase_pos[idx]).abs()/pv;
             }
         }
-        // Do the global reductions
-        for(int idx=0; idx<MaxNumPhases; ++idx)
-        {
-            if (active_[idx]) {
-                B_avg[pu.phase_pos[idx]] = B.sum()/nc;
-                maxCoeff[pu.phase_pos[idx]]=tempV.col(pu.phase_pos[idx]).maxCoeff();
-                R_sum[pu.phase_pos[idx]] = R.col(pu.phase_pos[idx]).sum();
-            }else{
-                R_sum[pu.phase_pos[idx]] = B_avg[pu.phase_pos[idx]] = 0.;
-            }
-        }
+
+        convergenceReduction(B, tempV, R, B_avg, maxCoeff, R_sum, nc);
 
         bool converged_MB = true;
         bool converged_CNV = true;
