@@ -536,8 +536,13 @@ public:
         // determine the size of the element
         dofVars.effectiveSize.fill(0.0);
 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+        // we assume all elements to be hexahedrons!
+        assert(context.element().subEntities(/*codim=*/dimWorld) == 8);
+#else
         // we assume all elements to be hexahedrons!
         assert(context.element().template count</*codim=*/dimWorld>() == 8);
+#endif
 
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
         const auto &refElem = Dune::ReferenceElements<Scalar, /*dim=*/3>::cube();
