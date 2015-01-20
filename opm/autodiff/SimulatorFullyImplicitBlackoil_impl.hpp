@@ -356,7 +356,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, *wells, solver_, has_disgas_, has_vapoil_);
+            FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
@@ -478,18 +478,20 @@ namespace Opm
         }
 
         inline std::vector<int>
-        resvProducers(const Wells&      wells,
+        resvProducers(const Wells*      wells,
                       const std::size_t step,
                       const WellMap&    wmap)
         {
             std::vector<int> resv_prod;
-
-            for (int w = 0, nw = wells.number_of_wells; w < nw; ++w) {
-                if (is_resv_prod(wells, w) ||
-                    ((wells.name[w] != 0) &&
-                     is_resv_prod(wmap, wells.name[w], step)))
-                {
-                    resv_prod.push_back(w);
+            if( wells )
+            {
+                for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
+                    if (is_resv_prod(*wells, w) ||
+                        ((wells->name[w] != 0) &&
+                         is_resv_prod(wmap, wells->name[w], step)))
+                    {
+                        resv_prod.push_back(w);
+                    }
                 }
             }
 
@@ -541,8 +543,7 @@ namespace Opm
         const std::vector<WellConstPtr>& w_ecl = eclipse_state_->getSchedule()->getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
-        const std::vector<int>& resv_prod =
-            SimFIBODetails::resvProducers(*wells, step, wmap);
+        const std::vector<int>& resv_prod = SimFIBODetails::resvProducers(wells, step, wmap);
 
         if (! resv_prod.empty()) {
             const PhaseUsage&                    pu = props_.phaseUsage();

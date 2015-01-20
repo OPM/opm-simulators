@@ -62,12 +62,14 @@ namespace Opm
                 return;
             }
 
+            const int nw = wells->number_of_wells;
+            if( nw == 0 ) return ;
+
             // We use the WellState::init() function to do bhp and well rates init.
             // The alternative would be to copy that function wholesale.
             BaseType :: init(wells, state);
 
             // Initialize perfphaserates_, which must be done here.
-            const int nw = wells->number_of_wells;
             const int np = wells->number_of_phases;
             const int nperf = wells->well_connpos[nw];
             perfphaserates_.resize(nperf * np, 0.0);
