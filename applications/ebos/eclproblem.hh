@@ -822,7 +822,8 @@ private:
     void readInitialCondition_()
     {
         const auto deck = this->simulator().gridManager().deck();
-        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
+        const auto &gridManager = this->simulator().gridManager();
+        const auto &cartesianCellId = gridManager.cartesianCellId();
 
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
@@ -928,7 +929,7 @@ private:
 
             if (RsReal > RsSat) {
                 std::array<int, 3> ijk;
-                // grid.getIJK(dofIdx, ijk);
+                gridManager.getIJK(dofIdx, ijk);
                 std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
                           << " than the maximium\n"
                           << "         amount which can be dissolved in oil"
