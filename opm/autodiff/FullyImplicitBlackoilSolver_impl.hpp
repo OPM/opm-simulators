@@ -1279,7 +1279,7 @@ namespace {
         double infinityNorm( const ADB& a )
         {
             if( a.value().size() > 0 ) {
-                return a.value().matrix().template lpNorm<Eigen::Infinity> ();
+                return a.value().matrix().lpNorm<Eigen::Infinity> ();
             }
             else { // this situation can occur when no wells are present
                 return 0.0;
