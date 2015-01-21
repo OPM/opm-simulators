@@ -58,7 +58,7 @@ namespace Opm
           wells_(wells),
           htrans_(grid.cell_facepos[ grid.number_of_cells ]),
           trans_ (grid.number_of_faces),
-          zeros_(grid.number_of_faces)
+          zeros_(grid.cell_facepos[ grid.number_of_cells ])
     {
         computeStaticData();
     }
