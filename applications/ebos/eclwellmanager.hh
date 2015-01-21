@@ -64,6 +64,8 @@ class EclWellManager
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
+    typedef typename GridView::template Codim<0>::Entity Element;
+
     typedef Ewoms::EclPeacemanWell<TypeTag> Well;
 
     typedef std::map<int, std::pair<const Opm::Completion*, std::shared_ptr<Well> > > WellCompletionsMap;
@@ -372,10 +374,11 @@ public:
         auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
         const auto &elemEndIt = simulator_.gridManager().gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            if (elemIt->partitionType() != Dune::InteriorEntity)
+            const Element& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
                 continue;
 
-            elemCtx.updateStencil(*elemIt);
+            elemCtx.updateStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
@@ -555,11 +558,11 @@ protected:
         const auto elemEndIt = gridView.template end</*codim=*/0>();
         std::set<std::shared_ptr<Well> > wells;
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& entity = *elemIt;
-            if (entity.partitionType() != Dune::InteriorEntity)
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
                 continue; // non-local entities need to be skipped
 
-            elemCtx.updateStencil( entity );
+            elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 int cartesianDofIdx = cartesianCellId[globalDofIdx];
@@ -635,11 +638,11 @@ protected:
         const auto elemEndIt = gridView.template end</*codim=*/0>();
 
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& entity = *elemIt;
-            if (entity.partitionType() != Dune::InteriorEntity)
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
                 continue; // non-local entities need to be skipped
 
-            elemCtx.updateStencil( entity );
+            elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 int cartesianDofIdx = cartesianCellId[globalDofIdx];

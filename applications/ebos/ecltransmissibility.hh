@@ -97,15 +97,15 @@ public:
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& entity = *elemIt;
+            const auto& elem = *elemIt;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            int elemIdx = elementMapper.index( entity );
+            int elemIdx = elementMapper.index(elem);
 #else
-            int elemIdx = elementMapper.map( entity );
+            int elemIdx = elementMapper.map(elem);
 #endif
 
             // get the geometry of the current element
-            const auto& geom = entity.geometry();
+            const auto& geom = elem.geometry();
 
             // compute the axis specific "centroids" used for the
             // transmissibilities
@@ -154,9 +154,9 @@ public:
         // compute the transmissibilities for all intersections
         elemIt = gridView.template begin</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& entity = *elemIt;
-            auto isIt = gridView.ibegin( entity );
-            const auto& isEndIt = gridView.iend( entity );
+            const auto& elem = *elemIt;
+            auto isIt = gridView.ibegin(elem);
+            const auto& isEndIt = gridView.iend(elem);
             for (; isIt != isEndIt; ++ isIt) {
                 // store intersection, this might be costly
                 const auto& intersection = *isIt;
