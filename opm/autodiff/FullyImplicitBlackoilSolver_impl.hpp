@@ -1947,9 +1947,9 @@ namespace {
             RG_sum = RG.sum();
         }
 
-        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * dt / pvSum;
-        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * dt / pvSum;
-        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * dt / pvSum;
+        const double mass_balance_residual_water = std::abs(BW_avg*RW_sum) * dt / pvSum;
+        const double mass_balance_residual_oil   = std::abs(BO_avg*RO_sum) * dt / pvSum;
+        const double mass_balance_residual_gas   = std::abs(BG_avg*RG_sum) * dt / pvSum;
 
         bool converged_MB = (mass_balance_residual_water < tol_mb)
                          && (mass_balance_residual_oil   < tol_mb)
@@ -1962,6 +1962,19 @@ namespace {
 
         bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
         bool converged = converged_MB && converged_CNV && converged_Well;
+
+        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
+        if( std::isnan(mass_balance_residual_water) ||
+            std::isnan(mass_balance_residual_oil)   ||
+            std::isnan(mass_balance_residual_gas)   ||
+            std::isnan(CNVW) ||
+            std::isnan(CNVO) ||
+            std::isnan(CNVG) ||
+            std::isnan(residualWellFlux) ||
+            std::isnan(residualWell) )
+        {
+            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN");
+        }
 
         if (iteration == 0) {
             std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
