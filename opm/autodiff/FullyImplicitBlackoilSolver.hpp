@@ -67,6 +67,7 @@ namespace Opm {
             double                          relax_max_;
             double                          relax_increment_;
             double                          relax_rel_tol_;
+            double                          max_residual_allowed_;
             int                             max_iter_;
 
             SolverParameter( const parameter::ParameterGroup& param );
@@ -363,7 +364,8 @@ namespace Opm {
         double relaxMax() const { return param_.relax_max_; };
         double relaxIncrement() const { return param_.relax_increment_; };
         double relaxRelTol() const { return param_.relax_rel_tol_; };
-        double maxIter() const { return param_.max_iter_; }
+        double maxIter() const     { return param_.max_iter_; }
+        double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     };
 } // namespace Opm
