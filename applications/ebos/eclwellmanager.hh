@@ -149,8 +149,8 @@ public:
             // make sure that the well is either an injector or a
             // producer for the current episode. (it is not allowed to
             // be neither or to be both...)
-            assert( (deckWell->isInjector(episodeIdx)?1:0) +
-                    (deckWell->isProducer(episodeIdx)?1:0) == 1);
+            assert((deckWell->isInjector(episodeIdx)?1:0) +
+                   (deckWell->isProducer(episodeIdx)?1:0) == 1);
 
             if (deckWell->isInjector(episodeIdx)) {
                 well->setWellType(Well::Injector);
