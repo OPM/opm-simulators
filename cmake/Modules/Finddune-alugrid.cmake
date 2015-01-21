@@ -22,6 +22,7 @@ find_opm_package (
   "CXX11Features REQUIRED;
    dune-grid REQUIRED;
    ZLIB REQUIRED;
+   ZOLTAN;
    METIS
   "
   # header to search for
