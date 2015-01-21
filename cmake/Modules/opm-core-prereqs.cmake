@@ -26,13 +26,14 @@ set (opm-core_DEPS
 	"SuiteSparse COMPONENTS umfpack"
 	# solver
 	"SuperLU"
-	"Petsc"
 	# xml processing (for config parsing)
 	"TinyXML"
 	# Ensembles-based Reservoir Tools (ERT)
 	"ERT REQUIRED"
 	# Look for MPI support
 	"MPI"
+	# PETSc numerical backend
+	"PETSc"
 	# DUNE dependency
 	"dune-common"
 	"dune-istl"
