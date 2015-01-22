@@ -20,6 +20,7 @@
 #include <opm/core/tof/FlowDiagnostics.hpp>
 
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <algorithm>
 #include <numeric>
 
 namespace Opm
