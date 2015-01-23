@@ -40,9 +40,10 @@ namespace Opm
     /// \param[in]  rtof  reverse (time to producer) time-of-flight values for each cell
     /// \return           a pair of vectors, the first containing F (flow capacity) the second
     ///                   containing Phi (storage capacity).
-    std::pair<std::vector<double>, std::vector<double>> computeFandPhi(const std::vector<double>& pv,
-                                                                       const std::vector<double>& ftof,
-                                                                       const std::vector<double>& rtof);
+    std::pair<std::vector<double>, std::vector<double>>
+    computeFandPhi(const std::vector<double>& pv,
+                   const std::vector<double>& ftof,
+                   const std::vector<double>& rtof);
 
 
     /// \brief Compute the Lorenz coefficient based on the F-Phi curve.
@@ -74,8 +75,9 @@ namespace Opm
     /// \param[in]  storagecap  storage capacity (Phi) as from computeFandPhi()
     /// \return                 a pair of vectors, the first containing Ev (sweep efficiency)
     ///                         the second containing tD (dimensionless time).
-    std::pair<std::vector<double>, std::vector<double>> computeSweep(const std::vector<double>& flowcap,
-                                                                     const std::vector<double>& storagecap);
+    std::pair<std::vector<double>, std::vector<double>>
+    computeSweep(const std::vector<double>& flowcap,
+                 const std::vector<double>& storagecap);
 
 } // namespace Opm
 
