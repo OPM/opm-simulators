@@ -35,9 +35,10 @@
 #include <dune/common/parallel/communicator.hh>
 #include <dune/common/enumset.hh>
 
-#include<algorithm>
-#include<limits>
-#include<type_traits>
+#include <algorithm>
+#include <functional>
+#include <limits>
+#include <type_traits>
 
 namespace Opm
 {
@@ -164,6 +165,9 @@ public:
     /// This function can either be used with a container, an operator, and an initial value
     /// to compute a reduction. Or with tuples of them to compute multiple reductions with only
     /// one global communication.
+    /// The possible functors needed can be constructed with Opm::Reduction::makeGlobalMaxFunctor(),
+    /// Opm::Reduction::makeGlobalMinFunctor(), and 
+    /// Opm::Reduction::makeGlobalSumFunctor().
     /// \tparam type of the container or the tuple of  containers.
     /// \tparam tyoe of the operator or a tuple of operators, examples are e.g. 
     /// Reduction::MaskIDOperator, Reduction::MaskToMinOperator,
@@ -369,6 +373,9 @@ private:
     template<typename BinaryOperator>
     struct MaskToMinOperator
     {
+        MaskToMinOperator(BinaryOperator b)
+        : b_(b)
+        {}
         /// \brief Apply the underlying binary operator according to the mask.
         ///
         /// If mask is 0 then t2 will be substituted by the lowest value,
@@ -420,6 +427,9 @@ private:
     template<typename BinaryOperator>
     struct MaskToMaxOperator
     {
+        MaskToMaxOperator(BinaryOperator b)
+        : b_(b)
+        {}
         /// \brief Apply the underlying binary operator according to the mask.
         ///
         /// If mask is 0 then t2 will be substituted by the maximum value,
@@ -450,6 +460,37 @@ private:
     private:
         BinaryOperator b_;
     };
+    /// \brief Create a functor for computing a global sum.
+    ///
+    /// To be used with ParallelISTLInformation::computeReduction.
+    template<class T>
+    MaskIDOperator<std::plus<T> >
+    makeGlobalSumFunctor()
+    {
+        return MaskIDOperator<std::plus<T> >();
+    }
+    /// \brief Create a functor for computing a global maximum.
+    ///
+    /// To be used with ParallelISTLInformation::computeReduction.
+    template<class T>
+    MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
+    makeGlobalMaxFunctor()
+    {
+        return MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
+            (std::pointer_to_binary_function<const T&,const T&,const T&>
+             ((const T&(*)(const T&, const T&))std::max<T>));
+    }
+    /// \brief Create a functor for computing a global minimum.
+    ///
+    /// To be used with ParallelISTLInformation::computeReduction.
+    template<class T>
+    MaskToMaxOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
+    makeGlobalMinFunctor()
+    {
+        return MaskToMaxOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
+            (std::pointer_to_binary_function<const T&,const T&,const T&>
+             ((const T&(*)(const T&, const T&))std::min<T>));
+    }
     } // end namespace Reduction
 } // end namespace Opm
 

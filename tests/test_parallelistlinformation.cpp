@@ -36,9 +36,10 @@
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <functional>
 #ifdef HAVE_DUNE_ISTL
-BOOST_AUTO_TEST_CASE(tupleReductionTest)
+
+void runSumMaxMinTest(const int offset)
 {
-    int N=100;
+    const int N=100;
     int start, end, istart, iend;
     std::tie(start,istart,iend,end) = computeRegions(N);
     Opm::ParallelISTLInformation comm(MPI_COMM_WORLD);
@@ -46,17 +47,24 @@ BOOST_AUTO_TEST_CASE(tupleReductionTest)
     std::vector<int> x(end-start);
     assert(comm.indexSet()->size()==x.size());
     for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
-        x[i->local()]=i->global();
+        x[i->local()]=i->global()+offset;
     auto containers = std::make_tuple(x, x, x);
-    auto operators  = std::make_tuple(Opm::Reduction::MaskIDOperator<std::plus<int> >(),
-                                      Opm::Reduction::MaskToMinOperator<std::greater<int> >(),
-                                      Opm::Reduction::MaskToMaxOperator<std::less< int>  >());
+    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
+                                      Opm::Reduction::makeGlobalMaxFunctor<int>(),
+                                      Opm::Reduction::makeGlobalMinFunctor<int>());
     auto values     = std::make_tuple(0,0,100000);
     auto oldvalues  = values;
     comm.computeReduction(containers,operators,values);
-    BOOST_CHECK(std::get<0>(values)==std::get<0>(oldvalues)+((N-1)*N)/2);
-    BOOST_CHECK(std::get<1>(values)==std::min(0, std::get<1>(oldvalues)));
-    BOOST_CHECK(std::get<2>(values)==std::max(N, std::get<2>(oldvalues)));
+    BOOST_CHECK(std::get<0>(values)==std::get<0>(oldvalues)+((N-1+2*offset)*N)/2);
+    BOOST_CHECK(std::get<1>(values)==std::max(N+offset-1, std::get<1>(oldvalues)));
+    BOOST_CHECK(std::get<2>(values)==std::min(offset, std::get<2>(oldvalues)));
+}
+
+BOOST_AUTO_TEST_CASE(tupleReductionTest)
+{
+    runSumMaxMinTest(0);
+    runSumMaxMinTest(20);
+    runSumMaxMinTest(-20);
 }
 BOOST_AUTO_TEST_CASE(singleContainerReductionTest)
 {
@@ -69,13 +77,9 @@ BOOST_AUTO_TEST_CASE(singleContainerReductionTest)
     assert(comm.indexSet()->size()==x.size());
     for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
         x[i->local()]=i->global();
-    auto containers = std::make_tuple(x, x, x);
-    auto operators  = std::make_tuple(Opm::Reduction::MaskIDOperator<std::plus<int> >(),
-                                      Opm::Reduction::MaskToMinOperator<std::greater<int> >(),
-                                      Opm::Reduction::MaskToMaxOperator<std::less< int>  >());
     int value = 1;
     int oldvalue = value;
-    comm.computeReduction(x,Opm::Reduction::MaskIDOperator<std::plus<int> >(),value);
+    comm.computeReduction(x,Opm::Reduction::makeGlobalSumFunctor<int>(),value);
     BOOST_CHECK(value==oldvalue+((N-1)*N)/2);
 }
 #endif
