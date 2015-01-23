@@ -56,7 +56,7 @@ struct MPIFixture {
 };
 
 
-BOOST_GLOBAL_FIXTURE(MPIFixture);
+BOOST_GLOBAL_FIXTURE(MPIFixture)
 
 struct MyMatrix
 {
@@ -177,7 +177,7 @@ void createRandomVectors(O& pinfo, int NN, std::vector<double>& x, std::vector<d
     pinfo.copyOwnerToAll(b,b);
 }
 
-std::tuple<int,int,int,int> computeRegions(int N=100)
+inline std::tuple<int,int,int,int> computeRegions(int N=100)
 {
     int procs, rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);

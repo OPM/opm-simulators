@@ -158,7 +158,7 @@ public:
                 }
             }
         }
-    };
+    }
     /// \brief Compute one or more global reductions.
     ///
     /// This function can either be used with a container, an operator, and an initial value
@@ -223,7 +223,6 @@ private:
         std::tuple<ReturnValues...> init=values;
         updateOwnerMask(std::get<0>(containers));
         computeLocalReduction(containers, operators, values);
-        auto val=std::get<0>(values);
         std::vector<std::tuple<ReturnValues...> > receivedValues(communicator_.size());
         communicator_.allgather(&values, 1, &(receivedValues[0]));
         values=init;
@@ -468,7 +467,9 @@ namespace Opm
 /// \param grid The grid to inspect.
 
 inline void extractParallelGridInformationToISTL(boost::any& anyComm, const UnstructuredGrid& grid)
-{}
+{
+    (void)anyComm; (void)grid;
+}
 } // end namespace Opm
 
 #endif
