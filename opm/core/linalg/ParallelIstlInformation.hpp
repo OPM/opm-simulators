@@ -1,5 +1,7 @@
 /*
-  Copyright 2014 Dr. Markus Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Dr. Markus Blatt - HPC-Simulation-Software & Services
+  Copyright 2014 Statoil ASA
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -19,6 +21,12 @@
 #ifndef OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 #define OPM_PARALLELISTLINFORMTION_HEADER_INCLUDED
 
+
+#include <opm/core/grid.h>
+#include <opm/core/utility/ErrorMacros.hpp>
+#include <boost/any.hpp>
+#include <exception>
+
 #if HAVE_MPI && HAVE_DUNE_ISTL
 
 #include "mpi.h"
@@ -28,9 +36,23 @@
 #include <dune/common/enumset.hh>
 
 #include<algorithm>
+#include<limits>
+#include<type_traits>
 
 namespace Opm
 {
+namespace
+{
+
+    template<class T>
+    struct is_tuple
+        : std::integral_constant<bool, false>
+    {};
+    template<typename... T>
+    struct is_tuple<std::tuple<T...> >
+        : std::integral_constant<bool, true>
+    {};
+}
 
 /// \brief Class that encapsulates the parallelization information needed by the
 /// ISTL solvers.
@@ -81,8 +103,8 @@ public:
     {
         return remoteIndices_;
     }
-    /// \brief Get the MPI communicator that we use.
-    MPI_Comm communicator() const
+    /// \brief Get the Collective MPI communicator that we use.
+    Dune::CollectiveCommunication<MPI_Comm> communicator() const
     {
         return communicator_;
     }
@@ -108,16 +130,163 @@ public:
       OwnerOverlapSet sourceFlags;
       AllSet destFlags;
       Dune::Interface interface(communicator_);
-      if(!remoteIndices_->isSynced())
+      if( !remoteIndices_->isSynced() )
+      {
           remoteIndices_->rebuild<false>();
+      }
       interface.build(*remoteIndices_,sourceFlags,destFlags);
       Dune::BufferedCommunicator communicator;
       communicator.template build<T>(interface);
       communicator.template forward<CopyGatherScatter<T> >(source,dest);
       communicator.free();
-    }    
+    }
+    template<class T>
+    void updateOwnerMask(const T& container)
+    {
+        if( ! indexSet_ )
+        {
+            OPM_THROW(std::runtime_error, "Trying to update owner mask without parallel information!");
+        }
+        if( container.size()!= ownerMask_.size() )
+        {
+            ownerMask_.resize(container.size(), 1.);
+            for( auto i=indexSet_->begin(), end=indexSet_->end(); i!=end; ++i )
+            {
+                if (i->local().attribute()!=Dune::OwnerOverlapCopyAttributeSet::owner)
+                {
+                    ownerMask_[i->local().local()] = 0.;
+                }
+            }
+        }
+    }
+    /// \brief Compute one or more global reductions.
+    ///
+    /// This function can either be used with a container, an operator, and an initial value
+    /// to compute a reduction. Or with tuples of them to compute multiple reductions with only
+    /// one global communication.
+    /// \tparam type of the container or the tuple of  containers.
+    /// \tparam tyoe of the operator or a tuple of operators, examples are e.g. 
+    /// Reduction::MaskIDOperator, Reduction::MaskToMinOperator,
+    /// and Reduction::MaskToMaxOperator. Has to provide an operator() that takes three
+    /// arguments (the last one is the mask value: 1 for a dof that we own, 0 otherwise),
+    /// a method maskValue that takes a value and mask value, and localOperator that
+    /// returns the underlying binary operator.
+    /// \param container A container or tuple of containers.
+    /// \param binaryOperator An operator doing the reduction of two values.
+    /// \param value The initial value or a tuple of them.
+    template<typename Container, typename BinaryOperator, typename T>
+    void computeReduction(const Container& container, BinaryOperator binaryOperator,
+                          T& value)
+    {
+        computeReduction(container, binaryOperator, value, is_tuple<Container>());
+    }
 private:
-        /** \brief gather/scatter callback for communcation */
+    /// \brief compute the reductions for tuples.
+    ///
+    /// This is a helper function to prepare for calling computeTupleReduction.
+    template<typename Container, typename BinaryOperator, typename T>
+    void computeReduction(const Container& container, BinaryOperator binaryOperator,
+                          T& value, std::integral_constant<bool,true>)
+    {
+        computeTupleReduction(container, binaryOperator, value);
+    }
+    /// \brief compute the reductions for non-tuples.
+    ///
+    /// This is a helper function to prepare for calling computeTupleReduction.
+    template<typename Container, typename BinaryOperator, typename T>
+    void computeReduction(const Container& container, BinaryOperator binaryOperator,
+                          T& value, std::integral_constant<bool,false>)
+    {
+        std::tuple<const Container&> containers=std::tuple<const Container&>(container);
+        auto values=std::make_tuple(value);
+        auto operators=std::make_tuple(binaryOperator);
+        computeTupleReduction(containers, operators, values);
+        value=std::get<0>(values);
+    }
+    /// \brief Compute the reductions for tuples.
+    template<typename... Containers, typename... BinaryOperators, typename... ReturnValues>
+    void computeTupleReduction(const std::tuple<Containers...>& containers,
+                               std::tuple<BinaryOperators...>& operators,
+                               std::tuple<ReturnValues...>& values)
+    {
+        static_assert(std::tuple_size<std::tuple<Containers...> >::value==
+                      std::tuple_size<std::tuple<BinaryOperators...> >::value,
+                      "We need the same number of containers and binary operators");
+        static_assert(std::tuple_size<std::tuple<Containers...> >::value==
+                      std::tuple_size<std::tuple<ReturnValues...> >::value,
+                      "We need the same number of containers and return values");
+        if( std::tuple_size<std::tuple<Containers...> >::value==0 )
+        {
+            return;
+        }
+        // Copy the initial values.
+        std::tuple<ReturnValues...> init=values;
+        updateOwnerMask(std::get<0>(containers));
+        computeLocalReduction(containers, operators, values);
+        std::vector<std::tuple<ReturnValues...> > receivedValues(communicator_.size());
+        communicator_.allgather(&values, 1, &(receivedValues[0]));
+        values=init;
+        for( auto rvals=receivedValues.begin(), endvals=receivedValues.end(); rvals!=endvals;
+             ++rvals )
+        {
+            computeGlobalReduction(*rvals, operators, values);
+        }
+    }
+    /// \brief TMP for computing the the global reduction after receiving the local ones.
+    ///
+    /// End of recursion.
+    template<int I=0, typename... BinaryOperators, typename... ReturnValues>
+    typename std::enable_if<I == sizeof...(BinaryOperators), void>::type
+    computeGlobalReduction(const std::tuple<ReturnValues...>&,
+                                std::tuple<BinaryOperators...>&,
+                                std::tuple<ReturnValues...>&)
+    {}
+    /// \brief TMP for computing the the global reduction after receiving the local ones.
+    template<int I=0, typename... BinaryOperators, typename... ReturnValues>
+    typename std::enable_if<I !=sizeof...(BinaryOperators), void>::type
+    computeGlobalReduction(const std::tuple<ReturnValues...>& receivedValues,
+                           std::tuple<BinaryOperators...>& operators,
+                           std::tuple<ReturnValues...>& values)
+    {
+        auto& val=std::get<I>(values);
+        val = std::get<I>(operators).localOperator()(val, std::get<I>(receivedValues));
+    }
+    /// \brief TMP for computing the the local reduction on the DOF that the process owns.
+    ///
+    /// End of recursion.
+    template<int I=0, typename... Containers, typename... BinaryOperators, typename... ReturnValues>
+    typename std::enable_if<I==sizeof...(Containers), void>::type
+    computeLocalReduction(const std::tuple<Containers...>&,
+                          std::tuple<BinaryOperators...>&,
+                          std::tuple<ReturnValues...>&)
+    {}
+    /// \brief TMP for computing the the local reduction on the DOF that the process owns.
+    template<int I=0, typename... Containers, typename... BinaryOperators, typename... ReturnValues>
+    typename std::enable_if<I!=sizeof...(Containers), void>::type
+    computeLocalReduction(const std::tuple<Containers...>& containers,
+                          std::tuple<BinaryOperators...>& operators,
+                          std::tuple<ReturnValues...>& values)
+    {
+        const auto& container = std::get<I>(containers);
+        if( container.size() )
+        {
+            auto& reduceOperator  = std::get<I>(operators);
+            auto newVal = container.begin();
+            auto mask   = ownerMask_.begin();
+            auto& value = std::get<I>(values);
+            value = reduceOperator.maskValue(*newVal, *mask);
+            ++mask;
+            ++newVal;
+
+            for( auto endVal=container.end(); newVal!=endVal;
+                ++newVal, ++mask )
+            {
+                value = reduceOperator(value, *newVal, *mask);
+            }
+        }
+        computeLocalReduction<I+1>(containers, operators, values);
+    }
+    /** \brief gather/scatter callback for communcation */
     template<typename T>
     struct CopyGatherScatter
     {
@@ -153,8 +322,154 @@ private:
 
     std::shared_ptr<ParallelIndexSet> indexSet_;
     std::shared_ptr<RemoteIndices> remoteIndices_;
-    MPI_Comm communicator_;
+    Dune::CollectiveCommunication<MPI_Comm> communicator_;
+    mutable std::vector<double> ownerMask_;
 };
+
+    namespace Reduction
+    {
+    /// \brief An operator that only uses values where mask is 1.
+    ///
+    /// Could be used to compute a global sum
+    /// \tparam BinaryOperator The wrapped binary operator that specifies
+    // the reduction operation.
+    template<typename BinaryOperator>
+    struct MaskIDOperator
+    {
+        /// \brief Apply the underlying binary operator according to the mask.
+        ///
+        /// The BinaryOperator will be called with t1, and mask*t2.
+        /// \param t1 first value
+        /// \param t2 second value (might be modified).
+        /// \param mask The mask (0 or 1).
+        template<class T, class T1>
+        T operator()(const T& t1, const T& t2, const T1& mask)
+        {
+            return b_(t1, maskValue(t2, mask));
+        }
+        template<class T, class T1>
+        T maskValue(const T& t, const T1& mask)
+        {
+            return t*mask;
+        }
+        BinaryOperator& localOperator()
+        {
+            return b_;
+        }
+    private:
+        BinaryOperator b_;
+    };
+
+    /// \brief An operator that converts the values where mask is 0 to the minimum value
+    ///
+    /// Could be used to compute a global maximum.
+    /// \tparam BinaryOperator The wrapped binary operator that specifies
+    // the reduction operation.
+    template<typename BinaryOperator>
+    struct MaskToMinOperator
+    {
+        /// \brief Apply the underlying binary operator according to the mask.
+        ///
+        /// If mask is 0 then t2 will be substituted by the lowest value,
+        /// else t2 will be used.
+        /// \param t1 first value
+        /// \param t2 second value (might be modified).
+        template<class T, class T1>
+        T operator()(const T& t1, const T& t2, const T1& mask)
+        {
+            return b_(t1, maskValue(t2, mask));
+        }
+        template<class T, class T1>
+        T maskValue(const T& t, const T1& mask)
+        {
+            if( mask )
+            {
+                return t;
+            }
+            else
+            {
+                //g++-4.4 does not support std::numeric_limits<T>::lowest();
+                // we rely on IEE 754 for floating point values and use min()
+                // for integral types.
+                if( std::is_integral<T>::value )
+                {
+                    return -std::numeric_limits<float>::min();
+                }
+                else
+                {
+                    return -std::numeric_limits<float>::max();
+                }
+            }
+        }
+        /// \brief Get the underlying binary operator.
+        ///
+        /// This might be needed to compute the reduction after each processor
+        /// has computed its local one.
+        BinaryOperator& localOperator()
+        {
+            return b_;
+        }
+    private:
+        BinaryOperator b_;
+    };
+
+    /// \brief An operator that converts the values where mask is 0 to the maximum value
+    ///
+    /// Could be used to compute a global minimum.
+    template<typename BinaryOperator>
+    struct MaskToMaxOperator
+    {
+        /// \brief Apply the underlying binary operator according to the mask.
+        ///
+        /// If mask is 0 then t2 will be substituted by the maximum value,
+        /// else t2 will be used.
+        /// \param t1 first value
+        /// \param t2 second value (might be modified).
+        template<class T, class T1>
+        T operator()(const T& t1, const T& t2, const T1& mask)
+        {
+            return b_(t1, maskValue(t2, mask));
+        }
+        template<class T, class T1>
+        T maskValue(const T& t, const T1& mask)
+        {
+            if( mask )
+            {
+                return t;
+            }
+            else
+            {
+                return std::numeric_limits<T>::max();
+            }
+        }
+        BinaryOperator& localOperator()
+        {
+            return b_;
+        }
+    private:
+        BinaryOperator b_;
+    };
+    } // end namespace Reduction
 } // end namespace Opm
+
 #endif
+
+namespace Opm
+{
+/// \brief Extracts the information about the data decomposition from the grid for dune-istl
+/// 
+/// In the case that grid is a parallel grid this method will query it to get the information
+/// about the data decompoisition and convert it to the format expected by the linear algebra
+/// of dune-istl.
+/// \warn for UnstructuredGrid this function doesn't do anything.
+/// \param anyComm The handle to store the information in. If grid is a parallel grid
+/// then this will ecapsulate an instance of ParallelISTLInformation.
+/// \param grid The grid to inspect.
+
+inline void extractParallelGridInformationToISTL(boost::any& anyComm, const UnstructuredGrid& grid)
+{
+    (void)anyComm; (void)grid;
+}
+} // end namespace Opm
+
 #endif
