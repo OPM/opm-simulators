@@ -130,8 +130,10 @@ public:
       OwnerOverlapSet sourceFlags;
       AllSet destFlags;
       Dune::Interface interface(communicator_);
-      if(!remoteIndices_->isSynced())
+      if( !remoteIndices_->isSynced() )
+      {
           remoteIndices_->rebuild<false>();
+      }
       interface.build(*remoteIndices_,sourceFlags,destFlags);
       Dune::BufferedCommunicator communicator;
       communicator.template build<T>(interface);
@@ -141,14 +143,20 @@ public:
     template<class T>
     void updateOwnerMask(const T& container)
     {
-        if(! indexSet_)
+        if( ! indexSet_ )
+        {
             OPM_THROW(std::runtime_error, "Trying to update owner mask without parallel information!");
-        if(container.size()!= ownerMask_.size())
+        }
+        if( container.size()!= ownerMask_.size() )
         {
             ownerMask_.resize(container.size(), 1.);
-            for(auto i=indexSet_->begin(), end=indexSet_->end(); i!=end; ++i)
+            for( auto i=indexSet_->begin(), end=indexSet_->end(); i!=end; ++i )
+            {
                 if (i->local().attribute()!=Dune::OwnerOverlapCopyAttributeSet::owner)
+                {
                     ownerMask_[i->local().local()] = 0.;
+                }
+            }
         }
     };
     /// \brief Compute one or more global reductions.
@@ -207,8 +215,10 @@ private:
         static_assert(std::tuple_size<std::tuple<Containers...> >::value==
                       std::tuple_size<std::tuple<ReturnValues...> >::value,
                       "We need the same number of containers and return values");
-        if(std::tuple_size<std::tuple<Containers...> >::value==0)
+        if( std::tuple_size<std::tuple<Containers...> >::value==0 )
+        {
             return;
+        }
         // Copy the initial values.
         std::tuple<ReturnValues...> init=values;
         updateOwnerMask(std::get<0>(containers));
@@ -217,9 +227,11 @@ private:
         std::vector<std::tuple<ReturnValues...> > receivedValues(communicator_.size());
         communicator_.allgather(&values, 1, &(receivedValues[0]));
         values=init;
-        for(auto rvals=receivedValues.begin(), endvals=receivedValues.end(); rvals!=endvals;
-            ++rvals)
+        for( auto rvals=receivedValues.begin(), endvals=receivedValues.end(); rvals!=endvals;
+             ++rvals )
+        {
             computeGlobalReduction(*rvals, operators, values);
+        }
     }
     /// \brief TMP for computing the the global reduction after receiving the local ones.
     ///
@@ -257,7 +269,7 @@ private:
                           std::tuple<ReturnValues...>& values)
     {
         const auto& container = std::get<I>(containers);
-        if(container.size())
+        if( container.size() )
         {
             auto& reduceOperator  = std::get<I>(operators);
             auto newVal = container.begin();
@@ -267,9 +279,11 @@ private:
             ++mask;
             ++newVal;
 
-            for(auto endVal=container.end(); newVal!=endVal;
-                ++newVal, ++mask)
-            value = reduceOperator(value, *newVal, *mask);
+            for( auto endVal=container.end(); newVal!=endVal;
+                ++newVal, ++mask )
+            {
+                value = reduceOperator(value, *newVal, *mask);
+            }
         }
         computeLocalReduction<I+1>(containers, operators, values);
     }
@@ -369,16 +383,23 @@ private:
         template<class T, class T1>
         T maskValue(const T& t, const T1& mask)
         {
-            if(mask)
+            if( mask )
+            {
                 return t;
-            else{
+            }
+            else
+            {
                 //g++-4.4 does not support std::numeric_limits<T>::lowest();
                 // we rely on IEE 754 for floating point values and use min()
                 // for integral types.
-                if(std::is_integral<T>::value)
+                if( std::is_integral<T>::value )
+                {
                     return -std::numeric_limits<float>::min();
+                }
                 else
+                {
                     return -std::numeric_limits<float>::max();
+                }
             }
         }
         /// \brief Get the underlying binary operator.
@@ -408,15 +429,19 @@ private:
         template<class T, class T1>
         T operator()(const T& t1, const T& t2, const T1& mask)
         {
-            b_(t1, maskValue(t2, mask));
+            return b_(t1, maskValue(t2, mask));
         }
         template<class T, class T1>
         T maskValue(const T& t, const T1& mask)
         {
-            if(mask)
+            if( mask )
+            {
                 return t;
+            }
             else
+            {
                 return std::numeric_limits<T>::max();
+            }
         }
         BinaryOperator& localOperator()
         {
