@@ -345,7 +345,7 @@ private:
         template<class T, class T1>
         T operator()(const T& t1, const T& t2, const T1& mask)
         {
-            b_(t1, maskValue(t2, mask));
+            return b_(t1, maskValue(t2, mask));
         }
         template<class T, class T1>
         T maskValue(const T& t, const T1& mask)
@@ -377,7 +377,7 @@ private:
         template<class T, class T1>
         T operator()(const T& t1, const T& t2, const T1& mask)
         {
-            b_(t1, maskValue(t2, mask));
+            return b_(t1, maskValue(t2, mask));
         }
         template<class T, class T1>
         T maskValue(const T& t, const T1& mask)
