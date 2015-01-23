@@ -43,18 +43,18 @@ namespace Opm
     class IncompTpfaSinglePhase
     {
     public:
-	/// Construct solver for incompressible case.
+        /// Construct solver for incompressible case.
         /// \param[in] grid             A 2d or 3d grid.
         /// \param[in] props            Rock and fluid properties.
         /// \param[in] linsolver        Linear solver to use.
         /// \param[in] wells            The wells used as driving forces.
-	IncompTpfaSinglePhase(const UnstructuredGrid& grid,
+        IncompTpfaSinglePhase(const UnstructuredGrid& grid,
                               const IncompPropertiesSinglePhase& props,
                               const LinearSolverInterface& linsolver,
                               const Wells& wells);
 
         /// Destructor.
-	~IncompTpfaSinglePhase();
+        ~IncompTpfaSinglePhase();
 
         /// Solve the pressure equation.
         void solve(std::vector<double>& press,
@@ -69,18 +69,18 @@ namespace Opm
 
     protected:
         // ------ Data that will remain unmodified after construction. ------
-	const UnstructuredGrid& grid_;
+        const UnstructuredGrid& grid_;
         const IncompPropertiesSinglePhase& props_;
         const LinearSolverInterface& linsolver_;
         const Wells& wells_;
-	std::vector<double> htrans_;
-	std::vector<double> trans_ ;
+        std::vector<double> htrans_;
+        std::vector<double> trans_ ;
         std::vector<double> zeros_;
         std::vector<double> totmob_;
         struct ifs_tpfa_forces forces_;
 
         // ------ Internal data for the ifs_tpfa solver. ------
-	struct ifs_tpfa_data* h_;
+        struct ifs_tpfa_data* h_;
     };
 
 } // namespace Opm
