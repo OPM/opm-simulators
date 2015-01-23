@@ -250,6 +250,7 @@ private:
     {
         auto& val=std::get<I>(values);
         val = std::get<I>(operators).localOperator()(val, std::get<I>(receivedValues));
+        computeGlobalReduction<I+1>(receivedValues, operators, values);
     }
     /// \brief TMP for computing the the local reduction on the DOF that the process owns.
     ///
