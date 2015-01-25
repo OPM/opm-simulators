@@ -43,16 +43,16 @@ NEW_TYPE_TAG(EclOutputBlackOil);
 NEW_PROP_TAG(EclOutputWriteSaturations);
 NEW_PROP_TAG(EclOutputWritePressures);
 NEW_PROP_TAG(EclOutputWriteGasDissolutionFactor);
-NEW_PROP_TAG(EclOutputWriteGasFormationVolumeFactor);
-NEW_PROP_TAG(EclOutputWriteOilFormationVolumeFactor);
+NEW_PROP_TAG(EclOutputWriteGasFormationFactor);
+NEW_PROP_TAG(EclOutputWriteOilFormationFactor);
 NEW_PROP_TAG(EclOutputWriteOilSaturationPressure);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteSaturations, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWritePressures, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasDissolutionFactor, true);
-SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasFormationVolumeFactor, true);
-SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilFormationVolumeFactor, true);
+SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasFormationFactor, true);
+SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilFormationFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilSaturationPressure, true);
 }} // namespace Opm, Properties
 
@@ -110,10 +110,10 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteGasDissolutionFactor,
                              "Include the gas dissolution factor in the "
                              "ECL output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteGasFormationVolumeFactor,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteGasFormationFactor,
                              "Include the gas formation volume factor in the "
                              "ECL output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteOilFormationVolumeFactor,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteOilFormationFactor,
                              "Include the oil formation volume factor of saturated oil "
                              "in the ECL output files");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputWriteOilSaturationPressure,
@@ -141,10 +141,10 @@ public:
         }
         if (gasDissolutionFactorOutput_())
             this->resizeScalarBuffer_(gasDissolutionFactor_, bufferType);
-        if (gasFormationVolumeFactorOutput_())
-            this->resizeScalarBuffer_(gasFormationVolumeFactor_, bufferType);
-        if (saturatedOilFormationVolumeFactorOutput_())
-            this->resizeScalarBuffer_(saturatedOilFormationVolumeFactor_, bufferType);
+        if (gasFormationFactorOutput_())
+            this->resizeScalarBuffer_(gasFormationFactor_, bufferType);
+        if (saturatedOilFormationFactorOutput_())
+            this->resizeScalarBuffer_(saturatedOilFormationFactor_, bufferType);
         if (oilSaturationPressureOutput_())
             this->resizeScalarBuffer_(oilSaturationPressure_, bufferType);
     }
@@ -182,15 +182,15 @@ public:
                     FluidSystem::gasDissolutionFactor(po, regionIdx);
                 Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
-            if (gasFormationVolumeFactorOutput_()) {
-                gasFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::gasFormationVolumeFactor(po, regionIdx);
-                Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
+            if (gasFormationFactorOutput_()) {
+                gasFormationFactor_[globalDofIdx] =
+                    FluidSystem::gasFormationFactor(po, regionIdx);
+                Valgrind::CheckDefined(gasFormationFactor_[globalDofIdx]);
             }
-            if (saturatedOilFormationVolumeFactorOutput_()) {
-                saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::saturatedOilFormationVolumeFactor(po, regionIdx);
-                Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
+            if (saturatedOilFormationFactorOutput_()) {
+                saturatedOilFormationFactor_[globalDofIdx] =
+                    FluidSystem::saturatedOilFormationFactor(po, regionIdx);
+                Valgrind::CheckDefined(saturatedOilFormationFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
@@ -236,13 +236,13 @@ public:
             deckUnits.siToDeck(gasDissolutionFactor_, DeckUnits::gasDissolutionFactor);
             this->commitScalarBuffer_(writer, "RS", gasDissolutionFactor_, bufferType);
         }
-        if (gasFormationVolumeFactorOutput_()) {
+        if (gasFormationFactorOutput_()) {
             // no unit conversion required
-            this->commitScalarBuffer_(writer, "BG", gasFormationVolumeFactor_, bufferType);
+            this->commitScalarBuffer_(writer, "BG", gasFormationFactor_, bufferType);
         }
-        if (saturatedOilFormationVolumeFactorOutput_()) {
+        if (saturatedOilFormationFactorOutput_()) {
             // no unit conversion required
-            this->commitScalarBuffer_(writer, "BOSAT", saturatedOilFormationVolumeFactor_, bufferType);
+            this->commitScalarBuffer_(writer, "BOSAT", saturatedOilFormationFactor_, bufferType);
         }
         if (oilSaturationPressureOutput_()) {
             deckUnits.siToDeck(oilSaturationPressure_, DeckUnits::pressure);
@@ -260,11 +260,11 @@ private:
     static bool gasDissolutionFactorOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteGasDissolutionFactor); }
 
-    static bool gasFormationVolumeFactorOutput_()
-    { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteGasFormationVolumeFactor); }
+    static bool gasFormationFactorOutput_()
+    { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteGasFormationFactor); }
 
-    static bool saturatedOilFormationVolumeFactorOutput_()
-    { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteOilFormationVolumeFactor); }
+    static bool saturatedOilFormationFactorOutput_()
+    { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteOilFormationFactor); }
 
     static bool oilSaturationPressureOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EclOutputWriteOilSaturationPressure); }
@@ -272,8 +272,8 @@ private:
     ScalarBuffer saturation_[numPhases];
     ScalarBuffer pressure_[numPhases];
     ScalarBuffer gasDissolutionFactor_;
-    ScalarBuffer gasFormationVolumeFactor_;
-    ScalarBuffer saturatedOilFormationVolumeFactor_;
+    ScalarBuffer gasFormationFactor_;
+    ScalarBuffer saturatedOilFormationFactor_;
     ScalarBuffer oilSaturationPressure_;
 };
 } // namespace Ewoms
