@@ -32,6 +32,7 @@
 #include "ecltransmissibility.hh"
 #include "ecldummygradientcalculator.hh"
 #include "eclfluxmodule.hh"
+#include "ecldeckunits.hh"
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
@@ -241,6 +242,7 @@ public:
         : ParentType(simulator)
         , transmissibilities_(simulator)
         , wellManager_(simulator)
+        , deckUnits_(simulator)
         , eclWriter_(simulator)
         , summaryWriter_(simulator)
     {
@@ -418,6 +420,12 @@ public:
             eclWriter_.endWrite();
         }
     }
+
+    /*!
+     * \brief Returns the object which converts between SI and deck units.
+     */
+    const EclDeckUnits<TypeTag>& deckUnits() const
+    { return deckUnits_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
@@ -991,6 +999,8 @@ private:
     Scalar temperature_;
 
     EclWellManager<TypeTag> wellManager_;
+
+    EclDeckUnits<TypeTag> deckUnits_;
 
     EclWriter<TypeTag> eclWriter_;
     EclSummaryWriter summaryWriter_;

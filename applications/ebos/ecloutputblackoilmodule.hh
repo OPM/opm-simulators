@@ -211,26 +211,43 @@ public:
         if (!dynamic_cast<EclWriter*>(&writer))
             return; // this module only consideres ecl writers...
 
+        typedef EclDeckUnits<TypeTag> DeckUnits;
+        const auto& deckUnits = this->simulator_.problem().deckUnits();
+
         typename ParentType::BufferType bufferType = ParentType::ElementBuffer;
         if (pressuresOutput_()) {
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+                deckUnits.siToDeck(pressure_[phaseIdx], DeckUnits::pressure);
+
             this->commitScalarBuffer_(writer, "PRESSURE", pressure_[oilPhaseIdx], bufferType);
             this->commitScalarBuffer_(writer, "PGAS", pressure_[gasPhaseIdx], bufferType);
             this->commitScalarBuffer_(writer, "PWAT", pressure_[waterPhaseIdx], bufferType);
         }
         if (saturationsOutput_()) {
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+                deckUnits.siToDeck(saturation_[phaseIdx], DeckUnits::saturation);
+
             this->commitScalarBuffer_(writer, "SWAT", saturation_[waterPhaseIdx], bufferType);
             this->commitScalarBuffer_(writer, "SGAS", saturation_[gasPhaseIdx], bufferType);
             // the oil saturation is _NOT_ written to disk. Instead, it is calculated by
             // the visualization tool. Wondering why is probably a waste of time...
         }
-        if (gasDissolutionFactorOutput_())
+        if (gasDissolutionFactorOutput_()) {
+            deckUnits.siToDeck(gasDissolutionFactor_, DeckUnits::gasDissolutionFactor);
             this->commitScalarBuffer_(writer, "RS", gasDissolutionFactor_, bufferType);
-        if (gasFormationVolumeFactorOutput_())
+        }
+        if (gasFormationVolumeFactorOutput_()) {
+            // no unit conversion required
             this->commitScalarBuffer_(writer, "BG", gasFormationVolumeFactor_, bufferType);
-        if (saturatedOilFormationVolumeFactorOutput_())
+        }
+        if (saturatedOilFormationVolumeFactorOutput_()) {
+            // no unit conversion required
             this->commitScalarBuffer_(writer, "BOSAT", saturatedOilFormationVolumeFactor_, bufferType);
-        if (oilSaturationPressureOutput_())
+        }
+        if (oilSaturationPressureOutput_()) {
+            deckUnits.siToDeck(oilSaturationPressure_, DeckUnits::pressure);
             this->commitScalarBuffer_(writer, "PSAT", oilSaturationPressure_);
+        }
     }
 
 private:
