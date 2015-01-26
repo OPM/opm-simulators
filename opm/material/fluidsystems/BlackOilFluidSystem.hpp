@@ -128,15 +128,14 @@ public:
     /*!
      * \brief Begin the initialization of the black oil fluid system.
      *
-     * After calling this method the reference densities, all formation
-     * and volume factors, the oil bubble pressure, all viscosities
-     * and the water compressibility must be set. Before the fluid
-     * system can be used, initEnd() must be called to finalize the
-     * initialization.
+     * After calling this method the reference densities, all dissolution and formation
+     * volume factors, the oil bubble pressure, all viscosities and the water
+     * compressibility must be set. Before the fluid system can be used, initEnd() must
+     * be called to finalize the initialization.
      */
     static void initBegin()
     {
-        setWaterReferenceFormationFactor(1.0);
+        setWaterReferenceFormationVolumeFactor(1.0);
         setWaterViscosibility(0.0);
         setWaterReferencePressure(surfacePressure);
     }
@@ -165,7 +164,7 @@ public:
                                          saturatedTable->getPressureColumn(),
                                          saturatedTable->getGasSolubilityColumn());
 
-        // extract the table for the oil formation factor
+        // extract the table for the gas dissolution and the oil formation volume factors
         for (int outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
             Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
 
@@ -215,8 +214,8 @@ public:
 
             // extend the current table using the master table. this is done by assuming
             // that the current table exhibits the same ratios of the oil formation
-            // factors and viscosities for identical pressure rations as in the master
-            // table.
+            // volume factors and viscosities for identical pressure rations as in the
+            // master table.
             const auto masterTable = pvtoTable.getInnerTable(masterTableIdx);
             const auto curTable = pvtoTable.getInnerTable(xIdx);
             for (int newRowIdx = 1;
@@ -261,7 +260,7 @@ public:
         auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
         waterReferencePressure_[regionIdx] =
             pvtwRecord->getItem("P_REF")->getSIDouble(0);
-        waterReferenceFormationFactor_[regionIdx] =
+        waterReferenceFormationVolumeFactor_[regionIdx] =
             pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
         waterCompressibility_[regionIdx] =
             pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
@@ -335,9 +334,11 @@ public:
     /*!
      * \brief Initialize the function for the oil formation volume factor
      *
-     * The oil density/volume factor is a function of (p_o, X_o^G), but this method here
-     * only requires the volume factor of gas-saturated oil (which only depends on
-     * pressure) while the dependence on the gas mass fraction is estimated...
+     * The oil formation volume factor \f$B_o\f$ is a function of \f$(p_o, X_o^G)\f$ and
+     * represents the partial density of the oil component in the oil phase at a given
+     * pressure. This method only requires the volume factor of gas-saturated oil (which
+     * only depends on pressure) while the dependence on the gas mass fraction is
+     * guesstimated...
      */
     static void setSaturatedOilFormationVolumeFactor(const SamplingPoints &samplePoints,
                                                      int regionIdx=0)
@@ -391,7 +392,14 @@ public:
     /*!
      * \brief Initialize the spline for the oil formation volume factor
      *
-     * This is a function of (Rs, po)...
+     * The oil formation volume factor \f$B_o\f$ is a function of \f$(p_o, X_o^G)\f$ and
+     * represents the partial density of the oil component in the oil phase at a given
+     * pressure.
+     *
+     * This method sets \f$1/B_o(R_s, p_o)\f$. Note that instead of the mass fraction of
+     * the gas component in the oil phase, this function depends on the gas dissolution
+     * factor. Also note, that the order of the arguments needs to be \f$(R_s, p_o)\f$
+     * and not the other way around.
      */
     static void setInverseOilFormationVolumeFactor(const TabulatedTwoDFunction &invBo, int regionIdx=0)
     {
@@ -401,9 +409,9 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the viscosity of gas-saturated oil.
+     * \brief Initialize the spline for the viscosity of the oil phase.
      *
-     * This is a function of (Rs, po)...
+     * This is a function of \f$(R_s, p_o)\f$...
      */
     static void setOilViscosity(const TabulatedTwoDFunction &muo, int regionIdx=0)
     {
@@ -413,11 +421,11 @@ public:
     }
 
     /*!
-     * \brief Initialize the oil viscosity
+     * \brief Initialize the phase viscosity for gas saturated oil
      *
-     * The oil viscosity is a function of (p_o, X_o^G), but this method here only requires
-     * the viscosity of gas-saturated oil (which only depends on pressure) while the
-     * dependence on the gas mass fraction is assumed to be zero...
+     * The oil viscosity is a function of \f$(p_o, X_o^G)\f$, but this method only
+     * requires the viscosity of gas-saturated oil (which only depends on pressure) while
+     * there is assumed to be no dependence on the gas mass fraction...
      */
     static void setSaturatedOilViscosity(const SamplingPoints &samplePoints, int regionIdx=0)
     {
@@ -456,7 +464,7 @@ public:
     /*!
      * \brief Initialize the function for the formation volume factor of dry gas
      *
-     * \param samplePoints A container of (x,y) values
+     * \param samplePoints A container of \f$(p_g, B_g)\f$ values
      */
     static void setGasFormationVolumeFactor(const SamplingPoints &samplePoints, int regionIdx=0)
     {
@@ -475,7 +483,7 @@ public:
     /*!
      * \brief Initialize the function for the viscosity of dry gas
      *
-     * \param samplePoints A container of (x,y) values
+     * \param samplePoints A container of \f$(p_g, \mu_g)\f$ values
      */
     static void setGasViscosity(const SamplingPoints &samplePoints, int regionIdx=0)
     {
@@ -497,17 +505,17 @@ public:
     /*!
      * \brief Set the water reference formation volume factor [-]
      */
-    static void setWaterReferenceFormationFactor(Scalar BwRef, int regionIdx=0)
+    static void setWaterReferenceFormationVolumeFactor(Scalar BwRef, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
-        waterReferenceFormationFactor_[regionIdx] = BwRef;
+        waterReferenceFormationVolumeFactor_[regionIdx] = BwRef;
     }
 
     /*!
-     * \brief Set the water viscosity [Pa s]
+     * \brief Set the water reference viscosity [Pa s]
      */
-    static void setWaterViscosity(Scalar muWater, int regionIdx=0)
+    static void setWaterReferenceViscosity(Scalar muWater, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -543,7 +551,7 @@ public:
         int numRegions = oilMu_.size();
         for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate the table which stores the inverse of the product of the oil
-            // formation factor and the oil viscosity
+            // formation volume factor and the oil viscosity
             const auto& oilMu = oilMu_[regionIdx];
             const auto& invOilB = inverseOilB_[regionIdx];
             assert(oilMu.numX() == invOilB.numX());
@@ -564,7 +572,7 @@ public:
             }
 
             // calculate the table which stores the inverse of the product of the gas
-            // formation factor and the gas viscosity
+            // formation volume factor and the gas viscosity
             const auto& gasMu = gasMu_[regionIdx];
             const auto& invGasB = inverseGasB_[regionIdx];
             assert(gasMu.numSamples() == invGasB.numSamples());
@@ -764,14 +772,14 @@ public:
         Scalar pRef = waterReferencePressure_[regionIdx];
         Scalar X = waterCompressibility_[regionIdx]*(pressure - pRef);
 
-        Scalar BwRef = waterReferenceFormationFactor_[regionIdx];
+        Scalar BwRef = waterReferenceFormationVolumeFactor_[regionIdx];
 
         // TODO (?): consider the salt concentration of the brine
         return BwRef/(1 + X*(1 + X/2));
     }
 
     /*!
-     * \brief Returns the gas formation factor \f$R_s\f$ for a given pressure
+     * \brief Returns the gas dissolution factor \f$R_s\f$ for a given pressure
      *
      * \param pressure The pressure of interest [Pa]
      */
@@ -886,8 +894,8 @@ public:
         Scalar rho_gRef = referenceDensity(gasPhaseIdx, regionIdx);
 
         // calculate the mass of the gas component [kg/m^3] in the oil phase. This is
-        // equivalent to the gas formation factor [m^3/m^3] at current pressure times the
-        // gas density [kg/m^3] at standard pressure
+        // equivalent to the gas dissolution factor [m^3/m^3] at current pressure times
+        // the gas density [kg/m^3] at standard pressure
         Scalar rho_oG = gasDissolutionFactor(pressure, regionIdx) * rho_gRef;
 
         // we now have the total density of saturated oil and the partial density of the
@@ -927,6 +935,9 @@ public:
     /*!
      * \brief Return the normalized formation volume factor of (potentially)
      *        under-saturated oil.
+     *
+     * This is the version of the method which takes the gas dissolution factor instead
+     * of the gas mass fraction in oil as an argument.
      */
     static Scalar oilFormationVolumeFactorRs(Scalar oilPressure, Scalar Rs, int regionIdx=0)
     {
@@ -945,10 +956,9 @@ public:
         Scalar Bo = oilFormationVolumeFactor(oilPressure, XoG, regionIdx);
         Scalar rhoo = rhooRef/Bo;
 
-        // for some reason, the gas concentration is not considered in the oil formation
-        // volume factor. WTF? While I have no idea why this should be there, it is
-        // analogous to what's done in opm-autodiff which seems to be in agreement what
-        // the commercial simulator does...
+        // the oil formation volume factor just represents the partial density of the oil
+        // component in the oil phase. to get the total density of the phase, we have to
+        // add the partial density of the gas component.
         Scalar Rs = XoG/(1 - XoG) * rhooRef/rhogRef;
         rhoo += rhogRef*Rs/Bo;
 
@@ -1005,7 +1015,7 @@ private:
             gasDissolutionFactor_.resize(numRegions);
             saturationPressureSpline_.resize(numRegions);
             waterReferencePressure_.resize(numRegions);
-            waterReferenceFormationFactor_.resize(numRegions);
+            waterReferenceFormationVolumeFactor_.resize(numRegions);
             waterCompressibility_.resize(numRegions);
             waterViscosity__.resize(numRegions);
             waterViscosibility_.resize(numRegions);
@@ -1060,7 +1070,7 @@ private:
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
-        Scalar BwMuwRef = waterViscosity__[regionIdx]*waterReferenceFormationFactor_[regionIdx];
+        Scalar BwMuwRef = waterViscosity__[regionIdx]*waterReferenceFormationVolumeFactor_[regionIdx];
         Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
 
         Scalar pRef = waterReferencePressure_[regionIdx];
@@ -1081,7 +1091,7 @@ private:
     static std::vector<TabulatedOneDFunction> inverseGasBMu_;
 
     static std::vector<Scalar> waterReferencePressure_;
-    static std::vector<Scalar> waterReferenceFormationFactor_;
+    static std::vector<Scalar> waterReferenceFormationVolumeFactor_;
     static std::vector<Scalar> waterCompressibility_;
     static std::vector<Scalar> waterViscosity__;
     static std::vector<Scalar> waterViscosibility_;
@@ -1136,7 +1146,7 @@ BlackOil<Scalar>::waterReferencePressure_;
 
 template <class Scalar>
 std::vector<Scalar>
-BlackOil<Scalar>::waterReferenceFormationFactor_;
+BlackOil<Scalar>::waterReferenceFormationVolumeFactor_;
 
 template <class Scalar>
 std::vector<Scalar>
