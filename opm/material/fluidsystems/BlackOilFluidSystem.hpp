@@ -350,7 +350,7 @@ public:
         auto &Rs = gasDissolutionFactor_[regionIdx];
 
         Scalar RsMin = 0.0;
-        Scalar RsMax = Rs.eval(gasDissolutionFactor_[regionIdx].xMax());
+        Scalar RsMax = Rs.eval(gasDissolutionFactor_[regionIdx].xMax(), /*extrapolate=*/true);
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -434,7 +434,7 @@ public:
         auto& gasDissolutionFactor = gasDissolutionFactor_[regionIdx];
 
         Scalar RsMin = 0.0;
-        Scalar RsMax = gasDissolutionFactor.eval(gasDissolutionFactor_[regionIdx].xMax());
+        Scalar RsMax = gasDissolutionFactor.eval(gasDissolutionFactor_[regionIdx].xMax(), /*extrapolate=*/true);
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -454,7 +454,7 @@ public:
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
-                Scalar muo = muoSpline.eval(po);
+                Scalar muo = muoSpline.eval(po, /*extrapolate=*/true);
 
                 oilMu_[regionIdx].appendSamplePoint(RsIdx, po, muo);
             }
@@ -760,7 +760,7 @@ public:
         Scalar XoG = saturatedOilGasMassFraction(pressure, regionIdx);
 
         // ATTENTION: XoG is represented by the _first_ axis!
-        return inverseOilB_[regionIdx].eval(XoG, pressure);
+        return inverseOilB_[regionIdx].eval(XoG, pressure, /*extrapolate=*/true);
     }
 
     /*!
@@ -929,7 +929,7 @@ public:
         Scalar Rs = XoG/(1-XoG)*referenceDensity(oilPhaseIdx)/referenceDensity(gasPhaseIdx);
 
         // ATTENTION: Rs is represented by the _first_ axis!
-        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
+        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure, /*extrapolate=*/true);
     }
 
     /*!
@@ -942,7 +942,7 @@ public:
     static Scalar oilFormationVolumeFactorRs(Scalar oilPressure, Scalar Rs, int regionIdx=0)
     {
         // ATTENTION: Rs is represented by the _first_ axis!
-        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
+        return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure, /*extrapolate=*/true);
     }
 
     /*!
@@ -1051,16 +1051,16 @@ private:
     static Scalar oilViscosityRs_(Scalar oilPressure, Scalar Rs, int regionIdx)
     {
         // ATTENTION: Rs is the first axis!
-        Scalar invBo = inverseOilB_[regionIdx].eval(Rs, oilPressure);
-        Scalar invMuoBo = inverseOilBMu_[regionIdx].eval(Rs, oilPressure);
+        Scalar invBo = inverseOilB_[regionIdx].eval(Rs, oilPressure, /*extrapolate=*/true);
+        Scalar invMuoBo = inverseOilBMu_[regionIdx].eval(Rs, oilPressure, /*extrapolate=*/true);
 
         return invBo/invMuoBo;
     }
 
     static Scalar gasViscosity_(Scalar gasPressure, int regionIdx)
     {
-        Scalar invBg = inverseGasB_[regionIdx].eval(gasPressure);
-        Scalar invMugBg = inverseGasBMu_[regionIdx].eval(gasPressure);
+        Scalar invBg = inverseGasB_[regionIdx].eval(gasPressure, /*extrapolate=*/true);
+        Scalar invMugBg = inverseGasBMu_[regionIdx].eval(gasPressure, /*extrapolate=*/true);
 
         return invBg/invMugBg;
     }
