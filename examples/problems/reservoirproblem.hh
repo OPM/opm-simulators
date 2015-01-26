@@ -250,7 +250,7 @@ public:
         FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
         FluidSystem::setSaturatedOilViscosity(muo);
         FluidSystem::setGasViscosity(mug);
-        FluidSystem::setWaterViscosity(9.6e-4);
+        FluidSystem::setWaterReferenceViscosity(9.6e-4);
         FluidSystem::setWaterCompressibility(1.450377e-10);
         FluidSystem::initEnd();
 
