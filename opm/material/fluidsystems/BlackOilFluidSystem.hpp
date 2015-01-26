@@ -339,7 +339,7 @@ public:
      * only requires the volume factor of gas-saturated oil (which only depends on
      * pressure) while the dependence on the gas mass fraction is estimated...
      */
-    static void setSaturatedOilFormationFactor(const SamplingPoints &samplePoints,
+    static void setSaturatedOilFormationVolumeFactor(const SamplingPoints &samplePoints,
                                                      int regionIdx=0)
     {
         resizeArrays_(regionIdx);
@@ -360,8 +360,8 @@ public:
         Scalar rhogRef = referenceDensity(gasPhaseIdx, regionIdx);
         Scalar rhooRef = referenceDensity(oilPhaseIdx, regionIdx);
 
-        Spline oilFormationFactorSpline;
-        oilFormationFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        Spline oilFormationVolumeFactorSpline;
+        oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
 
         updateSaturationPressureSpline_(regionIdx);
 
@@ -377,7 +377,7 @@ public:
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
 
                 Scalar poSat = oilSaturationPressure(XoG, regionIdx);
-                Scalar BoSat = oilFormationFactorSpline.eval(poSat, /*extrapolate=*/true);
+                Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
                 Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
                 Scalar rhoo = referenceDensity(oilPhaseIdx, regionIdx)/BoSat*(1 + drhoo_dp*(po - poSat));
 
@@ -393,7 +393,7 @@ public:
      *
      * This is a function of (Rs, po)...
      */
-    static void setInverseOilFormationFactor(const TabulatedTwoDFunction &invBo, int regionIdx=0)
+    static void setInverseOilFormationVolumeFactor(const TabulatedTwoDFunction &invBo, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -458,7 +458,7 @@ public:
      *
      * \param samplePoints A container of (x,y) values
      */
-    static void setGasFormationFactor(const SamplingPoints &samplePoints, int regionIdx=0)
+    static void setGasFormationVolumeFactor(const SamplingPoints &samplePoints, int regionIdx=0)
     {
         resizeArrays_(regionIdx);
 
@@ -744,7 +744,7 @@ public:
      *
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar saturatedOilFormationFactor(Scalar pressure, int regionIdx=0)
+    static Scalar saturatedOilFormationVolumeFactor(Scalar pressure, int regionIdx=0)
     {
         Valgrind::CheckDefined(pressure);
 
@@ -758,7 +758,7 @@ public:
     /*!
      * \brief Return the formation volume factor of water.
      */
-    static Scalar waterFormationFactor(Scalar pressure, int regionIdx=0)
+    static Scalar waterFormationVolumeFactor(Scalar pressure, int regionIdx=0)
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = waterReferencePressure_[regionIdx];
@@ -916,7 +916,7 @@ public:
      * \brief Return the normalized formation volume factor of (potentially)
      *        under-saturated oil.
      */
-    static Scalar oilFormationFactor(Scalar oilPressure, Scalar XoG, int regionIdx=0)
+    static Scalar oilFormationVolumeFactor(Scalar oilPressure, Scalar XoG, int regionIdx=0)
     {
         Scalar Rs = XoG/(1-XoG)*referenceDensity(oilPhaseIdx)/referenceDensity(gasPhaseIdx);
 
@@ -928,7 +928,7 @@ public:
      * \brief Return the normalized formation volume factor of (potentially)
      *        under-saturated oil.
      */
-    static Scalar oilFormationFactorRs(Scalar oilPressure, Scalar Rs, int regionIdx=0)
+    static Scalar oilFormationVolumeFactorRs(Scalar oilPressure, Scalar Rs, int regionIdx=0)
     {
         // ATTENTION: Rs is represented by the _first_ axis!
         return 1.0 / inverseOilB_[regionIdx].eval(Rs, oilPressure);
@@ -942,7 +942,7 @@ public:
         Scalar rhooRef = referenceDensity_[regionIdx][oilPhaseIdx];
         Scalar rhogRef = referenceDensity_[regionIdx][gasPhaseIdx];
 
-        Scalar Bo = oilFormationFactor(oilPressure, XoG, regionIdx);
+        Scalar Bo = oilFormationVolumeFactor(oilPressure, XoG, regionIdx);
         Scalar rhoo = rhooRef/Bo;
 
         // for some reason, the gas concentration is not considered in the oil formation
@@ -968,7 +968,7 @@ public:
     /*!
      * \brief Return the formation volume factor of gas.
      */
-    static Scalar gasFormationFactor(Scalar pressure, int regionIdx=0)
+    static Scalar gasFormationVolumeFactor(Scalar pressure, int regionIdx=0)
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
@@ -977,7 +977,7 @@ public:
     static Scalar gasDensity(Scalar gasPressure, int regionIdx)
     {
         // gas formation volume factor at reservoir pressure
-        Scalar Bg = gasFormationFactor(gasPressure, regionIdx);
+        Scalar Bg = gasFormationVolumeFactor(gasPressure, regionIdx);
         return referenceDensity_[regionIdx][gasPhaseIdx]/Bg;
     }
 
@@ -986,7 +986,7 @@ public:
      */
     static Scalar waterDensity(Scalar pressure, int regionIdx)
     {
-        Scalar Bw = waterFormationFactor(pressure, regionIdx);
+        Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
         Scalar rhowRef = referenceDensity(waterPhaseIdx, regionIdx);
         return rhowRef/Bw;
     }
@@ -1061,7 +1061,7 @@ private:
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BwMuwRef = waterViscosity__[regionIdx]*waterReferenceFormationFactor_[regionIdx];
-        Scalar Bw = waterFormationFactor(pressure, regionIdx);
+        Scalar Bw = waterFormationVolumeFactor(pressure, regionIdx);
 
         Scalar pRef = waterReferencePressure_[regionIdx];
         Scalar Y =
