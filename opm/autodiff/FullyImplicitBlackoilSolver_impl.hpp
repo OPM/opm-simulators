@@ -41,6 +41,7 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 //#include <fstream>
 
 // A debugging utility.
@@ -169,6 +170,7 @@ namespace {
         relax_increment_ = 0.1;
         relax_rel_tol_   = 0.2;
         max_iter_        = 15;
+        max_residual_allowed_  = std::numeric_limits< double >::max();
     }
 
     template<class T>
@@ -192,6 +194,7 @@ namespace {
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
+        max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
@@ -1947,9 +1950,9 @@ namespace {
             RG_sum = RG.sum();
         }
 
-        const double mass_balance_residual_water = fabs(BW_avg*RW_sum) * dt / pvSum;
-        const double mass_balance_residual_oil = fabs(BO_avg*RO_sum) * dt / pvSum;
-        const double mass_balance_residual_gas = fabs(BG_avg*RG_sum) * dt / pvSum;
+        const double mass_balance_residual_water = std::abs(BW_avg*RW_sum) * dt / pvSum;
+        const double mass_balance_residual_oil   = std::abs(BO_avg*RO_sum) * dt / pvSum;
+        const double mass_balance_residual_gas   = std::abs(BG_avg*RG_sum) * dt / pvSum;
 
         bool converged_MB = (mass_balance_residual_water < tol_mb)
                          && (mass_balance_residual_oil   < tol_mb)
@@ -1962,6 +1965,19 @@ namespace {
 
         bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
         bool converged = converged_MB && converged_CNV && converged_Well;
+
+        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
+        if( std::isnan(mass_balance_residual_water) || mass_balance_residual_water > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual_oil)   || mass_balance_residual_oil   > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual_gas)   || mass_balance_residual_gas   > maxResidualAllowed() ||
+            std::isnan(CNVW) || CNVW > maxResidualAllowed() ||
+            std::isnan(CNVO) || CNVO > maxResidualAllowed() ||
+            std::isnan(CNVG) || CNVG > maxResidualAllowed() ||
+            std::isnan(residualWellFlux) || residualWellFlux > maxResidualAllowed() ||
+            std::isnan(residualWell)     || residualWell     > maxResidualAllowed() )
+        {
+            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
+        }
 
         if (iteration == 0) {
             std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
