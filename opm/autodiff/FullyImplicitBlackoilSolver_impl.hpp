@@ -194,7 +194,7 @@ namespace {
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
-        max_residual_allowed_ = param.getDefault("max_residual_allowed",max_residual_allowed_);
+        max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
