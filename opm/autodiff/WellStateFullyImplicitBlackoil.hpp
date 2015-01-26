@@ -43,7 +43,7 @@ namespace Opm
     {
         typedef WellState  BaseType;
     public:
-        typedef std::array< int, 2 >  mapentry_t;
+        typedef std::array< int, 3 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
 
         using BaseType :: wellRates;
@@ -78,15 +78,18 @@ namespace Opm
                 const WellControls* ctrl = wells->ctrls[w];
                 std::string name( wells->name[ w ] );
                 assert( name.size() > 0 );
-                mapentry_t& wellMapEntry = wellMap_[ name ];
-                wellMapEntry[ 0 ] = w ;
-                wellMapEntry[ 1 ] = wells->well_connpos[w ] ;
+                mapentry_t& wellMapEntry = wellMap_[name];
+                wellMapEntry[ 0 ] = w;
+                wellMapEntry[ 1 ] = wells->well_connpos[w];
+                // also store the number of perforations in this well
+                const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
+                wellMapEntry[ 2 ] = num_perf_this_well;
+
                 if (well_controls_well_is_stopped(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
                     // Open well: Initialize perfphaserates_ to well
                     // rates divided by the number of perforations.
-                    const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
                     for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
@@ -128,14 +131,29 @@ namespace Opm
 
                         // perfPhaseRates
                         int oldPerf = (*it).second[ 1 ] * np;
-                        for (int perf = wells->well_connpos[ newIndex ]*np;
-                             perf < wells->well_connpos[ newIndex + 1]*np; ++perf, ++oldPerf )
+                        const int num_perf_old_well = (*it).second[ 2 ];
+                        const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
+                        // copy perforation rates when the number of perforations is equal,
+                        // otherwise initialize perfphaserates to well rates divided by the number of perforations.
+                        if( num_perf_old_well == num_perf_this_well )
                         {
-                            perfPhaseRates()[ perf ] = prevState.perfPhaseRates()[ oldPerf ];
+                            for (int perf = wells->well_connpos[ newIndex ]*np;
+                                 perf < wells->well_connpos[ newIndex + 1]*np; ++perf, ++oldPerf )
+                            {
+                                perfPhaseRates()[ perf ] = prevState.perfPhaseRates()[ oldPerf ];
+                            }
+                        } else {
+                            for (int perf = wells->well_connpos[newIndex]; perf < wells->well_connpos[newIndex + 1]; ++perf) {
+                                for (int p = 0; p < np; ++p) {
+                                    perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(num_perf_this_well);
+                                }
+                            }
                         }
 
                         // currentControls
+                        // WARNING: This may be error prone if the number of controls change.
                         currentControls()[ newIndex ] = prevState.currentControls()[ oldIndex ];
+
                     }
                 }
             }
