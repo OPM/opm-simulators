@@ -245,9 +245,9 @@ public:
         };
 
         FluidSystem::setReferenceDensities(/*oil=*/786, /*water=*/1037, /*gas=*/0.97);
-        FluidSystem::setGasFormationFactor(Bg);
+        FluidSystem::setGasFormationVolumeFactor(Bg);
         FluidSystem::setSaturatedOilGasDissolutionFactor(Rs);
-        FluidSystem::setSaturatedOilFormationFactor(Bo);
+        FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
         FluidSystem::setSaturatedOilViscosity(muo);
         FluidSystem::setGasViscosity(mug);
         FluidSystem::setWaterViscosity(9.6e-4);
