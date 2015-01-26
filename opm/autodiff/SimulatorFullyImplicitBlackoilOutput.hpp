@@ -1,3 +1,22 @@
+/*
+  Copyright (c) 2014 SINTEF ICT, Applied Mathematics.
+  Copyright (c) 2015 IRIS AS
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #include <opm/core/grid.h>
@@ -6,6 +25,10 @@
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+
+#include <opm/core/io/OutputWriter.hpp>
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 
@@ -23,7 +46,7 @@ namespace Opm
 {
 
     void outputStateVtk(const UnstructuredGrid& grid,
-                        const Opm::BlackoilState& state,
+                        const Opm::SimulatorState& state,
                         const int step,
                         const std::string& output_dir);
 
@@ -38,7 +61,7 @@ namespace Opm
                                const std::string& output_dir);
 #ifdef HAVE_DUNE_CORNERPOINT
     void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::BlackoilState& state,
+                        const Opm::SimulatorState& state,
                         const int step,
                         const std::string& output_dir);
 #endif
@@ -89,6 +112,141 @@ namespace Opm
         }
     }
 
+    /** Wrapper class satisfying the OutputWriter interface */
+    template <class Grid>
+    class BlackoilVTKWriter : public OutputWriter
+    {
+    public:
+        // constructor taking grid and directory
+        BlackoilVTKWriter(const Grid& grid,
+                          const std::string& outputDir)
+          : grid_( grid ),
+            outputDir_( outputDir )
+        {}
 
+        /** \copydoc Opm::OutputWriter::writeInit */
+        void writeInit(const SimulatorTimerInterface &timer) {}
+
+        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        void writeTimeStep(const SimulatorTimerInterface& timer,
+                           const SimulatorState& state,
+                           const WellState& )
+        {
+            outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
+        }
+
+    protected:
+        const Grid& grid_;
+        const std::string outputDir_;
+    };
+
+    template <class Grid>
+    class BlackoilMatlabWriter : public OutputWriter
+    {
+    public:
+        // constructor taking grid and directory
+        BlackoilMatlabWriter(const Grid& grid,
+                             const std::string& outputDir)
+          : grid_( grid ),
+            outputDir_( outputDir )
+        {}
+
+        /** \copydoc Opm::OutputWriter::writeInit */
+        void writeInit(const SimulatorTimerInterface &timer) {}
+
+        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        void writeTimeStep(const SimulatorTimerInterface& timer,
+                           const SimulatorState& reservoirState,
+                           const WellState& wellState)
+        {
+            const BlackoilState* state =
+                dynamic_cast< const BlackoilState* > (&reservoirState);
+            if( state ) {
+                outputStateMatlab(grid_, *state, timer.currentStepNum(), outputDir_);
+            }
+            else {
+                OPM_THROW(std::logic_error,"BlackoilMatlabWriter only works for BlackoilState");
+            }
+            outputWellStateMatlab(wellState, timer.currentStepNum(), outputDir_);
+        }
+
+    protected:
+        const Grid& grid_;
+        const std::string outputDir_;
+    };
+
+    class BlackoilOutputWriter : public OutputWriter
+    {
+    public:
+        // constructor creating different sub writers
+        template <class Grid>
+        BlackoilOutputWriter(const Grid& grid,
+                             const parameter::ParameterGroup& param,
+                             Opm::EclipseStateConstPtr eclipseState,
+                             const Opm::PhaseUsage &phaseUsage);
+
+        /** \copydoc Opm::OutputWriter::writeInit */
+        void writeInit(const SimulatorTimerInterface &timer);
+
+        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        void writeTimeStep(const SimulatorTimerInterface& timer,
+                           const SimulatorState& reservoirState,
+                           const WellState& wellState);
+
+        /** \brief return output directory */
+        const std::string& outputDirectory() const { return outputDir_; }
+
+        /** \brief return true if output is enabled */
+        const bool output () const { return output_; }
+
+    protected:
+        // Parameters for output.
+        const bool output_;
+        const std::string outputDir_;
+        const int output_interval_;
+
+        std::unique_ptr< OutputWriter  > vtkWriter_;
+        std::unique_ptr< OutputWriter  > matlabWriter_;
+        std::unique_ptr< EclipseWriter > eclWriter_;
+    };
+
+
+    //////////////////////////////////////////////////////////////
+    //
+    //  Implementation
+    //
+    //////////////////////////////////////////////////////////////
+    template <class Grid>
+    inline
+    BlackoilOutputWriter::
+    BlackoilOutputWriter(const Grid& grid,
+                         const parameter::ParameterGroup& param,
+                         Opm::EclipseStateConstPtr eclipseState,
+                         const Opm::PhaseUsage &phaseUsage )
+      : output_( param.getDefault("output", true) ),
+        outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
+        output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
+        vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
+                     new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
+        matlabWriter_( output_ && param.getDefault("output_matlab", false) ?
+                     new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
+        eclWriter_( output_ && param.getDefault("output_ecl", true) ?
+                    new EclipseWriter(param, eclipseState, phaseUsage,
+                                      Opm::UgGridHelpers::numCells( grid ),
+                                      Opm::UgGridHelpers::globalCell( grid ) )
+                   : 0 )
+    {
+        // For output.
+        if (output_) {
+            // Ensure that output dir exists
+            boost::filesystem::path fpath(outputDir_);
+            try {
+                create_directories(fpath);
+            }
+            catch (...) {
+                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+            }
+        }
+    }
 }
 #endif

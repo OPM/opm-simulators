@@ -54,7 +54,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -68,6 +67,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+
 #include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -132,7 +132,6 @@ try
 
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::LoggerPtr logger(new Opm::Logger());
-    bool strict_parsing = param.getDefault("strict_parsing", true);
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
@@ -160,9 +159,7 @@ try
     grid->processEclipseFormat(deck, false, false, false, porv);
 
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::EclipseWriter outputWriter(param, eclipseState, pu,
-                                    Opm::UgGridHelpers::numCells(*grid),
-                                    Opm::UgGridHelpers::globalCell(*grid));
+    Opm::BlackoilOutputWriter outputWriter(*grid, param, eclipseState, pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
