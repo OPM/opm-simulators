@@ -534,7 +534,7 @@ protected:
     void updateWellTopology_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
         auto& model = simulator_.model();
-        const auto& cartesianCellId = simulator_.gridManager().cartesianCellId();
+        const auto& gridManager = simulator_.gridManager();
 
         // first, remove all wells from the reservoir
         model.clearAuxiliaryModules();
@@ -557,7 +557,7 @@ protected:
             elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = cartesianCellId[globalDofIdx];
+                int cartesianDofIdx = gridManager.cartesianCellId(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip
@@ -635,8 +635,8 @@ protected:
 
         // associate the well completions with grid cells and register them in the
         // Peaceman well object
-        const GridView gridView = simulator_.gridManager().gridView();
-        const auto& cartesianCellId = simulator_.gridManager().cartesianCellId();
+        const auto& gridManager = simulator_.gridManager();
+        const GridView gridView = gridManager.gridView();
 
         ElementContext elemCtx(simulator_);
         auto elemIt = gridView.template begin</*codim=*/0>();
@@ -650,7 +650,7 @@ protected:
             elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = cartesianCellId[globalDofIdx];
+                int cartesianDofIdx = gridManager.cartesianCellId(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip

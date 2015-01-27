@@ -526,12 +526,12 @@ public:
         if (!deck->hasKeyword("PVTNUM"))
             return 0;
 
-        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
+        const auto& gridManager = this->simulator().gridManager();
 
         // this is quite specific to the ECFV discretization. But so is everything in an
         // ECL deck, i.e., we don't need to care here...
         int compressedDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        int cartesianDofIdx = cartesianCellId[compressedDofIdx];
+        int cartesianDofIdx = gridManager.cartesianCellId(compressedDofIdx);
 
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
@@ -662,9 +662,9 @@ private:
 
     void readMaterialParameters_()
     {
-        auto deck = this->simulator().gridManager().deck();
-        auto eclState = this->simulator().gridManager().eclState();
-        const auto &cartesianCellId = this->simulator().gridManager().cartesianCellId();
+        const auto &gridManager = this->simulator().gridManager();
+        auto deck = gridManager.deck();
+        auto eclState = gridManager.eclState();
 
         size_t numDof = this->model().numGridDof();
 
@@ -689,7 +689,7 @@ private:
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = cartesianCellId[dofIdx];
+                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
                 intrinsicPermeability_[dofIdx] = 0.0;
                 intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
                 intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
@@ -712,7 +712,7 @@ private:
                 eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = cartesianCellId[dofIdx];
+                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
@@ -726,10 +726,8 @@ private:
             const std::vector<double> &ntgData =
                 eclState->getDoubleGridProperty("NTG")->getData();
 
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = cartesianCellId[dofIdx];
-                porosity_[dofIdx] *= ntgData[cartesianElemIdx];
-            }
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
+                porosity_[dofIdx] *= ntgData[gridManager.cartesianCellId(dofIdx)];
         }
 
         // apply the MULTPV keyword to the porosity
@@ -737,10 +735,8 @@ private:
             const std::vector<double> &multpvData =
                 eclState->getDoubleGridProperty("MULTPV")->getData();
 
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = cartesianCellId[dofIdx];
-                porosity_[dofIdx] *= multpvData[cartesianElemIdx];
-            }
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
+                porosity_[dofIdx] *= multpvData[gridManager.cartesianCellId(dofIdx)];
         }
 
         ////////////////////////////////
@@ -802,7 +798,7 @@ private:
 
             materialParamTableIdx_.resize(numDof);
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = cartesianCellId[dofIdx];
+                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
 
                 // make sure that all values are in the correct range
                 assert(1 <= satnumData[dofIdx]);
@@ -849,7 +845,6 @@ private:
     {
         const auto deck = this->simulator().gridManager().deck();
         const auto &gridManager = this->simulator().gridManager();
-        const auto &cartesianCellId = gridManager.cartesianCellId();
 
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
@@ -903,7 +898,7 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
 
-            size_t cartesianDofIdx = cartesianCellId[dofIdx];
+            size_t cartesianDofIdx = gridManager.cartesianCellId(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
 
