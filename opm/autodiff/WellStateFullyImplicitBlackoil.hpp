@@ -72,6 +72,8 @@ namespace Opm
             // Initialize perfphaserates_, which must be done here.
             const int np = wells->number_of_phases;
             const int nperf = wells->well_connpos[nw];
+            // Ensure that we start out with zero rates by default.
+            perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
             for (int w = 0; w < nw; ++w) {
                 assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
@@ -151,8 +153,12 @@ namespace Opm
                         }
 
                         // currentControls
-                        // WARNING: This may be error prone if the number of controls change.
-                        currentControls()[ newIndex ] = prevState.currentControls()[ oldIndex ];
+                        const int old_control_index = prevState.currentControls()[ oldIndex ];
+                        if (old_control_index < well_controls_get_num(wells->ctrls[w])) {
+                            // If the set of controls have changed, this may not be identical
+                            // to the last control, but it must be a valid control.
+                            currentControls()[ newIndex ] = old_control_index;
+                        }
 
                     }
                 }
