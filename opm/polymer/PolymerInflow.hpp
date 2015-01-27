@@ -24,6 +24,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellPolymerProperties.hpp>
 #include <vector>
 #include <string>
@@ -101,6 +102,7 @@ namespace Opm
         /// \param[in]  num_cells   Number of cells in grid.
         /// \param[in]  currentStep Number of current simulation step.
         PolymerInflowFromDeck(Opm::DeckConstPtr deck,
+                              Opm::EclipseStateConstPtr eclipseState,
                               const Wells& wells,
                               const int num_cells,
                               size_t currentStep);
@@ -118,6 +120,7 @@ namespace Opm
         
         std::unordered_map<std::string, double> wellPolymerRate_;
         void setInflowValues(Opm::DeckConstPtr deck,
+                             Opm::EclipseStateConstPtr eclipseState,
                              size_t currentStep);
     };
 

@@ -114,17 +114,19 @@ namespace Opm
 
     void
     PolymerInflowFromDeck::setInflowValues(Opm::DeckConstPtr deck,
+                                           Opm::EclipseStateConstPtr eclipseState,
                                            size_t currentStep)
     {
         Opm::DeckKeywordConstPtr keyword = deck->getKeyword("WPOLYMER");
         
-        Schedule schedule(deck);
+        //        Schedule schedule(deck);
+        ScheduleConstPtr schedule = eclipseState->getSchedule();
         for (size_t recordNr = 0; recordNr < keyword->size(); recordNr++) {
             DeckRecordConstPtr record = keyword->getRecord(recordNr);
 
             const std::string& wellNamesPattern = record->getItem("WELL")->getTrimmedString(0);
             std::string wellName = record->getItem("WELL")->getTrimmedString(0);
-            std::vector<WellPtr> wells = schedule.getWells(wellNamesPattern);
+            std::vector<WellPtr> wells = schedule->getWells(wellNamesPattern);
             for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter) {
                 WellPtr well = *wellIter;
                 WellInjectionProperties injection = well->getInjectionProperties(currentStep);
@@ -141,6 +143,7 @@ namespace Opm
     /// Constructor.
     /// @param[in]  deck     Input deck expected to contain WPOLYMER.
     PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::DeckConstPtr deck,
+                                                 Opm::EclipseStateConstPtr eclipseState,
                                                  const Wells& wells,
                                                  const int num_cells,
                                                  size_t currentStep)
@@ -150,7 +153,7 @@ namespace Opm
             OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
             return;
         }
-        setInflowValues(deck, currentStep);
+        setInflowValues(deck, eclipseState, currentStep);
         
         std::unordered_map<std::string, double>::const_iterator map_it;
         // Extract concentrations and put into cell->concentration map.
