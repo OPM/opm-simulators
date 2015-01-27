@@ -275,7 +275,7 @@ namespace Opm {
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
         /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residuum of the well flux and the well equation.
+        /// and afterwards the norm of the residual of the well flux and the well equation.
         std::vector<double> computeResidualNorms() const;
 
         ADB
