@@ -124,7 +124,9 @@ public:
             }
         }
 
-        Opm::EclipseStateConstPtr eclState = simulator_.gridManager().eclState();
+        const auto& gridManager = simulator_.gridManager();
+        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        auto multipliers = eclState->getTransMult();
         const std::vector<double>& multx =
             eclState->getDoubleGridProperty("MULTX")->getData();
         const std::vector<double>& multy =
@@ -180,6 +182,9 @@ public:
                 if (insideElemIdx > outsideElemIdx)
                     continue;
 
+                int cartesianElemIdxInside = gridManager.cartesianCellId(insideElemIdx);
+                int cartesianElemIdxOutside = gridManager.cartesianCellId(outsideElemIdx);
+
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
                 int insideFaceIdx  = intersection.indexInInside();
@@ -223,6 +228,32 @@ public:
                                   multx, multxMinus,
                                   multy, multyMinus,
                                   multz, multzMinus);
+
+                // apply the region multipliers (cf. the MULTREGT keyword)
+                Opm::FaceDir::DirEnum faceDir;
+                switch (insideFaceIdx) {
+                case 0:
+                case 1:
+                    faceDir = Opm::FaceDir::XPlus;
+                    break;
+
+                case 2:
+                case 3:
+                    faceDir = Opm::FaceDir::YPlus;
+                    break;
+
+                case 4:
+                case 5:
+                    faceDir = Opm::FaceDir::ZPlus;
+                    break;
+
+                default:
+                    OPM_THROW(std::logic_error, "Could not determine a face direction");
+                }
+
+                trans *= multipliers->getRegionMultiplier(cartesianElemIdxInside,
+                                                          cartesianElemIdxOutside,
+                                                          faceDir);
 
                 trans_[isId_(insideElemIdx, outsideElemIdx)] = trans;
             }
