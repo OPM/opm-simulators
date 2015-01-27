@@ -629,8 +629,7 @@ protected:
             Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
 
-            if (!deckWell->getRefDepthDefaulted())
-                wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
+            wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
         }
 
         // associate the well completions with grid cells and register them in the
