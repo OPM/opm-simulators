@@ -272,7 +272,11 @@ namespace Opm {
         double
         residualNorm() const;
 
-        std::vector<double> residuals() const;
+        /// \brief Compute the residual norms of the mass balance for each phase,
+        /// the well flux, and the well equation.
+        /// \return a vector that contains for each phase the norm of the mass balance
+        /// and afterwards the norm of the residuum of the well flux and the well equation.
+        std::vector<double> computeResidualNorms() const;
 
         ADB
         fluidViscosity(const int               phase,
