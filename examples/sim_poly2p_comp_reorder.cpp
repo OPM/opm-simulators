@@ -303,7 +303,7 @@ try
                 if (wells.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow.reset(new PolymerInflowFromDeck(deck, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
+                polymer_inflow.reset(new PolymerInflowFromDeck(deck, eclipseState, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
             } else {
                 polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                                             param.getDefault("poly_end_days", 800.0)*Opm::unit::day,
