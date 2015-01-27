@@ -1886,7 +1886,7 @@ namespace {
     }
 
     template<class T>
-    void
+    double
     FullyImplicitBlackoilSolver<T>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
                                                          const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
                                                          const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
@@ -1907,6 +1907,9 @@ namespace {
                 R_sum[pu.phase_pos[idx]] = B_avg[pu.phase_pos[idx]] = maxCoeff[pu.phase_pos[idx]] =0.;
             }
         }
+        // Compute total pore volume
+        const V pv = geo_.poreVolume();
+        return pv.sum();
     }
 
     template<class T>
@@ -1920,7 +1923,6 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
-        const double pvSum = pv.sum();
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
@@ -1944,7 +1946,7 @@ namespace {
             }
         }
 
-        convergenceReduction(B, tempV, R, B_avg, maxCoeff, R_sum, nc);
+        const double pvSum = convergenceReduction(B, tempV, R, B_avg, maxCoeff, R_sum, nc);
 
         bool converged_MB = true;
         bool converged_CNV = true;

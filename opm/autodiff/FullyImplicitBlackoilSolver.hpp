@@ -353,8 +353,9 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         bool getConvergence(const double dt, const int iteration);
 
-        /// Compute the reduction within the convergence check.
-        void
+        /// \brief Compute the reduction within the convergence check.
+        /// \return The total pore volume.
+        double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
