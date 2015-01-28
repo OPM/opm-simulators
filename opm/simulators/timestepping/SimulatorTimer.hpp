@@ -95,10 +95,10 @@ namespace Opm
         /// Note: if done(), it is an error to call report().
         void report(std::ostream& os) const;
 
-        /// Next step.
+        /// advance time by currentStepLength
         SimulatorTimer& operator++();
 
-        /// Next step.
+        /// advance time by currentStepLength
         void advance() { this->operator++(); }
 
         /// Return true if op++() has been called numSteps() times.
