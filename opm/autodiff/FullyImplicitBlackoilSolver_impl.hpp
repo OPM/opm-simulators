@@ -1947,7 +1947,7 @@ namespace {
             }
         }
 
-        const double pvSum = convergenceReduction(B, tempV, R, B_avg, maxCoeff, R_sum, nc);
+        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, nc);
 
         bool converged_MB = true;
         bool converged_CNV = true;

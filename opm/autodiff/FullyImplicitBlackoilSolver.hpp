@@ -364,21 +364,21 @@ namespace Opm {
         /// \param[in] R     A matrix with MaxNumPhases columns and the same number rows
         ///                  as the number of cells of the grid. B.col(i) contains the values
         ///                  for phase i.
-        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
-        ///                   of B for the phase i.
-        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
-        ///                   maximum of (???) for the phase i.
         /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
         ///                   of R for the phase i.
+        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
+        ///                   maximum of (???) for the phase i.
+        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
+        ///                   of B for the phase i.
         /// \param[in]  nc    The number of cells of the local grid.
         /// \return The total pore volume over all cells.
         double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
-                             std::array<double,MaxNumPhases>& B_avg,
-                             std::array<double,MaxNumPhases>& maxCoeff,
                              std::array<double,MaxNumPhases>& R_sum,
+                             std::array<double,MaxNumPhases>& maxCoeff,
+                             std::array<double,MaxNumPhases>& B_avg,
                              int nc) const;
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
