@@ -1942,7 +1942,7 @@ namespace {
                 const int pos = pu.phase_pos[idx];
                 const ADB& tempB = rq_[pos].b;
                 B.col(pos)  = 1./tempB.value();
-                R.col(pos) = residual_.material_balance_eq[pos].value();
+                R.col(pos) = residual_.material_balance_eq[idx].value();
                 tempV.col(pos) = R.col(pos).abs()/pv;
             }
         }
