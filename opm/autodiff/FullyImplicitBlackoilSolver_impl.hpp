@@ -281,7 +281,9 @@ namespace {
             computeWellConnectionPressures(state, xw);
         }
 
-        std::vector<std::vector<double>> residual_history;
+        // For each iteration we store in a vector the norms of the residual of
+        // the mass balance for each active phase, the well flux and the well equations
+        std::vector<std::vector<double>> residual_norms_history;
 
         assemble(pvdt, x, xw);
 
@@ -289,7 +291,7 @@ namespace {
         bool converged = false;
         double omega = 1.;
 
-        residual_history.push_back(residuals());
+        residual_norms_history.push_back(computeResidualNorms());
 
         int          it  = 0;
         converged = getConvergence(dt,it);
@@ -308,7 +310,7 @@ namespace {
             // store number of linear iterations used
             linearIterations += linsolver_.iterations();
 
-            detectNewtonOscillations(residual_history, it, relaxRelTol(), isOscillate, isStagnate);
+            detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
 
             if (isOscillate) {
                 omega -= relaxIncrement();
@@ -322,7 +324,7 @@ namespace {
 
             assemble(pvdt, x, xw);
 
-            residual_history.push_back(residuals());
+            residual_norms_history.push_back(computeResidualNorms());
 
             // increase iteration counter
             ++it;
@@ -1783,9 +1785,9 @@ namespace {
 
     template<class T>
     std::vector<double>
-    FullyImplicitBlackoilSolver<T>::residuals() const
+    FullyImplicitBlackoilSolver<T>::computeResidualNorms() const
     {
-        std::vector<double> residual;
+        std::vector<double> residualNorms;
 
         std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
@@ -1796,7 +1798,7 @@ namespace {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
             }
-            residual.push_back(massBalanceResid);
+            residualNorms.push_back(massBalanceResid);
         }
 
         // the following residuals are not used in the oscillation detection now
@@ -1805,16 +1807,16 @@ namespace {
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
-        residual.push_back(wellFluxResid);
+        residualNorms.push_back(wellFluxResid);
 
         const double wellResid = infinityNorm( residual_.well_eq );
         if (!std::isfinite(wellResid)) {
            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
-        residual.push_back(wellResid);
+        residualNorms.push_back(wellResid);
 
-        return residual;
+        return residualNorms;
     }
 
     template<class T>
