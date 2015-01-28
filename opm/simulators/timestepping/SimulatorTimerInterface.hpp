@@ -75,6 +75,9 @@ namespace Opm
         /// beginning of the current time step [s].
         virtual double simulationTimeElapsed() const = 0;
 
+        /// advance timer to the next time step
+        virtual void advance() = 0 ;
+
         /// Return true if timer indicates that simulation of timer interval is finished
         virtual bool done() const = 0;
 

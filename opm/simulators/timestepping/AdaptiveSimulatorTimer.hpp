@@ -46,6 +46,9 @@ namespace Opm
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();
 
+        /// \brief advance time by currentStepLength
+        void advance() { this->operator++ (); }
+
         /// \brief provide and estimate for new time step size
         void provideTimeStepEstimate( const double dt_estimate );
 

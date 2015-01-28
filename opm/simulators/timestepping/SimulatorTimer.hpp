@@ -98,6 +98,9 @@ namespace Opm
         /// Next step.
         SimulatorTimer& operator++();
 
+        /// Next step.
+        void advance() { this->operator++(); }
+
         /// Return true if op++() has been called numSteps() times.
         bool done() const;
 
