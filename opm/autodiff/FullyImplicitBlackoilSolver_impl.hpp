@@ -1941,9 +1941,9 @@ namespace {
             if (active_[idx]) {
                 const int pos = pu.phase_pos[idx];
                 const ADB& tempB = rq_[pos].b;
-                B.col(pu.phase_pos[idx])  = 1./tempB.value();
-                R.col(pu.phase_pos[idx]) = residual_.material_balance_eq[pu.phase_pos[idx]].value();
-                tempV.col(pu.phase_pos[idx]) = R.col(pu.phase_pos[idx]).abs()/pv;
+                B.col(pos)  = 1./tempB.value();
+                R.col(pos) = residual_.material_balance_eq[pos].value();
+                tempV.col(pos) = R.col(pos).abs()/pv;
             }
         }
 
