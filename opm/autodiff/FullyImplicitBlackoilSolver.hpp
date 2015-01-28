@@ -367,7 +367,7 @@ namespace Opm {
         /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
         ///                   of R for the phase i.
         /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
-        ///                   maximum of (???) for the phase i.
+        ///                   maximum of tempV for the phase i.
         /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
         ///                   of B for the phase i.
         /// \param[in]  nc    The number of cells of the local grid.
