@@ -1931,9 +1931,10 @@ namespace {
         std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
         std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
         std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B;
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R;
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV;
+        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
 
         for(int idx=0; idx<MaxNumPhases; ++idx)
         {
