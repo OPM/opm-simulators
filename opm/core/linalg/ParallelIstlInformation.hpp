@@ -276,17 +276,22 @@ private:
         if( container.size() )
         {
             auto& reduceOperator  = std::get<I>(operators);
-            auto newVal = container.begin();
+            // Eigen:Block does not support STL iterators!!!!
+            // Therefore we need to rely on the harder random-access
+            // property of the containers. But this should be save, too.
+            // Just commenting out code in the hope that Eigen might improve
+            // in this regard in the future.
+            //auto newVal = container.begin();
             auto mask   = ownerMask_.begin();
             auto& value = std::get<I>(values);
-            value = reduceOperator.maskValue(*newVal, *mask);
+            value = reduceOperator.maskValue(container[0], *mask);
             ++mask;
-            ++newVal;
+            //++newVal;
 
-            for( auto endVal=container.end(); newVal!=endVal;
-                ++newVal, ++mask )
+            for( auto endVal=ownerMask_.end(); mask!=endVal;
+                 /*++newVal,*/ ++mask )
             {
-                value = reduceOperator(value, *newVal, *mask);
+                value = reduceOperator(value, container[mask-ownerMask_.begin()], *mask);
             }
         }
         computeLocalReduction<I+1>(containers, operators, values);
