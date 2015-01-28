@@ -22,17 +22,14 @@
 #include <opm/autodiff/DuneMatrix.hpp>
 
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
-#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
-
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
-#include <dune/istl/bvector.hh>
 // #include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/operators.hh>
 #include <dune/istl/io.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/preconditioners.hh>
@@ -57,11 +54,8 @@ namespace Opm
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
-
-    typedef Dune::FieldVector<double, 1   > VectorBlockType;
     typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
     typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
-    typedef Dune::BlockVector<VectorBlockType>        Vector;
 
 
     namespace {
@@ -114,8 +108,9 @@ namespace Opm
 
 
     /// Construct a system solver.
-    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param)
-        : iterations_( 0 )
+    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
+                                                           const boost::any& parallelInformation)
+        : iterations_( 0 ), parallelInformation_(parallelInformation)
     {
         cpr_relax_        = param.getDefault("cpr_relax", 1.0);
         cpr_ilu_n_        = param.getDefault("cpr_ilu_n", 0);
@@ -186,34 +181,38 @@ namespace Opm
 
         // Create ISTL matrix for elliptic part.
         DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
-
-        // Construct operator, scalar product and vectors needed.
-        typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
-        Operator opA(istlA);
-        Dune::SeqScalarProduct<Vector> sp;
+        
         // Right hand side.
-        Vector istlb(opA.getmat().N());
+        Vector istlb(istlA.N());
         std::copy_n(b.data(), istlb.size(), istlb.begin());
         // System solution
-        Vector x(opA.getmat().M());
+        Vector x(istlA.M());
         x = 0.0;
 
-        // Construct preconditioner.
-        // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
-        typedef Opm::CPRPreconditioner<Mat,Vector,Vector> Preconditioner;
-        Preconditioner precond(istlA, istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_);
-
-        // Construct linear solver.
-        const double tolerance = 1e-3;
-        const int maxit = 150;
-        const int verbosity = 0;
-        const int restart = 40;
-        Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond, tolerance, restart, maxit, verbosity);
-
-        // Solve system.
         Dune::InverseOperatorResult result;
-        linsolve.apply(x, istlb, result);
-
+#if HAVE_MPI
+        if(parallelInformation_.type()==typeid(ParallelISTLInformation))
+        {
+            typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
+            Comm istlComm(info.communicator());
+            info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices());
+            // Construct operator, scalar product and vectors needed.
+            typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
+            Operator opA(istlA, istlComm);
+            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, istlAe, x, istlb, istlComm, result);
+        }
+        else
+#endif
+        {
+            // Construct operator, scalar product and vectors needed.
+            typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
+            Operator opA(istlA);
+            Dune::Amg::SequentialInformation info;
+            constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, result);
+        }
+            
         // store number of iterations
         iterations_ = result.iterations;
 

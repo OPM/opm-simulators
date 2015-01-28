@@ -20,10 +20,14 @@
 #ifndef OPM_NEWTONITERATIONBLACKOILCPR_HEADER_INCLUDED
 #define OPM_NEWTONITERATIONBLACKOILCPR_HEADER_INCLUDED
 
-
+#include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <dune/istl/scalarproducts.hh>
+#include <dune/istl/operators.hh>
+#include <dune/istl/bvector.hh>
 #include <memory>
 
 namespace Opm
@@ -37,7 +41,12 @@ namespace Opm
     /// in Fully Implicit Reservoir Simulations" by Gries et al (SPE 163608).
     class NewtonIterationBlackoilCPR : public NewtonIterationBlackoilInterface
     {
+        typedef Dune::FieldVector<double, 1   > VectorBlockType;
+        typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
+        typedef Dune::BlockVector<VectorBlockType>        Vector;
     public:
+        
         /// Construct a system solver.
         /// \param[in] param   parameters controlling the behaviour of
         ///                    the preconditioning and choice of
@@ -47,7 +56,10 @@ namespace Opm
         ///                        cpr_ilu_n        (default 0) use ILU(n) for preconditioning of the linear system
         ///                        cpr_use_amg      (default false) if true, use AMG preconditioner for elliptic part
         ///                        cpr_use_bicgstab (default true)  if true, use BiCGStab (else use CG) for elliptic part
-        NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param);
+        /// \param[in] parallelInformation In the case of a parallel run
+        ///                               with dune-istl the information about the parallelization.
+        NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
+                                   const boost::any& parallelInformation=boost::any());
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -58,12 +70,42 @@ namespace Opm
 
         /// \copydoc NewtonIterationBlackoilInterface::iterations
         virtual int iterations () const { return iterations_; }
+
+        /// \brief construct the CPR preconditioner and the solver.
+        /// \tparam P The type of the parallel information.
+        /// \param parallelInformation the information about the parallelization.
+        template<int category=Dune::SolverCategory::sequential, class O, class P>   
+        void constructPreconditionerAndSolve(O& opA, DuneMatrix istlAe, 
+                                             Vector& x, Vector& istlb,
+                                             const P& parallelInformation,
+                                             Dune::InverseOperatorResult& result) const
+        {
+            typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
+            std::unique_ptr<typename ScalarProductChooser::ScalarProduct> 
+                sp(ScalarProductChooser::construct(parallelInformation));
+            // Construct preconditioner.
+            // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
+            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
+            Preconditioner precond(opA.getmat(), istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_, parallelInformation);
+
+            // Construct linear solver.
+            const double tolerance = 1e-3;
+            const int maxit = 150;
+            const int verbosity = 0;
+            const int restart = 40;
+            Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond, tolerance, restart, maxit, verbosity);
+            
+            // Solve system.
+            linsolve.apply(x, istlb, result);
+        }
+
     private:
         mutable int iterations_;
         double cpr_relax_;
         unsigned int cpr_ilu_n_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
+        const boost::any& parallelInformation_;
     };
 
 } // namespace Opm

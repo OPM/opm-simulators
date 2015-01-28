@@ -28,6 +28,7 @@
 list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
+	opm/autodiff/ExtractParallelGridInformationToISTL.cpp
 	opm/autodiff/NewtonIterationBlackoilCPR.cpp
 	opm/autodiff/NewtonIterationBlackoilSimple.cpp
 	opm/autodiff/GridHelpers.cpp
@@ -101,6 +102,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/CPRPreconditioner.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
+  opm/autodiff/ExtractParallelGridInformationToISTL.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
