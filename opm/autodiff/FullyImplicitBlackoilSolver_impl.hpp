@@ -1900,7 +1900,7 @@ namespace {
         for(int idx=0; idx<MaxNumPhases; ++idx)
         {
             if (active_[idx]) {
-                B_avg[pu.phase_pos[idx]] = B.sum()/nc;
+                B_avg[pu.phase_pos[idx]] = B.col(pu.phase_pos[idx]).sum()/nc;
                 maxCoeff[pu.phase_pos[idx]]=tempV.col(pu.phase_pos[idx]).maxCoeff();
                 R_sum[pu.phase_pos[idx]] = R.col(pu.phase_pos[idx]).sum();
             }else{
