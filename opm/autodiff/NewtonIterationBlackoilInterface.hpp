@@ -23,6 +23,7 @@
 
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 
+#include <boost/any.hpp>
 namespace Opm
 {
 
@@ -42,6 +43,10 @@ namespace Opm
 
         /// \return number of linear iterations used during last call of computeNewtonIncrement
         virtual int iterations () const = 0;
+
+
+        /// \brief Get the information about the parallelization of the grid.
+        virtual const boost::any& parallelInformation() const = 0;
     };
 
 } // namespace Opm

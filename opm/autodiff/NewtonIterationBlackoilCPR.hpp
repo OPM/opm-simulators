@@ -71,6 +71,11 @@ namespace Opm
         /// \copydoc NewtonIterationBlackoilInterface::iterations
         virtual int iterations () const { return iterations_; }
 
+        /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
+        virtual const boost::any& parallelInformation() const;
+
+    private:
+
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
@@ -99,7 +104,6 @@ namespace Opm
             linsolve.apply(x, istlb, result);
         }
 
-    private:
         mutable int iterations_;
         double cpr_relax_;
         unsigned int cpr_ilu_n_;

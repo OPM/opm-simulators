@@ -55,6 +55,9 @@ namespace Opm
         /// \copydoc NewtonIterationBlackoilInterface::iterations
         virtual int iterations () const { return iterations_; }
 
+        /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
+        virtual const boost::any& parallelInformation() const;
+
     private:
         std::unique_ptr<LinearSolverInterface> linsolver_;
         mutable int iterations_;

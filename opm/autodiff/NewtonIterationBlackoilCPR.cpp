@@ -234,6 +234,10 @@ namespace Opm
         return dx;
     }
 
+    const boost::any& NewtonIterationBlackoilCPR::parallelInformation() const
+    {
+        return parallelInformation_;
+    }
 
 
 

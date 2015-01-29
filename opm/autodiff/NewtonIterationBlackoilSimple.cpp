@@ -74,5 +74,9 @@ namespace Opm
         return dx;
     }
 
+    const boost::any& NewtonIterationBlackoilSimple::parallelInformation() const
+    {
+        return parallelInformation_;
+    }
 } // namespace Opm
 
