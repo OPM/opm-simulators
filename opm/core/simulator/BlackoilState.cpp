@@ -39,5 +39,8 @@ BlackoilState::equals(const SimulatorState& other,
     equal = equal && SimulatorState::vectorApproxEqual(this->gasoilratio(),
                                                        that->gasoilratio(),
                                                        epsilon);
+    equal = equal && SimulatorState::vectorApproxEqual(this->rv(),
+                                                       that->rv(),
+                                                       epsilon);
     return equal;
 }
