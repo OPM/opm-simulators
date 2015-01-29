@@ -29,6 +29,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -1898,16 +1899,47 @@ namespace {
                                                          int nc) const
     {
         // Do the global reductions
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        #if HAVE_MPI
+        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
         {
-            if (active_[idx]) {
-                B_avg[idx] = B.col(idx).sum()/nc;
-                maxCoeff[idx]=tempV.col(idx).maxCoeff();
-                R_sum[idx] = R.col(idx).sum();
-            }
-            else
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            for ( int idx=0; idx<MaxNumPhases; ++idx )
             {
-                R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
+                if (active_[idx]) {
+                    auto values     = std::tuple<double,double,double>(0.,0.,0.);
+                    auto containers = std::make_tuple(B.col(idx),
+                                                      tempV.col(idx),
+                                                      R.col(idx));
+                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
+                    nc=info.communicator().sum(nc);
+                    info.computeReduction(containers,operators,values);
+                    B_avg[idx]    = std::get<0>(values)/nc;
+                    maxCoeff[idx] = std::get<1>(values);
+                    R_sum[idx]    = std::get<2>(values);
+                }
+                else
+                {
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.;
+                }
+            }
+        }
+        else
+#endif
+        {
+            for ( int idx=0; idx<MaxNumPhases; ++idx )
+            {
+                if (active_[idx]) {
+                    B_avg[idx] = B.col(idx).sum()/nc;
+                    maxCoeff[idx]=tempV.col(idx).maxCoeff();
+                    R_sum[idx] = R.col(idx).sum();
+                }
+                else
+                {
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
+                }
             }
         }
         // Compute total pore volume
