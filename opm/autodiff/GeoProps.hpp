@@ -27,7 +27,7 @@
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-
+#include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
@@ -90,6 +90,10 @@ namespace Opm
                 ntg = eclState->getDoubleGridProperty("NTG")->getData();
             }
 
+            // get grid from parser.
+            
+            // Get original grid cell volume.
+            EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
             // Pore volume
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
                 int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
@@ -97,7 +101,8 @@ namespace Opm
                     props.porosity()[cellIdx]
                     * multpv[cartesianCellIdx]
                     * ntg[cartesianCellIdx]
-                    * AutoDiffGrid::cellVolume(grid, cellIdx);
+                    * eclgrid->getCellVolume(cartesianCellIdx);
+                //                    * AutoDiffGrid::cellVolume(grid, cellIdx);
             }
 
             // Transmissibility
