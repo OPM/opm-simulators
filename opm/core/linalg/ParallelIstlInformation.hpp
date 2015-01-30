@@ -142,7 +142,7 @@ public:
       communicator.free();
     }
     template<class T>
-    void updateOwnerMask(const T& container)
+    void updateOwnerMask(const T& container) const
     {
         if( ! indexSet_ )
         {
@@ -180,7 +180,7 @@ public:
     /// \param value The initial value or a tuple of them.
     template<typename Container, typename BinaryOperator, typename T>
     void computeReduction(const Container& container, BinaryOperator binaryOperator,
-                          T& value)
+                          T& value) const
     {
         computeReduction(container, binaryOperator, value, is_tuple<Container>());
     }
@@ -190,7 +190,7 @@ private:
     /// This is a helper function to prepare for calling computeTupleReduction.
     template<typename Container, typename BinaryOperator, typename T>
     void computeReduction(const Container& container, BinaryOperator binaryOperator,
-                          T& value, std::integral_constant<bool,true>)
+                          T& value, std::integral_constant<bool,true>) const
     {
         computeTupleReduction(container, binaryOperator, value);
     }
@@ -199,7 +199,7 @@ private:
     /// This is a helper function to prepare for calling computeTupleReduction.
     template<typename Container, typename BinaryOperator, typename T>
     void computeReduction(const Container& container, BinaryOperator binaryOperator,
-                          T& value, std::integral_constant<bool,false>)
+                          T& value, std::integral_constant<bool,false>) const
     {
         std::tuple<const Container&> containers=std::tuple<const Container&>(container);
         auto values=std::make_tuple(value);
@@ -211,7 +211,7 @@ private:
     template<typename... Containers, typename... BinaryOperators, typename... ReturnValues>
     void computeTupleReduction(const std::tuple<Containers...>& containers,
                                std::tuple<BinaryOperators...>& operators,
-                               std::tuple<ReturnValues...>& values)
+                               std::tuple<ReturnValues...>& values) const
     {
         static_assert(std::tuple_size<std::tuple<Containers...> >::value==
                       std::tuple_size<std::tuple<BinaryOperators...> >::value,
@@ -243,14 +243,14 @@ private:
     typename std::enable_if<I == sizeof...(BinaryOperators), void>::type
     computeGlobalReduction(const std::tuple<ReturnValues...>&,
                                 std::tuple<BinaryOperators...>&,
-                                std::tuple<ReturnValues...>&)
+                                std::tuple<ReturnValues...>&) const
     {}
     /// \brief TMP for computing the the global reduction after receiving the local ones.
     template<int I=0, typename... BinaryOperators, typename... ReturnValues>
     typename std::enable_if<I !=sizeof...(BinaryOperators), void>::type
     computeGlobalReduction(const std::tuple<ReturnValues...>& receivedValues,
                            std::tuple<BinaryOperators...>& operators,
-                           std::tuple<ReturnValues...>& values)
+                           std::tuple<ReturnValues...>& values) const
     {
         auto& val=std::get<I>(values);
         val = std::get<I>(operators).localOperator()(val, std::get<I>(receivedValues));
@@ -263,30 +263,35 @@ private:
     typename std::enable_if<I==sizeof...(Containers), void>::type
     computeLocalReduction(const std::tuple<Containers...>&,
                           std::tuple<BinaryOperators...>&,
-                          std::tuple<ReturnValues...>&)
+                          std::tuple<ReturnValues...>&) const
     {}
     /// \brief TMP for computing the the local reduction on the DOF that the process owns.
     template<int I=0, typename... Containers, typename... BinaryOperators, typename... ReturnValues>
     typename std::enable_if<I!=sizeof...(Containers), void>::type
     computeLocalReduction(const std::tuple<Containers...>& containers,
                           std::tuple<BinaryOperators...>& operators,
-                          std::tuple<ReturnValues...>& values)
+                          std::tuple<ReturnValues...>& values) const
     {
         const auto& container = std::get<I>(containers);
         if( container.size() )
         {
             auto& reduceOperator  = std::get<I>(operators);
-            auto newVal = container.begin();
+            // Eigen:Block does not support STL iterators!!!!
+            // Therefore we need to rely on the harder random-access
+            // property of the containers. But this should be save, too.
+            // Just commenting out code in the hope that Eigen might improve
+            // in this regard in the future.
+            //auto newVal = container.begin();
             auto mask   = ownerMask_.begin();
             auto& value = std::get<I>(values);
-            value = reduceOperator.maskValue(*newVal, *mask);
+            value = reduceOperator.maskValue(container[0], *mask);
             ++mask;
-            ++newVal;
+            //++newVal;
 
-            for( auto endVal=container.end(); newVal!=endVal;
-                ++newVal, ++mask )
+            for( auto endVal=ownerMask_.end(); mask!=endVal;
+                 /*++newVal,*/ ++mask )
             {
-                value = reduceOperator(value, *newVal, *mask);
+                value = reduceOperator(value, container[mask-ownerMask_.begin()], *mask);
             }
         }
         computeLocalReduction<I+1>(containers, operators, values);
