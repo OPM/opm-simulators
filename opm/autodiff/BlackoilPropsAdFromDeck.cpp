@@ -1124,9 +1124,12 @@ namespace Opm
         if (!satOilMax_.empty() && vap > 0.0) { 
             const int n = cells.size();
             V factor = V::Ones(n, 1);
+            const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
             for (int i=0; i<n; ++i) {
                 if (satOilMax_[cells[i]] > vap_satmax_guard_ && so[i] < satOilMax_[cells[i]]) {
-                    factor[i] = std::pow(so[i]/satOilMax_[cells[i]], vap);
+                    // guard against too small saturation values.
+                    const double so_i= std::max(so[i],eps_sqrt);
+                    factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
                 } 
             }
             r = factor*r;
@@ -1146,22 +1149,23 @@ namespace Opm
         if (!satOilMax_.empty() && vap > 0.0) { 
             const int n = cells.size();
             V factor = V::Ones(n, 1);
-            //V dfactor_dso = V::Zero(n, 1);  TODO: Consider effect of complete jacobian (including so-derivatives)
+            const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+            V dfactor_dso = V::Zero(n, 1);
             for (int i=0; i<n; ++i) {
                 if (satOilMax_[cells[i]] > vap_satmax_guard_ && so.value()[i] < satOilMax_[cells[i]]) {
-                    factor[i] = std::pow(so.value()[i]/satOilMax_[cells[i]], vap);
-                    //dfactor_dso[i] = vap*std::pow(so.value()[i]/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
+                    // guard against too small saturation values.
+                    const double so_i= std::max(so.value()[i],eps_sqrt);
+                    factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
+                    dfactor_dso[i] = vap*std::pow(so_i/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
                 }
             }
-            //ADB::M dfactor_dso_diag = spdiag(dfactor_dso);
-            //const int num_blocks = so.numBlocks();
-            //std::vector<ADB::M> jacs(num_blocks);
-            //for (int block = 0; block < num_blocks; ++block) {
-            //    jacs[block] = dfactor_dso_diag * so.derivative()[block];
-            //}
-            //r = ADB::function(factor, jacs)*r;
-            
-            r = factor*r;
+            ADB::M dfactor_dso_diag = spdiag(dfactor_dso);
+            const int num_blocks = so.numBlocks();
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                jacs[block] = dfactor_dso_diag * so.derivative()[block];
+            }
+            r = ADB::function(factor, jacs)*r;
         }
     }
 
