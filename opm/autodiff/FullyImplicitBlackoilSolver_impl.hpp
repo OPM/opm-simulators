@@ -1897,13 +1897,15 @@ namespace {
     {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         // Do the global reductions
-        for(int idx=0; idx<MaxNumPhases; ++idx)
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
             if (active_[idx]) {
                 B_avg[idx] = B.col(idx).sum()/nc;
                 maxCoeff[idx]=tempV.col(idx).maxCoeff();
                 R_sum[idx] = R.col(idx).sum();
-            }else{
+            }
+            else
+            {
                 R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
             }
         }
@@ -1935,14 +1937,14 @@ namespace {
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
 
-        for(int idx=0; idx<MaxNumPhases; ++idx)
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
             if (active_[idx]) {
-                const int pos = pu.phase_pos[idx];
+                const int pos    = pu.phase_pos[idx];
                 const ADB& tempB = rq_[pos].b;
-                B.col(idx)  = 1./tempB.value();
-                R.col(idx) = residual_.material_balance_eq[idx].value();
-                tempV.col(idx) = R.col(idx).abs()/pv;
+                B.col(idx)       = 1./tempB.value();
+                R.col(idx)       = residual_.material_balance_eq[idx].value();
+                tempV.col(idx)   = R.col(idx).abs()/pv;
             }
         }
 
@@ -1951,18 +1953,18 @@ namespace {
         bool converged_MB = true;
         bool converged_CNV = true;
         // Finish computation
-        for(int idx=0; idx<MaxNumPhases; ++idx)
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
-            CNV[idx] = B_avg[idx] * dt * maxCoeff[idx];
+            CNV[idx]                   = B_avg[idx] * dt * maxCoeff[idx];
             mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
-            converged_MB = converged_MB && (mass_balance_residual[idx] < tol_mb);
-            converged_CNV = converged_CNV && (CNV[idx] < tol_cnv);
+            converged_MB               = converged_MB && (mass_balance_residual[idx] < tol_mb);
+            converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
         }
 
-        double residualWellFlux = infinityNorm(residual_.well_flux_eq);
-        double residualWell = infinityNorm(residual_.well_eq);
-        bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
-        bool converged = converged_MB && converged_CNV && converged_Well;
+        const double residualWellFlux = infinityNorm(residual_.well_flux_eq);
+        const double residualWell     = infinityNorm(residual_.well_eq);
+        const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
+        const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
         if( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
