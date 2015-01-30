@@ -1888,6 +1888,34 @@ namespace {
     }
 
     template<class T>
+    double
+    FullyImplicitBlackoilSolver<T>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
+                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
+                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
+                                                         std::array<double,MaxNumPhases>& R_sum,
+                                                         std::array<double,MaxNumPhases>& maxCoeff,
+                                                         std::array<double,MaxNumPhases>& B_avg,
+                                                         int nc) const
+    {
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        // Do the global reductions
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            if (active_[idx]) {
+                B_avg[idx] = B.col(idx).sum()/nc;
+                maxCoeff[idx]=tempV.col(idx).maxCoeff();
+                R_sum[idx] = R.col(idx).sum();
+            }
+            else
+            {
+                R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
+            }
+        }
+        // Compute total pore volume
+        return geo_.poreVolume().sum();
+    }
+
+    template<class T>
     bool
     FullyImplicitBlackoilSolver<T>::getConvergence(const double dt, const int iteration)
     {
@@ -1898,83 +1926,55 @@ namespace {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
-        const double pvSum = pv.sum();
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        double CNVW = 0.;
-        double CNVO = 0.;
-        double CNVG = 0.;
+        std::array<double,MaxNumPhases> CNV                   = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
+        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
 
-        double RW_sum = 0.;
-        double RO_sum = 0.;
-        double RG_sum = 0.;
-
-        double BW_avg = 0.;
-        double BO_avg = 0.;
-        double BG_avg = 0.;
-
-        if (active_[Water]) {
-            const int pos = pu.phase_pos[Water];
-            const ADB& tempBW = rq_[pos].b;
-            V BW = 1./tempBW.value();
-            V RW = residual_.material_balance_eq[Water].value();
-            BW_avg = BW.sum()/nc;
-            const V tempV = RW.abs()/pv;
-
-            CNVW = BW_avg * dt * tempV.maxCoeff();
-            RW_sum = RW.sum();
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            if (active_[idx]) {
+                const int pos    = pu.phase_pos[idx];
+                const ADB& tempB = rq_[pos].b;
+                B.col(idx)       = 1./tempB.value();
+                R.col(idx)       = residual_.material_balance_eq[idx].value();
+                tempV.col(idx)   = R.col(idx).abs()/pv;
+            }
         }
 
-        if (active_[Oil]) {
-            // Omit the disgas here. We should add it.
-            const int pos = pu.phase_pos[Oil];
-            const ADB& tempBO = rq_[pos].b;
-            V BO = 1./tempBO.value();
-            V RO = residual_.material_balance_eq[Oil].value();
-            BO_avg = BO.sum()/nc;
-            const V tempV = RO.abs()/pv;
+        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, nc);
 
-            CNVO = BO_avg * dt * tempV.maxCoeff();
-            RO_sum = RO.sum();
+        bool converged_MB = true;
+        bool converged_CNV = true;
+        // Finish computation
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            CNV[idx]                   = B_avg[idx] * dt * maxCoeff[idx];
+            mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
+            converged_MB               = converged_MB && (mass_balance_residual[idx] < tol_mb);
+            converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
         }
 
-        if (active_[Gas]) {
-            // Omit the vapoil here. We should add it.
-            const int pos = pu.phase_pos[Gas];
-            const ADB& tempBG = rq_[pos].b;
-            V BG = 1./tempBG.value();
-            V RG = residual_.material_balance_eq[Gas].value();
-            BG_avg = BG.sum()/nc;
-            const V tempV = RG.abs()/pv;
-
-            CNVG = BG_avg * dt * tempV.maxCoeff();
-            RG_sum = RG.sum();
-        }
-
-        const double mass_balance_residual_water = std::abs(BW_avg*RW_sum) * dt / pvSum;
-        const double mass_balance_residual_oil   = std::abs(BO_avg*RO_sum) * dt / pvSum;
-        const double mass_balance_residual_gas   = std::abs(BG_avg*RG_sum) * dt / pvSum;
-
-        bool converged_MB = (mass_balance_residual_water < tol_mb)
-                         && (mass_balance_residual_oil   < tol_mb)
-                         && (mass_balance_residual_gas   < tol_mb);
-
-        bool converged_CNV = (CNVW < tol_cnv) && (CNVO < tol_cnv) && (CNVG < tol_cnv);
-
-        const double residualWellFlux = infinityNorm( residual_.well_flux_eq );
-        const double residualWell     = infinityNorm( residual_.well_eq );
-
-        bool converged_Well = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
-        bool converged = converged_MB && converged_CNV && converged_Well;
+        const double residualWellFlux = infinityNorm(residual_.well_flux_eq);
+        const double residualWell     = infinityNorm(residual_.well_eq);
+        const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
+        const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if( std::isnan(mass_balance_residual_water) || mass_balance_residual_water > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual_oil)   || mass_balance_residual_oil   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual_gas)   || mass_balance_residual_gas   > maxResidualAllowed() ||
-            std::isnan(CNVW) || CNVW > maxResidualAllowed() ||
-            std::isnan(CNVO) || CNVO > maxResidualAllowed() ||
-            std::isnan(CNVG) || CNVG > maxResidualAllowed() ||
+        if( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
+            std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
+            std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
+            std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
             std::isnan(residualWellFlux) || residualWellFlux > maxResidualAllowed() ||
             std::isnan(residualWell)     || residualWell     > maxResidualAllowed() )
         {
@@ -1987,12 +1987,12 @@ namespace {
         const std::streamsize oprec = std::cout.precision(3);
         const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
         std::cout << std::setw(4) << iteration
-                  << std::setw(11) << mass_balance_residual_water
-                  << std::setw(11) << mass_balance_residual_oil
-                  << std::setw(11) << mass_balance_residual_gas
-                  << std::setw(11) << CNVW
-                  << std::setw(11) << CNVO
-                  << std::setw(11) << CNVG
+                  << std::setw(11) << mass_balance_residual[Water]
+                  << std::setw(11) << mass_balance_residual[Oil]
+                  << std::setw(11) << mass_balance_residual[Gas]
+                  << std::setw(11) << CNV[Water]
+                  << std::setw(11) << CNV[Oil]
+                  << std::setw(11) << CNV[Gas]
                   << std::setw(11) << residualWellFlux
                   << std::setw(11) << residualWell
                   << std::endl;
