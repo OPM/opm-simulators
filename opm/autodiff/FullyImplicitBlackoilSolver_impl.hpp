@@ -1900,11 +1900,11 @@ namespace {
         for(int idx=0; idx<MaxNumPhases; ++idx)
         {
             if (active_[idx]) {
-                B_avg[pu.phase_pos[idx]] = B.col(pu.phase_pos[idx]).sum()/nc;
-                maxCoeff[pu.phase_pos[idx]]=tempV.col(pu.phase_pos[idx]).maxCoeff();
-                R_sum[pu.phase_pos[idx]] = R.col(pu.phase_pos[idx]).sum();
+                B_avg[idx] = B.col(idx).sum()/nc;
+                maxCoeff[idx]=tempV.col(idx).maxCoeff();
+                R_sum[idx] = R.col(idx).sum();
             }else{
-                R_sum[pu.phase_pos[idx]] = B_avg[pu.phase_pos[idx]] = maxCoeff[pu.phase_pos[idx]] =0.;
+                R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
             }
         }
         // Compute total pore volume
@@ -1941,9 +1941,9 @@ namespace {
             if (active_[idx]) {
                 const int pos = pu.phase_pos[idx];
                 const ADB& tempB = rq_[pos].b;
-                B.col(pos)  = 1./tempB.value();
-                R.col(pos) = residual_.material_balance_eq[idx].value();
-                tempV.col(pos) = R.col(pos).abs()/pv;
+                B.col(idx)  = 1./tempB.value();
+                R.col(idx) = residual_.material_balance_eq[idx].value();
+                tempV.col(idx) = R.col(idx).abs()/pv;
             }
         }
 
@@ -1954,8 +1954,8 @@ namespace {
         // Finish computation
         for(int idx=0; idx<MaxNumPhases; ++idx)
         {
-            CNV[idx] = B_avg[pu.phase_pos[idx]] * dt * maxCoeff[pu.phase_pos[idx]];
-            mass_balance_residual[idx] = std::abs(B_avg[pu.phase_pos[idx]]*R_sum[pu.phase_pos[idx]]) * dt / pvSum;
+            CNV[idx] = B_avg[idx] * dt * maxCoeff[idx];
+            mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV = converged_CNV && (CNV[idx] < tol_cnv);
         }
