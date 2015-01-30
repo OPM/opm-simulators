@@ -1908,8 +1908,7 @@ namespace {
             }
         }
         // Compute total pore volume
-        const V pv = geo_.poreVolume();
-        return pv.sum();
+        return geo_.poreVolume().sum();
     }
 
     template<class T>
