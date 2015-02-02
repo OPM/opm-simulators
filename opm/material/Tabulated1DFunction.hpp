@@ -77,7 +77,7 @@ public:
     template <class PointContainer>
     Tabulated1DFunction(const PointContainer &points,
                         bool sortInputs = false)
-    { this->setContainerOfPoints(points, sortInputs); }
+    { this->setContainerOfTuples(points, sortInputs); }
 
     /*!
      * \brief Set the sampling points for the piecewise linear function
