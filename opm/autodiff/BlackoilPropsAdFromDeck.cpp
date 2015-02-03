@@ -1,5 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services.
+  Copyright 2015 NTNU.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -64,6 +66,29 @@ namespace Opm
              grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
     }
 #endif
+
+/// Constructor for properties on a subgrid
+BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
+                                                 const int number_of_cells)
+{
+    if(number_of_cells>props.cellPvtRegionIdx_.size())
+        OPM_THROW(std::runtime_error, "The number of cells is larger than the one of the original grid!");
+    if(number_of_cells<0)
+        OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
+    // Copy properties that do not depend on the postion within the grid.
+    rock_             = props.rock_;
+    phase_usage_      = props.phase_usage_;
+    props_            = props.props_;
+    densities_        = props.densities_;
+    vap1_             = props.vap1_;
+    vap2_             = props.vap2_;
+    vap_satmax_guard_ = props.vap_satmax_guard_;
+    // For data that is dependant on the subgrid we simply allocate space
+    // and initialize with obviously bogus numbers.
+    cellPvtRegionIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
+    pvtTableIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
+    satOilMax_.resize(number_of_cells, -std::numeric_limits<double>::max());
+}
 
     /// Initializes the properties.
     template <class CentroidIterator>

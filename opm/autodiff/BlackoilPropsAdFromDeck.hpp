@@ -1,5 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services.
+  Copyright 2015 NTNU.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -69,6 +71,19 @@ namespace Opm
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
 #endif
+
+        /// \brief Constructor to create properties for a subgrid
+        ///
+        /// This copies all properties that are not dependant on the
+        /// grid size from an existing properties object
+        /// and the number of cells. All properties that do not depend
+        /// on the grid dimension will be copied. For the rest will have
+        /// the correct size but the values will be undefined.
+        ///
+        /// \param props            The property object to copy from.
+        /// \paramm number_of_cells The number of cells of the subgrid.
+        BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
+                                const int number_of_cells);
 
 
         ////////////////////////////
@@ -433,7 +448,9 @@ namespace Opm
                       const double vap) const;
 
         RockFromDeck rock_;
-        std::unique_ptr<SaturationPropsInterface> satprops_;
+        // This has to be a shared pointer as we must
+        // be able to make a copy of *this in the parallel case.
+        std::shared_ptr<SaturationPropsInterface> satprops_;
 
         PhaseUsage phase_usage_;
         // bool has_vapoil_;

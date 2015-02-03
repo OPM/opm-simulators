@@ -27,6 +27,7 @@
 #define BOOST_TEST_MODULE FluidPropertiesTest
 
 #include <opm/autodiff/BlackoilPropsAd.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -82,13 +83,35 @@ struct TestFixture : public Setup
     Opm::BlackoilPropertiesFromDeck props;
 };
 
+template <class Setup>
+struct TestFixtureAd : public Setup
+{
+    TestFixtureAd()
+        : Setup()
+        , grid (deck)
+        , props(deck, eclState, *grid.c_grid(),
+                param.getDefault("init_rock", false))
+    {
+    }
+
+    using Setup::param;
+    using Setup::deck;
+    using Setup::eclState;
+
+    Opm::GridManager             grid;
+    Opm::BlackoilPropsAdFromDeck props;
+};
+
 
 BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 {
     Opm::BlackoilPropsAd boprops_ad(props);
 }
 
-
+BOOST_FIXTURE_TEST_CASE(SubgridConstruction, TestFixtureAd<SetupSimple>)
+{
+    Opm::BlackoilPropsAdFromDeck subgrid_props(props);
+}
 
 BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 {
