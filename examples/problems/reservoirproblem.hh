@@ -31,6 +31,10 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
+#include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
@@ -186,7 +190,8 @@ public:
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
 
-        FluidSystem::initBegin();std::vector<std::pair<Scalar, Scalar> > Bo = {
+        FluidSystem::initBegin(/*numPvtRegions=*/1);
+        std::vector<std::pair<Scalar, Scalar> > Bo = {
             { 101353, 1.062 },
             { 1.82504e+06, 1.15 },
             { 3.54873e+06, 1.207 },
@@ -244,14 +249,37 @@ public:
             { 6.21542e+07, 4.7e-05 }
         };
 
-        FluidSystem::setReferenceDensities(/*oil=*/786, /*water=*/1037, /*gas=*/0.97);
-        FluidSystem::setGasFormationVolumeFactor(Bg);
-        FluidSystem::setSaturatedOilGasDissolutionFactor(Rs);
-        FluidSystem::setSaturatedOilFormationVolumeFactor(Bo);
-        FluidSystem::setSaturatedOilViscosity(muo);
-        FluidSystem::setGasViscosity(mug);
-        FluidSystem::setWaterReferenceViscosity(9.6e-4);
-        FluidSystem::setWaterCompressibility(1.450377e-10);
+        FluidSystem::setReferenceDensities(/*oil=*/786,
+                                           /*water=*/1037,
+                                           /*gas=*/0.97,
+                                           /*pvtRegionIdx=*/0);
+
+        Opm::DryGasPvt<Scalar> *gasPvt = new Opm::DryGasPvt<Scalar>;
+        gasPvt->setNumRegions(/*numPvtRegion=*/1);
+        gasPvt->setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
+        gasPvt->setGasViscosity(/*regionIdx=*/0, mug);
+        gasPvt->initEnd();
+        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar> > GasPvtSharedPtr;
+        FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
+
+        Opm::LiveOilPvt<Scalar> *oilPvt = new Opm::LiveOilPvt<Scalar>;
+        oilPvt->setNumRegions(/*numPvtRegion=*/1);
+        oilPvt->setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
+        oilPvt->setSaturatedOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
+        oilPvt->setSaturatedOilViscosity(/*regionIdx=*/0, muo);
+        oilPvt->initEnd();
+        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar> > OilPvtSharedPtr;
+        FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
+
+        Opm::ConstantCompressibilityWaterPvt<Scalar> *waterPvt =
+            new Opm::ConstantCompressibilityWaterPvt<Scalar>;
+        waterPvt->setNumRegions(/*numPvtRegions=*/1);
+        waterPvt->setViscosity(/*regionIdx=*/0, 9.6e-4);
+        waterPvt->setCompressibility(/*regionIdx=*/0, 1.450377e-10);
+        waterPvt->initEnd();
+        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > WaterPvtSharedPtr;
+        FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
+
         FluidSystem::initEnd();
 
         pReservoir_ = 330e5;
@@ -549,7 +577,9 @@ private:
         // set composition of the oil phase
         //////
 
-        Scalar xoG = 0.95*FluidSystem::saturatedOilGasMoleFraction(fs.pressure(oilPhaseIdx));
+        Scalar xoG = 0.95*FluidSystem::saturatedOilGasMoleFraction(temperature_,
+                                                                   fs.pressure(oilPhaseIdx),
+                                                                   /*pvtRegionIdx=*/0);
         Scalar xoO = 1 - xoG;
 
         // finally set the oil-phase composition
