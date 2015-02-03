@@ -23,7 +23,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/tof/AnisotropicEikonal.hpp>
+#include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>

@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/core/tof/FlowDiagnostics.hpp>
+#include <opm/core/flowdiagnostics/FlowDiagnostics.hpp>
 
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>

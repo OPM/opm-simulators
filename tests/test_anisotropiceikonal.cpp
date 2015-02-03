@@ -27,7 +27,7 @@
 #define BOOST_TEST_MODULE AnisotropicEikonalTest
 #include <boost/test/unit_test.hpp>
 
-#include <opm/core/tof/AnisotropicEikonal.hpp>
+#include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/grid.h>
 #include <cmath>

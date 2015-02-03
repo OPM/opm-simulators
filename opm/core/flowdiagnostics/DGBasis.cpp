@@ -18,7 +18,7 @@
 */
 
 #include "config.h"
-#include <opm/core/tof/DGBasis.hpp>
+#include <opm/core/flowdiagnostics/DGBasis.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <numeric>

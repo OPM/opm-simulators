@@ -43,8 +43,8 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/initState.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
-#include <opm/core/tof/TofReorder.hpp>
-#include <opm/core/tof/TofDiscGalReorder.hpp>
+#include <opm/core/flowdiagnostics/TofReorder.hpp>
+#include <opm/core/flowdiagnostics/TofDiscGalReorder.hpp>
 
 #include <memory>
 #include <boost/filesystem.hpp>

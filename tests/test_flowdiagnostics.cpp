@@ -27,7 +27,7 @@
 
 #define BOOST_TEST_MODULE FlowDiagnosticsTests
 #include <boost/test/unit_test.hpp>
-#include <opm/core/tof/FlowDiagnostics.hpp>
+#include <opm/core/flowdiagnostics/FlowDiagnostics.hpp>
 
 const std::vector<double> pv(16, 18750.0);
 
