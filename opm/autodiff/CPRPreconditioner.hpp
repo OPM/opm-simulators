@@ -1,6 +1,8 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
   Copyright 2014 IRIS AS.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -75,37 +77,57 @@ public:
 private:
     PREC* ilu_;
 };
-
+///
+/// \brief A traits class for selecting the types of the preconditioner.
+///
+/// \tparam M The type of the matrix.
+/// \tparam X The type of the domain of the linear problem.
+/// \tparam Y The type of the range of the linear problem.
+/// \tparam P The type of the parallel information.
+////
 template<class M, class X, class Y, class P>
 struct CPRSelector
 {
+    /// \brief The information about the parallelization and communication
     typedef Dune::Amg::SequentialInformation ParallelInformation;
+    /// \brief The operator type;
     typedef Dune::MatrixAdapter<M, X, Y> Operator;
+    /// \brief The type of the preconditioner used for the elliptic part.
     typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
+    /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
     typedef std::unique_ptr<EllipticPreconditioner> EllipticPreconditionerPointer;
-    
+    /// \brief creates an Operator from the matrix
+    /// \param M The matrix to use.
+    /// \param p The parallel information to use.
     static Operator* makeOperator(const M& m, const P&)
     {
         return new Operator(m);
     }
 };
 
+/// \copydoc CPRSelector<M,X,X,Y,P>
 template<class M, class X, class Y, class I1, class I2>
 struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
 {
-    
+    /// \brief The information about the parallelization and communication
     typedef Dune::OwnerOverlapCopyCommunication<I1,I2> ParallelInformation;
+    /// \brief The operator type;
     typedef Dune::OverlappingSchwarzOperator<M,X,X,ParallelInformation> Operator;
+    /// \brief The type of the preconditioner used for the elliptic part.
     typedef Dune::BlockPreconditioner<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
     EllipticPreconditioner;
+    /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
     typedef std::unique_ptr<EllipticPreconditioner,
                             ParallelPreconditionerDeleter<Dune::SeqILU0<M,X,X> > >
     EllipticPreconditionerPointer;
-    
+
+    /// \brief creates an Operator from the matrix
+    /// \param M The matrix to use.
+    /// \param p The parallel information to use.
     static Operator* makeOperator(const M& m, const ParallelInformation& p)
     {
         return new Operator(m, p);
-    }    
+    }
 };
 
 //! \brief Creates the deleter needed for the parallel ILU preconditioners.
@@ -122,19 +144,24 @@ createParallelDeleter(ILU& ilu, const Dune::OwnerOverlapCopyCommunication<I1,I2>
         return ParallelPreconditionerDeleter<ILU>(ilu);
     }
 
-//! \brief Creates and initializes a unique pointer to an ILU0 preconditioner.
+//! \brief Creates and initializes a unique pointer to an sequential ILU0 preconditioner.
+//! \param A     The matrix of the linear system to solve.
+//! \param relax The relaxation factor to use.
 template<class M, class X>
 std::shared_ptr<Dune::SeqILU0<M,X,X> >
-createILU0Ptr(const M& A_, double relax_, const Dune::Amg::SequentialInformation&)
+createILU0Ptr(const M& A, double relax, const Dune::Amg::SequentialInformation&)
 {
-    return std::shared_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>( A_, relax_) );
+    return std::shared_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>( A, relax) );
 }
 //! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
+//! \param A     The matrix of the linear system to solve.
+//! \param ilu_n The n parameter for the extension of the nonzero pattern.
+//! \param relax The relaxation factor to use.
 template<class M, class X>
 std::shared_ptr<Dune::SeqILUn<M,X,X> >
-createILUnPtr(const M& A_, int ilu_n, double relax_, const Dune::Amg::SequentialInformation&)
+createILUnPtr(const M& A, int ilu_n, double relax, const Dune::Amg::SequentialInformation&)
 {
-    return std::shared_ptr<Dune::SeqILUn<M,X,X> >(new Dune::SeqILUn<M,X,X>( A_, ilu_n, relax_) );
+    return std::shared_ptr<Dune::SeqILUn<M,X,X> >(new Dune::SeqILUn<M,X,X>( A, ilu_n, relax) );
 }
 
 template<class ILU, class I1, class I2>
@@ -151,9 +178,12 @@ struct SelectParallelILUSharedPtr
 };
 
 //! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
+//! \param A     The matrix of the linear system to solve.
+//! \param relax The relaxation factor to use.
+/// \param comm  The object describing the parallelization information and communication.
 template<class M, class X, class I1, class I2>
 typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>::type
-createILU0Ptr(const M& A_, double relax_, 
+createILU0Ptr(const M& A, double relax,
               const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
 {
     typedef Dune::BlockPreconditioner<
@@ -162,40 +192,52 @@ createILU0Ptr(const M& A_, double relax_,
         Dune::OwnerOverlapCopyCommunication<I1,I2>,
         Dune::SeqILU0<M,X,X>
         > PointerType;
-    Dune::SeqILU0<M,X,X>* ilu = new Dune::SeqILU0<M,X,X>( A_, relax_);
+    Dune::SeqILU0<M,X,X>* ilu = new Dune::SeqILU0<M,X,X>(A, relax);
     return typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>
         ::type ( new PointerType(*ilu, comm), createParallelDeleter(*ilu, comm));
 }
-//! \brief Creates and initializes a shared pointer to an ILU0 preconditioner.
+
+//! \brief Creates and initializes a shared pointer to an ILUn preconditioner.
+//! \param A     The matrix of the linear system to solve.
+//! \param ilu_n The n parameter for the extension of the nonzero pattern.
+//! \param relax The relaxation factor to use.
+/// \param comm  The object describing the parallelization information and communication.
 template<class M, class X, class I1, class I2>
 typename SelectParallelILUSharedPtr<Dune::SeqILUn<M,X,X>, I1, I2>::type
-createILUnPtr(const M& A_, int ilu_n, double relax_, 
+createILUnPtr(const M& A, int ilu_n, double relax,
               const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
 {
     typedef Dune::BlockPreconditioner<
         X,
         X,
         Dune::OwnerOverlapCopyCommunication<I1,I2>,
-        Dune::SeqILUn<M,X,X>    
+        Dune::SeqILUn<M,X,X>
         > PointerType;
-    Dune::SeqILUn<M,X,X>* ilu = new Dune::SeqILUn<M,X,X>( A_, ilu_n, relax_);
-        
+    Dune::SeqILUn<M,X,X>* ilu = new Dune::SeqILUn<M,X,X>( A, ilu_n, relax);
+
     return typename SelectParallelILUSharedPtr<Dune::SeqILUn<M,X,X>, I1, I2>::type
         (new PointerType(*ilu, comm),createParallelDeleter(*ilu, comm));
 }
 
+/// \brief Creates the elliptic preconditioner (ILU0)
+/// \param Ae The matrix of the elliptic system.
+/// \param relax The relaxation parameter for ILU0
 template<class M, class X=typename M::range_type>
 std::unique_ptr<Dune::SeqILU0<M,X,X> >
-createEllipticPreconditionerPointer(const M& Ae, double relax_,
+createEllipticPreconditionerPointer(const M& Ae, double relax,
                                     const Dune::Amg::SequentialInformation&)
 {
-    return std::unique_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>(Ae, relax_));
+    return std::unique_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>(Ae, relax));
 }
 
+/// \brief Creates the elliptic preconditioner (ILU0)
+/// \param Ae    The matrix of the elliptic system.
+/// \param relax The relaxation parameter for ILU0.
+/// \param comm  The object describing the parallelization information and communication.
 template<class M, class X=typename M::range_type, class I1, class I2>
 typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
 ::EllipticPreconditionerPointer
-createEllipticPreconditionerPointer(const M& Ae, double relax_,
+createEllipticPreconditionerPointer(const M& Ae, double relax,
                                     const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
 {
     typedef Dune::BlockPreconditioner<X, X,
@@ -203,7 +245,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax_,
                                       Dune::SeqILU0<M,X,X> >
     ParallelPreconditioner;
 
-    Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax_);
+    Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax);
     typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
         ::EllipticPreconditionerPointer EllipticPreconditionerPointer;
     return EllipticPreconditionerPointer(new ParallelPreconditioner(*ilu, comm),
@@ -213,7 +255,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax_,
 
 
     /*!
-      \brief Sequential CPR preconditioner.
+      \brief CPR preconditioner.
 
       This is a two-stage preconditioner, combining an elliptic-type
       partial solution with ILU0 for the whole system.
@@ -221,6 +263,10 @@ createEllipticPreconditionerPointer(const M& Ae, double relax_,
       \tparam M The matrix type to operate on
       \tparam X Type of the update
       \tparam Y Type of the defect
+      \tparam P Type of the parallel information. If not provided
+                this will be Dune::Amg::SequentialInformation.
+                The preconditioner is parallel if this is
+                Dune::OwnerOverlapCopyCommunication<int,int>
     */
     template<class M, class X, class Y,
              class P=Dune::Amg::SequentialInformation>
@@ -275,8 +321,8 @@ createEllipticPreconditionerPointer(const M& Ae, double relax_,
           \param relax   The ILU0 relaxation factor.
           \param useAMG  if true, AMG is used as a preconditioner for the elliptic sub-system, otherwise ilu-0 (default)
           \param useBiCG if true, BiCG solver is used (default), otherwise CG solver
-          \param paralleInformation The information about the parallelization, if this is a 
-                                    paralle run
+          \param paralleInformation The information about the parallelization, if this is a
+                                    parallel run
         */
         CPRPreconditioner (const M& A, const M& Ae, const field_type relax,
                            const unsigned int ilu_n,
@@ -380,7 +426,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax_,
             typedef Dune::ScalarProductChooser<X,ParallelInformation,category>
                 ScalarProductChooser;
             // the scalar product.
-            std::unique_ptr<typename ScalarProductChooser::ScalarProduct> 
+            std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(comm_));
 
             if( amg_ )

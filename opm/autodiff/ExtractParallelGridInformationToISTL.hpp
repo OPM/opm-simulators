@@ -28,7 +28,7 @@ namespace Opm
 {
 
 /// \brief Extracts the information about the data decomposition from the grid for dune-istl
-/// 
+///
 /// In the case that grid is a parallel grid this method will query it to get the information
 /// about the data decompoisition and convert it to the format expected by the linear algebra
 /// of dune-istl.
