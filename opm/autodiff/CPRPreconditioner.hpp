@@ -53,8 +53,8 @@ namespace
 //! In dune-istl they hold a reference to the sequential preconditioner.
 //! In CPRPreconditioner we use unique_ptr for the memory management.
 //! Ergo we need to construct the sequential preconditioner with new and
-//! make sure that it gets delete together with the enclosing parallel
-//! preconditioner. Therefore this delete store a pointer to it and deletes
+//! make sure that it gets deleted together with the enclosing parallel
+//! preconditioner. Therefore this deleter stores a pointer to it and deletes
 //! it during destruction.
 template<class PREC>
 class ParallelPreconditionerDeleter
