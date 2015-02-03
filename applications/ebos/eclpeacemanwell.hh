@@ -982,21 +982,21 @@ public:
                       << actualSurfaceRates_[oilPhaseIdx]*(24*60*60) << " m^3/day = "
                       << actualSurfaceRates_[oilPhaseIdx]*(24*60*60)/0.15898729 << " STB/day = "
                       << actualSurfaceRates_[oilPhaseIdx]*(24*60*60)
-                         *FluidSystem::referenceDensity(oilPhaseIdx) << " kg/day"
+                         *FluidSystem::referenceDensity(oilPhaseIdx, /*pvtRegionIdx=*/0) << " kg/day"
                       << "\n";
             std::cout << "  gas: "
                       << actualSurfaceRates_[gasPhaseIdx] << " m^3/s = "
                       << actualSurfaceRates_[gasPhaseIdx]*(24*60*60) << " m^3/day = "
                       << actualSurfaceRates_[gasPhaseIdx]*(24*60*60)/28.316847 << " MCF/day = "
                       << actualSurfaceRates_[gasPhaseIdx]*(24*60*60)
-                         *FluidSystem::referenceDensity(gasPhaseIdx) << " kg/day"
+                         *FluidSystem::referenceDensity(gasPhaseIdx, /*pvtRegionIdx=*/0) << " kg/day"
                       << "\n";
             std::cout << "  water: "
                       << actualSurfaceRates_[waterPhaseIdx] << " m^3/s = "
                       << actualSurfaceRates_[waterPhaseIdx]*(24*60*60) << " m^3/day = "
                       << actualSurfaceRates_[waterPhaseIdx]*(24*60*60)/0.15898729 << " STB/day = "
                       << actualSurfaceRates_[waterPhaseIdx]*(24*60*60)
-                         *FluidSystem::referenceDensity(waterPhaseIdx) << " kg/day"
+                         *FluidSystem::referenceDensity(waterPhaseIdx, /*pvtRegionIdx=*/0) << " kg/day"
                       << "\n";
         }
     }

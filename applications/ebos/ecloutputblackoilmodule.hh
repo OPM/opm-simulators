@@ -87,6 +87,7 @@ class EclOutputBlackOilModule : public BaseOutputModule<TypeTag>
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
+    enum { oilCompIdx = FluidSystem::oilCompIdx };
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 
@@ -163,7 +164,9 @@ public:
             int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             int regionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
             Scalar po = fs.pressure(oilPhaseIdx);
+            Scalar To = fs.temperature(oilPhaseIdx);
             Scalar XoG = fs.massFraction(oilPhaseIdx, gasCompIdx);
+            Scalar XgO = fs.massFraction(gasPhaseIdx, oilCompIdx);
 
             if (saturationsOutput_()) {
                 for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -179,22 +182,22 @@ public:
             }
             if (gasDissolutionFactorOutput_()) {
                 gasDissolutionFactor_[globalDofIdx] =
-                    FluidSystem::gasDissolutionFactor(po, regionIdx);
+                    FluidSystem::gasDissolutionFactor(To, po, regionIdx);
                 Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (gasFormationVolumeFactorOutput_()) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::gasFormationVolumeFactor(po, regionIdx);
+                    FluidSystem::gasFormationVolumeFactor(To, po, XgO, regionIdx);
                 Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
             if (saturatedOilFormationVolumeFactorOutput_()) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::saturatedOilFormationVolumeFactor(po, regionIdx);
+                    FluidSystem::saturatedOilFormationVolumeFactor(To, po, regionIdx);
                 Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
-                    FluidSystem::oilSaturationPressure(XoG, regionIdx);
+                    FluidSystem::oilSaturationPressure(To, XoG, regionIdx);
                 Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
             }
         }

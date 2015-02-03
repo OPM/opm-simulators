@@ -43,6 +43,13 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
+#include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+
 #include <opm/core/utility/Average.hpp>
 
 // for this simulator to make sense, dune-cornerpoint and opm-parser
@@ -819,32 +826,132 @@ private:
         const auto deck = this->simulator().gridManager().deck();
         const auto eclState = this->simulator().gridManager().eclState();
 
-        FluidSystem::initBegin();
+        auto densityKeyword = deck->getKeyword("DENSITY");
+        int numRegions = densityKeyword->size();
+        FluidSystem::initBegin(numRegions);
 
-        int numRegions = deck->getKeyword("DENSITY")->size();
+        // set the reference densities of all PVT regions
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            // set the reference densities
-            Opm::DeckRecordConstPtr densityRecord =
-                deck->getKeyword("DENSITY")->getRecord(regionIdx);
+            Opm::DeckRecordConstPtr densityRecord = densityKeyword->getRecord(regionIdx);
             FluidSystem::setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
                                                densityRecord->getItem("WATER")->getSIDouble(0),
                                                densityRecord->getItem("GAS")->getSIDouble(0),
                                                regionIdx);
-
-            // so far, we require the presence of the PVTO, PVTW and PVDG
-            // keywords...
-            FluidSystem::setPvtoTable(eclState->getPvtoTables()[regionIdx], regionIdx);
-            FluidSystem::setPvtw(deck->getKeyword("PVTW"), regionIdx);
-            FluidSystem::setPvdgTable(eclState->getPvdgTables()[regionIdx], regionIdx);
         }
+
+        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar> > GasPvtSharedPtr;
+        GasPvtSharedPtr gasPvt(createGasPvt_(deck, eclState));
+        FluidSystem::setGasPvt(gasPvt);
+
+        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar> > OilPvtSharedPtr;
+        OilPvtSharedPtr oilPvt(createOilPvt_(deck, eclState));
+        FluidSystem::setOilPvt(oilPvt);
+
+        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > WaterPvtSharedPtr;
+        WaterPvtSharedPtr waterPvt(createWaterPvt_(deck, eclState));
+        FluidSystem::setWaterPvt(waterPvt);
 
         FluidSystem::initEnd();
    }
 
+    Opm::OilPvtInterface<Scalar>* createOilPvt_(Opm::DeckConstPtr deck,
+                                                Opm::EclipseStateConstPtr eclState)
+    {
+        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        int numPvtRegions = densityKeyword->size();
+
+        if (deck->hasKeyword("PVTO")) {
+            Opm::LiveOilPvt<Scalar> *oilPvt = new Opm::LiveOilPvt<Scalar>;
+            oilPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                oilPvt->setPvtoTable(regionIdx, eclState->getPvtoTables()[regionIdx]);
+
+            oilPvt->initEnd();
+            return oilPvt;
+        }
+        else if (deck->hasKeyword("PVDO")) {
+            Opm::DeadOilPvt<Scalar> *oilPvt = new Opm::DeadOilPvt<Scalar>;
+            oilPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                oilPvt->setPvdoTable(regionIdx, eclState->getPvdoTables()[regionIdx]);
+
+            oilPvt->initEnd();
+            return oilPvt;
+        }
+        else if (deck->hasKeyword("PVCDO")) {
+            Opm::ConstantCompressibilityOilPvt<Scalar> *oilPvt =
+                new Opm::ConstantCompressibilityOilPvt<Scalar>;
+            oilPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                oilPvt->setPvcdo(regionIdx, deck->getKeyword("PVCDO"));
+
+            oilPvt->initEnd();
+            return oilPvt;
+        }
+        // TODO (?): PVCO (this is not very hard but the opm-parser requires support for
+        // an additional table)
+
+        OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!");
+    }
+
+    Opm::GasPvtInterface<Scalar>* createGasPvt_(Opm::DeckConstPtr deck,
+                                                Opm::EclipseStateConstPtr eclState)
+    {
+        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        int numPvtRegions = densityKeyword->size();
+
+        if (deck->hasKeyword("PVTG")) {
+            Opm::WetGasPvt<Scalar> *gasPvt = new Opm::WetGasPvt<Scalar>;
+            gasPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                gasPvt->setPvtgTable(regionIdx, eclState->getPvtgTables()[regionIdx]);
+
+            gasPvt->initEnd();
+            return gasPvt;
+        }
+        else if (deck->hasKeyword("PVDG")) {
+            Opm::DryGasPvt<Scalar> *gasPvt = new Opm::DryGasPvt<Scalar>;
+            gasPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                gasPvt->setPvdgTable(regionIdx, eclState->getPvdgTables()[regionIdx]);
+
+            gasPvt->initEnd();
+            return gasPvt;
+        }
+        OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
+    }
+
+    Opm::WaterPvtInterface<Scalar>* createWaterPvt_(Opm::DeckConstPtr deck,
+                                                    Opm::EclipseStateConstPtr eclState)
+    {
+        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        int numPvtRegions = densityKeyword->size();
+
+        if (deck->hasKeyword("PVTW")) {
+            Opm::ConstantCompressibilityWaterPvt<Scalar> *waterPvt =
+                new Opm::ConstantCompressibilityWaterPvt<Scalar>;
+            waterPvt->setNumRegions(numPvtRegions);
+
+            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
+                waterPvt->setPvtw(regionIdx, deck->getKeyword("PVTW"));
+
+            waterPvt->initEnd();
+            return waterPvt;
+        }
+
+        OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
+    }
+
     void readInitialCondition_()
     {
-        const auto deck = this->simulator().gridManager().deck();
         const auto &gridManager = this->simulator().gridManager();
+        const auto deck = gridManager.deck();
+        const auto eclState = gridManager.eclState();
 
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
@@ -945,7 +1052,7 @@ private:
             //
             // first, retrieve the relevant black-oil parameters from
             // the fluid system.
-            Scalar RsSat = FluidSystem::gasDissolutionFactor(oilPressure, /*regionIdx=*/0);
+            Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, oilPressure, /*regionIdx=*/0);
             Scalar RsReal = rsData[cartesianDofIdx];
 
             if (RsReal > RsSat) {
