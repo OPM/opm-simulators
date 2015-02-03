@@ -129,6 +129,11 @@ namespace Opm
             std::shared_ptr<PvtConstCompr> pvtw(new PvtConstCompr);
             pvtw->initFromWater(deck->getKeyword("PVTW"));
 
+            if (!eclState->getWatvisctTables().empty()) {
+                pvtw->setWatvisctTables(eclState->getWatvisctTables(),
+                                        deck->getKeyword("VISCREF"));
+            }
+
             props_[phase_usage_.phase_pos[Aqua]] = pvtw;
         }
         // Oil PVT
@@ -139,19 +144,42 @@ namespace Opm
             const auto& pvtoTables = eclState->getPvtoTables();
             if (!pvdoTables.empty()) {
                 if (numSamples > 0) {
-                    auto splinePvt = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
-                    splinePvt->initFromOil(pvdoTables, numSamples);
-                    props_[phase_usage_.phase_pos[Liquid]] = splinePvt;
+                    auto splinePvdo = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
+                    splinePvdo->initFromOil(pvdoTables, numSamples);
+
+                    if (!eclState->getOilvisctTables().empty()) {
+                        splinePvdo->setOilvisctTables(eclState->getOilvisctTables(),
+                                                      deck->getKeyword("VISCREF"));
+                    }
+
+                    props_[phase_usage_.phase_pos[Liquid]] = splinePvdo;
                 } else {
-                    auto deadPvt = std::shared_ptr<PvtDead>(new PvtDead);
-                    deadPvt->initFromOil(pvdoTables);
-                    props_[phase_usage_.phase_pos[Liquid]] = deadPvt;
+                    auto pvdo = std::shared_ptr<PvtDead>(new PvtDead);
+                    pvdo->initFromOil(pvdoTables);
+
+                    if (!eclState->getOilvisctTables().empty()) {
+                        pvdo->setOilvisctTables(eclState->getOilvisctTables(),
+                                                   deck->getKeyword("VISCREF"));
+                    }
+
+                    props_[phase_usage_.phase_pos[Liquid]] = pvdo;
                 }
             } else if (!pvtoTables.empty()) {
-                props_[phase_usage_.phase_pos[Liquid]].reset(new PvtLiveOil(pvtoTables));
+                std::shared_ptr<PvtLiveOil> pvto(new PvtLiveOil(pvtoTables));
+                props_[phase_usage_.phase_pos[Liquid]] = pvto;
+
+                if (!eclState->getOilvisctTables().empty()) {
+                    pvto->setOilvisctTables(eclState->getOilvisctTables(),
+                                            deck->getKeyword("VISCREF"));
+                }
             } else if (deck->hasKeyword("PVCDO")) {
                 std::shared_ptr<PvtConstCompr> pvcdo(new PvtConstCompr);
                 pvcdo->initFromOil(deck->getKeyword("PVCDO"));
+
+                if (!eclState->getOilvisctTables().empty()) {
+                    pvcdo->setOilvisctTables(eclState->getOilvisctTables(),
+                                             deck->getKeyword("VISCREF"));
+                }
 
                 props_[phase_usage_.phase_pos[Liquid]] = pvcdo;
             } else {
