@@ -396,6 +396,12 @@ public:
     }
 
     /*!
+     * \brief Returns true if an eWoms restart file should be written to disk.
+     */
+    bool shouldWriteRestartFile() const
+    { return false; }
+
+    /*!
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
