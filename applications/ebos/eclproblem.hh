@@ -76,9 +76,6 @@ namespace Opm {
 namespace Properties {
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
 
-// The temperature inside the reservoir
-NEW_PROP_TAG(Temperature);
-
 // Write all solutions for visualization, not just the ones for the
 // report steps...
 NEW_PROP_TAG(EnableWriteAllSolutions);
@@ -130,9 +127,6 @@ SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, false);
 
 // only write the solutions for the report steps to disk
 SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
-
-// set the defaults for some problem specific properties
-SET_SCALAR_PROP(EclBaseProblem, Temperature, 293.15);
 
 // The default for the end time of the simulation [s]
 //
@@ -232,8 +226,6 @@ public:
 
         Ewoms::EclOutputBlackOilModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
-                             "The temperature [K] in the reservoir");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
                              "report steps");
@@ -265,8 +257,6 @@ public:
         ParentType::finishInit();
 
         auto& simulator = this->simulator();
-
-        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
 
         // invert the direction of the gravity vector for ECL problems
         // (z coodinates represent depth, not height.)
@@ -556,15 +546,15 @@ public:
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
-     *
-     * The black-oil model assumes constant temperature to define its
-     * parameters. Although temperature is thus not really used by the
-     * model, it gets written to the VTK output. Who nows, maybe we
-     * will need it one day?
      */
     template <class Context>
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
-    { return temperature_; }
+    {
+        // use the temporally constant temperature, i.e. use the initial temperature of
+        // the DOF
+        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+    }
 
     // \}
 
@@ -990,6 +980,9 @@ private:
             deck->getKeyword("PRESSURE")->getSIDoubleData();
         const std::vector<double> &rsData =
             deck->getKeyword("RS")->getSIDoubleData();
+        // initial reservoir temperature
+        const std::vector<double> &tempiData =
+            eclState->getDoubleGridProperty("TEMPI")->getData();
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
@@ -1010,9 +1003,13 @@ private:
             assert(cartesianDofIdx <= numCartesianCells);
 
             //////
-            // set temperatures
+            // set temperature
             //////
-            dofFluidState.setTemperature(temperature_);
+            Scalar temperature = tempiData[cartesianDofIdx];
+            if (!std::isfinite(temperature) || temperature <= 0)
+                temperature = FluidSystem::surfaceTemperature;
+
+            dofFluidState.setTemperature(temperature);
 
             //////
             // set saturations
@@ -1097,8 +1094,6 @@ private:
     std::vector<RockParams> rockParams_;
 
     std::vector<BlackOilFluidState> initialFluidStates_;
-
-    Scalar temperature_;
 
     EclWellManager<TypeTag> wellManager_;
 
