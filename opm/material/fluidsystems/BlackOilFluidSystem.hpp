@@ -490,7 +490,7 @@ private:
 
 template <class Scalar>
 const Scalar
-BlackOil<Scalar>::surfaceTemperature = 273.15 + 24; // [K]
+BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
 
 template <class Scalar>
 const Scalar
