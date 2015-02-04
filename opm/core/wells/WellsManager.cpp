@@ -601,10 +601,14 @@ namespace Opm
                                               w_);
                 }
 
-                if (ok && productionProperties.hasProductionControl(WellProducer::BHP)) {
+                if (ok) {
+                    // Always append a BHP control.
+                    // If no explicit BHP control given, use a 1 atm control.
+                    const bool has_explicit_limit = productionProperties.hasProductionControl(WellProducer::BHP);
+                    const double bhp_limit = has_explicit_limit ? productionProperties.BHPLimit : unit::convert::from(1.0, unit::atm);
                     control_pos[WellsManagerDetail::ProductionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
                     ok = append_well_controls(BHP,
-                                              productionProperties.BHPLimit , 
+                                              bhp_limit,
                                               NULL,
                                               well_index,
                                               w_);

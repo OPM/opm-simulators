@@ -176,7 +176,8 @@ void check_controls_epoch1( struct WellControls ** ctrls) {
 void check_controls_epoch3( struct WellControls ** ctrls) {
     // The new producer
     const struct WellControls * ctrls1 = ctrls[1];
-    BOOST_CHECK_EQUAL( 5 , well_controls_get_num(ctrls1));
+    // Note: controls include default (1 atm) BHP control.
+    BOOST_CHECK_EQUAL( 6 , well_controls_get_num(ctrls1));
 }
 
 
