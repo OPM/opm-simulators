@@ -80,7 +80,7 @@ namespace Opm
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
         template<int category=Dune::SolverCategory::sequential, class O, class P>   
-        void constructPreconditionerAndSolve(O& opA, DuneMatrix istlAe, 
+        void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation,
                                              Dune::InverseOperatorResult& result) const
