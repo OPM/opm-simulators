@@ -40,8 +40,12 @@ namespace Opm
     {
     public:
         /// \brief constructor taking a simulator timer to determine start and end time
-        ///  \param timer   in case of sub stepping this is the outer timer
-        explicit AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer, const double lastStepTaken );
+        ///  \param timer          in case of sub stepping this is the outer timer
+        ///  \param lastStepTaken  last suggested time step
+        ///  \param maxTimeStep    maximum time step allowed
+        AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer,
+                                const double lastStepTaken,
+                                const double maxTimeStep = std::numeric_limits<double>::max() );
 
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();
@@ -79,12 +83,6 @@ namespace Opm
         /// \brief return min step length used so far
         double minStepLength () const;
 
-        /// \brief return max suggested step length
-        double suggestedMax () const;
-
-        /// \brief return average suggested step length
-        double suggestedAverage () const;
-
         /// \brief Previous step length. This is the length of the step that
         ///        was taken to arrive at this time.
         double stepLengthTaken () const;
@@ -100,14 +98,13 @@ namespace Opm
         const double start_time_;
         const double total_time_;
         const int report_step_;
+        const double max_time_step_;
 
         double current_time_;
         double dt_;
         int current_step_;
 
         std::vector< double > steps_;
-        double suggestedMax_;
-        double suggestedAverage_;
     };
 
 } // namespace Opm

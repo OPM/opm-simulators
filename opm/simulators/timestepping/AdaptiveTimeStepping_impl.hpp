@@ -25,7 +25,7 @@
 
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
-#include <opm/core/simulator/PIDTimeStepControl.hpp>
+#include <opm/core/simulator/TimeStepControl.hpp>
 
 namespace Opm {
 
@@ -37,13 +37,17 @@ namespace Opm {
         , initial_fraction_( param.getDefault("solver.initialfraction", double(0.25) ) )
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
+          // default is 1 year, convert to seconds
+        , max_time_step_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0 ), unit::day) )
         , solver_restart_max_( param.getDefault("solver.restart", int(3) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(false) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(false) ) )
         , last_timestep_( -1.0 )
     {
         // valid are "pid" and "pid+iteration"
-        std::string control = param.getDefault("timestep.control", std::string("pid") );
+        std::string control = param.getDefault("timestep.control", std::string("pid+iteration") );
+        // iterations is the accumulation of all linear iterations over all newton steops per time step
+        const int defaultTargetIterations = 30;
 
         const double tol = param.getDefault("timestep.control.tol", double(1e-3) );
         if( control == "pid" ) {
@@ -51,9 +55,16 @@ namespace Opm {
         }
         else if ( control == "pid+iteration" )
         {
-            const int iterations   = param.getDefault("timestep.control.targetiteration", int(25) );
+            const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
             const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(3.0) );
             timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth ) );
+        }
+        else if ( control == "iterationcount" )
+        {
+            const int iterations    = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
+            const double decayrate  = param.getDefault("timestep.control.decayrate",  double(0.75) );
+            const double growthrate = param.getDefault("timestep.control.growthrate", double(1.25) );
+            timeStepControl_ = TimeStepControlType( new SimpleIterationCountTimeStepControl( iterations, decayrate, growthrate ) );
         }
         else
             OPM_THROW(std::runtime_error,"Unsupported time step control selected "<< control );
@@ -93,7 +104,7 @@ namespace Opm {
         }
 
         // create adaptive step timer with previously used sub step size
-        AdaptiveSimulatorTimer substepTimer( simulatorTimer, last_timestep_ );
+        AdaptiveSimulatorTimer substepTimer( simulatorTimer, last_timestep_, max_time_step_ );
 
         // copy states in case solver has to be restarted (to be revised)
         State  last_state( state );

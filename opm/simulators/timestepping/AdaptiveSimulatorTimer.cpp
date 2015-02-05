@@ -30,17 +30,18 @@
 namespace Opm
 {
     AdaptiveSimulatorTimer::
-    AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer, const double lastStepTaken )
+    AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer,
+                            const double lastStepTaken,
+                            const double maxTimeStep )
         : start_date_time_( timer.startDateTime() )
         , start_time_( timer.simulationTimeElapsed() )
         , total_time_( start_time_ + timer.currentStepLength() )
         , report_step_( timer.reportStepNum() )
+        , max_time_step_( maxTimeStep )
         , current_time_( start_time_ )
         , dt_( 0.0 )
         , current_step_( 0 )
         , steps_()
-        , suggestedMax_( 0.0 )
-        , suggestedAverage_( 0.0 )
     {
         // reserve memory for sub steps
         steps_.reserve( 10 );
@@ -61,31 +62,30 @@ namespace Opm
     void AdaptiveSimulatorTimer::
     provideTimeStepEstimate( const double dt_estimate )
     {
-        // store some information about the time steps suggested
-        suggestedMax_      = std::max( dt_estimate, suggestedMax_ );
-        suggestedAverage_ += dt_estimate;
-
         double remaining = (total_time_ - current_time_);
+        // apply max time step if it was set
+        dt_ = std::min( dt_estimate, max_time_step_ );
 
         if( remaining > 0 ) {
 
             // set new time step (depending on remaining time)
-            if( 1.5 * dt_estimate > remaining ) {
+            if( 1.05 * dt_ > remaining ) {
                 dt_ = remaining;
-                return ;
+                // check max time step again and use half remaining if to large
+                if( dt_ > max_time_step_ ) {
+                    dt_ = 0.5 * remaining;
+                }
+                return;
             }
 
             // check for half interval step to avoid very small step at the end
             // remaining *= 0.5;
 
-            if( 2.25 * dt_estimate > remaining ) {
+            if( 1.5 * dt_ > remaining ) {
                 dt_ = 0.5 * remaining;
-                return ;
+                return;
             }
         }
-
-        // otherwise set dt_estimate as is
-        dt_ = dt_estimate;
     }
 
     int AdaptiveSimulatorTimer::
@@ -135,16 +135,6 @@ namespace Opm
     {
         if( steps_.size() == 0 ) return 0.0;
         return *(std::min_element( steps_.begin(), steps_.end() ));
-    }
-
-    /// \brief return max suggested step length
-    double AdaptiveSimulatorTimer::suggestedMax () const { return suggestedMax_; }
-
-    /// \brief return average suggested step length
-    double AdaptiveSimulatorTimer::suggestedAverage () const
-    {
-        const int size = steps_.size();
-        return (size > 0 ) ? (suggestedAverage_ / double(size)) : suggestedAverage_;
     }
 
     /// \brief report start and end time as well as used steps so far
