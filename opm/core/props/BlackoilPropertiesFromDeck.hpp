@@ -259,7 +259,7 @@ namespace Opm
         RockFromDeck rock_;
         std::vector<int> cellPvtRegionIdx_;
         BlackoilPvtProperties pvt_;
-        std::unique_ptr<SaturationPropsInterface> satprops_;
+        std::shared_ptr<SaturationPropsInterface> satprops_;
         mutable std::vector<double> B_;
         mutable std::vector<double> dB_;
         mutable std::vector<double> R_;
