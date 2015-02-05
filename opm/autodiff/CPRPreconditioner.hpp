@@ -105,6 +105,7 @@ struct CPRSelector
     }
 };
 
+#if HAVE_MPI
 /// \copydoc CPRSelector<M,X,X,Y,P>
 template<class M, class X, class Y, class I1, class I2>
 struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
@@ -143,6 +144,7 @@ createParallelDeleter(ILU& ilu, const Dune::OwnerOverlapCopyCommunication<I1,I2>
         (void) p;
         return ParallelPreconditionerDeleter<ILU>(ilu);
     }
+#endif
 
 //! \brief Creates and initializes a unique pointer to an sequential ILU0 preconditioner.
 //! \param A     The matrix of the linear system to solve.
@@ -164,6 +166,7 @@ createILUnPtr(const M& A, int ilu_n, double relax, const Dune::Amg::SequentialIn
     return std::shared_ptr<Dune::SeqILUn<M,X,X> >(new Dune::SeqILUn<M,X,X>( A, ilu_n, relax) );
 }
 
+#if HAVE_MPI
 template<class ILU, class I1, class I2>
 struct SelectParallelILUSharedPtr
 {
@@ -218,6 +221,7 @@ createILUnPtr(const M& A, int ilu_n, double relax,
     return typename SelectParallelILUSharedPtr<Dune::SeqILUn<M,X,X>, I1, I2>::type
         (new PointerType(*ilu, comm),createParallelDeleter(*ilu, comm));
 }
+#endif
 
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param Ae The matrix of the elliptic system.
@@ -230,6 +234,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return std::unique_ptr<Dune::SeqILU0<M,X,X> >(new Dune::SeqILU0<M,X,X>(Ae, relax));
 }
 
+#if HAVE_MPI
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param Ae    The matrix of the elliptic system.
 /// \param relax The relaxation parameter for ILU0.
@@ -251,6 +256,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     return EllipticPreconditionerPointer(new ParallelPreconditioner(*ilu, comm),
                                          createParallelDeleter(*ilu, comm));
 }
+#endif
 } // end namespace
 
 
