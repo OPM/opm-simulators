@@ -77,6 +77,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
     // Copy properties that do not depend on the postion within the grid.
     rock_             = props.rock_;
+    satprops_         = props.satprops_;
     phase_usage_      = props.phase_usage_;
     props_            = props.props_;
     densities_        = props.densities_;
@@ -87,7 +88,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // and initialize with obviously bogus numbers.
     cellPvtRegionIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
     pvtTableIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
-    satOilMax_.resize(number_of_cells, -std::numeric_limits<double>::max());
 }
 
     /// Initializes the properties.

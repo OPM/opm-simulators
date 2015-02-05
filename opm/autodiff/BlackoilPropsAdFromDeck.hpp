@@ -57,6 +57,7 @@ namespace Opm
     /// version of the methods.
     class BlackoilPropsAdFromDeck : public BlackoilPropsAdInterface
     {
+        friend class BlackoilPropsDataHandle;
     public:
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,

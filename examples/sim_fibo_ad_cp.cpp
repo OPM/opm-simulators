@@ -68,6 +68,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/RedistributeDataHandles.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
 
@@ -123,7 +124,7 @@ try
     }
     std::shared_ptr<Dune::CpGrid> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
@@ -155,7 +156,7 @@ try
     }
 
     // Grid init
-    grid.reset(new Dune::CpGrid());
+    grid.reset(new Dune::CpGrid);
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     grid->processEclipseFormat(deck, false, false, false, porv);
 
@@ -206,6 +207,38 @@ try
                                   *props, deck, gravity[2], state);
     }
 
+    std::shared_ptr<BlackoilState> distributed_state=Dune::stackobject_to_shared_ptr(state);
+    std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props=new_props;
+    Dune::CpGrid distributed_grid = *grid;
+    // At this point all properties and state variables are correctly initialized
+    // If there are more than one processors involved, we now repartition the grid
+    // and initilialize new properties and states for it.
+    if( grid->comm().size()>=1 )
+    {
+        if(!param.getDefault("output_vtk", true))
+        {
+            OPM_THROW(std::logic_error, "We only support vtk output during parallel runs");
+        }
+        grid->loadBalance(2);
+        Dune::CpGrid global_grid      = *grid;
+        distributed_grid = *grid;
+        global_grid.switchToGlobalView();
+        distributed_grid.switchToDistributedView();
+        distributed_props = std::make_shared<BlackoilPropsAdFromDeck>(*new_props, grid->numCells());
+        distributed_state.reset(new BlackoilState);
+        distributed_state->init(grid->numCells(), grid->numFaces(), state.numPhases());
+        // init does not resize surfacevol. Do it manually.
+        distributed_state->surfacevol().resize(grid->numCells()*state.numPhases(),
+                                             std::numeric_limits<double>::max());
+        Opm::BlackoilStateDataHandle state_handle(global_grid, distributed_grid,
+                                                  state, *distributed_state);
+        Opm::BlackoilPropsDataHandle props_handle(global_grid, distributed_grid,
+                                                  static_cast<BlackoilPropsAdFromDeck&>(*new_props),
+                                                  static_cast<BlackoilPropsAdFromDeck&>(*distributed_props));
+        grid->scatterData(state_handle);
+        grid->scatterData(props_handle);
+    }
+
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
@@ -244,14 +277,14 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    Opm::DerivedGeology geology(*grid, *new_props, eclipseState, false, grav);
+    Opm::DerivedGeology geology(distributed_grid, *distributed_props, eclipseState, false, grav);
 
-    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid);
+    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, distributed_grid);
 
     SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
-                                                           *grid,
+                                                           distributed_grid,
                                                            geology,
-                                                           *new_props,
+                                                           *distributed_props,
                                                            rock_comp->isActive() ? rock_comp.get() : 0,
                                                            *fis_solver,
                                                            grav,
@@ -264,7 +297,7 @@ try
     std::cout << "\n\n================ Starting main simulation loop ===============\n"
               << std::flush;
 
-    SimulatorReport fullReport = simulator.run(simtimer, state);
+    SimulatorReport fullReport = simulator.run(simtimer, *distributed_state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
