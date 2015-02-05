@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2014 by Andreas Lauser
+  Copyright (C) 2014-2015 by Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -63,6 +63,8 @@ class EclWellManager
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+
+    enum { numPhases = FluidSystem::numPhases };
 
     typedef typename GridView::template Codim<0>::Entity Element;
 
@@ -406,9 +408,43 @@ public:
      */
     void endTimeStep()
     {
-        // iterate over all wells and notify them individually
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
-            wells_[wellIdx]->endTimeStep();
+        Scalar dt = simulator_.timeStepSize();
+
+        // iterate over all wells and notify them individually. also, update the
+        // production/injection totals for the active wells.
+        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx) {
+            auto well = wells_[wellIdx];
+            well->endTimeStep();
+
+            // update the surface volumes of the produced/injected fluids
+            std::array<Scalar, numPhases>* injectedVolume;
+            if (wellTotalInjectedVolume_.count(well->name()) == 0) {
+                injectedVolume = &wellTotalInjectedVolume_[well->name()];
+                std::fill(injectedVolume->begin(), injectedVolume->end(), 0.0);
+            }
+            else
+                injectedVolume = &wellTotalInjectedVolume_[well->name()];
+
+            std::array<Scalar, numPhases>* producedVolume;
+            if (wellTotalProducedVolume_.count(well->name()) == 0) {
+                producedVolume = &wellTotalProducedVolume_[well->name()];
+                std::fill(producedVolume->begin(), producedVolume->end(), 0.0);
+            }
+            else
+                producedVolume = &wellTotalProducedVolume_[well->name()];
+
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                // this assumes that the implicit Euler method is used for time
+                // integration. TODO: Once the time discretization becomes pluggable,
+                // this integration needs to be done by the time discretization code!
+                Scalar vol = dt * well->surfaceRate(phaseIdx);
+
+                if (vol < 0)
+                    (*producedVolume)[phaseIdx] += -vol;
+                else
+                    (*injectedVolume)[phaseIdx] += vol;
+            }
+        }
     }
 
     /*!
@@ -416,6 +452,26 @@ public:
      */
     void endEpisode()
     { }
+
+    /*!
+     * \brief Returns the surface volume of a fluid phase produced by a well.
+     */
+    Scalar totalProducedVolume(const std::string& wellName, int phaseIdx) const
+    {
+        if (wellTotalProducedVolume_.count(wellName) == 0)
+            return 0.0; // well not yet seen
+        return wellTotalProducedVolume_.at(wellName)[phaseIdx];
+    }
+
+    /*!
+     * \brief Returns the surface volume of a fluid phase injected by a well.
+     */
+    Scalar totalInjectedVolume(const std::string& wellName, int phaseIdx) const
+    {
+        if (wellTotalInjectedVolume_.count(wellName) == 0)
+            return 0.0; // well not yet seen
+        return wellTotalInjectedVolume_.at(wellName)[phaseIdx];
+    }
 
     /*!
      * \brief Computes the source term due to wells for a degree of
@@ -692,6 +748,8 @@ protected:
 
     std::vector<std::shared_ptr<Well> > wells_;
     std::map<std::string, int> wellNameToIndex_;
+    std::map<std::string, std::array<Scalar, numPhases> > wellTotalInjectedVolume_;
+    std::map<std::string, std::array<Scalar, numPhases> > wellTotalProducedVolume_;
 };
 } // namespace Ewoms
 
