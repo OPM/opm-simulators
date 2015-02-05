@@ -610,11 +610,18 @@ namespace Opm
                             well_controls_clear(ctrl);
                             well_controls_assert_number_of_phases(ctrl, int(np));
 
-                            const int ok =
+                            const int ok_resv =
                                 well_controls_add_new(RESERVOIR_RATE, target,
                                                       & distr[0], ctrl);
 
-                            if (ok != 0) {
+                            // For WCONHIST/RESV the BHP limit is set to 1 atm.
+                            // TODO: Make it possible to modify the BHP limit using
+                            // the WELTARG keyword
+                            const int ok_bhp =
+                                well_controls_add_new(BHP, unit::convert::from(1.0, unit::atm),
+                                                      NULL, ctrl);
+
+                            if (ok_resv != 0 && ok_bhp != 0) {
                                 xw.currentControls()[*rp] = 0;
                                 well_controls_set_current(ctrl, 0);
                             }
