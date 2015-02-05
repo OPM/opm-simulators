@@ -56,11 +56,10 @@ namespace Opm
         const std::vector<double>& rv () const {return rv_ ; }
 
     private:
-        std::vector<double> surfvol_;
-        std::vector<double> gor_   ;
-        std::vector<double> rv_ ;
+        std::vector<double> surfvol_; // no entries = no cells * no phases
+        std::vector<double> gor_   ;  // no entries = no cells
+        std::vector<double> rv_ ;     // no entries = no cells
     };
-
 } // namespace Opm
 
 
