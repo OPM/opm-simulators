@@ -1,3 +1,22 @@
+/*
+  Copyright (c) 2014 SINTEF ICT, Applied Mathematics.
+  Copyright (c) 2015 IRIS AS
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "config.h"
 
 #include "SimulatorFullyImplicitBlackoilOutput.hpp"
@@ -26,7 +45,7 @@ namespace Opm
 
 
     void outputStateVtk(const UnstructuredGrid& grid,
-                        const Opm::BlackoilState& state,
+                        const SimulatorState& state,
                         const int step,
                         const std::string& output_dir)
     {
@@ -163,7 +182,7 @@ namespace Opm
 
 #ifdef HAVE_DUNE_CORNERPOINT
     void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::BlackoilState& state,
+                        const Opm::SimulatorState& state,
                         const int step,
                         const std::string& output_dir)
     {
@@ -187,7 +206,7 @@ namespace Opm
 #endif
         writer.addCellData(state.saturation(), "saturation", state.numPhases());
         writer.addCellData(state.pressure(), "pressure", 1);
-        
+
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
                                   AutoDiffGrid::numFaces(grid),
@@ -202,4 +221,32 @@ namespace Opm
     }
 #endif
 
+    void
+    BlackoilOutputWriter::
+    writeInit(const SimulatorTimerInterface& timer)
+    {
+        if( eclWriter_ ) {
+            eclWriter_->writeInit(timer);
+        }
+    }
+
+    void
+    BlackoilOutputWriter::
+    writeTimeStep(const SimulatorTimerInterface& timer,
+                  const SimulatorState& state,
+                  const WellState& wellState)
+    {
+        // VTK output
+        if( vtkWriter_ ) {
+            vtkWriter_->writeTimeStep( timer, state, wellState );
+        }
+        // Matlab output
+        if( matlabWriter_ ) {
+            matlabWriter_->writeTimeStep( timer, state, wellState );
+        }
+        // ECL output
+        if ( eclWriter_ ) {
+            eclWriter_->writeTimeStep(timer, state, wellState);
+        }
+    }
 }

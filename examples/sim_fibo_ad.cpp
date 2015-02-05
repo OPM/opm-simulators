@@ -33,7 +33,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/thresholdPressures.hpp>
 
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -132,11 +131,10 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::EclipseWriter outputWriter(param,
-                                    eclipseState,
-                                    pu,
-                                    cGrid.number_of_cells,
-                                    cGrid.global_cell);
+    Opm::BlackoilOutputWriter outputWriter(cGrid,
+                                           param,
+                                           eclipseState,
+                                           pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));

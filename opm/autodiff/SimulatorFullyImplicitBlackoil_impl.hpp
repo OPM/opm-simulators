@@ -34,7 +34,6 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/pressure/flow_bc.h>
 
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
@@ -87,7 +86,7 @@ namespace Opm
              bool has_disgas,
              bool has_vapoil,
              std::shared_ptr<EclipseState> eclipse_state,
-             EclipseWriter& output_writer,
+             BlackoilOutputWriter& output_writer,
              const std::vector<double>& threshold_pressures_by_face);
 
         SimulatorReport run(SimulatorTimer& timer,
@@ -100,13 +99,6 @@ namespace Opm
                                    std::vector<int> > RateConverterType;
 
         const parameter::ParameterGroup param_;
-
-        // Parameters for output.
-        const bool output_;
-        const bool output_vtk_;
-        const bool output_matlab_;
-        const std::string output_dir_;
-        const int output_interval_;
 
         // Observed objects.
         const Grid& grid_;
@@ -123,7 +115,7 @@ namespace Opm
         // eclipse_state
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
-        EclipseWriter& output_writer_;
+        BlackoilOutputWriter& output_writer_;
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
@@ -149,7 +141,7 @@ namespace Opm
                                                                    const bool has_disgas,
                                                                    const bool has_vapoil,
                                                                    std::shared_ptr<EclipseState> eclipse_state,
-                                                                   EclipseWriter& output_writer,
+                                                                   BlackoilOutputWriter& output_writer,
                                                                    const std::vector<double>& threshold_pressures_by_face)
 
     {
@@ -169,64 +161,6 @@ namespace Opm
     }
 
 
-
-    static void outputWellStateMatlab(const Opm::WellStateFullyImplicitBlackoil& well_state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["bhp"] = &well_state.bhp();
-        dm["wellrates"] = &well_state.wellRates();
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-
-#if 0
-    static void outputWaterCut(const Opm::Watercut& watercut,
-                               const std::string& output_dir)
-    {
-        // Write water cut curve.
-        std::string fname = output_dir  + "/watercut.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        watercut.write(os);
-    }
-
-    static void outputWellReport(const Opm::WellReport& wellreport,
-                                 const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-#endif
-
-
     // \TODO: Treat bcs.
     template<class T>
     SimulatorFullyImplicitBlackoil<T>::Impl::Impl(const parameter::ParameterGroup& param,
@@ -239,14 +173,9 @@ namespace Opm
                                                const bool has_disgas,
                                                const bool has_vapoil,
                                                std::shared_ptr<EclipseState> eclipse_state,
-                                               EclipseWriter& output_writer,
+                                               BlackoilOutputWriter& output_writer,
                                                const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
-          output_( param.getDefault("output", true) ),
-          output_vtk_( output_ ? param.getDefault("output_vtk",true) : false ),
-          output_matlab_( output_ ? param.getDefault("output_matlab", true) : false ),
-          output_dir_( output_ ? param.getDefault("output_dir", std::string("output")) : "" ),
-          output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
           grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -260,18 +189,6 @@ namespace Opm
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face)
     {
-        // For output.
-        if (output_) {
-            // Ensure that output dir exists
-            boost::filesystem::path fpath(output_dir_);
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-        }
-
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
         allcells_.resize(num_cells);
@@ -295,7 +212,7 @@ namespace Opm
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::string tstep_filename = output_dir_ + "/step_timing.txt";
+        std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
         typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
@@ -306,6 +223,9 @@ namespace Opm
         {
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_ ) );
         }
+
+        // init output writer
+        output_writer_.writeInit( timer );
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -328,22 +248,8 @@ namespace Opm
             WellStateFullyImplicitBlackoil well_state;
             well_state.init(wells, state, prev_well_state);
 
-            // Output state at start of time step.
-            if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
-                if (output_vtk_) {
-                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-                }
-                if (output_matlab_) {
-                    outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                    outputWellStateMatlab(well_state,timer.currentStepNum(), output_dir_);
-                }
-            }
-            if (output_) {
-                if (timer.currentStepNum() == 0) {
-                    output_writer_.writeInit(timer);
-                }
-                if( ! adaptiveTimeStepping || timer.currentStepNum() == 0 )
-                    output_writer_.writeTimeStep(timer, state, well_state);
+            if( ! adaptiveTimeStepping ) {
+                output_writer_.writeTimeStep( timer, state, well_state );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -381,7 +287,7 @@ namespace Opm
             const double st = solver_timer.secsSinceStart();
             std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
             stime += st;
-            if (output_) {
+            if ( output_writer_.output() ) {
                 SimulatorReport step_report;
                 step_report.pressure_time = st;
                 step_report.total_time =  step_timer.secsSinceStart();
@@ -394,17 +300,8 @@ namespace Opm
         }
 
         // Write final simulation state.
-        if (output_) {
-            if (output_vtk_) {
-                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-            }
-            if (output_matlab_) {
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-                outputWellStateMatlab(prev_well_state, timer.currentStepNum(), output_dir_);
-            }
-            if( ! adaptiveTimeStepping )
-            //std::cout << "Write last step" << std::endl;
-                output_writer_.writeTimeStep(timer, state, prev_well_state);
+        if( ! adaptiveTimeStepping ) {
+            output_writer_.writeTimeStep( timer, state, prev_well_state );
         }
 
         // Stop timer and create timing report
