@@ -24,8 +24,8 @@
 #include <dune/common/shared_ptr.hh>
  namespace Opm
 {
-#if defined(HAVE_DUNE_CORNERPOINT) && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
-#if defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)
+#if defined(HAVE_DUNE_CORNERPOINT)
+#if defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL) && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
 // Extracts the information about the data decomposition from the grid for dune-istl
 void extractParallelGridInformationToISTL(boost::any& anyComm, const Dune::CpGrid& grid)
 {
@@ -44,6 +44,6 @@ void extractParallelGridInformationToISTL(boost::any& anyComm, const Dune::CpGri
 // Missing support for MPI or dune-istl -> do nothing.
 void extractParallelGridInformationToISTL(boost::any&, const Dune::CpGrid&)
 {}
-#endif //defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)
+#endif //defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)  && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
 #endif //defined(HAVE_DUNE_CORNERPOINT)
 } // end namespace Opm
