@@ -123,7 +123,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 SET_BOOL_PROP(EclBaseProblem, EnableLinearizationRecycling, false);
 
 // Only relinearize the parts where the current solution is sufficiently "bad"
-SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, false);
+SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, true);
 
 // only write the solutions for the report steps to disk
 SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
