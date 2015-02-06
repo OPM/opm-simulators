@@ -21,29 +21,22 @@
 #include "ExtractParallelGridInformationToISTL.hpp"
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <dune/common/version.hh>
-
+#include <dune/common/shared_ptr.hh>
  namespace Opm
 {
 #if defined(HAVE_DUNE_CORNERPOINT) && DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
 #if defined(HAVE_MPI) && defined(HAVE_DUNE_ISTL)
 // Extracts the information about the data decomposition from the grid for dune-istl
-struct NullDeleter
-{
-    void operator()(void*)
-    {}
-};
-
 void extractParallelGridInformationToISTL(boost::any& anyComm, const Dune::CpGrid& grid)
 {
     if(grid.comm().size()>1)
     {
         // this is a parallel run with distributed data.
-        NullDeleter null_delete;
         Dune::CpGrid& mgrid=const_cast<Dune::CpGrid&>(grid);
-        Dune::CpGrid::ParallelIndexSet* idx=&(mgrid.getCellIndexSet());
-        Dune::CpGrid::RemoteIndices* ridx=&(mgrid.getCellRemoteIndices());
-        anyComm=boost::any(Opm::ParallelISTLInformation(std::shared_ptr<Dune::CpGrid::ParallelIndexSet>(idx, null_delete),
-                                                        std::shared_ptr<Dune::CpGrid::RemoteIndices>(ridx, null_delete),
+        Dune::CpGrid::ParallelIndexSet& idx=mgrid.getCellIndexSet();
+        Dune::CpGrid::RemoteIndices& ridx=mgrid.getCellRemoteIndices();
+        anyComm=boost::any(Opm::ParallelISTLInformation(Dune::stackobject_to_shared_ptr(idx),
+                                                        Dune::stackobject_to_shared_ptr(ridx),
                                                         grid.comm()));
     }
 }
