@@ -271,9 +271,8 @@ namespace Opm
                 }
                 else
                     OPM_THROW(std::logic_error,"cast to BlackoilState failed");
-                const WellStateFullyImplicitBlackoil& boWellState =
-                    static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
-                    backupfile_ << boWellState;
+                const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
+                backupfile_ << boWellState;
                 /*
                 const WellStateFullyImplicitBlackoil* boWellState =
                     dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
@@ -325,7 +324,13 @@ namespace Opm
                 std::cout << "Restored step " << timer.reportStepNum() << " at day "
                           <<  unit::convert::to(timer.simulationTimeElapsed(),unit::day) << std::endl;
 
-                if( readReportStep == reportStep || ! restorefile ) {
+                if( readReportStep == reportStep ) {
+                    break;
+                }
+
+                // if the stream is not valid anymore we just use the last state read
+                if( ! restorefile ) {
+                    std::cerr << "Reached EOF, using last state read!" << std::endl;
                     break;
                 }
 
