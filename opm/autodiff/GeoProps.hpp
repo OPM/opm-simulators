@@ -94,15 +94,20 @@ namespace Opm
             
             // Get original grid cell volume.
             EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
-            // Pore volume
+            // Pore volume.
+            // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
+            // But the default behavior is to get the comparable pore volume with ECLIPSE.
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
                 int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
                 pvol_[cellIdx] =
                     props.porosity()[cellIdx]
                     * multpv[cartesianCellIdx]
-                    * ntg[cartesianCellIdx]
-                    * eclgrid->getCellVolume(cartesianCellIdx);
-                //                    * AutoDiffGrid::cellVolume(grid, cellIdx);
+                    * ntg[cartesianCellIdx];
+                if (eclgrid->isMinpvfActive()) {
+                    pvol_[cellIdx] *= AutoDiffGrid::cellVolume(grid, cellIdx);
+                } else {
+                    pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
+                }                
             }
 
             // Transmissibility
