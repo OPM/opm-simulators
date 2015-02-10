@@ -826,6 +826,9 @@ private:
         int numRegions = densityKeyword->size();
         FluidSystem::initBegin(numRegions);
 
+        FluidSystem::setEnableDissolvedGas(deck->hasKeyword("DISGAS"));
+        FluidSystem::setEnableVaporizedOil(deck->hasKeyword("VAPOIL"));
+
         // set the reference densities of all PVT regions
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
             Opm::DeckRecordConstPtr densityRecord = densityKeyword->getRecord(regionIdx);
@@ -949,6 +952,10 @@ private:
         const auto deck = gridManager.deck();
         const auto eclState = gridManager.eclState();
 
+        bool enableDisgas = deck->hasKeyword("DISGAS");
+        bool enableVapoil = deck->hasKeyword("VAPOIL");
+
+        // make sure all required quantities are enables
         if (!deck->hasKeyword("SWAT") ||
             !deck->hasKeyword("SGAS"))
             OPM_THROW(std::runtime_error,
@@ -958,21 +965,12 @@ private:
             OPM_THROW(std::runtime_error,
                       "So far, the ECL input file requires the presence of the PRESSURE "
                       "keyword");
-        if (!deck->hasKeyword("DISGAS"))
+        if (enableDisgas && !deck->hasKeyword("RS"))
             OPM_THROW(std::runtime_error,
-                      "The deck must exhibit gas dissolved in the oil phase"
-                      " (DISGAS keyword is missing)");
-        if (!deck->hasKeyword("RS"))
+                      "The ECL input file requires the RS keyword to be present if dissolved gas is enabled");
+        if (enableVapoil && !deck->hasKeyword("RV"))
             OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the presence of the RS keyword");
-
-        if (deck->hasKeyword("VAPOIL"))
-            OPM_THROW(std::runtime_error,
-                      "The deck must _not_ exhibit vaporized oil"
-                      " (The VAPOIL keyword is unsupported)");
-        if (deck->hasKeyword("RV"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the RV keyword to be non-present");
+                      "The ECL input file requires the RV keyword to be present if vaporized oil is enabled");
 
         size_t numDof = this->model().numGridDof();
 
@@ -984,8 +982,12 @@ private:
             deck->getKeyword("SGAS")->getSIDoubleData();
         const std::vector<double> &pressureData =
             deck->getKeyword("PRESSURE")->getSIDoubleData();
-        const std::vector<double> &rsData =
-            deck->getKeyword("RS")->getSIDoubleData();
+        const std::vector<double> *rsData = 0;
+        if (enableDisgas)
+            rsData = &deck->getKeyword("RS")->getSIDoubleData();
+        const std::vector<double> *rvData = 0;
+        if (enableVapoil)
+            rvData = &deck->getKeyword("RV")->getSIDoubleData();
         // initial reservoir temperature
         const std::vector<double> &tempiData =
             eclState->getDoubleGridProperty("TEMPI")->getData();
@@ -997,7 +999,10 @@ private:
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
         assert(pressureData.size() == numCartesianCells);
-        assert(rsData.size() == numCartesianCells);
+        if (enableDisgas)
+            assert(rsData->size() == numCartesianCells);
+        if (enableVapoil)
+            assert(rvData->size() == numCartesianCells);
 #endif
 
         // calculate the initial fluid states
@@ -1036,6 +1041,7 @@ private:
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 dofFluidState.setPressure(phaseIdx, oilPressure);
             }
+            Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
 
             //////
             // set compositions
@@ -1046,46 +1052,86 @@ private:
                 for (int compIdx = 0; compIdx < numComponents; ++compIdx)
                     dofFluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
 
-            // set compositions of the gas and water phases
+            // by default, assume immiscibility for all phases
             dofFluidState.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
             dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
+            dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
 
+            if (enableDisgas) {
+                // set the composition of the oil phase:
+                //
+                // first, retrieve the relevant black-oil parameters from
+                // the fluid system.
+                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, oilPressure, /*regionIdx=*/0);
+                Scalar RsReal = (*rsData)[cartesianDofIdx];
 
-            // set the composition of the oil phase:
-            //
-            // first, retrieve the relevant black-oil parameters from
-            // the fluid system.
-            Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, oilPressure, /*regionIdx=*/0);
-            Scalar RsReal = rsData[cartesianDofIdx];
+                if (RsReal > RsSat) {
+                    std::array<int, 3> ijk;
+                    gridManager.getIJK(dofIdx, ijk);
+                    std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
+                              << " than the maximium\n"
+                              << "         amount which can be dissolved in oil"
+                              << " (R_s,max=" << RsSat << ")"
+                              << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
+                              << " Ignoring.\n";
+                    RsReal = RsSat;
+                }
 
-            if (RsReal > RsSat) {
-                std::array<int, 3> ijk;
-                gridManager.getIJK(dofIdx, ijk);
-                std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
-                          << " than the maximium\n"
-                          << "         amount which can be dissolved in oil"
-                          << " (R_s,max=" << RsSat << ")"
-                          << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                          << " Ignoring.\n";
-                RsReal = RsSat;
+                // calculate composition of the real and the saturated oil phase in terms of
+                // mass fractions.
+                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
+                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
+                Scalar XoGReal = RsReal/(RsReal + rhooRef/rhogRef);
+
+                // convert mass to mole fractions
+                Scalar MG = FluidSystem::molarMass(gasCompIdx);
+                Scalar MO = FluidSystem::molarMass(oilCompIdx);
+
+                Scalar xoGReal = XoGReal * MO / ((MO - MG) * XoGReal + MG);
+                Scalar xoOReal = 1 - xoGReal;
+
+                // finally, set the oil-phase composition
+                dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
+                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoOReal);
             }
 
-            // calculate composition of the real and the saturated oil phase in terms of
-            // mass fractions.
-            Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-            Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-            Scalar XoGReal = RsReal/(RsReal + rhooRef/rhogRef);
+            if (enableVapoil) {
+                // set the composition of the gas phase:
+                //
+                // first, retrieve the relevant black-gas parameters from
+                // the fluid system.
+                Scalar RvSat = FluidSystem::oilVaporizationFactor(temperature, gasPressure, /*regionIdx=*/0);
+                Scalar RvReal = (*rvData)[cartesianDofIdx];
 
-            // convert mass to mole fractions
-            Scalar MG = FluidSystem::molarMass(gasCompIdx);
-            Scalar MO = FluidSystem::molarMass(oilCompIdx);
+                if (RvReal > RvSat) {
+                    std::array<int, 3> ijk;
+                    gridManager.getIJK(dofIdx, ijk);
+                    std::cerr << "Warning: The specified amount oil (R_v = " << RvReal << ") is more"
+                              << " than the maximium\n"
+                              << "         amount which can be dissolved in gas"
+                              << " (R_v,max=" << RvSat << ")"
+                              << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
+                              << " Ignoring.\n";
+                    RvReal = RvSat;
+                }
 
-            Scalar xoGReal = XoGReal * MO / ((MO - MG) * XoGReal + MG);
-            Scalar xoOReal = 1 - xoGReal;
+                // calculate composition of the real and the saturated gas phase in terms of
+                // mass fractions.
+                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
+                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
+                Scalar XgOReal = RvReal/(RvReal + rhogRef/rhooRef);
 
-            // finally, set the oil-phase composition
-            dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
-            dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoOReal);
+                // convert mass to mole fractions
+                Scalar MG = FluidSystem::molarMass(gasCompIdx);
+                Scalar MO = FluidSystem::molarMass(oilCompIdx);
+
+                Scalar xgOReal = XgOReal * MG / ((MG - MO) * XgOReal + MO);
+                Scalar xgGReal = 1 - xgOReal;
+
+                // finally, set the gas-phase composition
+                dofFluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgOReal);
+                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, xgGReal);
+            }
         }
     }
 
