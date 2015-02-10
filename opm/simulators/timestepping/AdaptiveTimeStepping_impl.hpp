@@ -34,7 +34,6 @@ namespace Opm {
 
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param )
         : timeStepControl_()
-        , initial_fraction_( param.getDefault("solver.initialfraction", double(0.25) ) )
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
           // default is 1 year, convert to seconds
@@ -100,8 +99,11 @@ namespace Opm {
 
         // init last time step as a fraction of the given time step
         if( last_timestep_ < 0 ) {
-            last_timestep_ = initial_fraction_ * timestep;
+            last_timestep_ = restart_factor_ * timestep;
         }
+
+        // TODO
+        // take change in well state into account
 
         // create adaptive step timer with previously used sub step size
         AdaptiveSimulatorTimer substepTimer( simulatorTimer, last_timestep_, max_time_step_ );
@@ -207,7 +209,7 @@ namespace Opm {
 
 
         // store max of the small time step for next reportStep
-        last_timestep_ = substepTimer.maxStepLength();
+        last_timestep_ = substepTimer.averageStepLength();
         if( timestep_verbose_ )
         {
             substepTimer.report( std::cout );

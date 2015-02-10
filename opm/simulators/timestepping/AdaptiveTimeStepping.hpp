@@ -74,7 +74,6 @@ namespace Opm {
         typedef std::unique_ptr< TimeStepControlInterface > TimeStepControlType;
 
         TimeStepControlType timeStepControl_; //!< time step control object
-        const double initial_fraction_;       //!< fraction to take as a guess for initial time interval
         const double restart_factor_;         //!< factor to multiply time step with when solver fails to converge
         const double growth_factor_;          //!< factor to multiply time step when solver recovered from failed convergence
         const double max_time_step_;          //!< maximal allowed time step size
