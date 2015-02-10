@@ -1897,7 +1897,6 @@ namespace {
                                                          std::array<double,MaxNumPhases>& B_avg,
                                                          int nc) const
     {
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         // Do the global reductions
         for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
