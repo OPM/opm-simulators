@@ -37,6 +37,8 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <dune/common/float_cmp.hh>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -1058,13 +1060,14 @@ namespace {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] > target;
+                    broken = Dune::FloatCmp::gt(bhp.value()[well], target);
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
-                    broken = rateToCompare(well_phase_flow_rate,
-                                           well, num_phases, distr) > target;
+                    broken = Dune::FloatCmp::gt(rateToCompare(well_phase_flow_rate,
+                                                    well, num_phases, distr),
+                                      target);
                     break;
                 }
             }
@@ -1074,7 +1077,7 @@ namespace {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] < target;
+                    broken = Dune::FloatCmp::lt(bhp.value()[well], target);
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1082,8 +1085,9 @@ namespace {
                     // Note that the rates compared below are negative,
                     // so breaking the constraints means: too high flow rate
                     // (as for injection).
-                    broken = rateToCompare(well_phase_flow_rate,
-                                           well, num_phases, distr) < target;
+                    broken = Dune::FloatCmp::lt(rateToCompare(well_phase_flow_rate,
+                                                    well, num_phases, distr),
+                                      target);
                     break;
                 }
             }
