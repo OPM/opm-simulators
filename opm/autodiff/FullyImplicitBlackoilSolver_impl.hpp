@@ -1908,7 +1908,7 @@ namespace {
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
             // Compute the global number of cells and porevolume
             std::vector<int> v(nc, 1);
-            auto nc_and_pv = std::tuple<int, double>(0,.0);
+            auto nc_and_pv = std::tuple<int, double>(0, 0.0);
             auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
                                                         Opm::Reduction::makeGlobalSumFunctor<double>());
             auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
@@ -1917,21 +1917,21 @@ namespace {
             for ( int idx=0; idx<MaxNumPhases; ++idx )
             {
                 if (active_[idx]) {
-                    auto values     = std::tuple<double,double,double>(0.,0.,0.);
+                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
                     auto containers = std::make_tuple(B.col(idx),
                                                       tempV.col(idx),
                                                       R.col(idx));
                     auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
                                                       Opm::Reduction::makeGlobalMaxFunctor<double>(),
                                                       Opm::Reduction::makeGlobalSumFunctor<double>());
-                    info.computeReduction(containers,operators,values);
+                    info.computeReduction(containers, operators, values);
                     B_avg[idx]    = std::get<0>(values)/std::get<0>(nc_and_pv);
                     maxCoeff[idx] = std::get<1>(values);
                     R_sum[idx]    = std::get<2>(values);
                 }
                 else
                 {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.;
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
                 }
             }
             // Compute pore volume
@@ -1949,7 +1949,7 @@ namespace {
                 }
                 else
                 {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
                 }
             }
             // Compute total pore volume
