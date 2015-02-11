@@ -265,12 +265,9 @@ namespace Opm
                 // write resport step number
                 backupfile_.write( (const char *) &reportStep, sizeof(int) );
 
-                const BlackoilState* boState = dynamic_cast< const BlackoilState* > (&state);
-                if( boState ) {
-                    backupfile_ << (*boState);
-                }
-                else
-                    OPM_THROW(std::logic_error,"cast to BlackoilState failed");
+                const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
+                backupfile_ << boState;
+
                 const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
                 backupfile_ << boWellState;
                 /*

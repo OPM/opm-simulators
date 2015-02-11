@@ -161,8 +161,9 @@ namespace Opm {
             // read id and compare with object
             int id = -1;
             readValue( in, id );
-            if( id != objectId( state ) )
-                OPM_THROW(std::logic_error,"backup-restore object type missmatch");
+            if( id != objectId( state ) ) {
+                OPM_THROW(std::logic_error,"backup-restore object type mismatch");
+            }
         }
     }
 
@@ -233,11 +234,11 @@ namespace Opm {
         // check id of stored object
         checkObjectId( in, state );
 
-        // backup simulator state
+        // restore simulator state
         SimulatorState& simstate = static_cast< SimulatorState& > (state);
         in >> simstate;
 
-        // backup additional blackoil state variables
+        // restore additional blackoil state variables
         readContainer( in, state.surfacevol() );
         readContainer( in, state.gasoilratio() );
         readContainer( in, state.rv() );
