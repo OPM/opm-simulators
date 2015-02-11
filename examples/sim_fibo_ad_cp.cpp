@@ -213,7 +213,7 @@ try
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
     
     boost::any parallel_information;
-    Opm::extractParallelGridInformationToISTL(parallel_information, *grid);
+    Opm::extractParallelGridInformationToISTL(*grid, parallel_information);
     if (param.getDefault("use_cpr", true)) {
         fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
     } else {

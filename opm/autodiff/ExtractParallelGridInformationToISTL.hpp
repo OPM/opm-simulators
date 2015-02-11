@@ -33,11 +33,11 @@ namespace Opm
 /// about the data decompoisition and convert it to the format expected by the linear algebra
 /// of dune-istl.
 /// \warn if there is no support for dune-istl and MPI then this functio does not do anything.
-/// \param anyComm The handle to to store the information in. If grid is a parallel grid
+/// \param[in] grid The grid to inspect.
+/// \param[out] anyComm The handle to to store the information in. If grid is a parallel grid
 /// then this will ecapsulate an instance of ParallelISTLInformation.
-/// \param grid The grid to inspect.
 
-void extractParallelGridInformationToISTL(boost::any& anyComm, const Dune::CpGrid& grid);
+void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, boost::any& anyComm);
 
 } // end namespace Opm
 #endif //defined(HAVE_DUNE_CORNERPOINT)
