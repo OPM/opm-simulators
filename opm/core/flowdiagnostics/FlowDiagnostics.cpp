@@ -18,6 +18,7 @@
 */
 
 #include <opm/core/flowdiagnostics/FlowDiagnostics.hpp>
+#include <opm/core/wells.h>
 
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
@@ -159,6 +160,65 @@ namespace Opm
         }
 
         return std::make_pair(Ev, tD);
+    }
+
+
+
+
+
+    /// \brief Compute volumes associated with injector-producer pairs.
+    ///
+    /// \param[in]  wells       wells structure, containing NI injector wells and NP producer wells.
+    /// \param[in]  porevol     pore volume of each grid cell
+    /// \param[in]  ftracer     array of forward (injector) tracer values, NI per cell
+    /// \param[in]  btracer     array of backward (producer) tracer values, NP per cell
+    /// \return                 a vector of tuples, one tuple for each injector-producer pair,
+    ///                         where the first and second elements are well indices for the
+    ///                         injector and producer, and the third element is the pore volume
+    ///                         associated with that pair.
+    std::vector<std::tuple<int, int, double> >
+    computeWellPairs(const Wells& wells,
+                     const std::vector<double>& porevol,
+                     const std::vector<double>& ftracer,
+                     const std::vector<double>& btracer)
+    {
+        // Identify injectors and producers.
+        std::vector<int> inj;
+        std::vector<int> prod;
+        const int nw = wells.number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            if (wells.type[w] == INJECTOR) {
+                inj.push_back(w);
+            } else {
+                prod.push_back(w);
+            }
+        }
+
+        // Check sizes of input arrays.
+        const int nc = porevol.size();
+        if (nc * inj.size() != ftracer.size()) {
+            OPM_THROW(std::runtime_error, "computeWellPairs(): wrong size of input array ftracer.");
+        }
+        if (nc * prod.size() != btracer.size()) {
+            OPM_THROW(std::runtime_error, "computeWellPairs(): wrong size of input array btracer.");
+        }
+
+        // Compute associated pore volumes.
+        std::vector<std::tuple<int, int, double> > result;
+        const int num_inj = inj.size();
+        const int num_prod = prod.size();
+        for (int inj_ix = 0; inj_ix < num_inj; ++inj_ix) {
+            for (int prod_ix = 0; prod_ix < num_prod; ++prod_ix) {
+                double assoc_porevol = 0.0;
+                for (int c = 0; c < nc; ++c) {
+                    assoc_porevol += porevol[c]
+                        * ftracer[num_inj * c + inj_ix]
+                        * btracer[num_prod * c + prod_ix];
+                }
+                result.push_back(std::make_tuple(inj[inj_ix], prod[prod_ix], assoc_porevol));
+            }
+        }
+        return result;
     }
 
 

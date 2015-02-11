@@ -23,7 +23,9 @@
 
 #include <vector>
 #include <utility>
+#include <tuple>
 
+struct Wells;
 
 namespace Opm
 {
@@ -78,6 +80,23 @@ namespace Opm
     std::pair<std::vector<double>, std::vector<double>>
     computeSweep(const std::vector<double>& flowcap,
                  const std::vector<double>& storagecap);
+
+
+    /// \brief Compute volumes associated with injector-producer pairs.
+    ///
+    /// \param[in]  wells       wells structure, containing NI injector wells and NP producer wells.
+    /// \param[in]  porevol     pore volume of each grid cell
+    /// \param[in]  ftracer     array of forward (injector) tracer values, NI per cell
+    /// \param[in]  btracer     array of backward (producer) tracer values, NP per cell
+    /// \return                 a vector of tuples, one tuple for each injector-producer pair,
+    ///                         where the first and second elements are well indices for the
+    ///                         injector and producer, and the third element is the pore volume
+    ///                         associated with that pair.
+    std::vector<std::tuple<int, int, double>>
+    computeWellPairs(const Wells& wells,
+                     const std::vector<double>& porevol,
+                     const std::vector<double>& ftracer,
+                     const std::vector<double>& btracer);
 
 } // namespace Opm
 
