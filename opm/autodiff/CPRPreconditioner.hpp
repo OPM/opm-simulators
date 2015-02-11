@@ -68,11 +68,8 @@ public:
     template<class T>
     void operator()(T* pt)
     {
-        if(ilu_)
-        {
-            delete ilu_;
-        }
         delete pt;
+        delete ilu_;
     }
 private:
     PREC* ilu_;
