@@ -522,7 +522,9 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
               amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion, smootherArgs));
             }
             else
+            {
                 precond_ = createEllipticPreconditionerPointer<M,X>( Ae_, relax_, comm);
+            }
        }
     };
 
