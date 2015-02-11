@@ -466,7 +466,7 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^g = " << XoG);
+        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^G = " << XoG);
     }
 
     Scalar saturatedOilGasMassFraction(int regionIdx,

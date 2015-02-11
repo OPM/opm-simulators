@@ -139,15 +139,45 @@ public:
      */
     static void initBegin(int numPvtRegions)
     {
+        enableDissolvedGas_ = true;
+        enableVaporizedOil_ = false;
+
         resizeArrays_(numPvtRegions);
     }
 
+    /*!
+     * \brief Specify whether the fluid system should consider that the gas component can
+     *        dissolve in the oil phase
+     *
+     * By default, dissolved gas is considered.
+     */
+    static void setEnableDissolvedGas(bool yesno)
+    { enableDissolvedGas_ = yesno; }
+
+    /*!
+     * \brief Specify whether the fluid system should consider that the oil component can
+     *        dissolve in the gas phase
+     *
+     * By default, vaporized oil is not considered.
+     */
+    static void setEnableVaporizedOil(bool yesno)
+    { enableVaporizedOil_ = yesno; }
+
+    /*!
+     * \brief Set the pressure-volume-saturation (PVT) relations for the gas phase.
+     */
     static void setGasPvt(std::shared_ptr<const GasPvtInterface> pvtObj)
     { gasPvt_ = pvtObj; }
 
+    /*!
+     * \brief Set the pressure-volume-saturation (PVT) relations for the oil phase.
+     */
     static void setOilPvt(std::shared_ptr<const OilPvtInterface> pvtObj)
     { oilPvt_ = pvtObj; }
 
+    /*!
+     * \brief Set the pressure-volume-saturation (PVT) relations for the water phase.
+     */
     static void setWaterPvt(std::shared_ptr<const WaterPvtInterface> pvtObj)
     { waterPvt_ = pvtObj; }
 
@@ -334,6 +364,24 @@ public:
     }
 
     /*!
+     * \brief Returns whether the fluid system should consider that the gas component can
+     *        dissolve in the oil phase
+     *
+     * By default, dissolved gas is considered.
+     */
+    static bool enableDissolvedGas()
+    { return enableDissolvedGas_; }
+
+    /*!
+     * \brief Returns whether the fluid system should consider that the oil component can
+     *        dissolve in the gas phase
+     *
+     * By default, vaporized oil is not considered.
+     */
+    static bool enableVaporizedOil()
+    { return enableVaporizedOil_; }
+
+    /*!
      * \brief Returns the density of a fluid phase at surface pressure [kg/m^3]
      *
      * \copydoc Doxygen::phaseIdxParam
@@ -417,14 +465,29 @@ public:
     static Scalar oilSaturationPressure(Scalar temperature, Scalar XoG, int regionIdx)
     { return oilPvt_->oilSaturationPressure(regionIdx, temperature, XoG); }
 
-    // the mass fraction of the gas component in the oil phase in a
-    // flash experiment
+    /*!
+     * \brief The maximum mass fraction of the gas component in the oil phase.
+     */
     static Scalar saturatedOilGasMassFraction(Scalar temperature, Scalar pressure, int regionIdx)
     { return oilPvt_->saturatedOilGasMassFraction(regionIdx, temperature, pressure); }
 
-    // the mole fraction of the gas component of a gas-saturated oil phase
+    /*!
+     * \brief The maximum mole fraction of the gas component in the oil phase.
+     */
     static Scalar saturatedOilGasMoleFraction(Scalar temperature, Scalar pressure, int regionIdx)
     { return oilPvt_->saturatedOilGasMoleFraction(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief The maximum mass fraction of the oil component in the gas phase.
+     */
+    static Scalar saturatedGasOilMassFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    { return gasPvt_->saturatedGasOilMassFraction(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief The maximum mole fraction of the oil component in the gas phase.
+     */
+    static Scalar saturatedGasOilMoleFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    { return gasPvt_->saturatedGasOilMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the normalized formation volume factor of (potentially)
@@ -481,6 +544,9 @@ private:
     static std::shared_ptr<const Opm::OilPvtInterface<Scalar> > oilPvt_;
     static std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > waterPvt_;
 
+    static bool enableDissolvedGas_;
+    static bool enableVaporizedOil_;
+
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
     // here, because GCC 4.4 seems to be unable to determine the number of phases from
     // the BlackOil fluid system in the attribute declaration below...
@@ -495,6 +561,12 @@ BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
 template <class Scalar>
 const Scalar
 BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+
+template <class Scalar>
+bool BlackOil<Scalar>::enableDissolvedGas_;
+
+template <class Scalar>
+bool BlackOil<Scalar>::enableVaporizedOil_;
 
 template <class Scalar>
 std::shared_ptr<const OilPvtInterface<Scalar> >
