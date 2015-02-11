@@ -41,8 +41,9 @@ namespace Opm {
             stream.read( (char *) &value, sizeof( T ) );
         }
 
+        // write any container that provides a size method and a data method
         template <class Vector>
-        void writeVector( std::ostream& stream, const Vector& vector)
+        void writeContainer( std::ostream& stream, const Vector& vector)
         {
             typedef typename Vector :: value_type T;
             unsigned int size = vector.size() * sizeof( T );
@@ -52,6 +53,8 @@ namespace Opm {
             }
         }
 
+        // write map where the key is a std::string
+        // and the value is a std::vector or std::array
         template <class Map>
         void writeMap( std::ostream& stream, const Map& m)
         {
@@ -62,55 +65,57 @@ namespace Opm {
                 const auto& end = m.end();
                 for(auto it = m.begin(); it != end; ++it )
                 {
-                    // write key
-                    writeVector( stream, (*it).first );
-                    // write value
-                    writeVector( stream, (*it).second );
+                    // write key (assume that key is a container)
+                    writeContainer( stream, (*it).first );
+                    // write value (assume that value is a container)
+                    writeContainer( stream, (*it).second );
                 }
             }
         }
 
-        template <class Vector>
-        void resizeVector( Vector& vector, size_t size )
+        template <class Container>
+        void resizeContainer( Container& container, size_t size )
         {
-            vector.resize( size );
+            container.resize( size );
         }
 
         template <class T, unsigned long n>
-        void resizeVector( std::array<T, n>& vector, size_t size )
+        void resizeContainer( std::array<T, n>& a, size_t size )
         {
             assert( int(size) == int(n) );
         }
 
-        template <class Vector>
-        void readVectorImpl( std::istream& stream, Vector& vector, const bool adjustSize )
+        template <class Container>
+        void readContainerImpl( std::istream& stream, Container& container, const bool adjustSize )
         {
-            typedef typename Vector :: value_type T;
+            typedef typename Container :: value_type T;
             unsigned int dataSize = 0;
             readValue( stream, dataSize );
             if( adjustSize && dataSize > 0 ) {
-                resizeVector( vector, dataSize/sizeof(T) );
+                resizeContainer( container, dataSize/sizeof(T) );
             }
 
-            if( dataSize != vector.size() * sizeof( T ) )
+            if( dataSize != container.size() * sizeof( T ) )
             {
-                OPM_THROW(std::logic_error,"Size of stored data and simulation data does not match" << dataSize << " " << (vector.size() * sizeof( T )) );
+                OPM_THROW(std::logic_error,
+                        "Size of stored data and simulation data does not match"
+                        << dataSize << " " << (container.size() * sizeof( T )) );
             }
             if( dataSize > 0 ) {
-                stream.read( (char *) vector.data(), dataSize );
+                stream.read( (char *) container.data(), dataSize );
             }
         }
 
-        template <class Vector>
-        void readAndResizeVector( std::istream& stream, Vector& vector )
+        template <class Container>
+        void readAndResizeContainer( std::istream& stream, Container& container )
         {
-            readVectorImpl( stream, vector, true );
+            readContainerImpl( stream, container, true );
         }
 
-        template <class Vector>
-        void readVector( std::istream& stream, Vector& vector )
+        template <class Container>
+        void readContainer( std::istream& stream, Container& container )
         {
-            readVectorImpl( stream, vector, false );
+            readContainerImpl( stream, container, false );
         }
 
         template <class Map>
@@ -123,9 +128,9 @@ namespace Opm {
             {
                 std::pair< typename Map :: key_type, typename Map :: mapped_type > mapEntry;
                 // read key
-                readAndResizeVector( stream, mapEntry.first );
+                readAndResizeContainer( stream, mapEntry.first );
                 // read values
-                readVector( stream, mapEntry.second );
+                readContainer( stream, mapEntry.second );
 
                 // insert entry into map
                 m.insert( mapEntry );
@@ -172,11 +177,11 @@ namespace Opm {
         writeValue( out, numPhases );
 
         // write variables
-        writeVector( out, state.pressure() );
-        writeVector( out, state.temperature() );
-        writeVector( out, state.facepressure() );
-        writeVector( out, state.faceflux() );
-        writeVector( out, state.saturation() );
+        writeContainer( out, state.pressure() );
+        writeContainer( out, state.temperature() );
+        writeContainer( out, state.facepressure() );
+        writeContainer( out, state.faceflux() );
+        writeContainer( out, state.saturation() );
 
         return out;
     }
@@ -194,11 +199,11 @@ namespace Opm {
             OPM_THROW(std::logic_error,"num phases wrong");
 
         // read variables
-        readVector( in, state.pressure() );
-        readVector( in, state.temperature() );
-        readVector( in, state.facepressure() );
-        readVector( in, state.faceflux() );
-        readVector( in, state.saturation() );
+        readContainer( in, state.pressure() );
+        readContainer( in, state.temperature() );
+        readContainer( in, state.facepressure() );
+        readContainer( in, state.faceflux() );
+        readContainer( in, state.saturation() );
 
         return in;
     }
@@ -215,9 +220,9 @@ namespace Opm {
         out << simstate;
 
         // backup additional blackoil state variables
-        writeVector( out, state.surfacevol() );
-        writeVector( out, state.gasoilratio() );
-        writeVector( out, state.rv() );
+        writeContainer( out, state.surfacevol() );
+        writeContainer( out, state.gasoilratio() );
+        writeContainer( out, state.rv() );
 
         return out;
     }
@@ -233,9 +238,9 @@ namespace Opm {
         in >> simstate;
 
         // backup additional blackoil state variables
-        readVector( in, state.surfacevol() );
-        readVector( in, state.gasoilratio() );
-        readVector( in, state.rv() );
+        readContainer( in, state.surfacevol() );
+        readContainer( in, state.gasoilratio() );
+        readContainer( in, state.rv() );
 
         return in;
     }
@@ -248,11 +253,11 @@ namespace Opm {
         writeValue( out, objectId( state ) );
 
         // backup well state
-        writeVector( out, state.bhp() );
-        writeVector( out, state.temperature() );
-        writeVector( out, state.wellRates() );
-        writeVector( out, state.perfRates() );
-        writeVector( out, state.perfPress() );
+        writeContainer( out, state.bhp() );
+        writeContainer( out, state.temperature() );
+        writeContainer( out, state.wellRates() );
+        writeContainer( out, state.perfRates() );
+        writeContainer( out, state.perfPress() );
 
         return out;
     }
@@ -264,11 +269,11 @@ namespace Opm {
         checkObjectId( in, state );
 
         // restore well state
-        readAndResizeVector( in, state.bhp() );
-        readAndResizeVector( in, state.temperature() );
-        readAndResizeVector( in, state.wellRates() );
-        readAndResizeVector( in, state.perfRates() );
-        readAndResizeVector( in, state.perfPress() );
+        readAndResizeContainer( in, state.bhp() );
+        readAndResizeContainer( in, state.temperature() );
+        readAndResizeContainer( in, state.wellRates() );
+        readAndResizeContainer( in, state.perfRates() );
+        readAndResizeContainer( in, state.perfPress() );
 
         return in;
     }
@@ -292,8 +297,8 @@ namespace Opm {
             writeValue( out, numPhases );
 
             // backup additional variables
-            writeVector( out, state.perfPhaseRates() );
-            writeVector( out, state.currentControls() );
+            writeContainer( out, state.perfPhaseRates() );
+            writeContainer( out, state.currentControls() );
             writeMap( out, state.wellMap() );
         }
 
@@ -323,8 +328,8 @@ namespace Opm {
                 OPM_THROW(std::logic_error,"wrong numPhases");
 
             // restore additional variables
-            readAndResizeVector( in, state.perfPhaseRates()  );
-            readAndResizeVector( in, state.currentControls() );
+            readAndResizeContainer( in, state.perfPhaseRates()  );
+            readAndResizeContainer( in, state.currentControls() );
             readMap( in, state.wellMap() );
         }
 
