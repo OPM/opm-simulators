@@ -186,6 +186,7 @@ namespace Opm
         }
 
         const WellMapType& wellMap() const { return wellMap_; }
+        WellMapType& wellMap() { return wellMap_; }
 
     private:
         std::vector<double> perfphaserates_;
