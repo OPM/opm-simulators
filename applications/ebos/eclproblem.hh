@@ -1035,12 +1035,17 @@ private:
                                         - gasSaturationData[cartesianDofIdx]);
 
             //////
-            // set pressures
+            // set phase pressures
             //////
             Scalar oilPressure = pressureData[cartesianDofIdx];
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                dofFluidState.setPressure(phaseIdx, oilPressure);
-            }
+
+            // this assumes that capillary pressures only depend on the phase saturations
+            // and possibly on temperature. (this is always the case for ECL problems.)
+            Scalar pc[numPhases];
+            const auto& matParams = materialLawParams_(dofIdx);
+            MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
+            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
             Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
 
             //////
@@ -1062,7 +1067,11 @@ private:
                 //
                 // first, retrieve the relevant black-oil parameters from
                 // the fluid system.
-                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, oilPressure, /*regionIdx=*/0);
+                //
+                // note that we use the gas pressure here. this is because the primary
+                // varibles and the intensive quantities of the black oil model also do
+                // this...
+                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, gasPressure, /*regionIdx=*/0);
                 Scalar RsReal = (*rsData)[cartesianDofIdx];
 
                 if (RsReal > RsSat) {
@@ -1133,6 +1142,14 @@ private:
                 dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, xgGReal);
             }
         }
+    }
+
+    const MaterialLawParams& materialLawParams_(int globalDofIdx) const
+    {
+        int tableIdx = 0;
+        if (materialParamTableIdx_.size() > 0)
+            tableIdx = materialParamTableIdx_[globalDofIdx];
+        return materialParams_[tableIdx];
     }
 
     std::vector<Scalar> porosity_;
