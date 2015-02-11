@@ -344,5 +344,9 @@ namespace Opm
                 }
             }
         }
+        else
+        {
+            std::cerr << "Warning: Couldn't open restore file '" << filename << "'" << std::endl;
+        }
     }
 }
