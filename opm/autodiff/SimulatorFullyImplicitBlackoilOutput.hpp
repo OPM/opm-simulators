@@ -32,6 +32,8 @@
 
 #include <opm/autodiff/GridHelpers.hpp>
 
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -112,7 +114,7 @@ namespace Opm
         }
     }
 
-    /** Wrapper class satisfying the OutputWriter interface */
+    /** Wrapper class satisfying the OutputWriter interface and writing VTK output. */
     template <class Grid>
     class BlackoilVTKWriter : public OutputWriter
     {
@@ -140,6 +142,7 @@ namespace Opm
         const std::string outputDir_;
     };
 
+    /** Wrapper class satisfying the OutputWriter interface and writing Matlab output. */
     template <class Grid>
     class BlackoilMatlabWriter : public OutputWriter
     {
@@ -169,12 +172,12 @@ namespace Opm
             }
             outputWellStateMatlab(wellState, timer.currentStepNum(), outputDir_);
         }
-
     protected:
         const Grid& grid_;
         const std::string outputDir_;
     };
 
+    /** \brief Wrapper class for VTK, Matlab, and ECL output. */
     class BlackoilOutputWriter : public OutputWriter
     {
     public:
@@ -199,12 +202,21 @@ namespace Opm
         /** \brief return true if output is enabled */
         const bool output () const { return output_; }
 
+        void restore(SimulatorTimerInterface& timer,
+                     BlackoilState& state,
+                     WellStateFullyImplicitBlackoil& wellState,
+                     const std::string& filename,
+                     const int desiredReportStep);
+
     protected:
         // Parameters for output.
         const bool output_;
         const std::string outputDir_;
         const int output_interval_;
 
+        int lastBackupReportStep_;
+
+        std::ofstream backupfile_;
         std::unique_ptr< OutputWriter  > vtkWriter_;
         std::unique_ptr< OutputWriter  > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
@@ -226,6 +238,7 @@ namespace Opm
       : output_( param.getDefault("output", true) ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
+        lastBackupReportStep_( -1 ),
         vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
                      new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
         matlabWriter_( output_ && param.getDefault("output_matlab", false) ?
@@ -245,6 +258,12 @@ namespace Opm
             }
             catch (...) {
                 OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+            }
+
+            std::string backupfilename = param.getDefault("backupfile", std::string("") );
+            if( ! backupfilename.empty() )
+            {
+                backupfile_.open( backupfilename );
             }
         }
     }

@@ -77,7 +77,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/sim_2p_comp_ad.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
-        examples/opm_init_check.cpp     
+        examples/opm_init_check.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -94,6 +94,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffBlock.hpp
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
+	opm/autodiff/BackupRestore.hpp
 	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp

@@ -25,8 +25,10 @@
 #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/Units.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/BackupRestore.hpp>
 
 #include <sstream>
 #include <iomanip>
@@ -247,6 +249,95 @@ namespace Opm
         // ECL output
         if ( eclWriter_ ) {
             eclWriter_->writeTimeStep(timer, state, wellState);
+        }
+        // write backup file
+        if( backupfile_ )
+        {
+            int reportStep      = timer.reportStepNum();
+            int currentTimeStep = timer.currentStepNum();
+            if( (reportStep == currentTimeStep || // true for SimulatorTimer
+                 currentTimeStep == 0 || // true for AdaptiveSimulatorTimer at reportStep
+                 timer.done() ) // true for AdaptiveSimulatorTimer at reportStep
+               && lastBackupReportStep_ != reportStep ) // only backup report step once
+            {
+                // store report step
+                lastBackupReportStep_ = reportStep;
+                // write resport step number
+                backupfile_.write( (const char *) &reportStep, sizeof(int) );
+
+                const BlackoilState* boState = dynamic_cast< const BlackoilState* > (&state);
+                if( boState ) {
+                    backupfile_ << (*boState);
+                }
+                else
+                    OPM_THROW(std::logic_error,"cast to BlackoilState failed");
+                const WellStateFullyImplicitBlackoil& boWellState =
+                    static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
+                    backupfile_ << boWellState;
+                /*
+                const WellStateFullyImplicitBlackoil* boWellState =
+                    dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
+                if( boWellState ) {
+                    backupfile_ << (*boWellState);
+                }
+                else
+                    OPM_THROW(std::logic_error,"cast to WellStateFullyImplicitBlackoil failed");
+                */
+                backupfile_ << std::flush;
+            }
+        }
+    }
+
+    void
+    BlackoilOutputWriter::
+    restore(SimulatorTimerInterface& timer,
+            BlackoilState& state,
+            WellStateFullyImplicitBlackoil& wellState,
+            const std::string& filename,
+            const int desiredResportStep )
+    {
+        std::ifstream restorefile( filename );
+        if( restorefile )
+        {
+            std::cout << "============================================================================"<<std::endl;
+            std::cout << "Restoring from ";
+            if( desiredResportStep < 0 ) {
+                std::cout << "last";
+            }
+            else {
+                std::cout << desiredResportStep;
+            }
+            std::cout << " report step! filename = " << filename << std::endl << std::endl;
+
+            int reportStep;
+            restorefile.read( (char *) &reportStep, sizeof(int) );
+
+            const int readReportStep = (desiredResportStep < 0) ?
+                std::numeric_limits<int>::max() : desiredResportStep;
+
+            while( reportStep <= readReportStep && ! timer.done() && restorefile )
+            {
+                restorefile >> state;
+                restorefile >> wellState;
+
+                writeTimeStep( timer, state, wellState );
+                // some output
+                std::cout << "Restored step " << timer.reportStepNum() << " at day "
+                          <<  unit::convert::to(timer.simulationTimeElapsed(),unit::day) << std::endl;
+
+                if( readReportStep == reportStep || ! restorefile ) {
+                    break;
+                }
+
+                // next step
+                timer.advance();
+
+                // read next report step
+                restorefile.read( (char *) &reportStep, sizeof(int) );
+                if( timer.reportStepNum() != reportStep ) {
+                    break;
+                }
+            }
         }
     }
 }
