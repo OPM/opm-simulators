@@ -737,9 +737,9 @@ protected:
 
                 // overwrite the automatically computed connection
                 // transmissibilty factor by the one specified in the deck.
-                Scalar ctf = completion->getConnectionTransmissibilityFactor();
-                if (std::isfinite(ctf) && ctf > 0.0)
-                    eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf);
+                const auto& ctf = completion->getConnectionTransmissibilityFactorAsValueObject();
+                if (ctf.hasValue() && ctf.getValue() > 0.0)
+                    eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf.getValue());
             }
         }
     }
