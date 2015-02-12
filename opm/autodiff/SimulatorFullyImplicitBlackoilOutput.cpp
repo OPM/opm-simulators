@@ -292,7 +292,7 @@ namespace Opm
             const std::string& filename,
             const int desiredResportStep )
     {
-        std::ifstream restorefile( filename );
+        std::ifstream restorefile( filename.c_str() );
         if( restorefile )
         {
             std::cout << "============================================================================"<<std::endl;

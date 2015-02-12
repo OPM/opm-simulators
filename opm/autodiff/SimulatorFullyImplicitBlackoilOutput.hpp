@@ -263,7 +263,7 @@ namespace Opm
             std::string backupfilename = param.getDefault("backupfile", std::string("") );
             if( ! backupfilename.empty() )
             {
-                backupfile_.open( backupfilename );
+                backupfile_.open( backupfilename.c_str() );
             }
         }
     }
