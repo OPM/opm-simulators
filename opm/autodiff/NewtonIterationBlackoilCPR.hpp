@@ -109,7 +109,7 @@ namespace Opm
         unsigned int cpr_ilu_n_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
-        const boost::any& parallelInformation_;
+        boost::any parallelInformation_;
     };
 
 } // namespace Opm
