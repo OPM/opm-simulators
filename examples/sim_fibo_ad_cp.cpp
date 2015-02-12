@@ -219,7 +219,7 @@ try
         {
             OPM_THROW(std::logic_error, "We only support vtk output during parallel runs");
         }
-        grid->loadBalance(2);
+        grid->loadBalance();
         Dune::CpGrid global_grid      = *grid;
         distributed_grid = *grid;
         global_grid.switchToGlobalView();
