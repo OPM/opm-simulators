@@ -61,7 +61,7 @@ namespace Opm
     private:
         std::unique_ptr<LinearSolverInterface> linsolver_;
         mutable int iterations_;
-        const boost::any& parallelInformation_;
+        boost::any parallelInformation_;
     };
 
 } // namespace Opm
