@@ -30,6 +30,13 @@ namespace Opm
     /// Interface class for (linear) solvers for the fully implicit black-oil system.
     class NewtonIterationBlackoilInterface
     {
+    protected:
+        // initializer for default parallel information
+        static const boost::any& emptyParallelInformation ()
+        {
+            static boost::any emptyParInfo;
+            return emptyParInfo;
+        }
     public:
         /// Return type for linearSolve(). A simple, non-ad vector type.
         typedef LinearisedBlackoilResidual::ADB::V SolutionVector;

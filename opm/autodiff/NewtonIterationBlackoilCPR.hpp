@@ -45,8 +45,10 @@ namespace Opm
         typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
         typedef Dune::BlockVector<VectorBlockType>        Vector;
+    protected:
+        using NewtonIterationBlackoilInterface::emptyParallelInformation;
+
     public:
-        
         /// Construct a system solver.
         /// \param[in] param   parameters controlling the behaviour of
         ///                    the preconditioning and choice of
@@ -59,7 +61,7 @@ namespace Opm
         /// \param[in] parallelInformation In the case of a parallel run
         ///                               with dune-istl the information about the parallelization.
         NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
-                                   const boost::any& parallelInformation=boost::any());
+                                   const boost::any& parallelInformation = emptyParallelInformation());
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -79,14 +81,14 @@ namespace Opm
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
-        template<int category=Dune::SolverCategory::sequential, class O, class P>   
+        template<int category=Dune::SolverCategory::sequential, class O, class P>
         void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation,
                                              Dune::InverseOperatorResult& result) const
         {
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
-            std::unique_ptr<typename ScalarProductChooser::ScalarProduct> 
+            std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(parallelInformation));
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
@@ -99,7 +101,7 @@ namespace Opm
             const int verbosity = 0;
             const int restart = 40;
             Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond, tolerance, restart, maxit, verbosity);
-            
+
             // Solve system.
             linsolve.apply(x, istlb, result);
         }

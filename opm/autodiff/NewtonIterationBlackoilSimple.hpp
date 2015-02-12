@@ -36,6 +36,9 @@ namespace Opm
     /// can be passed in as a constructor argument.
     class NewtonIterationBlackoilSimple : public NewtonIterationBlackoilInterface
     {
+    protected:
+        using NewtonIterationBlackoilInterface::emptyParallelInformation;
+
     public:
         /// Construct a system solver.
         /// \param[in] param   parameters controlling the behaviour and
@@ -43,7 +46,7 @@ namespace Opm
         /// \param[in] parallelInformation In the case of a parallel run
         ///                    with dune-istl the information about the parallelization.
         NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param,
-                                      const boost::any& parallelInformation=boost::any());
+                                      const boost::any& parallelInformation=emptyParallelInformation());
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
