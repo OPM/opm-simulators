@@ -40,7 +40,10 @@ namespace Opm
         /// Construct a system solver.
         /// \param[in] param   parameters controlling the behaviour and
         ///                    choice of linear solver.
-        NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param);
+        /// \param[in] parallelInformation In the case of a parallel run
+        ///                    with dune-istl the information about the parallelization.
+        NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param,
+                                      const boost::any& parallelInformation=boost::any());
 
         /// Solve the system of linear equations Ax = b, with A being the
         /// combined derivative matrix of the residual and b
@@ -52,9 +55,13 @@ namespace Opm
         /// \copydoc NewtonIterationBlackoilInterface::iterations
         virtual int iterations () const { return iterations_; }
 
+        /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
+        virtual const boost::any& parallelInformation() const;
+
     private:
         std::unique_ptr<LinearSolverInterface> linsolver_;
         mutable int iterations_;
+        const boost::any& parallelInformation_;
     };
 
 } // namespace Opm

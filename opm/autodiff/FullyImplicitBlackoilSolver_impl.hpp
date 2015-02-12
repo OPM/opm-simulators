@@ -1,5 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -29,6 +31,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -1898,20 +1901,60 @@ namespace {
                                                          int nc) const
     {
         // Do the global reductions
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+#if HAVE_MPI
+        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
         {
-            if (active_[idx]) {
-                B_avg[idx] = B.col(idx).sum()/nc;
-                maxCoeff[idx]=tempV.col(idx).maxCoeff();
-                R_sum[idx] = R.col(idx).sum();
-            }
-            else
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            // Compute the global number of cells and porevolume
+            std::vector<int> v(nc, 1);
+            auto nc_and_pv = std::tuple<int, double>(0, 0.0);
+            auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
+                                                        Opm::Reduction::makeGlobalSumFunctor<double>());
+            auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
+            info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
+            
+            for ( int idx=0; idx<MaxNumPhases; ++idx )
             {
-                R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.;
+                if (active_[idx]) {
+                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
+                    auto containers = std::make_tuple(B.col(idx),
+                                                      tempV.col(idx),
+                                                      R.col(idx));
+                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
+                    info.computeReduction(containers, operators, values);
+                    B_avg[idx]    = std::get<0>(values)/std::get<0>(nc_and_pv);
+                    maxCoeff[idx] = std::get<1>(values);
+                    R_sum[idx]    = std::get<2>(values);
+                }
+                else
+                {
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
+                }
             }
+            // Compute pore volume
+            return std::get<1>(nc_and_pv);
         }
-        // Compute total pore volume
-        return geo_.poreVolume().sum();
+        else
+#endif
+        {
+            for ( int idx=0; idx<MaxNumPhases; ++idx )
+            {
+                if (active_[idx]) {
+                    B_avg[idx] = B.col(idx).sum()/nc;
+                    maxCoeff[idx]=tempV.col(idx).maxCoeff();
+                    R_sum[idx] = R.col(idx).sum();
+                }
+                else
+                {
+                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
+                }
+            }
+            // Compute total pore volume
+            return geo_.poreVolume().sum();
+        }
     }
 
     template<class T>

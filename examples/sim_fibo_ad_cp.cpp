@@ -61,6 +61,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -210,10 +211,13 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
+    
+    boost::any parallel_information;
+    Opm::extractParallelGridInformationToISTL(*grid, parallel_information);
     if (param.getDefault("use_cpr", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilCPR(param));
+        fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
     } else {
-        fis_solver.reset(new NewtonIterationBlackoilSimple(param));
+        fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
     }
 
     // Write parameters used for later reference.
