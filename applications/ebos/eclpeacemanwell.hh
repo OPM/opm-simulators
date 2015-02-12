@@ -35,7 +35,7 @@
 #include <dune/common/version.hh>
 #include <dune/geometry/referenceelements.hh>
 
-#include <unordered_map>
+#include <map>
 
 namespace Opm {
 namespace Properties {
@@ -1414,7 +1414,7 @@ protected:
 
     std::string name_;
 
-    std::unordered_map<int, DofVariables> dofVariables_;
+    std::map<int, DofVariables> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
     int iterationIdx_;
