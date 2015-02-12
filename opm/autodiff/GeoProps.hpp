@@ -103,7 +103,7 @@ namespace Opm
                     props.porosity()[cellIdx]
                     * multpv[cartesianCellIdx]
                     * ntg[cartesianCellIdx];
-                if (eclgrid->isMinpvfActive()) {
+                if (eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
                     pvol_[cellIdx] *= AutoDiffGrid::cellVolume(grid, cellIdx);
                 } else {
                     pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
