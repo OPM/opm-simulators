@@ -710,6 +710,11 @@ private:
 
         ////////////////////////////////
         // compute the porosity
+        if (!eclState->hasDoubleGridProperty("PORO") && !eclState->hasDoubleGridProperty("PORV"))
+            OPM_THROW(std::runtime_error,
+                      "Can't read the porosity from the ECL state object. "
+                      "(The PORO and PORV keywords are missing)");
+
         if (eclState->hasDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
                 eclState->getDoubleGridProperty("PORO")->getData();
@@ -719,10 +724,21 @@ private:
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
-        else
-            OPM_THROW(std::runtime_error,
-                      "Can't read the porosity from the ECL state object. "
-                      "(The PORO keyword is missing)");
+
+        // overwrite the porosity using the PORV keyword for the elements for which PORV
+        // is defined...
+        if (eclState->hasDoubleGridProperty("PORV")) {
+            const std::vector<double> &porvData =
+                eclState->getDoubleGridProperty("PORV")->getData();
+
+            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                if (std::isfinite(porvData[cartesianElemIdx])) {
+                    Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
+                    porosity_[dofIdx] = porvData[cartesianElemIdx]/dofVolume;
+                }
+            }
+        }
 
         // apply the NTG keyword to the porosity
         if (eclState->hasDoubleGridProperty("NTG")) {
