@@ -196,7 +196,7 @@ namespace Opm
         Vector b(opA.getmat().N());
         std::copy(rhs, rhs+b.size(), b.begin());
         // Make rhs consistent in the parallel case
-        comm.copyOwnerToOverlap(b,b);
+        comm.copyOwnerToAll(b,b);
         // System solution
         Vector x(opA.getmat().M());
         x = 0.0;
