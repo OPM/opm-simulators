@@ -207,13 +207,14 @@ try
                                   *props, deck, gravity[2], state);
     }
 
-    std::shared_ptr<BlackoilState> distributed_state=Dune::stackobject_to_shared_ptr(state);
-    std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props=new_props;
+    BlackoilState distributed_state;
+    std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props = new_props;
     Dune::CpGrid distributed_grid = *grid;
     // At this point all properties and state variables are correctly initialized
     // If there are more than one processors involved, we now repartition the grid
     // and initilialize new properties and states for it.
-    if( grid->comm().size()>=1 )
+    bool must_distribute = ( grid->comm().size()>=1 );
+    if( must_distribute )
     {
         if(!param.getDefault("output_vtk", true))
         {
@@ -225,13 +226,12 @@ try
         global_grid.switchToGlobalView();
         distributed_grid.switchToDistributedView();
         distributed_props = std::make_shared<BlackoilPropsAdFromDeck>(*new_props, grid->numCells());
-        distributed_state.reset(new BlackoilState);
-        distributed_state->init(grid->numCells(), grid->numFaces(), state.numPhases());
+        distributed_state.init(grid->numCells(), grid->numFaces(), state.numPhases());
         // init does not resize surfacevol. Do it manually.
-        distributed_state->surfacevol().resize(grid->numCells()*state.numPhases(),
+        distributed_state.surfacevol().resize(grid->numCells()*state.numPhases(),
                                              std::numeric_limits<double>::max());
         Opm::BlackoilStateDataHandle state_handle(global_grid, distributed_grid,
-                                                  state, *distributed_state);
+                                                  state, distributed_state);
         Opm::BlackoilPropsDataHandle props_handle(global_grid, distributed_grid,
                                                   static_cast<BlackoilPropsAdFromDeck&>(*new_props),
                                                   static_cast<BlackoilPropsAdFromDeck&>(*distributed_props));
@@ -297,7 +297,7 @@ try
     std::cout << "\n\n================ Starting main simulation loop ===============\n"
               << std::flush;
 
-    SimulatorReport fullReport = simulator.run(simtimer, *distributed_state);
+    SimulatorReport fullReport = simulator.run(simtimer, must_distribute ? distributed_state : state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
