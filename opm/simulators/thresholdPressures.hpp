@@ -17,13 +17,17 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <vector>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
+
+
 #ifndef OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
 #define OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
 
 namespace Opm
 {
 
-    /// \brief Make a vector of pressure thresholds from deck input.
+    /// \brief Get a vector of pressure thresholds from EclipseState.
     /// This function looks at EQLOPTS, THPRES and EQLNUM to determine
     /// pressure thresholds.  It does not consider the case where the
     /// threshold values are defaulted, in which case they should be
@@ -38,70 +42,26 @@ namespace Opm
     ///                           particular face. An empty vector is
     ///                           returned if there is no THPRES
     ///                           feature used in the deck.
+
+
+
     template <class Grid>
-    std::vector<double> thresholdPressures(DeckConstPtr deck, EclipseStateConstPtr eclipseState, const Grid& grid)
+    std::vector<double> thresholdPressures(EclipseStateConstPtr eclipseState, const Grid& grid)
     {
-        // Is the EQLOPTS option THPRES activated?
-        bool has_thpres_option = false;
-        if (deck->hasKeyword("EQLOPTS")) {
-            auto eqlopts = deck->getKeyword("EQLOPTS");
-            auto rec = eqlopts->getRecord(0);
-            for (size_t i = 0; i < rec->size(); ++i) {
-                auto item = rec->getItem(i);
-                if (item->hasValue(0)) {
-                    if (item->getString(0) == "THPRES") {
-                        has_thpres_option = true;
-                    } else if (item->getString(0) == "IRREVERS") {
-                        OPM_THROW(std::runtime_error, "Cannot use IRREVERS version of THPRES option, not implemented.");
-                    }
-                }
-            }
-        }
+        SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
+        std::vector<double> thresholdPressureTable = simulationConfig->getThresholdPressureTable();
 
-        // Do we have the THPRES keyword?
-        // Check for consistency.
-        const bool has_thpres_keyword = deck->hasKeyword("THPRES");
-        if (has_thpres_keyword != has_thpres_option) {
-            OPM_THROW(std::runtime_error, "Invalid deck, the THPRES keyword must be present and the THPRES "
-                      "option of EQLOPTS must be used for the threshold pressure feature.");
-        }
+        std::vector<double> thpres_vals;
 
-        if (has_thpres_option) {
-            // Check for EQLNUM
-            if (!eclipseState->hasIntGridProperty("EQLNUM")) {
-                OPM_THROW(std::runtime_error, "Invalid deck, EQLNUM must be set in order to use THPRES.");
-            }
+        if (thresholdPressureTable.size() > 0) {
 
-            // Create threshold pressure table.
-            auto thpres = deck->getKeyword("THPRES");
-            auto eqlnum = eclipseState->getIntGridProperty("EQLNUM")->getData();
-            const int max_eqlnum = *max_element(eqlnum.begin(), eqlnum.end());
-            std::vector<double> thp_table(max_eqlnum * max_eqlnum, 0.0);
-            const int num_records = thpres->size();
-            for (int rec_ix = 0; rec_ix < num_records; ++rec_ix) {
-                auto rec = thpres->getRecord(rec_ix);
-                auto region1Item = rec->getItem("REGION1");
-                auto region2Item = rec->getItem("REGION2");
-                auto thpressItem = rec->getItem("THPRES");
-
-                if (region1Item->hasValue(0) && region2Item->hasValue(0) && thpressItem->hasValue(0)) {
-                    const int r1 = region1Item->getInt(0) - 1;
-                    const int r2 = region2Item->getInt(0) - 1;
-                    const double p = thpressItem->getSIDouble(0);
-
-                    if (r1 >= max_eqlnum || r2 >= max_eqlnum) {
-                        OPM_THROW(std::runtime_error, "Too high region numbers in THPRES keyword.");
-                    }
-                    thp_table[r1 + max_eqlnum*r2] = p;
-                    thp_table[r2 + max_eqlnum*r1] = p;
-                } else {
-                    OPM_THROW(std::runtime_error, "Missing data for use of the THPRES keyword.");
-                }
-            }
+            std::shared_ptr<GridProperty<int>> gridProperty = eclipseState->getIntGridProperty("EQLNUM");
+            auto eqlnumData = gridProperty->getData();
+            int maxEqlnum = *std::max_element(eqlnumData.begin(), eqlnumData.end());
 
             // Set values for each face.
             const int num_faces = UgGridHelpers::numFaces(grid);
-            std::vector<double> thpres_vals(num_faces, 0.0);
+            thpres_vals.resize(num_faces, 0.0);
             const int* gc = UgGridHelpers::globalCell(grid);
             auto fc = UgGridHelpers::faceCells(grid);
             for (int face = 0; face < num_faces; ++face) {
@@ -111,16 +71,13 @@ namespace Opm
                     // Boundary face, skip this.
                     continue;
                 }
-                const int eq1 = eqlnum[gc[c1]] - 1;
-                const int eq2 = eqlnum[gc[c2]] - 1;
-                thpres_vals[face] = thp_table[eq1 + max_eqlnum*eq2];
+                const int eq1 = eqlnumData[gc[c1]] - 1;
+                const int eq2 = eqlnumData[gc[c2]] - 1;
+                thpres_vals[face] = thresholdPressureTable[eq1 + maxEqlnum*eq2];
             }
-            return thpres_vals;
-        } else {
-            return std::vector<double>();
         }
+        return thpres_vals;
     }
-
 }
 
 #endif // OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
