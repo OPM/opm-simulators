@@ -233,8 +233,8 @@ try
         Opm::BlackoilStateDataHandle state_handle(global_grid, distributed_grid,
                                                   state, distributed_state);
         Opm::BlackoilPropsDataHandle props_handle(global_grid, distributed_grid,
-                                                  static_cast<BlackoilPropsAdFromDeck&>(*new_props),
-                                                  static_cast<BlackoilPropsAdFromDeck&>(*distributed_props));
+                                                  *new_props,
+                                                  *distributed_props);
         grid->scatterData(state_handle);
         grid->scatterData(props_handle);
     }
