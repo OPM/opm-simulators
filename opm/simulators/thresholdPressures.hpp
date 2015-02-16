@@ -49,14 +49,14 @@ namespace Opm
     std::vector<double> thresholdPressures(EclipseStateConstPtr eclipseState, const Grid& grid)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
-        std::vector<double> thresholdPressureTable = simulationConfig->getThresholdPressureTable();
+        const std::vector<double>& thresholdPressureTable = simulationConfig->getThresholdPressureTable();
 
         std::vector<double> thpres_vals;
 
         if (thresholdPressureTable.size() > 0) {
 
-            std::shared_ptr<GridProperty<int>> gridProperty = eclipseState->getIntGridProperty("EQLNUM");
-            auto eqlnumData = gridProperty->getData();
+            std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+            auto eqlnumData = eqlnum->getData();
             int maxEqlnum = *std::max_element(eqlnumData.begin(), eqlnumData.end());
 
             // Set values for each face.
