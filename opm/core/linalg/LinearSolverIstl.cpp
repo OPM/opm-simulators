@@ -195,6 +195,8 @@ namespace Opm
                 // System RHS
         Vector b(opA.getmat().N());
         std::copy(rhs, rhs+b.size(), b.begin());
+        // Make rhs consistent in the parallel case
+        comm.copyOwnerToAll(b,b);
         // System solution
         Vector x(opA.getmat().M());
         x = 0.0;
