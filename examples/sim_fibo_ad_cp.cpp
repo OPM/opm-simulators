@@ -216,9 +216,11 @@ try
     bool must_distribute = ( grid->comm().size()>=1 );
     if( must_distribute )
     {
-        if(!param.getDefault("output_vtk", true))
+        if( param.getDefault("output_matlab", false) || param.getDefault("output_ecl", true) )
         {
-            OPM_THROW(std::logic_error, "We only support vtk output during parallel runs");
+            OPM_THROW(std::logic_error, "We only support vtk output during parallel runs. "
+                      <<"Please use \"output_matlab=false output_ecl=false\" to deactivate the "
+                      <<"other outputs!");
         }
         grid->loadBalance();
         Dune::CpGrid global_grid      = *grid;
