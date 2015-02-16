@@ -189,7 +189,9 @@ public:
         buffer.write(sendProps_.cellPvtRegionIndex()[e.index()]);
         buffer.write(sendProps_.pvtTableIdx_[e.index()]);
         if ( size_==2 )
+        {
             return;
+        }
         buffer.write(sendProps_.satOilMax_[e.index()]);
     }
     template<class B, class T>
