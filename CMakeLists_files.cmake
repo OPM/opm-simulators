@@ -113,6 +113,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
+        opm/autodiff/RedistributeDataHandles.hpp
 	opm/autodiff/SimulatorCompressibleAd.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp

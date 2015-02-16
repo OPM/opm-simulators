@@ -91,6 +91,7 @@ namespace Opm
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
             typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
+            parallelInformation.copyOwnerToAll(istlb, istlb);
             Preconditioner precond(opA.getmat(), istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_, parallelInformation);
 
             // Construct linear solver.

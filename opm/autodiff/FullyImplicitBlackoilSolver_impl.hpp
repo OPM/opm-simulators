@@ -1906,6 +1906,7 @@ namespace {
         {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+
             // Compute the global number of cells and porevolume
             std::vector<int> v(nc, 1);
             auto nc_and_pv = std::tuple<int, double>(0, 0.0);
@@ -1913,7 +1914,7 @@ namespace {
                                                         Opm::Reduction::makeGlobalSumFunctor<double>());
             auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
             info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
-            
+
             for ( int idx=0; idx<MaxNumPhases; ++idx )
             {
                 if (active_[idx]) {
