@@ -91,13 +91,12 @@ public:
         assert( size == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
         static_cast<void>(size);
 
+        double val;
         for ( int i=0; i<recvState_.numPhases(); ++i )
         {
-            double val;
             buffer.read(val);
             recvState_.surfacevol()[e.index()]=val;
         }
-        double val;
         buffer.read(val);
         recvState_.gasoilratio()[e.index()]=val;
         buffer.read(val);
@@ -111,13 +110,11 @@ public:
 
         for ( int i=0; i<recvGrid_.numCellFaces(e.index()); ++i )
         {
-            double val;
             buffer.read(val);
             recvState_.facepressure()[recvGrid_.cellFace(e.index(), i)]=val;
         }
         for ( int i=0; i<recvGrid_.numCellFaces(e.index()); ++i )
         {
-            double val;
             buffer.read(val);
             recvState_.faceflux()[recvGrid_.cellFace(e.index(), i)]=val;
         }
