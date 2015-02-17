@@ -53,7 +53,7 @@ namespace Opm
     }
 
     double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const SimulatorState& state ) const
+    computeTimeStepSize( const double dt, const int iterations, const SimulatorState& /* state */ ) const
     {
         double dtEstimate = dt ;
 
