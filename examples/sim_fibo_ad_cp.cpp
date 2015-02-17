@@ -281,7 +281,7 @@ try
 
     Opm::DerivedGeology geology(distributed_grid, *distributed_props, eclipseState, false, grav);
 
-    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, distributed_grid);
+    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, distributed_grid);
 
     SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                            distributed_grid,
