@@ -140,14 +140,13 @@ namespace Opm
 
 
     private:
-        template<class CC, class C2F, class FC>
+        template<class C2F, class FC>
         void init(const Opm::EclipseStateConstPtr eclipseState,
                   const size_t timeStep,
                   int num_cells,
                   const int* global_cell,
                   const int* cart_dims,
                   int dimensions,
-                  CC begin_cell_centroids,
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
                   const double* permeability);
@@ -158,12 +157,11 @@ namespace Opm
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
 
-        template<class C2F, class CC, class FC, class NTG>
+        template<class C2F, class FC, class NTG>
         void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
                                    const C2F& cell_to_faces, 
                                    const int* cart_dims,
                                    FC begin_face_centroids, 
-                                   CC begin_cell_centroids,
                                    int dimensions,
                                    std::vector<std::string>& well_names,
                                    std::vector<WellData>& well_data,

@@ -327,7 +327,7 @@ namespace Opm
     {
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
-             UgGridHelpers::dimensions(grid), UgGridHelpers::beginCellCentroids(grid),
+             UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
              permeability);
 

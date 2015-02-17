@@ -100,12 +100,11 @@ getCubeDim(const C2F& c2f,
 
 namespace Opm
 {
-template<class C2F, class CC, class FC, class NTG>
+template<class C2F, class FC, class NTG>
 void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
                                         const C2F& c2f,
                                         const int* cart_dims,
                                         FC begin_face_centroids,
-                                        CC begin_cell_centroids,
                                         int dimensions,
                                         std::vector<std::string>& well_names,
                                         std::vector<WellData>& well_data,
@@ -271,7 +270,7 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
 }
 
 /// Construct wells from deck.
-template <class CC, class C2F, class FC>
+template <class C2F, class FC>
 void
 WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const size_t                    timeStep,
@@ -279,7 +278,6 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const int*                      global_cell,
                    const int*                      cart_dims,
                    int                             dimensions,
-                   CC                              begin_cell_centroids,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const double*                   permeability)
@@ -327,7 +325,6 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
                          cart_dims,
                          begin_face_centroids,
-                         begin_cell_centroids,
                          dimensions,
                          well_names, well_data, well_names_to_index,
                          pu, cartesian_to_compressed, permeability, ntg);
