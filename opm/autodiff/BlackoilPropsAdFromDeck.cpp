@@ -71,10 +71,13 @@ namespace Opm
 BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
                                                  const int number_of_cells)
 {
-    if(number_of_cells>props.cellPvtRegionIdx_.size())
+    const int original_size = props.cellPvtRegionIdx_.size();
+    if (number_of_cells > original_size) {
         OPM_THROW(std::runtime_error, "The number of cells is larger than the one of the original grid!");
-    if(number_of_cells<0)
+    }
+    if (number_of_cells < 0) {
         OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
+    }
     // Copy properties that do not depend on the postion within the grid.
     rock_             = props.rock_;
     satprops_         = props.satprops_;
