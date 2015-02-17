@@ -216,7 +216,7 @@ try
     SimulatorReport fullReport;
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
 
-    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid());
+    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
     SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
                                              *grid->c_grid(),
                                              geology,
