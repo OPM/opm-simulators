@@ -72,14 +72,13 @@ namespace Opm
         /// The permeability argument may be zero if the input contain
         /// well productivity indices, otherwise it must be given in
         /// order to approximate these by the Peaceman formula.
-        template<class CC, class F2C, class FC>
+        template<class F2C, class FC>
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
                      int num_cells,
                      const int* global_cell,
                      const int* cart_dims,
                      int dimensions,
-                     CC begin_cell_centroids,
                      const F2C& f2c,
                      FC begin_face_centroids,
                      const double* permeability);

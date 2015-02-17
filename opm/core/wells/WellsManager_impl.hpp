@@ -250,7 +250,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     }
 }
 
-template <class CC, class C2F, class FC>
+template <class C2F, class FC>
 WellsManager::
 WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const size_t                    timeStep,
@@ -258,14 +258,13 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const int*                      global_cell,
              const int*                      cart_dims,
              int                             dimensions,
-             CC                              begin_cell_centroids,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
              const double*                   permeability)
     : w_(0)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
-         cart_dims, dimensions, begin_cell_centroids,
+         cart_dims, dimensions,
          cell_to_faces, begin_face_centroids, permeability);
 }
 
