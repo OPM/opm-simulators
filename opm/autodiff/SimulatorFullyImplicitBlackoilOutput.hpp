@@ -202,7 +202,7 @@ namespace Opm
         const std::string& outputDirectory() const { return outputDir_; }
 
         /** \brief return true if output is enabled */
-        const bool output () const { return output_; }
+        bool output () const { return output_; }
 
         void restore(SimulatorTimerInterface& timer,
                      BlackoilState& state,
