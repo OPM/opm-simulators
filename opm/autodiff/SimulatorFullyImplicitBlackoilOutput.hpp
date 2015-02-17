@@ -127,7 +127,8 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer) {}
+        void writeInit(const SimulatorTimerInterface& /* timer */)
+        {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -155,7 +156,8 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer) {}
+        void writeInit(const SimulatorTimerInterface& /* timer */)
+        {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,

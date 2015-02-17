@@ -89,7 +89,7 @@ public:
     {
         assert( T::codimension == 0);
         assert( size == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
-        (void) size;
+        static_cast<void>(size);
 
         for ( int i=0; i<recvState_.numPhases(); ++i )
         {
