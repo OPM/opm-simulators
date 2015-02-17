@@ -94,6 +94,7 @@ namespace Opm
     const double* BlackoilPropsAd::surfaceDensity(int regionIdx) const
     {
         // this class only supports a single PVT region for now...
+        static_cast<void>(regionIdx);
         assert(regionIdx == 0);
         return props_.surfaceDensity();
     }
@@ -433,7 +434,7 @@ namespace Opm
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     V BlackoilPropsAd::bGas(const V& pg,
-                            const V& T,
+                            const V& /* T */,
                             const Cells& cells) const
     {
         if (!pu_.phase_used[Gas]) {
