@@ -272,7 +272,6 @@ namespace Opm
                                        Opm::UgGridHelpers::globalCell(grid_),
                                        Opm::UgGridHelpers::cartDims(grid_),
                                        Opm::UgGridHelpers::dimensions(grid_),
-                                       Opm::UgGridHelpers::beginCellCentroids(grid_),
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability());
