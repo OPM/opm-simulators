@@ -170,6 +170,16 @@ try
         initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
     }
 
+    // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
+    if (deck->hasKeyword("SWATINIT")) {
+        const int nc = grid->c_grid()->number_of_cells;
+        std::vector<int> cells(nc);
+        for (int c = 0; c < nc; ++c) { cells[c] = c; }
+        std::vector<double> pc = state.saturation();
+        props->capPress(nc, state.saturation().data(), cells.data(), pc.data(),NULL);
+        new_props->swatinit(state.saturation(),pc);
+    }
+
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 

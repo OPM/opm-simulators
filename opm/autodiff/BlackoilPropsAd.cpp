@@ -936,5 +936,14 @@ namespace Opm
         OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support this functionality.");
     }
 
+    /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
+    /// \param[in]  saturation Array of n*numPhases cell indices to be associated with the saturation values.
+    /// \param[in]  pc         Array of n*numPhases cell indices to be associated with the capillary pressure values.
+    void BlackoilPropsAd::swatinit(const std::vector<double>& /*saturation*/,
+                                   const std::vector<double>& /*pc*/)
+    {
+        OPM_THROW(std::logic_error, "BlackoilPropsAd class does not support this functionality.");
+    }
+
 } // namespace Opm
 
