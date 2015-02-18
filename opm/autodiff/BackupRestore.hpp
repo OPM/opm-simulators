@@ -80,8 +80,9 @@ namespace Opm {
         }
 
         template <class T, unsigned long n>
-        void resizeContainer( std::array<T, n>& a, size_t size )
+        void resizeContainer( std::array<T, n>& /* a */, size_t size )
         {
+            static_cast<void>(size);
             assert( int(size) == int(n) );
         }
 
@@ -142,16 +143,16 @@ namespace Opm {
                BlackoilStateId = 2,
                WellStateFullyImplicitBackoilId = 3 };
 
-        inline int objectId( const SimulatorState& state ) {
+        inline int objectId( const SimulatorState& /* state */) {
             return SimulatorStateId;
         }
-        inline int objectId( const WellState& state ) {
+        inline int objectId( const WellState& /* state */) {
             return WellStateId;
         }
-        inline int objectId( const BlackoilState& state ) {
+        inline int objectId( const BlackoilState& /* state */) {
             return BlackoilStateId;
         }
-        inline int objectId( const WellStateFullyImplicitBlackoil& state ) {
+        inline int objectId( const WellStateFullyImplicitBlackoil& /* state */) {
             return WellStateFullyImplicitBackoilId;
         }
 

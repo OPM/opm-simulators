@@ -77,14 +77,6 @@ namespace Opm
         /// \return                       solution to complete system.
         V recoverVariable(const ADB& equation, const V& partial_solution, const int n);
 
-        /// Determine diagonality of a sparse matrix.
-        /// If there are off-diagonal elements in the sparse
-        /// structure, this function returns true if they are all
-        /// equal to zero.
-        /// \param[in]  matrix  the matrix under consideration
-        /// \return             true if matrix is diagonal
-        bool isDiagonal(const M& matrix);
-
         /// Form an elliptic system of equations.
         /// \param[in]       num_phases  the number of fluid phases
         /// \param[in]       eqs         the equations
@@ -97,11 +89,6 @@ namespace Opm
                                 const std::vector<ADB>& eqs,
                                 Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                                 V& b);
-
-        /// Create a dune-istl matrix from an Eigen matrix.
-        /// \param[in]  matrix       input Eigen::SparseMatrix
-        /// \return                  output Dune::BCRSMatrix
-        Mat makeIstlMatrix(const Eigen::SparseMatrix<double, Eigen::RowMajor>& matrix);
 
     } // anonymous namespace
 
@@ -377,29 +364,6 @@ namespace Opm
             std::copy_n(elim_var.data(), nelim, sol.data() + start);
             std::copy_n(partial_solution.data() + start, npart - start, sol.data() + start + nelim);
             return sol;
-        }
-
-
-
-
-
-        bool isDiagonal(const M& matr)
-        {
-            M matrix = matr;
-            matrix.makeCompressed();
-            for (int k = 0; k < matrix.outerSize(); ++k) {
-                for (M::InnerIterator it(matrix, k); it; ++it) {
-                    if (it.col() != it.row()) {
-                        // Off-diagonal element.
-                        if (it.value() != 0.0) {
-                            // Nonzero off-diagonal element.
-                            // std::cout << "off-diag: " << it.row() << ' ' << it.col() << std::endl;
-                            return false;
-                        }
-                    }
-                }
-            }
-            return true;
         }
 
 

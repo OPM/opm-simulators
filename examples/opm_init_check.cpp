@@ -315,7 +315,7 @@ void initEclipseTrans(TransGraph& eclipseTrans , const ecl_grid_type * ecl_grid 
 
 
 
-void dump_transGraph( DeckConstPtr deck , std::shared_ptr<const EclipseState> eclipseState , const ecl_grid_type * ecl_grid , const ecl_file_type * ecl_init , size_t verbosity) {
+void dump_transGraph( DeckConstPtr deck , std::shared_ptr<const EclipseState> eclipseState , const ecl_grid_type * ecl_grid , const ecl_file_type * ecl_init) {
     int nx = ecl_grid_get_nx( ecl_grid );
     int ny = ecl_grid_get_ny( ecl_grid );
     int nz = ecl_grid_get_nz( ecl_grid );
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
     std::cout << "Loading eclipse EGRID file ....: " << grid_file << std::endl;
     ecl_grid_type * ecl_grid = ecl_grid_alloc( grid_file.c_str() );
 
-    dump_transGraph( deck , state , ecl_grid , ecl_init , 3);
+    dump_transGraph( deck , state , ecl_grid , ecl_init);
     
     ecl_file_close( ecl_init );
     ecl_grid_free( ecl_grid );

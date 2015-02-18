@@ -127,7 +127,8 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer) {}
+        void writeInit(const SimulatorTimerInterface& /* timer */)
+        {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -155,7 +156,8 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer) {}
+        void writeInit(const SimulatorTimerInterface& /* timer */)
+        {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -200,7 +202,7 @@ namespace Opm
         const std::string& outputDirectory() const { return outputDir_; }
 
         /** \brief return true if output is enabled */
-        const bool output () const { return output_; }
+        bool output () const { return output_; }
 
         void restore(SimulatorTimerInterface& timer,
                      BlackoilState& state,
