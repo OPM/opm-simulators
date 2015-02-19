@@ -96,35 +96,6 @@ namespace {
 
 
 
-    template<class Grid>
-    V computePerfPress(const Grid& grid, const Wells& wells, const V& rho, const double grav)
-    {
-        using namespace Opm::AutoDiffGrid;
-        const int nw = wells.number_of_wells;
-        const int nperf = wells.well_connpos[nw];
-        const int dim = dimensions(grid);
-        V wdp = V::Zero(nperf,1);
-        assert(wdp.size() == rho.size());
-
-        // Main loop, iterate over all perforations,
-        // using the following formula:
-        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
-        // where the total density rho(perf) is taken to be
-        //    sum_p (rho_p*saturation_p) in the perforation cell.
-        // [although this is computed on the outside of this function].
-        for (int w = 0; w < nw; ++w) {
-            const double ref_depth = wells.depth_ref[w];
-            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
-                const int cell = wells.well_cells[j];
-                const double cell_depth = cellCentroid(grid, cell)[dim - 1];
-                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
-            }
-        }
-        return wdp;
-    }
-
-
-
     template <class PU>
     std::vector<bool>
     activePhases(const PU& pu)
