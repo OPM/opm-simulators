@@ -81,7 +81,7 @@ typedef Eigen::Array<double,
                      Eigen::RowMajor> DataBlock;
 
 
-namespace {
+namespace detail {
 
 
     std::vector<int>
@@ -92,35 +92,6 @@ namespace {
         for (int c = 0; c < nc; ++c) { all_cells[c] = c; }
 
         return all_cells;
-    }
-
-
-
-    template<class Grid>
-    V computePerfPress(const Grid& grid, const Wells& wells, const V& rho, const double grav)
-    {
-        using namespace Opm::AutoDiffGrid;
-        const int nw = wells.number_of_wells;
-        const int nperf = wells.well_connpos[nw];
-        const int dim = dimensions(grid);
-        V wdp = V::Zero(nperf,1);
-        assert(wdp.size() == rho.size());
-
-        // Main loop, iterate over all perforations,
-        // using the following formula:
-        //    wdp(perf) = g*(perf_z - well_ref_z)*rho(perf)
-        // where the total density rho(perf) is taken to be
-        //    sum_p (rho_p*saturation_p) in the perforation cell.
-        // [although this is computed on the outside of this function].
-        for (int w = 0; w < nw; ++w) {
-            const double ref_depth = wells.depth_ref[w];
-            for (int j = wells.well_connpos[w]; j < wells.well_connpos[w + 1]; ++j) {
-                const int cell = wells.well_cells[j];
-                const double cell_depth = cellCentroid(grid, cell)[dim - 1];
-                wdp[j] = rho[j]*grav*(cell_depth - ref_depth);
-            }
-        }
-        return wdp;
     }
 
 
@@ -158,7 +129,7 @@ namespace {
     }
 
 
-} // Anonymous namespace
+} // namespace detail
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::SolverParameter::
@@ -227,9 +198,9 @@ namespace {
         , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
         , linsolver_ (linsolver)
-        , active_(activePhases(fluid.phaseUsage()))
-        , canph_ (active2Canonical(fluid.phaseUsage()))
-        , cells_ (buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
+        , active_(detail::activePhases(fluid.phaseUsage()))
+        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
+        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid)
         , wops_  (wells_)
         , has_disgas_(has_disgas)
@@ -1025,7 +996,7 @@ namespace {
 
 
 
-    namespace
+    namespace detail
     {
         double rateToCompare(const ADB& well_phase_flow_rate,
                              const int well,
@@ -1098,7 +1069,7 @@ namespace {
 
             return broken;
         }
-    } // anonymous namespace
+    } // namespace detail
 
 
 
@@ -1135,7 +1106,7 @@ namespace {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1279,10 +1250,8 @@ namespace {
 
 
 
-    namespace {
-        struct Chop01 {
-            double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
-        };
+    namespace detail
+    {
 
         double infinityNorm( const ADB& a )
         {
@@ -1294,7 +1263,7 @@ namespace {
             }
         }
 
-    }
+    } // namespace detail
 
 
 
@@ -1796,7 +1765,7 @@ namespace {
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
 
         for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            const double massBalanceResid = infinityNorm( (*massBalanceIt) );
+            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt) );
             if (!std::isfinite(massBalanceResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
@@ -1805,14 +1774,14 @@ namespace {
         }
 
         // the following residuals are not used in the oscillation detection now
-        const double wellFluxResid = infinityNorm( residual_.well_flux_eq );
+        const double wellFluxResid = detail::infinityNorm( residual_.well_flux_eq );
         if (!std::isfinite(wellFluxResid)) {
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
         residualNorms.push_back(wellFluxResid);
 
-        const double wellResid = infinityNorm( residual_.well_eq );
+        const double wellResid = detail::infinityNorm( residual_.well_eq );
         if (!std::isfinite(wellResid)) {
            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
@@ -2006,8 +1975,8 @@ namespace {
             converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
         }
 
-        const double residualWellFlux = infinityNorm(residual_.well_flux_eq);
-        const double residualWell     = infinityNorm(residual_.well_eq);
+        const double residualWellFlux = detail::infinityNorm(residual_.well_flux_eq);
+        const double residualWell     = detail::infinityNorm(residual_.well_eq);
         const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
