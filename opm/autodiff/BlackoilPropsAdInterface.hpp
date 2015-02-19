@@ -400,13 +400,6 @@ namespace Opm
         /// Update for max oil saturation.
         virtual                  
         void updateSatOilMax(const std::vector<double>& saturation) = 0;
-
-        /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
-        /// \param[in]  saturation Array of n*numPhases cell indices to be associated with the saturation values.
-        /// \param[in]  pc         Array of n*numPhases cell indices to be associated with the capillary pressure values.
-        virtual
-        void swatinit(const std::vector<double>& saturation,
-                     const std::vector<double>& pc ) = 0;
     };
 
 } // namespace Opm

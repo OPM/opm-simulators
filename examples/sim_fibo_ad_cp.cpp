@@ -207,6 +207,17 @@ try
                                   *props, deck, gravity[2], state);
     }
 
+
+    // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
+    if (deck->hasKeyword("SWATINIT")) {
+        const int nc = grid->numCells();
+        std::vector<int> cells(nc);
+        for (int c = 0; c < nc; ++c) { cells[c] = c; }
+        std::vector<double> pc = state.saturation();
+        props->capPress(nc, state.saturation().data(), cells.data(), pc.data(),NULL);
+        new_props->setSwatInitScaling(state.saturation(),pc);
+    }
+
     BlackoilState distributed_state;
     std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props = new_props;
     Dune::CpGrid distributed_grid = *grid;

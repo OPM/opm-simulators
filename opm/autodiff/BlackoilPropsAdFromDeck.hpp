@@ -425,10 +425,10 @@ namespace Opm
         /// Update for max oil saturation.                  
         void updateSatOilMax(const std::vector<double>& saturation);
 
-        /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
-        /// \param[in]  saturation Array of n*numPhases cell indices to be associated with the saturation values.
-        /// \param[in]  pc         Array of n*numPhases cell indices to be associated with the capillary pressure values.
-        void swatinit(const std::vector<double>& saturation,
+        /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
+        /// \param[in]  saturation Array of n*numPhases saturation values.
+        /// \param[in]  pc         Array of n*numPhases capillary pressure values.
+        void setSwatInitScaling(const std::vector<double>& saturation,
                       const std::vector<double>& pc);
 
 

@@ -1167,10 +1167,10 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         }
     }
 
-    /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
-    /// \param[in]  saturation Array of n*numPhases cell indices to be associated with the saturation values.
-    /// \param[in]  pc         Array of n*numPhases cell indices to be associated with the capillary pressure values.
-    void BlackoilPropsAdFromDeck::swatinit(const std::vector<double>& saturation,
+    /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
+    /// \param[in]  saturation Array of n*numPhases saturation values.
+    /// \param[in]  pc         Array of n*numPhases capillary pressure values.
+    void BlackoilPropsAdFromDeck::setSwatInitScaling(const std::vector<double>& saturation,
                                            const std::vector<double>& pc)
     {
         const int nc = rock_.numCells();
@@ -1178,7 +1178,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         for (int i = 0; i < nc; ++i) {
             double pcow = pc[numActivePhases*i + phase_usage_.phase_pos[Water]];
             double swat = saturation[numActivePhases*i + phase_usage_.phase_pos[Water]];
-            satprops_->swatInitScaling(i,pcow,swat);
+            satprops_->swatInitScaling(i, pcow, swat);
         }
     }
 

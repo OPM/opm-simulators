@@ -95,7 +95,7 @@ try
     }
     std::shared_ptr<GridManager> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
     BlackoilState state;
     // bool check_well_controls = false;
@@ -177,7 +177,7 @@ try
         for (int c = 0; c < nc; ++c) { cells[c] = c; }
         std::vector<double> pc = state.saturation();
         props->capPress(nc, state.saturation().data(), cells.data(), pc.data(),NULL);
-        new_props->swatinit(state.saturation(),pc);
+        new_props->setSwatInitScaling(state.saturation(),pc);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
