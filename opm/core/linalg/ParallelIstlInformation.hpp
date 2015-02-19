@@ -148,7 +148,7 @@ public:
         {
             OPM_THROW(std::runtime_error, "Trying to update owner mask without parallel information!");
         }
-        if( container.size()!= ownerMask_.size() )
+        if( static_cast<std::size_t>(container.size())!= ownerMask_.size() )
         {
             ownerMask_.resize(container.size(), 1.);
             for( auto i=indexSet_->begin(), end=indexSet_->end(); i!=end; ++i )
