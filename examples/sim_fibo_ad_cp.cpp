@@ -234,8 +234,7 @@ try
                                              std::numeric_limits<double>::max());
         Opm::BlackoilStateDataHandle state_handle(global_grid, distributed_grid,
                                                   state, distributed_state);
-        Opm::BlackoilPropsDataHandle props_handle(global_grid, distributed_grid,
-                                                  *new_props,
+        Opm::BlackoilPropsDataHandle props_handle(*new_props,
                                                   *distributed_props);
         grid->scatterData(state_handle);
         grid->scatterData(props_handle);

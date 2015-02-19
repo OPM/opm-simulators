@@ -140,21 +140,17 @@ public:
     /// \brief The data that we send.
     typedef double DataType;
     /// \brief Constructor.
-    /// \param sendGrid   The grid that the data is attached to when sending.
-    /// \param recvGrid   The grid that the data is attached to when receiving.
     /// \param sendProps  The properties where we will retieve the values to be sent.
     /// \parame recvProps The properties where we will store the received values.
-    BlackoilPropsDataHandle(const Dune::CpGrid& sendGrid,
-                            const Dune::CpGrid& recvGrid,
-                            const BlackoilPropsAdFromDeck& sendProps,
+    BlackoilPropsDataHandle(const BlackoilPropsAdFromDeck& sendProps,
                             BlackoilPropsAdFromDeck& recvProps)
-        : sendGrid_(sendGrid), recvGrid_(recvGrid), sendProps_(sendProps), recvProps_(recvProps),
+        : sendProps_(sendProps), recvProps_(recvProps),
           size_(2)
     {
         // satOilMax might be non empty. In this case we will need to send it, too.
         if ( sendProps.satOilMax_.size()>0 )
         {
-            recvProps_.satOilMax_.resize(recvGrid.numCells(),
+            recvProps_.satOilMax_.resize(recvProps_.pvtTableIdx_.size(),
                                          -std::numeric_limits<double>::max());
             ++size_;
         }
@@ -211,10 +207,6 @@ public:
         return dim==3 && codim==0;
     }
 private:
-    /// \brief The grid that the data is attached to when sending
-    const Dune::CpGrid& sendGrid_;
-    /// \brief The grid that the data is attached to when receiving
-    const Dune::CpGrid& recvGrid_;
     /// \brief The properties where we will retieve the values to be sent.
     const BlackoilPropsAdFromDeck& sendProps_;
     // \brief The properties where we will store the received values.
