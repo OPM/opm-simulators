@@ -425,6 +425,13 @@ namespace Opm
         /// Update for max oil saturation.                  
         void updateSatOilMax(const std::vector<double>& saturation);
 
+        /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
+        /// \param[in]  saturation Array of n*numPhases saturation values.
+        /// \param[in]  pc         Array of n*numPhases capillary pressure values.
+        void setSwatInitScaling(const std::vector<double>& saturation,
+                      const std::vector<double>& pc);
+
+
     private:
         /// Initializes the properties.
         template <class CentroidIterator>
