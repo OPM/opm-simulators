@@ -48,6 +48,7 @@ namespace Opm
 
         using BaseType :: wellRates;
         using BaseType :: bhp;
+        using BaseType :: perfPress;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -96,6 +97,7 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
+                        perfPress()[perf] = state.pressure()[wells->well_cells[perf]];
                     }
                 }
             }
@@ -132,13 +134,14 @@ namespace Opm
                         }
 
                         // perfPhaseRates
-                        int oldPerf = (*it).second[ 1 ] * np;
+                        int oldPerf_idx = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
                         const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
                         if( num_perf_old_well == num_perf_this_well )
                         {
+                            int oldPerf = oldPerf_idx *np;
                             for (int perf = wells->well_connpos[ newIndex ]*np;
                                  perf < wells->well_connpos[ newIndex + 1]*np; ++perf, ++oldPerf )
                             {
@@ -149,6 +152,15 @@ namespace Opm
                                 for (int p = 0; p < np; ++p) {
                                     perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(num_perf_this_well);
                                 }
+                            }
+                        }
+                        // perfPressures
+                        if( num_perf_old_well == num_perf_this_well )
+                        {
+                            for (int perf = wells->well_connpos[ newIndex ];
+                                 perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                            {
+                                perfPress()[ perf ] = prevState.perfPress()[ oldPerf_idx ];
                             }
                         }
 
