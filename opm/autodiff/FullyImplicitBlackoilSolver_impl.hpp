@@ -81,7 +81,7 @@ typedef Eigen::Array<double,
                      Eigen::RowMajor> DataBlock;
 
 
-namespace {
+namespace detail {
 
 
     std::vector<int>
@@ -129,7 +129,7 @@ namespace {
     }
 
 
-} // Anonymous namespace
+} // namespace detail
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::SolverParameter::
@@ -198,9 +198,9 @@ namespace {
         , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
         , linsolver_ (linsolver)
-        , active_(activePhases(fluid.phaseUsage()))
-        , canph_ (active2Canonical(fluid.phaseUsage()))
-        , cells_ (buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
+        , active_(detail::activePhases(fluid.phaseUsage()))
+        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
+        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid)
         , wops_  (wells_)
         , has_disgas_(has_disgas)
@@ -996,7 +996,7 @@ namespace {
 
 
 
-    namespace
+    namespace detail
     {
         double rateToCompare(const ADB& well_phase_flow_rate,
                              const int well,
@@ -1069,7 +1069,7 @@ namespace {
 
             return broken;
         }
-    } // anonymous namespace
+    } // namespace detail
 
 
 
@@ -1106,7 +1106,7 @@ namespace {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1250,10 +1250,8 @@ namespace {
 
 
 
-    namespace {
-        struct Chop01 {
-            double operator()(double x) const { return std::max(std::min(x, 1.0), 0.0); }
-        };
+    namespace detail
+    {
 
         double infinityNorm( const ADB& a )
         {
@@ -1265,7 +1263,7 @@ namespace {
             }
         }
 
-    }
+    } // namespace detail
 
 
 
@@ -1767,7 +1765,7 @@ namespace {
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
 
         for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            const double massBalanceResid = infinityNorm( (*massBalanceIt) );
+            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt) );
             if (!std::isfinite(massBalanceResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
@@ -1776,14 +1774,14 @@ namespace {
         }
 
         // the following residuals are not used in the oscillation detection now
-        const double wellFluxResid = infinityNorm( residual_.well_flux_eq );
+        const double wellFluxResid = detail::infinityNorm( residual_.well_flux_eq );
         if (!std::isfinite(wellFluxResid)) {
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
         residualNorms.push_back(wellFluxResid);
 
-        const double wellResid = infinityNorm( residual_.well_eq );
+        const double wellResid = detail::infinityNorm( residual_.well_eq );
         if (!std::isfinite(wellResid)) {
            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
@@ -1977,8 +1975,8 @@ namespace {
             converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
         }
 
-        const double residualWellFlux = infinityNorm(residual_.well_flux_eq);
-        const double residualWell     = infinityNorm(residual_.well_eq);
+        const double residualWellFlux = detail::infinityNorm(residual_.well_flux_eq);
+        const double residualWell     = detail::infinityNorm(residual_.well_eq);
         const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
