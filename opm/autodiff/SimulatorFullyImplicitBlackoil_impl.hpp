@@ -354,17 +354,16 @@ namespace Opm
         }
 
         inline bool
-        is_resv_prod(const Wells& wells,
-                     const int    w)
+        is_resv(const Wells& wells,
+                const int    w)
         {
-            return ((wells.type[w] == PRODUCER) &&
-                    (0 <= resv_control(wells.ctrls[w])));
+            return (0 <= resv_control(wells.ctrls[w]));
         }
 
         inline bool
-        is_resv_prod(const WellMap&     wmap,
-                     const std::string& name,
-                     const std::size_t  step)
+        is_resv(const WellMap&     wmap,
+                const std::string& name,
+                const std::size_t  step)
         {
             bool match = false;
 
@@ -375,31 +374,34 @@ namespace Opm
 
                 match = (wp->isProducer(step) &&
                          wp->getProductionProperties(step)
-                         .hasProductionControl(WellProducer::RESV));
+                         .hasProductionControl(WellProducer::RESV))
+                    ||  (wp->isInjector(step) &&
+                         wp->getInjectionProperties(step)
+                         .hasInjectionControl(WellInjector::RESV));
             }
 
             return match;
         }
 
         inline std::vector<int>
-        resvProducers(const Wells*      wells,
-                      const std::size_t step,
-                      const WellMap&    wmap)
+        resvWells(const Wells*      wells,
+                  const std::size_t step,
+                  const WellMap&    wmap)
         {
-            std::vector<int> resv_prod;
+            std::vector<int> resv_wells;
             if( wells )
             {
                 for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
-                    if (is_resv_prod(*wells, w) ||
+                    if (is_resv(*wells, w) ||
                         ((wells->name[w] != 0) &&
-                         is_resv_prod(wmap, wells->name[w], step)))
+                         is_resv(wmap, wells->name[w], step)))
                     {
-                        resv_prod.push_back(w);
+                        resv_wells.push_back(w);
                     }
                 }
             }
 
-            return resv_prod;
+            return resv_wells;
         }
 
         inline void
@@ -447,9 +449,9 @@ namespace Opm
         const std::vector<WellConstPtr>& w_ecl = eclipse_state_->getSchedule()->getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
-        const std::vector<int>& resv_prod = SimFIBODetails::resvProducers(wells, step, wmap);
+        const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
 
-        if (! resv_prod.empty()) {
+        if (! resv_wells.empty()) {
             const PhaseUsage&                    pu = props_.phaseUsage();
             const std::vector<double>::size_type np = props_.numPhases();
 
@@ -460,10 +462,11 @@ namespace Opm
             std::vector<double> prates(np);
 
             for (std::vector<int>::const_iterator
-                     rp = resv_prod.begin(), e = resv_prod.end();
+                     rp = resv_wells.begin(), e = resv_wells.end();
                  rp != e; ++rp)
             {
                 WellControls* ctrl = wells->ctrls[*rp];
+                const bool is_producer = wells->type[*rp] == PRODUCER;
 
                 // RESV control mode, all wells
                 {
@@ -472,11 +475,17 @@ namespace Opm
                     if (0 <= rctrl) {
                         const std::vector<double>::size_type off = (*rp) * np;
 
-                        // Convert to positive rates to avoid issues
-                        // in coefficient calculations.
-                        std::transform(xw.wellRates().begin() + (off + 0*np),
-                                       xw.wellRates().begin() + (off + 1*np),
-                                       prates.begin(), std::negate<double>());
+                        if (is_producer) {
+                            // Convert to positive rates to avoid issues
+                            // in coefficient calculations.
+                            std::transform(xw.wellRates().begin() + (off + 0*np),
+                                           xw.wellRates().begin() + (off + 1*np),
+                                           prates.begin(), std::negate<double>());
+                        } else {
+                            std::copy(xw.wellRates().begin() + (off + 0*np),
+                                      xw.wellRates().begin() + (off + 1*np),
+                                      prates.begin());
+                        }
 
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
                         rateConverter_.calcCoeff(prates, fipreg, distr);
@@ -487,7 +496,7 @@ namespace Opm
 
                 // RESV control, WCONHIST wells.  A bit of duplicate
                 // work, regrettably.
-                if (wells->name[*rp] != 0) {
+                if (is_producer && wells->name[*rp] != 0) {
                     WellMap::const_iterator i = wmap.find(wells->name[*rp]);
 
                     if (i != wmap.end()) {
