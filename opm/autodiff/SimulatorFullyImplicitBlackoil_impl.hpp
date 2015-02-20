@@ -112,7 +112,7 @@ namespace Opm
         std::vector<int> allcells_;
         const bool has_disgas_;
         const bool has_vapoil_;
-        bool       verbosity_;
+        bool       terminal_output_;
         // eclipse_state
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
@@ -185,7 +185,7 @@ namespace Opm
           solver_(linsolver),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
-          verbosity_(true),
+          terminal_output_(true),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
@@ -203,7 +203,7 @@ namespace Opm
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
             // Only rank 0 does print to std::cout
-            verbosity_= (info.communicator().rank()==0);
+            terminal_output_= (info.communicator().rank()==0);
         }
 #endif
     }
@@ -250,7 +250,7 @@ namespace Opm
         while (!timer.done()) {
             // Report timestep.
             step_timer.start();
-            if ( verbosity_ )
+            if ( terminal_output_ )
             {
                 timer.report(std::cout);
             }
@@ -307,7 +307,7 @@ namespace Opm
             // Report timing.
             const double st = solver_timer.secsSinceStart();
 
-            if ( verbosity_ )
+            if ( terminal_output_ )
             {
                 std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
             }

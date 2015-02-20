@@ -212,7 +212,7 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
-        , verbosity_ (true)
+        , terminal_output_ (true)
     {
 #if HAVE_MPI
         if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
@@ -220,7 +220,7 @@ namespace detail {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
             // Only rank 0 does print to std::cout
-            verbosity_= (info.communicator().rank()==0);
+            terminal_output_ = (info.communicator().rank()==0);
         }
 #endif
     }
@@ -299,7 +299,7 @@ namespace detail {
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                if (verbosity_)
+                if (terminal_output_)
                 {
                     std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
                 }
@@ -1126,7 +1126,7 @@ namespace detail {
             }
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
-                if (verbosity_)
+                if (terminal_output_)
                 {
                     std::cout << "Switching control mode for well " << wells().name[w]
                               << " from " << modestring[well_controls_iget_type(wc, current)]
@@ -2009,7 +2009,7 @@ namespace detail {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
         }
 
-        if ( verbosity_ )
+        if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
