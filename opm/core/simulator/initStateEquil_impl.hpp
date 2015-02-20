@@ -553,7 +553,7 @@ namespace Opm
                          fi != fe;
                          ++fi)
                     {
-                        for (auto i = faceVertices[*fi].begin(), e=faceVertices[*fi].end();
+                        for (auto i = faceVertices[*fi].begin(), e = faceVertices[*fi].end();
                              i != e; ++i)
                         {
                             const double z = UgGridHelpers::vertexCoordinates(G, *i)[nd-1];
