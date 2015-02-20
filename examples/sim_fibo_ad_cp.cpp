@@ -266,7 +266,7 @@ try
     }
 
     // Write parameters used for later reference. (only if rank is zero)
-    bool output = param.getDefault("output", true) && ( grid->comm().rank()==0 );
+    bool output = ( grid->comm().rank() == 0 ) && param.getDefault("output", true);
     std::string output_dir;
     if (output) {
         // Create output directory if needed.
