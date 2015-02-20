@@ -1,5 +1,7 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -21,6 +23,7 @@
 #define OPM_INITSTATEEQUIL_IMPL_HEADER_INCLUDED
 
 #include <opm/core/grid.h>
+#include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/initState.hpp>
 
@@ -300,16 +303,17 @@ namespace Opm
         } // namespace PhaseIndex
 
         namespace PhasePressure {
-            template <class PressFunction,
+            template <class Grid,
+                      class PressFunction,
                       class CellRange>
             void
-            assign(const UnstructuredGrid&             G    ,
+            assign(const Grid&                         G    ,
                    const std::array<PressFunction, 2>& f    ,
                    const double                        split,
                    const CellRange&                    cells,
                    std::vector<double>&                p    )
             {
-                const int nd = G.dimensions;
+                const int nd = UgGridHelpers::dimensions(G);
 
                 enum { up = 0, down = 1 };
 
@@ -320,15 +324,16 @@ namespace Opm
                 {
                     assert (c < p.size());
 
-                    const double z = G.cell_centroids[(*ci)*nd + (nd - 1)];
+                    const double z = UgGridHelpers::cellCentroidCoordinate(G, *ci, nd-1);
                     p[c] = (z < split) ? f[up](z) : f[down](z);
                 }
             }
 
-            template <class Region,
+            template <class Grid,
+                      class Region,
                       class CellRange>
             void
-            water(const UnstructuredGrid&     G     ,
+            water(const Grid&                 G     ,
                   const Region&               reg   ,
                   const std::array<double,2>& span  ,
                   const double                grav  ,
@@ -363,10 +368,11 @@ namespace Opm
                 assign(G, wpress, z0, cells, press);
             }
 
-            template <class Region,
+            template <class Grid,
+                      class Region,
                       class CellRange>
             void
-            oil(const UnstructuredGrid&     G     ,
+            oil(const Grid&                 G     ,
                 const Region&               reg   ,
                 const std::array<double,2>& span  ,
                 const double                grav  ,
@@ -418,10 +424,11 @@ namespace Opm
 
             }
 
-            template <class Region,
+            template <class Grid,
+                      class Region,
                       class CellRange>
             void
-            gas(const UnstructuredGrid&     G     ,
+            gas(const Grid&                 G     ,
                 const Region&               reg   ,
                 const std::array<double,2>& span  ,
                 const double                grav  ,
@@ -463,10 +470,11 @@ namespace Opm
             }
         } // namespace PhasePressure
 
-        template <class Region,
+        template <class Grid,
+                  class Region,
                   class CellRange>
         void
-        equilibrateOWG(const UnstructuredGrid&             G,
+        equilibrateOWG(const Grid&                         G,
                        const Region&                       reg,
                        const double                        grav,
                        const std::array<double,2>&         span,
@@ -500,10 +508,11 @@ namespace Opm
     namespace Equil {
 
 
-        template <class Region,
+        template <class Grid,
+                  class Region,
                   class CellRange>
         std::vector< std::vector<double> >
-        phasePressures(const UnstructuredGrid& G,
+        phasePressures(const Grid&             G,
                        const Region&           reg,
                        const CellRange&        cells,
                        const double            grav)
@@ -515,18 +524,9 @@ namespace Opm
             int ncell = 0;
             {
                 // This code is only supported in three space dimensions
-                assert (G.dimensions == 3);
+                assert (UgGridHelpers::dimensions(G) == 3);
 
-                const int nd = G.dimensions;
-
-                // Define short-name aliases to reduce visual clutter.
-                const double* const nc  = & G.node_coordinates[0];
-
-                const int*    const cfp = & G.cell_facepos[0];
-                const int*    const cf  = & G.cell_faces[0];
-
-                const int*    const fnp = & G.face_nodepos[0];
-                const int*    const fn  = & G.face_nodes[0];
+                const int nd = UgGridHelpers::dimensions(G);
 
                 // Define vertical span as
                 //
@@ -541,21 +541,24 @@ namespace Opm
                 // imposes the requirement that cell centroids are all
                 // within this vertical span.  That requirement is not
                 // checked.
+                typename UgGridHelpers::Cell2FacesTraits<Grid>::Type
+                    cell2Faces = UgGridHelpers::cell2Faces(G);
+                typename UgGridHelpers::Face2VerticesTraits<Grid>::Type
+                    faceVertices = UgGridHelpers::face2Vertices(G);
+
                 for (typename CellRange::const_iterator
                          ci = cells.begin(), ce = cells.end();
                      ci != ce; ++ci, ++ncell)
                 {
-                    for (const int
-                             *fi = & cf[ cfp[*ci + 0] ],
-                             *fe = & cf[ cfp[*ci + 1] ];
-                         fi != fe; ++fi)
+                    for (auto fi=cell2Faces[*ci].begin(),
+                              fe=cell2Faces[*ci].end();
+                         fi != fe;
+                         ++fi)
                     {
-                        for (const int
-                                 *i = & fn[ fnp[*fi + 0] ],
-                                 *e = & fn[ fnp[*fi + 1] ];
+                        for (auto i = faceVertices[*fi].begin(), e=faceVertices[*fi].end();
                              i != e; ++i)
                         {
-                            const double z = nc[(*i)*nd + (nd - 1)];
+                            const double z = UgGridHelpers::vertexCoordinates(G, *i)[nd-1];
 
                             if (z < span[0]) { span[0] = z; }
                             if (z > span[1]) { span[1] = z; }
@@ -587,10 +590,11 @@ namespace Opm
             return press;
         }
 
-        template <class Region,
+        template <class Grid,
+                  class Region,
                   class CellRange>
         std::vector<double>
-        temperature(const UnstructuredGrid& /* G */,
+        temperature(const Grid&             /* G */,
                     const Region&           /* reg */,
                     const CellRange&        cells)
         {
@@ -598,9 +602,9 @@ namespace Opm
             return std::vector<double>(cells.size(), 273.15 + 20.0);
         }
 
-        template <class Region, class CellRange>
+        template <class Grid, class Region, class CellRange>
         std::vector< std::vector<double> >
-        phaseSaturations(const UnstructuredGrid& G,
+        phaseSaturations(const Grid&             G,
                          const Region&           reg,
                          const CellRange&        cells,
                          BlackoilPropertiesInterface& props,
@@ -621,8 +625,6 @@ namespace Opm
             double smin[BlackoilPhases::MaxNumPhases] = { 0.0 };
             double smax[BlackoilPhases::MaxNumPhases] = { 0.0 };
 
-            const double* const cc  = & G.cell_centroids[0];
-
             const bool water = reg.phaseUsage().phase_used[BlackoilPhases::Aqua];
             const bool gas = reg.phaseUsage().phase_used[BlackoilPhases::Vapour];
             const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
@@ -637,8 +639,10 @@ namespace Opm
                 double sw = 0.0;
                 if (water) {
                     if (isConstPc(props,waterpos,cell)){
-                        const int nd = G.dimensions;
-                        const double cellDepth  = cc[nd * cell + nd-1];
+                        const int nd = UgGridHelpers::dimensions(G);
+                        const double cellDepth  =  UgGridHelpers::cellCentroidCoordinate(G,
+                                                                                         cell,
+                                                                                         nd-1);
                         sw = satFromDepth(props,cellDepth,zwoc,waterpos,cell,false);
                         phase_saturations[waterpos][local_index] = sw;
                     }
@@ -657,8 +661,10 @@ namespace Opm
                 double sg = 0.0;
                 if (gas) {
                     if (isConstPc(props,gaspos,cell)){
-                        const int nd = G.dimensions;
-                        const double cellDepth  = cc[nd * cell + nd-1];
+                        const int nd = UgGridHelpers::dimensions(G);
+                        const double cellDepth  = UgGridHelpers::cellCentroidCoordinate(G,
+                                                                                        cell,
+                                                                                        nd-1);
                         sg = satFromDepth(props,cellDepth,zgoc,gaspos,cell,true);
                         phase_saturations[gaspos][local_index] = sg;
                     }
@@ -742,19 +748,19 @@ namespace Opm
          * \param[in] rs_func         Rs as function of pressure and depth.
          * \return                    Rs values, one for each cell in the 'cells' range.
          */
-        template <class CellRangeType>
-        std::vector<double> computeRs(const UnstructuredGrid& grid,
+        template <class Grid, class CellRangeType>
+        std::vector<double> computeRs(const Grid& grid,
                                       const CellRangeType& cells,
                                       const std::vector<double> oil_pressure,
                                       const std::vector<double>& temperature,
                                       const Miscibility::RsFunction& rs_func,
                                       const std::vector<double> gas_saturation)
         {
-            assert(grid.dimensions == 3);
+            assert(UgGridHelpers::dimensions(grid) == 3);
             std::vector<double> rs(cells.size());
             int count = 0;
             for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
-                const double depth = grid.cell_centroids[3*(*it) + 2];
+                const double depth = UgGridHelpers::cellCentroidCoordinate(grid, *it, 2);
                 rs[count] = rs_func(depth, oil_pressure[count], temperature[count], gas_saturation[count]);
             }
             return rs;
@@ -798,7 +804,8 @@ namespace Opm
      * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
      */
-    void initStateEquil(const UnstructuredGrid& grid,
+    template<class Grid>
+    void initStateEquil(const Grid& grid,
                         BlackoilPropertiesInterface& props,
                         const Opm::DeckConstPtr deck,
                         const Opm::EclipseStateConstPtr eclipseState,
@@ -815,7 +822,7 @@ namespace Opm
         state.saturation() = convertSats(isc.saturation());
         state.gasoilratio() = isc.rs();
         state.rv() = isc.rv();
-        initBlackoilSurfvolUsingRSorRV(grid, props, state);
+        initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
     }
 
 
