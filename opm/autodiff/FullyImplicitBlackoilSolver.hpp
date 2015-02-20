@@ -196,7 +196,7 @@ namespace Opm {
 
         LinearisedBlackoilResidual residual_;
 
-        /// \brief Wether we print something to std::cout
+        /// \brief Whether we print something to std::cout
         bool terminal_output_;
 
         std::vector<int>         primalVariable_;
