@@ -1,6 +1,7 @@
 /*
-  Copyright 2014 Dr. Markus Blatt - HPC-Simulation-Software & Services.
+  Copyright 2014, 2015 Dr. Markus Blatt - HPC-Simulation-Software & Services.
   Copyright 2014 Statoil AS
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -185,6 +186,17 @@ FaceCellTraits<Dune::CpGrid>::Type
 faceCells(const Dune::CpGrid& grid)
 {
     return Opm::AutoDiffGrid::FaceCellsContainerProxy(&grid);
+}
+
+Face2VerticesTraits<Dune::CpGrid>::Type
+face2Vertices(const Dune::CpGrid& grid)
+{
+    return Opm::AutoDiffGrid::FaceVerticesContainerProxy(&grid);
+}
+
+const double* vertexCoordinates(const Dune::CpGrid& grid, int index)
+{
+    return &(grid.vertexPosition(index)[0]);
 }
 
 const double* faceNormal(const Dune::CpGrid& grid, int face_index)
