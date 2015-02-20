@@ -541,10 +541,8 @@ namespace Opm
                 // imposes the requirement that cell centroids are all
                 // within this vertical span.  That requirement is not
                 // checked.
-                typename UgGridHelpers::Cell2FacesTraits<Grid>::Type
-                    cell2Faces = UgGridHelpers::cell2Faces(G);
-                typename UgGridHelpers::Face2VerticesTraits<Grid>::Type
-                    faceVertices = UgGridHelpers::face2Vertices(G);
+                auto cell2Faces = UgGridHelpers::cell2Faces(G);
+                auto faceVertices = UgGridHelpers::face2Vertices(G);
 
                 for (typename CellRange::const_iterator
                          ci = cells.begin(), ce = cells.end();
