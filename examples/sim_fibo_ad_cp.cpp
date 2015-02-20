@@ -265,8 +265,8 @@ try
         fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
     }
 
-    // Write parameters used for later reference.
-    bool output = param.getDefault("output", true);
+    // Write parameters used for later reference. (only if rank is zero)
+    bool output = ( grid->comm().rank() == 0 ) && param.getDefault("output", true);
     std::string output_dir;
     if (output) {
         // Create output directory if needed.
@@ -306,13 +306,19 @@ try
                                                            outputWriter,
                                                            threshold_pressures);
 
-    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-              << std::flush;
+    if( grid->comm().rank()==0 )
+    {
+        std::cout << "\n\n================ Starting main simulation loop ===============\n"
+                  << std::flush;
+    }
 
     SimulatorReport fullReport = simulator.run(simtimer, must_distribute ? distributed_state : state);
 
-    std::cout << "\n\n================    End of simulation     ===============\n\n";
-    fullReport.report(std::cout);
+    if( grid->comm().rank()==0 )
+    {
+        std::cout << "\n\n================    End of simulation     ===============\n\n";
+        fullReport.report(std::cout);
+    }
 
     if (output) {
         std::string filename = output_dir + "/walltime.txt";

@@ -112,6 +112,7 @@ namespace Opm
         std::vector<int> allcells_;
         const bool has_disgas_;
         const bool has_vapoil_;
+        bool       terminal_output_;
         // eclipse_state
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
@@ -184,6 +185,7 @@ namespace Opm
           solver_(linsolver),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
+          terminal_output_(true),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
@@ -195,6 +197,15 @@ namespace Opm
         for (int cell = 0; cell < num_cells; ++cell) {
             allcells_[cell] = cell;
         }
+#if HAVE_MPI
+        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            // Only rank 0 does print to std::cout
+            terminal_output_= (info.communicator().rank()==0);
+        }
+#endif
     }
 
 
@@ -239,7 +250,10 @@ namespace Opm
         while (!timer.done()) {
             // Report timestep.
             step_timer.start();
-            timer.report(std::cout);
+            if ( terminal_output_ )
+            {
+                timer.report(std::cout);
+            }
 
             // Create wells and well state.
             WellsManager wells_manager(eclipse_state_,
@@ -292,7 +306,12 @@ namespace Opm
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
-            std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
+
+            if ( terminal_output_ )
+            {
+                std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
+            }
+
             stime += st;
             if ( output_writer_.output() ) {
                 SimulatorReport step_report;

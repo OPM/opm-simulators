@@ -212,7 +212,17 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
+        , terminal_output_ (true)
     {
+#if HAVE_MPI
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            // Only rank 0 does print to std::cout
+            terminal_output_ = (info.communicator().rank()==0);
+        }
+#endif
     }
 
 
@@ -289,7 +299,10 @@ namespace detail {
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
+                if (terminal_output_)
+                {
+                    std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
+                }
             }
 
             stablizeNewton(dx, dxOld, omega, relaxtype);
@@ -1132,9 +1145,12 @@ namespace detail {
             }
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
-                std::cout << "Switching control mode for well " << wells().name[w]
-                          << " from " << modestring[well_controls_iget_type(wc, current)]
-                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                if (terminal_output_)
+                {
+                    std::cout << "Switching control mode for well " << wells().name[w]
+                              << " from " << modestring[well_controls_iget_type(wc, current)]
+                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                }
                 xw.currentControls()[w] = ctrl_index;
                 // Also updating well state and primary variables.
                 // We can only be switching to BHP and SURFACE_RATE
@@ -1890,7 +1906,7 @@ namespace detail {
     {
         // Do the global reductions
 #if HAVE_MPI
-        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
@@ -2000,7 +2016,7 @@ namespace detail {
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
+        if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
             std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
@@ -2012,23 +2028,27 @@ namespace detail {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
         }
 
-        if (iteration == 0) {
-            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+        if ( terminal_output_ )
+        {
+            // Only rank 0 does print to std::cout
+            if (iteration == 0) {
+                std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+            }
+            const std::streamsize oprec = std::cout.precision(3);
+            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+            std::cout << std::setw(4) << iteration
+                      << std::setw(11) << mass_balance_residual[Water]
+                      << std::setw(11) << mass_balance_residual[Oil]
+                      << std::setw(11) << mass_balance_residual[Gas]
+                      << std::setw(11) << CNV[Water]
+                      << std::setw(11) << CNV[Oil]
+                      << std::setw(11) << CNV[Gas]
+                      << std::setw(11) << residualWellFlux
+                      << std::setw(11) << residualWell
+                      << std::endl;
+            std::cout.precision(oprec);
+            std::cout.flags(oflags);
         }
-        const std::streamsize oprec = std::cout.precision(3);
-        const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-        std::cout << std::setw(4) << iteration
-                  << std::setw(11) << mass_balance_residual[Water]
-                  << std::setw(11) << mass_balance_residual[Oil]
-                  << std::setw(11) << mass_balance_residual[Gas]
-                  << std::setw(11) << CNV[Water]
-                  << std::setw(11) << CNV[Oil]
-                  << std::setw(11) << CNV[Gas]
-                  << std::setw(11) << residualWellFlux
-                  << std::setw(11) << residualWell
-                  << std::endl;
-        std::cout.precision(oprec);
-        std::cout.flags(oflags);
         return converged;
     }
 
