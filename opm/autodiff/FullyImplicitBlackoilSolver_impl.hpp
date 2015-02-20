@@ -296,10 +296,13 @@ namespace detail {
 
             detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
 
-            if (isOscillate && verbosity_) {
+            if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
+                if (verbosity_)
+                {
+                    std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
+                }
             }
 
             stablizeNewton(dx, dxOld, omega, relaxtype);
