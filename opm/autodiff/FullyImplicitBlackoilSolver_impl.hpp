@@ -212,7 +212,17 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
+        , verbosity_ (true)
     {
+#if HAVE_MPI
+        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            // Only rank 0 does print to std::cout
+            verbosity_= (info.communicator().rank()==0);
+        }
+#endif
     }
 
 
@@ -286,7 +296,7 @@ namespace detail {
 
             detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
 
-            if (isOscillate) {
+            if (isOscillate && verbosity_) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
                 std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
@@ -1113,9 +1123,12 @@ namespace detail {
             }
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
-                std::cout << "Switching control mode for well " << wells().name[w]
-                          << " from " << modestring[well_controls_iget_type(wc, current)]
-                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                if (verbosity_)
+                {
+                    std::cout << "Switching control mode for well " << wells().name[w]
+                              << " from " << modestring[well_controls_iget_type(wc, current)]
+                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                }
                 xw.currentControls()[w] = ctrl_index;
                 // Also updating well state and primary variables.
                 // We can only be switching to BHP and SURFACE_RATE
@@ -1993,23 +2006,27 @@ namespace detail {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
         }
 
-        if (iteration == 0) {
-            std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+        if ( verbosity_ )
+        {
+            // Only rank 0 does print to std::cout
+            if (iteration == 0) {
+                std::cout << "\nIter    MB(OIL)  MB(WATER)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+            }
+            const std::streamsize oprec = std::cout.precision(3);
+            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+            std::cout << std::setw(4) << iteration
+                      << std::setw(11) << mass_balance_residual[Water]
+                      << std::setw(11) << mass_balance_residual[Oil]
+                      << std::setw(11) << mass_balance_residual[Gas]
+                      << std::setw(11) << CNV[Water]
+                      << std::setw(11) << CNV[Oil]
+                      << std::setw(11) << CNV[Gas]
+                      << std::setw(11) << residualWellFlux
+                      << std::setw(11) << residualWell
+                      << std::endl;
+            std::cout.precision(oprec);
+            std::cout.flags(oflags);
         }
-        const std::streamsize oprec = std::cout.precision(3);
-        const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-        std::cout << std::setw(4) << iteration
-                  << std::setw(11) << mass_balance_residual[Water]
-                  << std::setw(11) << mass_balance_residual[Oil]
-                  << std::setw(11) << mass_balance_residual[Gas]
-                  << std::setw(11) << CNV[Water]
-                  << std::setw(11) << CNV[Oil]
-                  << std::setw(11) << CNV[Gas]
-                  << std::setw(11) << residualWellFlux
-                  << std::setw(11) << residualWell
-                  << std::endl;
-        std::cout.precision(oprec);
-        std::cout.flags(oflags);
         return converged;
     }
 
