@@ -149,7 +149,7 @@ public:
     
     /// \brief Constructor.
     /// \param grid The grid whose information we represent.
-    FaceCellsContainerProxy(const Dune::CpGrid* grid)
+    explicit FaceCellsContainerProxy(const Dune::CpGrid* grid)
         : grid_(grid)
     {}
     /// \brief Get the mapping for a cell.
@@ -175,7 +175,7 @@ private:
     class IndexIterator
     {
     public:
-        IndexIterator(int index)
+        explicit IndexIterator(int index)
         : index_(index)
         {}
 
@@ -275,7 +275,7 @@ public:
     typedef LocalIndexProxy<AccessMethod, SizeMethod> row_type;
     /// \brief Constructor.
     /// \param grid The grid whose information we represent.
-    LocalIndexContainerProxy(const Dune::CpGrid* grid)
+    explicit LocalIndexContainerProxy(const Dune::CpGrid* grid)
         : grid_(grid)
     {}
     /// \brief Get the mapping for a cell.
@@ -368,7 +368,7 @@ class Cell2FacesContainer
 public:
     typedef  Cell2FacesRow row_type;
     
-    Cell2FacesContainer(const Dune::CpGrid* grid)
+    explicit Cell2FacesContainer(const Dune::CpGrid* grid)
         : grid_(grid)
     {};
     
