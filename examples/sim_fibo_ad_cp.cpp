@@ -316,8 +316,8 @@ try
 
     if( grid->comm().rank()==0 )
     {
-    std::cout << "\n\n================    End of simulation     ===============\n\n";
-    fullReport.report(std::cout);
+        std::cout << "\n\n================    End of simulation     ===============\n\n";
+        fullReport.report(std::cout);
     }
 
     if (output) {
