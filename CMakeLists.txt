@@ -56,7 +56,7 @@ endmacro (prereqs_hook)
 macro (sources_hook)
 	if(DUNE_CORNERPOINT_FOUND OR dune-cornerpoint_FOUND)
 		list (APPEND examples_SOURCES
-			${PROJECT_SOURCE_DIR}/examples/sim_fibo_ad_cp.cpp
+			${PROJECT_SOURCE_DIR}/examples/flow_cp.cpp
 			)
 	endif()
 endmacro (sources_hook)
