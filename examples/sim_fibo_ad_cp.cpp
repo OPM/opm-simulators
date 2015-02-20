@@ -198,7 +198,10 @@ try
             }
         }
     } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
-        OPM_THROW(std::logic_error, "sim_fibo_ad_cp does not support EQUIL initialization.");
+        state.init(grid->numCells(), grid->numFaces(), props->numPhases());
+        const double grav = param.getDefault("gravity", unit::gravity);
+        initStateEquil(*grid, *props, deck, eclipseState, grav, state);
+        state.faceflux().resize(grid->numFaces(), 0.0);
     } else {
         initBlackoilStateFromDeck(grid->numCells(), &(grid->globalCell())[0],
                                   grid->numFaces(), UgGridHelpers::faceCells(*grid),

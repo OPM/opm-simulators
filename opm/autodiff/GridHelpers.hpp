@@ -1,6 +1,7 @@
 /*
-  Copyright 2014 Dr. Markus Blatt - HPC-Simulation-Software & Services.
+  Copyright 2014, 2015 Dr. Markus Blatt - HPC-Simulation-Software & Services.
   Copyright 2014 Statoil AS
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -170,16 +171,12 @@ private:
     const Dune::CpGrid* grid_;
 };
 
-class Cell2FacesRow
-{
-public:
-    class iterator
-        : public Dune::RandomAccessIteratorFacade<iterator,int, int, int>
+
+    class IndexIterator
     {
     public:
-        iterator(const Dune::cpgrid::OrientedEntityTable<0,1>::row_type* row,
-                 int index, int cell_index)
-            : row_(row), index_(index), cell_index_(cell_index)
+        IndexIterator(int index)
+        : index_(index)
         {}
 
         void increment()
@@ -190,25 +187,148 @@ public:
         {
             --index_;
         }
-        int dereference() const
-        {
-            return row_->operator[](index_).index();
-        }
-        int elementAt(int n) const
-        {
-            return row_->operator[](n).index();
-        }
         void advance(int n)
         {
             index_+=n;
         }
-        int distanceTo(const iterator& o)const
+        int distanceTo(const IndexIterator& o)const
         {
             return o.index_-index_;
         }
-        bool equals(const iterator& o) const
+        bool equals(const IndexIterator& o) const
         {
             return index_==o.index_;
+        }
+    protected:
+        int index_;
+    };
+
+
+/// \brief A proxy class representing a row of LocalIndexContainerProxy.
+/// \tparam AccessMethod Function pointer to access the values of a sparse
+///                      row (e.g. the faces attached to a cell.
+/// \tparam SizeMethod   Fuction pointer to access the size of the sparse row
+///                      (e.g. the number of faces attached to a cell.
+template<int (Dune::CpGrid::*AccessMethod)(int,int)const,
+         int (Dune::CpGrid::*SizeMethod)(int)const>
+class LocalIndexProxy
+{
+public:
+    class iterator
+        : public Dune::RandomAccessIteratorFacade<iterator,int, int, int>,
+          public IndexIterator
+    {
+    public:
+        iterator(const Dune::CpGrid* grid, int outer_index, int inner_index)
+            : IndexIterator(inner_index), grid_(grid), outer_index_(outer_index)
+        {}
+        int dereference() const
+        {
+            return std::mem_fn(AccessMethod)(*grid_, outer_index_, this->index_);
+        }
+        int elementAt(int n) const
+        {
+            return std::mem_fn(AccessMethod)(*grid_, outer_index_, n);
+        }
+    private:
+        int outer_index_;
+        const Dune::CpGrid* grid_;
+    };
+
+    typedef iterator const_iterator;
+
+    /// \brief Constructor.
+    /// \param grid The grid whose face to cell mapping we represent.
+    /// \param cell_index The index of the cell we repesent.
+    LocalIndexProxy(const Dune::CpGrid* grid, int cell_index)
+        : grid_(grid), cell_index_(cell_index)
+    {}
+    /// \brief Get the index of the cell associated with a local_index.
+    int operator[](int local_index)
+    {
+        return std::mem_fn(AccessMethod)(*grid_, cell_index_, local_index);
+    }
+    const_iterator begin()
+    {
+        return const_iterator(grid_, cell_index_, 0);
+    }
+    const_iterator end()
+    {
+        return const_iterator(grid_, cell_index_,
+                              std::mem_fn(SizeMethod)(*grid_, cell_index_));
+    }
+private:
+    const Dune::CpGrid* grid_;
+    int cell_index_;
+};
+
+/// \brief A class representing the sparse mapping of entity relations (e.g. vertices of faces).
+/// \tparam AccessMethod Function pointer to access the values of a sparse
+///                      row (e.g. the vertices attached to a face.
+/// \tparam SizeMethod   Fuction pointer to access the size of the sparse row
+///                      (e.g. the number of vertices attached to a face.
+template<int (Dune::CpGrid::*AccessMethod)(int,int)const,
+         int (Dune::CpGrid::*SizeMethod)(int)const>
+class LocalIndexContainerProxy
+{
+public:
+    typedef LocalIndexProxy<AccessMethod, SizeMethod> row_type;
+    /// \brief Constructor.
+    /// \param grid The grid whose information we represent.
+    LocalIndexContainerProxy(const Dune::CpGrid* grid)
+        : grid_(grid)
+    {}
+    /// \brief Get the mapping for a cell.
+    /// \param cell_index The index of the cell.
+    row_type operator[](int cell_index) const
+    {
+        return row_type(grid_, cell_index);
+    }
+    /// \brief Get a face associated with a cell.
+    /// \param cell_index The index of the cell.
+    /// \param local_index The local index of the cell, either 0 or 1.
+    /// \param The index of the face or -1 if it is not present because of
+    /// a boundary.
+    int operator()(int cell_index, int local_index) const
+    {
+        return std::mem_fn(AccessMethod)(*grid_, cell_index, local_index);
+    }
+private:
+    const Dune::CpGrid* grid_;
+};
+
+/// \brief A class representing the face to vertices mapping similar to the
+/// way done in UnstructuredGrid.
+class FaceVerticesContainerProxy
+    : public LocalIndexContainerProxy<&Dune::CpGrid::faceVertex, &Dune::CpGrid::numFaceVertices>
+{
+public:
+    /// \brief Constructor.
+    /// \param grid The grid whose information we represent.
+    FaceVerticesContainerProxy(const Dune::CpGrid* grid)
+        : LocalIndexContainerProxy<&Dune::CpGrid::faceVertex, &Dune::CpGrid::numFaceVertices>(grid)
+    {}
+};
+
+class Cell2FacesRow
+{
+public:
+    class iterator
+        : public Dune::RandomAccessIteratorFacade<iterator,int, int, int>,
+        public IndexIterator
+    {
+    public:
+        iterator(const Dune::cpgrid::OrientedEntityTable<0,1>::row_type* row,
+                 int index, int cell_index)
+            : IndexIterator(index), row_(row), cell_index_(cell_index)
+        {}
+        int dereference() const
+        {
+            return row_->operator[](this->index_).index();
+        }
+        int elementAt(int n) const
+        {
+            return row_->operator[](n).index();
         }
         int getCellIndex()const
         {
@@ -217,7 +337,6 @@ public:
         
     private:
         const Dune::cpgrid::OrientedEntityTable<0,1>::row_type* row_;
-        int index_;
         int cell_index_;
     };
     
@@ -391,6 +510,21 @@ Opm::AutoDiffGrid::Cell2FacesContainer cell2Faces(const Dune::CpGrid& grid);
 /// \brief Get the face to cell mapping of a grid.
 FaceCellTraits<Dune::CpGrid>::Type
 faceCells(const Dune::CpGrid& grid);
+
+template<>
+struct Face2VerticesTraits<Dune::CpGrid>
+{
+    typedef Opm::AutoDiffGrid::FaceVerticesContainerProxy Type;
+};
+
+/// \brief Get the face to vertices mapping of a grid.
+Face2VerticesTraits<Dune::CpGrid>::Type
+face2Vertices(const Dune::CpGrid& grid);
+
+/// \brief Get the coordinates of a vertex of the grid.
+/// \param grid The grid the vertex is part of.
+/// \param index The index identifying the vertex.
+const double* vertexCoordinates(const Dune::CpGrid& grid, int index);
 
 const double* faceNormal(const Dune::CpGrid& grid, int face_index);
 
