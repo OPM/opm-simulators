@@ -215,7 +215,7 @@ namespace detail {
         , terminal_output_ (true)
     {
 #if HAVE_MPI
-        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
@@ -1887,7 +1887,7 @@ namespace detail {
     {
         // Do the global reductions
 #if HAVE_MPI
-        if(linsolver_.parallelInformation().type()==typeid(ParallelISTLInformation))
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
@@ -1997,7 +1997,7 @@ namespace detail {
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
+        if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
             std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||

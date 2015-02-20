@@ -198,7 +198,7 @@ namespace Opm
             allcells_[cell] = cell;
         }
 #if HAVE_MPI
-        if(solver_.parallelInformation().type()==typeid(ParallelISTLInformation))
+        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
