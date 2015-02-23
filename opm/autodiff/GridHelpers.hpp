@@ -121,14 +121,6 @@ namespace Opm
 
 namespace AutoDiffGrid
 {
-}
-
-namespace UgGridHelpers
-{
-} // end namespace UgGridHelperHelpers
-
-namespace AutoDiffGrid
-{
 
 /// \brief Get the z coordinates of the cell centroids of a grid.
 /// \return The z coordinates of the cell centroids in an Eigen array
