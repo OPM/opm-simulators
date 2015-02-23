@@ -156,7 +156,7 @@ namespace Opm
                     typedef typename Cell2Faces::row_type::iterator Iter;
 
                     for (Iter f=faces.begin(), end=faces.end(); f!=end; ++f, ++i) {
-                        const double* const fc = AutoDiffGrid::faceCentroid(grid, *f);
+                        auto fc = AutoDiffGrid::faceCentroid(grid, *f);
 
                         for (typename Vector::Index d = 0; d < nd; ++d) {
                             gpot_[i] += grav[d] * (fc[d] - cc[d]);
