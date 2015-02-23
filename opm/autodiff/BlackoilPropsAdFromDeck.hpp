@@ -455,6 +455,9 @@ namespace Opm
                       const std::vector<int>& cells,
                       const double vap) const;
 
+        // Fills pvt_region_ with cellPvtRegionIdx_[cells].
+        void mapPvtRegions(const std::vector<int>& cells) const;
+
         RockFromDeck rock_;
         // This has to be a shared pointer as we must
         // be able to make a copy of *this in the parallel case.
@@ -466,6 +469,10 @@ namespace Opm
 
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
+
+        // Used for storing the region-per-cell array computed in calls
+        // to pvt functions.
+        mutable std::vector<int> pvt_region_;
 
         // The PVT properties. One object per active fluid phase.
         std::vector<std::shared_ptr<Opm::PvtInterface> > props_;

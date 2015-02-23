@@ -333,13 +333,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pw.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->mu(n, &pvtTableIdx_[0], pw.data(), T.data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.data(), T.data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -361,12 +362,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, &pvtTableIdx_[0], po.data(), T.data(), rs.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.data(), T.data(), rs.data(), &cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -384,13 +386,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.data(), T.data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.data(), T.data(), rs,
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -410,12 +413,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.data(), T.data(), rv.data(),&cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.data(), T.data(), rv.data(),&cond[0],
                                                 mu.data(), dmudp.data(), dmudr.data());
         return mu;
     }
@@ -433,13 +437,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pw.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->mu(n, &pvtTableIdx_[0], pw.value().data(), T.value().data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
         ADB::M dmudp_diag = spdiag(dmudp);
         const int num_blocks = pw.numBlocks();
@@ -467,12 +472,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, &pvtTableIdx_[0], po.value().data(), T.value().data(), rs.value().data(),
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
                                                 &cond[0], mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -501,13 +507,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.value().size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
         const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.value().data(), T.value().data(), rv,
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv,
                                                   mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -536,12 +543,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.value().size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, &pvtTableIdx_[0], pg.value().data(), T.value().data(), rv.value().data(),&cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(),&cond[0],
                                                   mu.data(), dmudp.data(), dmudr.data());
 
         ADB::M dmudp_diag = spdiag(dmudp);
@@ -588,6 +596,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call bWat(): water phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pw.size() == n);
 
         V b(n);
@@ -595,7 +604,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->b(n, &pvtTableIdx_[0], pw.data(), T.data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.data(), T.data(), rs,
                                                  b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -618,13 +627,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call bOil(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, &pvtTableIdx_[0], po.data(), T.data(), rs.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.data(), T.data(), rs.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -643,6 +653,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call bGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
 
         V b(n);
@@ -650,7 +661,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.data(), T.data(), rs,
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.data(), T.data(), rs,
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -673,13 +684,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.data(), T.data(), rv.data(), &cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.data(), T.data(), rv.data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         return b;
@@ -698,6 +710,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pw.size() == n);
 
         V b(n);
@@ -705,7 +718,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdr(n);
         const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->b(n, &pvtTableIdx_[0], pw.value().data(), T.value().data(), rs,
+        props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                  b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -734,13 +747,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, &pvtTableIdx_[0], po.value().data(), T.value().data(), rs.value().data(),
+        props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
                                                &cond[0], b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -769,6 +783,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
 
         V b(n);
@@ -776,7 +791,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdr(n);
         const double* rv = 0;
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.value().data(), T.value().data(), rv,
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv,
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -805,13 +820,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(pg.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, &pvtTableIdx_[0], pg.value().data(), T.value().data(), rv.value().data(), &cond[0],
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
         ADB::M dbdp_diag = spdiag(dbdp);
@@ -842,10 +858,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call rsMax(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, &pvtTableIdx_[0], po.data(), rbub.data(), drbubdp.data());
+        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.data(), rbub.data(), drbubdp.data());
         return rbub;
     }
 
@@ -874,10 +891,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call rsMax(): oil phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, &pvtTableIdx_[0], po.value().data(), rbub.data(), drbubdp.data());
+        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.value().data(), rbub.data(), drbubdp.data());
         ADB::M drbubdp_diag = spdiag(drbubdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -914,10 +932,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, &pvtTableIdx_[0], po.data(), rv.data(), drvdp.data());
+        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.data(), rv.data(), drvdp.data());
         return rv;
     }
 
@@ -946,10 +965,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
         }
         const int n = cells.size();
+        mapPvtRegions(cells);
         assert(po.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, &pvtTableIdx_[0], po.value().data(), rv.data(), drvdp.data());
+        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.value().data(), rv.data(), drvdp.data());
         ADB::M drvdp_diag = spdiag(drvdp);
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -1240,6 +1260,21 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             r = ADB::function(factor, jacs)*r;
         }
     }
+
+
+
+
+
+    // Fills pvt_region_ with cellPvtRegionIdx_[cells].
+    void BlackoilPropsAdFromDeck::mapPvtRegions(const std::vector<int>& cells) const
+    {
+        const int n = cells.size();
+        pvt_region_.resize(n);
+        for (int ii = 0; ii < n; ++ii) {
+            pvt_region_[ii] = cellPvtRegionIdx_[cells[ii]];
+        }
+    }
+
 
 } // namespace Opm
 
