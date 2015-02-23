@@ -26,23 +26,6 @@ namespace Opm
 {
 namespace AutoDiffGrid
 {
-
-// Interface functions using Unstructured grid
-/*    
-int numCells(const UnstructuredGrid& grid)
-{
-    return grid.number_of_cells;
-}
-
-int numFaces(const UnstructuredGrid& grid)
-{
-    return grid.number_of_faces;
-}
-int dimensions(const UnstructuredGrid& grid)
-{
-    return grid.dimensions;
-}
-*/
 Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>
 faceCellsToEigen(const UnstructuredGrid& grid)
 {
@@ -118,103 +101,6 @@ void extractInternalFaces(const UnstructuredGrid& grid,
 } // end namespace AutoDiffGrid
 
 #ifdef HAVE_DUNE_CORNERPOINT
-// Interface functions using CpGrid
-
-namespace UgGridHelpers
-{
-
-int numCells(const Dune::CpGrid& grid)
-{
-    return grid.numCells();
-}
-
-int numFaces(const  Dune::CpGrid& grid)
-{
-    return grid.numFaces();
-}
-
-int dimensions(const Dune::CpGrid&)
-{
-    return Dune::CpGrid::dimension;
-}
-
-int numCellFaces(const Dune::CpGrid& grid)
-{
-    return grid.numCellFaces();    
-}
-
-const int* cartDims(const Dune::CpGrid& grid)
-{
-    return &(grid.logicalCartesianSize()[0]);
-}
-
-const int*  globalCell(const Dune::CpGrid& grid)
-{
-    return &(grid.globalCell()[0]);
-}
-
-CellCentroidTraits<Dune::CpGrid>::IteratorType
-beginCellCentroids(const Dune::CpGrid& grid)
-{
-    return CellCentroidTraits<Dune::CpGrid>::IteratorType(grid, 0);
-}
-
-double cellCentroidCoordinate(const Dune::CpGrid& grid, int cell_index,
-                              int coordinate)
-{
-    return grid.cellCentroid(cell_index)[coordinate];
-}
-
-FaceCentroidTraits<Dune::CpGrid>::IteratorType
-beginFaceCentroids(const Dune::CpGrid& grid)
-{
-    return FaceCentroidTraits<Dune::CpGrid>::IteratorType(grid, 0);
-}
-
-FaceCentroidTraits<Dune::CpGrid>::ValueType
-faceCentroid(const Dune::CpGrid& grid, int face_index)
-{
-    return grid.faceCentroid(face_index);
-}
-
-Opm::AutoDiffGrid::Cell2FacesContainer cell2Faces(const Dune::CpGrid& grid)
-{
-    return Opm::AutoDiffGrid::Cell2FacesContainer(&grid);
-}
-
-FaceCellTraits<Dune::CpGrid>::Type
-faceCells(const Dune::CpGrid& grid)
-{
-    return Opm::AutoDiffGrid::FaceCellsContainerProxy(&grid);
-}
-
-Face2VerticesTraits<Dune::CpGrid>::Type
-face2Vertices(const Dune::CpGrid& grid)
-{
-    return Opm::AutoDiffGrid::FaceVerticesContainerProxy(&grid);
-}
-
-const double* vertexCoordinates(const Dune::CpGrid& grid, int index)
-{
-    return &(grid.vertexPosition(index)[0]);
-}
-
-const double* faceNormal(const Dune::CpGrid& grid, int face_index)
-{
-    return &(grid.faceNormal(face_index)[0]);
-}
-
-double faceArea(const Dune::CpGrid& grid, int face_index)
-{
-    return grid.faceArea(face_index);
-}
-
-int faceTag(const Dune::CpGrid& grid,
-            const Opm::AutoDiffGrid::Cell2FacesRow::iterator& cell_face)
-{
-    return grid.faceTag(cell_face);
-}
-} // end namespace UgGridHelpers
 
 namespace AutoDiffGrid
 {
@@ -222,7 +108,7 @@ namespace AutoDiffGrid
 ADFaceCellTraits<Dune::CpGrid>::Type
 faceCellsToEigen(const Dune::CpGrid& grid)
 {
-    return Opm::AutoDiffGrid::FaceCellsContainerProxy(&grid);
+    return Dune::cpgrid::FaceCellsContainerProxy(&grid);
 }
 
 Eigen::Array<double, Eigen::Dynamic, 1>
