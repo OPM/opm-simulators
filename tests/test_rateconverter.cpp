@@ -94,7 +94,7 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
 }
 
 
-BOOST_FIXTURE_TEST_CASE(TwoPhaseII, TestFixture<SetupSimple>)
+BOOST_FIXTURE_TEST_CASE(ThreePhase, TestFixture<SetupSimple>)
 {
     // Immiscible and incompressible two-phase fluid
     typedef std::vector<int>                     Region;
@@ -106,11 +106,11 @@ BOOST_FIXTURE_TEST_CASE(TwoPhaseII, TestFixture<SetupSimple>)
     RCvrt  cvrt(ad_props, reg);
 
     Opm::BlackoilState x;
-    x.init(*grid.c_grid(), 2);
+    x.init(*grid.c_grid(), 3);
 
     cvrt.defineState(x);
 
-    std::vector<double> qs{1.0e3, 1.0e1};
+    std::vector<double> qs{1.0e3, 1.0e1, 1.0e-1};
     std::vector<double> coeff(qs.size(), 0.0);
 
     // Immiscible and incompressible: All coefficients are one (1),
@@ -118,4 +118,5 @@ BOOST_FIXTURE_TEST_CASE(TwoPhaseII, TestFixture<SetupSimple>)
     cvrt.calcCoeff(qs, 0, coeff);
     BOOST_CHECK_CLOSE(coeff[0], 1.0, 1.0e-6);
     BOOST_CHECK_CLOSE(coeff[1], 1.0, 1.0e-6);
+    BOOST_CHECK_CLOSE(coeff[2], 1.0, 1.0e-6);
 }
