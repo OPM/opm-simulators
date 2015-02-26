@@ -477,15 +477,7 @@ namespace Opm
         // The PVT properties. One object per active fluid phase.
         std::vector<std::shared_ptr<Opm::PvtInterface> > props_;
 
-        // The index of the PVT table which ought to be used for each
-        // cell. Eclipse does not seem to allow specifying fluid-phase
-        // specific table indices, so for the sake of simplicity, we
-        // don't do this either. (if it turns out that Eclipes does in
-        // fact support it or if it by some miracle gains this feature
-        // in the future, this attribute needs to become a vector of
-        // vectors of ints.)
-        std::vector<int> pvtTableIdx_;
-
+        // Densities, one std::array per PVT region.
         std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
         
         // VAPPARS

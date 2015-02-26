@@ -145,12 +145,12 @@ public:
     BlackoilPropsDataHandle(const BlackoilPropsAdFromDeck& sendProps,
                             BlackoilPropsAdFromDeck& recvProps)
         : sendProps_(sendProps), recvProps_(recvProps),
-          size_(2)
+          size_(1)
     {
         // satOilMax might be non empty. In this case we will need to send it, too.
         if ( sendProps.satOilMax_.size()>0 )
         {
-            recvProps_.satOilMax_.resize(recvProps_.pvtTableIdx_.size(),
+            recvProps_.satOilMax_.resize(recvProps_.satOilMax_.size(),
                                          -std::numeric_limits<double>::max());
             ++size_;
         }
@@ -166,7 +166,7 @@ public:
     {
         if ( T::codimension == 0)
         {
-            // We only send pvtTableIdx_, cellPvtRegionIdx_, and maybe satOilMax_
+            // We only send cellPvtRegionIdx_, and maybe satOilMax_
             return size_;
         }
         else
@@ -180,12 +180,9 @@ public:
         assert( T::codimension == 0);
 
         buffer.write(sendProps_.cellPvtRegionIndex()[e.index()]);
-        buffer.write(sendProps_.pvtTableIdx_[e.index()]);
-        if ( size_==2 )
-        {
-            return;
+        if ( size_ > 1 ) {
+            buffer.write(sendProps_.satOilMax_[e.index()]);
         }
-        buffer.write(sendProps_.satOilMax_[e.index()]);
     }
     template<class B, class T>
     void scatter(B& buffer, const T& e, std::size_t size)
@@ -195,12 +192,10 @@ public:
         double val;
         buffer.read(val);
         recvProps_.cellPvtRegionIdx_[e.index()]=val;
-        buffer.read(val);
-        recvProps_.pvtTableIdx_[e.index()]=val;
-        if ( size_==2 )
-            return;
-        buffer.read(val);
-        recvProps_.satOilMax_[e.index()]=val;
+        if ( size_ > 1 ) {
+            buffer.read(val);
+            recvProps_.satOilMax_[e.index()]=val;
+        }
     }
     bool contains(int dim, int codim)
     {

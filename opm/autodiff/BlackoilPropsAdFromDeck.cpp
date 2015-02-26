@@ -90,7 +90,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // For data that is dependant on the subgrid we simply allocate space
     // and initialize with obviously bogus numbers.
     cellPvtRegionIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
-    pvtTableIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
 }
 
     /// Initializes the properties.
@@ -139,7 +138,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         // first, calculate the PVT table index for each compressed
         // cell. This array is required to construct the PVT classes
         // below.
-        Opm::extractPvtTableIndex(pvtTableIdx_,
+        Opm::extractPvtTableIndex(cellPvtRegionIdx_,
                                   deck,
                                   number_of_cells,
                                   global_cell);
