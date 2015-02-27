@@ -72,7 +72,7 @@ endif()
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
-	examples/sim_fibo_ad.cpp
+	examples/flow.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
         examples/opm_init_check.cpp
@@ -82,7 +82,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
-	examples/sim_fibo_ad.cpp
+	examples/flow.cpp
         examples/opm_init_check.cpp
 	)
 
