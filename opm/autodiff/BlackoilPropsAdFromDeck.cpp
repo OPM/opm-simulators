@@ -135,14 +135,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             }
         }
 
-        // first, calculate the PVT table index for each compressed
-        // cell. This array is required to construct the PVT classes
-        // below.
-        Opm::extractPvtTableIndex(cellPvtRegionIdx_,
-                                  deck,
-                                  number_of_cells,
-                                  global_cell);
-
         const int numSamples = 0;
 
         // Resize the property objects container
