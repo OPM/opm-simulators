@@ -467,8 +467,7 @@ namespace Opm
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
 
-        // The PVT properties. One object per PVT region and per
-        // active fluid phase.
+        // The PVT properties. One object per active fluid phase.
         std::vector<std::shared_ptr<Opm::PvtInterface> > props_;
 
         // The index of the PVT table which ought to be used for each

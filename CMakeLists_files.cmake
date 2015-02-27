@@ -26,14 +26,12 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-	opm/autodiff/BlackoilPropsAd.cpp
 	opm/autodiff/BlackoilPropsAdInterface.cpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.cpp
 	opm/autodiff/NewtonIterationBlackoilCPR.cpp
 	opm/autodiff/NewtonIterationBlackoilSimple.cpp
 	opm/autodiff/GridHelpers.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
-	opm/autodiff/SimulatorCompressibleAd.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
@@ -75,7 +73,6 @@ endif()
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/sim_fibo_ad.cpp
-	examples/sim_2p_comp_ad.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
         examples/opm_init_check.cpp
@@ -96,7 +93,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
-	opm/autodiff/BlackoilPropsAd.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
@@ -113,8 +109,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
-        opm/autodiff/RedistributeDataHandles.hpp
-	opm/autodiff/SimulatorCompressibleAd.hpp
+	opm/autodiff/RedistributeDataHandles.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
