@@ -49,8 +49,9 @@ PVCDO
 /
 
 PVDG
--- Pg Bg(Pg) mug
-    1   1     1
+-- Pg       Bg(Pg)  mug
+    1            1    1
+  800   0.99999999    1
 /
 
 SWOF

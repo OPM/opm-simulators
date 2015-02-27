@@ -455,6 +455,9 @@ namespace Opm
                       const std::vector<int>& cells,
                       const double vap) const;
 
+        // Fills pvt_region_ with cellPvtRegionIdx_[cells].
+        void mapPvtRegions(const std::vector<int>& cells) const;
+
         RockFromDeck rock_;
         // This has to be a shared pointer as we must
         // be able to make a copy of *this in the parallel case.
@@ -467,18 +470,14 @@ namespace Opm
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
 
+        // Used for storing the region-per-cell array computed in calls
+        // to pvt functions.
+        mutable std::vector<int> pvt_region_;
+
         // The PVT properties. One object per active fluid phase.
         std::vector<std::shared_ptr<Opm::PvtInterface> > props_;
 
-        // The index of the PVT table which ought to be used for each
-        // cell. Eclipse does not seem to allow specifying fluid-phase
-        // specific table indices, so for the sake of simplicity, we
-        // don't do this either. (if it turns out that Eclipes does in
-        // fact support it or if it by some miracle gains this feature
-        // in the future, this attribute needs to become a vector of
-        // vectors of ints.)
-        std::vector<int> pvtTableIdx_;
-
+        // Densities, one std::array per PVT region.
         std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
         
         // VAPPARS
