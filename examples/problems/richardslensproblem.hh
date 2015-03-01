@@ -147,6 +147,7 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
+    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -181,7 +182,9 @@ public:
     RichardsLensProblem(Simulator &simulator)
         : ParentType(simulator)
         , pnRef_(1e5)
-    { }
+    {
+        dofIsInLens_.resize(simulator.model().numGridDof());
+    }
 
     /*!
      * \copydoc FvBaseProblem::finishInit
@@ -218,6 +221,19 @@ public:
 
         lensK_ = this->toDimMatrix_(1e-12);
         outerK_ = this->toDimMatrix_(5e-12);
+
+        // determine which degrees of freedom are in the lens
+        Stencil stencil(this->gridView());
+        auto elemIt = this->gridView().template begin</*codim=*/0>();
+        auto elemEndIt = this->gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            stencil.update(*elemIt);
+            for (int dofIdx = 0; dofIdx < stencil.numPrimaryDof(); ++ dofIdx) {
+                int globalDofIdx = stencil.globalSpaceIndex(dofIdx);
+                const auto& dofPos = stencil.subControlVolume(dofIdx).center();
+                dofIsInLens_[globalDofIdx] = isInLens_(dofPos);
+            }
+        }
     }
 
     /*!
@@ -255,6 +271,9 @@ public:
      */
     template <class Context>
     Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    { return temperature(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
+
+    Scalar temperature(int globalSpaceIdx, int timeIdx) const
     { return 273.15 + 10; } // -> 10°C
 
     /*!
@@ -286,8 +305,13 @@ public:
                                                int spaceIdx,
                                                int timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
-        if (isInLens_(pos))
+        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return materialLawParams(globalSpaceIdx, timeIdx);
+    }
+
+    const MaterialLawParams& materialLawParams(int globalSpaceIdx, int timeIdx) const
+    {
+        if (dofIsInLens_[globalSpaceIdx])
             return lensMaterialParams_;
         return outerMaterialParams_;
     }
@@ -301,6 +325,11 @@ public:
     Scalar referencePressure(const Context &context,
                              int spaceIdx,
                              int timeIdx) const
+    { return referencePressure(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); };
+
+    // the Richards model does not have an element context available at all places
+    // where the reference pressure is required...
+    Scalar referencePressure(int globalSpaceIdx, int timeIdx) const
     { return pnRef_; }
 
     //! \}
@@ -427,6 +456,8 @@ private:
     DimMatrix outerK_;
     MaterialLawParams lensMaterialParams_;
     MaterialLawParams outerMaterialParams_;
+
+    std::vector<bool> dofIsInLens_;
 
     Scalar eps_;
     Scalar pnRef_;
