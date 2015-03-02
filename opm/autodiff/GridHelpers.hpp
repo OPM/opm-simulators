@@ -58,49 +58,12 @@ struct ADFaceCellTraits
 Eigen::Array<double, Eigen::Dynamic, 1>
 cellCentroidsZToEigen(const UnstructuredGrid& grid);
 
-/// \brief Get the centroid of a cell.
-/// \param grid The grid whose cell centroid we query.
-/// \param cell_index The index of the corresponding cell.
-const double* cellCentroid(const UnstructuredGrid& grid, int cell_index);
-
-/// \brief Get the cell centroid of a face.
-/// \param grid The grid whose cell centroid we query.
-/// \param face_index The index of the corresponding face.
-const double* faceCentroid(const UnstructuredGrid& grid, int face_index);
-
 /// \brief Mapping of the grid type to the type of the cell to faces mapping.
 template<class T>
 struct ADCell2FacesTraits
     : public Opm::UgGridHelpers::Cell2FacesTraits<T>
 {
 };
-
-/// \brief Get the volume of a cell.
-/// \param grid The grid the cell belongs to.
-/// \param cell_index The index of the cell.
-double cellVolume(const UnstructuredGrid& grid, int cell_index);
-
-/// \brief The mapping of the grid type to type of the iterator over
-/// the cell volumes.
-///
-/// The value of the mapping is stored in nested type IteratorType
-/// \tparam T The type of the grid.
-template<class T>
-struct ADCellVolumesTraits
-{
-};
-
-template<>
-struct ADCellVolumesTraits<UnstructuredGrid>
-{
-    typedef const double* IteratorType;
-};
-
-/// \brief Get an iterator over the cell volumes of a grid positioned at the first cell.
-const double* beginCellVolumes(const UnstructuredGrid& grid);
-
-/// \brief Get an iterator over the cell volumes of a grid positioned after the last cell.
-const double* endCellVolumes(const UnstructuredGrid& grid);
 
 /// \brief extracts the internal faces of a grid.
 /// \param[in] The grid whose internal faces we query.
@@ -114,8 +77,6 @@ void extractInternalFaces(const UnstructuredGrid& grid,
 } // end namespace Opm
 
 #ifdef HAVE_DUNE_CORNERPOINT
-
-#include <dune/common/iteratorfacades.hh>
 namespace Opm
 {
 
@@ -127,84 +88,11 @@ namespace AutoDiffGrid
 Eigen::Array<double, Eigen::Dynamic, 1>
 cellCentroidsZToEigen(const  Dune::CpGrid& grid);
 
-/// \brief Get the centroid of a cell.
-/// \param grid The grid whose cell centroid we query.
-/// \param cell_index The index of the corresponding cell.
-const double* cellCentroid(const Dune::CpGrid& grid, int cell_index);
-
-/// \brief Get the cell centroid of a face.
-/// \param grid The grid whose cell centroid we query.
-/// \param face_index The index of the corresponding face.
-const double* faceCentroid(const Dune::CpGrid& grid, int face_index);
-
 template<>
 struct ADCell2FacesTraits<Dune::CpGrid>
 {
     typedef Dune::cpgrid::Cell2FacesContainer Type;
 };
-
-/// \brief Get the volume of a cell.
-/// \param grid The grid the cell belongs to.
-/// \param cell_index The index of the cell.
-double cellVolume(const  Dune::CpGrid& grid, int cell_index);
-
-/// \brief An iterator over the cell volumes.
-class CellVolumeIterator
-    : public Dune::RandomAccessIteratorFacade<CellVolumeIterator, double, double, int>
-{
-public:
-    /// \brief Creates an iterator.
-    /// \param grid The grid the iterator belongs to.
-    /// \param cell_index The position of the iterator.
-    CellVolumeIterator(const  Dune::CpGrid& grid, int cell_index)
-        : grid_(&grid), cell_index_(cell_index)
-    {}
-
-    double dereference() const
-    {
-        return grid_->cellVolume(cell_index_);
-    }
-    void increment()
-    {
-        ++cell_index_;
-    }
-    double elementAt(int n) const
-    {
-        return grid_->cellVolume(n);
-    }
-    void advance(int n)
-    {
-        cell_index_+=n;
-    }
-    void decrement()
-    {
-        --cell_index_;
-    }
-    int distanceTo(const CellVolumeIterator& o) const
-    {
-        return o.cell_index_-cell_index_;
-    }
-    bool equals(const CellVolumeIterator& o) const
-    {
-        return o.grid_==grid_ && o.cell_index_==cell_index_;
-    }
-    
-private:
-    const Dune::CpGrid* grid_;
-    int cell_index_;
-};
-
-template<>
-struct ADCellVolumesTraits<Dune::CpGrid>
-{
-    typedef CellVolumeIterator IteratorType;
-};
-
-/// \brief Get an iterator over the cell volumes of a grid positioned at the first cell.
-CellVolumeIterator beginCellVolumes(const Dune::CpGrid& grid);
-
-/// \brief Get an iterator over the cell volumes of a grid positioned one after the last cell.
-CellVolumeIterator endCellVolumes(const Dune::CpGrid& grid);
 
 /// \brief extracts the internal faces of a grid.
 /// \param[in] The grid whose internal faces we query.
@@ -243,6 +131,10 @@ using Opm::UgGridHelpers::getCoordinate;
 using Opm::UgGridHelpers::numCellFaces;
 using Opm::UgGridHelpers::beginFaceCentroids;
 using Opm::UgGridHelpers::beginCellCentroids;
+using Opm::UgGridHelpers::cellCentroid;
+using Opm::UgGridHelpers::faceCentroid;
+using Opm::UgGridHelpers::beginCellVolumes;
+using Opm::UgGridHelpers::cellVolume;
 
 template<>
 struct ADFaceCellTraits<UnstructuredGrid>

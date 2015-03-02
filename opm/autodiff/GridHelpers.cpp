@@ -40,35 +40,12 @@ cellCentroidsZToEigen(const UnstructuredGrid& grid)
         (grid.cell_centroids, grid.number_of_cells, grid.dimensions).rightCols<1>();
 }
 
-const double*
-cellCentroid(const UnstructuredGrid& grid, int cell_index)
-{
-    return grid.cell_centroids+(cell_index*grid.dimensions);
-}
-
-const double* faceCentroid(const UnstructuredGrid& grid, int face_index)
-{
-    return grid.face_centroids+(face_index*grid.dimensions);
-}
 /*
 SparseTableView cell2Faces(const UnstructuredGrid& grid)
 {
     return SparseTableView(grid.cell_faces, grid.cell_facepos, numCells(grid));
 }
 */
-double cellVolume(const UnstructuredGrid& grid, int cell_index)
-{
-    return grid.cell_volumes[cell_index];
-}
-
-const double* beginCellVolumes(const UnstructuredGrid& grid)
-{
-    return grid.cell_volumes;
-}
-const double* endCellVolumes(const UnstructuredGrid& grid)
-{
-    return grid.cell_volumes+numCells(grid);
-}
 
 void extractInternalFaces(const UnstructuredGrid& grid,
                           Eigen::Array<int, Eigen::Dynamic, 1>& internal_faces,
@@ -119,24 +96,10 @@ cellCentroidsZToEigen(const Dune::CpGrid& grid)
     Eigen::Array<double, Eigen::Dynamic, 1> array(rows);
     // Fill it with the z coordinate of the cell centroids.
     for (int i=0; i<rows; ++i)
-        array[i]=cellCentroid(grid, i)[2];
+        array[i]=Opm::UgGridHelpers::cellCentroid(grid, i)[2];
     return array;
 }
 
-const double* cellCentroid(const Dune::CpGrid& grid, int cell_index)
-{
-    return &(grid.cellCentroid(cell_index)[0]);
-}
-
-const double* faceCentroid(const Dune::CpGrid& grid, int face_index)
-{
-    return &(grid.faceCentroid(face_index)[0]);
-}
-
-double cellVolume(const  Dune::CpGrid& grid, int cell_index)
-{
-    return grid.cellVolume(cell_index);
-}
 
 void extractInternalFaces(const Dune::CpGrid& grid,
                           Eigen::Array<int, Eigen::Dynamic, 1>& internal_faces,
@@ -167,16 +130,6 @@ void extractInternalFaces(const Dune::CpGrid& grid,
     }
 }
 
-
-CellVolumeIterator beginCellVolumes(const Dune::CpGrid& grid)
-{
-    return CellVolumeIterator(grid, 0);
-}
-
-CellVolumeIterator endCellVolumes(const Dune::CpGrid& grid)
-{
-    return CellVolumeIterator(grid, numCells(grid));
-}
 }       // end namespace AutoDiffGrid
 #endif  // HAVE_DUNE_CORNERPOINT
 }       // end namespace Opm
