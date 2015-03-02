@@ -81,7 +81,7 @@ public:
         }
         for ( int i=0; i<sendGrid_.numCellFaces(e.index()); ++i )
         {
-            buffer.write(recvState_.faceflux()[sendGrid_.cellFace(e.index(), i)]);
+            buffer.write(sendState_.faceflux()[sendGrid_.cellFace(e.index(), i)]);
         }
     }
     template<class B, class T>
