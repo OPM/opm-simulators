@@ -644,7 +644,6 @@ namespace detail {
         //    taking std::vector<double> arguments, and not Eigen objects.
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const int nw = wells().number_of_wells;
-        const int np = wells().number_of_phases;
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         // Compute the average pressure in each well block
