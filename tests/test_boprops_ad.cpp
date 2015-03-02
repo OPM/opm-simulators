@@ -129,6 +129,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
     const Opm::BlackoilPropsAdFromDeck::Cells cells(5, 0);
 
     typedef Opm::BlackoilPropsAdFromDeck::V V;
+    typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
 
     V Vpw;
     Vpw.resize(cells.size());
@@ -143,7 +144,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityValue, TestFixture<SetupSimple>)
 
     BOOST_REQUIRE_EQUAL(Vpw.size(), cells.size());
 
-    const Opm::BlackoilPropsAdFromDeck::V VmuWat = boprops_ad.muWat(Vpw, T, cells);
+    const V VmuWat = boprops_ad.muWat(ADB::constant(Vpw), ADB::constant(T), cells).value();
 
     BOOST_REQUIRE_EQUAL(Vpw.size(), cells.size());
 
@@ -159,6 +160,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
     const Opm::BlackoilPropsAdFromDeck::Cells cells(5, 0);
 
     typedef Opm::BlackoilPropsAdFromDeck::V V;
+    typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
 
     V Vpw;
     Vpw.resize(cells.size());
@@ -173,7 +175,7 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
 
     typedef Opm::BlackoilPropsAdFromDeck::ADB ADB;
 
-    const V VmuWat = boprops_ad.muWat(Vpw, T, cells);
+    const V VmuWat = boprops_ad.muWat(ADB::constant(Vpw), ADB::constant(T), cells).value();
     for (V::Index i = 0, n = Vpw.size(); i < n; ++i) {
         const std::vector<int> bp(1, grid.c_grid()->number_of_cells);
 

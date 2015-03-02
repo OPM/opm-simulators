@@ -134,15 +134,6 @@ namespace Opm
 
         // ------ Viscosity ------
 
-        /// Water viscosity.
-        /// \param[in]  pw     Array of n water pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n viscosity values.
-        V muWat(const V& pw,
-                const V& T,
-                const Cells& cells) const;
-
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  T      Array of n temperature values.

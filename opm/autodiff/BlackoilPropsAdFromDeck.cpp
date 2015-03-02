@@ -311,30 +311,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
     // ------ Viscosity ------
 
-    /// Water viscosity.
-    /// \param[in]  pw     Array of n water pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    V BlackoilPropsAdFromDeck::muWat(const V& pw,
-                                     const V& T,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pw.size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-        const double* rs = 0;
-
-        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.data(), T.data(), rs,
-                                                  mu.data(), dmudp.data(), dmudr.data());
-        return mu;
-    }
 
     /// Oil viscosity.
     /// \param[in]  po     Array of n oil pressure values.
@@ -437,13 +413,17 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
-        ADB::M dmudp_diag = spdiag(dmudp);
-        const int num_blocks = pw.numBlocks();
-        std::vector<ADB::M> jacs(num_blocks);
-        for (int block = 0; block < num_blocks; ++block) {
-            fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
+        if (pw.derivative().empty()) {
+            return ADB::constant(mu);
+        } else {
+            ADB::M dmudp_diag = spdiag(dmudp);
+            const int num_blocks = pw.numBlocks();
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
+            }
+            return ADB::function(mu, jacs);
         }
-        return ADB::function(mu, jacs);
     }
 
     /// Oil viscosity.

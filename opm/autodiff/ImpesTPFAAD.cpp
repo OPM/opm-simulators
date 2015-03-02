@@ -553,20 +553,7 @@ namespace {
 
     V ImpesTPFAAD::fluidMu(const int phase, const V& p, const V& T, const std::vector<int>& cells) const
     {
-        switch (phase) {
-        case Water:
-            return fluid_.muWat(p, T, cells);
-        case Oil: {
-            V dummy_rs = V::Zero(p.size(), 1) * p;
-            std::vector<PhasePresence> cond(dummy_rs.size());
-
-            return fluid_.muOil(p, T, dummy_rs, cond, cells);
-        }
-        case Gas:
-            return fluid_.muGas(p, T, cells);
-        default:
-            OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
-        }
+        return fluidMu(phase, ADB::constant(p), ADB::constant(T), cells).value();
     }
 
 
