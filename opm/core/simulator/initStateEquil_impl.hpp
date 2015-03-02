@@ -767,7 +767,7 @@ namespace Opm
     } // namespace Equil
 
 
-    namespace
+    namespace Details
     {
         /// Convert saturations from a vector of individual phase saturation vectors
         /// to an interleaved format where all values for a given cell come before all
@@ -784,7 +784,7 @@ namespace Opm
             }
             return s;
         }
-    }
+    } // namespace Details
 
 
     /**
@@ -817,7 +817,7 @@ namespace Opm
             ? pu.phase_pos[BlackoilPhases::Liquid]
             : pu.phase_pos[BlackoilPhases::Aqua];
         state.pressure() = isc.press()[ref_phase];
-        state.saturation() = convertSats(isc.saturation());
+        state.saturation() = Details::convertSats(isc.saturation());
         state.gasoilratio() = isc.rs();
         state.rv() = isc.rv();
         initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
