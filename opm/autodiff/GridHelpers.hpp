@@ -77,8 +77,6 @@ void extractInternalFaces(const UnstructuredGrid& grid,
 } // end namespace Opm
 
 #ifdef HAVE_DUNE_CORNERPOINT
-
-#include <dune/common/iteratorfacades.hh>
 namespace Opm
 {
 
