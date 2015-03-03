@@ -105,6 +105,11 @@ namespace Opm
         cpr_ilu_n_        = param.getDefault("cpr_ilu_n", 0);
         cpr_use_amg_      = param.getDefault("cpr_use_amg", false);
         cpr_use_bicgstab_ = param.getDefault("cpr_use_bicgstab", true);
+
+        linear_solver_reduction_ = param.getDefault("linear_solver_reduction", 1e-3 );
+        linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", 150 );
+        linear_solver_restart_   = param.getDefault("linear_solver_restart", 40 );
+        linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", 0 );
     }
 
 
@@ -170,7 +175,7 @@ namespace Opm
 
         // Create ISTL matrix for elliptic part.
         DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
-        
+
         // Right hand side.
         Vector istlb(istlA.N());
         std::copy_n(b.data(), istlb.size(), istlb.begin());
@@ -201,7 +206,7 @@ namespace Opm
             Dune::Amg::SequentialInformation info;
             constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, result);
         }
-            
+
         // store number of iterations
         iterations_ = result.iterations;
 
