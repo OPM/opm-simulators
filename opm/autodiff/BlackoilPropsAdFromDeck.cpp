@@ -428,21 +428,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
     // ------ Formation volume factor (b) ------
 
-    // These methods all call the matrix() method, after which the variable
-    // (also) called 'matrix' contains, in each row, the A = RB^{-1} matrix for
-    // a cell. For three-phase black oil:
-    //  A = [  bw       0       0
-    //          0       bo      0
-    //          0      b0*rs   bw ]
-    // Where b = B^{-1}.
-    // Therefore, we extract the correct diagonal element, and are done.
-    // When we need the derivatives (w.r.t. p, since we don't do w.r.t. rs),
-    // we also get the following derivative matrix:
-    //  A = [  dbw       0       0
-    //          0       dbo      0
-    //          0      db0*rs   dbw ]
-    // Again, we just extract a diagonal element.
-
     /// Water formation volume factor.
     /// \param[in]  pw     Array of n water pressure values.
     /// \param[in]  T      Array of n temperature values.
