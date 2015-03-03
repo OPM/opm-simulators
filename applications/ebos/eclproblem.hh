@@ -80,6 +80,9 @@ NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
 // report steps...
 NEW_PROP_TAG(EnableWriteAllSolutions);
 
+// The number of time steps skipped between writing two consequtive restart files
+NEW_PROP_TAG(RestartWritingInterval);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -167,6 +170,11 @@ SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Ewoms::EclDummyGradientCalcula
 
 // The default name of the data file to load
 SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
+
+// The frequency of writing restart (*.ers) files. This is the number of time steps
+// between writing restart files
+SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
+
 }} // namespace Properties, Opm
 
 namespace Ewoms {
@@ -232,6 +240,8 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
+        EWOMS_REGISTER_PARAM(TypeTag, int, RestartWritingInterval,
+                             "The frequencies of which time steps are serialized to disk");
     }
 
     /*!
@@ -353,6 +363,8 @@ public:
      */
     void endEpisode()
     {
+        std::cout << "Episode " << this->simulator().episodeIndex() + 1 << " finished.\n";
+
         // first, write the summary information ...
         summaryWriter_.write(wellManager_);
 
@@ -399,7 +411,13 @@ public:
      * \brief Returns true if an eWoms restart file should be written to disk.
      */
     bool shouldWriteRestartFile() const
-    { return false; }
+    {
+        int n = EWOMS_GET_PARAM(TypeTag, int, RestartWritingInterval);
+        int i = this->simulator().timeStepIndex();
+        if (i > 0 && (i%n) == 0)
+            return true; // we don't write a restart file for the initial condition
+        return false;
+    }
 
     /*!
      * \brief Write the requested quantities of the current solution into the output
