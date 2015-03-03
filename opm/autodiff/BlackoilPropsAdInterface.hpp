@@ -140,54 +140,6 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
-        V bWat(const V& pw,
-               const V& T,
-               const Cells& cells) const = 0;
-
-        /// Oil formation volume factor.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        virtual
-        V bOil(const V& po,
-               const V& T,
-               const V& rs,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const = 0;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        virtual
-        V bGas(const V& pg,
-               const V& T,
-               const Cells& cells) const = 0;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rv     Array of n vapor oil/gas ratio
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        virtual
-        V bGas(const V& pg,
-               const V& T,
-               const V& rv,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const = 0;
-
-        /// Water formation volume factor.
-        /// \param[in]  pw     Array of n water pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        virtual
         ADB bWat(const ADB& pw,
                  const ADB& T,
                  const Cells& cells) const = 0;
@@ -209,26 +161,16 @@ namespace Opm
         /// Gas formation volume factor.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        virtual
-        ADB bGas(const ADB& pg,
-                 const ADB& T,
-                 const Cells& cells) const = 0;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rv     Array of n vapor oil/gas ratio
+        /// \param[in]  rv     Array of n vapor oil/gas ratios.
         /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
         ADB bGas(const ADB& pg,
                  const ADB& T,
-               const ADB& rv,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const = 0;
+                 const ADB& rv,
+                 const std::vector<PhasePresence>& cond,
+                 const Cells& cells) const = 0;
 
         // ------ Rs bubble point curve ------
 

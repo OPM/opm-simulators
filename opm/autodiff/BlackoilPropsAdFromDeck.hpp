@@ -176,50 +176,6 @@ namespace Opm
         /// \param[in]  T      Array of n temperature values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
-        V bWat(const V& pw,
-               const V& T,
-               const Cells& cells) const;
-
-        /// Oil formation volume factor.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rs     Array of n gas solution factor values.
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        V bOil(const V& po,
-               const V& T,
-               const V& rs,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        V bGas(const V& pg,
-               const V& T,
-               const Cells& cells) const;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  rv     Array of n vapor oil/gas ratio
-        /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        V bGas(const V& pg,
-               const V& T,
-               const V& rv,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const;
-
-        /// Water formation volume factor.
-        /// \param[in]  pw     Array of n water pressure values.
-        /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
         ADB bWat(const ADB& pw,
                  const ADB& T,
                  const Cells& cells) const;
@@ -240,24 +196,15 @@ namespace Opm
         /// Gas formation volume factor.
         /// \param[in]  pg     Array of n gas pressure values.
         /// \param[in]  T      Array of n temperature values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n formation volume factor values.
-        ADB bGas(const ADB& pg,
-                 const ADB& T,
-                 const Cells& cells) const;
-
-        /// Gas formation volume factor.
-        /// \param[in]  pg     Array of n gas pressure values.
-        /// \param[in]  T      Array of n temperature values.
         /// \param[in]  rv     Array of n vapor oil/gas ratio
         /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         ADB bGas(const ADB& pg,
                  const ADB& T,
-               const ADB& rv,
-               const std::vector<PhasePresence>& cond,
-               const Cells& cells) const;
+                 const ADB& rv,
+                 const std::vector<PhasePresence>& cond,
+                 const Cells& cells) const;
 
         // ------ Rs bubble point curve ------
 
