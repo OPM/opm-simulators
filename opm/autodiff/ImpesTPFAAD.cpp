@@ -568,11 +568,13 @@ namespace {
         case Oil: {
             ADB dummy_rs = V::Zero(p.size(), 1) * p;
             std::vector<PhasePresence> cond(dummy_rs.size());
-
             return fluid_.muOil(p, T, dummy_rs, cond, cells);
         }
-        case Gas:
-            return fluid_.muGas(p, T, cells);
+        case Gas: {
+            ADB dummy_rv = V::Zero(p.size(), 1) * p;
+            std::vector<PhasePresence> cond(dummy_rv.size());
+            return fluid_.muGas(p, T, dummy_rv, cond, cells);
+        }
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
