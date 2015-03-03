@@ -145,6 +145,8 @@ namespace detail {
         relax_rel_tol_   = 0.2;
         max_iter_        = 15;
         max_residual_allowed_  = std::numeric_limits< double >::max();
+        tolerance_mb_    = 1.0e-7;
+        tolerance_cnv_   = 1.0e-3;
     }
 
     template<class T>
@@ -169,6 +171,9 @@ namespace detail {
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
+
+        tolerance_mb_  = param.getDefault("tolerance_mb", tolerance_mb_);
+        tolerance_cnv_ = param.getDefault("tolerance_cnv", tolerance_cnv_);
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
@@ -1965,8 +1970,8 @@ namespace detail {
     bool
     FullyImplicitBlackoilSolver<T>::getConvergence(const double dt, const int iteration)
     {
-        const double tol_mb = 1.0e-7;
-        const double tol_cnv = 1.0e-3;
+        const double tol_mb  = param_.tolerance_mb_;
+        const double tol_cnv = param_.tolerance_cnv_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
