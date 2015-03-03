@@ -46,7 +46,7 @@ namespace Opm
         typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
         typedef Dune::BlockVector<VectorBlockType>        Vector;
     public:
-        
+
         /// Construct a system solver.
         /// \param[in] param   parameters controlling the behaviour of
         ///                    the preconditioning and choice of
@@ -79,14 +79,14 @@ namespace Opm
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
-        template<int category=Dune::SolverCategory::sequential, class O, class P>   
+        template<int category=Dune::SolverCategory::sequential, class O, class P>
         void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation,
                                              Dune::InverseOperatorResult& result) const
         {
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
-            std::unique_ptr<typename ScalarProductChooser::ScalarProduct> 
+            std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(parallelInformation));
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
@@ -95,12 +95,9 @@ namespace Opm
             Preconditioner precond(opA.getmat(), istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_, parallelInformation);
 
             // Construct linear solver.
-            const double tolerance = 1e-3;
-            const int maxit = 150;
-            const int verbosity = 0;
-            const int restart = 40;
-            Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond, tolerance, restart, maxit, verbosity);
-            
+            Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond,
+                           linear_solver_reduction_, linear_solver_restart_, linear_solver_maxiter_, linear_solver_verbosity_);
+
             // Solve system.
             linsolve.apply(x, istlb, result);
         }
@@ -111,6 +108,11 @@ namespace Opm
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
         boost::any parallelInformation_;
+
+        double linear_solver_reduction_;
+        int    linear_solver_maxiter_;
+        int    linear_solver_restart_;
+        int    linear_solver_verbosity_;
     };
 
 } // namespace Opm
