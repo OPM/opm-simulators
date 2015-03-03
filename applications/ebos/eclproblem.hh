@@ -287,18 +287,17 @@ public:
         // intrinsic permeabilities because the well model uses them...
         wellManager_.init(simulator.gridManager().eclState());
 
-        // Start the first episode. For this, ask the ECL schedule.
+        // Set the start time of the simulation
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
 
         Scalar startTime = std::mktime(&curTime);
         simulator.setStartTime(startTime);
-        simulator.startNextEpisode(/*startTime=*/startTime,
-                                   /*length=*/timeMap->getTimeStepLength(/*timeStepIdx=*/0));
 
-        // we want the episode index to be the same as the report step
-        // index to make things simpler...
-        simulator.setEpisodeIndex(0);
+        // We want the episode index to be the same as the report step index to make
+        // things simpler, so we have to set the episode index to -1 because it is
+        // incremented inside beginEpisode()...
+        simulator.setEpisodeIndex(-1);
     }
 
     /*!
@@ -313,7 +312,13 @@ public:
      */
     template <class Restarter>
     void deserialize(Restarter &res)
-    { wellManager_.deserialize(res); }
+    {
+        // reload the current episode/report step from the deck
+        beginEpisode();
+
+        // deserialize the wells
+        wellManager_.deserialize(res);
+    }
 
     /*!
      * \brief This method writes the complete state of the well
@@ -327,7 +332,37 @@ public:
      * \brief Called by the simulator before an episode begins.
      */
     void beginEpisode()
-    { wellManager_.beginEpisode(this->simulator().gridManager().eclState()); }
+    {
+        // Proceed to the next report step
+        Simulator &simulator = this->simulator();
+        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
+        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
+
+        // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
+        // report steps) is one less!
+        int numReportSteps = timeMap->size() - 1;
+
+        // start the next episode if there are additional report steps, else finish the
+        // simulation
+        int nextEpisodeIdx = simulator.episodeIndex();
+        while (nextEpisodeIdx < numReportSteps &&
+               simulator.time() >= timeMap->getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
+        {
+            ++ nextEpisodeIdx;
+        }
+
+        if (nextEpisodeIdx < numReportSteps) {
+            simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
+            simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
+        }
+        else {
+            simulator.setFinished(true);
+            return;
+        }
+
+        // set up the wells
+        wellManager_.beginEpisode(this->simulator().gridManager().eclState());
+    }
 
     /*!
      * \brief Called by the simulator before each time integration.
@@ -367,25 +402,6 @@ public:
 
         // first, write the summary information ...
         summaryWriter_.write(wellManager_);
-
-        // ... then proceed to the next report step
-        Simulator &simulator = this->simulator();
-        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
-        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
-
-        // TimeMap deals with points in time, so the number of time
-        // intervals (i.e., report steps) is one less!
-        int numReportSteps = timeMap->size() - 1;
-
-        // start the next episode if there are additional report
-        // steps, else finish the simulation
-        int nextEpisodeIdx = simulator.episodeIndex() + 1;
-        if (nextEpisodeIdx < numReportSteps) {
-            simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
-            simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
-        }
-        else
-            simulator.setFinished(true);
     }
 
     /*!
