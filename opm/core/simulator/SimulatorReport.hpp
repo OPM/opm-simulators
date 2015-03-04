@@ -32,6 +32,9 @@ namespace Opm
         double transport_time;
         double total_time;
 
+        unsigned int total_newton_iterations;
+        unsigned int total_linear_iterations;
+
         /// Default constructor initializing all times to 0.0.
         SimulatorReport();
         /// Increment this report's times by those in sr.

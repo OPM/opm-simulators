@@ -26,7 +26,9 @@ namespace Opm
     SimulatorReport::SimulatorReport()
         : pressure_time(0.0),
           transport_time(0.0),
-          total_time(0.0)
+          total_time(0.0),
+          total_newton_iterations( 0 ),
+          total_linear_iterations( 0 )
     {
     }
 
@@ -35,19 +37,27 @@ namespace Opm
         pressure_time += sr.pressure_time;
         transport_time += sr.transport_time;
         total_time += sr.total_time;
+        total_newton_iterations += sr.total_newton_iterations;
+        total_linear_iterations += sr.total_linear_iterations;
     }
 
     void SimulatorReport::report(std::ostream& os)
     {
         os << "Total time taken: " << total_time
            << "\n  Pressure time:  " << pressure_time
-           << "\n  Transport time: " << transport_time << std::endl;
+           << "\n  Transport time: " << transport_time
+           << "\n  Overall Newton Iterations:  " << total_newton_iterations
+           << "\n  Overall Linear Iterations:  " << total_linear_iterations
+           << std::endl;
     }
     void SimulatorReport::reportParam(std::ostream& os)
     {
         os << "/timing/total_time=" << total_time
            << "\n/timing/pressure/total_time=" << pressure_time
-           << "\n/timing/transport/total_time=" << transport_time << std::endl;
+           << "\n/timing/transport/total_time=" << transport_time
+           << "\n/timing/newton/iterations=" << total_newton_iterations
+           << "\n/timing/linear/iterations=" << total_linear_iterations
+           << std::endl;
     }
 
 
