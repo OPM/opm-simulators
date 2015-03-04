@@ -72,6 +72,7 @@ namespace Opm {
             double                          max_residual_allowed_;
             double                          tolerance_mb_;
             double                          tolerance_cnv_;
+            double                          tolerance_wells_;
             int                             max_iter_;
 
             SolverParameter( const parameter::ParameterGroup& param );

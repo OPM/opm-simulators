@@ -147,6 +147,7 @@ namespace detail {
         max_residual_allowed_  = std::numeric_limits< double >::max();
         tolerance_mb_    = 1.0e-7;
         tolerance_cnv_   = 1.0e-3;
+        tolerance_wells_ = 1./Opm::unit::day;
     }
 
     template<class T>
@@ -172,8 +173,9 @@ namespace detail {
         max_iter_    = param.getDefault("max_iter", max_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
-        tolerance_mb_  = param.getDefault("tolerance_mb", tolerance_mb_);
-        tolerance_cnv_ = param.getDefault("tolerance_cnv", tolerance_cnv_);
+        tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
+        tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
+        tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
@@ -1970,8 +1972,9 @@ namespace detail {
     bool
     FullyImplicitBlackoilSolver<T>::getConvergence(const double dt, const int iteration)
     {
-        const double tol_mb  = param_.tolerance_mb_;
-        const double tol_cnv = param_.tolerance_cnv_;
+        const double tol_mb    = param_.tolerance_mb_;
+        const double tol_cnv   = param_.tolerance_cnv_;
+        const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -2016,7 +2019,7 @@ namespace detail {
 
         const double residualWellFlux = detail::infinityNorm(residual_.well_flux_eq);
         const double residualWell     = detail::infinityNorm(residual_.well_eq);
-        const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
+        const bool   converged_Well   = (residualWellFlux < tol_wells) && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
