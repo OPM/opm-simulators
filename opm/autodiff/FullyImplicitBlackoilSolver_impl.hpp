@@ -198,7 +198,8 @@ namespace detail {
                                 const Wells*                    wells,
                                 const NewtonIterationBlackoilInterface&    linsolver,
                                 const bool has_disgas,
-                                const bool has_vapoil)
+                                const bool has_vapoil,
+                                const bool terminal_output)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -219,15 +220,18 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
-        , terminal_output_ (true)
+        , terminal_output_ (terminal_output)
     {
 #if HAVE_MPI
-        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        if( terminal_output_ )
         {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-            // Only rank 0 does print to std::cout
-            terminal_output_ = (info.communicator().rank()==0);
+            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                // Only rank 0 does print to std::cout if terminal_output is enabled
+                terminal_output_ = (info.communicator().rank()==0);
+            }
         }
 #endif
     }

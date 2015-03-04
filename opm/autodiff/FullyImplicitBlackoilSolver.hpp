@@ -101,7 +101,8 @@ namespace Opm {
                                     const Wells*                    wells,
                                     const NewtonIterationBlackoilInterface& linsolver,
                                     const bool has_disgas,
-                                    const bool has_vapoil );
+                                    const bool has_vapoil,
+                                    const bool terminal_output);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
         /// This prevents flow across faces if the potential
