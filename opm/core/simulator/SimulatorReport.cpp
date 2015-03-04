@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <iostream>
+#include <ostream>
 
 namespace Opm
 {
