@@ -249,6 +249,9 @@ namespace Opm
             output_writer_.restore( timer, state, prev_well_state, restorefilename, desiredRestoreStep );
         }
 
+        unsigned int totalNewtonIterations = 0;
+        unsigned int totalLinearIterations = 0;
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -307,6 +310,10 @@ namespace Opm
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
 
+            // accumulate the number of Newton and Linear Iterations
+            totalNewtonIterations += solver.newtonIterations();
+            totalLinearIterations += solver.linearIterations();
+
             // Report timing.
             const double st = solver_timer.secsSinceStart();
 
@@ -339,6 +346,8 @@ namespace Opm
         report.pressure_time = stime;
         report.transport_time = 0.0;
         report.total_time = total_timer.secsSinceStart();
+        report.total_newton_iterations = totalNewtonIterations;
+        report.total_linear_iterations = totalLinearIterations;
         return report;
     }
 

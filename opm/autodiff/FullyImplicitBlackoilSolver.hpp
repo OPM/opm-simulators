@@ -129,6 +129,9 @@ namespace Opm {
              BlackoilState& state ,
              WellStateFullyImplicitBlackoil&     wstate);
 
+        unsigned int newtonIterations () const { return newtonIterations_; }
+        unsigned int linearIterations () const { return linearIterations_; }
+
     private:
         // Types and enums
         typedef AutoDiffBlock<double> ADB;
@@ -202,6 +205,8 @@ namespace Opm {
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
+        unsigned int newtonIterations_;
+        unsigned int linearIterations_;
 
         std::vector<int>         primalVariable_;
 

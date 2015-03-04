@@ -221,6 +221,8 @@ namespace detail {
                         ADB::null(),
                         ADB::null() } )
         , terminal_output_ (terminal_output)
+        , newtonIterations_( 0 )
+        , linearIterations_( 0 )
     {
 #if HAVE_MPI
         if( terminal_output_ )
@@ -335,6 +337,9 @@ namespace detail {
             OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
             return -1;
         }
+
+        linearIterations_ += linearIterations;
+        newtonIterations_ += it;
 
         return linearIterations;
     }
