@@ -245,23 +245,7 @@ namespace Opm
         /// Condensation curve for Rv as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rvSat(const V& po,
-                const Cells& cells) const;
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rvSat(const V& po,
-                const V& so,
-                const Cells& cells) const;
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
+        /// \return            Array of n condensation point values for Rv.
         ADB rvSat(const ADB& po,
                   const Cells& cells) const;
 
@@ -269,7 +253,7 @@ namespace Opm
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  so     Array of n oil saturation values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
+        /// \return            Array of n condensation point values for Rv.
         ADB rvSat(const ADB& po,
                   const ADB& so,
                   const Cells& cells) const;

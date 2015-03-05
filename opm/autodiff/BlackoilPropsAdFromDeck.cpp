@@ -550,39 +550,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n bubble point values for Rs.
-    V BlackoilPropsAdFromDeck::rsSat(const V& po,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call rsMax(): oil phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(po.size() == n);
-        V rbub(n);
-        V drbubdp(n);
-        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.data(), rbub.data(), drbubdp.data());
-        return rbub;
-    }
-
-    /// Bubble point curve for Rs as function of oil pressure.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  so     Array of n oil saturation values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
-    V BlackoilPropsAdFromDeck::rsSat(const V& po,
-                                     const V& so,
-                                     const Cells& cells) const
-    {
-        V rs = rsSat(po, cells);
-        applyVap(rs, so, cells, vap2_);
-        return rs;
-    }
-
-    /// Bubble point curve for Rs as function of oil pressure.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
     ADB BlackoilPropsAdFromDeck::rsSat(const ADB& po,
                                        const Cells& cells) const
     {
@@ -618,45 +585,12 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         return rs;
     }
 
-    // ------ Condensation curve ------
+    // ------ Rv condensation curve ------
 
     /// Condensation curve for Rv as function of oil pressure.
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
-    V BlackoilPropsAdFromDeck::rvSat(const V& po,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(po.size() == n);
-        V rv(n);
-        V drvdp(n);
-        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.data(), rv.data(), drvdp.data());
-        return rv;
-    }
-
-    /// Condensation curve for Rv as function of oil pressure.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  so     Array of n oil saturation values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
-    V BlackoilPropsAdFromDeck::rvSat(const V& po,
-                                     const V& so,
-                                     const Cells& cells) const
-    {
-        V rv = rvSat(po, cells);
-        applyVap(rv, so, cells, vap1_);
-        return rv;
-    }
-
-    /// Condensation curve for Rv as function of oil pressure.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
+    /// \return            Array of n condensation point values for Rv.
     ADB BlackoilPropsAdFromDeck::rvSat(const ADB& po,
                                        const Cells& cells) const
     {
@@ -682,7 +616,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// \param[in]  po     Array of n oil pressure values.
     /// \param[in]  so     Array of n oil saturation values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n bubble point values for Rs.
+    /// \return            Array of n condensation point values for Rv.
     ADB BlackoilPropsAdFromDeck::rvSat(const ADB& po,
                                        const ADB& so,
                                        const Cells& cells) const

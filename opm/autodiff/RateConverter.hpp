@@ -528,8 +528,9 @@ namespace Opm {
                     // pressure into account.  This facility uses the
                     // average *hydrocarbon* pressure rather than
                     // average phase pressure.
-                    Rmax_.col(io) = props_.rsSat(p_avg_, T_avg_, repcells_);
-                    Rmax_.col(ig) = props_.rvSat(p_avg_, T_avg_, repcells_);
+                    typedef BlackoilPropsAdInterface::ADB ADB;
+                    Rmax_.col(io) = props_.rsSat(ADB::constant(p_avg_), ADB::constant(T_avg_), repcells_).value();
+                    Rmax_.col(ig) = props_.rvSat(ADB::constant(p_avg_), ADB::constant(T_avg_), repcells_).value();
                 }
             }
 

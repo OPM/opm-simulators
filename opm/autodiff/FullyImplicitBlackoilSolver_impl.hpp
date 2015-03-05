@@ -2154,10 +2154,10 @@ namespace detail {
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const V&                p,
-                                            const V&                satOil,
-                                            const std::vector<int>& cells) const
+                                               const V&                satOil,
+                                               const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, satOil, cells);
+        return fluid_.rsSat(ADB::constant(p), ADB::constant(satOil), cells).value();
     }
 
 
@@ -2167,19 +2167,20 @@ namespace detail {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRsSat(const ADB&              p,
-                                            const ADB&              satOil,
-                                            const std::vector<int>& cells) const
+                                               const ADB&              satOil,
+                                               const std::vector<int>& cells) const
     {
         return fluid_.rsSat(p, satOil, cells);
     }
 
+
     template<class T>
     V
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const V&                p,
-                                            const V&              satOil,
-                                            const std::vector<int>& cells) const
+                                               const V&              satOil,
+                                               const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, satOil, cells);
+        return fluid_.rvSat(ADB::constant(p), ADB::constant(satOil), cells).value();
     }
 
 
@@ -2189,8 +2190,8 @@ namespace detail {
     template<class T>
     ADB
     FullyImplicitBlackoilSolver<T>::fluidRvSat(const ADB&              p,
-                                            const ADB&              satOil,
-                                            const std::vector<int>& cells) const
+                                               const ADB&              satOil,
+                                               const std::vector<int>& cells) const
     {
         return fluid_.rvSat(p, satOil, cells);
     }
