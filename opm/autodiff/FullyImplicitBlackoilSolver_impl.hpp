@@ -673,11 +673,12 @@ namespace detail {
         }
 
         // Use cell values for the temperature as the wells don't knows its temperature yet.
-        const V perf_temp = subset(state.temperature.value(), well_cells);
+        const ADB perf_temp = subset(state.temperature, well_cells);
 
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
         // and cell values for rs, rv, phase condition and temperature.
+        const ADB avg_press_ad = ADB::constant(avg_press);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
         for (int perf = 0; perf < nperf; ++perf) {
@@ -688,21 +689,21 @@ namespace detail {
         std::vector<double> rsmax_perf(nperf, 0.0);
         std::vector<double> rvmax_perf(nperf, 0.0);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const V bw = fluid_.bWat(avg_press, perf_temp, well_cells);
+            const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
         }
         assert(active_[Oil]);
         const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
-            const V perf_rs = subset(state.rs.value(), well_cells);
-            const V bo = fluid_.bOil(avg_press, perf_temp, perf_rs, perf_cond, well_cells);
+            const ADB perf_rs = subset(state.rs, well_cells);
+            const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
-            const V perf_rv = subset(state.rv.value(), well_cells);
-            const V bg = fluid_.bGas(avg_press, perf_temp, perf_rv, perf_cond, well_cells);
+            const ADB perf_rv = subset(state.rv, well_cells);
+            const V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
             const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);

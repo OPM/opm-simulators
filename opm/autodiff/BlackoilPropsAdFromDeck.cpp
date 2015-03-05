@@ -311,109 +311,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
     // ------ Viscosity ------
 
-    /// Water viscosity.
-    /// \param[in]  pw     Array of n water pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    V BlackoilPropsAdFromDeck::muWat(const V& pw,
-                                     const V& T,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pw.size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-        const double* rs = 0;
-
-        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.data(), T.data(), rs,
-                                                  mu.data(), dmudp.data(), dmudr.data());
-        return mu;
-    }
-
-    /// Oil viscosity.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    V BlackoilPropsAdFromDeck::muOil(const V& po,
-                                     const V& T,
-                                     const V& rs,
-                                     const std::vector<PhasePresence>& cond,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(po.size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.data(), T.data(), rs.data(), &cond[0],
-                                                mu.data(), dmudp.data(), dmudr.data());
-        return mu;
-    }
-
-    /// Gas viscosity.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    V BlackoilPropsAdFromDeck::muGas(const V& pg,
-                                     const V& T,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-        const double* rs = 0;
-
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.data(), T.data(), rs,
-                                                mu.data(), dmudp.data(), dmudr.data());
-        return mu;
-    }
-
-    /// Gas viscosity.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    V BlackoilPropsAdFromDeck::muGas(const V& pg,
-                                     const V& T,
-                                     const V& rv,
-                                     const std::vector<PhasePresence>& cond,
-                                     const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.data(), T.data(), rv.data(),&cond[0],
-                                                mu.data(), dmudp.data(), dmudr.data());
-        return mu;
-    }
 
     /// Water viscosity.
     /// \param[in]  pw     Array of n water pressure values.
@@ -437,13 +334,17 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
-        ADB::M dmudp_diag = spdiag(dmudp);
-        const int num_blocks = pw.numBlocks();
-        std::vector<ADB::M> jacs(num_blocks);
-        for (int block = 0; block < num_blocks; ++block) {
-            fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
+        if (pw.derivative().empty()) {
+            return ADB::constant(mu);
+        } else {
+            ADB::M dmudp_diag = spdiag(dmudp);
+            const int num_blocks = pw.numBlocks();
+            std::vector<ADB::M> jacs(num_blocks);
+            for (int block = 0; block < num_blocks; ++block) {
+                fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
+            }
+            return ADB::function(mu, jacs);
         }
-        return ADB::function(mu, jacs);
     }
 
     /// Oil viscosity.
@@ -481,38 +382,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             ADB::M temp;
             fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
             jacs[block] += temp;
-        }
-        return ADB::function(mu, jacs);
-    }
-
-    /// Gas viscosity.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n viscosity values.
-    ADB BlackoilPropsAdFromDeck::muGas(const ADB& pg,
-                                       const ADB& T,
-                                       const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.value().size() == n);
-        V mu(n);
-        V dmudp(n);
-        V dmudr(n);
-        const double* rv = 0;
-
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv,
-                                                  mu.data(), dmudp.data(), dmudr.data());
-
-        ADB::M dmudp_diag = spdiag(dmudp);
-        const int num_blocks = pg.numBlocks();
-        std::vector<ADB::M> jacs(num_blocks);
-        for (int block = 0; block < num_blocks; ++block) {
-            fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
         }
         return ADB::function(mu, jacs);
     }
@@ -559,134 +428,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
     // ------ Formation volume factor (b) ------
 
-    // These methods all call the matrix() method, after which the variable
-    // (also) called 'matrix' contains, in each row, the A = RB^{-1} matrix for
-    // a cell. For three-phase black oil:
-    //  A = [  bw       0       0
-    //          0       bo      0
-    //          0      b0*rs   bw ]
-    // Where b = B^{-1}.
-    // Therefore, we extract the correct diagonal element, and are done.
-    // When we need the derivatives (w.r.t. p, since we don't do w.r.t. rs),
-    // we also get the following derivative matrix:
-    //  A = [  dbw       0       0
-    //          0       dbo      0
-    //          0      db0*rs   dbw ]
-    // Again, we just extract a diagonal element.
-
-    /// Water formation volume factor.
-    /// \param[in]  pw     Array of n water pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n formation volume factor values.
-    V BlackoilPropsAdFromDeck::bWat(const V& pw,
-                                    const V& T,
-                                    const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call bWat(): water phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pw.size() == n);
-
-        V b(n);
-        V dbdp(n);
-        V dbdr(n);
-        const double* rs = 0;
-
-        props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.data(), T.data(), rs,
-                                                 b.data(), dbdp.data(), dbdr.data());
-
-        return b;
-    }
-
-    /// Oil formation volume factor.
-    /// \param[in]  po     Array of n oil pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  rs     Array of n gas solution factor values.
-    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n formation volume factor values.
-    V BlackoilPropsAdFromDeck::bOil(const V& po,
-                                    const V& T,
-                                    const V& rs,
-                                    const std::vector<PhasePresence>& cond,
-                                    const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call bOil(): oil phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(po.size() == n);
-
-        V b(n);
-        V dbdp(n);
-        V dbdr(n);
-
-        props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.data(), T.data(), rs.data(), &cond[0],
-                                               b.data(), dbdp.data(), dbdr.data());
-
-        return b;
-    }
-
-    /// Gas formation volume factor.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n formation volume factor values.
-    V BlackoilPropsAdFromDeck::bGas(const V& pg,
-                                    const V& T,
-                                    const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call bGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.size() == n);
-
-        V b(n);
-        V dbdp(n);
-        V dbdr(n);
-        const double* rs = 0;
-
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.data(), T.data(), rs,
-                                               b.data(), dbdp.data(), dbdr.data());
-
-        return b;
-    }
-
-    /// Gas formation volume factor.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  rv     Array of n vapor oil/gas ratio
-    /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n formation volume factor values.
-    V BlackoilPropsAdFromDeck::bGas(const V& pg,
-                                    const V& T,
-           const V& rv,
-           const std::vector<PhasePresence>& cond,
-           const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.size() == n);
-
-        V b(n);
-        V dbdp(n);
-        V dbdr(n);
-
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.data(), T.data(), rv.data(), &cond[0],
-                                               b.data(), dbdp.data(), dbdr.data());
-
-        return b;
-    }
 
     /// Water formation volume factor.
     /// \param[in]  pw     Array of n water pressure values.
@@ -764,48 +505,15 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// Gas formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
     /// \param[in]  T      Array of n temperature values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return            Array of n formation volume factor values.
-    ADB BlackoilPropsAdFromDeck::bGas(const ADB& pg,
-                                      const ADB& T,
-                                      const Cells& cells) const
-    {
-        if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
-        }
-        const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(pg.size() == n);
-
-        V b(n);
-        V dbdp(n);
-        V dbdr(n);
-        const double* rv = 0;
-
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv,
-                                               b.data(), dbdp.data(), dbdr.data());
-
-        ADB::M dbdp_diag = spdiag(dbdp);
-        const int num_blocks = pg.numBlocks();
-        std::vector<ADB::M> jacs(num_blocks);
-        for (int block = 0; block < num_blocks; ++block) {
-            fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
-        }
-        return ADB::function(b, jacs);
-    }
-
-    /// Gas formation volume factor.
-    /// \param[in]  pg     Array of n gas pressure values.
-    /// \param[in]  T      Array of n temperature values.
     /// \param[in]  rv     Array of n vapor oil/gas ratio
     /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n formation volume factor values.
     ADB BlackoilPropsAdFromDeck::bGas(const ADB& pg,
                                       const ADB& T,
-           const ADB& rv,
-           const std::vector<PhasePresence>& cond,
-           const Cells& cells) const
+                                      const ADB& rv,
+                                      const std::vector<PhasePresence>& cond,
+                                      const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Gas]) {
             OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");

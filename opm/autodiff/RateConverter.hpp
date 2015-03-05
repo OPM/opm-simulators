@@ -326,6 +326,7 @@ namespace Opm {
             calcCoeff(const Input& in, const RegionId r, Coeff& coeff)
             {
                 typedef typename Property::V V;
+                typedef typename Property::ADB ADB;
 
                 const PhaseUsage&               pu = props_.phaseUsage();
                 const V&                        p  = getRegPress(r);
@@ -341,7 +342,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const V& bw = props_.bWat(p, T, c);
+                    const V& bw = props_.bWat(ADB::constant(p), ADB::constant(T), c).value();
 
                     coeff[iw] = 1.0 / bw(0);
                 }
@@ -354,7 +355,7 @@ namespace Opm {
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const V&     bo  = props_.bOil(p, T, m.rs, m.cond, c);
+                    const V&     bo  = props_.bOil(ADB::constant(p), ADB::constant(T), ADB::constant(m.rs), m.cond, c).value();
                     const double den = bo(0) * detR;
 
                     coeff[io] += 1.0 / den;
@@ -367,7 +368,7 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const V&     bg  = props_.bGas(p, T, m.rv, m.cond, c);
+                    const V&     bg  = props_.bGas(ADB::constant(p), ADB::constant(T), ADB::constant(m.rv), m.cond, c).value();
                     const double den = bg(0) * detR;
 
                     coeff[ig] += 1.0 / den;
