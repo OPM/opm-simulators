@@ -185,7 +185,7 @@ namespace Opm
           solver_(linsolver),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
-          terminal_output_(true),
+          terminal_output_(param.getDefault("output_terminal", true)),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
@@ -198,12 +198,14 @@ namespace Opm
             allcells_[cell] = cell;
         }
 #if HAVE_MPI
-        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-        {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
-            // Only rank 0 does print to std::cout
-            terminal_output_= (info.communicator().rank()==0);
+        if ( terminal_output_ ) {
+            if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+                // Only rank 0 does print to std::cout
+                terminal_output_= (info.communicator().rank()==0);
+            }
         }
 #endif
     }
@@ -246,6 +248,9 @@ namespace Opm
             output_writer_.restore( timer, state, prev_well_state, restorefilename, desiredRestoreStep );
         }
 
+        unsigned int totalNewtonIterations = 0;
+        unsigned int totalLinearIterations = 0;
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -283,7 +288,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_);
+            FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
@@ -303,6 +308,10 @@ namespace Opm
 
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
+
+            // accumulate the number of Newton and Linear Iterations
+            totalNewtonIterations += solver.newtonIterations();
+            totalLinearIterations += solver.linearIterations();
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
@@ -336,6 +345,8 @@ namespace Opm
         report.pressure_time = stime;
         report.transport_time = 0.0;
         report.total_time = total_timer.secsSinceStart();
+        report.total_newton_iterations = totalNewtonIterations;
+        report.total_linear_iterations = totalLinearIterations;
         return report;
     }
 

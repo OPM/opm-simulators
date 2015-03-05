@@ -72,6 +72,7 @@ namespace Opm {
             double                          max_residual_allowed_;
             double                          tolerance_mb_;
             double                          tolerance_cnv_;
+            double                          tolerance_wells_;
             int                             max_iter_;
 
             SolverParameter( const parameter::ParameterGroup& param );
@@ -100,7 +101,8 @@ namespace Opm {
                                     const Wells*                    wells,
                                     const NewtonIterationBlackoilInterface& linsolver,
                                     const bool has_disgas,
-                                    const bool has_vapoil );
+                                    const bool has_vapoil,
+                                    const bool terminal_output);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
         /// This prevents flow across faces if the potential
@@ -126,6 +128,9 @@ namespace Opm {
         step(const double   dt    ,
              BlackoilState& state ,
              WellStateFullyImplicitBlackoil&     wstate);
+
+        unsigned int newtonIterations () const { return newtonIterations_; }
+        unsigned int linearIterations () const { return linearIterations_; }
 
     private:
         // Types and enums
@@ -200,6 +205,8 @@ namespace Opm {
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
+        unsigned int newtonIterations_;
+        unsigned int linearIterations_;
 
         std::vector<int>         primalVariable_;
 

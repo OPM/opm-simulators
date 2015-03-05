@@ -147,6 +147,7 @@ namespace detail {
         max_residual_allowed_  = std::numeric_limits< double >::max();
         tolerance_mb_    = 1.0e-7;
         tolerance_cnv_   = 1.0e-3;
+        tolerance_wells_ = 1./Opm::unit::day;
     }
 
     template<class T>
@@ -172,8 +173,9 @@ namespace detail {
         max_iter_    = param.getDefault("max_iter", max_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
-        tolerance_mb_  = param.getDefault("tolerance_mb", tolerance_mb_);
-        tolerance_cnv_ = param.getDefault("tolerance_cnv", tolerance_cnv_);
+        tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
+        tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
+        tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
 
         std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
         if (relaxation_type == "dampen") {
@@ -196,7 +198,8 @@ namespace detail {
                                 const Wells*                    wells,
                                 const NewtonIterationBlackoilInterface&    linsolver,
                                 const bool has_disgas,
-                                const bool has_vapoil)
+                                const bool has_vapoil,
+                                const bool terminal_output)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -217,15 +220,19 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
-        , terminal_output_ (true)
+        , terminal_output_ (terminal_output)
+        , newtonIterations_( 0 )
+        , linearIterations_( 0 )
     {
 #if HAVE_MPI
-        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-        {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-            // Only rank 0 does print to std::cout
-            terminal_output_ = (info.communicator().rank()==0);
+        if ( terminal_output_ ) {
+            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                // Only rank 0 does print to std::cout if terminal_output is enabled
+                terminal_output_ = (info.communicator().rank()==0);
+            }
         }
 #endif
     }
@@ -329,6 +336,9 @@ namespace detail {
             OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
             return -1;
         }
+
+        linearIterations_ += linearIterations;
+        newtonIterations_ += it;
 
         return linearIterations;
     }
@@ -1970,8 +1980,9 @@ namespace detail {
     bool
     FullyImplicitBlackoilSolver<T>::getConvergence(const double dt, const int iteration)
     {
-        const double tol_mb  = param_.tolerance_mb_;
-        const double tol_cnv = param_.tolerance_cnv_;
+        const double tol_mb    = param_.tolerance_mb_;
+        const double tol_cnv   = param_.tolerance_cnv_;
+        const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -2016,7 +2027,7 @@ namespace detail {
 
         const double residualWellFlux = detail::infinityNorm(residual_.well_flux_eq);
         const double residualWell     = detail::infinityNorm(residual_.well_eq);
-        const bool   converged_Well   = (residualWellFlux < 1./Opm::unit::day) && (residualWell < Opm::unit::barsa);
+        const bool   converged_Well   = (residualWellFlux < tol_wells) && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
