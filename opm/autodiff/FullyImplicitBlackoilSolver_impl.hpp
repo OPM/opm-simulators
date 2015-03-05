@@ -225,8 +225,7 @@ namespace detail {
         , linearIterations_( 0 )
     {
 #if HAVE_MPI
-        if( terminal_output_ )
-        {
+        if ( terminal_output_ ) {
             if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
             {
                 const ParallelISTLInformation& info =

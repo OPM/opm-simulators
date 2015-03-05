@@ -198,8 +198,7 @@ namespace Opm
             allcells_[cell] = cell;
         }
 #if HAVE_MPI
-        if( terminal_output_ )
-        {
+        if ( terminal_output_ ) {
             if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
             {
                 const ParallelISTLInformation& info =
