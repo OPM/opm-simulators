@@ -274,9 +274,8 @@ namespace Opm
             WellStateFullyImplicitBlackoil well_state;
             well_state.init(wells, state, prev_well_state);
 
-            if( ! adaptiveTimeStepping ) {
-                output_writer_.writeTimeStep( timer, state, well_state );
-            }
+            // write simulation state at the report stage
+            output_writer_.writeTimeStep( timer, state, well_state );
 
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
@@ -335,9 +334,7 @@ namespace Opm
         }
 
         // Write final simulation state.
-        if( ! adaptiveTimeStepping ) {
-            output_writer_.writeTimeStep( timer, state, prev_well_state );
-        }
+        output_writer_.writeTimeStep( timer, state, prev_well_state );
 
         // Stop timer and create timing report
         total_timer.stop();
