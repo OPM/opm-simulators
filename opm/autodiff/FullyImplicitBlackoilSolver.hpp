@@ -272,6 +272,12 @@ namespace Opm {
                          const ADB& so,
                          const ADB& sg) const;
 
+        V
+        computeGasPressure(const V& po,
+                           const V& sw,
+                           const V& so,
+                           const V& sg) const;
+
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
 

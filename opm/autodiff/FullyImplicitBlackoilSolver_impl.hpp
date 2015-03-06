@@ -1351,9 +1351,6 @@ namespace detail {
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
-        const V one = V::Constant(nc, 1.0);
-        const SolutionState sol_state_old = constantState(state, well_state);
-        const std::vector<ADB>& pressures_old = sol_state_old.canonical_phase_pressures;
 
         // store cell status in vectors
         V isRs = V::Zero(nc,1);
@@ -1405,6 +1402,7 @@ namespace detail {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         const double dsmax = dsMax();
+
         V so;
         V sw;
         V sg;
@@ -1545,10 +1543,10 @@ namespace detail {
         if (has_vapoil_) {
 
             // The gas pressure is needed for the rvSat calculations
-            const SolutionState sol_state = constantState(state, well_state);
-            const std::vector<ADB>& pressures = sol_state.canonical_phase_pressures;
-            const V rvSat0 = fluidRvSat(pressures_old[ Gas ].value(), s_old.col(pu.phase_pos[Oil]), cells_);
-            const V rvSat = fluidRvSat(pressures[ Gas ].value(), so, cells_);
+            const V gaspress_old = computeGasPressure(p_old, s_old.col(Water), s_old.col(Oil), s_old.col(Gas));
+            const V gaspress = computeGasPressure(p, sw, so, sg);
+            const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
+            const V rvSat = fluidRvSat(gaspress, so, cells_);
 
             // The obvious case
             auto hasOil = (so > 0 && isRv == 0);
@@ -1630,6 +1628,9 @@ namespace detail {
     }
 
 
+
+
+
     template<class T>
     std::vector<ADB>
     FullyImplicitBlackoilSolver<T>::computePressures(const SolutionState& state) const
@@ -1656,6 +1657,11 @@ namespace detail {
 
 
     }
+
+
+
+
+
     template <class T>
     std::vector<ADB>
     FullyImplicitBlackoilSolver<T>::
@@ -1688,6 +1694,27 @@ namespace detail {
 
         return pressure;
     }
+
+
+
+
+
+    template<class T>
+    V
+    FullyImplicitBlackoilSolver<T>::computeGasPressure(const V& po,
+                                                       const V& sw,
+                                                       const V& so,
+                                                       const V& sg) const
+    {
+        assert (active_[Gas]);
+        std::vector<ADB> cp = fluid_.capPress(ADB::constant(sw),
+                                              ADB::constant(so),
+                                              ADB::constant(sg),
+                                              cells_);
+        return cp[Gas].value() + po;
+    }
+
+
 
 
 
