@@ -267,18 +267,6 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
         ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
-        std::vector<V> relperm(const V& sw,
-                               const V& so,
-                               const V& sg,
-                               const Cells& cells) const;
-
-        /// Relative permeabilities for all phases.
-        /// \param[in]  sw     Array of n water saturation values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  sg     Array of n gas saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
-        /// \return            An std::vector with 3 elements, each an array of n relperm values,
-        ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
         std::vector<ADB> relperm(const ADB& sw,
                                  const ADB& so,
                                  const ADB& sg,

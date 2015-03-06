@@ -180,7 +180,7 @@ namespace {
         // Compute relperms once and for all (since saturations are explicit).
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
         assert(np == 2);
-        kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
+        kr_ = fluidRelperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
         // Compute relperms for wells. This must be revisited for crossflow.
         const int nw = wells_.number_of_wells;
         const int nperf = wells_.well_connpos[nw];
@@ -193,7 +193,7 @@ namespace {
         }
         const std::vector<int> well_cells(wells_.well_cells,
                                           wells_.well_cells + nperf);
-        well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
+        well_kr_ = fluidRelperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
 
         const double atol  = 1.0e-10;
         const double rtol  = 5.0e-6;
@@ -255,7 +255,7 @@ namespace {
         // Compute relperms.
         DataBlock s = Eigen::Map<const DataBlock>(state.saturation().data(), nc, np);
         assert(np == 2);
-        kr_ = fluid_.relperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
+        kr_ = fluidRelperm(s.col(0), s.col(1), V::Zero(nc,1), buildAllCells(nc));
 
         // Compute relperms for wells. This must be revisited for crossflow.
         DataBlock well_s(nperf, np);
@@ -267,7 +267,7 @@ namespace {
         }
         const std::vector<int> well_cells(wells_.well_cells,
                                           wells_.well_cells + nperf);
-        well_kr_ = fluid_.relperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
+        well_kr_ = fluidRelperm(well_s.col(0), well_s.col(1), V::Zero(nperf,1), well_cells);
 
         // Compute well pressure differentials.
         // Construct pressure difference vector for wells.
@@ -635,6 +635,20 @@ namespace {
         ADB b = fluidFvf(phase, p, T, cells);
         ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
         return rho;
+    }
+
+
+
+
+
+    std::vector<V> ImpesTPFAAD::fluidRelperm(const V& sw,
+                                             const V& so,
+                                             const V& sg,
+                                             const std::vector<int>& cells) const
+    {
+        std::vector<ADB> kr_ad = fluid_.relperm(ADB::constant(sw), ADB::constant(so), ADB::constant(sg), cells);
+        std::vector<V> kr = { kr_ad[0].value(), kr_ad[1].value(), kr_ad[2].value() };
+        return kr;
     }
 
 

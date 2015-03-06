@@ -635,47 +635,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
     /// \return            An std::vector with 3 elements, each an array of n relperm values,
     ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
-    std::vector<V> BlackoilPropsAdFromDeck::relperm(const V& sw,
-                                                    const V& so,
-                                                    const V& sg,
-                                                    const Cells& cells) const
-    {
-        const int n = cells.size();
-        const int np = numPhases();
-        Block s_all(n, np);
-        if (phase_usage_.phase_used[Water]) {
-            assert(sw.size() == n);
-            s_all.col(phase_usage_.phase_pos[Water]) = sw;
-        }
-        if (phase_usage_.phase_used[Oil]) {
-            assert(so.size() == n);
-            s_all.col(phase_usage_.phase_pos[Oil]) = so;
-        }
-        if (phase_usage_.phase_used[Gas]) {
-            assert(sg.size() == n);
-            s_all.col(phase_usage_.phase_pos[Gas]) = sg;
-        }
-        Block kr(n, np);
-        satprops_->relperm(n, s_all.data(), cells.data(), kr.data(), 0);
-        std::vector<V> relperms;
-        relperms.reserve(3);
-        for (int phase = 0; phase < 3; ++phase) {
-            if (phase_usage_.phase_used[phase]) {
-                relperms.emplace_back(kr.col(phase_usage_.phase_pos[phase]));
-            } else {
-                relperms.emplace_back();
-            }
-        }
-        return relperms;
-    }
-
-    /// Relative permeabilities for all phases.
-    /// \param[in]  sw     Array of n water saturation values.
-    /// \param[in]  so     Array of n oil saturation values.
-    /// \param[in]  sg     Array of n gas saturation values.
-    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
-    /// \return            An std::vector with 3 elements, each an array of n relperm values,
-    ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
     std::vector<ADB> BlackoilPropsAdFromDeck::relperm(const ADB& sw,
                                                       const ADB& so,
                                                       const ADB& sg,
