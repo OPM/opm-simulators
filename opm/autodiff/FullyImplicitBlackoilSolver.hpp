@@ -160,6 +160,8 @@ namespace Opm {
             ADB              rv;
             ADB              qs;
             ADB              bhp;
+            // Below are quantities stored in the state for optimization purposes.
+            std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
         };
 
         struct WellOps {
