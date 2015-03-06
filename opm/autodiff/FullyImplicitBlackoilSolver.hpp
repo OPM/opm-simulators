@@ -221,11 +221,14 @@ namespace Opm {
 
         SolutionState
         constantState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
+
+        void
+        makeConstantState(SolutionState& state) const;
 
         SolutionState
         variableState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
 
         void
         computeAccum(const SolutionState& state,
@@ -251,6 +254,7 @@ namespace Opm {
         void
         assemble(const V&             dtpv,
                  const BlackoilState& x,
+                 const bool initial_assembly,
                  WellStateFullyImplicitBlackoil& xw);
 
         V solveJacobianSystem() const;

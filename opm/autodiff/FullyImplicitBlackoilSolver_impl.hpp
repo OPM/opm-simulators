@@ -271,17 +271,11 @@ namespace detail {
 
         if (active_[Gas]) { updatePrimalVariableFromState(x); }
 
-        {
-            const SolutionState state = constantState(x, xw);
-            computeAccum(state, 0);
-            computeWellConnectionPressures(state, xw);
-        }
-
         // For each iteration we store in a vector the norms of the residual of
         // the mass balance for each active phase, the well flux and the well equations
         std::vector<std::vector<double>> residual_norms_history;
 
-        assemble(pvdt, x, xw);
+        assemble(pvdt, x, true, xw);
 
 
         bool converged = false;
@@ -321,7 +315,7 @@ namespace detail {
 
             updateState(dx, x, xw);
 
-            assemble(pvdt, x, xw);
+            assemble(pvdt, x, false, xw);
 
             residual_norms_history.push_back(computeResidualNorms());
 
@@ -417,10 +411,21 @@ namespace detail {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::constantState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw) const
     {
         auto state = variableState(x, xw);
+        makeConstantState(state);
+        return state;
+    }
 
+
+
+
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::makeConstantState(SolutionState& state) const
+    {
         // HACK: throw away the derivatives. this may not be the most
         // performant way to do things, but it will make the state
         // automatically consistent with variableState() (and doing
@@ -429,17 +434,17 @@ namespace detail {
         state.temperature = ADB::constant(state.temperature.value());
         state.rs = ADB::constant(state.rs.value());
         state.rv = ADB::constant(state.rv.value());
-        for (int phaseIdx= 0; phaseIdx < x.numPhases(); ++ phaseIdx) {
+        const int num_phases = state.saturation.size();
+        for (int phaseIdx = 0; phaseIdx < num_phases; ++ phaseIdx) {
             state.saturation[phaseIdx] = ADB::constant(state.saturation[phaseIdx].value());
         }
         state.qs = ADB::constant(state.qs.value());
         state.bhp = ADB::constant(state.bhp.value());
+        assert(state.canonical_phase_pressures.size() == Opm::BlackoilPhases::MaxNumPhases);
         for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
             ADB& pp = state.canonical_phase_pressures[canphase];
             pp = ADB::constant(pp.value());
         }
-
-        return state;
     }
 
 
@@ -449,7 +454,7 @@ namespace detail {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::variableState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw) const
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -750,11 +755,22 @@ namespace detail {
     FullyImplicitBlackoilSolver<T>::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
+             const bool initial_assembly,
              WellStateFullyImplicitBlackoil& xw  )
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
         SolutionState state = variableState(x, xw);
+
+        if (initial_assembly) {
+            // Create the (constant, derivativeless) initial state.
+            SolutionState state0 = state;
+            makeConstantState(state0);
+            // Compute initial accumulation contributions
+            // and well connection pressures.
+            computeAccum(state0, 0);
+            computeWellConnectionPressures(state0, xw);
+        }
 
         // DISKVAL(state.pressure);
         // DISKVAL(state.saturation[0]);
@@ -772,7 +788,7 @@ namespace detail {
         // These quantities are stored in rq_[phase].accum[1].
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
-        // in step() and stored in rq_[phase].accum[0].
+        // on the initial call to assemble() and stored in rq_[phase].accum[0].
         computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
@@ -1325,8 +1341,8 @@ namespace detail {
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::updateState(const V& dx,
-                                                  BlackoilState& state,
-                                                  WellStateFullyImplicitBlackoil& well_state)
+                                                     BlackoilState& state,
+                                                     WellStateFullyImplicitBlackoil& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
