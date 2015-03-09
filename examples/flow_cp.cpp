@@ -109,10 +109,8 @@ int
 main(int argc, char** argv)
 try
 {
-    // Must ensure an instance of the helper is created to initialise MPI,
-    // but we don't use the helper here.
-    // Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
-    Dune::MPIHelper::instance(argc, argv);
+    // Must ensure an instance of the helper is created to initialise MPI.
+    const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
     std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
@@ -134,7 +132,9 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
-    bool output = param.getDefault("output", true);
+
+    // Write parameters used for later reference. (only if rank is zero)
+    bool output = ( mpi_helper.rank() == 0 ) && param.getDefault("output", true);
     std::string output_dir;
     if (output) {
         // Create output directory if needed.
@@ -165,7 +165,7 @@ try
     std::shared_ptr<EclipseState> eclipseState;
     try {
         deck = parser->parseFile(deck_filename);
-        Opm::checkDeck(deck, logger);
+        Opm::checkDeck(deck);
         eclipseState.reset(new Opm::EclipseState(deck));
     }
     catch (const std::invalid_argument& e) {
@@ -285,24 +285,6 @@ try
         fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
     } else {
         fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
-    }
-
-    // Write parameters used for later reference. (only if rank is zero)
-    bool output = ( grid->comm().rank() == 0 ) && param.getDefault("output", true);
-    std::string output_dir;
-    if (output) {
-        // Create output directory if needed.
-        output_dir =
-            param.getDefault("output_dir", std::string("output"));
-        boost::filesystem::path fpath(output_dir);
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        // Write simulation parameters.
-        param.writeParam(output_dir + "/simulation.param");
     }
 
     Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
