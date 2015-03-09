@@ -2101,7 +2101,7 @@ namespace {
                                                       const V&                satOil,
                                                       const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(p, satOil, cells);
+        return fluid_.rsSat(ADB::constant(p), ADB::constant(satOil), cells).value();
     }
 
 
@@ -2123,7 +2123,7 @@ namespace {
                                                       const V&              satOil,
                                                       const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(p, satOil, cells);
+        return fluid_.rvSat(ADB::constant(p), ADB::constant(satOil), cells).value();
     }
 
 
