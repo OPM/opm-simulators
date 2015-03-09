@@ -245,23 +245,7 @@ namespace Opm
         /// Condensation curve for Rv as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rvSat(const V& po,
-                const Cells& cells) const;
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
-        V rvSat(const V& po,
-                const V& so,
-                const Cells& cells) const;
-
-        /// Condensation curve for Rv as function of oil pressure.
-        /// \param[in]  po     Array of n oil pressure values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
+        /// \return            Array of n condensation point values for Rv.
         ADB rvSat(const ADB& po,
                   const Cells& cells) const;
 
@@ -269,24 +253,12 @@ namespace Opm
         /// \param[in]  po     Array of n oil pressure values.
         /// \param[in]  so     Array of n oil saturation values.
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-        /// \return            Array of n bubble point values for Rs.
+        /// \return            Array of n condensation point values for Rv.
         ADB rvSat(const ADB& po,
                   const ADB& so,
                   const Cells& cells) const;
 
         // ------ Relative permeability ------
-
-        /// Relative permeabilities for all phases.
-        /// \param[in]  sw     Array of n water saturation values.
-        /// \param[in]  so     Array of n oil saturation values.
-        /// \param[in]  sg     Array of n gas saturation values.
-        /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
-        /// \return            An std::vector with 3 elements, each an array of n relperm values,
-        ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
-        std::vector<V> relperm(const V& sw,
-                               const V& so,
-                               const V& sg,
-                               const Cells& cells) const;
 
         /// Relative permeabilities for all phases.
         /// \param[in]  sw     Array of n water saturation values.

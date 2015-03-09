@@ -110,6 +110,7 @@ namespace Opm {
         ADB fluidFvf(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const;
         V fluidRho(const int phase, const V& p, const V& T, const std::vector<int>& cells) const;
         ADB fluidRho(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const;
+        std::vector<V> fluidRelperm(const V& sw, const V& so, const V& sg, const std::vector<int>& cells) const;
         V fluidKr(const int phase) const;
         V fluidKrWell(const int phase) const;
     };
