@@ -148,6 +148,10 @@ namespace Opm {
                 std::cerr << e.what() << std::endl;
                 // also catch linear solver not converged
             }
+            catch (const Dune::ISTLError& e) {
+                std::cerr << e.what() << std::endl;
+                // also catch errors in ISTL AMG that occur when time step is too large
+            }
 
             // (linearIterations < 0 means no convergence in solver)
             if( linearIterations >= 0 )
