@@ -1722,37 +1722,6 @@ namespace detail {
 
 
     template<class T>
-    std::vector<ADB>
-    FullyImplicitBlackoilSolver<T>::computeRelPermWells(const SolutionState& state,
-                                                     const DataBlock& well_s,
-                                                     const std::vector<int>& well_cells) const
-    {
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-
-        const ADB null = ADB::constant(V::Zero(nperf));
-
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Water ]))
-                        : null);
-
-        const ADB so = (active_[ Oil ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Oil ]))
-                        : null);
-
-        const ADB sg = (active_[ Gas ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Gas ]))
-                        : null);
-
-        return fluid_.relperm(sw, so, sg, well_cells);
-    }
-
-
-
-
-
-    template<class T>
     void
     FullyImplicitBlackoilSolver<T>::computeMassFlux(const int               actph ,
                                                  const V&                transi,
