@@ -136,7 +136,8 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
     }
 
     ADB::V v_copy(v);
-    ADB f = ADB::function(std::move(v_copy), std::move(jacs));
+    std::vector<ADB::M> jacs_copy(jacs);
+    ADB f = ADB::function(std::move(v_copy), std::move(jacs_copy));
 
     BOOST_REQUIRE(f.value().matrix() == v.matrix());
 
