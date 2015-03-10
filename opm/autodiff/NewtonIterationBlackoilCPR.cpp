@@ -314,7 +314,7 @@ namespace Opm
                 if (eq == n) {
                     continue;
                 }
-                retval.push_back(ADB::function(vals[eq], jacs[eq]));
+                retval.push_back(ADB::function(std::move(vals[eq]), std::move(jacs[eq])));
             }
             return retval;
         }
@@ -338,7 +338,8 @@ namespace Opm
             // Build C.
             std::vector<M> C_jacs = equation.derivative();
             C_jacs.erase(C_jacs.begin() + n);
-            ADB eq_coll = collapseJacs(ADB::function(equation.value(), C_jacs));
+            V equation_value = equation.value();
+            ADB eq_coll = collapseJacs(ADB::function(std::move(equation_value), std::move(C_jacs)));
             const M& C = eq_coll.derivative()[0];
 
             // Use sparse LU to solve the block submatrices

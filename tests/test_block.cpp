@@ -77,12 +77,10 @@ BOOST_AUTO_TEST_CASE(ConstantInitialisation)
 {
     typedef AutoDiffBlock<double> ADB;
 
-    std::vector<int> blocksizes = { 3, 1, 2 };
-
     ADB::V v(3);
     v << 0.2, 1.2, 13.4;
 
-    ADB a = ADB::constant(v, blocksizes);
+    ADB a = ADB::constant(v);
     BOOST_REQUIRE(a.value().matrix() == v.matrix());
 
     const std::vector<ADB::M>& J = a.derivative();
@@ -137,7 +135,8 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
         jacs[j].insert(0,0) = -1.0;
     }
 
-    ADB f = ADB::function(v, jacs);
+    ADB::V v_copy(v);
+    ADB f = ADB::function(std::move(v_copy), std::move(jacs));
 
     BOOST_REQUIRE(f.value().matrix() == v.matrix());
 

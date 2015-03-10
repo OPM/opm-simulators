@@ -403,7 +403,8 @@ collapseJacs(const AutoDiffBlock<double>& x)
     // Build final jacobian.
     std::vector<ADB::M> jacs(1);
     collapseJacs( x, jacs[ 0 ] );
-    return ADB::function(x.value(), jacs);
+    ADB::V val = x.value();
+    return ADB::function(std::move(val), std::move(jacs));
 }
 
 

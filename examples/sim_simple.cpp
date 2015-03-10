@@ -90,8 +90,8 @@ phaseMobility(const Opm::IncompPropertiesInterface& props,
     std::vector<M> dmw = { krwjac/mu[0] };
     std::vector<M> dmo = { krojac/mu[1] };
 
-    std::vector<ADB> pmobc = { ADB::function(krw / mu[0], dmw) ,
-                               ADB::function(kro / mu[1], dmo) };
+    std::vector<ADB> pmobc = { ADB::function(krw / mu[0], std::move(dmw)) ,
+                               ADB::function(kro / mu[1], std::move(dmo)) };
     return pmobc;
 }
 
