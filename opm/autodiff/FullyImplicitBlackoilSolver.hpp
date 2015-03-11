@@ -160,6 +160,8 @@ namespace Opm {
             ADB              rv;
             ADB              qs;
             ADB              bhp;
+            // Below are quantities stored in the state for optimization purposes.
+            std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
         };
 
         struct WellOps {
@@ -219,11 +221,14 @@ namespace Opm {
 
         SolutionState
         constantState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
+
+        void
+        makeConstantState(SolutionState& state) const;
 
         SolutionState
         variableState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
 
         void
         computeAccum(const SolutionState& state,
@@ -249,6 +254,7 @@ namespace Opm {
         void
         assemble(const V&             dtpv,
                  const BlackoilState& x,
+                 const bool initial_assembly,
                  WellStateFullyImplicitBlackoil& xw);
 
         V solveJacobianSystem() const;
@@ -265,6 +271,12 @@ namespace Opm {
                          const ADB& sw,
                          const ADB& so,
                          const ADB& sg) const;
+
+        V
+        computeGasPressure(const V& po,
+                           const V& sw,
+                           const V& so,
+                           const V& sg) const;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;

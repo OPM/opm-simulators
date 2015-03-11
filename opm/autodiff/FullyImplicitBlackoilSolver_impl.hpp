@@ -271,17 +271,11 @@ namespace detail {
 
         if (active_[Gas]) { updatePrimalVariableFromState(x); }
 
-        {
-            const SolutionState state = constantState(x, xw);
-            computeAccum(state, 0);
-            computeWellConnectionPressures(state, xw);
-        }
-
         // For each iteration we store in a vector the norms of the residual of
         // the mass balance for each active phase, the well flux and the well equations
         std::vector<std::vector<double>> residual_norms_history;
 
-        assemble(pvdt, x, xw);
+        assemble(pvdt, x, true, xw);
 
 
         bool converged = false;
@@ -321,7 +315,7 @@ namespace detail {
 
             updateState(dx, x, xw);
 
-            assemble(pvdt, x, xw);
+            assemble(pvdt, x, false, xw);
 
             residual_norms_history.push_back(computeResidualNorms());
 
@@ -370,6 +364,7 @@ namespace detail {
         , rv        (    ADB::null())
         , qs        (    ADB::null())
         , bhp       (    ADB::null())
+        , canonical_phase_pressures(3, ADB::null())
     {
     }
 
@@ -416,10 +411,21 @@ namespace detail {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::constantState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw) const
     {
         auto state = variableState(x, xw);
+        makeConstantState(state);
+        return state;
+    }
 
+
+
+
+
+    template<class T>
+    void
+    FullyImplicitBlackoilSolver<T>::makeConstantState(SolutionState& state) const
+    {
         // HACK: throw away the derivatives. this may not be the most
         // performant way to do things, but it will make the state
         // automatically consistent with variableState() (and doing
@@ -428,12 +434,17 @@ namespace detail {
         state.temperature = ADB::constant(state.temperature.value());
         state.rs = ADB::constant(state.rs.value());
         state.rv = ADB::constant(state.rv.value());
-        for (int phaseIdx= 0; phaseIdx < x.numPhases(); ++ phaseIdx)
+        const int num_phases = state.saturation.size();
+        for (int phaseIdx = 0; phaseIdx < num_phases; ++ phaseIdx) {
             state.saturation[phaseIdx] = ADB::constant(state.saturation[phaseIdx].value());
+        }
         state.qs = ADB::constant(state.qs.value());
         state.bhp = ADB::constant(state.bhp.value());
-
-        return state;
+        assert(state.canonical_phase_pressures.size() == Opm::BlackoilPhases::MaxNumPhases);
+        for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
+            ADB& pp = state.canonical_phase_pressures[canphase];
+            pp = ADB::constant(pp.value());
+        }
     }
 
 
@@ -443,7 +454,7 @@ namespace detail {
     template<class T>
     typename FullyImplicitBlackoilSolver<T>::SolutionState
     FullyImplicitBlackoilSolver<T>::variableState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw)
+                                                  const WellStateFullyImplicitBlackoil&     xw) const
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -562,14 +573,14 @@ namespace detail {
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
                                              : ADB::constant(V::Zero(nc, 1), bpat));
-                    const std::vector<ADB> pressures = computePressures(state.pressure, sw, so, sg);
-                    const ADB rsSat = fluidRsSat(pressures[ Oil ], so , cells_);
+                    state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
+                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
                         state.rs = (1-isRs) * rsSat + isRs*xvar;
                     } else {
                         state.rs = rsSat;
                     }
-                    const ADB rvSat = fluidRvSat(pressures[ Gas ], so , cells_);
+                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
                         state.rv = (1-isRv) * rvSat + isRv*xvar;
                     } else {
@@ -612,7 +623,6 @@ namespace detail {
         const ADB&              rs    = state.rs;
         const ADB&              rv    = state.rv;
 
-        const std::vector<ADB> pressures = computePressures(state);
         const std::vector<PhasePresence> cond = phaseCondition();
 
         const ADB pv_mult = poroMult(press);
@@ -621,7 +631,7 @@ namespace detail {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, pressures[phase], temp, rs, rv, cond, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond, cells_);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // DUMP(rq_[pos].b);
                 // DUMP(rq_[pos].accum[aix]);
@@ -745,11 +755,22 @@ namespace detail {
     FullyImplicitBlackoilSolver<T>::
     assemble(const V&             pvdt,
              const BlackoilState& x   ,
+             const bool initial_assembly,
              WellStateFullyImplicitBlackoil& xw  )
     {
         using namespace Opm::AutoDiffGrid;
         // Create the primary variables.
         SolutionState state = variableState(x, xw);
+
+        if (initial_assembly) {
+            // Create the (constant, derivativeless) initial state.
+            SolutionState state0 = state;
+            makeConstantState(state0);
+            // Compute initial accumulation contributions
+            // and well connection pressures.
+            computeAccum(state0, 0);
+            computeWellConnectionPressures(state0, xw);
+        }
 
         // DISKVAL(state.pressure);
         // DISKVAL(state.saturation[0]);
@@ -767,16 +788,15 @@ namespace detail {
         // These quantities are stored in rq_[phase].accum[1].
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
-        // in step() and stored in rq_[phase].accum[0].
+        // on the initial call to assemble() and stored in rq_[phase].accum[0].
         computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        const std::vector<ADB> pressures = computePressures(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], pressures[canph_[phaseIdx]], state);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
             // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
             // std::cout << kr[phase];
             // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
@@ -1321,8 +1341,8 @@ namespace detail {
 
     template<class T>
     void FullyImplicitBlackoilSolver<T>::updateState(const V& dx,
-                                                  BlackoilState& state,
-                                                  WellStateFullyImplicitBlackoil& well_state)
+                                                     BlackoilState& state,
+                                                     WellStateFullyImplicitBlackoil& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
@@ -1331,9 +1351,6 @@ namespace detail {
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
-        const V one = V::Constant(nc, 1.0);
-        const SolutionState sol_state_old = constantState(state, well_state);
-        const std::vector<ADB> pressures_old = computePressures(sol_state_old);
 
         // store cell status in vectors
         V isRs = V::Zero(nc,1);
@@ -1385,6 +1402,7 @@ namespace detail {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
         const double dsmax = dsMax();
+
         V so;
         V sw;
         V sg;
@@ -1525,10 +1543,10 @@ namespace detail {
         if (has_vapoil_) {
 
             // The gas pressure is needed for the rvSat calculations
-            const SolutionState sol_state = constantState(state, well_state);
-            const std::vector<ADB> pressures = computePressures(sol_state);
-            const V rvSat0 = fluidRvSat(pressures_old[ Gas ].value(), s_old.col(pu.phase_pos[Oil]), cells_);
-            const V rvSat = fluidRvSat(pressures[ Gas ].value(), so, cells_);
+            const V gaspress_old = computeGasPressure(p_old, s_old.col(Water), s_old.col(Oil), s_old.col(Gas));
+            const V gaspress = computeGasPressure(p, sw, so, sg);
+            const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
+            const V rvSat = fluidRvSat(gaspress, so, cells_);
 
             // The obvious case
             auto hasOil = (so > 0 && isRv == 0);
@@ -1610,6 +1628,9 @@ namespace detail {
     }
 
 
+
+
+
     template<class T>
     std::vector<ADB>
     FullyImplicitBlackoilSolver<T>::computePressures(const SolutionState& state) const
@@ -1636,6 +1657,11 @@ namespace detail {
 
 
     }
+
+
+
+
+
     template <class T>
     std::vector<ADB>
     FullyImplicitBlackoilSolver<T>::
@@ -1668,6 +1694,27 @@ namespace detail {
 
         return pressure;
     }
+
+
+
+
+
+    template<class T>
+    V
+    FullyImplicitBlackoilSolver<T>::computeGasPressure(const V& po,
+                                                       const V& sw,
+                                                       const V& so,
+                                                       const V& sg) const
+    {
+        assert (active_[Gas]);
+        std::vector<ADB> cp = fluid_.capPress(ADB::constant(sw),
+                                              ADB::constant(so),
+                                              ADB::constant(sg),
+                                              cells_);
+        return cp[Gas].value() + po;
+    }
+
+
 
 
 
