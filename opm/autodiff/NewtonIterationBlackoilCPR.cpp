@@ -396,7 +396,7 @@ namespace Opm
             // A concession to MRST, to obtain more similar behaviour:
             // swap the first two equations, so that oil is first, then water.
             auto eqs = eqs_in;
-            std::swap(eqs[0], eqs[1]);
+            eqs[0].swap(eqs[1]);
 
             // Characterize the material balance equations.
             const int n = eqs[0].size();
@@ -463,7 +463,7 @@ namespace Opm
             L.setFromTriplets(t.begin(), t.end());
 
             // Combine in single block.
-            ADB total_residual = eqs[0];
+            ADB total_residual = std::move(eqs[0]);
             for (int phase = 1; phase < num_phases; ++phase) {
                 total_residual = vertcat(total_residual, eqs[phase]);
             }
