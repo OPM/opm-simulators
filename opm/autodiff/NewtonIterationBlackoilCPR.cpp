@@ -463,11 +463,7 @@ namespace Opm
             L.setFromTriplets(t.begin(), t.end());
 
             // Combine in single block.
-            ADB total_residual = std::move(eqs[0]);
-            for (int phase = 1; phase < num_phases; ++phase) {
-                total_residual = vertcat(total_residual, eqs[phase]);
-            }
-            total_residual = collapseJacs(total_residual);
+            ADB total_residual = vertcatCollapseJacs(eqs);
 
             // Create output as product of L with equations.
             A = L * total_residual.derivative()[0];
