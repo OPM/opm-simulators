@@ -434,6 +434,81 @@ vertcat(const AutoDiffBlock<double>& x,
 
 
 
+/// Returns the vertical concatenation [ x[0]; x[1]; ...; x[n-1] ] of the inputs.
+/// This function also collapses the Jacobian matrices into one like collapsJacs().
+inline
+AutoDiffBlock<double>
+vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
+{
+    typedef AutoDiffBlock<double> ADB;
+    if (x.empty()) {
+        return ADB::null();
+    }
+
+    // Count sizes, nonzeros.
+    const int nx = x.size();
+    const int nb = x[0].numBlocks();
+    int size = 0;
+    int nnz = 0;
+    for (int elem = 0; elem < nx; ++elem) {
+        size += x[elem].size();
+        if (x[elem].blockPattern() != x[0].blockPattern()) {
+            OPM_THROW(std::runtime_error, "vertcatCollapseJacs(): all arguments must have the same block pattern");
+        }
+        for (int block = 0; block < nb; ++block) {
+            nnz += x[elem].derivative()[block].nonZeros();
+        }
+    }
+    int num_cols = 0;
+    for (int block = 0; block < nb; ++block) {
+        num_cols += x[0].derivative()[block].cols();
+    }
+
+    // Build value for result.
+    ADB::V val(size);
+    int pos = 0;
+    for (int elem = 0; elem < nx; ++elem) {
+        const int loc_size = x[elem].size();
+        val.segment(pos, loc_size) = x[elem].value();
+        pos += loc_size;
+    }
+    assert(pos == size);
+
+    // Set up for batch insertion of all Jacobian elements.
+    typedef Eigen::Triplet<double> Tri;
+    std::vector<Tri> t;
+    t.reserve(nnz);
+    int block_row_start = 0;
+    for (int elem = 0; elem < nx; ++elem) {
+        int block_col_start = 0;
+        for (int block = 0; block < nb; ++block) {
+            const ADB::M& jac = x[elem].derivative()[block];
+            for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
+                for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
+                    t.push_back(Tri(i.row() + block_row_start,
+                                    i.col() + block_col_start,
+                                    i.value()));
+                }
+            }
+            block_col_start += jac.cols();
+        }
+        block_row_start += x[elem].size();
+    }
+
+    // Build final jacobian.
+    std::vector<ADB::M> jac(1);
+    jac[0] = Eigen::SparseMatrix<double>(size, num_cols);
+    jac[0].reserve(nnz);
+    jac[0].setFromTriplets(t.begin(), t.end());
+
+    // Use move semantics to return result efficiently.
+    return ADB::function(std::move(val), std::move(jac));
+}
+
+
+
+
+
 class Span
 {
 public:
