@@ -31,6 +31,7 @@
 #include <opm/core/props/pvt/PvtDeadSpline.hpp>
 #include <opm/core/props/pvt/PvtLiveOil.hpp>
 #include <opm/core/props/pvt/PvtLiveGas.hpp>
+#include <opm/core/props/pvt/ThermalWaterPvtWrapper.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -147,13 +148,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             // keyword for now...
             std::shared_ptr<PvtConstCompr> pvtw(new PvtConstCompr);
             pvtw->initFromWater(deck->getKeyword("PVTW"));
-
-            if (!eclState->getWatvisctTables().empty()) {
-                pvtw->setWatvisctTables(eclState->getWatvisctTables(),
-                                        deck->getKeyword("VISCREF"));
-            }
-
             props_[phase_usage_.phase_pos[Aqua]] = pvtw;
+
+            // handle temperature dependence of the oil phase
+            if (!eclState->getWatvisctTables().empty() || deck->hasKeyword("WATDENT")) {
+                // deal with temperature dependent properties
+                std::shared_ptr<ThermalWaterPvtWrapper> waterNiPvt(new ThermalWaterPvtWrapper);
+                waterNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Aqua]], deck, eclState);
+
+                props_[phase_usage_.phase_pos[Aqua]] = waterNiPvt;
+            }
         }
         // Oil PVT
         if (phase_usage_.phase_used[Liquid]) {
