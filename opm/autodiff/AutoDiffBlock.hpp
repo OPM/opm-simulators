@@ -28,6 +28,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <utility>
 #include <vector>
 #include <cassert>
 #include <iostream>
