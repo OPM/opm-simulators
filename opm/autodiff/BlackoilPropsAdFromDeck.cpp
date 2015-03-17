@@ -33,6 +33,7 @@
 #include <opm/core/props/pvt/PvtLiveGas.hpp>
 #include <opm/core/props/pvt/ThermalWaterPvtWrapper.hpp>
 #include <opm/core/props/pvt/ThermalOilPvtWrapper.hpp>
+#include <opm/core/props/pvt/ThermalGasPvtWrapper.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -204,18 +205,24 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 if (numSamples > 0) {
                     std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
                     splinePvt->initFromGas(pvdgTables, numSamples);
-
                     props_[phase_usage_.phase_pos[Vapour]] = splinePvt;
                 } else {
                     std::shared_ptr<PvtDead> deadPvt(new PvtDead);
                     deadPvt->initFromGas(pvdgTables);
-
                     props_[phase_usage_.phase_pos[Vapour]] = deadPvt;
                 }
             } else if (!pvtgTables.empty()) {
                 props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(pvtgTables));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
+            }
+
+            // handle temperature dependence of the gas phase
+            if (!eclState->getGasvisctTables().empty() || deck->hasKeyword("TREF")) {
+                std::shared_ptr<ThermalGasPvtWrapper> gasNiPvt(new ThermalGasPvtWrapper);
+                gasNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Vapour]], deck, eclState);
+
+                props_[phase_usage_.phase_pos[Vapour]] = gasNiPvt;
             }
         }
         // Oil vaporization controls (kw VAPPARS)
