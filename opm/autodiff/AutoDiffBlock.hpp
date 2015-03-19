@@ -188,11 +188,25 @@ namespace Opm
         }
 
         /// Create an AutoDiffBlock by directly specifying values and jacobians.
+        /// This version of function() moves its arguments and is therefore
+        /// quite efficient, but leaves the argument variables empty (but valid).
         /// \param[in] val         values
         /// \param[in] jac         vector of jacobians
         static AutoDiffBlock function(V&& val, std::vector<M>&& jac)
         {
             return AutoDiffBlock(std::move(val), std::move(jac));
+        }
+
+        /// Create an AutoDiffBlock by directly specifying values and jacobians.
+        /// This version of function() copies its arguments and is therefore
+        /// less efficient than the other (moving) overload.
+        /// \param[in] val         values
+        /// \param[in] jac         vector of jacobians
+        static AutoDiffBlock function(const V& val, const std::vector<M>& jac)
+        {
+            V val_copy(val);
+            std::vector<M> jac_copy(jac);
+            return AutoDiffBlock(std::move(val_copy), std::move(jac_copy));
         }
 
         /// Construct a set of primary variables, each initialized to
