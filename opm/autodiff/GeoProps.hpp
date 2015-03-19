@@ -222,23 +222,25 @@ namespace Opm
             const int nx = grid.cartdims[0];
             const int ny = grid.cartdims[1];
             const int cartesianCellIdx = global_cell[cellIdx];
-            const int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
 
-            // Average properties when the cell above exist
-            // and has porv less than the MINPV threshold
-            if ( cartesianCellIdxAbove > 0 &&
+            const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
+            ntg[cartesianCellIdx] *= cellVolume;
+            double totalCellVolume = cellVolume;
+
+            // Average properties as long as there exist cells above
+            // that has pore volume less than the MINPV threshold
+            int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
+            while ( cartesianCellIdxAbove >= 0 &&
                  porv[cartesianCellIdxAbove] > 0 &&
                  porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
 
                 // Volume weighted arithmetic average of NTG
-                const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
                 const double cellAboveVolume = eclgrid->getCellVolume(cartesianCellIdxAbove);
-                const double inv_totalCellVolume = 1/(cellVolume + cellAboveVolume);
-
-                ntg[cartesianCellIdx] *= cellAboveVolume;
+                totalCellVolume += cellAboveVolume;
                 ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellAboveVolume;
-                ntg[cartesianCellIdx] *= inv_totalCellVolume;
+                cartesianCellIdxAbove -= nx*ny;
             }
+            ntg[cartesianCellIdx] /= totalCellVolume;
         }
     }
 
