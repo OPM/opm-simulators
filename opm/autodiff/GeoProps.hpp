@@ -109,6 +109,12 @@ namespace Opm
                     pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
                 }                
             }
+            // Use volume weighted arithmetic average of the NTG values for
+            // the cells effected by the current OPM cpgrid process algorithm
+            // for MINPV. Note that the change does not effect the pore volume calculations
+            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
+            // only the transmissibility calculations.
+            minPvFillProps_(grid, eclState,ntg);
 
             // Transmissibility
 
@@ -186,6 +192,11 @@ namespace Opm
                                      const double* perm,
                                      Vector &hTrans);
 
+        template <class Grid>
+        void minPvFillProps_(const Grid &grid,
+                             Opm::EclipseStateConstPtr eclState,
+                             std::vector<double> &ntg);
+
         Vector pvol_ ;
         Vector trans_;
         Vector gpot_ ;
@@ -197,6 +208,39 @@ namespace Opm
 
     };
 
+    template <class GridType>
+    inline void DerivedGeology::minPvFillProps_(const GridType &grid,
+                                                Opm::EclipseStateConstPtr eclState,
+                                                std::vector<double> &ntg)
+    {
+
+        int numCells = Opm::AutoDiffGrid::numCells(grid);
+        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+        EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
+        std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
+        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            const int nx = grid.cartdims[0];
+            const int ny = grid.cartdims[1];
+            const int cartesianCellIdx = global_cell[cellIdx];
+            const int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
+
+            // Average properties when the cell above exist
+            // and has porv less than the MINPV threshold
+            if ( cartesianCellIdxAbove > 0 &&
+                 porv[cartesianCellIdxAbove] > 0 &&
+                 porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
+
+                // Volume weighted arithmetic average of NTG
+                const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
+                const double cellAboveVolume = eclgrid->getCellVolume(cartesianCellIdxAbove);
+                const double inv_totalCellVolume = 1/(cellVolume + cellAboveVolume);
+
+                ntg[cartesianCellIdx] *= cellAboveVolume;
+                ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellAboveVolume;
+                ntg[cartesianCellIdx] *= inv_totalCellVolume;
+            }
+        }
+    }
 
     template <class GridType>
     inline void DerivedGeology::multiplyHalfIntersections_(const GridType &grid,
