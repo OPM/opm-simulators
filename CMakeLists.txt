@@ -16,14 +16,43 @@
 
 cmake_minimum_required (VERSION 2.8)
 
-# additional search modules
-find_path (OPM_MACROS_ROOT cmake/Modules/OpmInit.cmake
-	PATHS ${opm-macros_ROOT}
-	      ${CMAKE_CURRENT_SOURCE_DIR}
-	DOC "Path to build system macros and scripts"
-	NO_DEFAULT_PATH
-	)
-list (APPEND CMAKE_MODULE_PATH "${OPM_MACROS_ROOT}/cmake/Modules")
+set( OPM_CMAKE_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
+
+include (OpmInit OPTIONAL RESULT_VARIABLE OPM_INIT)
+
+if (OPM_INIT) 
+
+   # We actually found the OpmInit module without using the OPM_CMAKE_ROOT variable.
+   # The build needs the variable $OPM_MACROS_ROOT to be set, so here we infer it 
+   # by backtracing from the location of the OpmInit module.
+   get_filename_component( TMP1 ${OPM_INIT} PATH )
+   get_filename_component( TMP2 ${TMP1} PATH )
+   get_filename_component( OPM_MACROS_ROOT ${TMP2} PATH )
+
+else()
+
+   if (OPM_CMAKE_ROOT)
+      list( APPEND CMAKE_MODULE_PATH "${OPM_CMAKE_ROOT}/cmake/Modules")
+      include (OpmInit OPTIONAL RESULT_VARIABLE OPM_INIT)
+      set( OPM_MACROS_ROOT ${OPM_CMAKE_ROOT} )
+   endif()
+
+   if (NOT OPM_INIT)
+      message( "" )       
+      message( " /-------------------------------------------------------------------------------\\")
+      message( " |  Could not locate the opm build macros. The opm build macros                  |")
+      message( " |  are in a separate repository - instructions to proceed:                      |")
+      message( " |                                                                               |")
+      message( " |    1. Clone the repository: git clone git@github.com:OPM/opm-cmake.git        |")
+      message( " |                                                                               |")
+      message( " |    2. Run cmake in the current project with -DOPM_CMAKE_ROOT=<path>/opm-cmake |")
+      message( " |                                                                               |") 
+      message( " \\-------------------------------------------------------------------------------/")
+      message( "" )       
+      message( FATAL_ERROR "Could not find OPM Macros")
+   endif()
+
+endif()
 
 # not the same location as most of the other projects; this hook overrides
 macro (dir_hook)
