@@ -314,7 +314,7 @@ namespace Opm
                 if (eq == n) {
                     continue;
                 }
-                retval.push_back(ADB::function(vals[eq], jacs[eq]));
+                retval.push_back(ADB::function(std::move(vals[eq]), std::move(jacs[eq])));
             }
             return retval;
         }
@@ -338,7 +338,8 @@ namespace Opm
             // Build C.
             std::vector<M> C_jacs = equation.derivative();
             C_jacs.erase(C_jacs.begin() + n);
-            ADB eq_coll = collapseJacs(ADB::function(equation.value(), C_jacs));
+            V equation_value = equation.value();
+            ADB eq_coll = collapseJacs(ADB::function(std::move(equation_value), std::move(C_jacs)));
             const M& C = eq_coll.derivative()[0];
 
             // Use sparse LU to solve the block submatrices
@@ -395,7 +396,7 @@ namespace Opm
             // A concession to MRST, to obtain more similar behaviour:
             // swap the first two equations, so that oil is first, then water.
             auto eqs = eqs_in;
-            std::swap(eqs[0], eqs[1]);
+            eqs[0].swap(eqs[1]);
 
             // Characterize the material balance equations.
             const int n = eqs[0].size();
@@ -462,7 +463,7 @@ namespace Opm
             L.setFromTriplets(t.begin(), t.end());
 
             // Combine in single block.
-            ADB total_residual = eqs[0];
+            ADB total_residual = std::move(eqs[0]);
             for (int phase = 1; phase < num_phases; ++phase) {
                 total_residual = vertcat(total_residual, eqs[phase]);
             }

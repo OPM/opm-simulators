@@ -335,7 +335,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                   mu.data(), dmudp.data(), dmudr.data());
         if (pw.derivative().empty()) {
-            return ADB::constant(mu);
+            return ADB::constant(std::move(mu));
         } else {
             ADB::M dmudp_diag = spdiag(dmudp);
             const int num_blocks = pw.numBlocks();
@@ -343,7 +343,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dmudp_diag, pw.derivative()[block], jacs[block]);
             }
-            return ADB::function(mu, jacs);
+            return ADB::function(std::move(mu), std::move(jacs));
         }
     }
 
@@ -383,7 +383,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
             jacs[block] += temp;
         }
-        return ADB::function(mu, jacs);
+        return ADB::function(std::move(mu), std::move(jacs));
     }
 
     /// Gas viscosity.
@@ -422,7 +422,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dmudr_diag, rv.derivative()[block], temp);
             jacs[block] += temp;
         }
-        return ADB::function(mu, jacs);
+        return ADB::function(std::move(mu), std::move(jacs));
     }
 
 
@@ -459,7 +459,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dbdp_diag, pw.derivative()[block], jacs[block]);
         }
-        return ADB::function(b, jacs);
+        return ADB::function(std::move(b), std::move(jacs));
     }
 
     /// Oil formation volume factor.
@@ -499,7 +499,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
             jacs[block] += temp;
         }
-        return ADB::function(b, jacs);
+        return ADB::function(std::move(b), std::move(jacs));
     }
 
     /// Gas formation volume factor.
@@ -539,7 +539,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dbdr_diag, rv.derivative()[block], temp);
             jacs[block] += temp;
         }
-        return ADB::function(b, jacs);
+        return ADB::function(std::move(b), std::move(jacs));
     }
 
 
@@ -568,7 +568,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(drbubdp_diag, po.derivative()[block], jacs[block]);
         }
-        return ADB::function(rbub, jacs);
+        return ADB::function(std::move(rbub), std::move(jacs));
     }
 
     /// Bubble point curve for Rs as function of oil pressure.
@@ -609,7 +609,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(drvdp_diag, po.derivative()[block], jacs[block]);
         }
-        return ADB::function(rv, jacs);
+        return ADB::function(std::move(rv), std::move(jacs));
     }
 
     /// Condensation curve for Rv as function of oil pressure.
@@ -686,7 +686,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                         jacs[block] += temp;
                     }
                 }
-                relperms.emplace_back(ADB::function(kr.col(phase1_pos), jacs));
+                ADB::V val = kr.col(phase1_pos);
+                relperms.emplace_back(ADB::function(std::move(val), std::move(jacs)));
             } else {
                 relperms.emplace_back(ADB::null());
             }
@@ -746,7 +747,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                         jacs[block] += temp;
                     }
                 }
-                adbCapPressures.emplace_back(ADB::function(pc.col(phase1_pos), jacs));
+                ADB::V val = pc.col(phase1_pos);
+                adbCapPressures.emplace_back(ADB::function(std::move(val), std::move(jacs)));
             } else {
                 adbCapPressures.emplace_back(ADB::null());
             }
@@ -849,7 +851,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             for (int block = 0; block < num_blocks; ++block) {
                 jacs[block] = dfactor_dso_diag * so.derivative()[block];
             }
-            r = ADB::function(factor, jacs)*r;
+            r = ADB::function(std::move(factor), std::move(jacs))*r;
         }
     }
 

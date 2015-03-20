@@ -542,21 +542,20 @@ namespace detail {
 
         // Pressure.
         int nextvar = 0;
-        state.pressure = vars[ nextvar++ ];
+        state.pressure = std::move(vars[ nextvar++ ]);
 
         // temperature
         const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
         state.temperature = ADB::constant(temp);
 
         // Saturations
-        const std::vector<int>& bpat = vars[0].blockPattern();
         {
 
-            ADB so = ADB::constant(V::Ones(nc, 1), bpat);
+            ADB so = ADB::constant(V::Ones(nc, 1));
 
             if (active_[ Water ]) {
-                ADB& sw = vars[ nextvar++ ];
-                state.saturation[pu.phase_pos[ Water ]] = sw;
+                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[ nextvar++ ]);
+                const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
                 so -= sw;
             }
 
@@ -572,7 +571,7 @@ namespace detail {
                     // RS and RV is only defined if both oil and gas phase are active.
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1), bpat));
+                                             : ADB::constant(V::Zero(nc, 1)));
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
@@ -591,15 +590,15 @@ namespace detail {
 
             if (active_[ Oil ]) {
                 // Note that so is never a primary variable.
-                state.saturation[pu.phase_pos[ Oil ]] = so;
+                state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
             }
         }
 
         // Qs.
-        state.qs = vars[ nextvar++ ];
+        state.qs = std::move(vars[ nextvar++ ]);
 
         // Bhp.
-        state.bhp = vars[ nextvar++ ];
+        state.bhp = std::move(vars[ nextvar++ ]);
 
         assert(nextvar == int(vars.size()));
 
@@ -946,7 +945,7 @@ namespace detail {
         }
 
         // total rates at std
-        ADB qt_s = ADB::constant(V::Zero(nw), state.bhp.blockPattern());
+        ADB qt_s = ADB::constant(V::Zero(nw));
         for (int phase = 0; phase < np; ++phase) {
             qt_s += subset(state.qs, Span(nw, 1, phase*nw));
         }
@@ -954,7 +953,7 @@ namespace detail {
         // compute avg. and total wellbore phase volumetric rates at std. conds
         const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
         std::vector<ADB> wbq(np, ADB::null());
-        ADB wbqt = ADB::constant(V::Zero(nw), state.pressure.blockPattern());
+        ADB wbqt = ADB::constant(V::Zero(nw));
         for (int phase = 0; phase < np; ++phase) {
             const int pos = pu.phase_pos[phase];
             wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
@@ -995,7 +994,7 @@ namespace detail {
         ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
 
         // compute volume ratio between connection at standard conditions
-        ADB volRat = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        ADB volRat = ADB::constant(V::Zero(nperf));
         std::vector<ADB> cmix_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             cmix_s[phase] = wops_.w2p * mix_s[phase];
@@ -1223,16 +1222,22 @@ namespace detail {
 
         // Update primary variables, if necessary.
         if (bhp_changed) {
+            // We will set the bhp primary variable to the new ones,
+            // but we do not change the derivatives here.
             ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
-            bhp = ADB::function(new_bhp, bhp.derivative());
+            // Avoiding the copy below would require a value setter method
+            // in AutoDiffBlock.
+            std::vector<ADB::M> old_derivs = bhp.derivative();
+            bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
         }
         if (rates_changed) {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
             // The transpose() below switches the ordering.
             const DataBlock wrates = Eigen::Map<const DataBlock>(xw.wellRates().data(), nw, np).transpose();
-            const ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
+            ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
+            std::vector<ADB::M> old_derivs = well_phase_flow_rate.derivative();
+            well_phase_flow_rate = ADB::function(std::move(new_qs), std::move(old_derivs));
         }
     }
 
@@ -1607,22 +1612,21 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB zero = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? state.saturation[ pu.phase_pos[ Water ] ]
-                        : null);
+        const ADB& sw = (active_[ Water ]
+                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                         : zero);
 
-        const ADB so = (active_[ Oil ]
-                        ? state.saturation[ pu.phase_pos[ Oil ] ]
-                        : null);
+        const ADB& so = (active_[ Oil ]
+                         ? state.saturation[ pu.phase_pos[ Oil ] ]
+                         : zero);
 
-        const ADB sg = (active_[ Gas ]
-                        ? state.saturation[ pu.phase_pos[ Gas ] ]
-                        : null);
+        const ADB& sg = (active_[ Gas ]
+                         ? state.saturation[ pu.phase_pos[ Gas ] ]
+                         : zero);
 
         return fluid_.relperm(sw, so, sg, cells_);
     }
@@ -1637,9 +1641,8 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB null = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const ADB& sw = (active_[ Water ]
@@ -1712,38 +1715,6 @@ namespace detail {
                                               ADB::constant(sg),
                                               cells_);
         return cp[Gas].value() + po;
-    }
-
-
-
-
-
-    template<class T>
-    std::vector<ADB>
-    FullyImplicitBlackoilSolver<T>::computeRelPermWells(const SolutionState& state,
-                                                     const DataBlock& well_s,
-                                                     const std::vector<int>& well_cells) const
-    {
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int>& bpat = state.pressure.blockPattern();
-
-        const ADB null = ADB::constant(V::Zero(nperf), bpat);
-
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Water ]), bpat)
-                        : null);
-
-        const ADB so = (active_[ Oil ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Oil ]), bpat)
-                        : null);
-
-        const ADB sg = (active_[ Gas ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Gas ]), bpat)
-                        : null);
-
-        return fluid_.relperm(sw, so, sg, well_cells);
     }
 
 
@@ -2263,9 +2234,9 @@ namespace detail {
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
-            return ADB::function(pm, jacs);
+            return ADB::function(std::move(pm), std::move(jacs));
         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 
@@ -2291,9 +2262,9 @@ namespace detail {
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dtm_diag, p.derivative()[block], jacs[block]);
             }
-            return ADB::function(tm, jacs);
+            return ADB::function(std::move(tm), std::move(jacs));
         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 

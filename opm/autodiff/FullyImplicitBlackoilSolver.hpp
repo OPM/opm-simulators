@@ -281,11 +281,6 @@ namespace Opm {
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
 
-        std::vector<ADB>
-        computeRelPermWells(const SolutionState& state,
-                            const DataBlock& well_s,
-                            const std::vector<int>& well_cells) const;
-
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,

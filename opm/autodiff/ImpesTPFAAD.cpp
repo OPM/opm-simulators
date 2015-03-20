@@ -326,7 +326,6 @@ namespace {
         const ADB& p = vars[0];
         const ADB T = ADB::constant(T0);
         const ADB& bhp = vars[1];
-        std::vector<int> bpat = p.blockPattern();
 
         // Compute T_ij * (p_i - p_j).
         const ADB nkgradp = transi * (ops_.ngrad * p);
@@ -351,10 +350,10 @@ namespace {
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
 
-        cell_residual_ = ADB::constant(pv, bpat);
-        well_residual_ = ADB::constant(V::Zero(nw,1), bpat);
-        ADB divcontrib_sum = ADB::constant(V::Zero(nc,1), bpat);
-        qs_ = ADB::constant(V::Zero(nw*np, 1), bpat);
+        cell_residual_ = ADB::constant(pv);
+        well_residual_ = ADB::constant(V::Zero(nw,1));
+        ADB divcontrib_sum = ADB::constant(V::Zero(nc,1));
+        qs_ = ADB::constant(V::Zero(nw*np, 1));
         for (int phase = 0; phase < np; ++phase) {
             const ADB cell_b = fluidFvf(phase, p, T, cells);
             const ADB cell_rho = fluidRho(phase, p, T, cells);
@@ -381,7 +380,7 @@ namespace {
             const ADB well_contrib = superset(perf_flux*perf_b, well_cells, nc);
             const ADB divcontrib = delta_t * (ops_.div * (flux * face_b) + well_contrib);
             const V qcontrib = delta_t * q;
-            const ADB pvcontrib = ADB::constant(pv*z0, bpat);
+            const ADB pvcontrib = ADB::constant(pv*z0);
             const ADB component_contrib = pvcontrib + qcontrib;
             divcontrib_sum = divcontrib_sum - divcontrib/cell_b;
             cell_residual_ = cell_residual_ - (component_contrib/cell_b);

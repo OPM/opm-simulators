@@ -28,6 +28,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <utility>
 #include <vector>
 #include <cassert>
 #include <iostream>
@@ -98,9 +99,14 @@ namespace Opm
         /// Construct an empty AutoDiffBlock.
         static AutoDiffBlock null()
         {
-            V val;
-            std::vector<M> jac;
-            return AutoDiffBlock(val, jac);
+            return AutoDiffBlock(V(), {});
+        }
+
+        /// Create an AutoDiffBlock representing a constant.
+        /// \param[in] val         values
+        static AutoDiffBlock constant(V&& val)
+        {
+            return AutoDiffBlock(std::move(val));
         }
 
         /// Create an AutoDiffBlock representing a constant.
@@ -126,7 +132,8 @@ namespace Opm
             for (int i = 0; i < num_blocks; ++i) {
                 jac[i] = M(num_elem, blocksizes[i]);
             }
-            return AutoDiffBlock(val, jac);
+            V val_copy(val);
+            return AutoDiffBlock(std::move(val_copy), std::move(jac));
         }
 
         /// Create an AutoDiffBlock representing a single variable block.
@@ -136,7 +143,7 @@ namespace Opm
         /// The resulting object will have size() equal to block_pattern[index].
         /// Its jacobians will all be zero, except for derivative()[index], which
         /// will be an identity matrix.
-        static AutoDiffBlock variable(const int index, const V& val, const std::vector<int>& blocksizes)
+        static AutoDiffBlock variable(const int index, V&& val, const std::vector<int>& blocksizes)
         {
             std::vector<M> jac;
             const int num_elem = val.size();
@@ -164,15 +171,42 @@ namespace Opm
                     assert(jac[i].size()==0);
             }
             }
-            return AutoDiffBlock(val, jac);
+            return AutoDiffBlock(std::move(val), std::move(jac));
+        }
+
+        /// Create an AutoDiffBlock representing a single variable block.
+        /// \param[in] index       index of the variable you are constructing
+        /// \param[in] val         values
+        /// \param[in] blocksizes  block pattern
+        /// The resulting object will have size() equal to block_pattern[index].
+        /// Its jacobians will all be zero, except for derivative()[index], which
+        /// will be an identity matrix.
+        static AutoDiffBlock variable(const int index, const V& val, const std::vector<int>& blocksizes)
+        {
+            V value = val;
+            return variable(index, std::move(value), blocksizes);
         }
 
         /// Create an AutoDiffBlock by directly specifying values and jacobians.
+        /// This version of function() moves its arguments and is therefore
+        /// quite efficient, but leaves the argument variables empty (but valid).
+        /// \param[in] val         values
+        /// \param[in] jac         vector of jacobians
+        static AutoDiffBlock function(V&& val, std::vector<M>&& jac)
+        {
+            return AutoDiffBlock(std::move(val), std::move(jac));
+        }
+
+        /// Create an AutoDiffBlock by directly specifying values and jacobians.
+        /// This version of function() copies its arguments and is therefore
+        /// less efficient than the other (moving) overload.
         /// \param[in] val         values
         /// \param[in] jac         vector of jacobians
         static AutoDiffBlock function(const V& val, const std::vector<M>& jac)
         {
-            return AutoDiffBlock(val, jac);
+            V val_copy(val);
+            std::vector<M> jac_copy(jac);
+            return AutoDiffBlock(std::move(val_copy), std::move(jac_copy));
         }
 
         /// Construct a set of primary variables, each initialized to
@@ -259,7 +293,7 @@ namespace Opm
                 assert(jac[block].cols() == rhs.jac_[block].cols());
                 jac[block] += rhs.jac_[block];
             }
-            return function(val_ + rhs.val_, jac);
+            return function(val_ + rhs.val_, std::move(jac));
         }
 
         /// Elementwise operator -
@@ -282,7 +316,7 @@ namespace Opm
                 assert(jac[block].cols() == rhs.jac_[block].cols());
                 jac[block] -= rhs.jac_[block];
             }
-            return function(val_ - rhs.val_, jac);
+            return function(val_ - rhs.val_, std::move(jac));
         }
 
         /// Elementwise operator *
@@ -318,7 +352,7 @@ namespace Opm
                     jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
                 }
             }
-            return function(val_ * rhs.val_, jac);
+            return function(val_ * rhs.val_, std::move(jac));
         }
 
         /// Elementwise operator /
@@ -358,7 +392,7 @@ namespace Opm
                     jac[block] = D3 * (D2*jac_[block] - D1*rhs.jac_[block]);
                 }
             }
-            return function(val_ / rhs.val_, jac);
+            return function(val_ / rhs.val_, std::move(jac));
         }
 
         /// I/O.
@@ -372,6 +406,13 @@ namespace Opm
                 os << "Sub Jacobian #" << i << '\n' << jac_[i] << "\n";
             }
             return os;
+        }
+
+        /// Efficient swap function.
+        void swap(AutoDiffBlock& other)
+        {
+            val_.swap(other.val_);
+            jac_.swap(other.jac_);
         }
 
         /// Number of elements
@@ -411,13 +452,17 @@ namespace Opm
 
     private:
         AutoDiffBlock(const V& val)
-        : val_(val)
+            : val_(val)
         {
         }
 
-        AutoDiffBlock(const V& val,
-                      const std::vector<M>& jac)
-            : val_(val), jac_(jac)
+        AutoDiffBlock(V&& val)
+            : val_(std::move(val))
+        {
+        }
+
+        AutoDiffBlock(V&& val, std::vector<M>&& jac)
+            : val_(std::move(val)), jac_(std::move(jac))
         {
 #ifndef NDEBUG
             const int num_elem = val_.size();
@@ -457,7 +502,7 @@ namespace Opm
             fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
         }
         typename AutoDiffBlock<Scalar>::V val = lhs*rhs.value().matrix();
-        return AutoDiffBlock<Scalar>::function(val, jac);
+        return AutoDiffBlock<Scalar>::function(std::move(val), std::move(jac));
     }
 
 
@@ -549,7 +594,7 @@ namespace Opm
         for (int block=0; block<lhs.numBlocks(); block++) {
             jac.emplace_back( lhs.derivative()[block] * rhs );
         }
-        return AutoDiffBlock<Scalar>::function( lhs.value() * rhs, jac );
+        return AutoDiffBlock<Scalar>::function( lhs.value() * rhs, std::move(jac) );
     }
 
 
