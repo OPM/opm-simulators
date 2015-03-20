@@ -994,7 +994,7 @@ namespace {
             for (int block = 0; block < num_blocks; ++block) {
                 jacs[block] = dpm_diag * p.derivative()[block];
             }
-            return ADB::function(pm, jacs);
+            return ADB::function(std::move(pm), std::move(jacs));
         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
@@ -1021,7 +1021,7 @@ namespace {
             for (int block = 0; block < num_blocks; ++block) {
                 jacs[block] = dtm_diag * p.derivative()[block];
             }
-            return ADB::function(tm, jacs);
+            return ADB::function(std::move(tm), std::move(jacs));
         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
