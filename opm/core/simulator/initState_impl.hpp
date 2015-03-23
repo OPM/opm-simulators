@@ -180,11 +180,11 @@ namespace Opm
                 const double surfvol[2][2] = { { 1.0, 0.0 },
                                                { 0.0, 1.0 } };
                 // We do not handle multi-region PVT/EQUIL at this point.
-                const int* cells = 0;
+                const int cell = 0;
                 double A[4] = { 0.0 };
-                props_.matrix(1, &pressure, &temperature, surfvol[phase], cells, A, 0);
+                props_.matrix(1, &pressure, &temperature, surfvol[phase], &cell, A, 0);
                 double rho[2] = { 0.0 };
-                props_.density(1, A, cells, rho);
+                props_.density(1, A, &cell, rho);
                 return rho[phase];
             }
         };
@@ -903,7 +903,10 @@ namespace Opm
             computeSaturation(props,state);
         }
         else {
-            OPM_THROW(std::runtime_error, "Temporarily, we require the RS or the RV field.");
+            state.gasoilratio() = std::vector<double>(number_of_cells, 0.0);
+            state.rv() = std::vector<double>(number_of_cells, 0.0);
+            initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
+            computeSaturation(props,state);
         }
     }
 
