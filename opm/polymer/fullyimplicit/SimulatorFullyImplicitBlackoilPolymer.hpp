@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2014 STATOIL ASA.
 
   This file is part of the Open Porous Media project (OPM).
@@ -26,6 +26,7 @@
 
 struct UnstructuredGrid;
 struct Wells;
+struct FlowBoundaryConditions;
 
 namespace Opm
 {
@@ -37,9 +38,8 @@ namespace Opm
     class SimulatorTimer;
     class PolymerBlackoilState;
     class WellStateFullyImplicitBlackoil;
-    class WellsManager;
     class EclipseState;
-    class EclipseWriter;
+    class BlackoilOutputWriter;
     class PolymerPropsAd;
     class PolymerInflowInterface;
     struct SimulatorReport;
@@ -70,7 +70,6 @@ namespace Opm
         /// \param[in] grid          grid data structure
         /// \param[in] geo           derived geological properties
         /// \param[in] props         fluid and rock properties
-        /// \param[in] polymer_props polymer properties
         /// \param[in] rock_comp_props     if non-null, rock compressibility properties
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
@@ -91,7 +90,7 @@ namespace Opm
                                               const bool vapoil,
                                               const bool polymer,
                                               std::shared_ptr<EclipseState> eclipse_state,
-                                              EclipseWriter& output_writer,
+                                              BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 

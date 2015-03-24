@@ -1,7 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2014 STATOIL ASA.
-  
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,6 +21,8 @@
 #ifndef OPM_FULLYIMPLICITBLACKOILPOLYMERSOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITBLACKOILPOLYMERSOLVER_HEADER_INCLUDED
 
+#include <cassert>
+
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -29,6 +30,8 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+
+#include <array>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -56,29 +59,55 @@ namespace Opm {
     class FullyImplicitBlackoilPolymerSolver
     {
     public:
+        // the Newton relaxation type
+        enum RelaxType { DAMPEN, SOR };
+
+        // class holding the solver parameters
+        struct SolverParameter
+        {
+            double                          dp_max_rel_;
+            double                          ds_max_;
+            double                          dr_max_rel_;
+            enum RelaxType                  relax_type_;
+            double                          relax_max_;
+            double                          relax_increment_;
+            double                          relax_rel_tol_;
+            double                          max_residual_allowed_;
+            double                          tolerance_mb_;
+            double                          tolerance_cnv_;
+            double                          tolerance_wells_;
+            int                             max_iter_;
+
+            SolverParameter( const parameter::ParameterGroup& param );
+            SolverParameter();
+
+            void reset();
+        };
+
         /// \brief The type of the grid that we use.
         typedef T Grid;
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
-        /// \param[in] param       parameters
+        /// \param[in] param            parameters
         /// \param[in] grid             grid data structure
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilPolymerSolver(const parameter::ParameterGroup& param,
+        FullyImplicitBlackoilPolymerSolver(const SolverParameter&          param,
                                            const Grid&                     grid ,
                                            const BlackoilPropsAdInterface& fluid,
                                            const DerivedGeology&           geo  ,
                                            const RockCompressibility*      rock_comp_props,
                                            const PolymerPropsAd&           polymer_props_ad,
-                                           const Wells&                    wells,
+                                           const Wells*                    wells,
                                            const NewtonIterationBlackoilInterface& linsolver,
                                            const bool has_disgas,
                                            const bool has_vapoil,
-                                           const bool has_polymer);
+                                           const bool has_polymer,
+                                           const bool terminal_output);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
         /// This prevents flow across faces if the potential
@@ -99,11 +128,15 @@ namespace Opm {
         /// \param[in] dt        time step size
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
-        void
+        /// \return              number of linear iterations used
+        int
         step(const double   dt    ,
              PolymerBlackoilState& state ,
              WellStateFullyImplicitBlackoil& wstate,
              const std::vector<double>& polymer_inflow);
+
+        unsigned int newtonIterations () const { return newtonIterations_; }
+        unsigned int linearIterations () const { return linearIterations_; }
 
     private:
         // Types and enums
@@ -133,21 +166,23 @@ namespace Opm {
             ADB              rv;
             ADB              concentration;
             ADB              qs;
-            ADB              bhp;       
+            ADB              bhp;
+            // Below are quantities stored in the state for optimization purposes.
+            std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
         };
 
         struct WellOps {
-            WellOps(const Wells& wells);
+            WellOps(const Wells* wells);
             M w2p;              // well -> perf (scatter)
             M p2w;              // perf -> well (gather)
         };
 
-        enum { Water = BlackoilPropsAdInterface::Water,
-               Oil   = BlackoilPropsAdInterface::Oil  ,
-               Gas   = BlackoilPropsAdInterface::Gas  };
+        enum { Water        = BlackoilPropsAdInterface::Water,
+               Oil          = BlackoilPropsAdInterface::Oil  ,
+               Gas          = BlackoilPropsAdInterface::Gas  ,
+               MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases
+         };
 
-        // the Newton relaxation type
-        enum RelaxType { DAMPEN, SOR };
         enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
         // Member data
@@ -155,8 +190,8 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        const PolymerPropsAd&           polymer_props_ad_; 
-        const Wells&                    wells_;
+        const PolymerPropsAd&           polymer_props_ad_;
+        const Wells*                    wells_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
@@ -170,14 +205,8 @@ namespace Opm {
         const bool has_vapoil_;
         const bool has_polymer_;
         const int  poly_pos_;
-        double                          dp_max_rel_;
-        double                          ds_max_;
-        double                          drs_max_rel_;
-        enum RelaxType                  relax_type_;
-        double                          relax_max_;
-        double                          relax_increment_;
-        double                          relax_rel_tol_;
-        int                             max_iter_;
+
+        SolverParameter                 param_;
         bool use_threshold_pressure_;
         V threshold_pressures_by_interior_face_;
 
@@ -187,16 +216,30 @@ namespace Opm {
 
         LinearisedBlackoilResidual residual_;
 
+        /// \brief Whether we print something to std::cout
+        bool terminal_output_;
+        unsigned int newtonIterations_;
+        unsigned int linearIterations_;
+
         std::vector<int>         primalVariable_;
 
         // Private methods.
+
+        // return true if wells are available
+        bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
+        // return wells object
+        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
+
         SolutionState
         constantState(const PolymerBlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
+
+        void
+        makeConstantState(SolutionState& state) const;
 
         SolutionState
         variableState(const PolymerBlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw);
+                      const WellStateFullyImplicitBlackoil& xw) const;
 
         void
         computeAccum(const SolutionState& state,
@@ -223,6 +266,7 @@ namespace Opm {
         void
         assemble(const V&             dtpv,
                  const PolymerBlackoilState& x,
+                 const bool initial_assembly,
                  WellStateFullyImplicitBlackoil& xw,
                  const std::vector<double>& polymer_inflow);
 
@@ -236,6 +280,18 @@ namespace Opm {
         computePressures(const SolutionState& state) const;
 
         std::vector<ADB>
+        computePressures(const ADB& po,
+                         const ADB& sw,
+                         const ADB& so,
+                         const ADB& sg) const;
+
+        V
+        computeGasPressure(const V& po,
+                           const V& sw,
+                           const V& so,
+                           const V& sg) const;
+
+        std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
 
         std::vector<ADB>
@@ -244,35 +300,26 @@ namespace Opm {
                             const std::vector<int>& well_cells) const;
 
         void
-        computeMassFlux(const int               actph ,
-                        const V&                transi,
-                        const ADB&              kr    ,
-                        const ADB&              p     ,
-                        const SolutionState&    state );
-
-        void
-        computeMassFlux(const V&                trans,
-                        const std::vector<ADB>& kr,
+        computeMassFlux(const V&                transi,
+                        const std::vector<ADB>& kr    ,
                         const std::vector<ADB>& phasePressure,
-                        const SolutionState&    state);
-
+                        const SolutionState&    state );
         void
         computeCmax(PolymerBlackoilState& state);
 
         ADB
         computeMc(const SolutionState& state) const;
 
-        ADB
-        rockPorosity(const ADB& p) const;
-        
-        ADB
-        rockPermeability(const ADB& p) const;
         void applyThresholdPressures(ADB& dp);
 
         double
         residualNorm() const;
 
-        std::vector<double> residuals() const;
+        /// \brief Compute the residual norms of the mass balance for each phase,
+        /// the well flux, and the well equation.
+        /// \return a vector that contains for each phase the norm of the mass balance
+        /// and afterwards the norm of the residual of the well flux and the well equation.
+        std::vector<double> computeResidualNorms() const;
 
         ADB
         fluidViscosity(const int               phase,
@@ -321,7 +368,6 @@ namespace Opm {
                    const ADB&              so,
                    const std::vector<int>& cells) const;
 
-
         ADB
         poroMult(const ADB& p) const;
 
@@ -350,7 +396,35 @@ namespace Opm {
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
-        bool getConvergence(const double dt, const int it);
+        bool getConvergence(const double dt, const int iteration);
+
+        /// \brief Compute the reduction within the convergence check.
+        /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
+        ///                  as the number of cells of the grid. B.col(i) contains the values
+        ///                  for phase i.
+        /// \param[in] tempV A matrix with MaxNumPhases columns and the same number rows
+        ///                  as the number of cells of the grid. tempV.col(i) contains the
+        ///                   values
+        ///                  for phase i.
+        /// \param[in] R     A matrix with MaxNumPhases columns and the same number rows
+        ///                  as the number of cells of the grid. B.col(i) contains the values
+        ///                  for phase i.
+        /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
+        ///                   of R for the phase i.
+        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
+        ///                   maximum of tempV for the phase i.
+        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
+        ///                   of B for the phase i.
+        /// \param[in]  nc    The number of cells of the local grid.
+        /// \return The total pore volume over all cells.
+        double
+        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
+                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
+                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
+                             std::array<double,MaxNumPhases+1>& R_sum,
+                             std::array<double,MaxNumPhases+1>& maxCoeff,
+                             std::array<double,MaxNumPhases+1>& B_avg,
+                             int nc) const;
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,
@@ -358,14 +432,15 @@ namespace Opm {
 
         void stablizeNewton(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
 
-        double dpMaxRel() const { return dp_max_rel_; }
-        double dsMax() const { return ds_max_; }
-        double drsMaxRel() const { return drs_max_rel_; }
-        enum RelaxType relaxType() const { return relax_type_; }
-        double relaxMax() const { return relax_max_; };
-        double relaxIncrement() const { return relax_increment_; };
-        double relaxRelTol() const { return relax_rel_tol_; };
-        double maxIter() const { return max_iter_; }
+        double dpMaxRel() const { return param_.dp_max_rel_; }
+        double dsMax() const { return param_.ds_max_; }
+        double drMaxRel() const { return param_.dr_max_rel_; }
+        enum RelaxType relaxType() const { return param_.relax_type_; }
+        double relaxMax() const { return param_.relax_max_; };
+        double relaxIncrement() const { return param_.relax_increment_; };
+        double relaxRelTol() const { return param_.relax_rel_tol_; };
+        double maxIter() const     { return param_.max_iter_; }
+        double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     };
 } // namespace Opm
