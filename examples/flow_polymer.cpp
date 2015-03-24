@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2014 STATOIL ASA.
 
   This file is part of the Open Porous Media project (OPM).
@@ -34,7 +34,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/thresholdPressures.hpp>
 
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -53,8 +52,13 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
+#include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
+#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
+#include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -87,7 +91,7 @@ try
 {
     using namespace Opm;
 
-    std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
+    std::cout << "\n================    Test program for fully implicit three-phase black-oil-polymer flow     ===============\n\n";
     parameter::ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
@@ -99,7 +103,7 @@ try
     }
     std::shared_ptr<GridManager> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
     PolymerBlackoilState state;
     // bool check_well_controls = false;
@@ -107,23 +111,57 @@ try
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
 
-    Opm::ParserPtr newParser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = newParser->parseFile(deck_filename);
-    std::shared_ptr<EclipseState> eclipseState(new EclipseState(deck));
+    // Write parameters used for later reference.
+    bool output = param.getDefault("output", true);
+    std::string output_dir;
+    if (output) {
+        // Create output directory if needed.
+        output_dir =
+            param.getDefault("output_dir", std::string("output"));
+        boost::filesystem::path fpath(output_dir);
+        try {
+            create_directories(fpath);
+        }
+        catch (...) {
+            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+        }
+        // Write simulation parameters.
+        param.writeParam(output_dir + "/simulation.param");
+    }
+
+    std::string logFile = output_dir + "/LOGFILE.txt";
+    Opm::ParserPtr parser(new Opm::Parser());
+    {
+        std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
+        std::shared_ptr<Opm::CounterLog> counterLog = std::make_shared<Opm::CounterLog>(Opm::Log::DefaultMessageTypes);
+
+        Opm::OpmLog::addBackend( "STREAM" , streamLog );
+        Opm::OpmLog::addBackend( "COUNTER" , counterLog );
+    }
+
+
+    Opm::DeckConstPtr deck;
+    std::shared_ptr<EclipseState> eclipseState;
+    try {
+        deck = parser->parseFile(deck_filename);
+        Opm::checkDeck(deck);
+        eclipseState.reset(new Opm::EclipseState(deck));
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;
+        std::cerr << "Exception caught: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Grid init
-    std::vector<double> porv;
-    if (eclipseState->hasDoubleGridProperty("PORV")) {
-        porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-    }
+    std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::EclipseWriter outputWriter(param,
-                                    eclipseState,
-                                    pu,
-                                    cGrid.number_of_cells,
-                                    cGrid.global_cell);
+    Opm::BlackoilOutputWriter outputWriter(cGrid,
+                                           param,
+                                           eclipseState,
+                                           pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
@@ -142,8 +180,8 @@ try
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state.blackoilState());
+        initBlackoilSurfvol(*grid->c_grid(), *props, state.blackoilState());
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
@@ -159,8 +197,17 @@ try
         initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state.blackoilState());
         state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
     } else {
-        state.init(*grid->c_grid(), props->numPhases());
         initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state.blackoilState());
+    }
+
+    // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
+    if (deck->hasKeyword("SWATINIT")) {
+        const int nc = grid->c_grid()->number_of_cells;
+        std::vector<int> cells(nc);
+        for (int c = 0; c < nc; ++c) { cells[c] = c; }
+        std::vector<double> pc = state.saturation();
+        props->capPress(nc, state.saturation().data(), cells.data(), pc.data(),NULL);
+        new_props->setSwatInitScaling(state.saturation(),pc);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -172,24 +219,6 @@ try
         fis_solver.reset(new NewtonIterationBlackoilCPR(param));
     } else {
         fis_solver.reset(new NewtonIterationBlackoilSimple(param));
-    }
-
-    // Write parameters used for later reference.
-    bool output = param.getDefault("output", true);
-    std::string output_dir;
-    if (output) {
-        // Create output directory if needed.
-        output_dir =
-            param.getDefault("output_dir", std::string("output"));
-        boost::filesystem::path fpath(output_dir);
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        // Write simulation parameters.
-        param.writeParam(output_dir + "/simulation.param");
     }
 
     Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
@@ -210,13 +239,13 @@ try
         if (use_wpolymer) {
             OPM_MESSAGE("Warning: use WPOLYMER in a non-polymer scenario.");
         }
-    }
-    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-              << std::flush;
-    SimulatorReport fullReport;
-    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
+    }    
+
+    bool use_local_perm = param.getDefault("use_local_perm", true);
+    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
 
     std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
+
     SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
                                              *grid->c_grid(),
                                              geology,
@@ -233,8 +262,11 @@ try
                                              deck,
                                              threshold_pressures);
 
+    std::cout << "\n\n================ Starting main simulation loop ===============\n"
+              << std::flush;
 
-    fullReport = simulator.run(simtimer, state);
+    SimulatorReport fullReport = simulator.run(simtimer, state);
+
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);
 
