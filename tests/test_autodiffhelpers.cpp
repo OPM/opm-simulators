@@ -97,6 +97,7 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
         val << 10;
         std::vector<M> jacs(3);
         jacs[0] = M(1, 2);
+        jacs[1] = M(1, 0);
         jacs[2] = M(1, 1);
         jacs[0].insert(0, 0) = 1.0;
         jacs[0].insert(0, 1) = 2.0;
@@ -115,6 +116,7 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
         val << 13;
         std::vector<M> jacs(3);
         jacs[0] = M(1, 2);
+        jacs[1] = M(1, 0);
         jacs[2] = M(1, 1);
         jacs[0].insert(0, 0) = 4.0;
         jacs[0].insert(0, 1) = 5.0;
