@@ -1310,15 +1310,19 @@ namespace detail {
         // Update primary variables, if necessary.
         if (bhp_changed) {
             ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
-            bhp = ADB::function(new_bhp, bhp.derivative());
+            // Avoiding the copy below would require a value setter method
+            // in AutoDiffBlock.
+            std::vector<ADB::M> old_derivs = bhp.derivative();
+            bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
         }
         if (rates_changed) {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
             // The transpose() below switches the ordering.
             const DataBlock wrates = Eigen::Map<const DataBlock>(xw.wellRates().data(), nw, np).transpose();
-            const ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            well_phase_flow_rate = ADB::function(new_qs, well_phase_flow_rate.derivative());
+            ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
+            std::vector<ADB::M> old_derivs = well_phase_flow_rate.derivative();
+            well_phase_flow_rate = ADB::function(std::move(new_qs), std::move(old_derivs));
         }
     }
 
@@ -2397,7 +2401,7 @@ namespace detail {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
             return ADB::function(std::move(pm), std::move(jacs));
-        } else {
+         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
     }
