@@ -447,21 +447,31 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
 
     // Count sizes, nonzeros.
     const int nx = x.size();
-    const int nb = x[0].numBlocks();
     int size = 0;
     int nnz = 0;
+    int elem_with_deriv = -1;
+    int num_blocks = 0;
     for (int elem = 0; elem < nx; ++elem) {
         size += x[elem].size();
-        if (x[elem].blockPattern() != x[0].blockPattern()) {
+        if (x[elem].derivative().empty()) {
+            // No nnz contributions from this element.
+            continue;
+        } else {
+            if (elem_with_deriv == -1) {
+                elem_with_deriv = elem;
+                num_blocks = x[elem].numBlocks();
+            }
+        }
+        if (x[elem].blockPattern() != x[elem_with_deriv].blockPattern()) {
             OPM_THROW(std::runtime_error, "vertcatCollapseJacs(): all arguments must have the same block pattern");
         }
-        for (int block = 0; block < nb; ++block) {
+        for (int block = 0; block < num_blocks; ++block) {
             nnz += x[elem].derivative()[block].nonZeros();
         }
     }
     int num_cols = 0;
-    for (int block = 0; block < nb; ++block) {
-        num_cols += x[0].derivative()[block].cols();
+    for (int block = 0; block < num_blocks; ++block) {
+        num_cols += x[elem_with_deriv].derivative()[block].cols();
     }
 
     // Build value for result.
@@ -474,6 +484,11 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
     }
     assert(pos == size);
 
+    // Return a constant if we have no derivatives at all.
+    if (num_blocks == 0) {
+        return ADB::constant(std::move(val));
+    }
+
     // Set up for batch insertion of all Jacobian elements.
     typedef Eigen::Triplet<double> Tri;
     std::vector<Tri> t;
@@ -481,16 +496,18 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
     int block_row_start = 0;
     for (int elem = 0; elem < nx; ++elem) {
         int block_col_start = 0;
-        for (int block = 0; block < nb; ++block) {
-            const ADB::M& jac = x[elem].derivative()[block];
-            for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
-                for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
-                    t.push_back(Tri(i.row() + block_row_start,
-                                    i.col() + block_col_start,
-                                    i.value()));
+        if (!x[elem].derivative().empty()) {
+            for (int block = 0; block < num_blocks; ++block) {
+                const ADB::M& jac = x[elem].derivative()[block];
+                for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
+                    for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
+                        t.push_back(Tri(i.row() + block_row_start,
+                                        i.col() + block_col_start,
+                                        i.value()));
+                    }
                 }
+                block_col_start += jac.cols();
             }
-            block_col_start += jac.cols();
         }
         block_row_start += x[elem].size();
     }
