@@ -2396,7 +2396,7 @@ namespace detail {
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
-            return ADB::function(pm, jacs);
+            return ADB::function(std::move(pm), std::move(jacs));
         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
@@ -2424,7 +2424,7 @@ namespace detail {
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dtm_diag, p.derivative()[block], jacs[block]);
             }
-            return ADB::function(tm, jacs);
+            return ADB::function(std::move(tm), std::move(jacs));
         } else {
             return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
         }
