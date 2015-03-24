@@ -43,6 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
+	tests/test_autodiffhelpers.cpp
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
 	tests/test_rateconverter.cpp
