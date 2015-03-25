@@ -117,7 +117,7 @@ namespace Opm {
         for (int block = 0; block < num_blocks; ++block) {
             jacs[block] = dim_diag * c.derivative()[block];
         }
-        return ADB::function(inv_mu_w_eff, jacs);
+        return ADB::function(std::move(inv_mu_w_eff), std::move(jacs));
     }
 
 
@@ -165,7 +165,7 @@ namespace Opm {
             jacs[block] = dmc_diag * c.derivative()[block];
         }
 
-        return ADB::function(mc, jacs);
+        return ADB::function(std::move(mc), std::move(jacs));
     }
 
 
@@ -213,7 +213,7 @@ namespace Opm {
             jacs[block] = dads_diag * c.derivative()[block];
         }
 
-        return ADB::function(ads, jacs);
+        return ADB::function(std::move(ads), std::move(jacs));
     }
 
 
