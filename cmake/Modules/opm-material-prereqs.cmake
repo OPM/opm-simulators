@@ -5,6 +5,7 @@
 set (opm-material_CONFIG_VAR
 	HAVE_MPI
 	HAVE_VALGRIND
+	HAVE_FINAL
 	)
 
 # dependencies

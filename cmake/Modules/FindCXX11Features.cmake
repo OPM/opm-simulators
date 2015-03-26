@@ -3,6 +3,7 @@
 #
 # Sets the follwing variable:
 #
+# HAVE_FINAL                       True if the compiler supports the "final" quantifier
 # HAVE_TYPE_TRAITS                 True if the <type_traits> header is available and implements sufficient functionality
 # HAVE_SHARED_PTR                  True if std::shared_ptr is available
 # HAVE_UNIQUE_PTR                  True if std::unique_ptr is available
@@ -69,6 +70,22 @@ endif (CXX_STD0X_FLAGS AND CXX_STDLIB_FLAGS)
 
 # perform tests
 include(CheckCXXSourceCompiles)
+
+# the "final" method specifier
+CHECK_CXX_SOURCE_COMPILES("
+struct Base {
+  virtual void foo() = 0;
+};
+struct Derived : public Base {
+  virtual void foo() final {};
+};
+
+int main()
+{
+    return 0;
+}
+"  HAVE_FINAL
+)
 
 # std::is_convertible, std::is_base_of
 CHECK_CXX_SOURCE_COMPILES("
