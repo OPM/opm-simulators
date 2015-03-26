@@ -31,6 +31,9 @@
 #include <opm/core/props/pvt/PvtDeadSpline.hpp>
 #include <opm/core/props/pvt/PvtLiveOil.hpp>
 #include <opm/core/props/pvt/PvtLiveGas.hpp>
+#include <opm/core/props/pvt/ThermalWaterPvtWrapper.hpp>
+#include <opm/core/props/pvt/ThermalOilPvtWrapper.hpp>
+#include <opm/core/props/pvt/ThermalGasPvtWrapper.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -147,13 +150,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             // keyword for now...
             std::shared_ptr<PvtConstCompr> pvtw(new PvtConstCompr);
             pvtw->initFromWater(deck->getKeyword("PVTW"));
-
-            if (!eclState->getWatvisctTables().empty()) {
-                pvtw->setWatvisctTables(eclState->getWatvisctTables(),
-                                        deck->getKeyword("VISCREF"));
-            }
-
             props_[phase_usage_.phase_pos[Aqua]] = pvtw;
+
+            // handle temperature dependence of the oil phase
+            if (!eclState->getWatvisctTables().empty() || deck->hasKeyword("WATDENT")) {
+                // deal with temperature dependent properties
+                std::shared_ptr<ThermalWaterPvtWrapper> waterNiPvt(new ThermalWaterPvtWrapper);
+                waterNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Aqua]], deck, eclState);
+
+                props_[phase_usage_.phase_pos[Aqua]] = waterNiPvt;
+            }
         }
         // Oil PVT
         if (phase_usage_.phase_used[Liquid]) {
@@ -165,44 +171,29 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 if (numSamples > 0) {
                     auto splinePvdo = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
                     splinePvdo->initFromOil(pvdoTables, numSamples);
-
-                    if (!eclState->getOilvisctTables().empty()) {
-                        splinePvdo->setOilvisctTables(eclState->getOilvisctTables(),
-                                                      deck->getKeyword("VISCREF"));
-                    }
-
                     props_[phase_usage_.phase_pos[Liquid]] = splinePvdo;
                 } else {
                     auto pvdo = std::shared_ptr<PvtDead>(new PvtDead);
                     pvdo->initFromOil(pvdoTables);
-
-                    if (!eclState->getOilvisctTables().empty()) {
-                        pvdo->setOilvisctTables(eclState->getOilvisctTables(),
-                                                   deck->getKeyword("VISCREF"));
-                    }
-
                     props_[phase_usage_.phase_pos[Liquid]] = pvdo;
                 }
             } else if (!pvtoTables.empty()) {
                 std::shared_ptr<PvtLiveOil> pvto(new PvtLiveOil(pvtoTables));
                 props_[phase_usage_.phase_pos[Liquid]] = pvto;
-
-                if (!eclState->getOilvisctTables().empty()) {
-                    pvto->setOilvisctTables(eclState->getOilvisctTables(),
-                                            deck->getKeyword("VISCREF"));
-                }
             } else if (deck->hasKeyword("PVCDO")) {
                 std::shared_ptr<PvtConstCompr> pvcdo(new PvtConstCompr);
                 pvcdo->initFromOil(deck->getKeyword("PVCDO"));
-
-                if (!eclState->getOilvisctTables().empty()) {
-                    pvcdo->setOilvisctTables(eclState->getOilvisctTables(),
-                                             deck->getKeyword("VISCREF"));
-                }
-
                 props_[phase_usage_.phase_pos[Liquid]] = pvcdo;
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDO, PVCDO or PVTO\n");
+            }
+
+            // handle temperature dependence of the oil phase
+            if (!eclState->getOilvisctTables().empty() || deck->hasKeyword("THERMEX1")) {
+                std::shared_ptr<ThermalOilPvtWrapper> oilNiPvt(new ThermalOilPvtWrapper);
+                oilNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Liquid]], deck, eclState);
+
+                props_[phase_usage_.phase_pos[Liquid]] = oilNiPvt;
             }
         }
         // Gas PVT
@@ -214,18 +205,24 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 if (numSamples > 0) {
                     std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
                     splinePvt->initFromGas(pvdgTables, numSamples);
-
                     props_[phase_usage_.phase_pos[Vapour]] = splinePvt;
                 } else {
                     std::shared_ptr<PvtDead> deadPvt(new PvtDead);
                     deadPvt->initFromGas(pvdgTables);
-
                     props_[phase_usage_.phase_pos[Vapour]] = deadPvt;
                 }
             } else if (!pvtgTables.empty()) {
                 props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(pvtgTables));
             } else {
                 OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
+            }
+
+            // handle temperature dependence of the gas phase
+            if (!eclState->getGasvisctTables().empty() || deck->hasKeyword("TREF")) {
+                std::shared_ptr<ThermalGasPvtWrapper> gasNiPvt(new ThermalGasPvtWrapper);
+                gasNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Vapour]], deck, eclState);
+
+                props_[phase_usage_.phase_pos[Vapour]] = gasNiPvt;
             }
         }
         // Oil vaporization controls (kw VAPPARS)
