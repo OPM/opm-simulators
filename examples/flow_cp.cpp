@@ -180,7 +180,7 @@ try
     grid->processEclipseFormat(deck, false, false, false, porv);
 
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::BlackoilOutputWriter outputWriter(*grid, param, eclipseState, pu );
+    Opm::BlackoilOutputWriter outputWriter(*grid, param, deck, eclipseState, pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
