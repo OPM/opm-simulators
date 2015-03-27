@@ -160,6 +160,7 @@ try
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::BlackoilOutputWriter outputWriter(cGrid,
                                            param,
+                                           deck,
                                            eclipseState,
                                            pu );
 

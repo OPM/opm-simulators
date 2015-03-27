@@ -124,6 +124,7 @@ try
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::EclipseWriter outputWriter(param,
+                                    deck,
                                     eclipseState,
                                     pu,
                                     cGrid.number_of_cells,
