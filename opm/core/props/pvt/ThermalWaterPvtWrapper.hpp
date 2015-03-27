@@ -68,8 +68,8 @@ namespace Opm
                 watvisctTables_ = &eclipseState->getWatvisctTables();
                 Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
 
-                assert(watvisctTables_->size() == numRegions);
-                assert(viscrefKeyword->size() == numRegions);
+                assert(int(watvisctTables_->size()) == numRegions);
+                assert(int(viscrefKeyword->size()) == numRegions);
 
                 viscrefPress_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
@@ -83,7 +83,7 @@ namespace Opm
             if (deck->hasKeyword("WATDENT")) {
                 DeckKeywordConstPtr watdentKeyword = deck->getKeyword("WATDENT");
 
-                assert(watdentKeyword->size() == numRegions);
+                assert(int(watdentKeyword->size()) == numRegions);
 
                 watdentRefTemp_.resize(numRegions);
                 watdentCT1_.resize(numRegions);

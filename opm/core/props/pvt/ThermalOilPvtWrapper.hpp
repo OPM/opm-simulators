@@ -60,8 +60,8 @@ namespace Opm
                 oilvisctTables_ = &eclipseState->getOilvisctTables();
                 Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
 
-                assert(oilvisctTables_->size() == numRegions);
-                assert(viscrefKeyword->size() == numRegions);
+                assert(int(oilvisctTables_->size()) == numRegions);
+                assert(int(viscrefKeyword->size()) == numRegions);
 
                 viscrefPress_.resize(numRegions);
                 viscrefRs_.resize(numRegions);
