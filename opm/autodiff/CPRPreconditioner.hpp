@@ -97,7 +97,9 @@ struct CPRSelector
     typedef std::unique_ptr<EllipticPreconditioner> EllipticPreconditionerPointer;
 
     /// \brief type of AMG used to precondition the elliptic system.
-    typedef Dune::Amg::FastAMG<Operator, X> AMG;
+    typedef EllipticPreconditioner Smoother;
+    typedef Dune::Amg::AMG<Operator, X, Smoother, ParallelInformation> AMG;
+    //typedef Dune::Amg::FastAMG<Operator, X> AMG;
 
     /// \brief creates an Operator from the matrix
     /// \param M The matrix to use.
@@ -347,10 +349,6 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         //! \brief preconditioner for the whole system (here either ILU(0) or ILU(n)
         typedef Dune::Preconditioner<X,X> WholeSystemPreconditioner;
 
-        //! \brief the ilu-0 preconditioner used the for the elliptic system
-        typedef typename CPRSelector<M,X,X,P>::EllipticPreconditioner
-        EllipticPreconditioner;
-
         //! \brief type of the unique pointer to the ilu-0 preconditioner
         //! used the for the elliptic system
         typedef typename CPRSelector<M,X,X,P>::EllipticPreconditionerPointer
@@ -540,23 +538,20 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         {
             if( amg )
             {
-              //! \brief The coupling metric used in the AMG
+              // The coupling metric used in the AMG
               typedef Dune::Amg::FirstDiagonal CouplingMetric;
 
-              //! \brief The coupling criterion used in the AMG
+              // The coupling criterion used in the AMG
               typedef Dune::Amg::SymmetricCriterion<M, CouplingMetric> CritBase;
 
-              //! \brief The coarsening criterion used in the AMG
+              // The coarsening criterion used in the AMG
               typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
 
+              // TODO: revise choice of parameters
               int coarsenTarget=1200;
               Criterion criterion(15,coarsenTarget);
               criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
               criterion.setDefaultValuesIsotropic(2);
-              //criterion.setAlpha(.67);
-              //criterion.setGamma(1);
-              //criterion.setBeta(1.0e-6);
-              //criterion.setMaxLevel(10);
               criterion.setNoPostSmoothSteps( 1 );
               criterion.setNoPreSmoothSteps( 1 );
               amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion));//, smootherArgs));
