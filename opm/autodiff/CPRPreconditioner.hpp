@@ -275,6 +275,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         int cpr_max_ell_iter_;
         bool cpr_use_amg_;
         bool cpr_use_bicgstab_;
+        bool cpr_solver_verbose_;
 
         CPRParameter() { reset(); }
 
@@ -283,22 +284,24 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             // reset values to default
             reset();
 
-            cpr_relax_        = param.getDefault("cpr_relax", cpr_relax_);
-            cpr_solver_tol_   = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
-            cpr_ilu_n_        = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
-            cpr_max_ell_iter_ = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
-            cpr_use_amg_      = param.getDefault("cpr_use_amg", cpr_use_amg_);
-            cpr_use_bicgstab_ = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
+            cpr_relax_          = param.getDefault("cpr_relax", cpr_relax_);
+            cpr_solver_tol_     = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
+            cpr_ilu_n_          = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
+            cpr_max_ell_iter_   = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
+            cpr_use_amg_        = param.getDefault("cpr_use_amg", cpr_use_amg_);
+            cpr_use_bicgstab_   = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
+            cpr_solver_verbose_ = param.getDefault("cpr_solver_verbose", cpr_solver_verbose_);
         }
 
         void reset()
         {
-            cpr_relax_        = 1.0;
-            cpr_solver_tol_   = 1e-4;
-            cpr_ilu_n_        = 0;
-            cpr_max_ell_iter_ = 5000;
-            cpr_use_amg_      = false;
-            cpr_use_bicgstab_ = true;
+            cpr_relax_          = 1.0;
+            cpr_solver_tol_     = 1e-4;
+            cpr_ilu_n_          = 0;
+            cpr_max_ell_iter_   = 5000;
+            cpr_use_amg_        = false;
+            cpr_use_bicgstab_   = true;
+            cpr_solver_verbose_ = false;
         }
     };
 
@@ -457,7 +460,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             // Linear solver parameters
             const double tolerance = param_.cpr_solver_tol_;
             const int maxit        = param_.cpr_max_ell_iter_;
-            const int verbosity = 0;
+            const int verbosity    = param_.cpr_solver_verbose_ ? 1 : 0;
 
             // operator result containing iterations etc.
             Dune::InverseOperatorResult result;
