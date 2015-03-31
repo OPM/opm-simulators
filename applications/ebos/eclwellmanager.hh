@@ -518,6 +518,38 @@ public:
         beginEpisode(simulator_.gridManager().eclState(), /*wasRestarted=*/true);
     }
 
+    /*!
+     * \brief Returns true if something in a well changed compared to the previous report
+     *        step.
+     *
+     * "Something" can either be the well topology (i.e., which grid blocks are contained
+     * in which well) or it can be a well parameter like the bottom hole pressure...
+     */
+    bool wellsChanged(Opm::EclipseStateConstPtr eclState, int reportStepIdx) const
+    {
+        if (wellTopologyChanged_(eclState, reportStepIdx))
+            return true;
+
+        // this is slightly hacky because it assumes that the object which stores the set
+        // of wells which are relevant for a report step does not change if there are no
+        // changed well parameters. opm-parser does not guarantee this, but so far it
+        // seems to adhere to it...
+        auto deckSchedule = eclState->getSchedule();
+
+        if (deckSchedule->getTimeMap()->numTimesteps() <= reportStepIdx)
+            // for the "until the universe dies" episode, the wells don't change
+            return false;
+
+        const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
+        const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
+
+        for (int i = 0; i < curDeckWells.size(); ++i) {
+            if (curDeckWells[i] != prevDeckWells[i])
+                return true;
+        }
+        return false;
+    }
+
 protected:
     bool wellTopologyChanged_(Opm::EclipseStateConstPtr eclState, int reportStepIdx) const
     {
@@ -528,6 +560,10 @@ protected:
         }
 
         auto deckSchedule = eclState->getSchedule();
+        if (deckSchedule->getTimeMap()->numTimesteps() <= reportStepIdx)
+            // for the "until the universe dies" episode, the wells don't change
+            return false;
+
         const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
         const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
 

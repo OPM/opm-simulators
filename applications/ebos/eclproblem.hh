@@ -388,7 +388,14 @@ public:
     {
         wellManager_.endTimeStep();
 
+        // write the summary information after each time step
+        summaryWriter_.write(wellManager_);
+
 #ifndef NDEBUG
+        // in debug mode, we don't care about performance, so we check if the model does
+        // the right thing (i.e., the mass change inside the whole reservoir must be
+        // equivalent to the fluxes over the grid's boundaries plus the source rates
+        // specified by the problem)
         this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
 #endif // NDEBUG
     }
@@ -398,10 +405,15 @@ public:
      */
     void endEpisode()
     {
-        std::cout << "Episode " << this->simulator().episodeIndex() + 1 << " finished.\n";
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.gridManager().eclState();
+        auto& linearizer = this->model().linearizer();
+        int episodeIdx = simulator.episodeIndex();
 
-        // first, write the summary information ...
-        summaryWriter_.write(wellManager_);
+        bool wellsWillChange = wellManager_.wellsChanged(eclState, episodeIdx + 1);
+        linearizer.setLinearizationReusable(!wellsWillChange);
+
+        std::cout << "Episode " << episodeIdx + 1 << " finished.\n";
     }
 
     /*!
