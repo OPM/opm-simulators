@@ -187,7 +187,6 @@ namespace Opm
         template <class Grid>
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
-                             Opm::DeckConstPtr deck,
                              Opm::EclipseStateConstPtr eclipseState,
                              const Opm::PhaseUsage &phaseUsage);
 
@@ -236,7 +235,6 @@ namespace Opm
     BlackoilOutputWriter::
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
-                         Opm::DeckConstPtr deck,
                          Opm::EclipseStateConstPtr eclipseState,
                          const Opm::PhaseUsage &phaseUsage )
       : output_( param.getDefault("output", true) ),
@@ -248,7 +246,7 @@ namespace Opm
         matlabWriter_( output_ && param.getDefault("output_matlab", false) ?
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(param, deck, eclipseState, phaseUsage,
+                    new EclipseWriter(param, eclipseState, phaseUsage,
                                       Opm::UgGridHelpers::numCells( grid ),
                                       Opm::UgGridHelpers::globalCell( grid ) )
                    : 0 )
