@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -45,6 +46,7 @@ namespace Opm
         typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
         typedef Dune::BlockVector<VectorBlockType>        Vector;
+
     public:
 
         /// Construct a system solver.
@@ -90,23 +92,31 @@ namespace Opm
                 sp(ScalarProductChooser::construct(parallelInformation));
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
-            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
+           typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
             parallelInformation.copyOwnerToAll(istlb, istlb);
-            Preconditioner precond(opA.getmat(), istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_, parallelInformation);
+            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation);
 
+            // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
-            Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond,
-                           linear_solver_reduction_, linear_solver_restart_, linear_solver_maxiter_, linear_solver_verbosity_);
-
-            // Solve system.
-            linsolve.apply(x, istlb, result);
+            // GMRes solver
+            if ( newton_use_gmres_ ) {
+                Dune::RestartedGMResSolver<Vector> linsolve(opA, *sp, precond,
+                          linear_solver_reduction_, linear_solver_restart_, linear_solver_maxiter_, linear_solver_verbosity_);
+                // Solve system.
+                linsolve.apply(x, istlb, result);
+            }
+            else { // BiCGstab solver
+                Dune::BiCGSTABSolver<Vector> linsolve(opA, *sp, precond,
+                          linear_solver_reduction_, linear_solver_maxiter_, linear_solver_verbosity_);
+                // Solve system.
+                linsolve.apply(x, istlb, result);
+            }
         }
 
+        CPRParameter cpr_param_;
+
         mutable int iterations_;
-        double cpr_relax_;
-        unsigned int cpr_ilu_n_;
-        bool cpr_use_amg_;
-        bool cpr_use_bicgstab_;
+        bool newton_use_gmres_;
         boost::any parallelInformation_;
 
         double linear_solver_reduction_;
