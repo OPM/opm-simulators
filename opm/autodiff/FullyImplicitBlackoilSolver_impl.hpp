@@ -2,6 +2,7 @@
   Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -143,7 +144,8 @@ namespace detail {
         relax_max_       = 0.5;
         relax_increment_ = 0.1;
         relax_rel_tol_   = 0.2;
-        max_iter_        = 15;
+        max_iter_        = 15; // not more then 15 its by default
+        min_iter_        = 0;  // keep the default as it was
         max_residual_allowed_  = std::numeric_limits< double >::max();
         tolerance_mb_    = 1.0e-7;
         tolerance_cnv_   = 1.0e-3;
@@ -171,6 +173,7 @@ namespace detail {
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
+        min_iter_    = param.getDefault("min_iter", min_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
@@ -294,7 +297,7 @@ namespace detail {
         const enum RelaxType relaxtype = relaxType();
         int linearIterations = 0;
 
-        while ((!converged) && (it < maxIter())) {
+        while ( (!converged && (it < maxIter())) || (minIter() > it)) {
             V dx = solveJacobianSystem();
 
             // store number of linear iterations used
@@ -326,9 +329,8 @@ namespace detail {
         }
 
         if (!converged) {
-            // the runtime_error is caught by the AdaptiveTimeStepping
-            OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
-            return -1;
+            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
+            return -1; // -1 indicates that the solver has to be restarted
         }
 
         linearIterations_ += linearIterations;
