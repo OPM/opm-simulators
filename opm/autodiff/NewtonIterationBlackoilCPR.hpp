@@ -46,6 +46,7 @@ namespace Opm
         typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
         typedef Dune::BlockVector<VectorBlockType>        Vector;
+
     public:
 
         /// Construct a system solver.
@@ -91,9 +92,9 @@ namespace Opm
                 sp(ScalarProductChooser::construct(parallelInformation));
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
-            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
+           typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
             parallelInformation.copyOwnerToAll(istlb, istlb);
-            Preconditioner precond(opA.getmat(), istlAe, cpr_relax_, cpr_ilu_n_, cpr_use_amg_, cpr_use_bicgstab_, parallelInformation);
+            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation);
 
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
@@ -112,11 +113,9 @@ namespace Opm
             }
         }
 
+        CPRParameter cpr_param_;
+
         mutable int iterations_;
-        double cpr_relax_;
-        unsigned int cpr_ilu_n_;
-        bool cpr_use_amg_;
-        bool cpr_use_bicgstab_;
         bool newton_use_gmres_;
         boost::any parallelInformation_;
 

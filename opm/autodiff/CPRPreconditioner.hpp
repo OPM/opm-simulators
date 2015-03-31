@@ -27,6 +27,7 @@
 #include <type_traits>
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -39,6 +40,7 @@
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/pinfo.hh>
+#include <dune/istl/paamg/fastamg.hh>
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
@@ -93,6 +95,10 @@ struct CPRSelector
     typedef Dune::SeqILU0<M,X,X> EllipticPreconditioner;
     /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
     typedef std::unique_ptr<EllipticPreconditioner> EllipticPreconditionerPointer;
+
+    /// \brief type of AMG used to precondition the elliptic system.
+    typedef Dune::Amg::FastAMG<Operator, X> AMG;
+
     /// \brief creates an Operator from the matrix
     /// \param M The matrix to use.
     /// \param p The parallel information to use.
@@ -118,6 +124,9 @@ struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
     typedef std::unique_ptr<EllipticPreconditioner,
                             ParallelPreconditionerDeleter<Dune::SeqILU0<M,X,X> > >
     EllipticPreconditionerPointer;
+
+    typedef EllipticPreconditioner Smoother;
+    typedef Dune::Amg::AMG<Operator, X, Smoother, ParallelInformation> AMG;
 
     /// \brief creates an Operator from the matrix
     /// \param M The matrix to use.
@@ -256,6 +265,41 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
 #endif
 } // end namespace
 
+    struct CPRParameter
+    {
+        double cpr_relax_;
+        double cpr_solver_tol_;
+        int cpr_ilu_n_;
+        int cpr_max_ell_iter_;
+        bool cpr_use_amg_;
+        bool cpr_use_bicgstab_;
+
+        CPRParameter() { reset(); }
+
+        CPRParameter( const parameter::ParameterGroup& param)
+        {
+            // reset values to default
+            reset();
+
+            cpr_relax_        = param.getDefault("cpr_relax", cpr_relax_);
+            cpr_solver_tol_   = param.getDefault("cpr_solver_tol", cpr_solver_tol_);
+            cpr_ilu_n_        = param.getDefault("cpr_ilu_n", cpr_ilu_n_);
+            cpr_max_ell_iter_ = param.getDefault("cpr_max_elliptic_iter",cpr_max_ell_iter_);
+            cpr_use_amg_      = param.getDefault("cpr_use_amg", cpr_use_amg_);
+            cpr_use_bicgstab_ = param.getDefault("cpr_use_bicgstab", cpr_use_bicgstab_);
+        }
+
+        void reset()
+        {
+            cpr_relax_        = 1.0;
+            cpr_solver_tol_   = 1e-4;
+            cpr_ilu_n_        = 0;
+            cpr_max_ell_iter_ = 5000;
+            cpr_use_amg_      = false;
+            cpr_use_bicgstab_ = true;
+        }
+    };
+
 
     /*!
       \brief CPR preconditioner.
@@ -313,8 +357,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         EllipticPreconditionerPointer;
 
         //! \brief amg preconditioner for the elliptic system
-        typedef EllipticPreconditioner Smoother;
-        typedef Dune::Amg::AMG<Operator, X, Smoother, P> AMG;
+        typedef typename CPRSelector<M,X,X,P>::AMG  AMG;
 
         /*! \brief Constructor.
 
@@ -327,12 +370,10 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
           \param paralleInformation The information about the parallelization, if this is a
                                     parallel run
         */
-        CPRPreconditioner (const M& A, const M& Ae, const field_type relax,
-                           const unsigned int ilu_n,
-                           const bool useAMG,
-                           const bool useBiCG,
+        CPRPreconditioner (const CPRParameter& param, const M& A, const M& Ae,
                            const ParallelInformation& comm=ParallelInformation())
-            : A_(A),
+            : param_( param ),
+              A_(A),
               Ae_(Ae),
               de_( Ae_.N() ),
               ve_( Ae_.M() ),
@@ -342,18 +383,16 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
               amg_(),     // amg  preconditioner for elliptic system
               pre_(), // copy A will be made be the preconditioner
               vilu_( A_.N() ),
-              relax_(relax),
-              use_bicg_solver_( useBiCG ),
               comm_(comm)
         {
             // create appropriate preconditioner for elliptic system
-            createPreconditioner( useAMG, comm );
+            createPreconditioner( param_.cpr_use_amg_, comm );
 
-            if( ilu_n == 0 ) {
-                pre_ = createILU0Ptr<M,X>( A_, relax_, comm );
+            if( param_.cpr_ilu_n_ == 0 ) {
+                pre_ = createILU0Ptr<M,X>( A_, param_.cpr_relax_, comm );
             }
             else {
-                pre_ = createILUnPtr<M,X>( A_, ilu_n, relax_, comm );
+                pre_ = createILUnPtr<M,X>( A_, param_.cpr_ilu_n_, param_.cpr_relax_, comm );
             }
         }
 
@@ -396,11 +435,11 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             pre_->apply( vilu_, dmodified_);
 
             // don't apply relaxation if relax_ == 1
-            if( std::abs( relax_ - 1.0 ) < 1e-12 ) {
+            if( std::abs( param_.cpr_relax_ - 1.0 ) < 1e-12 ) {
                 v += vilu_;
             }
             else {
-                v *= relax_;
+                v *= param_.cpr_relax_;
                 v += vilu_;
             }
         }
@@ -418,8 +457,8 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         void solveElliptic(Y& x, Y& de)
         {
             // Linear solver parameters
-            const double tolerance = 1e-4;
-            const int maxit = 5000;
+            const double tolerance = param_.cpr_solver_tol_;
+            const int maxit        = param_.cpr_max_ell_iter_;
             const int verbosity = 0;
 
             // operator result containing iterations etc.
@@ -435,7 +474,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             if( amg_ )
             {
                 // Solve system with AMG
-                if( use_bicg_solver_ ) {
+                if( param_.cpr_use_bicgstab_ ) {
                     Dune::BiCGSTABSolver<X> linsolve(*opAe_, *sp, (*amg_), tolerance, maxit, verbosity);
                     linsolve.apply(x, de, result);
                 }
@@ -448,7 +487,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             {
                 assert( precond_ );
                 // Solve system with ILU-0
-                if( use_bicg_solver_ ) {
+                if( param_.cpr_use_bicgstab_ ) {
                     Dune::BiCGSTABSolver<X> linsolve(*opAe_, *sp, (*precond_), tolerance, maxit, verbosity);
                     linsolve.apply(x, de, result);
                 }
@@ -463,6 +502,9 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
                 OPM_THROW(std::runtime_error, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
         }
+
+        //! \brief Parameter collection for CPR
+        const CPRParameter& param_;
 
         //! \brief The matrix for the full linear problem.
         const matrix_type& A_;
@@ -491,12 +533,6 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         //! \brief temporary variables for ILU solve
         Y vilu_;
 
-        //! \brief The relaxation factor to use.
-        field_type relax_;
-
-        //! \brief true if ISTL BiCGSTABSolver is used, otherwise ISTL CGSolver is used
-        const bool use_bicg_solver_;
-
         //! \brief The information about the parallelization
         const P& comm_;
      protected:
@@ -504,29 +540,34 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         {
             if( amg )
             {
-              typedef Dune::Amg::CoarsenCriterion< Dune::Amg::SymmetricCriterion<M, Dune::Amg::FirstDiagonal> > Criterion;
-              typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments SmootherArgs;
+              //! \brief The coupling metric used in the AMG
+              typedef Dune::Amg::FirstDiagonal CouplingMetric;
 
-              SmootherArgs smootherArgs;
+              //! \brief The coupling criterion used in the AMG
+              typedef Dune::Amg::SymmetricCriterion<M, CouplingMetric> CritBase;
 
-              smootherArgs.iterations = 1;
-              smootherArgs.relaxationFactor = relax_;
+              //! \brief The coarsening criterion used in the AMG
+              typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
 
               int coarsenTarget=1200;
               Criterion criterion(15,coarsenTarget);
               criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
               criterion.setDefaultValuesIsotropic(2);
-              criterion.setAlpha(.67);
-              criterion.setBeta(1.0e-6);
-              criterion.setMaxLevel(10);
-              amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion, smootherArgs));
+              //criterion.setAlpha(.67);
+              //criterion.setGamma(1);
+              //criterion.setBeta(1.0e-6);
+              //criterion.setMaxLevel(10);
+              criterion.setNoPostSmoothSteps( 1 );
+              criterion.setNoPreSmoothSteps( 1 );
+              amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion));//, smootherArgs));
             }
             else
             {
-                precond_ = createEllipticPreconditionerPointer<M,X>( Ae_, relax_, comm);
+                precond_ = createEllipticPreconditionerPointer<M,X>( Ae_, param_.cpr_relax_, comm);
             }
        }
     };
+
 
 } // namespace Opm
 
