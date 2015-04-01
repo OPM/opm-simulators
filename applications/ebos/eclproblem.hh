@@ -355,10 +355,6 @@ public:
             simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
             simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
         }
-        else {
-            simulator.setFinished(true);
-            return;
-        }
 
         // set up the wells
         wellManager_.beginEpisode(this->simulator().gridManager().eclState());
@@ -405,15 +401,22 @@ public:
      */
     void endEpisode()
     {
-        const auto& simulator = this->simulator();
+        auto& simulator = this->simulator();
         const auto& eclState = simulator.gridManager().eclState();
         auto& linearizer = this->model().linearizer();
         int episodeIdx = simulator.episodeIndex();
 
+        std::cout << "Episode " << episodeIdx + 1 << " finished.\n";
+
         bool wellsWillChange = wellManager_.wellsChanged(eclState, episodeIdx + 1);
         linearizer.setLinearizationReusable(!wellsWillChange);
 
-        std::cout << "Episode " << episodeIdx + 1 << " finished.\n";
+        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
+        int numReportSteps = timeMap->size() - 1;
+        if (episodeIdx + 1 >= numReportSteps) {
+            simulator.setFinished(true);
+            return;
+        }
     }
 
     /*!
