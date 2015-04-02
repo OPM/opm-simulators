@@ -536,14 +536,14 @@ public:
         // seems to adhere to it...
         auto deckSchedule = eclState->getSchedule();
 
-        if (deckSchedule->getTimeMap()->numTimesteps() <= reportStepIdx)
+        if (deckSchedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
         const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
         const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
 
-        for (int i = 0; i < curDeckWells.size(); ++i) {
+        for (unsigned i = 0; i < curDeckWells.size(); ++i) {
             if (curDeckWells[i] != prevDeckWells[i])
                 return true;
         }
@@ -560,7 +560,7 @@ protected:
         }
 
         auto deckSchedule = eclState->getSchedule();
-        if (deckSchedule->getTimeMap()->numTimesteps() <= reportStepIdx)
+        if (deckSchedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
