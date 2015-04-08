@@ -99,17 +99,16 @@ namespace Opm
     /// Construct a system solver.
     NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
                                                            const boost::any& parallelInformation)
-        : cpr_param_( param ),
-          iterations_( 0 ),
-          parallelInformation_(parallelInformation)
+      : cpr_param_( param ),
+        iterations_( 0 ),
+        parallelInformation_(parallelInformation),
+        newton_use_gmres_( param.getDefault("newton_use_gmres", true ) ),
+        linear_solver_reduction_( param.getDefault("linear_solver_reduction", 1e-3 ) ),
+        linear_solver_maxiter_( param.getDefault("linear_solver_maxiter", 150 ) ),
+        linear_solver_restart_( param.getDefault("linear_solver_restart", 40 ) ),
+        linear_solver_verbosity_( param.getDefault("linear_solver_verbosity", 0 ))
     {
-        linear_solver_reduction_ = param.getDefault("linear_solver_reduction", 1e-3 );
-        linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", 150 );
-        linear_solver_restart_   = param.getDefault("linear_solver_restart", 40 );
-        linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", 0 );
     }
-
-
 
 
 
