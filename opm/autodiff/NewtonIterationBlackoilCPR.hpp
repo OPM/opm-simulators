@@ -116,13 +116,13 @@ namespace Opm
         CPRParameter cpr_param_;
 
         mutable int iterations_;
-        bool newton_use_gmres_;
         boost::any parallelInformation_;
 
-        double linear_solver_reduction_;
-        int    linear_solver_maxiter_;
-        int    linear_solver_restart_;
-        int    linear_solver_verbosity_;
+        const bool newton_use_gmres_;
+        const double linear_solver_reduction_;
+        const int    linear_solver_maxiter_;
+        const int    linear_solver_restart_;
+        const int    linear_solver_verbosity_;
     };
 
 } // namespace Opm
