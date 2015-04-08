@@ -233,7 +233,8 @@ try
         fis_solver.reset(new NewtonIterationBlackoilSimple(param));
     }
 
-    Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
+    Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
+    Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
     SimulatorTimer simtimer;
 
     // initialize variables
@@ -257,20 +258,39 @@ try
                                              outputWriter,
                                              threshold_pressures);
 
-    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-              << std::flush;
+    if (!schedule->initOnly()){
+        std::cout << "\n\n================ Starting main simulation loop ===============\n"
+                  << std::flush;
 
-    SimulatorReport fullReport = simulator.run(simtimer, state);
+        SimulatorReport fullReport = simulator.run(simtimer, state);
 
-    std::cout << "\n\n================    End of simulation     ===============\n\n";
-    fullReport.reportFullyImplicit(std::cout);
+        std::cout << "\n\n================    End of simulation     ===============\n\n";
+        fullReport.reportFullyImplicit(std::cout);
 
-    if (output) {
-        std::string filename = output_dir + "/walltime.txt";
-        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        fullReport.reportParam(tot_os);
-        warnIfUnusedParams(param);
+        if (output) {
+            std::string filename = output_dir + "/walltime.txt";
+            std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
+            fullReport.reportParam(tot_os);
+            warnIfUnusedParams(param);
+        }
+    } else {
+        std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
     }
+
+//    std::cout << "\n\n================ Starting main simulation loop ===============\n"
+//              << std::flush;
+
+//    SimulatorReport fullReport = simulator.run(simtimer, state);
+
+//    std::cout << "\n\n================    End of simulation     ===============\n\n";
+//    fullReport.report(std::cout);
+
+//    if (output) {
+//        std::string filename = output_dir + "/walltime.txt";
+//        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
+//        fullReport.reportParam(tot_os);
+//        warnIfUnusedParams(param);
+//    }
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
