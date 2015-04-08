@@ -40,7 +40,6 @@
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/pinfo.hh>
-#include <dune/istl/paamg/fastamg.hh>
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
@@ -99,7 +98,6 @@ struct CPRSelector
     /// \brief type of AMG used to precondition the elliptic system.
     typedef EllipticPreconditioner Smoother;
     typedef Dune::Amg::AMG<Operator, X, Smoother, ParallelInformation> AMG;
-    //typedef Dune::Amg::FastAMG<Operator, X> AMG;
 
     /// \brief creates an Operator from the matrix
     /// \param M The matrix to use.
@@ -557,7 +555,15 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
               criterion.setDefaultValuesIsotropic(2);
               criterion.setNoPostSmoothSteps( 1 );
               criterion.setNoPreSmoothSteps( 1 );
-              amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion));//, smootherArgs));
+
+              // for DUNE 2.2 we also need to pass the smoother args
+              typedef typename AMG::Smoother Smoother;
+              typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+              SmootherArgs  smootherArgs;
+              smootherArgs.iterations = 1;
+              smootherArgs.relaxationFactor = param_.cpr_relax_;
+
+              amg_ = std::unique_ptr< AMG > (new AMG(*opAe_, criterion, smootherArgs ));
             }
             else
             {
