@@ -103,6 +103,7 @@ namespace Opm
           iterations_( 0 ),
           parallelInformation_(parallelInformation)
     {
+        newton_use_gmres_ = param.getDefault("newton_use_gmres", true);
         linear_solver_reduction_ = param.getDefault("linear_solver_reduction", 1e-3 );
         linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", 150 );
         linear_solver_restart_   = param.getDefault("linear_solver_restart", 40 );
