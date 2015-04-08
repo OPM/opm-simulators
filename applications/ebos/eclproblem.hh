@@ -314,7 +314,7 @@ public:
     void deserialize(Restarter &res)
     {
         // reload the current episode/report step from the deck
-        beginEpisode();
+        beginEpisode(/*isOnRestart=*/true);
 
         // deserialize the wells
         wellManager_.deserialize(res);
@@ -331,7 +331,7 @@ public:
     /*!
      * \brief Called by the simulator before an episode begins.
      */
-    void beginEpisode()
+    void beginEpisode(bool isOnRestart = false)
     {
         // Proceed to the next report step
         Simulator &simulator = this->simulator();
@@ -357,7 +357,7 @@ public:
         }
 
         // set up the wells
-        wellManager_.beginEpisode(this->simulator().gridManager().eclState());
+        wellManager_.beginEpisode(this->simulator().gridManager().eclState(), isOnRestart);
     }
 
     /*!

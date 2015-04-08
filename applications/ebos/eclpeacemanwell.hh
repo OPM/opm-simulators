@@ -125,17 +125,15 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         DofVariables() = default;
         DofVariables(const DofVariables&) = default;
 
-        // retrieve the solution dependent quantities from the IntensiveQuantities of the
-        // model
+        // retrieve the solution dependent quantities that are only updated at the
+        // beginning of a time step from the IntensiveQuantities of the model
         void updateBeginTimestep(const IntensiveQuantities& intQuants)
-        { }
+        {}
 
         // retrieve the solution dependent quantities from the IntensiveQuantities of the
         // model
         void update(const IntensiveQuantities& intQuants)
         {
-            permeability = intQuants.intrinsicPermeability();
-
             const auto& fs = intQuants.fluidState();
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 pressure[phaseIdx] = fs.pressure(phaseIdx);
@@ -598,7 +596,7 @@ public:
         // default skin factor: 0
         dofVars.skinFactor = 0;
 
-        // the permeability tensor of the DOF
+        // the intrinsic permeability tensor of the DOF
         const auto& K = context.problem().intrinsicPermeability(context, dofIdx, /*timeIdx=*/0);
         dofVars.permeability = K;
 
