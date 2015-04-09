@@ -38,7 +38,7 @@ if (CXX_COMPAT_GCC)
 
   # default optimization flags, if not set by user
   set_default_option (CXX _opt_dbg "-O0" "(^|\ )-O")
-  set_default_option (CXX _opt_rel "-O3" "(^|\ )-O")
+  set_default_option (CXX _opt_rel "-O2" "(^|\ )-O")
 
   # use these options for debug builds - no optimizations
   add_options (ALL_LANGUAGES "${_prof_DEBUG}" ${_opt_dbg} "-DDEBUG")
