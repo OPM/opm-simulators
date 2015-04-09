@@ -274,23 +274,9 @@ try
             warnIfUnusedParams(param);
         }
     } else {
+        outputWriter.writeInit( simtimer );
         std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
     }
-
-//    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-//              << std::flush;
-
-//    SimulatorReport fullReport = simulator.run(simtimer, state);
-
-//    std::cout << "\n\n================    End of simulation     ===============\n\n";
-//    fullReport.report(std::cout);
-
-//    if (output) {
-//        std::string filename = output_dir + "/walltime.txt";
-//        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-//        fullReport.reportParam(tot_os);
-//        warnIfUnusedParams(param);
-//    }
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
