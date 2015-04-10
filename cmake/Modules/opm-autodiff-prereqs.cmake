@@ -21,5 +21,5 @@ set (opm-autodiff_DEPS
         dune-cornerpoint;
 	opm-core REQUIRED"
 	# Eigen
-	"Eigen3 3.1.2 "
+	"Eigen3 3.2.0"
 	)
