@@ -26,6 +26,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/simulator/TimeStepControl.hpp>
+#include <dune/istl/istlexception.hh>
 
 namespace Opm {
 
