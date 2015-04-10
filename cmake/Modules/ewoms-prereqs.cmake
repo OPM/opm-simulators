@@ -1,10 +1,15 @@
 # -*- mode: cmake; tab-width: 2; indent-tabs-mode: t; truncate-lines: t; compile-command: "cmake -Wdev" -*-
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
+# this avoids an annoying deprecation warning on DUNE 2.4 (which we
+# are not interested in anyway)
+set(DUNE_AVOID_CAPABILITIES_IS_PARALLEL_DEPRECATION_WARNING 1)
+
 # defines that must be present in config.h for our headers
 set (ewoms_CONFIG_VAR
 	HAVE_QUAD
 	HAVE_VALGRIND
+	DUNE_AVOID_CAPABILITIES_IS_PARALLEL_DEPRECATION_WARNING
 	)
 
 # dependencies

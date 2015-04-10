@@ -22,6 +22,7 @@ find_opm_package (
   "CXX11Features REQUIRED;
    dune-grid REQUIRED;
    ZLIB REQUIRED;
+   ZOLTAN;
    METIS
   "
   # header to search for
@@ -34,10 +35,8 @@ find_opm_package (
   ""
 
   # test program
-"#include <dune/alugrid/grid.hh>
+"#include <dune/alugrid/2d/indexsets.hh>
 int main (void) {
-   Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming> grid;
-   grid.leafGridView().size(/*codim=*/0);
    return 0;
 }
 "

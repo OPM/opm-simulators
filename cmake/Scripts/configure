@@ -21,6 +21,7 @@ Optional Features:
                           [default=no]
   --disable-runpath       do not use RUNPATH in installed library [default=yes]
   --enable-lto            use whole program optimization [default=no]
+  --enable-strip-debug    separate the executable code and the debugging symbols [default=no]
   --disable-tests         do not compile and enable unit tests [default=yes]
   --disable-examples      do not compile example programs [default=yes]
   --disable-pch           do not use precompiled headers (if buggy compiler)
@@ -123,6 +124,8 @@ silent_rules=
 debug_loc=
 #use_lto=" -DWHOLE_PROG_OPTIM=OFF"
 use_lto=
+#strip_debug=" -DSTRIP_DEBUGGING_SYMBOLS=OFF"
+strip_debug=
 #use_runpath=" -DUSE_RUNPATH=OFF"
 use_runpath=
 #use_tests=" -DBUILD_TESTING=ON"
@@ -314,6 +317,10 @@ for OPT in "$@"; do
               use_lto=" -DWHOLE_PROG_OPTIM=OFF"
               pkgname=""
               ;;
+            strip-debug  )
+              strip_debug=" -DSTRIP_DEBUGGING_SYMBOLS=OFF"
+              pkgname=""
+              ;;
             openmp)
               use_openmp=" -DUSE_OPENMP=OFF"
               pkgname=""
@@ -396,6 +403,10 @@ for OPT in "$@"; do
             lto)
               use_lto=" -DWHOLE_PROG_OPTIM=ON"
               shared=""
+              ;;
+            strip-debug  )
+              strip_debug=" -DSTRIP_DEBUGGING_SYMBOLS=ON"
+              pkgname=""
               ;;
             tests)
               use_tests=" -DBUILD_TESTING=ON"
@@ -534,7 +545,7 @@ elif test "$c_compiler$c_opts$cxx_compiler$cxx_opts$fort_compiler$fort_opts" != 
 fi
 
 # pass everything on to CMake
-CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
+CMDLINE="${ENVVARS}${CMAKE_COMMAND} \"${srcdir}\" ${use_ninja}\"-DCMAKE_INSTALL_PREFIX=$prefix\"${buildtype}${pch_use}${silent_rules}${debug_loc}${use_openmp}${use_mpi}${use_lto}${strip_debug}${use_runpath}${use_tests}${use_samples}${use_underscoring}${c_compiler}${c_opts}${cxx_compiler}${cxx_opts}${fort_compiler}${fort_opts}${boost_opts}${buildname}${site} ${FEATURES}"
 echo --- calling CMake ---
 echo "${CMDLINE}"
 eval exec "${CMDLINE}"

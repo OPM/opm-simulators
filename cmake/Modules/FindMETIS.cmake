@@ -20,7 +20,7 @@ endif()
 find_path (METIS_INCLUDE_DIRS
   NAMES "metis.h"
   PATHS ${METIS_SEARCH_PATH}
-  PATH_SUFFIXES "include" "METISLib"
+  PATH_SUFFIXES "include" "METISLib" "include/metis"
   ${METIS_NO_DEFAULT_PATH})
 
 # only search in architecture-relevant directory
@@ -39,7 +39,7 @@ if (METIS_INCLUDE_DIRS OR METIS_LIBRARIES)
   set(METIS_FOUND TRUE)
   set(HAVE_METIS TRUE)
 endif()
-  
+
 # print a message to indicate status of this package
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args(METIS
