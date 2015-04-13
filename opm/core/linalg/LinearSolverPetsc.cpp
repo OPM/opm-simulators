@@ -37,20 +37,23 @@ namespace{
         KSPTypeMap(const std::string& default_type = "gmres")
             : default_type_(default_type)
         {
-            type_map_.insert(std::make_pair("richardson", KSPRICHARDSON));
-            type_map_.insert(std::make_pair("chebyshev", KSPCHEBYSHEV));
-            type_map_.insert(std::make_pair("cg", KSPCG));
-            type_map_.insert(std::make_pair("bicgs", KSPBICG));
-            type_map_.insert(std::make_pair("gmres", KSPGMRES));
-            type_map_.insert(std::make_pair("fgmres", KSPFGMRES));
-            type_map_.insert(std::make_pair("dgmres", KSPDGMRES));
-            type_map_.insert(std::make_pair("gcr", KSPGCR));
-            type_map_.insert(std::make_pair("bcgs", KSPBCGS));
-            type_map_.insert(std::make_pair("cgs", KSPCGS));
-            type_map_.insert(std::make_pair("tfqmr", KSPTFQMR));
-            type_map_.insert(std::make_pair("tcqmr", KSPTCQMR));
-            type_map_.insert(std::make_pair("cr", KSPCR));
-            type_map_.insert(std::make_pair("preonly", KSPPREONLY));
+            // g++-4.4 has problems converting const char* to char*
+            // which it thinks is needed for constructing std::string.
+            // Using operator[] circumvents this problem.
+            type_map_["richardson"] = KSPRICHARDSON;
+            type_map_["chebyshev"] = KSPCHEBYSHEV;
+            type_map_["cg"] = KSPCG;
+            type_map_["bicgs"] = KSPBICG;
+            type_map_["gmres"] = KSPGMRES;
+            type_map_["fgmres"] = KSPFGMRES;
+            type_map_["dgmres"] = KSPDGMRES;
+            type_map_["gcr"] = KSPGCR;
+            type_map_["bcgs"] = KSPBCGS;
+            type_map_["cgs"] = KSPCGS;
+            type_map_["tfqmr"] = KSPTFQMR;
+            type_map_["tcqmr"] = KSPTCQMR;
+            type_map_["cr"] = KSPCR;
+            type_map_["preonly"] = KSPPREONLY;
         }
 
         KSPType
@@ -81,19 +84,19 @@ namespace{
         PCTypeMap(const std::string& default_type = "jacobi")
             : default_type_(default_type)
         {
-            type_map_.insert(std::make_pair("jacobi", PCJACOBI));
-            type_map_.insert(std::make_pair("bjacobi", PCBJACOBI));
-            type_map_.insert(std::make_pair("sor", PCSOR));
-            type_map_.insert(std::make_pair("eisenstat", PCEISENSTAT));
-            type_map_.insert(std::make_pair("icc", PCICC));
-            type_map_.insert(std::make_pair("ilu", PCILU));
-            type_map_.insert(std::make_pair("asm", PCASM));
-            type_map_.insert(std::make_pair("gamg", PCGAMG));
-            type_map_.insert(std::make_pair("ksp", PCKSP));
-            type_map_.insert(std::make_pair("composite", PCCOMPOSITE));
-            type_map_.insert(std::make_pair("lu", PCLU));
-            type_map_.insert(std::make_pair("cholesky", PCCHOLESKY));
-            type_map_.insert(std::make_pair("none", PCNONE));
+            type_map_["jacobi"] = PCJACOBI;
+            type_map_["bjacobi"] = PCBJACOBI;
+            type_map_["sor"] = PCSOR;
+            type_map_["eisenstat"] = PCEISENSTAT;
+            type_map_["icc"] = PCICC;
+            type_map_["ilu"] = PCILU;
+            type_map_["asm"] = PCASM;
+            type_map_["gamg"] = PCGAMG;
+            type_map_["ksp"] = PCKSP;
+            type_map_["composite"] = PCCOMPOSITE;
+            type_map_["lu"] = PCLU;
+            type_map_["cholesky"] = PCCHOLESKY;
+            type_map_["none"] = PCNONE;
         }
 
         PCType
