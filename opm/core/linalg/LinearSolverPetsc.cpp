@@ -41,7 +41,8 @@ namespace{
             // which it thinks is needed for constructing std::string.
             // Using operator[] circumvents this problem.
             type_map_["richardson"] = KSPRICHARDSON;
-            type_map_["chebyshev"] = KSPCHEBYSHEV;
+            // Not available in PETSC 3.2 on Debian
+            //type_map_["chebyshev"] = KSPCHEBYSHEV;
             type_map_["cg"] = KSPCG;
             type_map_["bicgs"] = KSPBICG;
             type_map_["gmres"] = KSPGMRES;
