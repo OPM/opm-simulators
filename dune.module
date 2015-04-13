@@ -1,7 +1,7 @@
 Module: opm-autodiff
 Description: Utilities for automatic differentiation and simulators based on AD
-Version: 0.9
-Label: 2013.10
+Version: 2.0
+Label: 2015.04
 Maintainer: atgeirr@sintef.no
 Depends: opm-core dune-istl (>=2.2)
 Suggests: dune-cornerpoint
