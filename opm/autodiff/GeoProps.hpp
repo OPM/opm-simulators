@@ -216,11 +216,12 @@ namespace Opm
 
         int numCells = Opm::AutoDiffGrid::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+        const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
         EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
         std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            const int nx = grid.cartdims[0];
-            const int ny = grid.cartdims[1];
+            const int nx = cartdims[0];
+            const int ny = cartdims[1];
             const int cartesianCellIdx = global_cell[cellIdx];
 
             const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
