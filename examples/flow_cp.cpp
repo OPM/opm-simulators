@@ -122,14 +122,26 @@ try
     std::cout << "*                             http://opm-project.org                                     *\n";
     std::cout << "*                                                                                        *\n";
     std::cout << "******************************************************************************************\n\n";
+
+    // Read parameters, see if a deck was specified on the command line.
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
     parameter::ParameterGroup param(argc, argv, false);
+    if (!param.unhandledArguments().empty()) {
+        if (param.unhandledArguments().size() != 1) {
+            OPM_THROW(std::runtime_error, "You can only specify a single input deck on the command line.");
+        } else {
+            param.insertParameter("deck_filename", param.unhandledArguments()[0]);
+        }
+    }
 
-    // If we have a "deck_filename", grid and props will be read from that.
-    bool use_deck = param.has("deck_filename");
-    if (!use_deck) {
-        OPM_THROW(std::runtime_error, "This program must be run with an input deck. "
-                  "Specify the deck with deck_filename=deckname.data (for example).");
+    // We must have an input deck. Grid and props will be read from that.
+    if (!param.has("deck_filename")) {
+        std::cerr << "This program must be run with an input deck.\n"
+            "Specify the deck filename either\n"
+            "    a) as a command line argument by itself\n"
+            "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
+            "    c) as a parameter in a parameter file (.param or .xml) passed to the program.";
+        OPM_THROW(std::runtime_error, "Input deck required.");
     }
     std::shared_ptr<Dune::CpGrid> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
