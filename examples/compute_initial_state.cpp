@@ -81,7 +81,7 @@ try
     using namespace Opm;
 
     // Setup.
-    parameter::ParameterGroup param(argc, argv, false);
+    parameter::ParameterGroup param(argc, argv);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
     const std::string deck_filename = param.get<std::string>("deck_filename");
     Opm::ParserPtr parser(new Opm::Parser() );
