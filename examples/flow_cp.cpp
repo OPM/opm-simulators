@@ -113,9 +113,17 @@ try
     const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
 
-    std::cout << "\n================    Test program for fully implicit three-phase black-oil flow     ===============\n\n";
-    parameter::ParameterGroup param(argc, argv, false);
+    std::cout << "******************************************************************************************\n";
+    std::cout << "*                                                                                        *\n";
+    std::cout << "*              Welcome to Flow! (Experimental version using dune-cornerpoint.)           *\n";
+    std::cout << "*                                                                                        *\n";
+    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow that is part of OPM. *\n";
+    std::cout << "* For more information see:                                                              *\n";
+    std::cout << "*                             http://opm-project.org                                     *\n";
+    std::cout << "*                                                                                        *\n";
+    std::cout << "******************************************************************************************\n\n";
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+    parameter::ParameterGroup param(argc, argv, false);
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
