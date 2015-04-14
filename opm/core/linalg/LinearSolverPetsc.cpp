@@ -38,8 +38,10 @@ namespace{
             : default_type_(default_type)
         {
             // g++-4.4 has problems converting const char* to char*
-            // which it thinks is needed for constructing std::string.
-            // Using operator[] circumvents this problem.
+            // The problem is caused by the mapped type being PCType
+            // which (at least in PETSc 3.2) is char* because of C
+            // (in the header there is "#define PCType character*(80)").
+            // and the KSP...  defines being const char* (because of C++).
             type_map_["richardson"] = KSPRICHARDSON;
             // Not available in PETSC 3.2 on Debian
             //type_map_["chebyshev"] = KSPCHEBYSHEV;
