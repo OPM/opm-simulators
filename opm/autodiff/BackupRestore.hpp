@@ -79,7 +79,7 @@ namespace Opm {
             container.resize( size );
         }
 
-        template <class T, unsigned long n>
+        template <class T, size_t n>
         void resizeContainer( std::array<T, n>& /* a */, size_t size )
         {
             static_cast<void>(size);
