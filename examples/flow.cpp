@@ -88,7 +88,7 @@ try
 
     std::cout << "******************************************************************************************\n";
     std::cout << "*                                                                                        *\n";
-    std::cout << "*                               Welcome to Flow!                                         *\n";
+    std::cout << "*                          This is Flow (version 2015.04)                                *\n";
     std::cout << "*                                                                                        *\n";
     std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow that is part of OPM. *\n";
     std::cout << "* For more information see:                                                              *\n";
