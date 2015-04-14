@@ -60,7 +60,7 @@ try
 {
     using namespace Opm;
 
-    parameter::ParameterGroup param(argc, argv, false);
+    parameter::ParameterGroup param(argc, argv);
 
     // Read grid.
     GridManager grid_manager(param.get<std::string>("grid_filename"));
