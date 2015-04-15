@@ -260,7 +260,7 @@ try
         if (use_wpolymer) {
             OPM_MESSAGE("Warning: use WPOLYMER in a non-polymer scenario.");
         }
-    }    
+    }
 
     bool use_local_perm = param.getDefault("use_local_perm", true);
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
