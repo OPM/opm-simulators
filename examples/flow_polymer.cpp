@@ -91,9 +91,18 @@ try
 {
     using namespace Opm;
 
-    std::cout << "\n================    Test program for fully implicit three-phase black-oil-polymer flow     ===============\n\n";
-    parameter::ParameterGroup param(argc, argv, false);
+    std::cout << "*********************************************************************************************\n";
+    std::cout << "*                                                                                           *\n";
+    std::cout << "*                       This is Flow-Polymer (version 2015.04)                              *\n";
+    std::cout << "*                                                                                           *\n";
+    std::cout << "* Flow-Polymer is a simulator for three-phase black-oil-polymer flow that is a part of OPM. *\n";
+    std::cout << "* For more information see:                                                                 *\n";
+    std::cout << "*                              http://opm-project.org                                       *\n";
+    std::cout << "*                                                                                           *\n";
+    std::cout << "*********************************************************************************************\n\n";
+
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+    parameter::ParameterGroup param(argc, argv, false);
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
