@@ -26,6 +26,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
@@ -208,7 +209,7 @@ namespace Opm
 
         // Check for failure of linear solver.
         if (!result.converged) {
-            OPM_THROW(std::runtime_error, "Convergence failure for linear solver.");
+            OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
         }
 
         // Copy solver output to dx.

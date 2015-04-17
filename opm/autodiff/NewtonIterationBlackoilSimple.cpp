@@ -22,6 +22,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 namespace Opm
@@ -67,7 +68,7 @@ namespace Opm
         iterations_ = rep.iterations;
 
         if (!rep.converged) {
-            OPM_THROW(std::runtime_error,
+            OPM_THROW(LinearSolverProblem,
                       "FullyImplicitBlackoilSolver::solveJacobianSystem(): "
                       "Linear solver convergence failure.");
         }

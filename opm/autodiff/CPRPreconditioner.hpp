@@ -44,6 +44,7 @@
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 
 namespace Opm
 {
@@ -498,7 +499,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             }
 
             if (!result.converged) {
-                OPM_THROW(std::runtime_error, "CPRPreconditioner failed to solve elliptic subsystem.");
+                OPM_THROW(LinearSolverProblem, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
         }
 

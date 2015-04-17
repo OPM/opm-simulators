@@ -25,6 +25,7 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <iostream>
 
 
@@ -236,7 +237,7 @@ namespace Opm
                                    smatr.outerIndexPtr(), smatr.innerIndexPtr(), smatr.valuePtr(),
                                    transport_residual.value().data(), ds.data());
             if (!rep.converged) {
-                OPM_THROW(std::runtime_error, "Linear solver convergence error in TransportSolverTwophaseAd::solve()");
+                OPM_THROW(LinearSolverProblem, "Linear solver convergence error in TransportSolverTwophaseAd::solve()");
             }
 
             // Update (possible clamp) sw1.
