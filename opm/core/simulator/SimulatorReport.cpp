@@ -50,6 +50,16 @@ namespace Opm
            << "\n  Overall Linear Iterations:  " << total_linear_iterations
            << std::endl;
     }
+
+    void SimulatorReport::reportFullyImplicit(std::ostream& os)
+    {
+        os << "Total time taken (seconds):  " << total_time
+           << "\nSolver time (seconds):       " << pressure_time
+           << "\nOverall Newton Iterations:   " << total_newton_iterations
+           << "\nOverall Linear Iterations:   " << total_linear_iterations
+           << std::endl;
+    }
+
     void SimulatorReport::reportParam(std::ostream& os)
     {
         os << "/timing/total_time=" << total_time

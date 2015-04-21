@@ -41,6 +41,8 @@ namespace Opm
         void operator+=(const SimulatorReport& sr);
         /// Print a report to the given stream.
         void report(std::ostream& os);
+        /// Print a report, leaving out the transport time.
+        void reportFullyImplicit(std::ostream& os);
         void reportParam(std::ostream& os);
     };
 
