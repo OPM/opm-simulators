@@ -35,28 +35,28 @@ namespace Opm {
 
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param )
         : timeStepControl_()
-        , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
+        , restart_factor_( param.getDefault("solver.restartfactor", double(0.3) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
           // default is 1 year, convert to seconds
         , max_time_step_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0 ), unit::day) )
-        , solver_restart_max_( param.getDefault("solver.restart", int(3) ) )
-        , solver_verbose_( param.getDefault("solver.verbose", bool(false) ) )
-        , timestep_verbose_( param.getDefault("timestep.verbose", bool(false) ) )
+        , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
+        , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) )
+        , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) )
         , last_timestep_( -1.0 )
     {
         // valid are "pid" and "pid+iteration"
         std::string control = param.getDefault("timestep.control", std::string("pid+iteration") );
         // iterations is the accumulation of all linear iterations over all newton steops per time step
-        const int defaultTargetIterations = 30;
+        const int defaultTargetIterations = 8;
 
-        const double tol = param.getDefault("timestep.control.tol", double(1e-3) );
+        const double tol = param.getDefault("timestep.control.tol", double(4e-5) );
         if( control == "pid" ) {
             timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol ) );
         }
         else if ( control == "pid+iteration" )
         {
             const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
-            const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(3.0) );
+            const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(1.6) );
             timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth ) );
         }
         else if ( control == "iterationcount" )
