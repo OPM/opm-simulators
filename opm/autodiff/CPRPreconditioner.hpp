@@ -295,10 +295,10 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         void reset()
         {
             cpr_relax_          = 1.0;
-            cpr_solver_tol_     = 1e-4;
+            cpr_solver_tol_     = 1e-2;
             cpr_ilu_n_          = 0;
-            cpr_max_ell_iter_   = 5000;
-            cpr_use_amg_        = false;
+            cpr_max_ell_iter_   = 25;
+            cpr_use_amg_        = true;
             cpr_use_bicgstab_   = true;
             cpr_solver_verbose_ = false;
         }
