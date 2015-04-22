@@ -232,7 +232,7 @@ namespace Opm
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
-        if( param_.getDefault("timestep.adaptive", bool(false) ) )
+        if( param_.getDefault("timestep.adaptive", true ) )
         {
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_ ) );
         }
