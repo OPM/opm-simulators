@@ -145,11 +145,11 @@ namespace detail {
         relax_increment_ = 0.1;
         relax_rel_tol_   = 0.2;
         max_iter_        = 15; // not more then 15 its by default
-        min_iter_        = 0;  // keep the default as it was
-        max_residual_allowed_  = std::numeric_limits< double >::max();
-        tolerance_mb_    = 1.0e-7;
-        tolerance_cnv_   = 1.0e-3;
-        tolerance_wells_ = 1./Opm::unit::day;
+        min_iter_        = 1;  // Default to always do at least one nonlinear iteration.
+        max_residual_allowed_ = 1e5;
+        tolerance_mb_    = 1.0e-5;
+        tolerance_cnv_   = 1.0e-2;
+        tolerance_wells_ = 1.0e-2;
     }
 
     template<class T>

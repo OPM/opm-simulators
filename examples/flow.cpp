@@ -263,7 +263,7 @@ try
     SimulatorReport fullReport = simulator.run(simtimer, state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
-    fullReport.report(std::cout);
+    fullReport.reportFullyImplicit(std::cout);
 
     if (output) {
         std::string filename = output_dir + "/walltime.txt";
