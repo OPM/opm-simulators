@@ -146,7 +146,7 @@ namespace detail {
         relax_rel_tol_   = 0.2;
         max_iter_        = 15; // not more then 15 its by default
         min_iter_        = 1;  // Default to always do at least one nonlinear iteration.
-        max_residual_allowed_ = 1e5;
+        max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 1.0e-2;
