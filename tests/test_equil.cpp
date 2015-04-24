@@ -44,6 +44,14 @@
 #include <string>
 #include <vector>
 
+#define CHECK(value, expected, reltol) \
+{ \
+  if (std::fabs((expected)) < 1.e-14) \
+    BOOST_CHECK_SMALL((value), (reltol)); \
+  else \
+    BOOST_CHECK_CLOSE((value), (expected), (reltol)); \
+}
+
 BOOST_AUTO_TEST_SUITE ()
 
 BOOST_AUTO_TEST_CASE (PhasePressure)
@@ -443,7 +451,7 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     for (int phase = 0; phase < 3; ++phase) {
         BOOST_REQUIRE(sats[phase].size() == s[phase].size());
         for (size_t i = 0; i < s[phase].size(); ++i) {
-            BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
+            CHECK(sats[phase][i], s[phase][i], reltol);
         }
     }
 }
@@ -504,8 +512,8 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
         BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
-            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            CHECK(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            CHECK(sats[phase][i], s_opm[phase][i], reltol);
         }
     }
 }
@@ -565,8 +573,8 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
         BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
-            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            CHECK(sats[phase][i], s_opm[phase][i], reltol);
+            CHECK(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
@@ -610,7 +618,7 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
+    const double reltol = 5.0e-3;
     const double reltol_ecl = 1.0;
     BOOST_CHECK_CLOSE(pressures[0][first], 1.48215e+07, reltol_ecl);  // eclipse
     BOOST_CHECK_CLOSE(pressures[0][last],  1.54801e+07, reltol_ecl);
@@ -645,8 +653,8 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
         BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], 100.*reltol);
-            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            CHECK(sats[phase][i], s_opm[phase][i], 100.*reltol);
+            CHECK(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
@@ -668,8 +676,8 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
          
     for (size_t i = 0; i < rv_opm.size(); ++i) {
         //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], 100.*reltol);
-        BOOST_CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
+        CHECK(rv[i], rv_opm[i], 100.*reltol);
+        CHECK(rv[i], rv_ecl[i], reltol_ecl);
     }
 }
 
@@ -728,8 +736,8 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
         BOOST_REQUIRE(sats[phase].size() == s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], 100.*reltol);
-            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            CHECK(sats[phase][i], s_opm[phase][i], 100.*reltol);
+            CHECK(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }

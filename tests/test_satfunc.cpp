@@ -44,6 +44,14 @@
 #include <string>
 #include <vector>
 
+#define CHECK(value, expected, reltol) \
+{ \
+  if (std::fabs((expected)) < 1.e-14) \
+    BOOST_CHECK_SMALL((value), (reltol)); \
+  else \
+    BOOST_CHECK_CLOSE((value), (expected), (reltol)); \
+}
+
 BOOST_AUTO_TEST_SUITE ()
 
 BOOST_AUTO_TEST_CASE (GwsegStandard)
@@ -96,11 +104,11 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     
     const double reltol = 1.0e-6;
     for (int i=0; i<n; ++i) {
-      BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[i], reltol);
-      BOOST_CHECK_CLOSE(kr[i*np+opos], kro[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
+      CHECK(kr[i*np+wpos], krw[i], reltol);
+      CHECK(kr[i*np+opos], kro[i], reltol);
+      CHECK(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
+      CHECK(dkrds[i*np*np+opos], DkroDsw[i], reltol);
+      CHECK(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
     }
 
 /*    
@@ -177,14 +185,14 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     double DkrwDsw[11] = {0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0};
     double DkroDsw[11] = {-2.0, -2.0, -2.0, -2.0, -1.0, -1.0, -1.0, -1.0, 0.0, 0.0, 0.0};
     double DkroDsg[11] = {-5.0, -5.0, -3.0, -2.0,-0.66666666666666741, -0.75, -0.8, -0.83333333333333237, 0.14285714285714296, 0.0, 0.0};
-   
+
     const double reltol = 1.0e-6;
     for (int i=0; i<n; ++i) {
-      BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[i], reltol);
-      BOOST_CHECK_CLOSE(kr[i*np+opos], kro[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
+      CHECK(kr[i*np+wpos], krw[i], reltol);
+      CHECK(kr[i*np+opos], kro[i], reltol);
+      CHECK(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
+      CHECK(dkrds[i*np*np+opos], DkroDsw[i], reltol);
+      CHECK(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
     }
  
 /*
@@ -303,11 +311,11 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
       
       const double reltol = 1.0e-3;
       for (int i=0; i<n; ++i) {
-        BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(kr[i*np+opos], kro[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[icell][i], reltol);
+        CHECK(kr[i*np+wpos], krw[icell][i], reltol);
+        CHECK(kr[i*np+opos], kro[icell][i], reltol);
+        CHECK(dkrds[i*np*np+wpos], DkrwDsw[icell][i], reltol);
+        CHECK(dkrds[i*np*np+opos], DkroDsw[icell][i], reltol);
+        CHECK(dkrds[i*np*np+np*gpos+opos], DkroDsg[icell][i], reltol);
       }
       
 /*      
@@ -549,11 +557,11 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
       
       const double reltol = 1.0e-3;
       for (int i=0; i<n; ++i) {
-        BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(kr[i*np+opos], kro[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[icell][i], reltol);
-        BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[icell][i], reltol);
+        CHECK(kr[i*np+wpos], krw[icell][i], reltol);
+        CHECK(kr[i*np+opos], kro[icell][i], reltol);
+        CHECK(dkrds[i*np*np+wpos], DkrwDsw[icell][i], reltol);
+        CHECK(dkrds[i*np*np+opos], DkroDsw[icell][i], reltol);
+        CHECK(dkrds[i*np*np+np*gpos+opos], DkroDsg[icell][i], reltol);
       }
     
     }
@@ -610,11 +618,11 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     
     const double reltol = 1.0e-6;
     for (int i=0; i<n; ++i) {
-      BOOST_CHECK_CLOSE(kr[i*np+wpos], krw[i], reltol);
-      BOOST_CHECK_CLOSE(kr[i*np+opos], kro[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+opos], DkroDsw[i], reltol);
-      BOOST_CHECK_CLOSE(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
+      CHECK(kr[i*np+wpos], krw[i], reltol);
+      CHECK(kr[i*np+opos], kro[i], reltol);
+      CHECK(dkrds[i*np*np+wpos], DkrwDsw[i], reltol);
+      CHECK(dkrds[i*np*np+opos], DkroDsw[i], reltol);
+      CHECK(dkrds[i*np*np+np*gpos+opos], DkroDsg[i], reltol);
     }
 
 /*    
