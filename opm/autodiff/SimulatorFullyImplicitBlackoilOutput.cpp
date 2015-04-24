@@ -331,11 +331,17 @@ namespace Opm
                     break;
                 }
 
+                // try to read next report step
+                restorefile.read( (char *) &reportStep, sizeof(int) );
+
+                // if read failed, exit loop
+                if( ! restorefile ) {
+                    break;
+                }
+
                 // next step
                 timer.advance();
 
-                // read next report step
-                restorefile.read( (char *) &reportStep, sizeof(int) );
                 if( timer.reportStepNum() != reportStep ) {
                     break;
                 }
