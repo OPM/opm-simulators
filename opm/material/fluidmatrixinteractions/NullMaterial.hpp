@@ -25,8 +25,8 @@
 
 #include "NullMaterialParams.hpp"
 
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 

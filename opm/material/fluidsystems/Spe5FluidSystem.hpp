@@ -29,7 +29,7 @@
 #include <opm/material/Constants.hpp>
 #include <opm/material/eos/PengRobinsonMixture.hpp>
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 namespace Opm {
 namespace FluidSystems {

@@ -31,10 +31,10 @@
 #include <opm/material/components/Air.hpp>
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
 
 #include <iostream>
 #include <cassert>

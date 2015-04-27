@@ -25,7 +25,7 @@
 
 #include "FluidConductionParams.hpp"
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 #include <algorithm>
 

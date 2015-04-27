@@ -27,7 +27,7 @@
 #include "VanGenuchten.hpp"
 #include "VanGenuchtenParams.hpp"
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 #include <cassert>
 

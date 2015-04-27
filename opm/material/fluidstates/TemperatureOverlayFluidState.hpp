@@ -23,7 +23,7 @@
 #ifndef OPM_TEMPERATURE_OVERLAY_FLUID_STATE_HPP
 #define OPM_TEMPERATURE_OVERLAY_FLUID_STATE_HPP
 
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 namespace Opm {
 

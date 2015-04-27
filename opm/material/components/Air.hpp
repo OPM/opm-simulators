@@ -28,8 +28,8 @@
 #include <opm/material/components/Component.hpp>
 #include <opm/material/IdealGas.hpp>
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
 
 namespace Opm {
 
@@ -158,10 +158,8 @@ public:
     {
         Scalar r;
         if(temperature < 273.15 || temperature > 660.)
-        {
-            OPM_THROW(MaterialLawProblem,
-                      "ConstrelAir: Temperature out of range at ");
-        }
+            OPM_THROW(NumericalIssue, "Air: Temperature out of range at ");
+
         r = 1.496*1.E-6*std::pow(temperature,1.5)/(temperature+120.);
         return (r);
 

@@ -28,7 +28,7 @@
 #include "VanGenuchten.hpp"
 #include "RegularizedVanGenuchtenParams.hpp"
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 #include <algorithm>
 

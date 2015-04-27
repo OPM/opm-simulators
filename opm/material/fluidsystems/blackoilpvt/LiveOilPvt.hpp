@@ -25,10 +25,10 @@
 
 #include "OilPvtInterface.hpp"
 
-#include <opm/material/OpmFinal.hpp>
-#include <opm/material/UniformXTabulated2DFunction.hpp>
-#include <opm/material/Tabulated1DFunction.hpp>
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/OpmFinal.hpp>
+#include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/common/Tabulated1DFunction.hpp>
+#include <opm/material/common/Spline.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -466,7 +466,7 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^G = " << XoG);
+        OPM_THROW(NumericalIssue, "Could find the oil saturation pressure for X_o^G = " << XoG);
     }
 
     Scalar saturatedOilGasMassFraction(int regionIdx,

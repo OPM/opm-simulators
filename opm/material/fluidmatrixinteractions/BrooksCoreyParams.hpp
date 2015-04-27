@@ -24,7 +24,7 @@
 #ifndef OPM_BROOKS_COREY_PARAMS_HPP
 #define OPM_BROOKS_COREY_PARAMS_HPP
 
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <cassert>
 

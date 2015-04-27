@@ -25,10 +25,10 @@
 
 #include "EclDefaultMaterialParams.hpp"
 
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
 
 #include <algorithm>
 

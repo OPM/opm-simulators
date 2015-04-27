@@ -25,9 +25,9 @@
 
 #include "SomertonParams.hpp"
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 

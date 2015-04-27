@@ -214,7 +214,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     ComponentVector tmpMolarities;
     for (int i = 0;; ++i) {
         if (i >= 20)
-            OPM_THROW(Opm::NumericalProblem,
+            OPM_THROW(Opm::NumericalIssue,
                        "Newton method did not converge after 20 iterations");
 
         // calculate the deviation from the standard pressure

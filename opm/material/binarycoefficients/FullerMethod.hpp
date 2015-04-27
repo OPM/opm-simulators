@@ -24,7 +24,7 @@
 #ifndef OPM_FULLERMETHOD_HPP
 #define OPM_FULLERMETHOD_HPP
 
-#include <opm/core/utility/Average.hpp>
+#include <opm/material/common/Means.hpp>
 
 #include <cmath>
 
@@ -55,7 +55,7 @@ inline Scalar fullerMethod(const Scalar *M, // molar masses [g/mol]
                            const Scalar pressure) // [Pa]
 {
     // "effective" molar mass in [g/m^3]
-    Scalar Mab = Opm::utils::harmonicAverage(M[0], M[1]);
+    Scalar Mab = Opm::harmonicMean(M[0], M[1]);
 
     // Fuller's method
     Scalar tmp = std::pow(SigmaNu[0], 1./3) + std::pow(SigmaNu[1], 1./3);

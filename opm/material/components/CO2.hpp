@@ -24,8 +24,8 @@
 #ifndef OPM_CO2_HPP
 #define OPM_CO2_HPP
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/Constants.hpp>
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Component.hpp>

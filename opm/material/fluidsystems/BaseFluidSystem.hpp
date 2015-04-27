@@ -27,10 +27,9 @@
 
 #include "NullParameterCache.hpp"
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-
-#include <opm/core/utility/ClassName.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/ClassName.hpp>
 
 namespace Opm {
 

@@ -25,8 +25,8 @@
 
 #include "GasPvtInterface.hpp"
 
-#include <opm/material/OpmFinal.hpp>
-#include <opm/material/Tabulated1DFunction.hpp>
+#include <opm/material/common/OpmFinal.hpp>
+#include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

@@ -27,7 +27,7 @@
 #include "BrooksCorey.hpp"
 #include "RegularizedBrooksCoreyParams.hpp"
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 namespace Opm {
 /*!

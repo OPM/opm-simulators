@@ -54,7 +54,7 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/N2.hpp>
 
-#include <opm/core/utility/Unused.hpp>
+#include <opm/material/common/Unused.hpp>
 
 // include the MPI header if available
 #if HAVE_MPI

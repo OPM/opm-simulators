@@ -25,7 +25,7 @@
 
 #include "WaterPvtInterface.hpp"
 
-#include <opm/material/OpmFinal.hpp>
+#include <opm/material/common/OpmFinal.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

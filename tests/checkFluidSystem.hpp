@@ -41,8 +41,8 @@
 #include <opm/material/fluidstates/NonEquilibriumFluidState.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
-#include <opm/core/utility/Unused.hpp>
-#include <opm/core/utility/ClassName.hpp>
+#include <opm/material/common/Unused.hpp>
+#include <opm/material/common/ClassName.hpp>
 
 #include <iostream>
 #include <string>

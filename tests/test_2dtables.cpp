@@ -25,8 +25,8 @@
  */
 #include "config.h"
 
-#include <opm/material/UniformXTabulated2DFunction.hpp>
-#include <opm/material/UniformTabulated2DFunction.hpp>
+#include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/common/UniformTabulated2DFunction.hpp>
 
 #include <memory>
 #include <cmath>

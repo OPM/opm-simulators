@@ -24,8 +24,8 @@
 #ifndef OPM_COMPONENT_HPP
 #define OPM_COMPONENT_HPP
 
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 namespace Opm {
 

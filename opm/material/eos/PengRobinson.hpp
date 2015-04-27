@@ -26,10 +26,10 @@
 
 #include <opm/material/fluidstates/TemperatureOverlayFluidState.hpp>
 #include <opm/material/IdealGas.hpp>
-#include <opm/material/UniformTabulated2DFunction.hpp>
+#include <opm/material/common/UniformTabulated2DFunction.hpp>
 
-#include <opm/core/utility/Unused.hpp>
-#include <opm/core/utility/PolynomialUtils.hpp>
+#include <opm/material/common/Unused.hpp>
+#include <opm/material/common/PolynomialUtils.hpp>
 
 #include <csignal>
 
@@ -369,7 +369,7 @@ protected:
                         Vcrit = (maxVm + minVm)/2;
                         return;
                     }
-                    OPM_THROW(NumericalProblem,
+                    OPM_THROW(NumericalIssue,
                                "Could not determine the critical point for a=" << a << ", b=" << b);
                 }
 

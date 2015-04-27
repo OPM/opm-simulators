@@ -23,7 +23,7 @@
 #ifndef OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
 #define OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
 
-#include <opm/core/utility/Spline.hpp>
+#include <opm/material/common/Spline.hpp>
 
 #include <vector>
 #include <cassert>

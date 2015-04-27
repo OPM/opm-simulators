@@ -28,10 +28,10 @@
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/Average.hpp>
-#include <opm/material/Valgrind.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Means.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <limits>
 #include <iostream>
@@ -147,8 +147,8 @@ public:
 
         if (tolerance <= 0.0) {
             tolerance = std::min(1e-10,
-                                 Opm::utils::geometricAverage(Scalar(1.0),
-                                                              std::numeric_limits<Scalar>::epsilon()));
+                                 Opm::geometricMean(Scalar(1.0),
+                                                    std::numeric_limits<Scalar>::epsilon()));
         }
 
         /////////////////////////
@@ -203,7 +203,7 @@ public:
                 std::cout << "J: " << J << "\n";
                 */
 
-                throw Opm::NumericalProblem(e.what());
+                throw Opm::NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -244,7 +244,7 @@ public:
         std::cout << "\n";
         */
 
-        OPM_THROW(NumericalProblem,
+        OPM_THROW(NumericalIssue,
                   "Flash calculation failed."
                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                   << fluidState.temperature(/*phaseIdx=*/0));

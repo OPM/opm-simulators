@@ -480,12 +480,12 @@ private:
         Valgrind::CheckDefined(xlCO2);
 
         if(T < 273.15) {
-            OPM_THROW(NumericalProblem,
+            OPM_THROW(NumericalIssue,
                        "Liquid density for Brine and CO2 is only "
                        "defined above 273.15K (is " << T << "K)");
         }
         if(pl >= 2.5e8) {
-            OPM_THROW(NumericalProblem,
+            OPM_THROW(NumericalIssue,
                        "Liquid density for Brine and CO2 is only "
                        "defined below 250MPa (is " << pl << "Pa)");
         }

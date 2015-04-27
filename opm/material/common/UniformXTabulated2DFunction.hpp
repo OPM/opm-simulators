@@ -24,8 +24,8 @@
 #ifndef OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 #define OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 
-#include <opm/core/utility/Exceptions.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
 
 #include <iostream>
 #include <vector>
@@ -236,14 +236,14 @@ public:
      * \brief Evaluate the function at a given (x,y) position.
      *
      * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalProblem exception is thrown.
+     * range, a \c Opm::NumericalIssue exception is thrown.
      */
     Scalar eval(Scalar x, Scalar y, bool extrapolate = true) const
     {
 #ifndef NDEBUG
         if (!extrapolate && !applies(x,y))
         {
-            OPM_THROW(NumericalProblem,
+            OPM_THROW(NumericalIssue,
                        "Attempt to get tabulated value for ("
                        << x << ", " << y
                        << ") on table");
