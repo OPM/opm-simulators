@@ -9,3 +9,4 @@ Url: http://opm-project.org
 Maintainer: and@poware.org
 MaintainerName: Andreas Lauser
 Depends: dune-common
+Suggests: opm-parser
