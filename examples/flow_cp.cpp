@@ -307,7 +307,8 @@ try
         fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
     }
 
-    Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
+    Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
+    Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
     SimulatorTimer simtimer;
 
     // initialize variables
@@ -330,25 +331,30 @@ try
                                                            outputWriter,
                                                            threshold_pressures);
 
-    if( grid->comm().rank()==0 )
-    {
-        std::cout << "\n\n================ Starting main simulation loop ===============\n"
-                  << std::flush;
-    }
+    if (!schedule->initOnly()){
+        if( grid->comm().rank()==0 )
+        {
+            std::cout << "\n\n================ Starting main simulation loop ===============\n"
+                      << std::flush;
+        }
 
-    SimulatorReport fullReport = simulator.run(simtimer, must_distribute ? distributed_state : state);
+        SimulatorReport fullReport = simulator.run(simtimer, must_distribute ? distributed_state : state);
 
-    if( grid->comm().rank()==0 )
-    {
-        std::cout << "\n\n================    End of simulation     ===============\n\n";
-        fullReport.reportFullyImplicit(std::cout);
-    }
+        if( grid->comm().rank()==0 )
+        {
+            std::cout << "\n\n================    End of simulation     ===============\n\n";
+            fullReport.reportFullyImplicit(std::cout);
+        }
 
-    if (output) {
-        std::string filename = output_dir + "/walltime.txt";
-        std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-        fullReport.reportParam(tot_os);
-        warnIfUnusedParams(param);
+        if (output) {
+            std::string filename = output_dir + "/walltime.txt";
+            std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
+            fullReport.reportParam(tot_os);
+            warnIfUnusedParams(param);
+        }
+    } else {
+        outputWriter.writeInit( simtimer );
+        std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
     }
 }
 catch (const std::exception &e) {
