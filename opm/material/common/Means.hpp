@@ -16,6 +16,13 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+/*!
+ * \file
+ *
+ * \brief Implements some common averages.
+ *
+ * i.e., arithmetic, geometric and harmonic averages.
+ */
 #ifndef OPM_MEANS_HH
 #define OPM_MEANS_HH
 
