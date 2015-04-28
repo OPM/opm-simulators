@@ -27,7 +27,7 @@
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include "problems/reservoirproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(ReservoirProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
 }

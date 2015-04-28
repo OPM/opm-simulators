@@ -27,7 +27,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/cuvetteproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(CuvetteProblem, INHERITS_FROM(PvsModel, CuvetteBaseProblem));
 }}

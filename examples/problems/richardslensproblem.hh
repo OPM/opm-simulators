@@ -45,7 +45,7 @@ template <class TypeTag>
 class RichardsLensProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(RichardsLensProblem, Richards);
 
@@ -118,7 +118,7 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 /*!

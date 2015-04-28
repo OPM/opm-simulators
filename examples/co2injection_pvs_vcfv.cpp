@@ -30,7 +30,7 @@
 
 #include "problems/co2injectionproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionPvsVcfvProblem, INHERITS_FROM(PvsModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionPvsVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);

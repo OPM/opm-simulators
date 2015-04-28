@@ -51,7 +51,7 @@ template <class TypeTag>
 class FingerProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(FingerGridManager));
 
@@ -123,7 +123,7 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 /*!

@@ -40,7 +40,7 @@ template <class TypeTag>
 class OutflowProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(OutflowBaseProblem);
 
@@ -76,7 +76,7 @@ SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
 // The default DGF file to load
 SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!

@@ -41,7 +41,7 @@ template <class TypeTag>
 class StokesTestProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(StokesTestProblem, INHERITS_FROM(StokesModel));
 
@@ -77,7 +77,7 @@ SET_SCALAR_PROP(StokesTestProblem, InitialTimeStepSize, 10.0);
 // Default grid file to load
 SET_STRING_PROP(StokesTestProblem, GridFile, "data/test_stokes.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!

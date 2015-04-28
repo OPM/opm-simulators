@@ -27,7 +27,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/groundwaterproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(ImmiscibleSinglePhaseModel, GroundWaterBaseProblem));
 }}

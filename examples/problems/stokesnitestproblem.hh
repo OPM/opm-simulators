@@ -38,7 +38,7 @@ template <class TypeTag>
 class StokesNiTestProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(StokesNiTestProblem, INHERITS_FROM(StokesModel));
 
@@ -77,7 +77,7 @@ SET_SCALAR_PROP(StokesNiTestProblem, NewtonRawTolerance, 1e-4);
 // Default grid file to load
 SET_STRING_PROP(StokesNiTestProblem, GridFile, "data/test_stokes2cni.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!

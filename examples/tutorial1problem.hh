@@ -55,7 +55,7 @@ template <class TypeTag>
 class Tutorial1Problem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 // Create a new type tag for the problem
 NEW_TYPE_TAG(Tutorial1Problem, INHERITS_FROM(ImmiscibleTwoPhaseModel)); /*@\label{tutorial1:create-type-tag}@*/
@@ -125,7 +125,7 @@ SET_INT_PROP(Tutorial1Problem, CellsX, 100);
 SET_INT_PROP(Tutorial1Problem, CellsY, 1);
 SET_INT_PROP(Tutorial1Problem, CellsZ, 1); /*@\label{tutorial1:default-params-end}@*/
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 //! Tutorial problem using the "immiscible" model.

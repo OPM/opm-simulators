@@ -50,7 +50,7 @@ template <class TypeTag>
 class LensProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridManager));
 
@@ -140,7 +140,7 @@ SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 
 // By default, include the intrinsic permeability tensor to the VTK output files
 SET_BOOL_PROP(LensBaseProblem, VtkWriteIntrinsicPermeabilities, true);
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 /*!

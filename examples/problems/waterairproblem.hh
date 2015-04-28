@@ -51,7 +51,7 @@ template <class TypeTag>
 class WaterAirProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(WaterAirBaseProblem);
 
@@ -119,7 +119,7 @@ SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!
