@@ -27,7 +27,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include "problems/powerinjectionproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(PowerInjectionProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,

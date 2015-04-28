@@ -38,7 +38,7 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
-#include <opm/material/UniformTabulated2DFunction.hpp>
+#include <opm/material/common/UniformTabulated2DFunction.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -60,7 +60,7 @@ namespace Co2Injection {
 }
 } // namespace Ewoms
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
@@ -165,7 +165,7 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!

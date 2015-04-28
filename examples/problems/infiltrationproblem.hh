@@ -47,7 +47,7 @@ template <class TypeTag>
 class InfiltrationProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(InfiltrationBaseProblem);
 
@@ -111,7 +111,7 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
                 "./data/infiltration_50x3.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!

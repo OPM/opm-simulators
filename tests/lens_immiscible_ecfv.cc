@@ -29,7 +29,7 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/lensproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(LensProblemEcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 SET_TAG_PROP(LensProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);

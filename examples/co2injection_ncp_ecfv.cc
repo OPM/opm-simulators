@@ -29,7 +29,7 @@
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionNcpEcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);

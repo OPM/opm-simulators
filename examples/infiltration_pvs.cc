@@ -27,7 +27,7 @@
 #include <ewoms/models/pvs/pvsmodel.hh>
 #include "problems/infiltrationproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(InfiltrationProblem, INHERITS_FROM(PvsModel, InfiltrationBaseProblem));
 }}

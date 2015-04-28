@@ -30,7 +30,7 @@
 #include <ewoms/models/immiscible/immisciblemodel.hh>
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionImmiscibleVcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                               Co2InjectionBaseProblem));

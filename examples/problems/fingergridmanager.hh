@@ -25,7 +25,7 @@
 
 #include <ewoms/parallel/mpihelper.hh>
 #include <ewoms/io/basegridmanager.hh>
-#include <opm/core/utility/PropertySystem.hpp>
+#include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
 #if HAVE_DUNE_ALUGRID
@@ -52,7 +52,7 @@ template <class TypeTag>
 class FingerProblem;
 } // namespace Ewoms
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 // declare the properties required by the for the finger grid manager
 NEW_TYPE_TAG(FingerGridManager);
@@ -73,7 +73,7 @@ NEW_PROP_TAG(GridGlobalRefinements);
 SET_TYPE_PROP(FingerGridManager, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
 SET_TYPE_PROP(FingerGridManager, GridManager, Ewoms::FingerGridManager<TypeTag>);
 
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 /*!

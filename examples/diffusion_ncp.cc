@@ -27,7 +27,7 @@
 #include <ewoms/models/ncp/ncpmodel.hh>
 #include "problems/diffusionproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(NcpModel, DiffusionBaseProblem));
 }}

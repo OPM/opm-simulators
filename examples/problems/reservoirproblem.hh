@@ -50,7 +50,7 @@ template <class TypeTag>
 class ReservoirProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 
 NEW_TYPE_TAG(ReservoirBaseProblem);

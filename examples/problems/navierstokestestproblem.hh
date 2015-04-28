@@ -46,7 +46,7 @@ template <class TypeTag>
 class NavierStokesTestProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(NavierStokesTestProblem, INHERITS_FROM(NavierStokesModel));
 

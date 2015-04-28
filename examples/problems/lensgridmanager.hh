@@ -25,7 +25,7 @@
 
 #include <ewoms/parallel/mpihelper.hh>
 #include <ewoms/io/basegridmanager.hh>
-#include <opm/core/utility/PropertySystem.hpp>
+#include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
 #include <dune/grid/yaspgrid.hh>
@@ -43,7 +43,7 @@ template <class TypeTag>
 class LensGridManager;
 } // namespace Ewoms
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(LensGridManager);
 
@@ -64,7 +64,7 @@ NEW_PROP_TAG(GridGlobalRefinements);
 // set the Grid and GridManager properties
 SET_TYPE_PROP(LensGridManager, Grid, Dune::YaspGrid<2>);
 SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 /*!

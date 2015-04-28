@@ -27,7 +27,7 @@
 #include <ewoms/models/flash/flashmodel.hh>
 #include "problems/diffusionproblem.hh"
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(FlashModel, DiffusionBaseProblem));
 }}

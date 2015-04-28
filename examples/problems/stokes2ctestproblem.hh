@@ -37,7 +37,7 @@ template <class TypeTag>
 class Stokes2cTestProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 //////////
 // Specify the properties for the stokes2c problem
 //////////
@@ -73,7 +73,7 @@ SET_SCALAR_PROP(Stokes2cTestProblem, InitialTimeStepSize, 0.1);
 // Default grid file to load
 SET_STRING_PROP(Stokes2cTestProblem, GridFile, "data/test_stokes2c.dgf");
 } // namespace Properties
-} // namespace Opm
+} // namespace Ewoms
 
 namespace Ewoms {
 /*!
