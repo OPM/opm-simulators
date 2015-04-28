@@ -25,11 +25,9 @@
 #define EWOMS_ECL_PEACEMAN_WELL_HH
 
 #include <ewoms/aux/baseauxiliarymodule.hh>
+#include <ewoms/common/propertysystem.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-
-#include <opm/core/utility/PropertySystem.hpp>
-#include <opm/core/utility/Average.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
@@ -37,7 +35,7 @@
 
 #include <map>
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(Discretization);
@@ -1326,7 +1324,7 @@ protected:
                 return bhp;
         }
 
-        OPM_THROW(Opm::NumericalProblem,
+        OPM_THROW(Opm::NumericalIssue,
                   "Could not determine the bottom hole pressure of well '" << name()
                   << "' within 20 iterations.");
     }

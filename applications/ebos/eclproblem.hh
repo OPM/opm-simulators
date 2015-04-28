@@ -50,8 +50,6 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
-#include <opm/core/utility/Average.hpp>
-
 // for this simulator to make sense, dune-cornerpoint and opm-parser
 // must be available
 #include <dune/grid/CpGrid.hpp>
@@ -72,7 +70,7 @@ template <class TypeTag>
 class EclProblem;
 }
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
 

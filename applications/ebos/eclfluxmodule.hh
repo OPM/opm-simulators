@@ -32,7 +32,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(MaterialLaw);
 }}
@@ -117,7 +117,7 @@ public:
      */
     const DimMatrix& intrinsicPermeability() const
     {
-        OPM_THROW(Opm::NotImplemented,
+        OPM_THROW(Opm::NotAvailable,
                   "The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
@@ -129,7 +129,7 @@ public:
      */
     const DimVector& potentialGrad(int phaseIdx) const
     {
-        OPM_THROW(Opm::NotImplemented,
+        OPM_THROW(Opm::NotAvailable,
                   "The ECL transmissibility module does not provide explicit potential gradients");
     }
 
@@ -141,7 +141,7 @@ public:
      */
     const DimVector& filterVelocity(int phaseIdx) const
     {
-        OPM_THROW(Opm::NotImplemented,
+        OPM_THROW(Opm::NotAvailable,
                   "The ECL transmissibility module does not provide explicit filter velocities");
     }
 

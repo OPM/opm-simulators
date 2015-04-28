@@ -27,14 +27,14 @@
 
 #include <ewoms/io/baseoutputmodule.hh>
 
-#include <opm/core/utility/PropertySystem.hpp>
+#include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
 
 #include <dune/common/fvector.hh>
 
 #include <type_traits>
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(EclOutputBlackOil);
@@ -54,7 +54,7 @@ SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasDissolutionFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasFormationVolumeFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilFormationVolumeFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilSaturationPressure, true);
-}} // namespace Opm, Properties
+}} // namespace Ewoms, Properties
 
 namespace Ewoms {
 

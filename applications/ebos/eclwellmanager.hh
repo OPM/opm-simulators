@@ -33,7 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 
-#include <opm/core/utility/PropertySystem.hpp>
+#include <ewoms/common/propertysystem.hh>
 
 #include <dune/grid/common/gridenums.hh>
 
@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-namespace Opm {
+namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(Grid);
 }}
