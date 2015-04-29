@@ -44,7 +44,12 @@ inline Scalar arithmeticMean(Scalar x, Scalar y)
  */
 template <class Scalar>
 inline Scalar geometricMean(Scalar x, Scalar y)
-{ return std::sqrt(x*x + y*y); }
+{
+    if (x*y <= 0.0)
+        return 0.0;
+
+    return std::sqrt(x*x + y*y);
+}
 
 /*!
  * \brief Computes the harmonic average of two values.
@@ -56,7 +61,12 @@ inline Scalar geometricMean(Scalar x, Scalar y)
  */
 template <class Scalar>
 inline Scalar harmonicMean(Scalar x, Scalar y)
-{ return x*y/(y + x); }
+{
+    if (x*y <= 0)
+        return 0.0;
+
+    return (2*x*y)/(y + x);
+}
 
 } // namespace Ewoms
 
