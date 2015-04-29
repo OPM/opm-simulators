@@ -760,7 +760,12 @@ namespace detail {
              WellStateFullyImplicitBlackoil& xw  )
     {
         using namespace Opm::AutoDiffGrid;
-        // Create the primary variables.
+
+        // Possibly switch well controls and updating well state to
+        // get reasonable initial conditions for the wells
+        updateWellControls(xw);
+
+        // Create the primary variables.      
         SolutionState state = variableState(x, xw);
 
         if (initial_assembly) {
@@ -836,9 +841,9 @@ namespace detail {
 
         }
 
-        // Note: updateWellControls() can change all its arguments if
-        // a well control is switched.
-        updateWellControls(state.bhp, state.qs, xw);
+        // -------- Well equations ----------
+
+        // Add contribution from wells and set up the well equations.
         V aliveWells;
         addWellEq(state, xw, aliveWells);
         addWellControlEq(state, xw, aliveWells);
@@ -1056,23 +1061,22 @@ namespace detail {
 
     namespace detail
     {
-        double rateToCompare(const ADB& well_phase_flow_rate,
+        double rateToCompare(const std::vector<double>& well_phase_flow_rate,
                              const int well,
                              const int num_phases,
                              const double* distr)
         {
-            const int num_wells = well_phase_flow_rate.size() / num_phases;
             double rate = 0.0;
             for (int phase = 0; phase < num_phases; ++phase) {
-                // Important: well_phase_flow_rate is ordered with all rates for first
-                // phase coming first, then all for second phase etc.
-                rate += well_phase_flow_rate.value()[well + phase*num_wells] * distr[phase];
+                // Important: well_phase_flow_rate is ordered with all phase rates for first
+                // well first, then all phase rates for second well etc.
+                rate += well_phase_flow_rate[well*num_phases + phase] * distr[phase];
             }
             return rate;
         }
 
-        bool constraintBroken(const ADB& bhp,
-                              const ADB& well_phase_flow_rate,
+        bool constraintBroken(const std::vector<double>& bhp,
+                              const std::vector<double>& well_phase_flow_rate,
                               const int well,
                               const int num_phases,
                               const WellType& well_type,
@@ -1090,7 +1094,7 @@ namespace detail {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] > target;
+                    broken = bhp[well] > target;
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1106,7 +1110,7 @@ namespace detail {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] < target;
+                    broken = bhp[well] < target;
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1133,9 +1137,7 @@ namespace detail {
 
 
     template<class T>
-    void FullyImplicitBlackoilSolver<T>::updateWellControls(ADB& bhp,
-                                                            ADB& well_phase_flow_rate,
-                                                            WellStateFullyImplicitBlackoil& xw) const
+    void FullyImplicitBlackoilSolver<T>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1144,8 +1146,6 @@ namespace detail {
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
-        bool bhp_changed = false;
-        bool rates_changed = false;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
@@ -1164,7 +1164,7 @@ namespace detail {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(xw.bhp(), xw.wellRates(), w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1188,7 +1188,6 @@ namespace detail {
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
                 xw.bhp()[w] = target;
-                bhp_changed = true;
                 break;
 
             case RESERVOIR_RATE:
@@ -1196,10 +1195,6 @@ namespace detail {
                 // surface condition.  In this case, use existing
                 // flow rates as initial conditions as reservoir
                 // rate acts only in aggregate.
-                //
-                // Just record the fact that we need to recompute
-                // the 'well_phase_flow_rate'.
-                rates_changed = true;
                 break;
 
             case SURFACE_RATE:
@@ -1208,30 +1203,9 @@ namespace detail {
                         xw.wellRates()[np*w + phase] = target * distr[phase];
                     }
                 }
-                rates_changed = true;
                 break;
             }
 
-        }
-
-        // Update primary variables, if necessary.
-        if (bhp_changed) {
-            // We will set the bhp primary variable to the new ones,
-            // but we do not change the derivatives here.
-            ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
-            // Avoiding the copy below would require a value setter method
-            // in AutoDiffBlock.
-            std::vector<ADB::M> old_derivs = bhp.derivative();
-            bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
-        }
-        if (rates_changed) {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            // The transpose() below switches the ordering.
-            const DataBlock wrates = Eigen::Map<const DataBlock>(xw.wellRates().data(), nw, np).transpose();
-            ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            std::vector<ADB::M> old_derivs = well_phase_flow_rate.derivative();
-            well_phase_flow_rate = ADB::function(std::move(new_qs), std::move(old_derivs));
         }
     }
 
