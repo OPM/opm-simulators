@@ -940,25 +940,15 @@ namespace detail {
             cq_ps[oilpos] += subset(state.rv,well_cells) * cq_psGas;
         }
 
-        // phase rates at std. condtions
-        std::vector<ADB> q_ps(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            q_ps[phase] = wops_.p2w * cq_ps[phase];
-        }
-
-        // total rates at std
-        ADB qt_s = ADB::constant(V::Zero(nw));
-        for (int phase = 0; phase < np; ++phase) {
-            qt_s += subset(state.qs, Span(nw, 1, phase*nw));
-        }
-
         // compute avg. and total wellbore phase volumetric rates at std. conds
         const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
         std::vector<ADB> wbq(np, ADB::null());
         ADB wbqt = ADB::constant(V::Zero(nw));
         for (int phase = 0; phase < np; ++phase) {
+            const ADB& q_ps = wops_.p2w * cq_ps[phase];
+            const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
             const int pos = pu.phase_pos[phase];
-            wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
+            wbq[phase] = (isInj * compi.col(pos)) * q_s - q_ps;
             wbqt += wbq[phase];
         }
         // DUMPVAL(wbqt);
