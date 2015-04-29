@@ -1151,7 +1151,7 @@ namespace detail {
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
-            const int current = xw.currentControls()[w];
+            int current = xw.currentControls()[w];
             // Loop over all controls except the current one, and also
             // skip any RESERVOIR_RATE controls, since we cannot
             // handle those.
@@ -1178,38 +1178,40 @@ namespace detail {
                               << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 }
                 xw.currentControls()[w] = ctrl_index;
-                // Also updating well state and primary variables.
-                // We can only be switching to BHP and SURFACE_RATE
-                // controls since we do not support RESERVOIR_RATE.
-                const double target = well_controls_iget_target(wc, ctrl_index);
-                const double* distr = well_controls_iget_distr(wc, ctrl_index);
-                switch (well_controls_iget_type(wc, ctrl_index)) {
-                case BHP:
-                    xw.bhp()[w] = target;
-                    bhp_changed = true;
-                    break;
-
-                case RESERVOIR_RATE:
-                    // No direct change to any observable quantity at
-                    // surface condition.  In this case, use existing
-                    // flow rates as initial conditions as reservoir
-                    // rate acts only in aggregate.
-                    //
-                    // Just record the fact that we need to recompute
-                    // the 'well_phase_flow_rate'.
-                    rates_changed = true;
-                    break;
-
-                case SURFACE_RATE:
-                    for (int phase = 0; phase < np; ++phase) {
-                        if (distr[phase] > 0.0) {
-                            xw.wellRates()[np*w + phase] = target * distr[phase];
-                        }
-                    }
-                    rates_changed = true;
-                    break;
-                }
+                current = xw.currentControls()[w];
             }
+
+            // Updating well state and primary variables.
+            // Target values are used as initial conditions for BHP and SURFACE_RATE
+            const double target = well_controls_iget_target(wc, current);
+            const double* distr = well_controls_iget_distr(wc, current);
+            switch (well_controls_iget_type(wc, current)) {
+            case BHP:
+                xw.bhp()[w] = target;
+                bhp_changed = true;
+                break;
+
+            case RESERVOIR_RATE:
+                // No direct change to any observable quantity at
+                // surface condition.  In this case, use existing
+                // flow rates as initial conditions as reservoir
+                // rate acts only in aggregate.
+                //
+                // Just record the fact that we need to recompute
+                // the 'well_phase_flow_rate'.
+                rates_changed = true;
+                break;
+
+            case SURFACE_RATE:
+                for (int phase = 0; phase < np; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                    }
+                }
+                rates_changed = true;
+                break;
+            }
+
         }
 
         // Update primary variables, if necessary.
