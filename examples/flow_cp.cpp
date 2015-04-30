@@ -266,7 +266,7 @@ try
     // At this point all properties and state variables are correctly initialized
     // If there are more than one processors involved, we now repartition the grid
     // and initilialize new properties and states for it.
-    bool must_distribute = ( grid->comm().size() > 1 );
+    bool must_distribute = ( mpi_helper.size() > 1 );
     if( must_distribute )
     {
         if( param.getDefault("output_matlab", false) || param.getDefault("output_ecl", true) )
