@@ -544,7 +544,9 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
               typedef Dune::Amg::FirstDiagonal CouplingMetric;
 
               // The coupling criterion used in the AMG
-              typedef Dune::Amg::SymmetricCriterion<M, CouplingMetric> CritBase;
+              // use UnSymmetricCriterion because the resulting matrices happen to be
+              // unsymmetric sometimes due to the drop of values close to zero
+              typedef Dune::Amg::UnSymmetricCriterion<M, CouplingMetric> CritBase;
 
               // The coarsening criterion used in the AMG
               typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
