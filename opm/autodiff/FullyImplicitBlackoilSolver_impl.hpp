@@ -442,7 +442,7 @@ namespace detail {
         }
         state.qs = ADB::constant(state.qs.value());
         state.bhp = ADB::constant(state.bhp.value());
-        assert(state.canonical_phase_pressures.size() == Opm::BlackoilPhases::MaxNumPhases);
+        assert(state.canonical_phase_pressures.size() == static_cast<std::size_t>(Opm::BlackoilPhases::MaxNumPhases));
         for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
             ADB& pp = state.canonical_phase_pressures[canphase];
             pp = ADB::constant(pp.value());
