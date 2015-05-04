@@ -1931,6 +1931,7 @@ namespace detail {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int nw = wellsActive() ? wells().number_of_wells : 0;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
@@ -1942,6 +1943,7 @@ namespace detail {
         std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
         std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
         std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
         std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
@@ -1962,18 +1964,25 @@ namespace detail {
 
         bool converged_MB = true;
         bool converged_CNV = true;
+        bool converged_Well = true;
         // Finish computation
         for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
-            CNV[idx]                   = B_avg[idx] * dt * maxCoeff[idx];
-            mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
-            converged_MB               = converged_MB && (mass_balance_residual[idx] < tol_mb);
-            converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
+            CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
+            mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
+            converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
+            converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
+
+            for ( int w=0; w<nw; ++w )
+            {
+                well_flux_residual[idx] += std::abs(residual_.well_flux_eq.value()[nw*idx + w]);
+            }
+            well_flux_residual[idx]     *= (B_avg[idx] * dt/nw);
+            converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
         }
 
-        const double residualWellFlux = detail::infinityNorm(residual_.well_flux_eq);
         const double residualWell     = detail::infinityNorm(residual_.well_eq);
-        const bool   converged_Well   = (residualWellFlux < tol_wells) && (residualWell < Opm::unit::barsa);
+        converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
@@ -1983,8 +1992,10 @@ namespace detail {
             std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
             std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
             std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
-            std::isnan(residualWellFlux) || residualWellFlux > maxResidualAllowed() ||
-            std::isnan(residualWell)     || residualWell     > maxResidualAllowed() )
+            std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
+            std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
+            std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
+            std::isnan(residualWell) || residualWell > maxResidualAllowed() )
         {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
         }
@@ -1993,7 +2004,7 @@ namespace detail {
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter  MB(WATER)    MB(OIL)    MB(GAS)       CNVW       CNVO       CNVG  WELL-FLOW WELL-CNTRL\n";
+                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)       CNVW       CNVO       CNVG   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
             }
             const std::streamsize oprec = std::cout.precision(3);
             const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
@@ -2004,8 +2015,9 @@ namespace detail {
                       << std::setw(11) << CNV[Water]
                       << std::setw(11) << CNV[Oil]
                       << std::setw(11) << CNV[Gas]
-                      << std::setw(11) << residualWellFlux
-                      << std::setw(11) << residualWell
+                      << std::setw(11) << well_flux_residual[Water]
+                      << std::setw(11) << well_flux_residual[Oil]
+                      << std::setw(11) << well_flux_residual[Gas]
                       << std::endl;
             std::cout.precision(oprec);
             std::cout.flags(oflags);
