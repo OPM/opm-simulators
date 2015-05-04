@@ -902,15 +902,7 @@ namespace detail {
                 selectInjectingPerforations[c] = 1;
             else
                 selectProducingPerforations[c] = 1;
-        }
-
-        // select injectors
-        V selectInjector = V::Zero(nw);
-        for (int w = 0; w < nw; ++w) {
-            if (wells().type[w] == INJECTOR) {
-                selectInjector[w] = 1;
-            }
-        }        
+        }   
 
         // HANDLE FLOW INTO WELLBORE
 
@@ -950,8 +942,9 @@ namespace detail {
         for (int phase = 0; phase < np; ++phase) {
             const ADB& q_ps = wops_.p2w * cq_ps[phase];
             const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
+            Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
             const int pos = pu.phase_pos[phase];
-            wbq[phase] = (selectInjector * compi.col(pos)) * q_s - q_ps;
+            wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s,ADB::constant(V::Zero(nw))))  - q_ps;
             wbqt += wbq[phase];
         }
 
