@@ -73,8 +73,10 @@ public:
         buffer.write(sendState_.rv()[e.index()]);
         buffer.write(sendState_.pressure()[e.index()]);
         buffer.write(sendState_.temperature()[e.index()]);
-        buffer.write(sendState_.saturation()[e.index()]);
-
+        for ( int i=0; i<sendState_.numPhases(); ++i )
+        {
+            buffer.write(sendState_.saturation()[e.index()*sendState_.numPhases()+i]);
+        }
         for ( int i=0; i<sendGrid_.numCellFaces(e.index()); ++i )
         {
             buffer.write(sendState_.facepressure()[sendGrid_.cellFace(e.index(), i)]);
@@ -95,7 +97,7 @@ public:
         for ( int i=0; i<recvState_.numPhases(); ++i )
         {
             buffer.read(val);
-            recvState_.surfacevol()[e.index()]=val;
+            recvState_.surfacevol()[e.index()*sendState_.numPhases()+i]=val;
         }
         buffer.read(val);
         recvState_.gasoilratio()[e.index()]=val;
@@ -105,9 +107,11 @@ public:
         recvState_.pressure()[e.index()]=val;
         buffer.read(val);
         recvState_.temperature()[e.index()]=val;
-        buffer.read(val);
-        recvState_.saturation()[e.index()]=val;
-
+        for ( int i=0; i<recvState_.numPhases(); ++i )
+        {
+            buffer.read(val);
+            recvState_.saturation()[e.index()*sendState_.numPhases()+i]=val;
+        }
         for ( int i=0; i<recvGrid_.numCellFaces(e.index()); ++i )
         {
             buffer.read(val);
