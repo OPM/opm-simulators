@@ -86,15 +86,15 @@ try
 {
     using namespace Opm;
 
-    std::cout << "******************************************************************************************\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "*                          This is Flow (version 2015.04)                                *\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow that is part of OPM. *\n";
-    std::cout << "* For more information see:                                                              *\n";
-    std::cout << "*                             http://opm-project.org                                     *\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "******************************************************************************************\n\n";
+    std::cout << "**********************************************************************\n";
+    std::cout << "*                                                                    *\n";
+    std::cout << "*                   This is Flow (version 2015.04)                   *\n";
+    std::cout << "*                                                                    *\n";
+    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+    std::cout << "*            and is part of OPM. For more information see:           *\n";
+    std::cout << "*                       http://opm-project.org                       *\n";
+    std::cout << "*                                                                    *\n";
+    std::cout << "**********************************************************************\n\n";
 
     // Read parameters, see if a deck was specified on the command line.
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
