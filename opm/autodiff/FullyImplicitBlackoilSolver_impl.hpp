@@ -1973,11 +1973,13 @@ namespace detail {
             converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
 
+            double maxNormWell = 0.0;
             for ( int w=0; w<nw; ++w )
             {
-                well_flux_residual[idx] += std::abs(residual_.well_flux_eq.value()[nw*idx + w]);
+                maxNormWell  = std::max(maxNormWell, std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
             }
-            well_flux_residual[idx]     *= (B_avg[idx] * dt/nw);
+            well_flux_residual[idx] = B_avg[idx] * dt * maxNormWell;
+
             converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
         }
 
