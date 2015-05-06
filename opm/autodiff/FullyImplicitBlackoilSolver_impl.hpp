@@ -149,7 +149,7 @@ namespace detail {
         max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
-        tolerance_wells_ = 1.0e-2;
+        tolerance_wells_ = 5.0e-1;
     }
 
     template<class T>
