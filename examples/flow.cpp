@@ -63,6 +63,7 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
+#include <cstdlib>
 
 
 namespace
@@ -101,7 +102,8 @@ try
     parameter::ParameterGroup param(argc, argv, false);
     if (!param.unhandledArguments().empty()) {
         if (param.unhandledArguments().size() != 1) {
-            OPM_THROW(std::runtime_error, "You can only specify a single input deck on the command line.");
+            std::cerr << "You can only specify a single input deck on the command line.\n";
+            return EXIT_FAILURE;
         } else {
             param.insertParameter("deck_filename", param.unhandledArguments()[0]);
         }
@@ -113,8 +115,8 @@ try
             "Specify the deck filename either\n"
             "    a) as a command line argument by itself\n"
             "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
-            "    c) as a parameter in a parameter file (.param or .xml) passed to the program.";
-        OPM_THROW(std::runtime_error, "Input deck required.");
+            "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
+        return EXIT_FAILURE;
     }
     std::shared_ptr<GridManager> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
@@ -138,7 +140,8 @@ try
             create_directories(fpath);
         }
         catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+            std::cerr << "Creating directories failed: " << fpath << std::endl;
+            return EXIT_FAILURE;
         }
         // Write simulation parameters.
         param.writeParam(output_dir + "/simulation.param");
@@ -280,6 +283,6 @@ try
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
-    throw;
+    return EXIT_FAILURE;
 }
 
