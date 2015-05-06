@@ -89,6 +89,7 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
+#include <cstdlib>
 
 namespace
 {
