@@ -1709,22 +1709,21 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB zero = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? state.saturation[ pu.phase_pos[ Water ] ]
-                        : null);
+        const ADB& sw = (active_[ Water ]
+                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                         : zero);
 
-        const ADB so = (active_[ Oil ]
-                        ? state.saturation[ pu.phase_pos[ Oil ] ]
-                        : null);
+        const ADB& so = (active_[ Oil ]
+                         ? state.saturation[ pu.phase_pos[ Oil ] ]
+                         : zero);
 
-        const ADB sg = (active_[ Gas ]
-                        ? state.saturation[ pu.phase_pos[ Gas ] ]
-                        : null);
+        const ADB& sg = (active_[ Gas ]
+                         ? state.saturation[ pu.phase_pos[ Gas ] ]
+                         : zero);
 
         return fluid_.relperm(sw, so, sg, cells_);
     }
@@ -1739,9 +1738,8 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB null = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const ADB& sw = (active_[ Water ]
