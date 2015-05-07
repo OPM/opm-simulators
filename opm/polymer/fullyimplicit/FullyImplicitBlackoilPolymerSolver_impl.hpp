@@ -2366,8 +2366,8 @@ namespace detail {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
             return ADB::function(std::move(pm), std::move(jacs));
-         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+        } else {
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 
@@ -2395,7 +2395,7 @@ namespace detail {
             }
             return ADB::function(std::move(tm), std::move(jacs));
         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 
