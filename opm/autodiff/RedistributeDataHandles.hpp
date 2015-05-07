@@ -24,6 +24,80 @@
 
 namespace Opm
 {
+
+/// \brief a data handle to distribute Derived Geology
+class GeologyDataHandle
+{
+public:
+    /// \brief type of the data we send
+    typedef double DataType;
+    /// \brief Constructor
+    /// \param sendGrid    The grid that the data is attached to when sending.
+    /// \param recvGrid    The grid that the data is attached to when receiving.
+    /// \param sendGeology The state where we will retieve the values to be sent.
+    /// \param recvGeology The state where we will store the received values.
+    GeologyDataHandle(const Dune::CpGrid& sendGrid,
+                      const Dune::CpGrid& recvGrid,
+                      const DerivedGeology& sendGeology,
+                      DerivedGeology& recvGeology)
+        : sendGrid_(sendGrid), recvGrid_(recvGrid), sendGeology_(sendGeology),
+          recvGeology_(recvGeology)
+    {}
+
+    bool fixedsize(int /*dim*/, int /*codim*/)
+    {
+        return false;
+    }
+    template<class T>
+    std::size_t size(const T& e)
+    {
+        if ( T::codimension == 0)
+        {
+            return 1 + sendGrid_.numCellFaces(e.index());
+        }
+        else
+        {
+            OPM_THROW(std::logic_error, "Data handle can only be used for elements");
+        }
+    }
+    template<class B, class T>
+    void gather(B& buffer, const T& e)
+    {
+        assert( T::codimension == 0);
+        buffer.write(sendGeology_.poreVolume()[e.index()]);
+        for ( int i=0; i< sendGrid_.numCellFaces(e.index()); ++i )
+        {
+            buffer.write(sendGeology_.transmissibility()[sendGrid_.cellFace(e.index(), i)]);
+        }
+    }
+    template<class B, class T>
+    void scatter(B& buffer, const T& e, std::size_t size)
+    {
+        assert( T::codimension == 0);
+        double val;
+        buffer.read(val);
+        recvGeology_.poreVolume()[e.index()]=val;
+        for ( int i=0; i< recvGrid_.numCellFaces(e.index()); ++i )
+        {
+            buffer.read(val);
+            recvGeology_.transmissibility()[recvGrid_.cellFace(e.index(), i)]=val;
+        }
+    }
+    bool contains(int dim, int codim)
+    {
+        return dim==3 && codim==0;
+    }
+private:
+    /// \brief The grid that the data we send is associated with.
+    const Dune::CpGrid& sendGrid_;
+    /// \brief The grid that the data we receive is associated with.
+    const Dune::CpGrid& recvGrid_;
+    /// \brief The data to send.
+    const DerivedGeology& sendGeology_;
+    /// \brief The data to receive.
+    DerivedGeology& recvGeology_;
+};
+
 /// \brief a data handle to distribute the BlackoilState
 class BlackoilStateDataHandle
 {
@@ -34,7 +108,7 @@ public:
     /// \param sendGrid   The grid that the data is attached to when sending.
     /// \param recvGrid   The grid that the data is attached to when receiving.
     /// \param sendState  The state where we will retieve the values to be sent.
-    /// \parame recvState The state where we will store the received values.
+    /// \param recvState The state where we will store the received values.
     BlackoilStateDataHandle(const Dune::CpGrid& sendGrid,
                             const Dune::CpGrid& recvGrid,
                             const BlackoilState& sendState,
