@@ -159,11 +159,13 @@ namespace detail {
         relax_max_       = 0.5;
         relax_increment_ = 0.1;
         relax_rel_tol_   = 0.2;
-        max_iter_        = 15;
-        max_residual_allowed_  = std::numeric_limits< double >::max();
-        tolerance_mb_    = 1.0e-7;
-        tolerance_cnv_   = 1.0e-3;
-        tolerance_wells_ = 1./Opm::unit::day;
+        max_iter_        = 15; // not more then 15 its by default
+        min_iter_        = 1;  // Default to always do at least one nonlinear iteration.
+        max_residual_allowed_ = 1e7;
+        tolerance_mb_    = 1.0e-5;
+        tolerance_cnv_   = 1.0e-2;
+        tolerance_wells_ = 5.0e-1;
+
     }
 
     template<class T>
@@ -187,6 +189,7 @@ namespace detail {
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
         relax_max_   = param.getDefault("relax_max", relax_max_);
         max_iter_    = param.getDefault("max_iter", max_iter_);
+        min_iter_    = param.getDefault("min_iter", min_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
 
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
@@ -328,7 +331,7 @@ namespace detail {
         const enum RelaxType relaxtype = relaxType();
         int linearIterations = 0;
 
-        while ((!converged) && (it < maxIter())) {
+        while ((!converged && (it < maxIter())) || (minIter() > it)) {
             V dx = solveJacobianSystem();
 
             // store number of linear iterations used
@@ -360,9 +363,8 @@ namespace detail {
         }
 
         if (!converged) {
-            // the runtime_error is caught by the AdaptiveTimeStepping
-            OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
-            return -1;
+            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
+            return -1; // -1 indicates that the solver has to be restarted
         }
 
         linearIterations_ += linearIterations;
@@ -1707,22 +1709,21 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB zero = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? state.saturation[ pu.phase_pos[ Water ] ]
-                        : null);
+        const ADB& sw = (active_[ Water ]
+                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                         : zero);
 
-        const ADB so = (active_[ Oil ]
-                        ? state.saturation[ pu.phase_pos[ Oil ] ]
-                        : null);
+        const ADB& so = (active_[ Oil ]
+                         ? state.saturation[ pu.phase_pos[ Oil ] ]
+                         : zero);
 
-        const ADB sg = (active_[ Gas ]
-                        ? state.saturation[ pu.phase_pos[ Gas ] ]
-                        : null);
+        const ADB& sg = (active_[ Gas ]
+                         ? state.saturation[ pu.phase_pos[ Gas ] ]
+                         : zero);
 
         return fluid_.relperm(sw, so, sg, cells_);
     }
@@ -1737,9 +1738,8 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
-        const std::vector<int>& bpat = state.pressure.blockPattern();
 
-        const ADB null = ADB::constant(V::Zero(nc, 1), bpat);
+        const ADB null = ADB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const ADB& sw = (active_[ Water ]
@@ -1813,41 +1813,6 @@ namespace detail {
                                               cells_);
         return cp[Gas].value() + po;
     }
-
-
-
-
-
-    template<class T>
-    std::vector<ADB>
-    FullyImplicitBlackoilPolymerSolver<T>::computeRelPermWells(const SolutionState& state,
-                                                               const DataBlock& well_s,
-                                                               const std::vector<int>& well_cells) const
-    {
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int>& bpat = state.pressure.blockPattern();
-
-        const ADB null = ADB::constant(V::Zero(nperf), bpat);
-
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB sw = (active_[ Water ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Water ]), bpat)
-                        : null);
-
-        const ADB so = (active_[ Oil ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Oil ]), bpat)
-                        : null);
-
-        const ADB sg = (active_[ Gas ]
-                        ? ADB::constant(well_s.col(pu.phase_pos[ Gas ]), bpat)
-                        : null);
-
-        return fluid_.relperm(sw, so, sg, well_cells);
-    }
-
-
-
 
 
     template<class T>
@@ -2401,8 +2366,8 @@ namespace detail {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
             return ADB::function(std::move(pm), std::move(jacs));
-         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+        } else {
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 
@@ -2430,7 +2395,7 @@ namespace detail {
             }
             return ADB::function(std::move(tm), std::move(jacs));
         } else {
-            return ADB::constant(V::Constant(n, 1.0), p.blockPattern());
+            return ADB::constant(V::Constant(n, 1.0));
         }
     }
 
