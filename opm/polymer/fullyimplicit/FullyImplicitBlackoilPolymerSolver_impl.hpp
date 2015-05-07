@@ -363,9 +363,8 @@ namespace detail {
         }
 
         if (!converged) {
-            // the runtime_error is caught by the AdaptiveTimeStepping
-            OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
-            return -1;
+            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
+            return -1; // -1 indicates that the solver has to be restarted
         }
 
         linearIterations_ += linearIterations;
