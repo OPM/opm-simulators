@@ -76,7 +76,8 @@ namespace Opm {
             double                          tolerance_mb_;
             double                          tolerance_cnv_;
             double                          tolerance_wells_;
-            int                             max_iter_;
+            int                             max_iter_; // max newton iterations
+            int                             min_iter_; // min newton iterations
 
             SolverParameter( const parameter::ParameterGroup& param );
             SolverParameter();
@@ -440,6 +441,7 @@ namespace Opm {
         double relaxIncrement() const { return param_.relax_increment_; };
         double relaxRelTol() const { return param_.relax_rel_tol_; };
         double maxIter() const     { return param_.max_iter_; }
+        double minIter() const     { return param_.min_iter_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     };
