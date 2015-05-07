@@ -584,21 +584,20 @@ namespace detail {
 
         // Pressure.
         int nextvar = 0;
-        state.pressure = vars[ nextvar++ ];
+        state.pressure = std::move(vars[ nextvar++ ]);
 
         // temperature
         const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
         state.temperature = ADB::constant(temp);
 
         // Saturations
-        const std::vector<int>& bpat = vars[0].blockPattern();
         {
 
-            ADB so = ADB::constant(V::Ones(nc, 1), bpat);
+            ADB so = ADB::constant(V::Ones(nc, 1));
 
             if (active_[ Water ]) {
-                ADB& sw = vars[ nextvar++ ];
-                state.saturation[pu.phase_pos[ Water ]] = sw;
+                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[ nextvar++ ]);
+                const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
                 so -= sw;
             }
 
@@ -614,7 +613,7 @@ namespace detail {
                     // RS and RV is only defined if both oil and gas phase are active.
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1), bpat));
+                                             : ADB::constant(V::Zero(nc, 1)));
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
@@ -633,20 +632,20 @@ namespace detail {
 
             if (active_[ Oil ]) {
                 // Note that so is never a primary variable.
-                state.saturation[pu.phase_pos[ Oil ]] = so;
+                state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
             }
         }
 
         // Concentration.
         if (has_polymer_) {
-            state.concentration = vars[nextvar++];
+            state.concentration = std::move(vars[ nextvar++ ]);
         }
 
         // Qs.
-        state.qs = vars[ nextvar++ ];
+        state.qs = std::move(vars[ nextvar++ ]);
 
         // Bhp.
-        state.bhp = vars[ nextvar++ ];
+        state.bhp = std::move(vars[ nextvar++ ]);
 
         assert(nextvar == int(vars.size()));
 
