@@ -81,7 +81,8 @@ namespace Opm
                      int dimensions,
                      const F2C& f2c,
                      FC begin_face_centroids,
-                     const double* permeability);
+                     const double* permeability,
+                     bool is_parallel_run=false);
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
@@ -177,6 +178,8 @@ namespace Opm
         // Data
         Wells* w_;
         WellCollection well_collection_;
+        // Whether this is a parallel simulation
+        bool is_parallel_run_;
     };
 
 } // namespace Opm

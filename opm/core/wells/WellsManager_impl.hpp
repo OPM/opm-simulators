@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <exception>
 #include <iterator>
+#include <numeric>
 
 namespace WellsManagerDetail
 {
@@ -121,7 +122,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     }
 
     std::vector<std::vector<PerfData> > wellperf_data;
+    std::vector<int>                    well_on_proc;
     wellperf_data.resize(wells.size());
+    well_on_proc.resize(wells.size(), 1);
 
     int well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
@@ -131,23 +134,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
             continue;
         }
 
-        {   // WELSPECS handling
-            well_names_to_index[well->name()] = well_index;
-            well_names.push_back(well->name());
-            {
-                WellData wd;
-                wd.reference_bhp_depth = well->getRefDepth();
-                wd.welspecsline = -1;
-                if (well->isInjector( timeStep ))
-                    wd.type = INJECTOR;
-                else
-                    wd.type = PRODUCER;
-                well_data.push_back(wd);
-            }
-        }
-
         {   // COMPDAT handling
             CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
+            std::vector<std::size_t> completion_on_proc(completionSet->size(), 1);
             for (size_t c=0; c<completionSet->size(); c++) {
                 CompletionConstPtr completion = completionSet->get(c);
                 if (completion->getState() == WellCompletion::OPEN) {
@@ -159,6 +148,15 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
                     std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
+                        if ( is_parallel_run_ )
+                        {
+                            // \todo remove hack for parallel runs! HACK!
+                            std::cerr<<" Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
+                                     << k << " not found in grid (well = " << well->name()
+                                     << ") Assuming a parallel run and ignoring it"<<std::endl;
+                            completion_on_proc[c]=0;
+                            continue;
+                        }
                         OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
                                   << k << " not found in grid (well = " << well->name() << ')');
                     }
@@ -195,7 +193,38 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     }
                 }
             }
+            if ( is_parallel_run_ )
+            {
+                // Set wells that are on other processor to SHUT.
+                std::size_t sum_completions_on_proc = std::accumulate(completion_on_proc.begin(),
+                                                                      completion_on_proc.end(),0);
+                if ( sum_completions_on_proc == 0 )
+                {
+                    const_cast<Well&>(*well).setStatus(timeStep, WellCommon::SHUT);
+                    continue;
+                }
+                // Check that the complete well is on this process
+                if( sum_completions_on_proc < completionSet->size() )
+                {
+                    OPM_THROW(std::runtime_error, "Wells must be completely on processor!");
+                }
+            }
         }
+        {   // WELSPECS handling
+            well_names_to_index[well->name()] = well_index;
+            well_names.push_back(well->name());
+            {
+                WellData wd;
+                wd.reference_bhp_depth = well->getRefDepth();
+                wd.welspecsline = -1;
+                if (well->isInjector( timeStep ))
+                    wd.type = INJECTOR;
+                else
+                    wd.type = PRODUCER;
+                well_data.push_back(wd);
+            }
+        }
+
         well_index++;
     }
 
@@ -260,8 +289,9 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              int                             dimensions,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
-             const double*                   permeability)
-    : w_(0)
+             const double*                   permeability,
+             bool                            is_parallel_run)
+    : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
