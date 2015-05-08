@@ -872,9 +872,9 @@ namespace detail {
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        computeMassFlux(transi, kr, state.canonical_phase_pressures, state);
+        // computeMassFlux(transi, kr, state.canonical_phase_pressures, state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            //            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
                 + ops_.div*rq_[phaseIdx].mflux;
@@ -1813,65 +1813,66 @@ namespace detail {
         return cp[Gas].value() + po;
     }
 
-
     template<class T>
     void
-    FullyImplicitBlackoilPolymerSolver<T>::computeMassFlux(const V& transi,
-                                                           const std::vector<ADB>& kr    ,
-                                                           const std::vector<ADB>& phasePressure,
+    FullyImplicitBlackoilPolymerSolver<T>::computeMassFlux(const int               actph ,
+                                                           const V&                transi,
+                                                           const ADB&              kr    ,
+                                                           const ADB&              phasePressure,
                                                            const SolutionState&    state)
     {
-        for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            const int canonicalPhaseIdx = canph_[phase];
-            const std::vector<PhasePresence> cond = phaseCondition();
+        const int canonicalPhaseIdx = canph_[ actph ];
 
-            const ADB tr_mult = transMult(state.pressure);
-            const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        const std::vector<PhasePresence> cond = phaseCondition();
 
-            rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+        const ADB tr_mult = transMult(state.pressure);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
-            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        rq_[ actph ].mob = tr_mult * kr / mu;
 
-            ADB& head = rq_[phase].head;
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
-            // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rhoavg = ops_.caver * rho;
+        ADB& head = rq_[ actph ].head;
 
-            ADB dp = ops_.ngrad * phasePressure[canonicalPhaseIdx] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        // compute gravity potensial using the face average as in eclipse and MRST
+        const ADB rhoavg = ops_.caver * rho;
 
-            if (use_threshold_pressure_) {
-                applyThresholdPressures(dp);
+        ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+
+        if (use_threshold_pressure_) {
+            applyThresholdPressures(dp);
+        }
+
+        head = transi*dp;
+
+        if (canonicalPhaseIdx == Water) {
+            if(has_polymer_) {
+                const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+                const ADB mc = computeMc(state);
+                ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
+                                                                 cmax,
+                                                                 kr,
+                                                                 state.saturation[canonicalPhaseIdx]);
+                ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+                rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
+                rq_[poly_pos_].b = rq_[actph].b;
+                rq_[poly_pos_].head = rq_[actph].head;
+                UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
+                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
             }
+        }
 
-            head = transi*dp;
-            if (canonicalPhaseIdx == Water) {
-                if(has_polymer_) {
-                    const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-                    const ADB mc = computeMc(state);
-                    ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                     cmax,
-                                                                     kr[canonicalPhaseIdx],
-                                                                     state.saturation[canonicalPhaseIdx]);
-                    ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
-                    rq_[phase].mob = tr_mult * krw_eff * inv_wat_eff_visc;
-                    rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc; 
-                    rq_[poly_pos_].b = rq_[phase].b;
-                    rq_[poly_pos_].head = rq_[phase].head;
-                    UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
-                    rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
-                }
-            }
-            //head      = transi*(ops_.ngrad * phasePressure) + gflux;
+        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
-            UpwindSelector<double> upwind(grid_, ops_, head.value());
+        UpwindSelector<double> upwind(grid_, ops_, head.value());
 
-            const ADB& b       = rq_[phase].b;
-            const ADB& mob     = rq_[phase].mob;
-            rq_[phase].mflux = upwind.select(b * mob) * head;
-        }       
+        const ADB& b       = rq_[ actph ].b;
+        const ADB& mob     = rq_[ actph ].mob;
+        rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        // DUMP(rq_[ actph ].mob);
+        // DUMP(rq_[ actph ].mflux);
     }
-
-
 
 
 

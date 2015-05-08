@@ -296,10 +296,12 @@ namespace Opm {
         computeRelPerm(const SolutionState& state) const;
 
         void
-        computeMassFlux(const V&                transi,
-                        const std::vector<ADB>& kr    ,
-                        const std::vector<ADB>& phasePressure,
+        computeMassFlux(const int               actph ,
+                        const V&                transi,
+                        const ADB&              kr    ,
+                        const ADB&              p     ,
                         const SolutionState&    state );
+
         void
         computeCmax(PolymerBlackoilState& state);
 
