@@ -36,7 +36,7 @@ namespace Opm
         unsigned int total_linear_iterations;
 
         /// Default constructor initializing all times to 0.0.
-        SimulatorReport();
+        SimulatorReport(bool verbose=true);
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReport& sr);
         /// Print a report to the given stream.
@@ -44,6 +44,9 @@ namespace Opm
         /// Print a report, leaving out the transport time.
         void reportFullyImplicit(std::ostream& os);
         void reportParam(std::ostream& os);
+    private:
+        // Whether to print statistics to std::cout
+        bool verbose_;
     };
 
 } // namespace Opm
