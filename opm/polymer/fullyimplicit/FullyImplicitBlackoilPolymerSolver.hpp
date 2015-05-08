@@ -260,9 +260,7 @@ namespace Opm {
                   V& aliveWells,
                   const std::vector<double>& polymer_inflow);
 
-        void updateWellControls(ADB& bhp,
-                                ADB& well_phase_flow_rate,
-                                WellStateFullyImplicitBlackoil& xw) const;
+        void updateWellControls(WellStateFullyImplicitBlackoil& xw) const;
 
         void
         assemble(const V&             dtpv,
