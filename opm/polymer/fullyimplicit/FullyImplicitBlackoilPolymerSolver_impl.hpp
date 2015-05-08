@@ -943,13 +943,16 @@ namespace detail {
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = well_perforation_pressure_diffs_;
 
-        // Extract variables for perforation cell pressures
-        // and corresponding perforation well pressures.
-        const ADB p_perfcell = subset(state.pressure, well_cells);
-
-        // DUMPVAL(p_perfcell);
-        // DUMPVAL(state.bhp);
-        // DUMPVAL(ADB::constant(cdp));
+        // Extract needed quantities for the perforation cells
+        const ADB& p_perfcells = subset(state.pressure, well_cells);
+        const ADB& rv_perfcells = subset(state.rv,well_cells);
+        const ADB& rs_perfcells = subset(state.rs,well_cells);
+        std::vector<ADB> mob_perfcells(np, ADB::null());
+        std::vector<ADB> b_perfcells(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            mob_perfcells[phase] = subset(rq_[phase].mob,well_cells);
+            b_perfcells[phase] = subset(rq_[phase].b,well_cells);
+        }
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
@@ -957,187 +960,133 @@ namespace detail {
         xw.perfPress() = perfpressure_d;
 
         // Pressure drawdown (also used to determine direction of flow)
-        const ADB drawdown =  p_perfcell - perfpressure;
+        const ADB drawdown =  p_perfcells - perfpressure;
 
-        // current injecting connections
-        auto connInjInx = drawdown.value() < 0;
+        // Compute vectors with zero and ones that
+        // selects the wanted quantities.
 
-        // injector == 1, producer == 0
-        V isInj = V::Zero(nw);
-        for (int w = 0; w < nw; ++w) {
-            if (wells().type[w] == INJECTOR) {
-                isInj[w] = 1;
-            }
-        }
-
-//        // A cross-flow connection is defined as a connection which has opposite
-//        // flow-direction to the well total flow
-//         V isInjPerf = (wops_.w2p * isInj);
-//        auto crossFlowConns = (connInjInx != isInjPerf);
-
-//        bool allowCrossFlow = true;
-
-//        if (not allowCrossFlow) {
-//            auto closedConns = crossFlowConns;
-//            for (int c = 0; c < nperf; ++c) {
-//                if (closedConns[c]) {
-//                    Tw[c] = 0;
-//                }
-//            }
-//            connInjInx = !closedConns;
-//        }
-//        TODO: not allow for crossflow
-
-
-        V isInjInx = V::Zero(nperf);
-        V isNotInjInx = V::Zero(nperf);
+        // selects injection perforations
+        V selectInjectingPerforations = V::Zero(nperf);
+        // selects producing perforations
+        V selectProducingPerforations = V::Zero(nperf);
         for (int c = 0; c < nperf; ++c){
-            if (connInjInx[c])
-                isInjInx[c] = 1;
+            if (drawdown.value()[c] < 0)
+                selectInjectingPerforations[c] = 1;
             else
-                isNotInjInx[c] = 1;
+                selectProducingPerforations[c] = 1;
         }
-
 
         // HANDLE FLOW INTO WELLBORE
 
-        // compute phase volumerates standard conditions
+        // compute phase volumetric rates at standard conditions
         std::vector<ADB> cq_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            const ADB& wellcell_mob = subset ( rq_[phase].mob, well_cells);
-            const ADB cq_p = -(isNotInjInx * Tw) * (wellcell_mob * drawdown);
-            cq_ps[phase] = subset(rq_[phase].b,well_cells) * cq_p;
+            const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
+            cq_ps[phase] = b_perfcells[phase] * cq_p;
         }
         if (active_[Oil] && active_[Gas]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
-            ADB cq_psOil = cq_ps[oilpos];
-            ADB cq_psGas = cq_ps[gaspos];
-            cq_ps[gaspos] += subset(state.rs,well_cells) * cq_psOil;
-            cq_ps[oilpos] += subset(state.rv,well_cells) * cq_psGas;
+            const ADB cq_psOil = cq_ps[oilpos];
+            const ADB cq_psGas = cq_ps[gaspos];
+            cq_ps[gaspos] += rs_perfcells * cq_psOil;
+            cq_ps[oilpos] += rv_perfcells * cq_psGas;
         }
-
-        // phase rates at std. condtions
-        std::vector<ADB> q_ps(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            q_ps[phase] = wops_.p2w * cq_ps[phase];
-        }
-
-        // total rates at std
-        ADB qt_s = ADB::constant(V::Zero(nw), state.bhp.blockPattern());
-        for (int phase = 0; phase < np; ++phase) {
-            qt_s += subset(state.qs, Span(nw, 1, phase*nw));
-        }
-
-        // compute avg. and total wellbore phase volumetric rates at std. conds
-        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-        std::vector<ADB> wbq(np, ADB::null());
-        ADB wbqt = ADB::constant(V::Zero(nw), state.pressure.blockPattern());
-        for (int phase = 0; phase < np; ++phase) {
-            const int pos = pu.phase_pos[phase];
-            wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
-            wbqt += wbq[phase];
-        }
-        // DUMPVAL(wbqt);
-
-        // check for dead wells
-        aliveWells = V::Constant(nw, 1.0);
-        for (int w = 0; w < nw; ++w) {
-            if (wbqt.value()[w] == 0) {
-                aliveWells[w] = 0.0;
-            }
-        }
-        // compute wellbore mixture at std conds
-        Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
-        std::vector<ADB> mix_s(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            const int pos = pu.phase_pos[phase];
-            mix_s[phase] = notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
-        }
-
 
         // HANDLE FLOW OUT FROM WELLBORE
 
-        // Total mobilities
-        ADB mt = subset(rq_[0].mob,well_cells);
+        // Using total mobilities
+        ADB total_mob = mob_perfcells[0];
         for (int phase = 1; phase < np; ++phase) {
-            mt += subset(rq_[phase].mob,well_cells);
+            total_mob += mob_perfcells[phase];
+        }
+        // injection perforations total volume rates
+        const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
+
+        // compute wellbore mixture for injecting perforations
+        // The wellbore mixture depends on the inflow from the reservoar
+        // and the well injection rates.
+
+        // compute avg. and total wellbore phase volumetric rates at standard conds
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+        std::vector<ADB> wbq(np, ADB::null());
+        ADB wbqt = ADB::constant(V::Zero(nw));
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB& q_ps = wops_.p2w * cq_ps[phase];
+            const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
+            Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
+            const int pos = pu.phase_pos[phase];
+            wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s,ADB::constant(V::Zero(nw))))  - q_ps;
+            wbqt += wbq[phase];
         }
 
-        // DUMPVAL(ADB::constant(isInjInx));
-        // DUMPVAL(ADB::constant(Tw));
-        // DUMPVAL(mt);
-        // DUMPVAL(drawdown);
-
-        // injection connections total volumerates
-        ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
-
-        // compute volume ratio between connection at standard conditions
-        ADB volRat = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        // compute wellbore mixture at standard conditions.
+        Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
         std::vector<ADB> cmix_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            cmix_s[phase] = wops_.w2p * mix_s[phase];
+            const int pos = pu.phase_pos[phase];
+            cmix_s[phase] = wops_.w2p * notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
         }
 
-        ADB well_rv = subset(state.rv,well_cells);
-        ADB well_rs = subset(state.rs,well_cells);
-        ADB d = V::Constant(nperf,1.0) -  well_rv * well_rs;
-
+        // compute volume ratio between connection at standard conditions
+        ADB volumeRatio = ADB::constant(V::Zero(nperf));
+        const ADB d = V::Constant(nperf,1.0) -  rv_perfcells * rs_perfcells;
         for (int phase = 0; phase < np; ++phase) {
             ADB tmp = cmix_s[phase];
 
             if (phase == Oil && active_[Gas]) {
                 const int gaspos = pu.phase_pos[Gas];
-                tmp = tmp - subset(state.rv,well_cells) * cmix_s[gaspos] / d;
+                tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
             }
             if (phase == Gas && active_[Oil]) {
                 const int oilpos = pu.phase_pos[Oil];
-                tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
+                tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
             }
-            volRat += tmp / subset(rq_[phase].b,well_cells);
+            volumeRatio += tmp / b_perfcells[phase];
         }
 
-        // DUMPVAL(cqt_i);
-        // DUMPVAL(volRat);
+        // injecting connections total volumerates at standard conditions
+        ADB cqt_is = cqt_i/volumeRatio;
 
-        // injecting connections total volumerates at std cond
-        ADB cqt_is = cqt_i/volRat;
-
-        // connection phase volumerates at std cond
+        // connection phase volumerates at standard conditions
         std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            cq_s[phase] = cq_ps[phase] + (wops_.w2p * mix_s[phase])*cqt_is;
+            cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
         }
-
-        // DUMPVAL(mix_s[2]);
-        // DUMPVAL(cq_ps[2]);
 
         // Add well contributions to mass balance equations
         for (int phase = 0; phase < np; ++phase) {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
-        
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
             const ADB mc = computeMc(state);
             const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
             const V poly_in_perf = subset(polyin, well_cells);
             const V poly_mc_perf = subset(mc, well_cells).value();
-            residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]]*poly_mc_perf
-                                                     + (wops_.w2p * mix_s[pu.phase_pos[Water]])*cqt_is*poly_in_perf,
+            residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]] * poly_mc_perf
+                                                     + cmix_s[pu.phase_pos[Water]] * cqt_is*poly_in_perf,
                                                      well_cells, nc);
         }
 
 
-        // Add WELL EQUATIONS
+        // WELL EQUATIONS
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
             qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
 
+        // check for dead wells (used in the well controll equations)
+        aliveWells = V::Constant(nw, 1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wbqt.value()[w] == 0) {
+                aliveWells[w] = 0.0;
+            }
+        }
 
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore)
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {
             cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
@@ -1226,6 +1175,8 @@ namespace detail {
             return broken;
         }
     } // namespace detail
+
+
 
 
     template<class T>
