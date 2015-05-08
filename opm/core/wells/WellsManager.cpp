@@ -308,13 +308,13 @@ namespace Opm
 
     /// Default constructor.
     WellsManager::WellsManager()
-        : w_(0), is_parallel_run_()
+        : w_(0), is_parallel_run_(false)
     {
     }
 
     /// Construct from existing wells object.
     WellsManager::WellsManager(struct Wells* W)
-        : w_(clone_wells(W)), is_parallel_run_()
+        : w_(clone_wells(W)), is_parallel_run_(false)
     {
     }
 
@@ -323,7 +323,7 @@ namespace Opm
                                const size_t timeStep,
                                const UnstructuredGrid& grid,
                                const double* permeability)
-        : w_(0), is_parallel_run_()
+        : w_(0), is_parallel_run_(false)
     {
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
