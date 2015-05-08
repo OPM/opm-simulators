@@ -459,7 +459,8 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             // Linear solver parameters
             const double tolerance = param_.cpr_solver_tol_;
             const int maxit        = param_.cpr_max_ell_iter_;
-            const int verbosity    = param_.cpr_solver_verbose_ ? 1 : 0;
+            const int verbosity    = ( param_.cpr_solver_verbose_ &&
+                                       comm_.communicator().rank()==0 ) ? 1 : 0;
 
             // operator result containing iterations etc.
             Dune::InverseOperatorResult result;

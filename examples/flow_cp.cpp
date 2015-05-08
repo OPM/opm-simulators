@@ -93,7 +93,7 @@
 
 namespace
 {
-    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
+void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
     {
         if (param.anyUnused()) {
             std::cout << "--------------------   Unused parameters:   --------------------\n";
@@ -113,20 +113,34 @@ try
     // Must ensure an instance of the helper is created to initialise MPI.
     const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
     using namespace Opm;
+    // Write parameters used for later reference. (only if rank is zero)
+    bool output_cout = ( mpi_helper.rank() == 0 );
 
-    std::cout << "******************************************************************************************\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "*     This is Flow (version 2015.04, experimental variant using dune-cornerpoint)        *\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow that is part of OPM. *\n";
-    std::cout << "* For more information see:                                                              *\n";
-    std::cout << "*                             http://opm-project.org                                     *\n";
-    std::cout << "*                                                                                        *\n";
-    std::cout << "******************************************************************************************\n\n";
-
+    if(output_cout)
+    {
+        std::cout << "******************************************************************************************\n";
+        std::cout << "*                                                                                        *\n";
+        std::cout << "*     This is Flow (version 2015.04, experimental variant using dune-cornerpoint)        *\n";
+        std::cout << "*                                                                                        *\n";
+        std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow that is part of OPM. *\n";
+        std::cout << "* For more information see:                                                              *\n";
+        std::cout << "*                             http://opm-project.org                                     *\n";
+        std::cout << "*                                                                                        *\n";
+        std::cout << "******************************************************************************************\n\n";
+    }
+    
     // Read parameters, see if a deck was specified on the command line.
-    std::cout << "---------------    Reading parameters     ---------------" << std::endl;
-    parameter::ParameterGroup param(argc, argv, false);
+    if ( output_cout )
+    {
+        std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+    }
+    
+    parameter::ParameterGroup param(argc, argv, false, output_cout);
+    if( !output_cout )
+    {
+        param.disableOutput();
+    }
+
     if (!param.unhandledArguments().empty()) {
         if (param.unhandledArguments().size() != 1) {
             std::cerr << "You can only specify a single input deck on the command line.\n";
@@ -336,7 +350,7 @@ try
                                                            threshold_pressures);
 
     if (!schedule->initOnly()){
-        if( grid->comm().rank()==0 )
+        if( output_cout )
         {
             std::cout << "\n\n================ Starting main simulation loop ===============\n"
                       << std::flush;
@@ -344,7 +358,7 @@ try
 
         SimulatorReport fullReport = simulator.run(simtimer, must_distribute ? distributed_state : state);
 
-        if( grid->comm().rank()==0 )
+        if( output_cout )
         {
             std::cout << "\n\n================    End of simulation     ===============\n\n";
             fullReport.reportFullyImplicit(std::cout);
@@ -358,7 +372,8 @@ try
         }
     } else {
         outputWriter.writeInit( simtimer );
-        std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
+        if ( output_cout )
+            std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
     }
 }
 catch (const std::exception &e) {
