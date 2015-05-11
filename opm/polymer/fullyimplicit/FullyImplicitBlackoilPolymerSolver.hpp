@@ -260,9 +260,7 @@ namespace Opm {
                   V& aliveWells,
                   const std::vector<double>& polymer_inflow);
 
-        void updateWellControls(ADB& bhp,
-                                ADB& well_phase_flow_rate,
-                                WellStateFullyImplicitBlackoil& xw) const;
+        void updateWellControls(WellStateFullyImplicitBlackoil& xw) const;
 
         void
         assemble(const V&             dtpv,
@@ -296,10 +294,12 @@ namespace Opm {
         computeRelPerm(const SolutionState& state) const;
 
         void
-        computeMassFlux(const V&                transi,
-                        const std::vector<ADB>& kr    ,
-                        const std::vector<ADB>& phasePressure,
+        computeMassFlux(const int               actph ,
+                        const V&                transi,
+                        const ADB&              kr    ,
+                        const ADB&              p     ,
                         const SolutionState&    state );
+
         void
         computeCmax(PolymerBlackoilState& state);
 

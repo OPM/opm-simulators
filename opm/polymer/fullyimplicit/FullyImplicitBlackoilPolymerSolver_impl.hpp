@@ -584,21 +584,20 @@ namespace detail {
 
         // Pressure.
         int nextvar = 0;
-        state.pressure = vars[ nextvar++ ];
+        state.pressure = std::move(vars[ nextvar++ ]);
 
         // temperature
         const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
         state.temperature = ADB::constant(temp);
 
         // Saturations
-        const std::vector<int>& bpat = vars[0].blockPattern();
         {
 
-            ADB so = ADB::constant(V::Ones(nc, 1), bpat);
+            ADB so = ADB::constant(V::Ones(nc, 1));
 
             if (active_[ Water ]) {
-                ADB& sw = vars[ nextvar++ ];
-                state.saturation[pu.phase_pos[ Water ]] = sw;
+                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[ nextvar++ ]);
+                const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
                 so -= sw;
             }
 
@@ -614,7 +613,7 @@ namespace detail {
                     // RS and RV is only defined if both oil and gas phase are active.
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1), bpat));
+                                             : ADB::constant(V::Zero(nc, 1)));
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
@@ -633,20 +632,20 @@ namespace detail {
 
             if (active_[ Oil ]) {
                 // Note that so is never a primary variable.
-                state.saturation[pu.phase_pos[ Oil ]] = so;
+                state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
             }
         }
 
         // Concentration.
         if (has_polymer_) {
-            state.concentration = vars[nextvar++];
+            state.concentration = std::move(vars[ nextvar++ ]);
         }
 
         // Qs.
-        state.qs = vars[ nextvar++ ];
+        state.qs = std::move(vars[ nextvar++ ]);
 
         // Bhp.
-        state.bhp = vars[ nextvar++ ];
+        state.bhp = std::move(vars[ nextvar++ ]);
 
         assert(nextvar == int(vars.size()));
 
@@ -837,6 +836,11 @@ namespace detail {
              const std::vector<double>& polymer_inflow)
     {
         using namespace Opm::AutoDiffGrid;
+
+        // Possibly switch well controls and updating well state to
+        // get reasonable initial conditions for the wells
+        updateWellControls(xw);
+
         // Create the primary variables.
         SolutionState state = variableState(x, xw);
 
@@ -873,9 +877,8 @@ namespace detail {
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
-        computeMassFlux(transi, kr, state.canonical_phase_pressures, state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            //            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
                 + ops_.div*rq_[phaseIdx].mflux;
@@ -910,9 +913,8 @@ namespace detail {
             residual_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
         }
-        // Note: updateWellControls() can change all its arguments if
-        // a well control is switched.
-        updateWellControls(state.bhp, state.qs, xw);
+
+        // Add contribution from wells and set up the well equations.
         V aliveWells;
         addWellEq(state, xw, aliveWells, polymer_inflow);
         addWellControlEq(state, xw, aliveWells);
@@ -941,13 +943,16 @@ namespace detail {
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = well_perforation_pressure_diffs_;
 
-        // Extract variables for perforation cell pressures
-        // and corresponding perforation well pressures.
-        const ADB p_perfcell = subset(state.pressure, well_cells);
-
-        // DUMPVAL(p_perfcell);
-        // DUMPVAL(state.bhp);
-        // DUMPVAL(ADB::constant(cdp));
+        // Extract needed quantities for the perforation cells
+        const ADB& p_perfcells = subset(state.pressure, well_cells);
+        const ADB& rv_perfcells = subset(state.rv,well_cells);
+        const ADB& rs_perfcells = subset(state.rs,well_cells);
+        std::vector<ADB> mob_perfcells(np, ADB::null());
+        std::vector<ADB> b_perfcells(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            mob_perfcells[phase] = subset(rq_[phase].mob,well_cells);
+            b_perfcells[phase] = subset(rq_[phase].b,well_cells);
+        }
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
@@ -955,187 +960,133 @@ namespace detail {
         xw.perfPress() = perfpressure_d;
 
         // Pressure drawdown (also used to determine direction of flow)
-        const ADB drawdown =  p_perfcell - perfpressure;
+        const ADB drawdown =  p_perfcells - perfpressure;
 
-        // current injecting connections
-        auto connInjInx = drawdown.value() < 0;
+        // Compute vectors with zero and ones that
+        // selects the wanted quantities.
 
-        // injector == 1, producer == 0
-        V isInj = V::Zero(nw);
-        for (int w = 0; w < nw; ++w) {
-            if (wells().type[w] == INJECTOR) {
-                isInj[w] = 1;
-            }
-        }
-
-//        // A cross-flow connection is defined as a connection which has opposite
-//        // flow-direction to the well total flow
-//         V isInjPerf = (wops_.w2p * isInj);
-//        auto crossFlowConns = (connInjInx != isInjPerf);
-
-//        bool allowCrossFlow = true;
-
-//        if (not allowCrossFlow) {
-//            auto closedConns = crossFlowConns;
-//            for (int c = 0; c < nperf; ++c) {
-//                if (closedConns[c]) {
-//                    Tw[c] = 0;
-//                }
-//            }
-//            connInjInx = !closedConns;
-//        }
-//        TODO: not allow for crossflow
-
-
-        V isInjInx = V::Zero(nperf);
-        V isNotInjInx = V::Zero(nperf);
+        // selects injection perforations
+        V selectInjectingPerforations = V::Zero(nperf);
+        // selects producing perforations
+        V selectProducingPerforations = V::Zero(nperf);
         for (int c = 0; c < nperf; ++c){
-            if (connInjInx[c])
-                isInjInx[c] = 1;
+            if (drawdown.value()[c] < 0)
+                selectInjectingPerforations[c] = 1;
             else
-                isNotInjInx[c] = 1;
+                selectProducingPerforations[c] = 1;
         }
-
 
         // HANDLE FLOW INTO WELLBORE
 
-        // compute phase volumerates standard conditions
+        // compute phase volumetric rates at standard conditions
         std::vector<ADB> cq_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            const ADB& wellcell_mob = subset ( rq_[phase].mob, well_cells);
-            const ADB cq_p = -(isNotInjInx * Tw) * (wellcell_mob * drawdown);
-            cq_ps[phase] = subset(rq_[phase].b,well_cells) * cq_p;
+            const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
+            cq_ps[phase] = b_perfcells[phase] * cq_p;
         }
         if (active_[Oil] && active_[Gas]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
-            ADB cq_psOil = cq_ps[oilpos];
-            ADB cq_psGas = cq_ps[gaspos];
-            cq_ps[gaspos] += subset(state.rs,well_cells) * cq_psOil;
-            cq_ps[oilpos] += subset(state.rv,well_cells) * cq_psGas;
+            const ADB cq_psOil = cq_ps[oilpos];
+            const ADB cq_psGas = cq_ps[gaspos];
+            cq_ps[gaspos] += rs_perfcells * cq_psOil;
+            cq_ps[oilpos] += rv_perfcells * cq_psGas;
         }
-
-        // phase rates at std. condtions
-        std::vector<ADB> q_ps(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            q_ps[phase] = wops_.p2w * cq_ps[phase];
-        }
-
-        // total rates at std
-        ADB qt_s = ADB::constant(V::Zero(nw), state.bhp.blockPattern());
-        for (int phase = 0; phase < np; ++phase) {
-            qt_s += subset(state.qs, Span(nw, 1, phase*nw));
-        }
-
-        // compute avg. and total wellbore phase volumetric rates at std. conds
-        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-        std::vector<ADB> wbq(np, ADB::null());
-        ADB wbqt = ADB::constant(V::Zero(nw), state.pressure.blockPattern());
-        for (int phase = 0; phase < np; ++phase) {
-            const int pos = pu.phase_pos[phase];
-            wbq[phase] = (isInj * compi.col(pos)) * qt_s - q_ps[phase];
-            wbqt += wbq[phase];
-        }
-        // DUMPVAL(wbqt);
-
-        // check for dead wells
-        aliveWells = V::Constant(nw, 1.0);
-        for (int w = 0; w < nw; ++w) {
-            if (wbqt.value()[w] == 0) {
-                aliveWells[w] = 0.0;
-            }
-        }
-        // compute wellbore mixture at std conds
-        Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
-        std::vector<ADB> mix_s(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            const int pos = pu.phase_pos[phase];
-            mix_s[phase] = notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
-        }
-
 
         // HANDLE FLOW OUT FROM WELLBORE
 
-        // Total mobilities
-        ADB mt = subset(rq_[0].mob,well_cells);
+        // Using total mobilities
+        ADB total_mob = mob_perfcells[0];
         for (int phase = 1; phase < np; ++phase) {
-            mt += subset(rq_[phase].mob,well_cells);
+            total_mob += mob_perfcells[phase];
+        }
+        // injection perforations total volume rates
+        const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
+
+        // compute wellbore mixture for injecting perforations
+        // The wellbore mixture depends on the inflow from the reservoar
+        // and the well injection rates.
+
+        // compute avg. and total wellbore phase volumetric rates at standard conds
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+        std::vector<ADB> wbq(np, ADB::null());
+        ADB wbqt = ADB::constant(V::Zero(nw));
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB& q_ps = wops_.p2w * cq_ps[phase];
+            const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
+            Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
+            const int pos = pu.phase_pos[phase];
+            wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s,ADB::constant(V::Zero(nw))))  - q_ps;
+            wbqt += wbq[phase];
         }
 
-        // DUMPVAL(ADB::constant(isInjInx));
-        // DUMPVAL(ADB::constant(Tw));
-        // DUMPVAL(mt);
-        // DUMPVAL(drawdown);
-
-        // injection connections total volumerates
-        ADB cqt_i = -(isInjInx * Tw) * (mt * drawdown);
-
-        // compute volume ratio between connection at standard conditions
-        ADB volRat = ADB::constant(V::Zero(nperf), state.pressure.blockPattern());
+        // compute wellbore mixture at standard conditions.
+        Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
         std::vector<ADB> cmix_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            cmix_s[phase] = wops_.w2p * mix_s[phase];
+            const int pos = pu.phase_pos[phase];
+            cmix_s[phase] = wops_.w2p * notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
         }
 
-        ADB well_rv = subset(state.rv,well_cells);
-        ADB well_rs = subset(state.rs,well_cells);
-        ADB d = V::Constant(nperf,1.0) -  well_rv * well_rs;
-
+        // compute volume ratio between connection at standard conditions
+        ADB volumeRatio = ADB::constant(V::Zero(nperf));
+        const ADB d = V::Constant(nperf,1.0) -  rv_perfcells * rs_perfcells;
         for (int phase = 0; phase < np; ++phase) {
             ADB tmp = cmix_s[phase];
 
             if (phase == Oil && active_[Gas]) {
                 const int gaspos = pu.phase_pos[Gas];
-                tmp = tmp - subset(state.rv,well_cells) * cmix_s[gaspos] / d;
+                tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
             }
             if (phase == Gas && active_[Oil]) {
                 const int oilpos = pu.phase_pos[Oil];
-                tmp = tmp - subset(state.rs,well_cells) * cmix_s[oilpos] / d;
+                tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
             }
-            volRat += tmp / subset(rq_[phase].b,well_cells);
+            volumeRatio += tmp / b_perfcells[phase];
         }
 
-        // DUMPVAL(cqt_i);
-        // DUMPVAL(volRat);
+        // injecting connections total volumerates at standard conditions
+        ADB cqt_is = cqt_i/volumeRatio;
 
-        // injecting connections total volumerates at std cond
-        ADB cqt_is = cqt_i/volRat;
-
-        // connection phase volumerates at std cond
+        // connection phase volumerates at standard conditions
         std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            cq_s[phase] = cq_ps[phase] + (wops_.w2p * mix_s[phase])*cqt_is;
+            cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
         }
-
-        // DUMPVAL(mix_s[2]);
-        // DUMPVAL(cq_ps[2]);
 
         // Add well contributions to mass balance equations
         for (int phase = 0; phase < np; ++phase) {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
-        
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
             const ADB mc = computeMc(state);
             const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
             const V poly_in_perf = subset(polyin, well_cells);
             const V poly_mc_perf = subset(mc, well_cells).value();
-            residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]]*poly_mc_perf
-                                                     + (wops_.w2p * mix_s[pu.phase_pos[Water]])*cqt_is*poly_in_perf,
+            residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]] * poly_mc_perf
+                                                     + cmix_s[pu.phase_pos[Water]] * cqt_is*poly_in_perf,
                                                      well_cells, nc);
         }
 
 
-        // Add WELL EQUATIONS
+        // WELL EQUATIONS
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
             qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
 
+        // check for dead wells (used in the well controll equations)
+        aliveWells = V::Constant(nw, 1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wbqt.value()[w] == 0) {
+                aliveWells[w] = 0.0;
+            }
+        }
 
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore)
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {
             cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
@@ -1153,23 +1104,22 @@ namespace detail {
 
     namespace detail
     {
-        double rateToCompare(const ADB& well_phase_flow_rate,
+        double rateToCompare(const std::vector<double>& well_phase_flow_rate,
                              const int well,
                              const int num_phases,
                              const double* distr)
         {
-            const int num_wells = well_phase_flow_rate.size() / num_phases;
             double rate = 0.0;
             for (int phase = 0; phase < num_phases; ++phase) {
-                // Important: well_phase_flow_rate is ordered with all rates for first
-                // phase coming first, then all for second phase etc.
-                rate += well_phase_flow_rate.value()[well + phase*num_wells] * distr[phase];
+                // Important: well_phase_flow_rate is ordered with all phase rates for first
+                // well first, then all phase rates for second well etc.
+                rate += well_phase_flow_rate[well*num_phases + phase] * distr[phase];
             }
             return rate;
         }
 
-        bool constraintBroken(const ADB& bhp,
-                              const ADB& well_phase_flow_rate,
+        bool constraintBroken(const std::vector<double>& bhp,
+                              const std::vector<double>& well_phase_flow_rate,
                               const int well,
                               const int num_phases,
                               const WellType& well_type,
@@ -1187,7 +1137,7 @@ namespace detail {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] > target;
+                    broken = bhp[well] > target;
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1203,7 +1153,7 @@ namespace detail {
             {
                 switch (ctrl_type) {
                 case BHP:
-                    broken = bhp.value()[well] < target;
+                    broken = bhp[well] < target;
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1230,9 +1180,7 @@ namespace detail {
 
 
     template<class T>
-    void FullyImplicitBlackoilPolymerSolver<T>::updateWellControls(ADB& bhp,
-                                                                   ADB& well_phase_flow_rate,
-                                                                   WellStateFullyImplicitBlackoil& xw) const
+    void FullyImplicitBlackoilPolymerSolver<T>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1241,14 +1189,12 @@ namespace detail {
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
-        bool bhp_changed = false;
-        bool rates_changed = false;
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
-            const int current = xw.currentControls()[w];
+            int current = xw.currentControls()[w];
             // Loop over all controls except the current one, and also
             // skip any RESERVOIR_RATE controls, since we cannot
             // handle those.
@@ -1261,7 +1207,7 @@ namespace detail {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(bhp, well_phase_flow_rate, w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(xw.bhp(), xw.wellRates(), w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1275,59 +1221,36 @@ namespace detail {
                               << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 }
                 xw.currentControls()[w] = ctrl_index;
-                // Also updating well state and primary variables.
-                // We can only be switching to BHP and SURFACE_RATE
-                // controls since we do not support RESERVOIR_RATE.
-                const double target = well_controls_iget_target(wc, ctrl_index);
-                const double* distr = well_controls_iget_distr(wc, ctrl_index);
-                switch (well_controls_iget_type(wc, ctrl_index)) {
-                case BHP:
-                    xw.bhp()[w] = target;
-                    bhp_changed = true;
-                    break;
-
-                case RESERVOIR_RATE:
-                    // No direct change to any observable quantity at
-                    // surface condition.  In this case, use existing
-                    // flow rates as initial conditions as reservoir
-                    // rate acts only in aggregate.
-                    //
-                    // Just record the fact that we need to recompute
-                    // the 'well_phase_flow_rate'.
-                    rates_changed = true;
-                    break;
-
-                case SURFACE_RATE:
-                    for (int phase = 0; phase < np; ++phase) {
-                        if (distr[phase] > 0.0) {
-                            xw.wellRates()[np*w + phase] = target * distr[phase];
-                        }
-                    }
-                    rates_changed = true;
-                    break;
-                }
+                current = xw.currentControls()[w];
             }
-        }
 
-        // Update primary variables, if necessary.
-        if (bhp_changed) {
-            ADB::V new_bhp = Eigen::Map<ADB::V>(xw.bhp().data(), nw);
-            // Avoiding the copy below would require a value setter method
-            // in AutoDiffBlock.
-            std::vector<ADB::M> old_derivs = bhp.derivative();
-            bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
-        }
-        if (rates_changed) {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            // The transpose() below switches the ordering.
-            const DataBlock wrates = Eigen::Map<const DataBlock>(xw.wellRates().data(), nw, np).transpose();
-            ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            std::vector<ADB::M> old_derivs = well_phase_flow_rate.derivative();
-            well_phase_flow_rate = ADB::function(std::move(new_qs), std::move(old_derivs));
+            // Updating well state and primary variables.
+            // Target values are used as initial conditions for BHP and SURFACE_RATE
+            const double target = well_controls_iget_target(wc, current);
+            const double* distr = well_controls_iget_distr(wc, current);
+            switch (well_controls_iget_type(wc, current)) {
+            case BHP:
+                xw.bhp()[w] = target;
+                break;
+
+            case RESERVOIR_RATE:
+                // No direct change to any observable quantity at
+                // surface condition.  In this case, use existing
+                // flow rates as initial conditions as reservoir
+                // rate acts only in aggregate.
+                break;
+
+            case SURFACE_RATE:
+                for (int phase = 0; phase < np; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                    }
+                }
+                break;
+            }
+
         }
     }
-
 
 
 
@@ -1814,65 +1737,66 @@ namespace detail {
         return cp[Gas].value() + po;
     }
 
-
     template<class T>
     void
-    FullyImplicitBlackoilPolymerSolver<T>::computeMassFlux(const V& transi,
-                                                           const std::vector<ADB>& kr    ,
-                                                           const std::vector<ADB>& phasePressure,
+    FullyImplicitBlackoilPolymerSolver<T>::computeMassFlux(const int               actph ,
+                                                           const V&                transi,
+                                                           const ADB&              kr    ,
+                                                           const ADB&              phasePressure,
                                                            const SolutionState&    state)
     {
-        for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            const int canonicalPhaseIdx = canph_[phase];
-            const std::vector<PhasePresence> cond = phaseCondition();
+        const int canonicalPhaseIdx = canph_[ actph ];
 
-            const ADB tr_mult = transMult(state.pressure);
-            const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        const std::vector<PhasePresence> cond = phaseCondition();
 
-            rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+        const ADB tr_mult = transMult(state.pressure);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
-            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        rq_[ actph ].mob = tr_mult * kr / mu;
 
-            ADB& head = rq_[phase].head;
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
-            // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rhoavg = ops_.caver * rho;
+        ADB& head = rq_[ actph ].head;
 
-            ADB dp = ops_.ngrad * phasePressure[canonicalPhaseIdx] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        // compute gravity potensial using the face average as in eclipse and MRST
+        const ADB rhoavg = ops_.caver * rho;
 
-            if (use_threshold_pressure_) {
-                applyThresholdPressures(dp);
+        ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+
+        if (use_threshold_pressure_) {
+            applyThresholdPressures(dp);
+        }
+
+        head = transi*dp;
+
+        if (canonicalPhaseIdx == Water) {
+            if(has_polymer_) {
+                const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+                const ADB mc = computeMc(state);
+                ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
+                                                                 cmax,
+                                                                 kr,
+                                                                 state.saturation[canonicalPhaseIdx]);
+                ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+                rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
+                rq_[poly_pos_].b = rq_[actph].b;
+                rq_[poly_pos_].head = rq_[actph].head;
+                UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
+                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
             }
+        }
 
-            head = transi*dp;
-            if (canonicalPhaseIdx == Water) {
-                if(has_polymer_) {
-                    const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-                    const ADB mc = computeMc(state);
-                    ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                     cmax,
-                                                                     kr[canonicalPhaseIdx],
-                                                                     state.saturation[canonicalPhaseIdx]);
-                    ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
-                    rq_[phase].mob = tr_mult * krw_eff * inv_wat_eff_visc;
-                    rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc; 
-                    rq_[poly_pos_].b = rq_[phase].b;
-                    rq_[poly_pos_].head = rq_[phase].head;
-                    UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
-                    rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
-                }
-            }
-            //head      = transi*(ops_.ngrad * phasePressure) + gflux;
+        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
-            UpwindSelector<double> upwind(grid_, ops_, head.value());
+        UpwindSelector<double> upwind(grid_, ops_, head.value());
 
-            const ADB& b       = rq_[phase].b;
-            const ADB& mob     = rq_[phase].mob;
-            rq_[phase].mflux = upwind.select(b * mob) * head;
-        }       
+        const ADB& b       = rq_[ actph ].b;
+        const ADB& mob     = rq_[ actph ].mob;
+        rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        // DUMP(rq_[ actph ].mob);
+        // DUMP(rq_[ actph ].mflux);
     }
-
-
 
 
 
