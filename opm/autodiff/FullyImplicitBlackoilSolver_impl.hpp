@@ -1722,34 +1722,6 @@ namespace detail {
         dp = keep_high_potential * (dp - threshold_modification);
     }
 
-
-
-
-
-    template<class T>
-    double
-    FullyImplicitBlackoilSolver<T>::residualNorm() const
-    {
-        double globalNorm = 0;
-        std::vector<ADB>::const_iterator quantityIt = residual_.material_balance_eq.begin();
-        const std::vector<ADB>::const_iterator endQuantityIt = residual_.material_balance_eq.end();
-        for (; quantityIt != endQuantityIt; ++quantityIt) {
-            const double quantityResid = (*quantityIt).value().matrix().norm();
-            if (!std::isfinite(quantityResid)) {
-                const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual in material balance equation "
-                          << trouble_phase);
-            }
-            globalNorm = std::max(globalNorm, quantityResid);
-        }
-        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
-        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
-
-        return globalNorm;
-    }
-
-
     template<class T>
     std::vector<double>
     FullyImplicitBlackoilSolver<T>::computeResidualNorms() const

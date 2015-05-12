@@ -289,9 +289,6 @@ namespace Opm {
 
         void applyThresholdPressures(ADB& dp);
 
-        double
-        residualNorm() const;
-
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
         /// \return a vector that contains for each phase the norm of the mass balance
