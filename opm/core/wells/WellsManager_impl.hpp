@@ -157,36 +157,42 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                             completion_on_proc[c]=0;
                             continue;
                         }
-                        OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                                  << k << " not found in grid (well = " << well->name() << ')');
-                    }
-                    int cell = cgit->second;
-                    PerfData pd;
-                    pd.cell = cell;
-                    {
-                        const Value<double>& transmissibilityFactor = completion->getConnectionTransmissibilityFactorAsValueObject();
-
-                        if (transmissibilityFactor.hasValue()) {
-                            pd.well_index = transmissibilityFactor.getValue();
-                        } else {
-                            double radius = 0.5*completion->getDiameter();
-                            if (radius <= 0.0) {
-                                radius = 0.5*unit::feet;
-                                OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-                            }
-
-                            const std::array<double, 3> cubical =
-                                WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
-
-                            const double* cell_perm = &permeability[dimensions*dimensions*cell];
-                            pd.well_index =
-                                WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
-                                                                     completion->getSkinFactor(),
-                                                                     completion->getDirection(),
-                                                                     ntg[cell]);
+                        else
+                        {
+                            OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                                      << k << " not found in grid (well = " << well->name() << ')');
                         }
                     }
-                    wellperf_data[well_index].push_back(pd);
+                    else
+                    {
+                        int cell = cgit->second;
+                        PerfData pd;
+                        pd.cell = cell;
+                        {
+                            const Value<double>& transmissibilityFactor = completion->getConnectionTransmissibilityFactorAsValueObject();
+
+                            if (transmissibilityFactor.hasValue()) {
+                                pd.well_index = transmissibilityFactor.getValue();
+                            } else {
+                                double radius = 0.5*completion->getDiameter();
+                                if (radius <= 0.0) {
+                                    radius = 0.5*unit::feet;
+                                    OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
+                                }
+
+                                const std::array<double, 3> cubical =
+                                    WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
+
+                                const double* cell_perm = &permeability[dimensions*dimensions*cell];
+                                pd.well_index =
+                                    WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
+                                                                         completion->getSkinFactor(),
+                                                                         completion->getDirection(),
+                                                                         ntg[cell]);
+                            }
+                        }
+                        wellperf_data[well_index].push_back(pd);
+                    }
                 } else {
                     if (completion->getState() != WellCompletion::SHUT) {
                         OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
