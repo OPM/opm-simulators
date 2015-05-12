@@ -120,6 +120,8 @@ namespace Opm
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
+        // Whether this a parallel simulation or not
+        bool is_parallel_run_;
 
         void
         computeRESV(const std::size_t               step,
@@ -205,6 +207,7 @@ namespace Opm
                     boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
                 // Only rank 0 does print to std::cout
                 terminal_output_= (info.communicator().rank()==0);
+                is_parallel_run_ = info.communicator().size();
             }
         }
 #endif
@@ -269,7 +272,8 @@ namespace Opm
                                        Opm::UgGridHelpers::dimensions(grid_),
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
-                                       props_.permeability());
+                                       props_.permeability(),
+                                       is_parallel_run_);
             const Wells* wells = wells_manager.c_wells();
             WellStateFullyImplicitBlackoil well_state;
             well_state.init(wells, state, prev_well_state);
