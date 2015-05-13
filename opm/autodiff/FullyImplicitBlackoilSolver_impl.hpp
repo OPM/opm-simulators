@@ -1254,14 +1254,31 @@ namespace detail {
 
     namespace detail
     {
-
-        double infinityNorm( const ADB& a )
+        /// \brief Compute the L-infinity norm of a vector
+        /// \warn This function is not suitable to compute on the well equations.
+        /// \param a The container to compute the infinity norm on.
+        ///          It has to have one entry for each cell.
+        /// \param info In a parallel this holds the information about the data distribution.
+        double infinityNorm( const ADB& a, const boost::any& pinfo=boost::any() )
         {
-            if( a.value().size() > 0 ) {
-                return a.value().matrix().lpNorm<Eigen::Infinity> ();
+#if HAVE_MPI
+            if ( pinfo.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& real_info =
+                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                double result=0;
+                real_info.computeReduction(a.value(), Reduction::makeGlobalMaxFunctor<double>(), result);
+                return result;
             }
-            else { // this situation can occur when no wells are present
-                return 0.0;
+            else
+#endif
+            {
+                if( a.value().size() > 0 ) {
+                    return a.value().matrix().lpNorm<Eigen::Infinity> ();
+                }
+                else { // this situation can occur when no wells are present
+                    return 0.0;
+                }
             }
         }
 
@@ -1732,7 +1749,8 @@ namespace detail {
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
 
         for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt) );
+            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt),
+                                                                  linsolver_.parallelInformation() );
             if (!std::isfinite(massBalanceResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
