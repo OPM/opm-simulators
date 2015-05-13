@@ -389,7 +389,9 @@ namespace Opm {
         ///                   maximum of tempV for the phase i.
         /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
         ///                   of B for the phase i.
+        /// \param[out] maxNormWell The maximum of the well equations for each phase.
         /// \param[in]  nc    The number of cells of the local grid.
+        /// \param[in]  nw    The number of wells on the local grid.
         /// \return The total pore volume over all cells.
         double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
@@ -398,7 +400,9 @@ namespace Opm {
                              std::array<double,MaxNumPhases>& R_sum,
                              std::array<double,MaxNumPhases>& maxCoeff,
                              std::array<double,MaxNumPhases>& B_avg,
-                             int nc) const;
+                             std::vector<double>& maxNormWell,
+                             int nc,
+                             int nw) const;
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,

@@ -1834,7 +1834,9 @@ namespace detail {
                                                          std::array<double,MaxNumPhases>& R_sum,
                                                          std::array<double,MaxNumPhases>& maxCoeff,
                                                          std::array<double,MaxNumPhases>& B_avg,
-                                                         int nc) const
+                                                         std::vector<double>& maxNormWell,
+                                                         int nc,
+                                                         int nw) const
     {
         // Do the global reductions
 #if HAVE_MPI
@@ -1862,15 +1864,21 @@ namespace detail {
                                                       Opm::Reduction::makeGlobalMaxFunctor<double>(),
                                                       Opm::Reduction::makeGlobalSumFunctor<double>());
                     info.computeReduction(containers, operators, values);
-                    B_avg[idx]    = std::get<0>(values)/std::get<0>(nc_and_pv);
-                    maxCoeff[idx] = std::get<1>(values);
-                    R_sum[idx]    = std::get<2>(values);
+                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
+                    maxCoeff[idx]    = std::get<1>(values);
+                    R_sum[idx]       = std::get<2>(values);
+                    maxNormWell[idx] = 0.0;
+                    for ( int w=0; w<nw; ++w )
+                    {
+                        maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    }
                 }
                 else
                 {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
+                    maxNormWell[idx] = R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
                 }
             }
+            info.communicator().max(&maxNormWell[0], MaxNumPhases);
             // Compute pore volume
             return std::get<1>(nc_and_pv);
         }
@@ -1887,6 +1895,11 @@ namespace detail {
                 else
                 {
                     R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
+                }
+                maxNormWell[idx] = 0.0;
+                for ( int w=0; w<nw; ++w )
+                {
+                    maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
                 }
             }
             // Compute total pore volume
@@ -1920,6 +1933,7 @@ namespace detail {
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
+        std::vector<double> maxNormWell(MaxNumPhases);
 
         for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
@@ -1932,7 +1946,8 @@ namespace detail {
             }
         }
 
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, nc);
+        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
+                                                  maxNormWell, nc, nw);
 
         bool converged_MB = true;
         bool converged_CNV = true;
@@ -1944,13 +1959,7 @@ namespace detail {
             mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
-
-            double maxNormWell = 0.0;
-            for ( int w=0; w<nw; ++w )
-            {
-                maxNormWell  = std::max(maxNormWell, std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-            }
-            well_flux_residual[idx] = B_avg[idx] * dt * maxNormWell;
+            well_flux_residual[idx] = B_avg[idx] * dt * maxNormWell[idx];
 
             converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
         }
