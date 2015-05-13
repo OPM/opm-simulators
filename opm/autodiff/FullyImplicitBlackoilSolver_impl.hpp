@@ -1282,6 +1282,26 @@ namespace detail {
             }
         }
 
+        /// \brief Compute the L-infinity norm of a vector representing a well equation.
+        /// \param a The container to compute the infinity norm on.
+        /// \param info In a parallel this holds the information about the data distribution.
+        double infinityNormWell( const ADB& a, const boost::any& pinfo )
+        {
+            double result=0;
+            if( a.value().size() > 0 ) {
+                result = a.value().matrix().lpNorm<Eigen::Infinity> ();
+            }
+#if HAVE_MPI
+            if ( pinfo.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& real_info =
+                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                result = real_info.communicator().max(result);
+            }
+#endif
+            return result;
+        }
+
     } // namespace detail
 
 
@@ -1759,14 +1779,16 @@ namespace detail {
         }
 
         // the following residuals are not used in the oscillation detection now
-        const double wellFluxResid = detail::infinityNorm( residual_.well_flux_eq );
+        const double wellFluxResid = detail::infinityNormWell( residual_.well_flux_eq,
+                                                               linsolver_.parallelInformation() );
         if (!std::isfinite(wellFluxResid)) {
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
         residualNorms.push_back(wellFluxResid);
 
-        const double wellResid = detail::infinityNorm( residual_.well_eq );
+        const double wellResid = detail::infinityNormWell( residual_.well_eq,
+                                                           linsolver_.parallelInformation() );
         if (!std::isfinite(wellResid)) {
            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
@@ -1982,7 +2004,8 @@ namespace detail {
             converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
         }
 
-        const double residualWell     = detail::infinityNorm(residual_.well_eq);
+        const double residualWell     = detail::infinityNormWell(residual_.well_eq,
+                                                                 linsolver_.parallelInformation());
         converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
