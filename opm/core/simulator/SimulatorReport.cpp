@@ -23,12 +23,13 @@
 
 namespace Opm
 {
-    SimulatorReport::SimulatorReport()
+    SimulatorReport::SimulatorReport(bool verbose)
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
           total_newton_iterations( 0 ),
-          total_linear_iterations( 0 )
+          total_linear_iterations( 0 ),
+          verbose_(verbose)
     {
     }
 
@@ -43,31 +44,40 @@ namespace Opm
 
     void SimulatorReport::report(std::ostream& os)
     {
-        os << "Total time taken: " << total_time
-           << "\n  Pressure time:  " << pressure_time
-           << "\n  Transport time: " << transport_time
-           << "\n  Overall Newton Iterations:  " << total_newton_iterations
-           << "\n  Overall Linear Iterations:  " << total_linear_iterations
-           << std::endl;
+        if ( verbose_ )
+        {
+            os << "Total time taken: " << total_time
+               << "\n  Pressure time:  " << pressure_time
+               << "\n  Transport time: " << transport_time
+               << "\n  Overall Newton Iterations:  " << total_newton_iterations
+               << "\n  Overall Linear Iterations:  " << total_linear_iterations
+               << std::endl;
+        }
     }
 
     void SimulatorReport::reportFullyImplicit(std::ostream& os)
     {
-        os << "Total time taken (seconds):  " << total_time
-           << "\nSolver time (seconds):       " << pressure_time
-           << "\nOverall Newton Iterations:   " << total_newton_iterations
-           << "\nOverall Linear Iterations:   " << total_linear_iterations
-           << std::endl;
+        if ( verbose_ )
+        {
+            os << "Total time taken (seconds):  " << total_time
+               << "\nSolver time (seconds):       " << pressure_time
+               << "\nOverall Newton Iterations:   " << total_newton_iterations
+               << "\nOverall Linear Iterations:   " << total_linear_iterations
+               << std::endl;
+        }
     }
 
     void SimulatorReport::reportParam(std::ostream& os)
     {
-        os << "/timing/total_time=" << total_time
-           << "\n/timing/pressure/total_time=" << pressure_time
-           << "\n/timing/transport/total_time=" << transport_time
-           << "\n/timing/newton/iterations=" << total_newton_iterations
-           << "\n/timing/linear/iterations=" << total_linear_iterations
-           << std::endl;
+        if ( verbose_ )
+        {
+            os << "/timing/total_time=" << total_time
+               << "\n/timing/pressure/total_time=" << pressure_time
+               << "\n/timing/transport/total_time=" << transport_time
+               << "\n/timing/newton/iterations=" << total_newton_iterations
+               << "\n/timing/linear/iterations=" << total_linear_iterations
+               << std::endl;
+        }
     }
 
 
