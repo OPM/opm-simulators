@@ -269,7 +269,7 @@ try
     std::shared_ptr<DerivedGeology> geoprops;
     std::shared_ptr<DerivedGeology> distributed_geology;
     geoprops.reset(new Opm::DerivedGeology(*grid, *new_props, eclipseState, false, grav));
-    distributed_geology=geoprops; // copy for serial case.
+    distributed_geology = geoprops; // copy for serial case.
     BlackoilState distributed_state;
     std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props = new_props;
     Dune::CpGrid distributed_grid = *grid;
