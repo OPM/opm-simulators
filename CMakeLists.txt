@@ -68,7 +68,7 @@ include (OpmInit)
 # list of prerequisites for this particular project; this is in a
 # separate file (in cmake/Modules sub-directory) because it is shared
 # with the find module
-include ("${project}-prereqs.cmake")
+include ("${project}-prereqs")
 
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
