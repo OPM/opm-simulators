@@ -373,7 +373,9 @@ try
     } else {
         outputWriter.writeInit( simtimer );
         if ( output_cout )
+        {
             std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
+        }
     }
 }
 catch (const std::exception &e) {
