@@ -8,5 +8,5 @@ Version: 2015.10
 Url: http://opm-project.org
 Maintainer: and@poware.org
 MaintainerName: Andreas Lauser
-Depends: dune-common
+Depends: dune-common opm-cmake
 Suggests: opm-parser
