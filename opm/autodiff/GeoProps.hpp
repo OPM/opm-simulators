@@ -178,6 +178,8 @@ namespace Opm
         const Vector& gravityPotential() const { return gpot_   ;}
         const Vector& z()                const { return z_      ;}
         const double* gravity()          const { return gravity_;}
+        Vector&       poreVolume()             { return pvol_   ;}
+        Vector&       transmissibility()       { return trans_  ;}
 
     private:
         template <class Grid>

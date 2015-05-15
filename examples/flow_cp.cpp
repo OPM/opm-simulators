@@ -263,6 +263,13 @@ try
         new_props->setSwatInitScaling(state.saturation(),pc);
     }
 
+    bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
+    const double *grav = use_gravity ? &gravity[0] : 0;
+
+    std::shared_ptr<DerivedGeology> geoprops;
+    std::shared_ptr<DerivedGeology> distributed_geology;
+    geoprops.reset(new Opm::DerivedGeology(*grid, *new_props, eclipseState, false, grav));
+    distributed_geology = geoprops; // copy for serial case.
     BlackoilState distributed_state;
     std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props = new_props;
     Dune::CpGrid distributed_grid = *grid;
@@ -295,10 +302,15 @@ try
                                                   *distributed_props);
         grid->scatterData(state_handle);
         grid->scatterData(props_handle);
+        // Create a distributed Geology. Some values will be updated using communication
+        // below
+        distributed_geology.reset(new Opm::DerivedGeology(distributed_grid,
+                                                           *distributed_props, eclipseState,
+                                                           false, grav));
+        Opm::GeologyDataHandle geo_handle(global_grid, distributed_grid,
+                                          *geoprops, *distributed_geology);
+        grid->scatterData(geo_handle);
     }
-
-    bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
-    const double *grav = use_gravity ? &gravity[0] : 0;
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
@@ -318,13 +330,11 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    Opm::DerivedGeology geology(distributed_grid, *distributed_props, eclipseState, false, grav);
-
     std::vector<double> threshold_pressures = thresholdPressures(eclipseState, distributed_grid);
 
     SimulatorFullyImplicitBlackoil<Dune::CpGrid> simulator(param,
                                                            distributed_grid,
-                                                           geology,
+                                                           *distributed_geology,
                                                            *distributed_props,
                                                            rock_comp->isActive() ? rock_comp.get() : 0,
                                                            *fis_solver,
