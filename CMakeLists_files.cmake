@@ -95,6 +95,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
 	opm/autodiff/BlackoilModel.hpp
+	opm/autodiff/BlackoilModel_impl.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp

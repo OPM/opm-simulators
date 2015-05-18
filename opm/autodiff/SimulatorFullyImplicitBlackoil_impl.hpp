@@ -232,7 +232,7 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typename FullyImplicitSolver<T, BlackoilModel>::SolverParameter solverParam( param_ );
+        typename BlackoilModel<T>::SolverParameter solverParam( param_ );
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -292,10 +292,13 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitSolver<T, BlackoilModel> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
+            typedef T Grid;
+            typedef BlackoilModel<Grid> Model;
+            Model model(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
-                solver.setThresholdPressures(threshold_pressures_by_face_);
+                model.setThresholdPressures(threshold_pressures_by_face_);
             }
+            FullyImplicitSolver<Model> solver(model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge

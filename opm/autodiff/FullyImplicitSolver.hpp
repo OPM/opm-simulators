@@ -21,42 +21,61 @@
 #ifndef OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
 
-#include <cassert>
+// #include <cassert>
 
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+// #include <opm/autodiff/AutoDiffBlock.hpp>
+// #include <opm/autodiff/AutoDiffHelpers.hpp>
+// #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+// #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
+// #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
-#include <array>
+// #include <array>
 
-struct UnstructuredGrid;
-struct Wells;
+// struct UnstructuredGrid;
+// struct Wells;
 
 namespace Opm {
 
-    namespace parameter { class ParameterGroup; }
-    class DerivedGeology;
-    class RockCompressibility;
-    class NewtonIterationBlackoilInterface;
-    class BlackoilState;
-    class WellStateFullyImplicitBlackoil;
+    // namespace parameter { class ParameterGroup; }
+    // class DerivedGeology;
+    // class RockCompressibility;
+    // class NewtonIterationBlackoilInterface;
 
-
-    /// A fully implicit solver suitable for general .
-    ///
-    /// The simulator is capable of handling three-phase problems
-    /// where gas can be dissolved in oil (but not vice versa). It
-    /// uses an industry-standard TPFA discretization with per-phase
-    /// upwind weighting of mobilities.
-    ///
-    /// It uses automatic differentiation via the class AutoDiffBlock
-    /// to simplify assembly of the jacobian matrix.
-    template<class Grid, class PhysicalModel>
+    /// A fully implicit solver suitable for general models.
+    template <class PhysicalModel>
     class FullyImplicitSolver
     {
     public:
+        // Forwarding types from PhysicalModel.
+        typedef typename PhysicalModel::ReservoirState ReservoirState;
+        typedef typename PhysicalModel::WellState WellState;
+
+        /// Construct solver for a given model.
+        explicit FullyImplicitSolver(PhysicalModel& model);
+
+        /// Take a single forward step, after which the state will be modified
+        /// according to PhysicalModel.
+        /// \param[in] dt        time step size
+        /// \param[in] state     reservoir state
+        /// \param[in] wstate    well state
+        /// \return              number of linear iterations used
+        int
+        step(const double dt,
+             ReservoirState& state,
+             WellState& wstate);
+
+        /// Number of Newton iterations used in all calls to step().
+        unsigned int newtonIterations() const;
+
+        /// Number of linear solver iterations used in all calls to step().
+        unsigned int linearIterations() const;
+
+    private:
+        PhysicalModel& model_;
+        unsigned int newtonIterations_;
+        unsigned int linearIterations_;
+
+        /*
         // the Newton relaxation type
         enum RelaxType { DAMPEN, SOR };
 
@@ -114,23 +133,6 @@ namespace Opm {
         ///                                   of the grid passed in the constructor.
         void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
 
-        /// Take a single forward step, modifiying
-        ///   state.pressure()
-        ///   state.faceflux()
-        ///   state.saturation()
-        ///   state.gasoilratio()
-        ///   wstate.bhp()
-        /// \param[in] dt        time step size
-        /// \param[in] state     reservoir state
-        /// \param[in] wstate    well state
-        /// \return              number of linear iterations used
-        int
-        step(const double   dt    ,
-             BlackoilState& state ,
-             WellStateFullyImplicitBlackoil&     wstate);
-
-        unsigned int newtonIterations () const { return newtonIterations_; }
-        unsigned int linearIterations () const { return linearIterations_; }
 
     private:
         // Types and enums
@@ -207,8 +209,6 @@ namespace Opm {
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
-        unsigned int newtonIterations_;
-        unsigned int linearIterations_;
 
         std::vector<int>         primalVariable_;
 
@@ -415,7 +415,7 @@ namespace Opm {
         double maxIter() const     { return param_.max_iter_; }
         double minIter() const     { return param_.min_iter_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
-
+        */
     };
 } // namespace Opm
 
