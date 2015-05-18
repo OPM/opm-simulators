@@ -24,7 +24,8 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/FullyImplicitBlackoilSolver.hpp>
+#include <opm/autodiff/FullyImplicitSolver.hpp>
+#include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
@@ -231,7 +232,7 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typename FullyImplicitBlackoilSolver<T>::SolverParameter solverParam( param_ );
+        typename FullyImplicitSolver<T, BlackoilModel>::SolverParameter solverParam( param_ );
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -291,7 +292,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitBlackoilSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
+            FullyImplicitSolver<T, BlackoilModel> solver(solverParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
