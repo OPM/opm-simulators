@@ -115,19 +115,20 @@ public:
     void copyValuesTo(ParallelIndexSet& indexSet, RemoteIndices& remoteIndices,
                       std::size_t local_component_size = 0, std::size_t num_components = 1) const
     {
-        ParallelIndexSet::GlobalIndex max_gi  = local_component_size;
+        ParallelIndexSet::GlobalIndex global_component_size  = local_component_size;
         if ( num_components > 1 )
         {
+            ParallelIndexSet::GlobalIndex max_gi = 0;
             // component the max global index
             for( auto i = indexSet_->begin(), end = indexSet_->end(); i != end; ++i )
             {
                 max_gi = std::max(max_gi, i->global());
             }
-            ++max_gi;
-            max_gi = communicator_.max(max_gi);
+            global_component_size = max_gi+1;
+            global_component_size = communicator_.max(global_component_size);
         }
         indexSet.beginResize();
-        IndexSetInserter<ParallelIndexSet> inserter(indexSet, max_gi,
+        IndexSetInserter<ParallelIndexSet> inserter(indexSet, global_component_size,
                                                     local_component_size, num_components);
         std::for_each(indexSet_->begin(), indexSet_->end(), inserter);
         indexSet.endResize();
