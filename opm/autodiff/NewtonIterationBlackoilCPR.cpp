@@ -188,11 +188,14 @@ namespace Opm
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
             Comm istlComm(info.communicator());
-            info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices());
+            Comm istlAeComm(info.communicator());
+            info.copyValuesTo(istlAeComm.indexSet(), istlAeComm.remoteIndices());
+            info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices(),
+                              istlAe.N(), istlA.N()/istlAe.N());
             // Construct operator, scalar product and vectors needed.
             typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
             Operator opA(istlA, istlComm);
-            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, istlAe, x, istlb, istlComm, result);
+            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, istlAe, x, istlb, istlComm, istlAeComm, result);
         }
         else
 #endif
@@ -201,7 +204,7 @@ namespace Opm
             typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
             Operator opA(istlA);
             Dune::Amg::SequentialInformation info;
-            constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, result);
+            constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, info, result);
         }
 
         // store number of iterations

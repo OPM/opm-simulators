@@ -371,28 +371,31 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
                                     parallel run
         */
         CPRPreconditioner (const CPRParameter& param, const M& A, const M& Ae,
-                           const ParallelInformation& comm=ParallelInformation())
+                           const ParallelInformation& comm=ParallelInformation(),
+                           const ParallelInformation& commAe=ParallelInformation())
             : param_( param ),
               A_(A),
               Ae_(Ae),
               de_( Ae_.N() ),
               ve_( Ae_.M() ),
               dmodified_( A_.N() ),
-              opAe_(CPRSelector<M,X,Y,P>::makeOperator(Ae_, comm)),
+              opAe_(CPRSelector<M,X,Y,P>::makeOperator(Ae_, commAe)),
               precond_(), // ilu0 preconditioner for elliptic system
               amg_(),     // amg  preconditioner for elliptic system
               pre_(), // copy A will be made be the preconditioner
               vilu_( A_.N() ),
-              comm_(comm)
+              comm_(comm),
+              commAe_(commAe)
         {
             // create appropriate preconditioner for elliptic system
-            createEllipticPreconditioner( param_.cpr_use_amg_, comm );
+            createEllipticPreconditioner( param_.cpr_use_amg_, commAe_ );
 
+            // create the preconditioner for the whole system.
             if( param_.cpr_ilu_n_ == 0 ) {
-                pre_ = createILU0Ptr<M,X>( A_, param_.cpr_relax_, comm );
+                pre_ = createILU0Ptr<M,X>( A_, param_.cpr_relax_, comm_ );
             }
             else {
-                pre_ = createILUnPtr<M,X>( A_, param_.cpr_ilu_n_, param_.cpr_relax_, comm );
+                pre_ = createILUnPtr<M,X>( A_, param_.cpr_ilu_n_, param_.cpr_relax_, comm_ );
             }
         }
 
@@ -430,6 +433,8 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
             // dmodified = d - A * vfull
             dmodified_ = d;
             A_.mmv(v, dmodified_);
+            // A is not parallel, do communication manually.
+            comm_.copyOwnerToAll(dmodified_, dmodified_);
 
             // Apply Preconditioner for whole system (relax will be applied already)
             pre_->apply( vilu_, dmodified_);
@@ -470,7 +475,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
                 ScalarProductChooser;
             // the scalar product.
             std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
-                sp(ScalarProductChooser::construct(comm_));
+                sp(ScalarProductChooser::construct(commAe_));
 
             if( amg_ )
             {
@@ -534,8 +539,11 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         //! \brief temporary variables for ILU solve
         Y vilu_;
 
-        //! \brief The information about the parallelization
+        //! \brief The information about the parallelization of the whole system.
         const P& comm_;
+        //! \brief The information about the parallelization of the elliptic part
+        //! of the system
+        const P& commAe_;
      protected:
         void createEllipticPreconditioner( const bool amg, const P& comm )
         {
