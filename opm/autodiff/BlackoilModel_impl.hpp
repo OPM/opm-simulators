@@ -136,19 +136,13 @@ namespace detail {
 } // namespace detail
 
     template <class Grid>
-    void BlackoilModel<Grid>::SolverParameter::
+    void BlackoilModel<Grid>::ModelParameter::
     reset()
     {
         // default values for the solver parameters
         dp_max_rel_      = 1.0e9;
         ds_max_          = 0.2;
         dr_max_rel_      = 1.0e9;
-        relax_type_      = DAMPEN;
-        relax_max_       = 0.5;
-        relax_increment_ = 0.1;
-        relax_rel_tol_   = 0.2;
-        max_iter_        = 15; // not more then 15 its by default
-        min_iter_        = 1;  // Default to always do at least one nonlinear iteration.
         max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
@@ -156,16 +150,16 @@ namespace detail {
     }
 
     template <class Grid>
-    BlackoilModel<Grid>::SolverParameter::
-    SolverParameter()
+    BlackoilModel<Grid>::ModelParameter::
+    ModelParameter()
     {
         // set default values
         reset();
     }
 
     template <class Grid>
-    BlackoilModel<Grid>::SolverParameter::
-    SolverParameter( const parameter::ParameterGroup& param )
+    BlackoilModel<Grid>::ModelParameter::
+    ModelParameter( const parameter::ParameterGroup& param )
     {
         // set default values
         reset();
@@ -174,38 +168,25 @@ namespace detail {
         dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_      = param.getDefault("ds_max", ds_max_);
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
-        relax_max_   = param.getDefault("relax_max", relax_max_);
-        max_iter_    = param.getDefault("max_iter", max_iter_);
-        min_iter_    = param.getDefault("min_iter", min_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
-
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
         tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-
-        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
-        if (relaxation_type == "dampen") {
-            relax_type_ = DAMPEN;
-        } else if (relaxation_type == "sor") {
-            relax_type_ = SOR;
-        } else {
-            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
-        }
     }
 
 
     template <class Grid>
     BlackoilModel<Grid>::
-    BlackoilModel(const SolverParameter&          param,
-                                const Grid&                     grid ,
-                                const BlackoilPropsAdInterface& fluid,
-                                const DerivedGeology&           geo  ,
-                                const RockCompressibility*      rock_comp_props,
-                                const Wells*                    wells,
-                                const NewtonIterationBlackoilInterface&    linsolver,
-                                const bool has_disgas,
-                                const bool has_vapoil,
-                                const bool terminal_output)
+    BlackoilModel(const ModelParameter&          param,
+                  const Grid&                     grid ,
+                  const BlackoilPropsAdInterface& fluid,
+                  const DerivedGeology&           geo  ,
+                  const RockCompressibility*      rock_comp_props,
+                  const Wells*                    wells,
+                  const NewtonIterationBlackoilInterface&    linsolver,
+                  const bool has_disgas,
+                  const bool has_vapoil,
+                  const bool terminal_output)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -246,6 +227,66 @@ namespace detail {
     template <class Grid>
     void
     BlackoilModel<Grid>::
+    prepareStep(const double dt,
+                const ReservoirState& reservoir_state,
+                const WellState& /* well_state */)
+    {
+        pvdt_ = geo_.poreVolume() / dt;
+        if (active_[Gas]) {
+            updatePrimalVariableFromState(reservoir_state);
+        }
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilModel<Grid>::
+    sizeNonLinear() const
+    {
+        return residual_.sizeNonLinear();
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilModel<Grid>::
+    linearIterationsLastSolve() const
+    {
+        return linsolver_.iterations();
+    }
+
+
+
+
+    template <class Grid>
+    bool
+    BlackoilModel<Grid>::
+    terminalOutput() const
+    {
+        return terminal_output_;
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilModel<Grid>::
+    numPhases() const
+    {
+        return fluid_.numPhases();
+    }
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilModel<Grid>::
     setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
     {
         const int num_faces = AutoDiffGrid::numFaces(grid_);
@@ -260,83 +301,6 @@ namespace detail {
             threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
         }
     }
-
-
-
-
-    template <class Grid>
-    int
-    BlackoilModel<Grid>::
-    step(const double   dt,
-         BlackoilState& x ,
-         WellStateFullyImplicitBlackoil& xw)
-    {
-        const V pvdt = geo_.poreVolume() / dt;
-
-        if (active_[Gas]) { updatePrimalVariableFromState(x); }
-
-        // For each iteration we store in a vector the norms of the residual of
-        // the mass balance for each active phase, the well flux and the well equations
-        std::vector<std::vector<double>> residual_norms_history;
-
-        assemble(pvdt, x, true, xw);
-
-
-        bool converged = false;
-        double omega = 1.;
-
-        residual_norms_history.push_back(computeResidualNorms());
-
-        int          it  = 0;
-        converged = getConvergence(dt,it);
-        const int sizeNonLinear = residual_.sizeNonLinear();
-
-        V dxOld = V::Zero(sizeNonLinear);
-
-        bool isOscillate = false;
-        bool isStagnate = false;
-        const enum RelaxType relaxtype = relaxType();
-        int linearIterations = 0;
-
-        while ( (!converged && (it < maxIter())) || (minIter() > it)) {
-            V dx = solveJacobianSystem();
-
-            // store number of linear iterations used
-            linearIterations += linsolver_.iterations();
-
-            detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
-
-            if (isOscillate) {
-                omega -= relaxIncrement();
-                omega = std::max(omega, relaxMax());
-                if (terminal_output_)
-                {
-                    std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
-                }
-            }
-
-            stablizeNewton(dx, dxOld, omega, relaxtype);
-
-            updateState(dx, x, xw);
-
-            assemble(pvdt, x, false, xw);
-
-            residual_norms_history.push_back(computeResidualNorms());
-
-            // increase iteration counter
-            ++it;
-
-            converged = getConvergence(dt,it);
-        }
-
-        if (!converged) {
-            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
-            return -1; // -1 indicates that the solver has to be restarted
-        }
-
-        return linearIterations;
-    }
-
 
 
 
@@ -752,19 +716,18 @@ namespace detail {
     template <class Grid>
     void
     BlackoilModel<Grid>::
-    assemble(const V&             pvdt,
-             const BlackoilState& x   ,
-             const bool initial_assembly,
-             WellStateFullyImplicitBlackoil& xw  )
+    assemble(const BlackoilState& reservoir_state,
+             WellStateFullyImplicitBlackoil& well_state,
+             const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        updateWellControls(xw);
+        updateWellControls(well_state);
 
         // Create the primary variables.      
-        SolutionState state = variableState(x, xw);
+        SolutionState state = variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
             // Create the (constant, derivativeless) initial state.
@@ -773,7 +736,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             computeAccum(state0, 0);
-            computeWellConnectionPressures(state0, xw);
+            computeWellConnectionPressures(state0, well_state);
         }
 
         // DISKVAL(state.pressure);
@@ -801,18 +764,10 @@ namespace detail {
         const std::vector<ADB> kr = computeRelPerm(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
-            // std::cout << "===== kr[" << phase << "] = \n" << std::endl;
-            // std::cout << kr[phase];
-            // std::cout << "===== rq_[" << phase << "].mflux = \n" << std::endl;
-            // std::cout << rq_[phase].mflux;
 
             residual_.material_balance_eq[ phaseIdx ] =
-                pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
+                pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
                 + ops_.div*rq_[phaseIdx].mflux;
-
-
-            // DUMP(ops_.div*rq_[phase].mflux);
-            // DUMP(residual_.material_balance_eq[phase]);
         }
 
         // -------- Extra (optional) rs and rv contributions to the mass balance equations --------
@@ -843,8 +798,8 @@ namespace detail {
 
         // Add contribution from wells and set up the well equations.
         V aliveWells;
-        addWellEq(state, xw, aliveWells);
-        addWellControlEq(state, xw, aliveWells);
+        addWellEq(state, well_state, aliveWells);
+        addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -1754,74 +1709,6 @@ namespace detail {
         residualNorms.push_back(wellResid);
 
         return residualNorms;
-    }
-
-    template <class Grid>
-    void
-    BlackoilModel<Grid>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                             const int it, const double relaxRelTol,
-                                                             bool& oscillate, bool& stagnate) const
-    {
-        // The detection of oscillation in two primary variable results in the report of the detection
-        // of oscillation for the solver.
-        // Only the saturations are used for oscillation detection for the black oil model.
-        // Stagnate is not used for any treatment here.
-
-        if ( it < 2 ) {
-            oscillate = false;
-            stagnate = false;
-            return;
-        }
-
-        stagnate = true;
-        int oscillatePhase = 0;
-        const std::vector<double>& F0 = residual_history[it];
-        const std::vector<double>& F1 = residual_history[it - 1];
-        const std::vector<double>& F2 = residual_history[it - 2];
-        for (int p= 0; p < fluid_.numPhases(); ++p){
-            const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-            const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
-
-            oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
-
-            // Process is 'stagnate' unless at least one phase
-            // exhibits significant residual change.
-            stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
-        }
-
-        oscillate = (oscillatePhase > 1);
-    }
-
-
-    template <class Grid>
-    void
-    BlackoilModel<Grid>::stablizeNewton(V& dx, V& dxOld, const double omega,
-                                                    const RelaxType relax_type) const
-    {
-        // The dxOld is updated with dx.
-        // If omega is equal to 1., no relaxtion will be appiled.
-
-        const V tempDxOld = dxOld;
-        dxOld = dx;
-
-        switch (relax_type) {
-            case DAMPEN:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega;
-                return;
-            case SOR:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega + (1.-omega)*tempDxOld;
-                return;
-            default:
-                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
-        }
-
-        return;
     }
 
     template <class Grid>
