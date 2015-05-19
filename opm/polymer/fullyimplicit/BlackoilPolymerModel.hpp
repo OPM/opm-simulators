@@ -125,17 +125,17 @@ namespace Opm {
         void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
 
         /// Called once before each time step.
-        /// \param[in] dt                time step size
-        /// \param[in] reservoir_state   reservoir state variables
-        /// \param[in] well_state        well state variables
+        /// \param[in] dt                     time step size
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
         void prepareStep(const double dt,
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
         /// Called once after each time step.
-        /// \param[in] dt                time step size
-        /// \param[in] reservoir_state   reservoir state variables
-        /// \param[in] well_state        well state variables
+        /// \param[in] dt                     time step size
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
         void afterStep(const double dt,
                        ReservoirState& reservoir_state,
                        WellState& well_state);
