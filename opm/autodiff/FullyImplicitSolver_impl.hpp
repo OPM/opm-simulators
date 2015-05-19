@@ -31,9 +31,10 @@ namespace Opm
     FullyImplicitSolver<PhysicalModel>::FullyImplicitSolver(const SolverParameter& param,
                                                             PhysicalModel& model)
         : param_(param),
-          model_(model)
+          model_(model),
+          newtonIterations_(0),
+          linearIterations_(0)
     {
-        
     }
 
     template <class PhysicalModel>
@@ -56,40 +57,38 @@ namespace Opm
          ReservoirState& reservoir_state,
          WellState& well_state)
     {
-
+        // Do model-specific once-per-step calculations.
         model_.prepareStep(dt, reservoir_state, well_state);
 
         // For each iteration we store in a vector the norms of the residual of
-        // the mass balance for each active phase, the well flux and the well equations
+        // the mass balance for each active phase, the well flux and the well equations.
         std::vector<std::vector<double>> residual_norms_history;
 
+        // Assemble residual and Jacobian, store residual norms.
         model_.assemble(reservoir_state, well_state, true);
-
-
-        bool converged = false;
-        double omega = 1.0;
-
         residual_norms_history.push_back(model_.computeResidualNorms());
 
-        int          it  = 0;
-        converged = model_.getConvergence(dt,it);
+        // Set up for main Newton loop.
+        double omega = 1.0;
+        int iteration = 0;
+        bool converged = model_.getConvergence(dt, iteration);
         const int sizeNonLinear = model_.sizeNonLinear();
-
         V dxOld = V::Zero(sizeNonLinear);
-
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
         int linearIterations = 0;
 
-        while ( (!converged && (it < maxIter())) || (minIter() > it)) {
+        // ----------  Main Newton loop  ----------
+        while ( (!converged && (iteration < maxIter())) || (minIter() > iteration)) {
+            // Compute the Newton update to the primary variables.
             V dx = model_.solveJacobianSystem();
 
-            // store number of linear iterations used
+            // Store number of linear iterations used.
             linearIterations += model_.linearIterationsLastSolve();
 
-            detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
-
+            // Stabilize the Newton update.
+            detectNewtonOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
@@ -97,28 +96,31 @@ namespace Opm
                     std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
                 }
             }
-
             stabilizeNewton(dx, dxOld, omega, relaxtype);
 
+            // Apply the update, the model may apply model-dependent
+            // limitations and chopping of the update.
             model_.updateState(dx, reservoir_state, well_state);
 
+            // Assemble residual and Jacobian, store residual norms.
             model_.assemble(reservoir_state, well_state, false);
-
             residual_norms_history.push_back(model_.computeResidualNorms());
 
             // increase iteration counter
-            ++it;
+            ++iteration;
 
-            converged = model_.getConvergence(dt,it);
+            converged = model_.getConvergence(dt, iteration);
         }
 
         if (!converged) {
-            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
+            if (model_.terminalOutput()) {
+                std::cerr << "WARNING: Failed to compute converged solution in " << iteration << " iterations." << std::endl;
+            }
             return -1; // -1 indicates that the solver has to be restarted
         }
 
         linearIterations_ += linearIterations;
-        newtonIterations_ += it;
+        newtonIterations_ += iteration;
 
         return linearIterations;
     }
