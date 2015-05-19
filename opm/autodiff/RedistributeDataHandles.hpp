@@ -71,7 +71,7 @@ public:
         }
     }
     template<class B, class T>
-    void scatter(B& buffer, const T& e, std::size_t size)
+    void scatter(B& buffer, const T& e, std::size_t /* size */)
     {
         assert( T::codimension == 0);
         double val;
