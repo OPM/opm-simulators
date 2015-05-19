@@ -122,6 +122,9 @@ namespace Opm
         linearIterations_ += linearIterations;
         newtonIterations_ += iteration;
 
+        // Do model-specific post-step actions.
+        model_.afterStep(dt, reservoir_state, well_state);
+
         return linearIterations;
     }
 

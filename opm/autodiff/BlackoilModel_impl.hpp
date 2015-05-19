@@ -228,13 +228,26 @@ namespace detail {
     void
     BlackoilModel<Grid>::
     prepareStep(const double dt,
-                const ReservoirState& reservoir_state,
-                const WellState& /* well_state */)
+                ReservoirState& reservoir_state,
+                WellState& /* well_state */)
     {
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
             updatePrimalVariableFromState(reservoir_state);
         }
+    }
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilModel<Grid>::
+    afterStep(const double /* dt */,
+              ReservoirState& /* reservoir_state */,
+              WellState& /* well_state */)
+    {
+        // Does nothing in this model.
     }
 
 
