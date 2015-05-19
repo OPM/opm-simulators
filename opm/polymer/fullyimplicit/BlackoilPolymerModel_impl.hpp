@@ -25,6 +25,7 @@
 
 #include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -32,7 +33,6 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -151,19 +151,13 @@ namespace detail {
 } // namespace detail
 
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::SolverParameter::
+    void BlackoilPolymerModel<Grid>::ModelParameter::
     reset()
     {
         // default values for the solver parameters
         dp_max_rel_      = 1.0e9;
         ds_max_          = 0.2;
         dr_max_rel_      = 1.0e9;
-        relax_type_      = DAMPEN;
-        relax_max_       = 0.5;
-        relax_increment_ = 0.1;
-        relax_rel_tol_   = 0.2;
-        max_iter_        = 15; // not more then 15 its by default
-        min_iter_        = 1;  // Default to always do at least one nonlinear iteration.
         max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
@@ -172,16 +166,16 @@ namespace detail {
     }
 
     template <class Grid>
-    BlackoilPolymerModel<Grid>::SolverParameter::
-    SolverParameter()
+    BlackoilPolymerModel<Grid>::ModelParameter::
+    ModelParameter()
     {
         // set default values
         reset();
     }
 
     template <class Grid>
-    BlackoilPolymerModel<Grid>::SolverParameter::
-    SolverParameter( const parameter::ParameterGroup& param )
+    BlackoilPolymerModel<Grid>::ModelParameter::
+    ModelParameter( const parameter::ParameterGroup& param )
     {
         // set default values
         reset();
@@ -190,40 +184,27 @@ namespace detail {
         dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_      = param.getDefault("ds_max", ds_max_);
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
-        relax_max_   = param.getDefault("relax_max", relax_max_);
-        max_iter_    = param.getDefault("max_iter", max_iter_);
-        min_iter_    = param.getDefault("min_iter", min_iter_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
-
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
         tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-
-        std::string relaxation_type = param.getDefault("relax_type", std::string("dampen"));
-        if (relaxation_type == "dampen") {
-            relax_type_ = DAMPEN;
-        } else if (relaxation_type == "sor") {
-            relax_type_ = SOR;
-        } else {
-            OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxation_type);
-        }
     }
 
 
     template <class Grid>
     BlackoilPolymerModel<Grid>::
-    BlackoilPolymerModel(const SolverParameter&          param,
-                                       const Grid&                     grid ,
-                                       const BlackoilPropsAdInterface& fluid,
-                                       const DerivedGeology&           geo  ,
-                                       const RockCompressibility*      rock_comp_props,
-                                       const PolymerPropsAd&           polymer_props_ad,
-                                       const Wells*                    wells,
-                                       const NewtonIterationBlackoilInterface&    linsolver,
-                                       const bool has_disgas,
-                                       const bool has_vapoil,
-                                       const bool has_polymer,
-                                       const bool terminal_output)
+    BlackoilPolymerModel(const ModelParameter&          param,
+                         const Grid&                     grid ,
+                         const BlackoilPropsAdInterface& fluid,
+                         const DerivedGeology&           geo  ,
+                         const RockCompressibility*      rock_comp_props,
+                         const PolymerPropsAd&           polymer_props_ad,
+                         const Wells*                    wells,
+                         const NewtonIterationBlackoilInterface&    linsolver,
+                         const bool has_disgas,
+                         const bool has_vapoil,
+                         const bool has_polymer,
+                         const bool terminal_output)
         : grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
@@ -279,6 +260,81 @@ namespace detail {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
+    prepareStep(const double dt,
+                ReservoirState& reservoir_state,
+                WellState& /* well_state */)
+    {
+        pvdt_ = geo_.poreVolume() / dt;
+        if (active_[Gas]) {
+            updatePrimalVariableFromState(reservoir_state);
+        }
+        // Initial max concentration of this time step from PolymerBlackoilState.
+        cmax_ = Eigen::Map<const V>(reservoir_state.maxconcentration().data(), Opm::AutoDiffGrid::numCells(grid_));
+    }
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilPolymerModel<Grid>::
+    afterStep(const double /* dt */,
+              ReservoirState& reservoir_state,
+              WellState& /* well_state */)
+    {
+        computeCmax(reservoir_state);
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilPolymerModel<Grid>::
+    sizeNonLinear() const
+    {
+        return residual_.sizeNonLinear();
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilPolymerModel<Grid>::
+    linearIterationsLastSolve() const
+    {
+        return linsolver_.iterations();
+    }
+
+
+
+
+    template <class Grid>
+    bool
+    BlackoilPolymerModel<Grid>::
+    terminalOutput() const
+    {
+        return terminal_output_;
+    }
+
+
+
+
+    template <class Grid>
+    int
+    BlackoilPolymerModel<Grid>::
+    numPhases() const
+    {
+        return fluid_.numPhases();
+    }
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilPolymerModel<Grid>::
     setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
     {
         const int num_faces = AutoDiffGrid::numFaces(grid_);
@@ -292,89 +348,6 @@ namespace detail {
         for (int ii = 0; ii < num_ifaces; ++ii) {
             threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
         }
-    }
-
-
-
-
-    template <class Grid>
-    int
-    BlackoilPolymerModel<Grid>::
-    step(const double   dt,
-         PolymerBlackoilState& x ,
-         WellStateFullyImplicitBlackoil& xw,
-         const std::vector<double>& polymer_inflow)
-    {
-        const V pvdt = geo_.poreVolume() / dt;
-
-        // Initial max concentration of this time step from PolymerBlackoilState.
-        cmax_ = Eigen::Map<V>(&x.maxconcentration()[0], Opm::AutoDiffGrid::numCells(grid_));
-        if (active_[Gas]) { updatePrimalVariableFromState(x); }
-
-        // For each iteration we store in a vector the norms of the residual of
-        // the mass balance for each active phase, the well flux and the well equations
-        std::vector<std::vector<double>> residual_norms_history;
-
-        assemble(pvdt, x, true, xw, polymer_inflow);
-
-
-        bool converged = false;
-        double omega = 1.;
-
-        residual_norms_history.push_back(computeResidualNorms());
-
-        int          it  = 0;
-        converged = getConvergence(dt,it);
-        const int sizeNonLinear = residual_.sizeNonLinear();
-
-        V dxOld = V::Zero(sizeNonLinear);
-
-        bool isOscillate = false;
-        bool isStagnate = false;
-        const enum RelaxType relaxtype = relaxType();
-        int linearIterations = 0;
-
-        while ((!converged && (it < maxIter())) || (minIter() > it)) {
-            V dx = solveJacobianSystem();
-
-            // store number of linear iterations used
-            linearIterations += linsolver_.iterations();
-
-            detectNewtonOscillations(residual_norms_history, it, relaxRelTol(), isOscillate, isStagnate);
-
-            if (isOscillate) {
-                omega -= relaxIncrement();
-                omega = std::max(omega, relaxMax());
-                if (terminal_output_)
-                {
-                    std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
-                }
-            }
-
-            stablizeNewton(dx, dxOld, omega, relaxtype);
-
-            updateState(dx, x, xw);
-
-            assemble(pvdt, x, false, xw, polymer_inflow);
-
-            residual_norms_history.push_back(computeResidualNorms());
-
-            // increase iteration counter
-            ++it;
-
-            converged = getConvergence(dt,it);
-        }
-
-        if (!converged) {
-            std::cerr << "WARNING: Failed to compute converged solution in " << it << " iterations." << std::endl;
-            return -1; // -1 indicates that the solver has to be restarted
-        }
-
-        linearIterations_ += linearIterations;
-        newtonIterations_ += it;
-        // Update max concentration.
-        computeCmax(x);
-        return linearIterations;
     }
 
 
@@ -452,7 +425,7 @@ namespace detail {
     template <class Grid>
     typename BlackoilPolymerModel<Grid>::SolutionState
     BlackoilPolymerModel<Grid>::constantState(const PolymerBlackoilState& x,
-                                                         const WellStateFullyImplicitBlackoil&     xw) const
+                                              const WellStateFullyImplicitBlackoilPolymer& xw) const
     {
         auto state = variableState(x, xw);
         makeConstantState(state);
@@ -496,7 +469,7 @@ namespace detail {
     template <class Grid>
     typename BlackoilPolymerModel<Grid>::SolutionState
     BlackoilPolymerModel<Grid>::variableState(const PolymerBlackoilState& x,
-                                                         const WellStateFullyImplicitBlackoil&     xw) const
+                                              const WellStateFullyImplicitBlackoilPolymer& xw) const
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -738,7 +711,7 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
-                                                                               const WellStateFullyImplicitBlackoil& xw)
+                                                                    const WellStateFullyImplicitBlackoilPolymer& xw)
     {
         if( ! wellsActive() ) return ;
 
@@ -832,11 +805,9 @@ namespace detail {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
-    assemble(const V&             pvdt,
-             const PolymerBlackoilState& x   ,
-             const bool initial_assembly,
-             WellStateFullyImplicitBlackoil& xw,
-             const std::vector<double>& polymer_inflow)
+    assemble(const PolymerBlackoilState& x,
+             WellStateFullyImplicitBlackoilPolymer& xw,
+             const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
 
@@ -883,7 +854,7 @@ namespace detail {
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
             residual_.material_balance_eq[ phaseIdx ] =
-                pvdt*(rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
+                pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
                 + ops_.div*rq_[phaseIdx].mflux;
         }
 
@@ -913,13 +884,13 @@ namespace detail {
 
         // Add polymer equation.
         if (has_polymer_) {
-            residual_.material_balance_eq[poly_pos_] = pvdt*(rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
+            residual_.material_balance_eq[poly_pos_] = pvdt_ * (rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
         }
 
         // Add contribution from wells and set up the well equations.
         V aliveWells;
-        addWellEq(state, xw, aliveWells, polymer_inflow);
+        addWellEq(state, xw, aliveWells);
         addWellControlEq(state, xw, aliveWells);
     }
 
@@ -929,9 +900,8 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::addWellEq(const SolutionState& state,
-                                                          WellStateFullyImplicitBlackoil& xw,
-                                                          V& aliveWells,
-                                                          const std::vector<double>& polymer_inflow)
+                                               WellStateFullyImplicitBlackoilPolymer& xw,
+                                               V& aliveWells)
     {
         if( ! wellsActive() ) return ;
 
@@ -1065,7 +1035,7 @@ namespace detail {
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
             const ADB mc = computeMc(state);
-            const V polyin = Eigen::Map<const V>(&polymer_inflow[0], nc);
+            const V polyin = Eigen::Map<const V>(xw.polymerInflow().data(), nc);
             const V poly_in_perf = subset(polyin, well_cells);
             const V poly_mc_perf = subset(mc, well_cells).value();
             residual_.material_balance_eq[poly_pos_] -= superset(cq_ps[pu.phase_pos[Water]] * poly_mc_perf
@@ -1183,7 +1153,7 @@ namespace detail {
 
 
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
+    void BlackoilPolymerModel<Grid>::updateWellControls(WellStateFullyImplicitBlackoilPolymer& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1259,8 +1229,8 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::addWellControlEq(const SolutionState& state,
-                                                                 const WellStateFullyImplicitBlackoil& xw,
-                                                                 const V& aliveWells)
+                                                      const WellStateFullyImplicitBlackoilPolymer& xw,
+                                                      const V& aliveWells)
     {
         if( ! wellsActive() ) return;
 
@@ -1359,8 +1329,8 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::updateState(const V& dx,
-                                                            PolymerBlackoilState& state,
-                                                            WellStateFullyImplicitBlackoil& well_state)
+                                                 PolymerBlackoilState& state,
+                                                 WellStateFullyImplicitBlackoilPolymer& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
@@ -1836,30 +1806,6 @@ namespace detail {
 
 
     template <class Grid>
-    double
-    BlackoilPolymerModel<Grid>::residualNorm() const
-    {
-        double globalNorm = 0;
-        std::vector<ADB>::const_iterator quantityIt = residual_.material_balance_eq.begin();
-        const std::vector<ADB>::const_iterator endQuantityIt = residual_.material_balance_eq.end();
-        for (; quantityIt != endQuantityIt; ++quantityIt) {
-            const double quantityResid = (*quantityIt).value().matrix().norm();
-            if (!std::isfinite(quantityResid)) {
-                const int trouble_phase = quantityIt - residual_.material_balance_eq.begin();
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual in material balance equation "
-                          << trouble_phase);
-            }
-            globalNorm = std::max(globalNorm, quantityResid);
-        }
-        globalNorm = std::max(globalNorm, residual_.well_flux_eq.value().matrix().norm());
-        globalNorm = std::max(globalNorm, residual_.well_eq.value().matrix().norm());
-
-        return globalNorm;
-    }
-
-
-    template <class Grid>
     std::vector<double>
     BlackoilPolymerModel<Grid>::computeResidualNorms() const
     {
@@ -1895,73 +1841,8 @@ namespace detail {
         return residualNorms;
     }
 
-    template <class Grid>
-    void
-    BlackoilPolymerModel<Grid>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                                    const int it, const double relaxRelTol,
-                                                                    bool& oscillate, bool& stagnate) const
-    {
-        // The detection of oscillation in two primary variable results in the report of the detection
-        // of oscillation for the solver.
-        // Only the saturations are used for oscillation detection for the black oil model.
-        // Stagnate is not used for any treatment here.
-
-        if ( it < 2 ) {
-            oscillate = false;
-            stagnate = false;
-            return;
-        }
-
-        stagnate = true;
-        int oscillatePhase = 0;
-        const std::vector<double>& F0 = residual_history[it];
-        const std::vector<double>& F1 = residual_history[it - 1];
-        const std::vector<double>& F2 = residual_history[it - 2];
-        for (int p= 0; p < fluid_.numPhases(); ++p){
-            const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-            const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
-
-            oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
-
-            // Process is 'stagnate' unless at least one phase
-            // exhibits significant residual change.
-            stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
-        }
-
-        oscillate = (oscillatePhase > 1);
-    }
 
 
-    template <class Grid>
-    void
-    BlackoilPolymerModel<Grid>::stablizeNewton(V& dx, V& dxOld, const double omega,
-                                                          const RelaxType relax_type) const
-    {
-        // The dxOld is updated with dx.
-        // If omega is equal to 1., no relaxtion will be appiled.
-
-        const V tempDxOld = dxOld;
-        dxOld = dx;
-
-        switch (relax_type) {
-            case DAMPEN:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega;
-                return;
-            case SOR:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega + (1.-omega)*tempDxOld;
-                return;
-            default:
-                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
-        }
-
-        return;
-    }
 
     template <class Grid>
     double
