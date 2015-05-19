@@ -28,7 +28,6 @@
 #include <exception>
 
 #if HAVE_MPI && HAVE_DUNE_ISTL
-
 #include "mpi.h"
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/interface.hh>
@@ -38,6 +37,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <numeric>
 #include <type_traits>
 
 namespace Opm
@@ -112,10 +112,21 @@ public:
     /// \brief Copy the information stored to the specified objects.
     /// \param[out] indexSet The object to store the index set in.
     /// \param[out] remoteIndices The object to store the remote indices information in.
-    void copyValuesTo(ParallelIndexSet& indexSet, RemoteIndices& remoteIndices) const
+    void copyValuesTo(ParallelIndexSet& indexSet, RemoteIndices& remoteIndices,
+                      std::size_t local_component_size=0, std::size_t no_components=1) const
     {
+        ParallelIndexSet::GlobalIndex max_gi  = local_component_size;
+        if (no_components>1)
+        {
+            // component the max global index
+            for( auto i = indexSet_->begin(), end = indexSet_->end(); i != end; ++i )
+                max_gi = std::max(max_gi, i->global());
+            ++max_gi;
+            max_gi = communicator_.max(max_gi);
+        }
         indexSet.beginResize();
-        IndexSetInserter<ParallelIndexSet> inserter(indexSet);
+        IndexSetInserter<ParallelIndexSet> inserter(indexSet, max_gi,
+                                                    local_component_size, no_components);
         std::for_each(indexSet_->begin(), indexSet_->end(), inserter);
         indexSet.endResize();
         remoteIndices.rebuild<false>();
@@ -317,19 +328,31 @@ private:
     {
     public:
         typedef T ParallelIndexSet;
+        typedef typename ParallelIndexSet::LocalIndex LocalIndex;
+        typedef typename ParallelIndexSet::GlobalIndex GlobalIndex;
 
-        IndexSetInserter(ParallelIndexSet& indexSet)
-        : indexSet_(&indexSet)
+        IndexSetInserter(ParallelIndexSet& indexSet, const GlobalIndex& component_size,
+                         std::size_t local_component_size, std::size_t no_components)
+            : indexSet_(&indexSet), component_size_(component_size),
+              local_component_size_(local_component_size),
+              no_components_(no_components)
         {}
         void operator()(const typename ParallelIndexSet::IndexPair& pair)
         {
-            indexSet_->add(pair.global(), pair.local());
+            for(std::size_t i = 0; i < no_components_; i++)
+                indexSet_->add(i * component_size_ + pair.global(),
+                               LocalIndex(i * local_component_size_  + pair.local(),
+                                          pair.local().attribute()));
         }
-
     private:
         ParallelIndexSet* indexSet_;
+        /// \brief The global number of unknowns per component/equation.
+        GlobalIndex component_size_;
+        /// \brief The local number of unknowns per component/equation.
+        std::size_t local_component_size_;
+        /// \brief The number of components/equations.
+        std::size_t no_components_;
     };
-
     std::shared_ptr<ParallelIndexSet> indexSet_;
     std::shared_ptr<RemoteIndices> remoteIndices_;
     Dune::CollectiveCommunication<MPI_Comm> communicator_;
