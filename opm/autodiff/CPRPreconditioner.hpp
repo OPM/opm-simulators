@@ -386,7 +386,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
               comm_(comm)
         {
             // create appropriate preconditioner for elliptic system
-            createPreconditioner( param_.cpr_use_amg_, comm );
+            createEllipticPreconditioner( param_.cpr_use_amg_, comm );
 
             if( param_.cpr_ilu_n_ == 0 ) {
                 pre_ = createILU0Ptr<M,X>( A_, param_.cpr_relax_, comm );
@@ -537,7 +537,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
         //! \brief The information about the parallelization
         const P& comm_;
      protected:
-        void createPreconditioner( const bool amg, const P& comm )
+        void createEllipticPreconditioner( const bool amg, const P& comm )
         {
             if( amg )
             {
