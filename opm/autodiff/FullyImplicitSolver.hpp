@@ -21,27 +21,14 @@
 #ifndef OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
 #define OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
 
-// #include <cassert>
-
 #include <opm/autodiff/AutoDiffBlock.hpp>
-// #include <opm/autodiff/AutoDiffHelpers.hpp>
-// #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-// #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-// #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-
-// #include <array>
-
-// struct UnstructuredGrid;
-// struct Wells;
+#include <opm/autodiff/NewtonRelaxation.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm {
 
-    namespace parameter { class ParameterGroup; }
-    // class DerivedGeology;
-    // class RockCompressibility;
-    // class NewtonIterationBlackoilInterface;
 
-    /// A fully implicit solver suitable for general models.
+    /// A fully implicit solver class suitable for general models.
     template <class PhysicalModel>
     class FullyImplicitSolver
     {

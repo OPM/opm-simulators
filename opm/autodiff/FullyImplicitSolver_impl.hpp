@@ -24,7 +24,6 @@
 #define OPM_FULLYIMPLICITSOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/autodiff/FullyImplicitSolver.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm
 {
