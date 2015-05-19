@@ -1226,8 +1226,8 @@ namespace detail {
 
     template <class Grid>
     void BlackoilModel<Grid>::updateState(const V& dx,
-                                                     BlackoilState& state,
-                                                     WellStateFullyImplicitBlackoil& well_state)
+                                          BlackoilState& reservoir_state,
+                                          WellStateFullyImplicitBlackoil& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
@@ -1276,16 +1276,16 @@ namespace detail {
 
         // Pressure update.
         const double dpmaxrel = dpMaxRel();
-        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V p_old = Eigen::Map<const V>(&reservoir_state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
-        std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+        std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
 
 
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        const DataBlock s_old = Eigen::Map<const DataBlock>(& reservoir_state.saturation()[0], nc, np);
         const double dsmax = dsMax();
 
         V so;
@@ -1363,19 +1363,19 @@ namespace detail {
         so = so / sumSat;
         sg = sg / sumSat;
 
-        // Update the state
+        // Update the reservoir_state
         for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+            reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
         }
 
         for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+            reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
         }
 
         if (active_[ Oil ]) {
             const int pos = pu.phase_pos[ Oil ];
             for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = so[c];
+                reservoir_state.saturation()[c*np + pos] = so[c];
             }
         }
 
@@ -1383,14 +1383,14 @@ namespace detail {
         const double drmaxrel = drMaxRel();
         V rs;
         if (has_disgas_) {
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
             const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
         if (has_vapoil_) {
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = isRv * dxvar;
             const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
             rv = rv_old - drv_limited;
@@ -1411,7 +1411,7 @@ namespace detail {
             auto hasGas = (sg > 0 && isRs == 0);
 
             // Set oil saturated if previous rs is sufficiently large
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasGas || gasVaporized;
             for (int c = 0; c < nc; ++c) {
@@ -1437,7 +1437,7 @@ namespace detail {
             auto hasOil = (so > 0 && isRv == 0);
 
             // Set oil saturated if previous rv is sufficiently large
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
@@ -1450,13 +1450,13 @@ namespace detail {
 
         }
 
-        // Update the state
+        // Update the reservoir_state
         if (has_disgas_) {
-            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+            std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
         }
 
         if (has_vapoil_) {
-            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
+            std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
         if( wellsActive() )

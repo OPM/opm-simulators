@@ -44,10 +44,10 @@ namespace Opm {
     class WellStateFullyImplicitBlackoil;
 
 
-    /// A fully implicit solver suitable for general .
+    /// A model implementation for three-phase black oil.
     ///
     /// The simulator is capable of handling three-phase problems
-    /// where gas can be dissolved in oil (but not vice versa). It
+    /// where gas can be dissolved in oil and vice versa. It
     /// uses an industry-standard TPFA discretization with per-phase
     /// upwind weighting of mobilities.
     ///
@@ -64,19 +64,16 @@ namespace Opm {
         typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
 
-        // the Newton relaxation type
-        enum RelaxType { DAMPEN, SOR };
-
-        // class holding the solver parameters
+        /// Model-specific solver parameters.
         struct ModelParameter
         {
-            double                          dp_max_rel_;
-            double                          ds_max_;
-            double                          dr_max_rel_;
-            double                          max_residual_allowed_;
-            double                          tolerance_mb_;
-            double                          tolerance_cnv_;
-            double                          tolerance_wells_;
+            double dp_max_rel_;
+            double ds_max_;
+            double dr_max_rel_;
+            double max_residual_allowed_;
+            double tolerance_mb_;
+            double tolerance_cnv_;
+            double tolerance_wells_;
 
             ModelParameter( const parameter::ParameterGroup& param );
             ModelParameter();
@@ -86,7 +83,7 @@ namespace Opm {
 
         // ---------  Public methods  ---------
 
-        /// Construct a solver. It will retain references to the
+        /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
         /// \param[in] param            parameters
@@ -96,6 +93,9 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
+        /// \param[in] has_disgas       turn on dissolved gas
+        /// \param[in] has_vapoil       turn on vaporized oil feature
+        /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModel(const ModelParameter&          param,
                       const Grid&                     grid ,
                       const BlackoilPropsAdInterface& fluid,
@@ -126,13 +126,12 @@ namespace Opm {
                          const WellState& well_state);
 
         /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in] dt                time step size
-        /// \param[in] reservoir_state   reservoir state variables
-        /// \param[in] well_state        well state variables
-        void
-        assemble(const BlackoilState& reservoir_state,
-                 WellStateFullyImplicitBlackoil& well_state,
-                 const bool initial_assembly);
+        /// \param[in]      reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
+        void assemble(const BlackoilState& reservoir_state,
+                      WellStateFullyImplicitBlackoil& well_state,
+                      const bool initial_assembly);
 
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
@@ -150,8 +149,12 @@ namespace Opm {
         /// r is the residual.
         V solveJacobianSystem() const;
 
+        /// Apply an update to the primary variables, chopped if appropriate.
+        /// \param[in]      dx                updates to apply to primary variables
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
         void updateState(const V& dx,
-                         BlackoilState& state,
+                         BlackoilState& reservoir_state,
                          WellStateFullyImplicitBlackoil& well_state);
 
         /// Return true if output to cout is wanted.
@@ -159,6 +162,8 @@ namespace Opm {
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
+        /// \param[in]   dt          timestep length
+        /// \param[in]   iteration   current iteration number
         bool getConvergence(const double dt, const int iteration);
 
         /// The number of active phases in the model.

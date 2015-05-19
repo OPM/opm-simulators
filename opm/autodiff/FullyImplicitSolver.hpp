@@ -22,7 +22,6 @@
 #define OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/NewtonRelaxation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 namespace Opm {
