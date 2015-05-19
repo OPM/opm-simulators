@@ -113,10 +113,10 @@ public:
     /// \param[out] indexSet The object to store the index set in.
     /// \param[out] remoteIndices The object to store the remote indices information in.
     void copyValuesTo(ParallelIndexSet& indexSet, RemoteIndices& remoteIndices,
-                      std::size_t local_component_size=0, std::size_t no_components=1) const
+                      std::size_t local_component_size=0, std::size_t num_components=1) const
     {
         ParallelIndexSet::GlobalIndex max_gi  = local_component_size;
-        if (no_components>1)
+        if ( num_components > 1 )
         {
             // component the max global index
             for( auto i = indexSet_->begin(), end = indexSet_->end(); i != end; ++i )
@@ -126,7 +126,7 @@ public:
         }
         indexSet.beginResize();
         IndexSetInserter<ParallelIndexSet> inserter(indexSet, max_gi,
-                                                    local_component_size, no_components);
+                                                    local_component_size, num_components);
         std::for_each(indexSet_->begin(), indexSet_->end(), inserter);
         indexSet.endResize();
         remoteIndices.rebuild<false>();
@@ -332,14 +332,14 @@ private:
         typedef typename ParallelIndexSet::GlobalIndex GlobalIndex;
 
         IndexSetInserter(ParallelIndexSet& indexSet, const GlobalIndex& component_size,
-                         std::size_t local_component_size, std::size_t no_components)
+                         std::size_t local_component_size, std::size_t num_components)
             : indexSet_(&indexSet), component_size_(component_size),
               local_component_size_(local_component_size),
-              no_components_(no_components)
+              num_components_(num_components)
         {}
         void operator()(const typename ParallelIndexSet::IndexPair& pair)
         {
-            for(std::size_t i = 0; i < no_components_; i++)
+            for(std::size_t i = 0; i < num_components_; i++)
                 indexSet_->add(i * component_size_ + pair.global(),
                                LocalIndex(i * local_component_size_  + pair.local(),
                                           pair.local().attribute()));
@@ -351,7 +351,7 @@ private:
         /// \brief The local number of unknowns per component/equation.
         std::size_t local_component_size_;
         /// \brief The number of components/equations.
-        std::size_t no_components_;
+        std::size_t num_components_;
     };
     std::shared_ptr<ParallelIndexSet> indexSet_;
     std::shared_ptr<RemoteIndices> remoteIndices_;
