@@ -19,10 +19,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp>
-#include <opm/polymer/fullyimplicit/FullyImplicitBlackoilPolymerSolver.hpp>
+#include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 
@@ -33,6 +32,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/NewtonSolver.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -247,7 +247,14 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typename FullyImplicitBlackoilPolymerSolver<T>::SolverParameter solverParam( param_ );
+        typedef T Grid;
+        typedef BlackoilPolymerModel<Grid> Model;
+        // typedef typename Model::ModelParameter ModelParam;
+        // ModelParam modelParam( param_ );
+        // typedef NewtonSolver<Model> Solver;
+        // typedef typename Solver::SolverParameter SolverParam;
+        typedef typename Model::SolverParameter SolverParam;
+        SolverParam solverParam( param_ );
 
         //adaptive time stepping
         //        std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -323,7 +330,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitBlackoilPolymerSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, polymer_props_, wells, solver_, has_disgas_, has_vapoil_, has_polymer_, terminal_output_);
+            Model solver(solverParam, grid_, props_, geo_, rock_comp_props_, polymer_props_, wells, solver_, has_disgas_, has_vapoil_, has_polymer_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
                 solver.setThresholdPressures(threshold_pressures_by_face_);
             }
