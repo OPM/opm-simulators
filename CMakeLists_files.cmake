@@ -107,11 +107,11 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver.hpp
 	opm/autodiff/FullyImplicitBlackoilSolver_impl.hpp
-	opm/autodiff/FullyImplicitSolver.hpp
-	opm/autodiff/FullyImplicitSolver_impl.hpp
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
+	opm/autodiff/NewtonSolver.hpp
+	opm/autodiff/NewtonSolver_impl.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp

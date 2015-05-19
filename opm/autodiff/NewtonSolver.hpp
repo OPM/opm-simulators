@@ -18,8 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
+#ifndef OPM_NEWTONSOLVER_HEADER_INCLUDED
+#define OPM_NEWTONSOLVER_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -27,9 +27,9 @@
 namespace Opm {
 
 
-    /// A fully implicit solver class suitable for general models.
+    /// A Newton solver class suitable for general fully-implicit models.
     template <class PhysicalModel>
-    class FullyImplicitSolver
+    class NewtonSolver
     {
     public:
         // ---------  Types and enums  ---------
@@ -65,8 +65,8 @@ namespace Opm {
         /// Construct solver for a given model.
         /// \param[in]      param   parameters controlling nonlinear Newton process
         /// \param[in, out] model   physical simulation model
-        explicit FullyImplicitSolver(const SolverParameter& param,
-                                     PhysicalModel& model);
+        explicit NewtonSolver(const SolverParameter& param,
+                              PhysicalModel& model);
 
         /// Take a single forward step, after which the states will be modified
         /// according to the physical model.
@@ -106,6 +106,6 @@ namespace Opm {
     };
 } // namespace Opm
 
-#include "FullyImplicitSolver_impl.hpp"
+#include "NewtonSolver_impl.hpp"
 
-#endif // OPM_FULLYIMPLICITSOLVER_HEADER_INCLUDED
+#endif // OPM_NEWTONSOLVER_HEADER_INCLUDED

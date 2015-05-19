@@ -24,7 +24,7 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/FullyImplicitSolver.hpp>
+#include <opm/autodiff/NewtonSolver.hpp>
 #include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -236,7 +236,7 @@ namespace Opm
         typedef BlackoilModel<Grid> Model;
         typedef typename Model::ModelParameter ModelParam;
         ModelParam modelParam( param_ );
-        typedef FullyImplicitSolver<Model> Solver;
+        typedef NewtonSolver<Model> Solver;
         typedef typename Solver::SolverParameter SolverParam;
         SolverParam solverParam( param_ );
 

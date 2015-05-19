@@ -20,16 +20,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITSOLVER_IMPL_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITSOLVER_IMPL_HEADER_INCLUDED
+#ifndef OPM_NEWTONSOLVER_IMPL_HEADER_INCLUDED
+#define OPM_NEWTONSOLVER_IMPL_HEADER_INCLUDED
 
-#include <opm/autodiff/FullyImplicitSolver.hpp>
+#include <opm/autodiff/NewtonSolver.hpp>
 
 namespace Opm
 {
     template <class PhysicalModel>
-    FullyImplicitSolver<PhysicalModel>::FullyImplicitSolver(const SolverParameter& param,
-                                                            PhysicalModel& model)
+    NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameter& param,
+                                              PhysicalModel& model)
         : param_(param),
           model_(model),
           newtonIterations_(0),
@@ -38,13 +38,13 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    unsigned int FullyImplicitSolver<PhysicalModel>::newtonIterations () const
+    unsigned int NewtonSolver<PhysicalModel>::newtonIterations () const
     {
         return newtonIterations_;
     }
 
     template <class PhysicalModel>
-    unsigned int FullyImplicitSolver<PhysicalModel>::linearIterations () const
+    unsigned int NewtonSolver<PhysicalModel>::linearIterations () const
     {
         return linearIterations_;
     }
@@ -52,7 +52,7 @@ namespace Opm
 
     template <class PhysicalModel>
     int
-    FullyImplicitSolver<PhysicalModel>::
+    NewtonSolver<PhysicalModel>::
     step(const double dt,
          ReservoirState& reservoir_state,
          WellState& well_state)
@@ -128,7 +128,7 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    void FullyImplicitSolver<PhysicalModel>::SolverParameter::
+    void NewtonSolver<PhysicalModel>::SolverParameter::
     reset()
     {
         // default values for the solver parameters
@@ -141,7 +141,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    FullyImplicitSolver<PhysicalModel>::SolverParameter::
+    NewtonSolver<PhysicalModel>::SolverParameter::
     SolverParameter()
     {
         // set default values
@@ -149,7 +149,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    FullyImplicitSolver<PhysicalModel>::SolverParameter::
+    NewtonSolver<PhysicalModel>::SolverParameter::
     SolverParameter( const parameter::ParameterGroup& param )
     {
         // set default values
@@ -172,9 +172,9 @@ namespace Opm
 
     template <class PhysicalModel>
     void
-    FullyImplicitSolver<PhysicalModel>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                             const int it, const double relaxRelTol,
-                                                             bool& oscillate, bool& stagnate) const
+    NewtonSolver<PhysicalModel>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
+                                                          const int it, const double relaxRelTol,
+                                                          bool& oscillate, bool& stagnate) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
         // of oscillation for the solver.
@@ -209,8 +209,8 @@ namespace Opm
 
     template <class PhysicalModel>
     void
-    FullyImplicitSolver<PhysicalModel>::stabilizeNewton(V& dx, V& dxOld, const double omega,
-                                                        const RelaxType relax_type) const
+    NewtonSolver<PhysicalModel>::stabilizeNewton(V& dx, V& dxOld, const double omega,
+                                                 const RelaxType relax_type) const
     {
         // The dxOld is updated with dx.
         // If omega is equal to 1., no relaxtion will be appiled.
