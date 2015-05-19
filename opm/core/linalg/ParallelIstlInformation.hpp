@@ -113,14 +113,16 @@ public:
     /// \param[out] indexSet The object to store the index set in.
     /// \param[out] remoteIndices The object to store the remote indices information in.
     void copyValuesTo(ParallelIndexSet& indexSet, RemoteIndices& remoteIndices,
-                      std::size_t local_component_size=0, std::size_t num_components=1) const
+                      std::size_t local_component_size = 0, std::size_t num_components = 1) const
     {
         ParallelIndexSet::GlobalIndex max_gi  = local_component_size;
         if ( num_components > 1 )
         {
             // component the max global index
             for( auto i = indexSet_->begin(), end = indexSet_->end(); i != end; ++i )
+            {
                 max_gi = std::max(max_gi, i->global());
+            }
             ++max_gi;
             max_gi = communicator_.max(max_gi);
         }
