@@ -156,9 +156,6 @@ namespace Opm
         setInflowValues(deck, eclipseState, currentStep);
         
         std::unordered_map<std::string, double>::const_iterator map_it;
-        for (map_it = wellPolymerRate_.begin(); map_it != wellPolymerRate_.end(); ++map_it) {
-            std::cout << map_it->first << map_it->second << std::endl;
-        }
         // Extract concentrations and put into cell->concentration map.
         std::map<int, double> perfcell_conc;
         for (map_it = wellPolymerRate_.begin(); map_it != wellPolymerRate_.end(); ++map_it) {
