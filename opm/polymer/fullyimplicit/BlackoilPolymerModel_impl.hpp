@@ -162,7 +162,6 @@ namespace detail {
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 5.0e-1;
-
     }
 
     template <class Grid>
@@ -230,8 +229,6 @@ namespace detail {
                         ADB::null(),
                         ADB::null() } )
         , terminal_output_ (terminal_output)
-        , newtonIterations_( 0 )
-        , linearIterations_( 0 )
     {
 #if HAVE_MPI
         if ( terminal_output_ ) {
@@ -455,7 +452,7 @@ namespace detail {
         }
         state.qs = ADB::constant(state.qs.value());
         state.bhp = ADB::constant(state.bhp.value());
-        assert(state.canonical_phase_pressures.size() == Opm::BlackoilPhases::MaxNumPhases);
+        assert(state.canonical_phase_pressures.size() == static_cast<std::size_t>(Opm::BlackoilPhases::MaxNumPhases));
         for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
             ADB& pp = state.canonical_phase_pressures[canphase];
             pp = ADB::constant(pp.value());
@@ -805,18 +802,18 @@ namespace detail {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
-    assemble(const PolymerBlackoilState& x,
-             WellStateFullyImplicitBlackoilPolymer& xw,
+    assemble(const PolymerBlackoilState& reservoir_state,
+             WellStateFullyImplicitBlackoilPolymer& well_state,
              const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        updateWellControls(xw);
+        updateWellControls(well_state);
 
         // Create the primary variables.
-        SolutionState state = variableState(x, xw);
+        SolutionState state = variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
             // Create the (constant, derivativeless) initial state.
@@ -825,7 +822,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             computeAccum(state0, 0);
-            computeWellConnectionPressures(state0, xw);
+            computeWellConnectionPressures(state0, well_state);
         }
 
         // DISKVAL(state.pressure);
@@ -890,8 +887,8 @@ namespace detail {
 
         // Add contribution from wells and set up the well equations.
         V aliveWells;
-        addWellEq(state, xw, aliveWells);
-        addWellControlEq(state, xw, aliveWells);
+        addWellEq(state, well_state, aliveWells);
+        addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -1329,7 +1326,7 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::updateState(const V& dx,
-                                                 PolymerBlackoilState& state,
+                                                 PolymerBlackoilState& reservoir_state,
                                                  WellStateFullyImplicitBlackoilPolymer& well_state)
     {
         using namespace Opm::AutoDiffGrid;
@@ -1382,16 +1379,16 @@ namespace detail {
 
         // Pressure update.
         const double dpmaxrel = dpMaxRel();
-        const V p_old = Eigen::Map<const V>(&state.pressure()[0], nc, 1);
+        const V p_old = Eigen::Map<const V>(&reservoir_state.pressure()[0], nc, 1);
         const V absdpmax = dpmaxrel*p_old.abs();
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
-        std::copy(&p[0], &p[0] + nc, state.pressure().begin());
+        std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
 
 
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const DataBlock s_old = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        const DataBlock s_old = Eigen::Map<const DataBlock>(& reservoir_state.saturation()[0], nc, np);
         const double dsmax = dsMax();
 
         V so;
@@ -1469,19 +1466,19 @@ namespace detail {
         so = so / sumSat;
         sg = sg / sumSat;
 
-        // Update the state
+        // Update the reservoir_state
         for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+            reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
         }
 
         for (int c = 0; c < nc; ++c) {
-            state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+            reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
         }
 
         if (active_[ Oil ]) {
             const int pos = pu.phase_pos[ Oil ];
             for (int c = 0; c < nc; ++c) {
-                state.saturation()[c*np + pos] = so[c];
+                reservoir_state.saturation()[c*np + pos] = so[c];
             }
         }
 
@@ -1489,14 +1486,14 @@ namespace detail {
         const double drmaxrel = drMaxRel();
         V rs;
         if (has_disgas_) {
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             const V drs = isRs * dxvar;
             const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
         if (has_vapoil_) {
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = isRv * dxvar;
             const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
             rv = rv_old - drv_limited;
@@ -1517,7 +1514,7 @@ namespace detail {
             auto hasGas = (sg > 0 && isRs == 0);
 
             // Set oil saturated if previous rs is sufficiently large
-            const V rs_old = Eigen::Map<const V>(&state.gasoilratio()[0], nc);
+            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasGas || gasVaporized;
             for (int c = 0; c < nc; ++c) {
@@ -1543,7 +1540,7 @@ namespace detail {
             auto hasOil = (so > 0 && isRv == 0);
 
             // Set oil saturated if previous rv is sufficiently large
-            const V rv_old = Eigen::Map<const V>(&state.rv()[0], nc);
+            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
@@ -1556,20 +1553,20 @@ namespace detail {
 
         }
 
-        // Update the state
+        // Update the reservoir_state
         if (has_disgas_) {
-            std::copy(&rs[0], &rs[0] + nc, state.gasoilratio().begin());
+            std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
         }
 
         if (has_vapoil_) {
-            std::copy(&rv[0], &rv[0] + nc, state.rv().begin());
+            std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
         //Polymer concentration updates.
         if (has_polymer_) {
-            const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
+            const V c_old = Eigen::Map<const V>(&reservoir_state.concentration()[0], nc, 1);
             const V c = (c_old - dc).max(zero);
-            std::copy(&c[0], &c[0] + nc, state.concentration().begin());
+            std::copy(&c[0], &c[0] + nc, reservoir_state.concentration().begin());
         }
         
         if( wellsActive() )
