@@ -156,21 +156,26 @@ namespace Opm
         setInflowValues(deck, eclipseState, currentStep);
         
         std::unordered_map<std::string, double>::const_iterator map_it;
+        for (map_it = wellPolymerRate_.begin(); map_it != wellPolymerRate_.end(); ++map_it) {
+            std::cout << map_it->first << map_it->second << std::endl;
+        }
         // Extract concentrations and put into cell->concentration map.
         std::map<int, double> perfcell_conc;
-        for (size_t i = 0; i < wellPolymerRate_.size(); ++i) {
+        for (map_it = wellPolymerRate_.begin(); map_it != wellPolymerRate_.end(); ++map_it) {
             // Only use well name and polymer concentration.
             // That is, we ignore salt concentration and group
             // names.
             int wix = 0;
             for (; wix < wells.number_of_wells; ++wix) {
-                map_it = wellPolymerRate_.find(wells.name[wix]);
-                if (map_it != wellPolymerRate_.end()) {
+                if (wellPolymerRate_.count(wells.name[wix]) > 0) {
                     break;
                 }
             }
             if (wix == wells.number_of_wells) {
-                OPM_THROW(std::runtime_error, "Could not find a match for well from WPOLYMER.");
+                OPM_THROW(std::runtime_error, "Could not find a match for well "
+                          << map_it->first
+                          << " from WPOLYMER.");
+    
             }
             for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
                 const int perf_cell = wells.well_cells[j];
