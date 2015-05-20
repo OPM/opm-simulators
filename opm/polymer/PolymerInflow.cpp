@@ -165,11 +165,12 @@ namespace Opm
             int wix = 0;
             for (; wix < wells.number_of_wells; ++wix) {
                 map_it = wellPolymerRate_.find(wells.name[wix]);
-                if (map_it == wellPolymerRate_.end()) {
-                    OPM_THROW(std::runtime_error, "Could not find a match for well from WPOLYMER.");
-                } else {
+                if (map_it != wellPolymerRate_.end()) {
                     break;
                 }
+            }
+            if (wix == wells.number_of_wells) {
+                OPM_THROW(std::runtime_error, "Could not find a match for well from WPOLYMER.");
             }
             for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
                 const int perf_cell = wells.well_cells[j];
