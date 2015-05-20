@@ -1,6 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Statoil AS
   Copyright 2015 NTNU
   Copyright 2015 IRIS AS
 
