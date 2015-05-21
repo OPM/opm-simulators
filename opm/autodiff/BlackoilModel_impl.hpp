@@ -52,21 +52,21 @@
 //#include <fstream>
 
 // A debugging utility.
-#define DUMP(foo)                                                       \
+#define OPM_AD_DUMP(foo)                                                \
     do {                                                                \
         std::cout << "==========================================\n"     \
                   << #foo ":\n"                                         \
                   << collapseJacs(foo) << std::endl;                    \
     } while (0)
 
-#define DUMPVAL(foo)                                                    \
+#define OPM_AD_DUMPVAL(foo)                                             \
     do {                                                                \
         std::cout << "==========================================\n"     \
                   << #foo ":\n"                                         \
                   << foo.value() << std::endl;                          \
     } while (0)
 
-#define DISKVAL(foo)                                                    \
+#define OPM_AD_DISKVAL(foo)                                             \
     do {                                                                \
         std::ofstream os(#foo);                                         \
         os.precision(16);                                               \
@@ -609,8 +609,8 @@ namespace detail {
                 const int pos = pu.phase_pos[ phase ];
                 rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond, cells_);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
-                // DUMP(rq_[pos].b);
-                // DUMP(rq_[pos].accum[aix]);
+                // OPM_AD_DUMP(rq_[pos].b);
+                // OPM_AD_DUMP(rq_[pos].accum[aix]);
             }
         }
 
@@ -625,7 +625,7 @@ namespace detail {
 
             rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
             rq_[po].accum[aix] += state.rv * accum_gas_copy;
-            //DUMP(rq_[pg].accum[aix]);
+            // OPM_AD_DUMP(rq_[pg].accum[aix]);
         }
     }
 
@@ -752,14 +752,14 @@ namespace detail {
             computeWellConnectionPressures(state0, well_state);
         }
 
-        // DISKVAL(state.pressure);
-        // DISKVAL(state.saturation[0]);
-        // DISKVAL(state.saturation[1]);
-        // DISKVAL(state.saturation[2]);
-        // DISKVAL(state.rs);
-        // DISKVAL(state.rv);
-        // DISKVAL(state.qs);
-        // DISKVAL(state.bhp);
+        // OPM_AD_DISKVAL(state.pressure);
+        // OPM_AD_DISKVAL(state.saturation[0]);
+        // OPM_AD_DISKVAL(state.saturation[1]);
+        // OPM_AD_DISKVAL(state.saturation[2]);
+        // OPM_AD_DISKVAL(state.rs);
+        // OPM_AD_DISKVAL(state.rv);
+        // OPM_AD_DISKVAL(state.qs);
+        // OPM_AD_DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
 
@@ -803,7 +803,7 @@ namespace detail {
             residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
             residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
 
-            // DUMP(residual_.material_balance_eq[ Gas ]);
+            // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
 
         }
 
@@ -1201,7 +1201,7 @@ namespace detail {
         }
         Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
         residual_.well_eq = alive_selector.select(residual_.well_eq, rate_summer * state.qs);
-        // DUMP(residual_.well_eq);
+        // OPM_AD_DUMP(residual_.well_eq);
     }
 
 
@@ -1652,8 +1652,8 @@ namespace detail {
         const ADB& b       = rq_[ actph ].b;
         const ADB& mob     = rq_[ actph ].mob;
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
-        // DUMP(rq_[ actph ].mob);
-        // DUMP(rq_[ actph ].mflux);
+        // OPM_AD_DUMP(rq_[ actph ].mob);
+        // OPM_AD_DUMP(rq_[ actph ].mflux);
     }
 
 
