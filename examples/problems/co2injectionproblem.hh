@@ -90,11 +90,9 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Ewoms::Co2Injection::CO2Tables CO2Tables;
 
-    static const bool useComplexRelations = false;
-
 public:
     typedef Opm::FluidSystems::BrineCO2<Scalar, CO2Tables> type;
-    // typedef Opm::FluidSystems::H2ON2<Scalar, useComplexRelations> type;
+    //typedef Opm::FluidSystems::H2ON2<Scalar, /*useComplexRelations=*/false> type;
 };
 
 // Set the material Law
@@ -108,8 +106,7 @@ private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
-    Traits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
 
     // define the material law which is parameterized by effective
     // saturations
@@ -195,8 +192,9 @@ class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     enum { dim = GridView::dimension };
@@ -222,6 +220,7 @@ class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, HeatConductionLaw) HeatConductionLaw;
     typedef typename HeatConductionLaw::Params HeatConductionLawParams;
 
+    typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -476,15 +475,15 @@ public:
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             fs.setSaturation(gasPhaseIdx, 1.0);
-            fs.setPressure(gasPhaseIdx,
-                           context.intensiveQuantities(spaceIdx, timeIdx).fluidState().pressure(
-                               gasPhaseIdx));
+            const auto& pg =
+                context.intensiveQuantities(spaceIdx, timeIdx).fluidState().pressure(gasPhaseIdx);
+            fs.setPressure(gasPhaseIdx, Toolbox::value(pg));
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
             typename FluidSystem::ParameterCache paramCache;
             paramCache.updatePhase(fs, gasPhaseIdx);
             Scalar h = FluidSystem::enthalpy(fs, paramCache, gasPhaseIdx);
 
-            // impose an forced inflow boundary condition
+            // impose an forced inflow boundary condition for pure CO2
             values.setMassRate(massRate);
             values.setEnthalpyRate(massRate[contiCO2EqIdx] * h);
         }
@@ -550,7 +549,7 @@ private:
         //////
         // set pressures
         //////
-        Scalar densityL = FluidSystem::Brine::liquidDensity(temperature_, 1e5);
+        Scalar densityL = FluidSystem::Brine::liquidDensity(temperature_, Scalar(1e5));
         Scalar depth = maxDepth_ - pos[dim - 1];
         Scalar pl = 1e5 - densityL * this->gravity()[dim - 1] * depth;
 

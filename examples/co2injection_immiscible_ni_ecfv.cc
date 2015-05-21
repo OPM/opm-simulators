@@ -37,6 +37,9 @@ SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice,
              EcfvDiscretization);
 
 SET_BOOL_PROP(Co2InjectionImmiscibleNiEcfvProblem, EnableEnergy, true);
+
+//! Use automatic differentiation to linearize the system of PDEs
+SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 }}
 
 ////////////////////////
