@@ -167,7 +167,7 @@ namespace Opm {
                          WellStateFullyImplicitBlackoil& well_state);
 
         /// Return true if output to cout is wanted.
-        bool terminalOutput() const;
+        bool terminalOutputEnabled() const;
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).

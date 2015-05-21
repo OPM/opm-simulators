@@ -92,7 +92,7 @@ namespace Opm
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                if (model_.terminalOutput()) {
+                if (model_.terminalOutputEnabled()) {
                     std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
                 }
             }
@@ -113,7 +113,7 @@ namespace Opm
         }
 
         if (!converged) {
-            if (model_.terminalOutput()) {
+            if (model_.terminalOutputEnabled()) {
                 std::cerr << "WARNING: Failed to compute converged solution in " << iteration << " iterations." << std::endl;
             }
             return -1; // -1 indicates that the solver has to be restarted

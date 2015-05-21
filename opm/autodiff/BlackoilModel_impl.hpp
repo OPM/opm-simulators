@@ -278,7 +278,7 @@ namespace detail {
     template <class Grid>
     bool
     BlackoilModel<Grid>::
-    terminalOutput() const
+    terminalOutputEnabled() const
     {
         return terminal_output_;
     }
