@@ -32,6 +32,9 @@ namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(RichardsLensEcfvProblem, INHERITS_FROM(RichardsLensProblem));
 SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+
+//! Use automatic differentiation to linearize the system of PDEs
+SET_TAG_PROP(RichardsLensEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 }}
 
 int main(int argc, char **argv)
