@@ -28,7 +28,7 @@
 namespace Opm
 {
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameter& param,
+    NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameters& param,
                                               PhysicalModel& model)
         : param_(param),
           model_(model),
@@ -131,7 +131,7 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    void NewtonSolver<PhysicalModel>::SolverParameter::
+    void NewtonSolver<PhysicalModel>::SolverParameters::
     reset()
     {
         // default values for the solver parameters
@@ -144,16 +144,16 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::SolverParameter::
-    SolverParameter()
+    NewtonSolver<PhysicalModel>::SolverParameters::
+    SolverParameters()
     {
         // set default values
         reset();
     }
 
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::SolverParameter::
-    SolverParameter( const parameter::ParameterGroup& param )
+    NewtonSolver<PhysicalModel>::SolverParameters::
+    SolverParameters( const parameter::ParameterGroup& param )
     {
         // set default values
         reset();

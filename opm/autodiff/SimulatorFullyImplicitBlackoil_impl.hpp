@@ -234,11 +234,11 @@ namespace Opm
 
         typedef T Grid;
         typedef BlackoilModel<Grid> Model;
-        typedef typename Model::ModelParameter ModelParam;
-        ModelParam modelParam( param_ );
+        typedef typename Model::ModelParameters ModelParams;
+        ModelParams modelParams( param_ );
         typedef NewtonSolver<Model> Solver;
-        typedef typename Solver::SolverParameter SolverParam;
-        SolverParam solverParam( param_ );
+        typedef typename Solver::SolverParameters SolverParams;
+        SolverParams solverParams( param_ );
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -298,11 +298,11 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            Model model(modelParam, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
+            Model model(modelParams, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
                 model.setThresholdPressures(threshold_pressures_by_face_);
             }
-            Solver solver(solverParam, model);
+            Solver solver(solverParams, model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge

@@ -136,7 +136,7 @@ namespace detail {
 } // namespace detail
 
     template <class Grid>
-    void BlackoilModel<Grid>::ModelParameter::
+    void BlackoilModel<Grid>::ModelParameters::
     reset()
     {
         // default values for the solver parameters
@@ -150,16 +150,16 @@ namespace detail {
     }
 
     template <class Grid>
-    BlackoilModel<Grid>::ModelParameter::
-    ModelParameter()
+    BlackoilModel<Grid>::ModelParameters::
+    ModelParameters()
     {
         // set default values
         reset();
     }
 
     template <class Grid>
-    BlackoilModel<Grid>::ModelParameter::
-    ModelParameter( const parameter::ParameterGroup& param )
+    BlackoilModel<Grid>::ModelParameters::
+    ModelParameters( const parameter::ParameterGroup& param )
     {
         // set default values
         reset();
@@ -177,7 +177,7 @@ namespace detail {
 
     template <class Grid>
     BlackoilModel<Grid>::
-    BlackoilModel(const ModelParameter&          param,
+    BlackoilModel(const ModelParameters&          param,
                   const Grid&                     grid ,
                   const BlackoilPropsAdInterface& fluid,
                   const DerivedGeology&           geo  ,

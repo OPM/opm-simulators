@@ -41,7 +41,7 @@ namespace Opm {
         enum RelaxType { DAMPEN, SOR };
 
         // Solver parameters controlling nonlinear Newton process.
-        struct SolverParameter
+        struct SolverParameters
         {
             enum RelaxType relax_type_;
             double         relax_max_;
@@ -50,8 +50,8 @@ namespace Opm {
             int            max_iter_; // max newton iterations
             int            min_iter_; // min newton iterations
 
-            SolverParameter( const parameter::ParameterGroup& param );
-            SolverParameter();
+            explicit SolverParameters( const parameter::ParameterGroup& param );
+            SolverParameters();
 
             void reset();
         };
@@ -65,7 +65,7 @@ namespace Opm {
         /// Construct solver for a given model.
         /// \param[in]      param   parameters controlling nonlinear Newton process
         /// \param[in, out] model   physical simulation model
-        explicit NewtonSolver(const SolverParameter& param,
+        explicit NewtonSolver(const SolverParameters& param,
                               PhysicalModel& model);
 
         /// Take a single forward step, after which the states will be modified
@@ -87,7 +87,7 @@ namespace Opm {
 
     private:
         // ---------  Data members  ---------
-        SolverParameter param_;
+        SolverParameters param_;
         PhysicalModel& model_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;

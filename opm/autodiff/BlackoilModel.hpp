@@ -65,7 +65,7 @@ namespace Opm {
         typedef WellStateFullyImplicitBlackoil WellState;
 
         /// Model-specific solver parameters.
-        struct ModelParameter
+        struct ModelParameters
         {
             double dp_max_rel_;
             double ds_max_;
@@ -75,8 +75,8 @@ namespace Opm {
             double tolerance_cnv_;
             double tolerance_wells_;
 
-            ModelParameter( const parameter::ParameterGroup& param );
-            ModelParameter();
+            explicit ModelParameters( const parameter::ParameterGroup& param );
+            ModelParameters();
 
             void reset();
         };
@@ -96,7 +96,7 @@ namespace Opm {
         /// \param[in] has_disgas       turn on dissolved gas
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilModel(const ModelParameter&          param,
+        BlackoilModel(const ModelParameters&          param,
                       const Grid&                     grid ,
                       const BlackoilPropsAdInterface& fluid,
                       const DerivedGeology&           geo  ,
@@ -241,7 +241,7 @@ namespace Opm {
         const bool has_disgas_;
         const bool has_vapoil_;
 
-        ModelParameter                 param_;
+        ModelParameters                 param_;
         bool use_threshold_pressure_;
         V threshold_pressures_by_interior_face_;
 
