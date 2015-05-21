@@ -19,15 +19,23 @@
 /*!
  * \file
  *
- * \brief Test for the Richards VCVF discretization.
+ * \brief Test for the Richards model using the ECFV discretization.
  */
 #include "config.h"
 
 #include <ewoms/common/start.hh>
+#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+
 #include "problems/richardslensproblem.hh"
+
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(RichardsLensEcfvProblem, INHERITS_FROM(RichardsLensProblem));
+SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(RichardsLensProblem) ProblemTypeTag;
+    typedef TTAG(RichardsLensEcfvProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }

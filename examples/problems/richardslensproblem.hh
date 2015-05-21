@@ -47,7 +47,7 @@ class RichardsLensProblem;
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(RichardsLensProblem, Richards);
+NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
 
 // Use 2d YaspGrid
 SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
@@ -149,6 +149,7 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
 
@@ -245,7 +246,12 @@ public:
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return "lens_richards"; }
+    {
+        std::ostringstream oss;
+        oss << "lens_richards_"
+            << Model::discretizationName();
+        return oss.str();
+    }
 
     /*!
      * \copydoc FvBaseProblem::endTimeStep
