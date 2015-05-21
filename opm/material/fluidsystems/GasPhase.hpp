@@ -66,25 +66,25 @@ public:
      * \brief The mass in [kg] of one mole of the component.
      */
     static Scalar molarMass()
-    {  return Component::molarMass(); }
+    { return Component::molarMass(); }
 
     /*!
      * \brief Returns the critical temperature of the component
      */
     static Scalar criticalTemperature()
-    {  return Component::criticalTemperature(); }
+    { return Component::criticalTemperature(); }
 
     /*!
      * \brief Returns the critical pressure of the component
      */
     static Scalar criticalPressure()
-    {  return Component::criticalPressure(); }
+    { return Component::criticalPressure(); }
 
     /*!
      * \brief Returns the temperature at the component's triple point.
      */
     static Scalar tripleTemperature()
-    {  return Component::tripleTemperature(); }
+    { return Component::tripleTemperature(); }
 
     /*!
      * \brief Returns the pressure at the component's triple point.
@@ -98,7 +98,8 @@ public:
      *
      * \copydetails Doxygen::temperatureParam
      */
-    static Scalar vaporPressure(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     { return Component::vaporPressure(temperature); }
 
     /*!
@@ -106,8 +107,9 @@ public:
      *
      * \copydetails Doxygen::TpParams
      */
-    static Scalar density(Scalar temperature, Scalar pressure)
-    {  return Component::gasDensity(temperature, pressure); }
+    template <class Evaluation>
+    static Evaluation density(const Evaluation& temperature, const Evaluation& pressure)
+    { return Component::gasDensity(temperature, pressure); }
 
     /*!
      * \brief The pressure [Pa] of the component at a given density and temperature.
@@ -115,23 +117,26 @@ public:
      * \param temperature The temperature of interest [K]
      * \param density The density of interest [kg / m^3]
      */
-    static Scalar pressure(Scalar temperature, Scalar density)
-    {  return Component::gasPressure(temperature, density); }
+    template <class Evaluation>
+    static Evaluation pressure(const Evaluation& temperature, const Evaluation& density)
+    { return Component::gasPressure(temperature, density); }
 
     /*!
      * \brief Specific enthalpy [J/kg] the pure component as a gas.
      *
      * \copydetails Doxygen::TpParams
      */
-    static const Scalar enthalpy(Scalar temperature, Scalar pressure)
-    {  return Component::gasEnthalpy(temperature, pressure); }
+    template <class Evaluation>
+    static Evaluation enthalpy(const Evaluation& temperature, const Evaluation& pressure)
+    { return Component::gasEnthalpy(temperature, pressure); }
 
     /*!
      * \brief Specific internal energy [J/kg] the pure component as a gas.
      *
      * \copydetails Doxygen::TpParams
      */
-    static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation internalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::gasInternalEnergy(temperature, pressure); }
 
     /*!
@@ -139,15 +144,17 @@ public:
      *
      * \copydetails Doxygen::TpParams
      */
-    static Scalar viscosity(Scalar temperature, Scalar pressure)
-    {  return Component::gasViscosity(temperature, pressure); }
+    template <class Evaluation>
+    static Evaluation viscosity(const Evaluation& temperature, const Evaluation& pressure)
+    { return Component::gasViscosity(temperature, pressure); }
 
     /*!
      * \brief Thermal conductivity of the fluid [W/(m^2 K/m)].
      *
      * \copydetails Doxygen::TpParams
      */
-    static Scalar thermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation thermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::gasThermalConductivity(temperature, pressure); }
 
     /*!
@@ -155,7 +162,8 @@ public:
      *
      * \copydetails Doxygen::TpParams
      */
-    static Scalar heatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::gasHeatCapacity(temperature, pressure); }
 };
 } // namespace Opm

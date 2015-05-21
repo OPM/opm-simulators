@@ -52,7 +52,7 @@ namespace FluidSystems {
  */
 template <class Scalar, class WettingPhase, class NonwettingPhase>
 class TwoPhaseImmiscible
-: public BaseFluidSystem<Scalar, TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> >
+    : public BaseFluidSystem<Scalar, TwoPhaseImmiscible<Scalar, WettingPhase, NonwettingPhase> >
 {
     // do not try to instanciate this class, it has only static members!
     TwoPhaseImmiscible()
@@ -216,42 +216,48 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState>
-    static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval density(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::density(temperature, pressure);
         return NonwettingPhase::density(temperature, pressure);
     }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::viscosity(temperature, pressure);
         return NonwettingPhase::viscosity(temperature, pressure);
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
         assert(0 <= compIdx  && compIdx < numComponents);
 
@@ -260,50 +266,56 @@ public:
             // the component in the fluid. Probably that's not worth
             // the effort, since the fugacity coefficient of the other
             // component is infinite anyway...
-            return 1.0;
-        return std::numeric_limits<Scalar>::infinity();
+            return LhsToolbox::createConstant(1.0);
+        return LhsToolbox::createConstant(std::numeric_limits<Scalar>::infinity());
     }
 
     //! \copydoc BaseFluidSystem::enthalpy
-    template <class FluidState>
-    static Scalar enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval enthalpy(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
+                            int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::enthalpy(temperature, pressure);
         return NonwettingPhase::enthalpy(temperature, pressure);
     }
 
     //! \copydoc BaseFluidSystem::thermalConductivity
-    template <class FluidState>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval thermalConductivity(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
     }
 
     //! \copydoc BaseFluidSystem::heatCapacity
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
-                               int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval heatCapacity(const FluidState &fluidState,
+                                const ParameterCache &paramCache,
+                                int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::heatCapacity(temperature, pressure);
         return NonwettingPhase::heatCapacity(temperature, pressure);

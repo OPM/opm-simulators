@@ -126,7 +126,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static const Scalar molarMass(int compIdx)
+    static Scalar molarMass(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -138,7 +138,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static const Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -150,7 +150,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static const Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -162,7 +162,7 @@ public:
      *
      * \param compIdx The index of the component to consider
      */
-    static const Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(int compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -178,37 +178,41 @@ public:
     { }
 
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState>
-    static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval density(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::density(temperature, pressure);
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        return Fluid::density(T, p);
     }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             int phaseIdx)
     {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::viscosity(temperature, pressure);
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        return Fluid::viscosity(T, p);
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
         assert(0 <= compIdx  && compIdx < numComponents);
@@ -223,42 +227,48 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::enthalpy
-    template <class FluidState>
-    static Scalar enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval enthalpy(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
+                            int phaseIdx)
     {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::enthalpy(temperature, pressure);
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        return Fluid::enthalpy(T, p);
     }
 
     //! \copydoc BaseFluidSystem::thermalConductivity
-    template <class FluidState>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval thermalConductivity(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx)
     {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::thermalConductivity(temperature, pressure);
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        return Fluid::thermalConductivity(T, p);
     }
 
     //! \copydoc BaseFluidSystem::heatCapacity
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
-                               int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval heatCapacity(const FluidState &fluidState,
+                                const ParameterCache &paramCache,
+                                int phaseIdx)
     {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
-        return Fluid::heatCapacity(temperature, pressure);
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        return Fluid::heatCapacity(T, p);
     }
 };
 

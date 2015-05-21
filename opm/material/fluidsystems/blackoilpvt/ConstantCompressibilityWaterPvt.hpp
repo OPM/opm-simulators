@@ -26,7 +26,6 @@
 #include "WaterPvtInterface.hpp"
 
 #include <opm/material/common/OpmFinal.hpp>
-
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
@@ -39,10 +38,13 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
  */
-template <class Scalar>
-class ConstantCompressibilityWaterPvt : public WaterPvtInterface<Scalar>
+template <class Scalar, class Evaluation = Scalar>
+class ConstantCompressibilityWaterPvt
+    : public WaterPvtInterfaceTemplateWrapper<Scalar, Evaluation, ConstantCompressibilityWaterPvt<Scalar, Evaluation> >
 {
-    typedef FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
+    friend class WaterPvtInterfaceTemplateWrapper<Scalar, Evaluation, ConstantCompressibilityWaterPvt<Scalar, Evaluation> >;
+
+    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
 
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
@@ -132,21 +134,23 @@ public:
     void initEnd()
     { }
 
+private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    Scalar viscosity(int regionIdx,
-                     Scalar temperature,
-                     Scalar pressure) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval viscosity_(int regionIdx,
+                       const LhsEval& temperature,
+                       const LhsEval& pressure) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BwMuwRef = waterViscosity_[regionIdx]*waterReferenceFormationVolumeFactor_[regionIdx];
-        Scalar Bw = formationVolumeFactor(regionIdx, temperature, pressure);
+        const LhsEval& Bw = formationVolumeFactor_(regionIdx, temperature, pressure);
 
         Scalar pRef = waterReferencePressure_[regionIdx];
-        Scalar Y =
+        const LhsEval& Y =
             (waterCompressibility_[regionIdx] - waterViscosibility_[regionIdx])
             * (pressure - pRef);
         return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
@@ -155,11 +159,12 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    Scalar density(int regionIdx,
-                   Scalar temperature,
-                   Scalar pressure) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval density_(int regionIdx,
+                     const LhsEval& temperature,
+                     const LhsEval& pressure) const
     {
-        Scalar Bw = formationVolumeFactor(regionIdx, temperature, pressure);
+        const LhsEval& Bw = formationVolumeFactor_(regionIdx, temperature, pressure);
         Scalar rhowRef = BlackOilFluidSystem::referenceDensity(waterPhaseIdx, regionIdx);
         return rhowRef/Bw;
     }
@@ -167,13 +172,14 @@ public:
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    Scalar formationVolumeFactor(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar pressure) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval formationVolumeFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = waterReferencePressure_[regionIdx];
-        Scalar X = waterCompressibility_[regionIdx]*(pressure - pRef);
+        const LhsEval& X = waterCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BwRef = waterReferenceFormationVolumeFactor_[regionIdx];
 
@@ -185,10 +191,11 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    Scalar fugacityCoefficient(int regionIdx,
-                               Scalar temperature,
-                               Scalar pressure,
-                               int compIdx) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval fugacityCoefficient_(int regionIdx,
+                                 const LhsEval& temperature,
+                                 const LhsEval& pressure,
+                                 int compIdx) const
     {
         // set the affinity of the gas and oil components to the water phase to be 10
         // orders of magnitute smaller than that of the water component. for this we use

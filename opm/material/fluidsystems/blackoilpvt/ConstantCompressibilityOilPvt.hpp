@@ -40,10 +40,16 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phase
  *        without dissolved gas and constant compressibility/"viscosibility".
  */
-template <class Scalar>
-class ConstantCompressibilityOilPvt : public OilPvtInterface<Scalar>
+template <class Scalar, class Evaluation = Scalar>
+class ConstantCompressibilityOilPvt  : public OilPvtInterfaceTemplateWrapper<Scalar,
+                                                                             Evaluation,
+                                                                             ConstantCompressibilityOilPvt<Scalar, Evaluation> >
 {
-    typedef FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
+    friend class OilPvtInterfaceTemplateWrapper<Scalar,
+                                                Evaluation,
+                                                ConstantCompressibilityOilPvt<Scalar, Evaluation> >;
+
+    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
 
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
@@ -133,22 +139,24 @@ public:
     void initEnd()
     { }
 
+private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    Scalar viscosity(int regionIdx,
-                     Scalar temperature,
-                     Scalar pressure,
-                     Scalar XoG) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval viscosity_(int regionIdx,
+                       const LhsEval& temperature,
+                       const LhsEval& pressure,
+                       const LhsEval& XoG) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        Scalar Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        const LhsEval& Bo = formationVolumeFactor_(regionIdx, temperature, pressure, XoG);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
-        Scalar Y =
+        const LhsEval& Y =
             (oilCompressibility_[regionIdx] - oilViscosibility_[regionIdx])
             * (pressure - pRef);
         return BoMuoRef/((1 + Y*(1 + Y/2))*Bo);
@@ -157,12 +165,13 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    Scalar density(int regionIdx,
-                   Scalar temperature,
-                   Scalar pressure,
-                   Scalar XoG) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval density_(int regionIdx,
+                     const LhsEval& temperature,
+                     const LhsEval& pressure,
+                     const LhsEval& XoG) const
     {
-        Scalar Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        const LhsEval& Bo = formationVolumeFactor_(regionIdx, temperature, pressure, XoG);
         Scalar rhooRef = BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
         return rhooRef/Bo;
     }
@@ -170,14 +179,15 @@ public:
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    Scalar formationVolumeFactor(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar pressure,
-                                 Scalar XoG) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval formationVolumeFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure,
+                                   const LhsEval& XoG) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
-        Scalar X = oilCompressibility_[regionIdx]*(pressure - pRef);
+        const LhsEval& X = oilCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BoRef = oilReferenceFormationVolumeFactor_[regionIdx];
         return BoRef/(1 + X*(1 + X/2));
@@ -187,15 +197,16 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    Scalar fugacityCoefficient(int regionIdx,
-                               Scalar temperature,
-                               Scalar pressure,
-                               int compIdx) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval fugacityCoefficient_(int regionIdx,
+                                 const LhsEval& temperature,
+                                 const LhsEval& pressure,
+                                 int compIdx) const
     {
         // set the oil component fugacity coefficient in oil phase
         // arbitrarily. we use some pseudo-realistic value for the vapor
         // pressure to ease physical interpretation of the results
-        Scalar phi_oO = 20e3/pressure;
+        const LhsEval& phi_oO = 20e3/pressure;
 
         if (compIdx == BlackOilFluidSystem::oilCompIdx)
             return phi_oO;
@@ -213,10 +224,15 @@ public:
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
-    Scalar gasDissolutionFactor(int regionIdx,
-                                Scalar temperature,
-                                Scalar pressure) const OPM_FINAL
-    { return 0.0; /* this is dead oil! */ }
+    template <class LhsEval>
+    LhsEval gasDissolutionFactor_(int regionIdx,
+                                  const LhsEval& temperature,
+                                  const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
+        return Toolbox::createConstant(0.0); /* this is dead oil! */
+    }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
@@ -224,20 +240,35 @@ public:
      *
      * \param XoG The mass fraction of the gas component in the oil phase [-]
      */
-    Scalar oilSaturationPressure(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar XoG) const OPM_FINAL
-    { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
+    template <class LhsEval>
+    LhsEval oilSaturationPressure_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& XoG) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
 
-    Scalar saturatedOilGasMassFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
-    { return 0.0; /* this is dead oil! */ }
+        return Toolbox::createConstant(0.0); /* this is dead oil, so there isn't any meaningful saturation pressure! */
+    }
 
-    Scalar saturatedOilGasMoleFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
-    { return 0.0; /* this is dead oil! */ }
+    template <class LhsEval>
+    LhsEval saturatedOilGasMassFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
+        return Toolbox::createConstant(0.0); /* this is dead oil! */
+    }
+
+    template <class LhsEval>
+    LhsEval saturatedOilGasMoleFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
+        return Toolbox::createConstant(0.0); /* this is dead oil! */
+    }
 
 private:
     std::vector<Scalar> oilReferencePressure_;

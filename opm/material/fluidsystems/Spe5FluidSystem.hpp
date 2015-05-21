@@ -352,23 +352,27 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState>
+    template <class FluidState, class Evaluation = Scalar>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
                           int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        static_assert(std::is_same<Evaluation, Scalar>::value,
+                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState>
+    template <class FluidState, class Evaluation = Scalar>
     static Scalar viscosity(const FluidState &fluidState,
                             const ParameterCache &paramCache,
                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        static_assert(std::is_same<Evaluation, Scalar>::value,
+                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         if (phaseIdx == gasPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
@@ -387,7 +391,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState>
+    template <class FluidState, class Evaluation = Scalar>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
                                       int phaseIdx,
@@ -395,6 +399,8 @@ public:
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
+        static_assert(std::is_same<Evaluation, Scalar>::value,
+                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         if (phaseIdx == oilPhaseIdx || phaseIdx == gasPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fluidState,

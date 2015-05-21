@@ -38,27 +38,17 @@
 #include <array>
 
 namespace Opm {
-template <class Scalar>
-class OilPvtInterface;
-
-template <class Scalar>
-class GasPvtInterface;
-
-template <class Scalar>
-class WaterPvtInterface;
-
 namespace FluidSystems {
-
 /*!
  * \brief A fluid system which uses the black-oil parameters
  *        to calculate termodynamically meaningful quantities.
  */
-template <class Scalar>
-class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
+template <class Scalar, class Evaluation = Scalar>
+class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar, Evaluation> >
 {
-    typedef Opm::GasPvtInterface<Scalar> GasPvtInterface;
-    typedef Opm::OilPvtInterface<Scalar> OilPvtInterface;
-    typedef Opm::WaterPvtInterface<Scalar> WaterPvtInterface;
+    typedef Opm::GasPvtInterface<Scalar, Evaluation> GasPvtInterface;
+    typedef Opm::OilPvtInterface<Scalar, Evaluation> OilPvtInterface;
+    typedef Opm::WaterPvtInterface<Scalar, Evaluation> WaterPvtInterface;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
@@ -286,26 +276,29 @@ public:
      * thermodynamic relations
      ****************************************/
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState>
-    static Scalar density(const FluidState &fluidState,
-                          ParameterCache &paramCache,
-                          const int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval density(const FluidState &fluidState,
+                           ParameterCache &paramCache,
+                           const int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
 
-        Scalar p = fluidState.pressure(phaseIdx);
-        Scalar T = fluidState.temperature(phaseIdx);
+        typedef typename FluidState::Scalar FsEval;
+        typedef Opm::MathToolbox<FsEval> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
         int regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
-        case waterPhaseIdx: return waterDensity(T, p, regionIdx);
+        case waterPhaseIdx: return waterDensity<LhsEval>(T, p, regionIdx);
         case gasPhaseIdx: {
-            Scalar XgO = fluidState.massFraction(gasPhaseIdx, oilCompIdx);
-            return gasDensity(T, p, XgO, regionIdx);
+            const auto& XgO = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
+            return gasDensity<LhsEval>(T, p, XgO, regionIdx);
         }
         case oilPhaseIdx: {
-            Scalar XoG = fluidState.massFraction(oilPhaseIdx, gasCompIdx);
-            return oilDensity(T, p, XoG, regionIdx);
+            const auto& XoG = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
+            return oilDensity<LhsEval>(T, p, XoG, regionIdx);
         }
         }
 
@@ -313,49 +306,53 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
 
-        Scalar p = fluidState.pressure(phaseIdx);
-        Scalar T = fluidState.temperature(phaseIdx);
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
         int regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
-        case waterPhaseIdx: return fugCoefficientInWater(compIdx, T, p, regionIdx);
-        case gasPhaseIdx: return fugCoefficientInGas(compIdx, T, p, regionIdx);
-        case oilPhaseIdx: return fugCoefficientInOil(compIdx, T, p, regionIdx);
+        case waterPhaseIdx: return fugCoefficientInWater<LhsEval>(compIdx, T, p, regionIdx);
+        case gasPhaseIdx: return fugCoefficientInGas<LhsEval>(compIdx, T, p, regionIdx);
+        case oilPhaseIdx: return fugCoefficientInOil<LhsEval>(compIdx, T, p, regionIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase or component index");
     }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             int phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
 
-        Scalar p = fluidState.pressure(phaseIdx);
-        Scalar T = fluidState.temperature(phaseIdx);
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
         int regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
-            Scalar XoG = fluidState.massFraction(oilPhaseIdx, gasCompIdx);
+            const auto& XoG = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
             return oilPvt_->viscosity(regionIdx, T, p, XoG);
         }
         case waterPhaseIdx:
             return waterPvt_->viscosity(regionIdx, T, p);
         case gasPhaseIdx: {
-            Scalar XgO = fluidState.massFraction(gasPhaseIdx, oilCompIdx);
+            const auto& XgO = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
             return gasPvt_->viscosity(regionIdx, T, p, XgO);
         }
         }
@@ -394,14 +391,15 @@ public:
      *
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar saturatedOilFormationVolumeFactor(Scalar temperature,
-                                                    Scalar pressure,
-                                                    int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedOilFormationVolumeFactor(const LhsEval& temperature,
+                                                     const LhsEval& pressure,
+                                                     int regionIdx)
     {
         Valgrind::CheckDefined(pressure);
 
         // calculate the mass fractions of gas and oil
-        Scalar XoG = saturatedOilGasMassFraction(temperature, pressure, regionIdx);
+        const auto& XoG = saturatedOilGasMassFraction(temperature, pressure, regionIdx);
 
         // ATTENTION: XoG is represented by the _first_ axis!
         return oilFormationVolumeFactor(temperature, pressure, XoG, regionIdx);
@@ -410,7 +408,10 @@ public:
     /*!
      * \brief Return the formation volume factor of water.
      */
-    static Scalar waterFormationVolumeFactor(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval waterFormationVolumeFactor(const LhsEval& temperature,
+                                              const LhsEval& pressure,
+                                              int regionIdx)
     { return waterPvt_->formationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -418,7 +419,10 @@ public:
      *
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar gasDissolutionFactor(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval gasDissolutionFactor(const LhsEval& temperature,
+                                        const LhsEval& pressure,
+                                        int regionIdx)
     { return oilPvt_->gasDissolutionFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -426,7 +430,10 @@ public:
      *
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar oilVaporizationFactor(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval oilVaporizationFactor(const LhsEval& temperature,
+                                         const LhsEval& pressure,
+                                         int regionIdx)
     { return gasPvt_->oilVaporizationFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -435,7 +442,11 @@ public:
      * \param compIdx The index of the component of interest
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar fugCoefficientInWater(int compIdx, Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval fugCoefficientInWater(int compIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure,
+                                         int regionIdx)
     { return waterPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -444,7 +455,11 @@ public:
      * \param compIdx The index of the component of interest
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar fugCoefficientInGas(int compIdx, Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval fugCoefficientInGas(int compIdx,
+                                       const LhsEval& temperature,
+                                       const LhsEval& pressure,
+                                       int regionIdx)
     { return gasPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -453,7 +468,11 @@ public:
      * \param compIdx The index of the component of interest
      * \param pressure The pressure of interest [Pa]
      */
-    static Scalar fugCoefficientInOil(int compIdx, Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval fugCoefficientInOil(int compIdx,
+                                       const LhsEval& temperature,
+                                       const LhsEval& pressure,
+                                       int regionIdx)
     { return oilPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -462,75 +481,109 @@ public:
      *
      * \param XoG The mass fraction of the gas component in the oil phase [-]
      */
-    static Scalar oilSaturationPressure(Scalar temperature, Scalar XoG, int regionIdx)
+    template <class LhsEval>
+    static LhsEval oilSaturationPressure(const LhsEval& temperature,
+                                         const LhsEval& XoG,
+                                         int regionIdx)
     { return oilPvt_->oilSaturationPressure(regionIdx, temperature, XoG); }
 
     /*!
      * \brief The maximum mass fraction of the gas component in the oil phase.
      */
-    static Scalar saturatedOilGasMassFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedOilGasMassFraction(const LhsEval& temperature,
+                                               const LhsEval& pressure,
+                                               int regionIdx)
     { return oilPvt_->saturatedOilGasMassFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief The maximum mole fraction of the gas component in the oil phase.
      */
-    static Scalar saturatedOilGasMoleFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedOilGasMoleFraction(const LhsEval& temperature,
+                                               const LhsEval& pressure,
+                                               int regionIdx)
     { return oilPvt_->saturatedOilGasMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief The maximum mass fraction of the oil component in the gas phase.
      */
-    static Scalar saturatedGasOilMassFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedGasOilMassFraction(const LhsEval& temperature,
+                                               const LhsEval& pressure,
+                                               int regionIdx)
     { return gasPvt_->saturatedGasOilMassFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief The maximum mole fraction of the oil component in the gas phase.
      */
-    static Scalar saturatedGasOilMoleFraction(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedGasOilMoleFraction(const LhsEval& temperature,
+                                               const LhsEval& pressure,
+                                               int regionIdx)
     { return gasPvt_->saturatedGasOilMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the normalized formation volume factor of (potentially)
      *        under-saturated oil.
      */
-    static Scalar oilFormationVolumeFactor(Scalar temperature,
-                                           Scalar pressure,
-                                           Scalar XoG,
-                                           int regionIdx)
+    template <class LhsEval>
+    static LhsEval oilFormationVolumeFactor(const LhsEval& temperature,
+                                            const LhsEval& pressure,
+                                            const LhsEval& XoG,
+                                            int regionIdx)
     { return oilPvt_->formationVolumeFactor(regionIdx, temperature, pressure, XoG); }
 
     /*!
      * \brief Return the density of (potentially) under-saturated oil.
      */
-    static Scalar oilDensity(Scalar temperature, Scalar pressure, Scalar XoG, int regionIdx)
+    template <class LhsEval>
+    static LhsEval oilDensity(const LhsEval& temperature,
+                              const LhsEval& pressure,
+                              const LhsEval& XoG,
+                              int regionIdx)
     { return oilPvt_->density(regionIdx, temperature, pressure, XoG); }
 
     /*!
      * \brief Return the density of gas-saturated oil.
      */
-    static Scalar saturatedOilDensity(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval saturatedOilDensity(const LhsEval& temperature,
+                                       const LhsEval& pressure,
+                                       int regionIdx)
     {
         // mass fraction of gas-saturated oil
-        Scalar XoG = saturatedOilGasMassFraction(temperature, pressure, regionIdx);
+        const LhsEval& XoG = saturatedOilGasMassFraction(temperature, pressure, regionIdx);
         return oilPvt_->density(regionIdx, temperature, pressure, XoG);
     }
 
     /*!
      * \brief Return the formation volume factor of gas.
      */
-    static Scalar gasFormationVolumeFactor(Scalar temperature, Scalar pressure, Scalar XgO, int regionIdx)
+    template <class LhsEval>
+    static LhsEval gasFormationVolumeFactor(const LhsEval& temperature,
+                                            const LhsEval& pressure,
+                                            const LhsEval& XgO,
+                                            int regionIdx)
     { return gasPvt_->formationVolumeFactor(regionIdx, temperature, pressure, XgO); }
 
     /*!
      * \brief Return the density of dry gas.
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure, Scalar XgO, int regionIdx)
+    template <class LhsEval>
+    static LhsEval gasDensity(const LhsEval& temperature,
+                              const LhsEval& pressure,
+                              const LhsEval& XgO,
+                              int regionIdx)
     { return gasPvt_->density(regionIdx, temperature, pressure, XgO); }
 
     /*!
      * \brief Return the density of water.
      */
-    static Scalar waterDensity(Scalar temperature, Scalar pressure, int regionIdx)
+    template <class LhsEval>
+    static LhsEval waterDensity(const LhsEval& temperature,
+                                const LhsEval& pressure,
+                                int regionIdx)
     { return waterPvt_->density(regionIdx, temperature, pressure); }
 
 private:
@@ -540,9 +593,9 @@ private:
         referenceDensity_.resize(numRegions);
     }
 
-    static std::shared_ptr<const Opm::GasPvtInterface<Scalar> > gasPvt_;
-    static std::shared_ptr<const Opm::OilPvtInterface<Scalar> > oilPvt_;
-    static std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > waterPvt_;
+    static std::shared_ptr<const Opm::GasPvtInterface<Scalar, Evaluation> > gasPvt_;
+    static std::shared_ptr<const Opm::OilPvtInterface<Scalar, Evaluation> > oilPvt_;
+    static std::shared_ptr<const Opm::WaterPvtInterface<Scalar, Evaluation> > waterPvt_;
 
     static bool enableDissolvedGas_;
     static bool enableVaporizedOil_;
@@ -554,39 +607,39 @@ private:
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
 };
 
-template <class Scalar>
+template <class Scalar, class Evaluation>
 const Scalar
-BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
+BlackOil<Scalar, Evaluation>::surfaceTemperature = 273.15 + 15.56; // [K]
 
-template <class Scalar>
+template <class Scalar, class Evaluation>
 const Scalar
-BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+BlackOil<Scalar, Evaluation>::surfacePressure = 101325.0; // [Pa]
 
-template <class Scalar>
-bool BlackOil<Scalar>::enableDissolvedGas_;
+template <class Scalar, class Evaluation>
+bool BlackOil<Scalar, Evaluation>::enableDissolvedGas_;
 
-template <class Scalar>
-bool BlackOil<Scalar>::enableVaporizedOil_;
+template <class Scalar, class Evaluation>
+bool BlackOil<Scalar, Evaluation>::enableVaporizedOil_;
 
-template <class Scalar>
-std::shared_ptr<const OilPvtInterface<Scalar> >
-BlackOil<Scalar>::oilPvt_;
+template <class Scalar, class Evaluation>
+std::shared_ptr<const OilPvtInterface<Scalar, Evaluation> >
+BlackOil<Scalar, Evaluation>::oilPvt_;
 
-template <class Scalar>
-std::shared_ptr<const GasPvtInterface<Scalar> >
-BlackOil<Scalar>::gasPvt_;
+template <class Scalar, class Evaluation>
+std::shared_ptr<const GasPvtInterface<Scalar, Evaluation> >
+BlackOil<Scalar, Evaluation>::gasPvt_;
 
-template <class Scalar>
-std::shared_ptr<const WaterPvtInterface<Scalar> >
-BlackOil<Scalar>::waterPvt_;
+template <class Scalar, class Evaluation>
+std::shared_ptr<const WaterPvtInterface<Scalar, Evaluation> >
+BlackOil<Scalar, Evaluation>::waterPvt_;
 
-template <class Scalar>
+template <class Scalar, class Evaluation>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::referenceDensity_;
+BlackOil<Scalar, Evaluation>::referenceDensity_;
 
-template <class Scalar>
+template <class Scalar, class Evaluation>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar>::molarMass_;
+BlackOil<Scalar, Evaluation>::molarMass_;
 }} // namespace Opm, FluidSystems
 
 #endif

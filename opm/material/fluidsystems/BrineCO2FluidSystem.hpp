@@ -226,30 +226,33 @@ public:
     /*!
      * \copydoc BaseFluidSystem::density
      */
-    template <class FluidState>
-    static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval density(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // use normalized composition for to calculate the density
             // (the relations don't seem to take non-normalized
             // compositions too well...)
-            Scalar xlBrine = std::min(1.0, std::max(0.0, fluidState.moleFraction(liquidPhaseIdx, BrineIdx)));
-            Scalar xlCO2 = std::min(1.0, std::max(0.0, fluidState.moleFraction(liquidPhaseIdx, CO2Idx)));
-            Scalar sumx = xlBrine + xlCO2;
+            LhsEval xlBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
+            LhsEval xlCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
+            LhsEval sumx = xlBrine + xlCO2;
             xlBrine /= sumx;
             xlCO2 /= sumx;
 
-            Scalar result = liquidDensity_(temperature,
-                                           pressure,
-                                           xlBrine,
-                                           xlCO2);
+            LhsEval result = liquidDensity_(temperature,
+                                            pressure,
+                                            xlBrine,
+                                            xlCO2);
 
             Valgrind::CheckDefined(result);
             return result;
@@ -260,16 +263,16 @@ public:
         // use normalized composition for to calculate the density
         // (the relations don't seem to take non-normalized
         // compositions too well...)
-        Scalar xgBrine = std::min(1.0, std::max(0.0, fluidState.moleFraction(gasPhaseIdx, BrineIdx)));
-        Scalar xgCO2 = std::min(1.0, std::max(0.0, fluidState.moleFraction(gasPhaseIdx, CO2Idx)));
-        Scalar sumx = xgBrine + xgCO2;
+        LhsEval xgBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
+        LhsEval xgCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
+        LhsEval sumx = xgBrine + xgCO2;
         xgBrine /= sumx;
         xgCO2 /= sumx;
 
-        Scalar result = gasDensity_(temperature,
-                                    pressure,
-                                    xgBrine,
-                                    xgCO2);
+        LhsEval result = gasDensity_(temperature,
+                                     pressure,
+                                     xgBrine,
+                                     xgCO2);
         Valgrind::CheckDefined(result);
         return result;
     }
@@ -277,26 +280,28 @@ public:
     /*!
      * \copydoc BaseFluidSystem::viscosity
      */
-    template <class FluidState>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // assume pure brine for the liquid phase. TODO: viscosity
             // of mixture
-            Scalar result = Brine::liquidViscosity(temperature, pressure);
+            LhsEval result = Brine::liquidViscosity(temperature, pressure);
             Valgrind::CheckDefined(result);
             return result;
         }
 
         assert(phaseIdx == gasPhaseIdx);
-        Scalar result = CO2::gasViscosity(temperature, pressure);
+        LhsEval result = CO2::gasViscosity(temperature, pressure);
         Valgrind::CheckDefined(result);
         return result;
     }
@@ -304,12 +309,15 @@ public:
     /*!
      * \copydoc BaseFluidSystem::fugacityCoefficient
      */
-    template <class FluidState>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(0 <= compIdx && compIdx < numComponents);
 
@@ -317,18 +325,18 @@ public:
             // use the fugacity coefficients of an ideal gas. the
             // actual value of the fugacity is not relevant, as long
             // as the relative fluid compositions are observed,
-            return 1.0;
+            return LhsToolbox::createConstant(1.0);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         assert(temperature > 0);
         assert(pressure > 0);
 
         // calulate the equilibrium composition for the given
         // temperature and pressure. TODO: calculateMoleFractions()
         // could use some cleanup.
-        Scalar xlH2O, xgH2O;
-        Scalar xlCO2, xgCO2;
+        LhsEval xlH2O, xgH2O;
+        LhsEval xlCO2, xgCO2;
         BinaryCoeffBrineCO2::calculateMoleFractions(temperature,
                                                     pressure,
                                                     Brine_IAPWS::salinity,
@@ -337,8 +345,8 @@ public:
                                                     xgH2O);
 
         // normalize the phase compositions
-        xlCO2 = std::max(0.0, std::min(1.0, xlCO2));
-        xgH2O = std::max(0.0, std::min(1.0, xgH2O));
+        xlCO2 = LhsToolbox::max(0.0, LhsToolbox::min(1.0, xlCO2));
+        xgH2O = LhsToolbox::max(0.0, LhsToolbox::min(1.0, xgH2O));
 
         xlH2O = 1.0 - xlCO2;
         xgCO2 = 1.0 - xgH2O;
@@ -358,14 +366,16 @@ public:
     /*!
      * \copydoc BaseFluidSystem::diffusionCoefficient
      */
-    template <class FluidState>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval diffusionCoefficient(const FluidState &fluidState,
+                                        const ParameterCache &paramCache,
+                                        int phaseIdx,
+                                        int compIdx)
     {
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
 
@@ -376,30 +386,33 @@ public:
     /*!
      * \copydoc BaseFluidSystem::enthalpy
      */
-    template <class FluidState>
-    static Scalar enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval enthalpy(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
+                            int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        Scalar temperature = fluidState.temperature(phaseIdx);
-        Scalar pressure = fluidState.pressure(phaseIdx);
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
-            Scalar XlCO2 = fluidState.massFraction(phaseIdx, CO2Idx);
-            Scalar result = liquidEnthalpyBrineCO2_(temperature,
-                                                    pressure,
-                                                    Brine_IAPWS::salinity,
-                                                    XlCO2);
+            const LhsEval& XlCO2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
+            const LhsEval& result = liquidEnthalpyBrineCO2_(temperature,
+                                                            pressure,
+                                                            Brine_IAPWS::salinity,
+                                                            XlCO2);
             Valgrind::CheckDefined(result);
             return result;
         }
         else {
-            Scalar XCO2 = fluidState.massFraction(gasPhaseIdx, CO2Idx);
-            Scalar XBrine = fluidState.massFraction(gasPhaseIdx, BrineIdx);
+            const LhsEval& XCO2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
+            const LhsEval& XBrine = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
 
-            Scalar result = 0;
+            LhsEval result = LhsToolbox::createConstant(0);
             result += XBrine * Brine::gasEnthalpy(temperature, pressure);
             result += XCO2 * CO2::gasEnthalpy(temperature, pressure);
             Valgrind::CheckDefined(result);
@@ -410,17 +423,19 @@ public:
     /*!
      * \copydoc BaseFluidSystem::thermalConductivity
      */
-    template <class FluidState>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval thermalConductivity(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx)
     {
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         // TODO way too simple!
         if (phaseIdx == liquidPhaseIdx)
-            return  0.6; // conductivity of water[W / (m K ) ]
+            return  LhsToolbox::createConstant(0.6); // conductivity of water[W / (m K ) ]
 
         // gas phase
-        return 0.025; // conductivity of air [W / (m K ) ]
+        return LhsToolbox::createConstant(0.025); // conductivity of air [W / (m K ) ]
     }
 
     /*!
@@ -435,32 +450,37 @@ public:
      * \param phaseIdx The index of the fluid phase to consider
      * \tparam FluidState the fluid state class
      */
-    template <class FluidState>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
-                               int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval heatCapacity(const FluidState &fluidState,
+                                const ParameterCache &paramCache,
+                                int phaseIdx)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+
+        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+
         if(phaseIdx == liquidPhaseIdx)
-            return H2O::liquidHeatCapacity(fluidState.temperature(phaseIdx),
-                                           fluidState.pressure(phaseIdx));
+            return H2O::liquidHeatCapacity(temperature, pressure);
         else
-            return CO2::gasHeatCapacity(fluidState.temperature(phaseIdx),
-                                        fluidState.pressure(phaseIdx));
+            return CO2::gasHeatCapacity(temperature, pressure);
     }
 
 private:
-    static Scalar gasDensity_(Scalar T,
-                              Scalar pg,
-                              Scalar xgH2O,
-                              Scalar xgCO2)
+    template <class LhsEval>
+    static LhsEval gasDensity_(const LhsEval& T,
+                               const LhsEval& pg,
+                               const LhsEval& xgH2O,
+                               const LhsEval& xgCO2)
     {
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(pg);
         Valgrind::CheckDefined(xgH2O);
         Valgrind::CheckDefined(xgCO2);
 
-        Scalar gasDensity = CO2::gasDensity(T, pg);
-        return gasDensity;
+        return CO2::gasDensity(T, pg);
     }
 
     /***********************************************************************/
@@ -469,10 +489,11 @@ private:
     /* rho_{b,CO2} = rho_w + contribution(salt) + contribution(CO2)        */
     /*                                                                     */
     /***********************************************************************/
-    static Scalar liquidDensity_(Scalar T,
-                                 Scalar pl,
-                                 Scalar xlH2O,
-                                 Scalar xlCO2)
+    template <class LhsEval>
+    static LhsEval liquidDensity_(const LhsEval& T,
+                                  const LhsEval& pl,
+                                  const LhsEval& xlH2O,
+                                  const LhsEval& xlCO2)
     {
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(pl);
@@ -481,37 +502,40 @@ private:
 
         if(T < 273.15) {
             OPM_THROW(NumericalIssue,
-                       "Liquid density for Brine and CO2 is only "
-                       "defined above 273.15K (is " << T << "K)");
+                      "Liquid density for Brine and CO2 is only "
+                      "defined above 273.15K (is " << T << "K)");
         }
         if(pl >= 2.5e8) {
             OPM_THROW(NumericalIssue,
-                       "Liquid density for Brine and CO2 is only "
-                       "defined below 250MPa (is " << pl << "Pa)");
+                      "Liquid density for Brine and CO2 is only "
+                      "defined below 250MPa (is " << pl << "Pa)");
         }
 
-        Scalar rho_brine = Brine::liquidDensity(T, pl);
-        Scalar rho_pure = H2O::liquidDensity(T, pl);
-        Scalar rho_lCO2 = liquidDensityWaterCO2_(T, pl, xlH2O, xlCO2);
-        Scalar contribCO2 = rho_lCO2 - rho_pure;
+        const LhsEval& rho_brine = Brine::liquidDensity(T, pl);
+        const LhsEval& rho_pure = H2O::liquidDensity(T, pl);
+        const LhsEval& rho_lCO2 = liquidDensityWaterCO2_(T, pl, xlH2O, xlCO2);
+        const LhsEval& contribCO2 = rho_lCO2 - rho_pure;
 
         return rho_brine + contribCO2;
     }
 
-    static Scalar liquidDensityWaterCO2_(Scalar temperature,
-                                         Scalar pl,
-                                         Scalar xlH2O,
-                                         Scalar xlCO2)
+    template <class LhsEval>
+    static LhsEval liquidDensityWaterCO2_(const LhsEval& temperature,
+                                          const LhsEval& pl,
+                                          const LhsEval& /*xlH2O*/,
+                                          const LhsEval& xlCO2)
     {
-        const Scalar M_CO2 = CO2::molarMass();
-        const Scalar M_H2O = H2O::molarMass();
+        Scalar M_CO2 = CO2::molarMass();
+        Scalar M_H2O = H2O::molarMass();
 
-        const Scalar tempC = temperature - 273.15;        /* tempC : temperature in °C */
-        const Scalar rho_pure = H2O::liquidDensity(temperature, pl);
-        xlH2O = 1.0 - xlCO2; // xlH2O is available, but in case of a pure gas phase
-                             // the value of M_T for the virtual liquid phase can become very large
-        const Scalar M_T = M_H2O * xlH2O + M_CO2 * xlCO2;
-        const Scalar V_phi =
+        const LhsEval& tempC = temperature - 273.15;        /* tempC : temperature in °C */
+        const LhsEval& rho_pure = H2O::liquidDensity(temperature, pl);
+        // calculate the mole fraction of CO2 in the liquid. note that xlH2O is available
+        // as a function parameter, but in the case of a pure gas phase the value of M_T
+        // for the virtual liquid phase can become very large
+        const LhsEval xlH2O = 1.0 - xlCO2;
+        const LhsEval& M_T = M_H2O * xlH2O + M_CO2 * xlCO2;
+        const LhsEval& V_phi =
             (37.51 +
              tempC*(-9.585e-2 +
                     tempC*(8.74e-4 -
@@ -519,41 +543,43 @@ private:
         return 1/ (xlCO2 * V_phi/M_T + M_H2O * xlH2O / (rho_pure * M_T));
     }
 
-    static Scalar liquidEnthalpyBrineCO2_(Scalar T,
-                                          Scalar p,
-                                          Scalar S,
-                                          Scalar X_CO2_w)
+    template <class LhsEval>
+    static LhsEval liquidEnthalpyBrineCO2_(const LhsEval& T,
+                                           const LhsEval& p,
+                                           Scalar S, // salinity
+                                           const LhsEval& X_CO2_w)
     {
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         /* X_CO2_w : mass fraction of CO2 in brine */
 
         /* same function as enthalpy_brine, only extended by CO2 content */
 
         /*Numerical coefficents from PALLISER*/
-        static const Scalar f[] = {
+        static Scalar f[] = {
             2.63500E-1, 7.48368E-6, 1.44611E-6, -3.80860E-10
         };
 
         /*Numerical coefficents from MICHAELIDES for the enthalpy of brine*/
-        static const Scalar a[4][3] = {
+        static Scalar a[4][3] = {
             { 9633.6, -4080.0, +286.49 },
             { +166.58, +68.577, -4.6856 },
             { -0.90963, -0.36524, +0.249667E-1 },
             { +0.17965E-2, +0.71924E-3, -0.4900E-4 }
         };
 
-        Scalar theta, h_NaCl;
-        Scalar m, h_ls1, d_h;
-        Scalar S_lSAT, delta_h;
-        int i, j;
-        Scalar delta_hCO2, hg, hw;
+        LhsEval theta, h_NaCl;
+        LhsEval h_ls1, d_h;
+        LhsEval delta_h;
+        LhsEval delta_hCO2, hg, hw;
 
         theta = T - 273.15;
 
-        S_lSAT = f[0] + f[1]*theta + f[2]*theta*theta + f[3]*theta*theta*theta;
-        /*Regularization*/
-        if (S>S_lSAT) {
+        // Regularization
+        Scalar scalarTheta = LhsToolbox::value(theta);
+        Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
+        if (S > S_lSAT)
             S = S_lSAT;
-        }
 
         hw = H2O::liquidEnthalpy(T, p) /1E3; /* kJ/kg */
 
@@ -561,14 +587,14 @@ private:
         /*U=*/h_NaCl = (3.6710E4*T + 0.5*(6.2770E1)*T*T - ((6.6670E-2)/3)*T*T*T
                         +((2.8000E-5)/4)*(T*T*T*T))/(58.44E3)- 2.045698e+02; /* kJ/kg */
 
-        m = (1E3/58.44)*(S/(1-S));
-        i = 0;
-        j = 0;
+        Scalar m = 1E3/58.44 * S/(1-S);
+        int i = 0;
+        int j = 0;
         d_h = 0;
 
         for (i = 0; i<=3; i++) {
             for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * pow(theta, i) * pow(m, j);
+                d_h = d_h + a[i][j] * LhsToolbox::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
             }
         }
         /* heat of dissolution for halite according to Michaelides 1971 */

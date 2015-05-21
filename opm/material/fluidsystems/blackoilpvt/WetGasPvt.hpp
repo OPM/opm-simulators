@@ -35,15 +35,17 @@
 #endif
 
 namespace Opm {
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phas
  *        with vaporized oil.
  */
-template <class Scalar>
-class WetGasPvt : public GasPvtInterface<Scalar>
+template <class Scalar, class Evaluation = Scalar>
+class WetGasPvt
+    : public GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, WetGasPvt<Scalar, Evaluation> >
 {
-    typedef FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
+    friend class GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, WetGasPvt<Scalar, Evaluation> >;
+
+    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
 
     typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
@@ -64,7 +66,7 @@ public:
         inverseGasB_.resize(numRegions);
         inverseGasBMu_.resize(numRegions);
         gasMu_.resize(numRegions);
-        oilVaporizationFactor_.resize(numRegions);
+        oilVaporizationFactorTable_.resize(numRegions);
         saturationPressureSpline_.resize(numRegions);
     }
 
@@ -74,7 +76,7 @@ public:
      * \param samplePoints A container of (x,y) values.
      */
     void setSaturatedGasOilVaporizationFactor(int regionIdx, const SamplingPoints &samplePoints)
-    { oilVaporizationFactor_[regionIdx].setContainerOfTuples(samplePoints); }
+    { oilVaporizationFactorTable_[regionIdx].setContainerOfTuples(samplePoints); }
 
     /*!
      * \brief Initialize the function for the gas formation volume factor
@@ -89,12 +91,12 @@ public:
     {
         auto& invGasB = inverseGasB_[regionIdx];
 
-        auto &Rv = oilVaporizationFactor_[regionIdx];
+        auto &Rv = oilVaporizationFactorTable_[regionIdx];
 
         Scalar T = BlackOilFluidSystem::surfaceTemperature;
 
         Scalar RvMin = 0.0;
-        Scalar RvMax = Rv.eval(oilVaporizationFactor_[regionIdx].xMax(), /*extrapolate=*/true);
+        Scalar RvMax = Rv.eval(oilVaporizationFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -165,10 +167,10 @@ public:
      */
     void setSaturatedGasViscosity(int regionIdx, const SamplingPoints &samplePoints  )
     {
-        auto& oilVaporizationFactor = oilVaporizationFactor_[regionIdx];
+        auto& oilVaporizationFactor = oilVaporizationFactorTable_[regionIdx];
 
         Scalar RvMin = 0.0;
-        Scalar RvMax = oilVaporizationFactor.eval(oilVaporizationFactor_[regionIdx].xMax(), /*extrapolate=*/true);
+        Scalar RvMax = oilVaporizationFactor.eval(oilVaporizationFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
 
         Scalar poMin = samplePoints.front().first;
         Scalar poMax = samplePoints.back().first;
@@ -206,11 +208,11 @@ public:
 
         auto& gasMu = gasMu_[regionIdx];
         auto& invGasB = inverseGasB_[regionIdx];
-        auto& oilVaporizationFactor = oilVaporizationFactor_[regionIdx];
+        auto& oilVaporizationFactor = oilVaporizationFactorTable_[regionIdx];
 
         oilVaporizationFactor.setXYArrays(saturatedTable->numRows(),
-                                         saturatedTable->getPressureColumn(),
-                                         saturatedTable->getOilSolubilityColumn());
+                                          saturatedTable->getPressureColumn(),
+                                          saturatedTable->getOilSolubilityColumn());
 
         // extract the table for the gas dissolution and the oil formation volume factors
         for (int outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
@@ -326,21 +328,23 @@ public:
         }
     }
 
+private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    Scalar viscosity(int regionIdx,
-                     Scalar temperature,
-                     Scalar pressure,
-                     Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval viscosity_(int regionIdx,
+                       const LhsEval& temperature,
+                       const LhsEval& pressure,
+                       const LhsEval& XgO) const
     {
-        Scalar Rv =
+        const LhsEval& Rv =
             XgO/(1 - XgO)
-            * BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx)
-            / BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
+            * (BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx)
+               / BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx));
 
-        Scalar invBg = inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
-        Scalar invMugBg = inverseGasBMu_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
+        const LhsEval& invBg = inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
+        const LhsEval& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
 
         return invBg/invMugBg;
     }
@@ -348,22 +352,23 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    Scalar density(int regionIdx,
-                   Scalar temperature,
-                   Scalar pressure,
-                   Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval density_(int regionIdx,
+                     const LhsEval& temperature,
+                     const LhsEval& pressure,
+                     const LhsEval& XgO) const
     {
         Scalar rhooRef = BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
         Scalar rhogRef = BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
 
-        Scalar Bg = formationVolumeFactor(regionIdx, temperature, pressure, XgO);
-        Scalar rhoo = rhooRef/Bg;
+        const LhsEval& Bg = formationVolumeFactor_(regionIdx, temperature, pressure, XgO);
+        LhsEval rhoo = rhooRef/Bg;
 
         // the oil formation volume factor just represents the partial density of the gas
         // component in the gas phase. to get the total density of the phase, we have to
         // add the partial density of the oil component.
-        Scalar Rv = XgO/(1 - XgO) * rhooRef/rhogRef;
-        rhoo += rhogRef*Rv/Bg;
+        const LhsEval& Rv = XgO/(1 - XgO) * (rhooRef/rhogRef);
+        rhoo += (rhogRef*Rv)/Bg;
 
         return rhoo;
     }
@@ -371,12 +376,13 @@ public:
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    Scalar formationVolumeFactor(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar pressure,
-                                 Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval formationVolumeFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure,
+                                   const LhsEval& XgO) const
     {
-        Scalar Rv =
+        const LhsEval& Rv =
             XgO/(1-XgO)
             *BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx)
             /BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
@@ -388,15 +394,18 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    Scalar fugacityCoefficient(int regionIdx,
-                               Scalar temperature,
-                               Scalar pressure,
-                               int compIdx) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval fugacityCoefficient_(int regionIdx,
+                                 const LhsEval& temperature,
+                                 const LhsEval& pressure,
+                                 int compIdx) const
     {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
         // set the oil component fugacity coefficient in oil phase
         // arbitrarily. we use some pseudo-realistic value for the vapor
         // pressure to ease physical interpretation of the results
-        Scalar phi_gG = 1.0;
+        LhsEval phi_gG = Toolbox::createConstant(1.0);
 
         if (compIdx == BlackOilFluidSystem::gasCompIdx)
             return phi_gG;
@@ -411,16 +420,15 @@ public:
         //
         // first, retrieve the mole fraction of gas a saturated oil
         // would exhibit at the given pressure
-        Scalar x_gOSat = saturatedGasOilMoleFraction(regionIdx, temperature, pressure);
+        const LhsEval& x_gOSat = saturatedGasOilMoleFraction_(regionIdx, temperature, pressure);
 
         // then, scale the oil component's gas phase fugacity
         // coefficient, so that the oil phase ends up at the right
         // composition if we were doing a flash experiment
-        Scalar phi_oO = BlackOilFluidSystem::fugCoefficientInOil(oilCompIdx,
-                                                                 temperature,
-                                                                 pressure,
-                                                                 regionIdx);
-
+        const LhsEval& phi_oO = BlackOilFluidSystem::fugCoefficientInOil(oilCompIdx,
+                                                                         temperature,
+                                                                         pressure,
+                                                                         regionIdx);
 
         return phi_oO / x_gOSat;
     }
@@ -428,10 +436,11 @@ public:
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
-    Scalar oilVaporizationFactor(int regionIdx,
-                                Scalar temperature,
-                                Scalar pressure) const OPM_FINAL
-    { return oilVaporizationFactor_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    template <class LhsEval>
+    LhsEval oilVaporizationFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure) const
+    { return oilVaporizationFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]
@@ -439,34 +448,38 @@ public:
      *
      * \param XgO The mass fraction of the oil component in the gas phase [-]
      */
-    Scalar gasSaturationPressure(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval gasSaturationPressure_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& XgO) const
     {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
         // use the saturation pressure spline to get a pretty good initial value
-        Scalar pSat = saturationPressureSpline_[regionIdx].eval(XgO, /*extrapolate=*/true);
+        LhsEval pSat = saturationPressureSpline_[regionIdx].eval(XgO, /*extrapolate=*/true);
+        const LhsEval& eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
         // value is good, this should only take two to three
         // iterations...
         for (int i = 0; i < 20; ++i) {
-            Scalar f = saturatedGasOilMassFraction(regionIdx, temperature, pSat) - XgO;
-            Scalar eps = pSat*1e-11;
-            Scalar fPrime = ((saturatedGasOilMassFraction(regionIdx, temperature, pSat + eps) - XgO) - f)/eps;
+            const LhsEval& f = saturatedGasOilMassFraction_(regionIdx, temperature, pSat) - XgO;
+            const LhsEval& fPrime = ((saturatedGasOilMassFraction_(regionIdx, temperature, pSat + eps) - XgO) - f)/eps;
 
-            Scalar delta = f/fPrime;
+            const LhsEval& delta = f/fPrime;
             pSat -= delta;
 
-            if (std::abs(delta) < pSat * 1e-10)
+            if (std::abs(Toolbox::value(delta)) < std::abs(Toolbox::value(pSat)) * 1e-10)
                 return pSat;
         }
 
         OPM_THROW(NumericalIssue, "Could find the gas saturation pressure for X_g^O = " << XgO);
     }
 
-    Scalar saturatedGasOilMassFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval saturatedGasOilMassFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
     {
         Scalar rho_gRef = BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
         Scalar rho_oRef = BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
@@ -474,27 +487,28 @@ public:
         // calculate the mass of the oil component [kg/m^3] in the oil phase. This is
         // equivalent to the gas dissolution factor [m^3/m^3] at current pressure times
         // the gas density [kg/m^3] at standard pressure
-        Scalar rho_oG = oilVaporizationFactor(regionIdx, temperature, pressure) * rho_gRef;
+        const LhsEval& rho_oG = oilVaporizationFactor_(regionIdx, temperature, pressure) * rho_gRef;
 
         // we now have the total density of saturated oil and the partial density of the
         // oil component within it. The gas mass fraction is the ratio of these two.
         return rho_oG/(rho_oRef + rho_oG);
     }
 
-    Scalar saturatedGasOilMoleFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval saturatedGasOilMoleFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
     {
         // calculate the mass fractions of gas and oil
-        Scalar XgO = saturatedGasOilMassFraction(regionIdx, temperature, pressure);
+        const LhsEval& XgO = saturatedGasOilMassFraction_(regionIdx, temperature, pressure);
 
         // which can be converted to mole fractions, given the
         // components' molar masses
         Scalar MG = BlackOilFluidSystem::molarMass(gasCompIdx, regionIdx);
         Scalar MO = BlackOilFluidSystem::molarMass(oilCompIdx, regionIdx);
 
-        Scalar avgMolarMass = MO/(1 + (1 - XgO)*(MO/MG - 1));
-        Scalar xgO = XgO*avgMolarMass/MG;
+        const LhsEval& avgMolarMass = MO/(1 + (1 - XgO)*(MO/MG - 1));
+        const LhsEval& xgO = XgO*avgMolarMass/MG;
 
         return xgO;
     }
@@ -502,7 +516,7 @@ public:
 private:
     void updateSaturationPressureSpline_(int regionIdx)
     {
-        auto& oilVaporizationFactor = oilVaporizationFactor_[regionIdx];
+        auto& oilVaporizationFactor = oilVaporizationFactorTable_[regionIdx];
 
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
@@ -513,7 +527,7 @@ private:
         Scalar XgO = 0;
         for (int i=0; i <= n; ++ i) {
             Scalar pSat = oilVaporizationFactor.xMin() + i*delta;
-            XgO = saturatedGasOilMassFraction(regionIdx, /*temperature=*/1e100, pSat);
+            XgO = saturatedGasOilMassFraction_(regionIdx, /*temperature=*/Scalar(1e100), pSat);
 
             std::pair<Scalar, Scalar> val(XgO, pSat);
             pSatSamplePoints.push_back(val);
@@ -525,7 +539,7 @@ private:
     std::vector<TabulatedTwoDFunction> inverseGasB_;
     std::vector<TabulatedTwoDFunction> gasMu_;
     std::vector<TabulatedTwoDFunction> inverseGasBMu_;
-    std::vector<TabulatedOneDFunction> oilVaporizationFactor_;
+    std::vector<TabulatedOneDFunction> oilVaporizationFactorTable_;
     std::vector<Spline> saturationPressureSpline_;
 };
 

@@ -40,10 +40,13 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
  */
-template <class Scalar>
-class DryGasPvt : public GasPvtInterface<Scalar>
+template <class Scalar, class Evaluation = Scalar>
+class DryGasPvt
+    : public GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, DryGasPvt<Scalar, Evaluation> >
 {
-    typedef FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
+    friend class GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, DryGasPvt<Scalar, Evaluation> >;
+
+    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
 
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
@@ -133,16 +136,18 @@ public:
         }
     }
 
+private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    Scalar viscosity(int regionIdx,
-                     Scalar temperature,
-                     Scalar pressure,
-                     Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval viscosity_(int regionIdx,
+                       const LhsEval& temperature,
+                       const LhsEval& pressure,
+                       const LhsEval& XgO) const
     {
-        Scalar invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
-        Scalar invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
+        const LhsEval& invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
+        const LhsEval& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
 
         return invBg/invMugBg;
     }
@@ -150,38 +155,43 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    Scalar density(int regionIdx,
-                   Scalar temperature,
-                   Scalar pressure,
-                   Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval density_(int regionIdx,
+                     const LhsEval& temperature,
+                     const LhsEval& pressure,
+                     const LhsEval& XgO) const
     {
         // gas formation volume factor at reservoir pressure
-        Scalar Bg = formationVolumeFactor(regionIdx, temperature, pressure, XgO);
+        const LhsEval& Bg = formationVolumeFactor_(regionIdx, temperature, pressure, XgO);
         return BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx)/Bg;
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    Scalar formationVolumeFactor(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar pressure,
-                                 Scalar XgO) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval formationVolumeFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure,
+                                   const LhsEval& XgO) const
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    Scalar fugacityCoefficient(int regionIdx,
-                               Scalar temperature,
-                               Scalar pressure,
-                               int compIdx) const OPM_FINAL
+    template <class LhsEval>
+    LhsEval fugacityCoefficient_(int regionIdx,
+                                 const LhsEval& temperature,
+                                 const LhsEval& pressure,
+                                 int compIdx) const
     {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+
         // make the gas component more affine to the gas phase than the other components
         if (compIdx == BlackOilFluidSystem::gasCompIdx)
-            return 1;
-        return 1e6;
+            return Toolbox::createConstant(1.0);
+        return Toolbox::createConstant(1e6);
     }
 
     /*!
@@ -190,28 +200,44 @@ public:
      *
      * \param XgO The mass fraction of the oil component in the gas phase [-]
      */
-    Scalar gasSaturationPressure(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar XgO) const OPM_FINAL
-    { return 0.0; } // this is dry gas!
+    template <class LhsEval>
+    LhsEval gasSaturationPressure_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& XgO) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+        return Toolbox::createConstant(0.0);  // this is dry gas!
+    }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
-    Scalar oilVaporizationFactor(int regionIdx,
-                                 Scalar temperature,
-                                 Scalar pressure) const OPM_FINAL
-    { return 0.0; } // this is dry gas!
+    template <class LhsEval>
+    LhsEval oilVaporizationFactor_(int regionIdx,
+                                   const LhsEval& temperature,
+                                   const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+        return Toolbox::createConstant(0.0);  // this is dry gas!
+    }
 
-    Scalar saturatedGasOilMassFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
-    { return 0.0; } // this is dry gas!
+    template <class LhsEval>
+    LhsEval saturatedGasOilMassFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+        return Toolbox::createConstant(0.0);  // this is dry gas!
+    }
 
-    Scalar saturatedGasOilMoleFraction(int regionIdx,
-                                       Scalar temperature,
-                                       Scalar pressure) const OPM_FINAL
-    { return 0.0; } // this is dry gas!
+    template <class LhsEval>
+    LhsEval saturatedGasOilMoleFraction_(int regionIdx,
+                                         const LhsEval& temperature,
+                                         const LhsEval& pressure) const
+    {
+        typedef Opm::MathToolbox<LhsEval> Toolbox;
+        return Toolbox::createConstant(0.0);  // this is dry gas!
+    }
 
 private:
     std::vector<TabulatedOneDFunction> inverseGasB_;

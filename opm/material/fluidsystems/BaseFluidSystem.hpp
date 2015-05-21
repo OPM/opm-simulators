@@ -65,7 +65,7 @@ public:
     static char *phaseName(int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a phaseName() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a phaseName() method!");
     }
 
     /*!
@@ -76,7 +76,7 @@ public:
     static bool isLiquid(int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isLiquid() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isLiquid() method!");
     }
 
     /*!
@@ -96,7 +96,7 @@ public:
     static bool isIdealMixture(int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealMixture() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealMixture() method!");
     }
 
     /*!
@@ -111,7 +111,7 @@ public:
     static bool isCompressible(int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isCompressible() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isCompressible() method!");
     }
 
     /*!
@@ -123,7 +123,7 @@ public:
     static bool isIdealGas(int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealGas() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealGas() method!");
     }
 
     /*!
@@ -134,7 +134,7 @@ public:
     static const char *componentName(int compIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a componentName() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a componentName() method!");
     }
 
     /*!
@@ -145,7 +145,7 @@ public:
     static Scalar molarMass(int compIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a molarMass() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a molarMass() method!");
     }
 
     /*!
@@ -160,13 +160,13 @@ public:
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval density(const FluidState &fluidState,
+                           const ParameterCache &paramCache,
+                           int phaseIdx)
     {
         OPM_THROW(std::runtime_error,
-                   "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a density() method!");
+                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a density() method!");
     }
 
     /*!
@@ -183,11 +183,11 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx,
+                                       int compIdx)
     {
         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
     }
@@ -198,10 +198,10 @@ public:
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             int phaseIdx)
     {
         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a viscosity() method!");
     }
@@ -223,13 +223,13 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval diffusionCoefficient(const FluidState &fluidState,
+                                        const ParameterCache &paramCache,
+                                        int phaseIdx,
+                                        int compIdx)
     {
-         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
     }
 
     /*!
@@ -239,10 +239,10 @@ public:
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval enthalpy(const FluidState &fluidState,
+                            const ParameterCache &paramCache,
+                            int phaseIdx)
     {
         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide an enthalpy() method!");
     }
@@ -253,10 +253,10 @@ public:
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar thermalConductivity(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval thermalConductivity(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       int phaseIdx)
     {
         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
     }
@@ -267,10 +267,10 @@ public:
      * \copydoc Doxygen::fluidSystemBaseParams
      * \copydoc Doxygen::phaseIdxParam
      */
-    template <class FluidState, class ParameterCache>
-    static Scalar heatCapacity(const FluidState &fluidState,
-                               const ParameterCache &paramCache,
-                               int phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParameterCache = NullParameterCache>
+    static LhsEval heatCapacity(const FluidState &fluidState,
+                                const ParameterCache &paramCache,
+                                int phaseIdx)
     {
         OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a heatCapacity() method!");
     }

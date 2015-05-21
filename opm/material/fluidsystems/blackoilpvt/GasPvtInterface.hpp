@@ -23,8 +23,9 @@
 #ifndef OPM_GAS_PVT_INTERFACE_HPP
 #define OPM_GAS_PVT_INTERFACE_HPP
 
-namespace Opm {
+#include <opm/material/common/OpmFinal.hpp>
 
+namespace Opm {
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas
  *        phase in the black-oil model.
@@ -37,38 +38,54 @@ namespace Opm {
  * Note that, since the application for this class is the black oil fluid system, the API
  * exposed by this class is pretty specific to the black oil model.
  */
-template <class Scalar>
+template <class Scalar, class Evaluation = Scalar>
 class GasPvtInterface
 {
 public:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
+    virtual Evaluation viscosity(int regionIdx,
+                                 const Evaluation& temperature,
+                                 const Evaluation& pressure,
+                                 const Evaluation& XgO) const = 0;
     virtual Scalar viscosity(int regionIdx,
                              Scalar temperature,
                              Scalar pressure,
-                             Scalar XoG) const = 0;
+                             Scalar XgO) const = 0;
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
+    virtual Evaluation formationVolumeFactor(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure,
+                                             const Evaluation& XgO) const = 0;
     virtual Scalar formationVolumeFactor(int regionIdx,
                                          Scalar temperature,
                                          Scalar pressure,
-                                         Scalar XoG) const = 0;
+                                         Scalar XgO) const = 0;
 
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
+    virtual Evaluation density(int regionIdx,
+                               const Evaluation& temperature,
+                               const Evaluation& pressure,
+                               const Evaluation& XgO) const = 0;
     virtual Scalar density(int regionIdx,
                            Scalar temperature,
                            Scalar pressure,
-                           Scalar XoG) const = 0;
+                           Scalar XgO) const = 0;
 
     /*!
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
+    virtual Evaluation fugacityCoefficient(int regionIdx,
+                                           const Evaluation& temperature,
+                                           const Evaluation& pressure,
+                                           int compIdx) const = 0;
     virtual Scalar fugacityCoefficient(int regionIdx,
                                        Scalar temperature,
                                        Scalar pressure,
@@ -77,6 +94,9 @@ public:
     /*!
      * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of oil saturated gas.
      */
+    virtual Evaluation oilVaporizationFactor(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure) const = 0;
     virtual Scalar oilVaporizationFactor(int regionIdx,
                                          Scalar temperature,
                                          Scalar pressure) const = 0;
@@ -87,6 +107,9 @@ public:
      *
      * \param XgO The mass fraction of the oil component in the gas phase [-]
      */
+    virtual Evaluation gasSaturationPressure(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& XgO) const = 0;
     virtual Scalar gasSaturationPressure(int regionIdx,
                                          Scalar temperature,
                                          Scalar XgO) const = 0;
@@ -95,6 +118,9 @@ public:
      * \brief Returns the gas mass fraction of oil-saturated gas at a given temperatire
      *        and pressure [-].
      */
+    virtual Evaluation saturatedGasOilMassFraction(int regionIdx,
+                                                   const Evaluation& temperature,
+                                                   const Evaluation& pressure) const = 0;
     virtual Scalar saturatedGasOilMassFraction(int regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
@@ -103,9 +129,180 @@ public:
      * \brief Returns the gas mole fraction of oil-saturated gas at a given temperatire
      *        and pressure [-].
      */
+    virtual Evaluation saturatedGasOilMoleFraction(int regionIdx,
+                                                   const Evaluation& temperature,
+                                                   const Evaluation& pressure) const = 0;
     virtual Scalar saturatedGasOilMoleFraction(int regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
+};
+
+template <class Scalar>
+class GasPvtInterface<Scalar, Scalar>
+{
+public:
+    virtual Scalar viscosity(int regionIdx,
+                             Scalar temperature,
+                             Scalar pressure,
+                             Scalar XgO) const = 0;
+    virtual Scalar formationVolumeFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure,
+                                         Scalar XgO) const = 0;
+    virtual Scalar density(int regionIdx,
+                           Scalar temperature,
+                           Scalar pressure,
+                           Scalar XgO) const = 0;
+    virtual Scalar fugacityCoefficient(int regionIdx,
+                                       Scalar temperature,
+                                       Scalar pressure,
+                                       int compIdx) const = 0;
+    virtual Scalar oilVaporizationFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure) const = 0;
+    virtual Scalar gasSaturationPressure(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar XgO) const = 0;
+    virtual Scalar saturatedGasOilMassFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const = 0;
+    virtual Scalar saturatedGasOilMoleFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const = 0;
+};
+
+template <class Scalar, class Evaluation, class Implementation>
+class GasPvtInterfaceTemplateWrapper : public GasPvtInterface<Scalar, Evaluation>
+{
+    const Implementation& asImp_() const
+    { return *static_cast<const Implementation*>(this); }
+
+public:
+    virtual Evaluation viscosity(int regionIdx,
+                                 const Evaluation& temperature,
+                                 const Evaluation& pressure,
+                                 const Evaluation& XgO) const OPM_FINAL
+    { return asImp_().viscosity_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar viscosity(int regionIdx,
+                             Scalar temperature,
+                             Scalar pressure,
+                             Scalar XgO) const OPM_FINAL
+    { return asImp_().viscosity_(regionIdx, temperature, pressure, XgO); };
+
+    virtual Evaluation formationVolumeFactor(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure,
+                                             const Evaluation& XgO) const OPM_FINAL
+    { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar formationVolumeFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure,
+                                         Scalar XgO) const OPM_FINAL
+    { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure, XgO); };
+
+    virtual Evaluation density(int regionIdx,
+                               const Evaluation& temperature,
+                               const Evaluation& pressure,
+                               const Evaluation& XgO) const OPM_FINAL
+    { return asImp_().density_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar density(int regionIdx,
+                           Scalar temperature,
+                           Scalar pressure,
+                           Scalar XgO) const OPM_FINAL
+    { return asImp_().density_(regionIdx, temperature, pressure, XgO); };
+
+    virtual Evaluation fugacityCoefficient(int regionIdx,
+                                           const Evaluation& temperature,
+                                           const Evaluation& pressure,
+                                           int compIdx) const OPM_FINAL
+    { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); };
+    virtual Scalar fugacityCoefficient(int regionIdx,
+                                       Scalar temperature,
+                                       Scalar pressure,
+                                       int compIdx) const OPM_FINAL
+    { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); };
+
+    virtual Evaluation oilVaporizationFactor(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure) const OPM_FINAL
+    { return asImp_().oilVaporizationFactor_(regionIdx, temperature, pressure); };
+    virtual Scalar oilVaporizationFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure) const OPM_FINAL
+    { return asImp_().oilVaporizationFactor_(regionIdx, temperature, pressure); };
+
+    virtual Evaluation gasSaturationPressure(int regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& XgO) const OPM_FINAL
+    { return asImp_().gasSaturationPressure_(regionIdx, temperature, XgO); };
+    virtual Scalar gasSaturationPressure(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar XgO) const OPM_FINAL
+    { return asImp_().gasSaturationPressure_(regionIdx, temperature, XgO); };
+
+    virtual Evaluation saturatedGasOilMassFraction(int regionIdx,
+                                                   const Evaluation& temperature,
+                                                   const Evaluation& pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMassFraction_(regionIdx, temperature, pressure); };
+    virtual Scalar saturatedGasOilMassFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMassFraction_(regionIdx, temperature, pressure); };
+
+    virtual Evaluation saturatedGasOilMoleFraction(int regionIdx,
+                                                   const Evaluation& temperature,
+                                                   const Evaluation& pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMoleFraction_(regionIdx, temperature, pressure); };
+    virtual Scalar saturatedGasOilMoleFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMoleFraction_(regionIdx, temperature, pressure); };
+};
+
+template <class Scalar, class Implementation>
+class GasPvtInterfaceTemplateWrapper<Scalar, Scalar, Implementation>
+    : public GasPvtInterface<Scalar, Scalar>
+{
+    const Implementation& asImp_() const
+    { return *static_cast<const Implementation*>(this); }
+
+public:
+    virtual Scalar viscosity(int regionIdx,
+                             Scalar temperature,
+                             Scalar pressure,
+                             Scalar XgO) const OPM_FINAL
+    { return asImp_().viscosity_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar formationVolumeFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure,
+                                         Scalar XgO) const OPM_FINAL
+    { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar density(int regionIdx,
+                           Scalar temperature,
+                           Scalar pressure,
+                           Scalar XgO) const OPM_FINAL
+    { return asImp_().density_(regionIdx, temperature, pressure, XgO); };
+    virtual Scalar fugacityCoefficient(int regionIdx,
+                                       Scalar temperature,
+                                       Scalar pressure,
+                                       int compIdx) const OPM_FINAL
+    { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); };
+    virtual Scalar oilVaporizationFactor(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar pressure) const OPM_FINAL
+    { return asImp_().oilVaporizationFactor_(regionIdx, temperature, pressure); };
+    virtual Scalar gasSaturationPressure(int regionIdx,
+                                         Scalar temperature,
+                                         Scalar XgO) const OPM_FINAL
+    { return asImp_().gasSaturationPressure_(regionIdx, temperature, XgO); };
+    virtual Scalar saturatedGasOilMassFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMassFraction_(regionIdx, temperature, pressure); };
+    virtual Scalar saturatedGasOilMoleFraction(int regionIdx,
+                                               Scalar temperature,
+                                               Scalar pressure) const OPM_FINAL
+    { return asImp_().saturatedGasOilMoleFraction_(regionIdx, temperature, pressure); };
 };
 
 } // namespace Opm

@@ -74,35 +74,43 @@ public:
     { return Component::triplePressure(); }
 
     //! \copydoc GasPhase::vaporPressure
-    static Scalar vaporPressure(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     {  return Component::vaporPressure(temperature); }
 
     //! \copydoc GasPhase::density
-    static Scalar density(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation density(const Evaluation& temperature, const Evaluation& pressure)
     {  return Component::liquidDensity(temperature, pressure); }
 
     //! \copydoc GasPhase::pressure
-    static Scalar pressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation pressure(const Evaluation& temperature, const Evaluation& density)
     {  return Component::liquidPressure(temperature, density); }
 
     //! \copydoc GasPhase::enthalpy
-    static const Scalar enthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static const Evaluation enthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {  return Component::liquidEnthalpy(temperature, pressure); }
 
     //! \copydoc GasPhase::internalEnergy
-    static const Scalar internalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static const Evaluation internalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::liquidInternalEnergy(temperature, pressure); }
 
     //! \copydoc GasPhase::viscosity
-    static Scalar viscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation viscosity(const Evaluation& temperature, const Evaluation& pressure)
     {  return Component::liquidViscosity(temperature, pressure); }
 
     //! \copydoc GasPhase::thermalConductivity
-    static Scalar thermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation thermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::liquidThermalConductivity(temperature, pressure); }
 
     //! \copydoc GasPhase::heatCapacity
-    static Scalar heatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { return Component::liquidHeatCapacity(temperature, pressure); }
 };
 } // namespace Opm
