@@ -37,6 +37,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_spline.cpp
 	tests/test_tabulation.cpp
 	tests/test_2dtables.cpp
+	tests/test_components.cpp
 	tests/test_fluidsystems.cpp
 	tests/test_immiscibleflash.cpp
 	)
