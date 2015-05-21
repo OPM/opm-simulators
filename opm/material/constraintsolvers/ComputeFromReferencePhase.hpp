@@ -58,13 +58,13 @@ namespace Opm {
  * - if the setViscosity parameter is true, also dynamic viscosities of *all* phases
  * - if the setEnthalpy parameter is true, also specific enthalpies and internal energies of *all* phases
  */
-template <class Scalar, class FluidSystem>
+template <class Scalar, class FluidSystem, class Evaluation = Scalar>
 class ComputeFromReferencePhase
 {
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    typedef Opm::CompositionFromFugacities<Scalar, FluidSystem> CompositionFromFugacities;
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+    typedef Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation> CompositionFromFugacities;
+    typedef Dune::FieldVector<Evaluation, numComponents> ComponentVector;
 
 public:
     /*!
@@ -108,6 +108,7 @@ public:
                       bool setViscosity,
                       bool setEnthalpy)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         // compute the density and enthalpy of the
         // reference phase
@@ -145,8 +146,10 @@ public:
                 continue; // reference phase is already calculated
 
             ComponentVector fugVec;
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                fugVec[compIdx] = fluidState.fugacity(refPhaseIdx, compIdx);
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+                const auto& fug = fluidState.fugacity(refPhaseIdx, compIdx);
+                fugVec[compIdx] = FsToolbox::template toLhs<Evaluation>(fug);
+            }
 
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);
 

@@ -25,6 +25,8 @@
 #ifndef OPM_MISCIBLE_MULTIPHASE_COMPOSITION_HPP
 #define OPM_MISCIBLE_MULTIPHASE_COMPOSITION_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -114,11 +116,13 @@ private:
  * - if the setViscosity parameter is true, also dynamic viscosities of *all* phases
  * - if the setInternalEnergy parameter is true, also specific enthalpies and internal energies of *all* phases
  */
-template <class Scalar, class FluidSystem>
+template <class Scalar, class FluidSystem, class Evaluation = Scalar>
 class MiscibleMultiPhaseComposition
 {
     static const int numPhases = FluidSystem::numPhases;
     static const int numComponents = FluidSystem::numComponents;
+
+    typedef MathToolbox<Evaluation> Toolbox;
 
     static_assert(numPhases <= numComponents,
                   "This solver requires that the number fluid phases is smaller or equal "
@@ -153,11 +157,15 @@ public:
     static void solve(FluidState &fluidState,
                       ParameterCache &paramCache,
                       int phasePresence,
-                      const MMPCAuxConstraint<Scalar> *auxConstraints,
+                      const MMPCAuxConstraint<Evaluation> *auxConstraints,
                       int numAuxConstraints,
                       bool setViscosity,
                       bool setInternalEnergy)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        static_assert(std::is_same<typename FluidState::Scalar, Evaluation>::value,
+                      "The scalar type of the fluid state must be 'Evaluation'");
+
 #ifndef NDEBUG
         // currently this solver can only handle fluid systems which
         // assume ideal mixtures of all fluids. TODO: relax this
@@ -176,7 +184,8 @@ public:
             // coefficients of the components cannot depend on
             // composition, i.e. the parameters in the cache are valid
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Scalar fugCoeff = FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx);
+                Evaluation fugCoeff = FsToolbox::template toLhs<Evaluation>(
+                    FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx));
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
             }
         }
@@ -184,25 +193,25 @@ public:
         // create the linear system of equations which defines the
         // mole fractions
         static const int numEq = numComponents*numPhases;
-        Dune::FieldMatrix<Scalar, numEq, numEq> M(0.0);
-        Dune::FieldVector<Scalar, numEq> x(0.0);
-        Dune::FieldVector<Scalar, numEq> b(0.0);
+        Dune::FieldMatrix<Evaluation, numEq, numEq> M(Toolbox::createConstant(0.0));
+        Dune::FieldVector<Evaluation, numEq> x(Toolbox::createConstant(0.0));
+        Dune::FieldVector<Evaluation, numEq> b(Toolbox::createConstant(0.0));
 
         // assemble the equations expressing the fact that the
         // fugacities of each component are equal in all phases
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            Scalar entryCol1 =
+            const Evaluation& entryCol1 =
                 fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx)
-                * fluidState.pressure(/*phaseIdx=*/0);
+                *fluidState.pressure(/*phaseIdx=*/0);
             int col1Idx = compIdx;
 
             for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
                 int rowIdx = (phaseIdx - 1)*numComponents + compIdx;
                 int col2Idx = phaseIdx*numComponents + compIdx;
 
-                Scalar entryCol2 =
+                const Evaluation& entryCol2 =
                     fluidState.fugacityCoefficient(phaseIdx, compIdx)
-                    * fluidState.pressure(phaseIdx);
+                    *fluidState.pressure(phaseIdx);
 
                 M[rowIdx][col1Idx] = entryCol1;
                 M[rowIdx][col2Idx] = -entryCol2;
@@ -220,11 +229,11 @@ public:
             int rowIdx = numComponents*(numPhases - 1) + presentPhases;
             presentPhases += 1;
 
-            b[rowIdx] = 1.0;
+            b[rowIdx] = Toolbox::createConstant(1.0);
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
                 int colIdx = phaseIdx*numComponents + compIdx;
 
-                M[rowIdx][colIdx] = 1.0;
+                M[rowIdx][colIdx] = Toolbox::createConstant(1.0);
             }
         }
 
@@ -262,17 +271,17 @@ public:
             }
             paramCache.updateComposition(fluidState, phaseIdx);
 
-            Scalar value = FluidSystem::density(fluidState, paramCache, phaseIdx);
-            fluidState.setDensity(phaseIdx, value);
+            const Evaluation& rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
+            fluidState.setDensity(phaseIdx, rho);
 
             if (setViscosity) {
-                value = FluidSystem::viscosity(fluidState, paramCache, phaseIdx);
-                fluidState.setViscosity(phaseIdx, value);
+                const Evaluation& mu = FluidSystem::viscosity(fluidState, paramCache, phaseIdx);
+                fluidState.setViscosity(phaseIdx, mu);
             }
 
             if (setInternalEnergy) {
-                value = FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
-                fluidState.setEnthalpy(phaseIdx, value);
+                const Evaluation& h =  FluidSystem::enthalpy(fluidState, paramCache, phaseIdx);
+                fluidState.setEnthalpy(phaseIdx, h);
             }
         }
     }
