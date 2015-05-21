@@ -437,7 +437,9 @@ namespace Opm {
                              std::array<double,MaxNumPhases+1>& R_sum,
                              std::array<double,MaxNumPhases+1>& maxCoeff,
                              std::array<double,MaxNumPhases+1>& B_avg,
-                             int nc) const;
+                             std::vector<double>& maxNormWell,
+                             int nc,
+                             int nw) const;
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
