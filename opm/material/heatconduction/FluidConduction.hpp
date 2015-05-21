@@ -29,8 +29,7 @@
 
 #include <algorithm>
 
-namespace Opm
-{
+namespace Opm {
 /*!
  * \ingroup material
  *
@@ -50,13 +49,15 @@ public:
      * \brief Given a fluid state, return the effective heat conductivity [W/m^2 / (K/m)] of the porous
      *        medium.
      */
-    template <class FluidState>
-    static Scalar heatConductivity(const Params &params,
-                                   const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation heatConductivity(const Params &params,
+                                       const FluidState &fluidState)
     {
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updatePhase(fluidState, phaseIdx);
-        return FluidSystem::thermalConductivity(fluidState, paramCache, phaseIdx);
+        return FluidSystem::template thermalConductivity<FluidState, Evaluation>(fluidState,
+                                                                                 paramCache,
+                                                                                 phaseIdx);
     }
 };
 } // namespace Opm

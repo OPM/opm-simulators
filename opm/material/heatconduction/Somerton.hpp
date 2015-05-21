@@ -28,6 +28,7 @@
 #include <opm/material/common/Spline.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <algorithm>
 
@@ -81,19 +82,22 @@ public:
      * phase \f$\alpha\f$ and \f$S_\alpha\f$ is the saturation of
      * phase \f$\alpha\f$.
      */
-    template <class FluidState>
-    static Scalar heatConductivity(const Params &params,
-                                   const FluidState &fluidState)
+    template <class FluidState, class Evaluation = Scalar>
+    static Evaluation heatConductivity(const Params &params,
+                                       const FluidState &fluidState)
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         Valgrind::CheckDefined(params.vacuumLambda());
 
-        Scalar lambda = 0;
+        Evaluation lambda = 0;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
 
             if (FluidSystem::isLiquid(phaseIdx)) {
+                const auto& sat = Toolbox::template toLhs<Evaluation>(fluidState.saturation(phaseIdx));
                 lambda +=
-                    regularizedSqrt_(std::max(0.0, std::min(1.0, fluidState.saturation(phaseIdx))))
+                    regularizedSqrt_(Toolbox::max(0.0, Toolbox::min(1.0, sat)))
                     * (params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda());
             }
             else { // gas phase
@@ -107,8 +111,11 @@ public:
     }
 
 protected:
-    static Scalar regularizedSqrt_(Scalar x)
+    template <class Evaluation>
+    static Evaluation regularizedSqrt_(const Evaluation& x)
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         static const Scalar xMin = 1e-2;
         static const Scalar sqrtXMin = std::sqrt(xMin);
         static const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
@@ -119,7 +126,7 @@ protected:
                                           fPrime0, fPrimeXMin); // m0, m1
 
         if (x > xMin)
-            return std::sqrt(x);
+            return Toolbox::sqrt(x);
         else if (x <= 0)
             return fPrime0 * x;
         else
