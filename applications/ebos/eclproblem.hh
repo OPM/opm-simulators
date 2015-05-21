@@ -24,6 +24,8 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
+#include <opm/material/localad/Evaluation.hpp>
+
 #include "eclgridmanager.hh"
 #include "eclwellmanager.hh"
 #include "eclwriter.hh"
@@ -93,19 +95,23 @@ SET_PROP(EclBaseProblem, MaterialLaw)
 private:
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx> OilWaterTraits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                        Evaluation> OilWaterTraits;
 
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> GasOilTraits;
+                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                        Evaluation> GasOilTraits;
 
     typedef Opm::ThreePhaseMaterialTraits<Scalar,
                                           /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                           /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                          /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+                                          /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx,
+                                          Evaluation> Traits;
 
     typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits> OilWaterLaw;
     typedef typename Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits> GasOilLaw;
@@ -173,9 +179,8 @@ SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 // between writing restart files
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
-}} // namespace Properties, Opm
+} // namespace Properties
 
-namespace Ewoms {
 /*!
  * \ingroup EclBlackOilSimulator
  *
@@ -196,6 +201,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
+    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
@@ -209,12 +215,13 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, BlackOilFluidState) BlackOilFluidState;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
 
+    typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
+    typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
-
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     struct RockParams {
@@ -663,13 +670,18 @@ public:
                 int spaceIdx,
                 int timeIdx) const
     {
-        rate = 0;
+        rate = Toolbox::createConstant(0);
+
+        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+            rate[eqIdx] = Toolbox::createConstant(0.0);
+
         wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
         int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        rate /= this->model().dofTotalVolume(globalDofIdx);
+        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
     }
 
     //! \}
@@ -901,29 +913,29 @@ private:
                                                regionIdx);
         }
 
-        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar> > GasPvtSharedPtr;
+        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar, Evaluation> > GasPvtSharedPtr;
         GasPvtSharedPtr gasPvt(createGasPvt_(deck, eclState));
         FluidSystem::setGasPvt(gasPvt);
 
-        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar> > OilPvtSharedPtr;
+        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar, Evaluation> > OilPvtSharedPtr;
         OilPvtSharedPtr oilPvt(createOilPvt_(deck, eclState));
         FluidSystem::setOilPvt(oilPvt);
 
-        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > WaterPvtSharedPtr;
+        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar, Evaluation> > WaterPvtSharedPtr;
         WaterPvtSharedPtr waterPvt(createWaterPvt_(deck, eclState));
         FluidSystem::setWaterPvt(waterPvt);
 
         FluidSystem::initEnd();
    }
 
-    Opm::OilPvtInterface<Scalar>* createOilPvt_(Opm::DeckConstPtr deck,
-                                                Opm::EclipseStateConstPtr eclState)
+    Opm::OilPvtInterface<Scalar, Evaluation>* createOilPvt_(Opm::DeckConstPtr deck,
+                                                            Opm::EclipseStateConstPtr eclState)
     {
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numPvtRegions = densityKeyword->size();
 
         if (deck->hasKeyword("PVTO")) {
-            Opm::LiveOilPvt<Scalar> *oilPvt = new Opm::LiveOilPvt<Scalar>;
+            Opm::LiveOilPvt<Scalar, Evaluation> *oilPvt = new Opm::LiveOilPvt<Scalar, Evaluation>;
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -933,7 +945,7 @@ private:
             return oilPvt;
         }
         else if (deck->hasKeyword("PVDO")) {
-            Opm::DeadOilPvt<Scalar> *oilPvt = new Opm::DeadOilPvt<Scalar>;
+            Opm::DeadOilPvt<Scalar, Evaluation> *oilPvt = new Opm::DeadOilPvt<Scalar, Evaluation>;
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -943,8 +955,8 @@ private:
             return oilPvt;
         }
         else if (deck->hasKeyword("PVCDO")) {
-            Opm::ConstantCompressibilityOilPvt<Scalar> *oilPvt =
-                new Opm::ConstantCompressibilityOilPvt<Scalar>;
+            Opm::ConstantCompressibilityOilPvt<Scalar, Evaluation> *oilPvt =
+                new Opm::ConstantCompressibilityOilPvt<Scalar, Evaluation>;
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -959,14 +971,14 @@ private:
         OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!");
     }
 
-    Opm::GasPvtInterface<Scalar>* createGasPvt_(Opm::DeckConstPtr deck,
-                                                Opm::EclipseStateConstPtr eclState)
+    Opm::GasPvtInterface<Scalar, Evaluation>* createGasPvt_(Opm::DeckConstPtr deck,
+                                                            Opm::EclipseStateConstPtr eclState)
     {
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numPvtRegions = densityKeyword->size();
 
         if (deck->hasKeyword("PVTG")) {
-            Opm::WetGasPvt<Scalar> *gasPvt = new Opm::WetGasPvt<Scalar>;
+            Opm::WetGasPvt<Scalar, Evaluation> *gasPvt = new Opm::WetGasPvt<Scalar, Evaluation>;
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -976,7 +988,7 @@ private:
             return gasPvt;
         }
         else if (deck->hasKeyword("PVDG")) {
-            Opm::DryGasPvt<Scalar> *gasPvt = new Opm::DryGasPvt<Scalar>;
+            Opm::DryGasPvt<Scalar, Evaluation> *gasPvt = new Opm::DryGasPvt<Scalar, Evaluation>;
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -988,15 +1000,15 @@ private:
         OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
     }
 
-    Opm::WaterPvtInterface<Scalar>* createWaterPvt_(Opm::DeckConstPtr deck,
-                                                    Opm::EclipseStateConstPtr eclState)
+    Opm::WaterPvtInterface<Scalar, Evaluation>* createWaterPvt_(Opm::DeckConstPtr deck,
+                                                                Opm::EclipseStateConstPtr eclState)
     {
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numPvtRegions = densityKeyword->size();
 
         if (deck->hasKeyword("PVTW")) {
-            Opm::ConstantCompressibilityWaterPvt<Scalar> *waterPvt =
-                new Opm::ConstantCompressibilityWaterPvt<Scalar>;
+            Opm::ConstantCompressibilityWaterPvt<Scalar, Evaluation> *waterPvt =
+                new Opm::ConstantCompressibilityWaterPvt<Scalar, Evaluation>;
             waterPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
@@ -1082,7 +1094,6 @@ private:
             Scalar temperature = tempiData[cartesianDofIdx];
             if (!std::isfinite(temperature) || temperature <= 0)
                 temperature = FluidSystem::surfaceTemperature;
-
             dofFluidState.setTemperature(temperature);
 
             //////
@@ -1107,6 +1118,8 @@ private:
             Scalar pc[numPhases];
             const auto& matParams = materialLawParams_(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
+            Valgrind::CheckDefined(oilPressure);
+            Valgrind::CheckDefined(pc);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
             Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
@@ -1134,7 +1147,9 @@ private:
                 // note that we use the gas pressure here. this is because the primary
                 // varibles and the intensive quantities of the black oil model also do
                 // this...
-                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature, gasPressure, /*regionIdx=*/0);
+                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature,
+                                                                 gasPressure,
+                                                                 /*regionIdx=*/0);
                 Scalar RsReal = (*rsData)[cartesianDofIdx];
 
                 if (RsReal > RsSat) {
@@ -1172,7 +1187,9 @@ private:
                 //
                 // first, retrieve the relevant black-gas parameters from
                 // the fluid system.
-                Scalar RvSat = FluidSystem::oilVaporizationFactor(temperature, gasPressure, /*regionIdx=*/0);
+                Scalar RvSat = FluidSystem::oilVaporizationFactor(temperature,
+                                                                  gasPressure,
+                                                                  /*regionIdx=*/0);
                 Scalar RvReal = (*rvData)[cartesianDofIdx];
 
                 if (RvReal > RvSat) {
@@ -1225,7 +1242,7 @@ private:
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
-    std::vector<BlackOilFluidState> initialFluidStates_;
+    std::vector<ScalarFluidState> initialFluidStates_;
 
     EclWellManager<TypeTag> wellManager_;
 

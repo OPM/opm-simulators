@@ -46,9 +46,8 @@ NEW_PROP_TAG(RateVector);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(NumPhases);
 NEW_PROP_TAG(NumComponents);
-}}
+}
 
-namespace Ewoms {
 template <class TypeTag>
 class EcfvDiscretization;
 
@@ -83,6 +82,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
@@ -91,6 +91,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
+    typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef typename GridView::template Codim<0>::EntityPointer ElementPointer;
 
     // the dimension of the simulator's world
@@ -179,19 +180,19 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         //////////////
 
         // the phase pressures inside a DOF
-        std::array<Scalar, numPhases> pressure;
+        std::array<Evaluation, numPhases> pressure;
 
         // the phase densities at the DOF
-        std::array<Scalar, numPhases> density;
+        std::array<Evaluation, numPhases> density;
 
         // the phase mobilities of the DOF
-        std::array<Scalar, numPhases> mobility;
+        std::array<Evaluation, numPhases> mobility;
 
         // the composition of the oil phase at the DOF
-        std::array<Scalar, numComponents> oilMassFraction;
+        std::array<Evaluation, numComponents> oilMassFraction;
 
         // the composition of the gas phase at the DOF
-        std::array<Scalar, numComponents> gasMassFraction;
+        std::array<Evaluation, numComponents> gasMassFraction;
 
         std::shared_ptr<ElementPointer> elementPtr;
         int localDofIdx;
@@ -323,7 +324,7 @@ public:
             for (int priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
                 // primary variable using forward differences
-                Scalar eps = 1e-6*std::max(1.0, priVars[priVarIdx]);
+                Scalar eps = 1e-6*std::max<Scalar>(1.0, priVars[priVarIdx]);
                 priVars[priVarIdx] += eps;
 
                 elemCtx.updateIntensiveQuantities(priVars, dofVars.localDofIdx, /*timeIdx=*/0);
@@ -351,7 +352,7 @@ public:
             const auto& fluidState = elemCtx.intensiveQuantities(dofVars.localDofIdx, /*timeIdx=*/0).fluidState();
 
             // first, we need the source term of the grid for the slightly disturbed well.
-            Scalar eps = std::max(1e5, actualBottomHolePressure_)*1e-8;
+            Scalar eps = std::max<Scalar>(1e5, actualBottomHolePressure_)*1e-8;
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, dofVariables_[gridDofIdx]);
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
@@ -366,7 +367,8 @@ public:
             }
 
             // and finally, we divide by the epsilon to get the derivative
-            q /= eps;
+            for (int eqIdx = 0; eqIdx < numModelEq; ++eqIdx)
+                q[eqIdx] /= eps;
 
             // now we put this derivative into the right place in the Jacobian
             // matrix. This is a bit hacky because it assumes that the model uses a mass
@@ -378,13 +380,13 @@ public:
             auto &matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
             for (int eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
-                matrixEntry[eqIdx][0] = - q[eqIdx]/dofVars.totalVolume;
+                matrixEntry[eqIdx][0] = - Toolbox::value(q[eqIdx])/dofVars.totalVolume;
             //
             /////////////
         }
 
         // effect of changing the well's bottom hole pressure on the well equation
-        Scalar eps = std::min(1e7, std::max(1e6, targetBottomHolePressure_))*1e-8;
+        Scalar eps = std::min<Scalar>(1e7, std::max<Scalar>(1e6, targetBottomHolePressure_))*1e-8;
         Scalar wellResidStar = wellResidual_(actualBottomHolePressure_ + eps);
         diagBlock[0][0] = (wellResidStar - wellResid)/eps;
     }
@@ -937,7 +939,7 @@ public:
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
         // retrieve the bottom hole pressure from the global system of equations
-        actualBottomHolePressure_ = dofVariables_.begin()->second.pressure[0];
+        actualBottomHolePressure_ = Toolbox::value(dofVariables_.begin()->second.pressure[0]);
         actualBottomHolePressure_ = computeRateEquivalentBhp_();
 
         sol[wellGlobalDof][0] = actualBottomHolePressure_;
@@ -1017,7 +1019,7 @@ public:
 
         tmp.update(context.intensiveQuantities(dofIdx, timeIdx));
 
-        std::array<Scalar, numPhases> volumetricRates;
+        std::array<Evaluation, numPhases> volumetricRates;
         computeVolumetricDofRates_(volumetricRates, actualBottomHolePressure_, tmp);
 
         // convert to mass rates
@@ -1027,6 +1029,7 @@ public:
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
             q += modelRate;
         }
+
         Valgrind::CheckDefined(q);
     }
 
@@ -1061,10 +1064,13 @@ protected:
         dofVars.connectionTransmissibilityFactor = exposureFactor*Kh/(std::log(r0 / rWell) + S);
     }
 
-    void computeVolumetricDofRates_(std::array<Scalar, numPhases> &volRates,
+    template <class Eval>
+    void computeVolumetricDofRates_(std::array<Eval, numPhases> &volRates,
                                     Scalar bottomHolePressure,
                                     const DofVariables& dofVars) const
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             volRates[phaseIdx] = 0.0;
 
@@ -1082,14 +1088,14 @@ protected:
             // well model due to Peaceman; see Chen et al., p. 449
 
             // phase pressure in grid cell
-            Scalar p = dofVars.pressure[phaseIdx];
+            const Eval& p = Toolbox::template toLhs<Eval>(dofVars.pressure[phaseIdx]);
 
             // density and mobility of fluid phase
-            Scalar rho = dofVars.density[phaseIdx];
-            Scalar lambda;
+            const Eval& rho = Toolbox::template toLhs<Eval>(dofVars.density[phaseIdx]);
+            Eval lambda;
             if (wellType_ == Producer) {
                 //assert(p < pbh);
-                lambda = dofVars.mobility[phaseIdx];
+                lambda = Toolbox::template toLhs<Eval>(dofVars.mobility[phaseIdx]);
             }
             else if (wellType_ == Injector) {
                 //assert(p > pbh);
@@ -1102,7 +1108,7 @@ protected:
                 // 1/viscosity...
                 lambda = 0.0;
                 for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    lambda += dofVars.mobility[phaseIdx];
+                    lambda += Toolbox::template toLhs<Eval>(dofVars.mobility[phaseIdx]);
             }
             else
                 OPM_THROW(std::logic_error,
@@ -1117,7 +1123,7 @@ protected:
             Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
-            Scalar ph = pbh + rho*g*(depth - refDepth_);
+            Eval ph = pbh + rho*g*(depth - refDepth_);
 
             // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
@@ -1167,34 +1173,34 @@ protected:
         surfaceRates[oilPhaseIdx] =
             // oil in gas phase
             reservoirRate[gasPhaseIdx]
-            * dofVars.density[gasPhaseIdx]
-            * dofVars.gasMassFraction[oilCompIdx]
+            * Toolbox::value(dofVars.density[gasPhaseIdx])
+            * Toolbox::value(dofVars.gasMassFraction[oilCompIdx])
             / rhoOilSurface
             +
             // oil in oil phase
             reservoirRate[oilPhaseIdx]
-            * dofVars.density[oilPhaseIdx]
-            * dofVars.oilMassFraction[oilCompIdx]
+            * Toolbox::value(dofVars.density[oilPhaseIdx])
+            * Toolbox::value(dofVars.oilMassFraction[oilCompIdx])
             / rhoOilSurface;
 
         // gas
         surfaceRates[gasPhaseIdx] =
             // gas in gas phase
             reservoirRate[gasPhaseIdx]
-            * dofVars.density[gasPhaseIdx]
-            * dofVars.gasMassFraction[gasCompIdx]
+            * Toolbox::value(dofVars.density[gasPhaseIdx])
+            * Toolbox::value(dofVars.gasMassFraction[gasCompIdx])
             / rhoGasSurface
             +
             // gas in oil phase
             reservoirRate[oilPhaseIdx]
-            * dofVars.density[oilPhaseIdx]
-            * dofVars.oilMassFraction[gasCompIdx]
+            * Toolbox::value(dofVars.density[oilPhaseIdx])
+            * Toolbox::value(dofVars.oilMassFraction[gasCompIdx])
             / rhoGasSurface;
 
         // water
         surfaceRates[waterPhaseIdx] =
             reservoirRate[waterPhaseIdx]
-            * dofVars.density[waterPhaseIdx]
+            * Toolbox::value(dofVars.density[waterPhaseIdx])
             / rhoWaterSurface;
     }
 
@@ -1389,17 +1395,17 @@ protected:
         if (wellType_ == Injector) {
             // for injectors the computed rates are positive and the target BHP is the
             // maximum allowed pressure ...
-            result = std::min(maxSurfaceRate - surfaceRate, result);
-            result = std::min(maxResvRate - resvRate, result);
-            result = std::min(1e-7*(targetBottomHolePressure_ - bhp), result);
+            result = std::min<Scalar>(maxSurfaceRate - surfaceRate, result);
+            result = std::min<Scalar>(maxResvRate - resvRate, result);
+            result = std::min<Scalar>(1e-7*(targetBottomHolePressure_ - bhp), result);
         }
         else {
             assert(wellType_ == Producer);
             // ... for producers the rates are negative and the bottom hole pressure is
             // is the minimum
-            result = std::min(maxSurfaceRate + surfaceRate, result);
-            result = std::min(maxResvRate + resvRate, result);
-            result = std::min(1e-7*(bhp - targetBottomHolePressure_), result);
+            result = std::min<Scalar>(maxSurfaceRate + surfaceRate, result);
+            result = std::min<Scalar>(maxResvRate + resvRate, result);
+            result = std::min<Scalar>(1e-7*(bhp - targetBottomHolePressure_), result);
         }
 
         const Scalar scalingFactor = 1e-3;

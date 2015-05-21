@@ -24,6 +24,7 @@
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include "eclwriter.hh"
+#include "ecldeckunits.hh"
 
 #include <ewoms/io/baseoutputmodule.hh>
 
@@ -54,9 +55,7 @@ SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasDissolutionFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasFormationVolumeFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilFormationVolumeFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilSaturationPressure, true);
-}} // namespace Ewoms, Properties
-
-namespace Ewoms {
+} // namespace Properties
 
 // forward declaration
 template <class TypeTag>
@@ -76,6 +75,7 @@ class EclOutputBlackOilModule : public BaseOutputModule<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -156,6 +156,8 @@ public:
      */
     void processElement(const ElementContext &elemCtx)
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
@@ -163,20 +165,20 @@ public:
             const auto &fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
             int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             int regionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
-            Scalar po = fs.pressure(oilPhaseIdx);
-            Scalar To = fs.temperature(oilPhaseIdx);
-            Scalar XoG = fs.massFraction(oilPhaseIdx, gasCompIdx);
-            Scalar XgO = fs.massFraction(gasPhaseIdx, oilCompIdx);
+            Scalar po = Toolbox::value(fs.pressure(oilPhaseIdx));
+            Scalar To = Toolbox::value(fs.temperature(oilPhaseIdx));
+            Scalar XoG = Toolbox::value(fs.massFraction(oilPhaseIdx, gasCompIdx));
+            Scalar XgO = Toolbox::value(fs.massFraction(gasPhaseIdx, oilCompIdx));
 
             if (saturationsOutput_()) {
                 for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    saturation_[phaseIdx][globalDofIdx] = fs.saturation(phaseIdx);
+                    saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
                     Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
                 }
             }
             if (pressuresOutput_()) {
                 for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                    pressure_[phaseIdx][globalDofIdx] = fs.pressure(phaseIdx) / 1e5;
+                    pressure_[phaseIdx][globalDofIdx] = Toolbox::value(fs.pressure(phaseIdx));
                     Valgrind::CheckDefined(pressure_[phaseIdx][globalDofIdx]);
                 }
             }

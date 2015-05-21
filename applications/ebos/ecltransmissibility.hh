@@ -284,7 +284,13 @@ private:
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
         halfTrans *= is.geometry().volume();
-        halfTrans *= std::abs<Scalar>(is.centerUnitOuterNormal()*distance);
+
+        const auto &normal = is.centerUnitOuterNormal();
+        Scalar val = 0;
+        for (unsigned i = 0; i < normal.size(); ++i)
+            val += is.centerUnitOuterNormal()[i]*distance[i];
+
+        halfTrans *= std::abs<Scalar>(val);
         halfTrans /= distance*distance;
     }
 
@@ -301,13 +307,14 @@ private:
         return x;
     }
 
+    template <class MultScalar>
     void applyMultipliers_(Scalar &trans, int faceIdx, int elemIdx,
-                           const std::vector<Scalar>& multx,
-                           const std::vector<Scalar>& multxMinus,
-                           const std::vector<Scalar>& multy,
-                           const std::vector<Scalar>& multyMinus,
-                           const std::vector<Scalar>& multz,
-                           const std::vector<Scalar>& multzMinus) const
+                           const std::vector<MultScalar>& multx,
+                           const std::vector<MultScalar>& multxMinus,
+                           const std::vector<MultScalar>& multy,
+                           const std::vector<MultScalar>& multyMinus,
+                           const std::vector<MultScalar>& multz,
+                           const std::vector<MultScalar>& multzMinus) const
     {
         // apply multiplyer for the transmissibility of the face. (the
         // face index is the index of the reference-element face which
@@ -336,8 +343,9 @@ private:
         }
     }
 
+    template <class NtgScalar>
     void applyNtg_(Scalar &trans, int faceIdx, int elemIdx,
-                   const std::vector<Scalar>& ntg) const
+                   const std::vector<NtgScalar>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the
         // face index is the index of the reference-element face which

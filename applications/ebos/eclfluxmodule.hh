@@ -35,9 +35,8 @@
 namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(MaterialLaw);
-}}
+}
 
-namespace Ewoms {
 template <class TypeTag>
 class EclTransIntensiveQuantities;
 
@@ -96,13 +95,16 @@ class EclTransExtensiveQuantities
 {
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
 
+    typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
+    typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
 public:
@@ -127,7 +129,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const DimVector& potentialGrad(int phaseIdx) const
+    const EvalDimVector& potentialGrad(int phaseIdx) const
     {
         OPM_THROW(Opm::NotAvailable,
                   "The ECL transmissibility module does not provide explicit potential gradients");
@@ -139,7 +141,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const DimVector& filterVelocity(int phaseIdx) const
+    const EvalDimVector& filterVelocity(int phaseIdx) const
     {
         OPM_THROW(Opm::NotAvailable,
                   "The ECL transmissibility module does not provide explicit filter velocities");
@@ -154,8 +156,8 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    Scalar volumeFlux(int phaseIdx) const
-    { return - pressureDifferential_[phaseIdx]*mobility_[phaseIdx] * trans_/faceArea_; }
+    const Evaluation& volumeFlux(int phaseIdx) const
+    { return volumeFlux_[phaseIdx]; }
 
 protected:
     /*!
@@ -168,7 +170,7 @@ protected:
     int upstreamIndex_(int phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (pressureDifferential_[phaseIdx] >= 0)?exteriorDofIdx_:interiorDofIdx_;
+        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?exteriorDofIdx_:interiorDofIdx_;
     }
 
     /*!
@@ -181,7 +183,7 @@ protected:
     int downstreamIndex_(int phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (pressureDifferential_[phaseIdx] >= 0)?interiorDofIdx_:exteriorDofIdx_;
+        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?interiorDofIdx_:exteriorDofIdx_;
     }
 
     /*!
@@ -219,20 +221,30 @@ protected:
         Scalar distZEx = zEx - zFace;
 
         for (int phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            // calculate the hydrostatic pressures at the face's integration point
-            Scalar rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-            Scalar rhoEx = intQuantsEx.fluidState().density(phaseIdx);
+            // do the gravity correction at the face's integration point
+            const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+            Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
 
-            Scalar pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
-            Scalar pressureExterior = intQuantsEx.fluidState().pressure(phaseIdx);
+            Evaluation pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+            Scalar pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
 
             pressureInterior += - rhoIn*(g*distZIn);
             pressureExterior += - rhoEx*(g*distZEx);
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
-            const auto& up = elemCtx.intensiveQuantities(upstreamIndex_(phaseIdx), timeIdx);
-            mobility_[phaseIdx] = up.mobility(phaseIdx);
+            // this is slightly hacky because in the automatic differentiation case, it
+            // only works for the element centered finite volume method. for ebos this
+            // does not matter, though.
+            int upstreamIdx = upstreamIndex_(phaseIdx);
+            const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+            if (upstreamIdx == interiorDofIdx_)
+                volumeFlux_[phaseIdx] =
+                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx) * (- trans_/faceArea_);
+            else
+                volumeFlux_[phaseIdx] =
+                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx)) * (- trans_/faceArea_));
+
         }
     }
 
@@ -252,12 +264,12 @@ protected:
     // the area of the face between the DOFs [m^2]
     Scalar faceArea_;
 
-    // the mobility of all phases [1 / (Pa s)]
-    Scalar mobility_[numPhases];
+    // the volumetric flux of all phases [m^3/s]
+    Evaluation volumeFlux_[numPhases];
 
     // the difference in effective pressure between the two degrees of
     // freedom [Pa]
-    Scalar pressureDifferential_[numPhases];
+    Evaluation pressureDifferential_[numPhases];
 };
 
 } // namespace Ewoms

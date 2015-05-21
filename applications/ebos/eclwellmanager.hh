@@ -44,9 +44,8 @@
 namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(Grid);
-}}
+}
 
-namespace Ewoms {
 /*!
  * \ingroup EclBlackOilSimulator
  *
@@ -60,10 +59,12 @@ class EclWellManager
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
 
+    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     enum { numPhases = FluidSystem::numPhases };
 
     typedef typename GridView::template Codim<0>::Entity Element;
@@ -71,6 +72,8 @@ class EclWellManager
     typedef Ewoms::EclPeacemanWell<TypeTag> Well;
 
     typedef std::map<int, std::pair<const Opm::Completion*, std::shared_ptr<Well> > > WellCompletionsMap;
+
+    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
 
 public:
     EclWellManager(Simulator &simulator)
@@ -478,12 +481,13 @@ public:
      *        freedom.
      */
     template <class Context>
-    void computeTotalRatesForDof(RateVector &q,
+    void computeTotalRatesForDof(EvalEqVector &q,
                                  const Context &context,
                                  int dofIdx,
                                  int timeIdx) const
     {
-        q = 0.0;
+        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+            q[eqIdx] = 0.0;
 
         RateVector wellRate;
 
