@@ -50,9 +50,7 @@ class FingerGridManager;
 
 template <class TypeTag>
 class FingerProblem;
-} // namespace Ewoms
 
-namespace Ewoms {
 namespace Properties {
 // declare the properties required by the for the finger grid manager
 NEW_TYPE_TAG(FingerGridManager);
@@ -73,9 +71,8 @@ NEW_PROP_TAG(GridGlobalRefinements);
 SET_TYPE_PROP(FingerGridManager, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
 SET_TYPE_PROP(FingerGridManager, GridManager, Ewoms::FingerGridManager<TypeTag>);
 
-}} // namespace Ewoms, Properties
+} // namespace Properties
 
-namespace Ewoms {
 /*!
  * \brief Helper class for grid instantiation of the finger problem.
  */

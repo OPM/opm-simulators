@@ -110,9 +110,8 @@ SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 10);
 
 // The default DGF file to load
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
-}} // namespace Properties, Opm
+} // namespace Properties
 
-namespace Ewoms {
 /*!
  * \ingroup TestProblems
  *

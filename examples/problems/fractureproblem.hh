@@ -25,6 +25,7 @@
 #define EWOMS_FRACTURE_PROBLEM_HH
 
 #include <ewoms/parallel/mpihelper.hh>
+#include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
@@ -45,8 +46,6 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
 #include <ewoms/io/artgridmanager.hh>
-
-#include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>

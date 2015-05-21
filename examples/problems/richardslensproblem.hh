@@ -43,9 +43,7 @@
 namespace Ewoms {
 template <class TypeTag>
 class RichardsLensProblem;
-}
 
-namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
 
@@ -118,9 +116,8 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
-}} // namespace Ewoms, Properties
+} // namespace Properties
 
-namespace Ewoms {
 /*!
  * \ingroup TestProblems
  *
@@ -331,7 +328,7 @@ public:
     Scalar referencePressure(const Context &context,
                              int spaceIdx,
                              int timeIdx) const
-    { return referencePressure(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); };
+    { return referencePressure(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
     // the Richards model does not have an element context available at all places
     // where the reference pressure is required...
