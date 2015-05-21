@@ -70,9 +70,7 @@
 namespace Ewoms {
 template <class TypeTag>
 class EclProblem;
-}
 
-namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
 
@@ -88,6 +86,9 @@ SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
 // Select the element centered finite volume method as spatial discretization
 SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+
+//! for ebos, use automatic differentiation to linearize the system of PDEs
+SET_TAG_PROP(EclBaseProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
 // Set the material Law
 SET_PROP(EclBaseProblem, MaterialLaw)
