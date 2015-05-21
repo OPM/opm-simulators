@@ -85,12 +85,20 @@ namespace Opm {
         /// Number of linear solver iterations used in all calls to step().
         unsigned int linearIterations() const;
 
+        /// Number of linear solver iterations used in the last call to step().
+        unsigned int newtonIterationsLastStep() const;
+
+        /// Number of linear solver iterations used in the last call to step().
+        unsigned int linearIterationsLastStep() const;
+
     private:
         // ---------  Data members  ---------
         SolverParameters param_;
         PhysicalModel& model_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
+        unsigned int newtonIterationsLast_;
+        unsigned int linearIterationsLast_;
 
         // ---------  Private methods  ---------
         enum RelaxType relaxType() const { return param_.relax_type_; }
