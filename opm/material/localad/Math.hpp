@@ -30,6 +30,8 @@
 
 #include "Evaluation.hpp"
 
+#include <opm/material/common/MathToolbox.hpp>
+
 namespace Opm {
 namespace LocalAd {
 // provide some algebraic functions
@@ -377,6 +379,88 @@ Evaluation<Scalar, VarSetTag, numVars> log(const Evaluation<Scalar, VarSetTag, n
 }
 
 } // namespace LocalAd
+
+// a kind of traits class for the automatic differentiation case. (The toolbox for the
+// scalar case is provided by the MathToolbox.hpp header file.)
+template <class ScalarT, class VariableSetTag, int numVars>
+struct MathToolbox<Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars>, false>
+{
+private:
+public:
+    typedef ScalarT Scalar;
+    typedef Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars> Evaluation;
+
+    static Scalar value(const Evaluation& eval)
+    { return eval.value; }
+
+    static Evaluation createConstant(Scalar value)
+    { return Evaluation::createConstant(value); }
+
+    static Evaluation createVariable(Scalar value, int varIdx)
+    { return Evaluation::createVariable(value, varIdx); }
+
+    template <class LhsEval>
+    static LhsEval toLhs(const Evaluation& eval)
+    { return ToLhsEvalHelper<LhsEval, Evaluation>::exec(eval); }
+
+    static const Evaluation passThroughOrCreateConstant(Scalar value)
+    { return createConstant(value); }
+
+    static const Evaluation& passThroughOrCreateConstant(const Evaluation& eval)
+    { return eval; }
+
+
+    // arithmetic functions
+    template <class Arg1Eval, class Arg2Eval>
+    static Evaluation max(const Arg1Eval& arg1, const Arg2Eval& arg2)
+    { return Opm::LocalAd::max(arg1, arg2); }
+
+    template <class Arg1Eval, class Arg2Eval>
+    static Evaluation min(const Arg1Eval& arg1, const Arg2Eval& arg2)
+    { return Opm::LocalAd::min(arg1, arg2); }
+
+    static Evaluation abs(const Evaluation& arg)
+    { return Opm::LocalAd::abs(arg); }
+
+    static Evaluation tan(const Evaluation& arg)
+    { return Opm::LocalAd::tan(arg); }
+
+    static Evaluation atan(const Evaluation& arg)
+    { return Opm::LocalAd::atan(arg); }
+
+    static Evaluation atan2(const Evaluation& arg1, const Evaluation& arg2)
+    { return Opm::LocalAd::atan2(arg1, arg2); }
+
+    static Evaluation sin(const Evaluation& arg)
+    { return Opm::LocalAd::sin(arg); }
+
+    static Evaluation asin(const Evaluation& arg)
+    { return Opm::LocalAd::asin(arg); }
+
+    static Evaluation cos(const Evaluation& arg)
+    { return Opm::LocalAd::cos(arg); }
+
+    static Evaluation acos(const Evaluation& arg)
+    { return Opm::LocalAd::acos(arg); }
+
+    static Evaluation sqrt(const Evaluation& arg)
+    { return Opm::LocalAd::sqrt(arg); }
+
+    static Evaluation exp(const Evaluation& arg)
+    { return Opm::LocalAd::exp(arg); }
+
+    static Evaluation log(const Evaluation& arg)
+    { return Opm::LocalAd::log(arg); }
+
+    static Evaluation pow(const Evaluation& arg1, typename Evaluation::Scalar arg2)
+    { return Opm::LocalAd::pow(arg1, arg2); }
+
+    static Evaluation pow(typename Evaluation::Scalar arg1, const Evaluation& arg2)
+    { return Opm::LocalAd::pow(arg1, arg2); }
+
+    static Evaluation pow(const Evaluation& arg1, const Evaluation& arg2)
+    { return Opm::LocalAd::pow(arg1, arg2); }
+};
 
 }
 
