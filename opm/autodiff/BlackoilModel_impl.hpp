@@ -1,6 +1,7 @@
 /*
   Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Statoil ASA.
   Copyright 2015 NTNU
   Copyright 2015 IRIS AS
 
@@ -1220,15 +1221,52 @@ namespace detail {
 
     namespace detail
     {
-
-        double infinityNorm( const ADB& a )
+        /// \brief Compute the L-infinity norm of a vector
+        /// \warn This function is not suitable to compute on the well equations.
+        /// \param a The container to compute the infinity norm on.
+        ///          It has to have one entry for each cell.
+        /// \param info In a parallel this holds the information about the data distribution.
+        double infinityNorm( const ADB& a, const boost::any& pinfo = boost::any() )
         {
+#if HAVE_MPI
+            if ( pinfo.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& real_info =
+                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                double result=0;
+                real_info.computeReduction(a.value(), Reduction::makeGlobalMaxFunctor<double>(), result);
+                return result;
+            }
+            else
+#endif
+            {
+                if( a.value().size() > 0 ) {
+                    return a.value().matrix().lpNorm<Eigen::Infinity> ();
+                }
+                else { // this situation can occur when no wells are present
+                    return 0.0;
+                }
+            }
+        }
+
+        /// \brief Compute the L-infinity norm of a vector representing a well equation.
+        /// \param a The container to compute the infinity norm on.
+        /// \param info In a parallel this holds the information about the data distribution.
+        double infinityNormWell( const ADB& a, const boost::any& pinfo )
+        {
+            double result=0;
             if( a.value().size() > 0 ) {
-                return a.value().matrix().lpNorm<Eigen::Infinity> ();
+                result = a.value().matrix().lpNorm<Eigen::Infinity> ();
             }
-            else { // this situation can occur when no wells are present
-                return 0.0;
+#if HAVE_MPI
+            if ( pinfo.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& real_info =
+                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                result = real_info.communicator().max(result);
             }
+#endif
+            return result;
         }
 
     } // namespace detail
@@ -1688,6 +1726,9 @@ namespace detail {
         dp = keep_high_potential * (dp - threshold_modification);
     }
 
+
+
+
     template <class Grid>
     std::vector<double>
     BlackoilModel<Grid>::computeResidualNorms() const
@@ -1698,7 +1739,8 @@ namespace detail {
         const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
 
         for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt) );
+            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt),
+                                                                  linsolver_.parallelInformation() );
             if (!std::isfinite(massBalanceResid)) {
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
@@ -1707,14 +1749,16 @@ namespace detail {
         }
 
         // the following residuals are not used in the oscillation detection now
-        const double wellFluxResid = detail::infinityNorm( residual_.well_flux_eq );
+        const double wellFluxResid = detail::infinityNormWell( residual_.well_flux_eq,
+                                                               linsolver_.parallelInformation() );
         if (!std::isfinite(wellFluxResid)) {
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
         residualNorms.push_back(wellFluxResid);
 
-        const double wellResid = detail::infinityNorm( residual_.well_eq );
+        const double wellResid = detail::infinityNormWell( residual_.well_eq,
+                                                           linsolver_.parallelInformation() );
         if (!std::isfinite(wellResid)) {
            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
@@ -1724,15 +1768,20 @@ namespace detail {
         return residualNorms;
     }
 
+
+
+
     template <class Grid>
     double
     BlackoilModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
-                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
-                                                         const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
-                                                         std::array<double,MaxNumPhases>& R_sum,
-                                                         std::array<double,MaxNumPhases>& maxCoeff,
-                                                         std::array<double,MaxNumPhases>& B_avg,
-                                                         int nc) const
+                                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
+                                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
+                                              std::array<double,MaxNumPhases>& R_sum,
+                                              std::array<double,MaxNumPhases>& maxCoeff,
+                                              std::array<double,MaxNumPhases>& B_avg,
+                                              std::vector<double>& maxNormWell,
+                                              int nc,
+                                              int nw) const
     {
         // Do the global reductions
 #if HAVE_MPI
@@ -1760,15 +1809,21 @@ namespace detail {
                                                       Opm::Reduction::makeGlobalMaxFunctor<double>(),
                                                       Opm::Reduction::makeGlobalSumFunctor<double>());
                     info.computeReduction(containers, operators, values);
-                    B_avg[idx]    = std::get<0>(values)/std::get<0>(nc_and_pv);
-                    maxCoeff[idx] = std::get<1>(values);
-                    R_sum[idx]    = std::get<2>(values);
+                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
+                    maxCoeff[idx]    = std::get<1>(values);
+                    R_sum[idx]       = std::get<2>(values);
+                    maxNormWell[idx] = 0.0;
+                    for ( int w=0; w<nw; ++w )
+                    {
+                        maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    }
                 }
                 else
                 {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
+                    maxNormWell[idx] = R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
                 }
             }
+            info.communicator().max(&maxNormWell[0], MaxNumPhases);
             // Compute pore volume
             return std::get<1>(nc_and_pv);
         }
@@ -1786,11 +1841,19 @@ namespace detail {
                 {
                     R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
                 }
+                maxNormWell[idx] = 0.0;
+                for ( int w=0; w<nw; ++w )
+                {
+                    maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                }
             }
             // Compute total pore volume
             return geo_.poreVolume().sum();
         }
     }
+
+
+
 
     template <class Grid>
     bool
@@ -1818,6 +1881,7 @@ namespace detail {
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
+        std::vector<double> maxNormWell(MaxNumPhases);
 
         for ( int idx=0; idx<MaxNumPhases; ++idx )
         {
@@ -1830,7 +1894,8 @@ namespace detail {
             }
         }
 
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, nc);
+        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
+                                                  maxNormWell, nc, nw);
 
         bool converged_MB = true;
         bool converged_CNV = true;
@@ -1842,18 +1907,13 @@ namespace detail {
             mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
-
-            double maxNormWell = 0.0;
-            for ( int w=0; w<nw; ++w )
-            {
-                maxNormWell  = std::max(maxNormWell, std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-            }
-            well_flux_residual[idx] = B_avg[idx] * dt * maxNormWell;
+            well_flux_residual[idx] = B_avg[idx] * dt * maxNormWell[idx];
 
             converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
         }
 
-        const double residualWell     = detail::infinityNorm(residual_.well_eq);
+        const double residualWell     = detail::infinityNormWell(residual_.well_eq,
+                                                                 linsolver_.parallelInformation());
         converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
@@ -1896,6 +1956,8 @@ namespace detail {
         }
         return converged;
     }
+
+
 
 
     template <class Grid>
