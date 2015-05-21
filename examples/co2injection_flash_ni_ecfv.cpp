@@ -38,6 +38,9 @@ SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, SpatialDiscretizationSplice, EcfvDi
 
 SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableEnergy, true);
 
+//! Use automatic differentiation to linearize the system of PDEs
+SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
     Co2InjectionFlashNiEcfvProblem, FlashSolver,
