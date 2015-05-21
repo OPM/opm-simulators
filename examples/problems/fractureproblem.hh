@@ -246,10 +246,10 @@ public:
 #if 1 // Brooks-Corey
         matrixMaterialParams_.setEntryPressure(2000);
         matrixMaterialParams_.setLambda(2.0);
-        matrixMaterialParams_.setThresholdSw(1e-1);
+        matrixMaterialParams_.setPcLowSw(1e-1);
         fractureMaterialParams_.setEntryPressure(1000);
         fractureMaterialParams_.setLambda(2.0);
-        fractureMaterialParams_.setThresholdSw(5e-2);
+        fractureMaterialParams_.setPcLowSw(5e-2);
 #endif
 
 #if 0 // van Genuchten
