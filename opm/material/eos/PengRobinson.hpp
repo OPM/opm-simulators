@@ -452,7 +452,7 @@ protected:
         // invert resulting cubic polynomial analytically
         Scalar allV[4];
         allV[0] = V;
-        int numSol = 1 + Opm::invertCubicPolynomial(allV + 1, b1, b2, b3, b4);
+        int numSol = 1 + Opm::invertCubicPolynomial<Scalar>(allV + 1, b1, b2, b3, b4);
 
         // sort all roots of the derivative
         std::sort(allV + 0, allV + numSol);

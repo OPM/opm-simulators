@@ -195,8 +195,8 @@ void testMonotonic(const Spline &sp,
 
         // test the intersection methods
         double d = (y[i] + y[i+1])/2;
-        double interX = sp.intersectInterval(x[i], x[i+1],
-                                             /*a=*/0, /*b=*/0, /*c=*/0, d);
+        double interX = sp.template intersectInterval<double>(x[i], x[i+1],
+                                                              /*a=*/0, /*b=*/0, /*c=*/0, d);
         double interY = sp.eval(interX);
         if (std::abs(interY - d) > 1e-5)
             OPM_THROW(std::runtime_error,

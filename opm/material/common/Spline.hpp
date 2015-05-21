@@ -813,6 +813,39 @@ public:
     }
 
     /*!
+     * \brief Evaluate the spline for a given function evaluation.
+     *
+     * \param x The value on the abscissa where the spline ought to be
+     *          evaluated
+     * \param extrapolate If this parameter is set to true, the spline
+     *                    will be extended beyond its range by
+     *                    straight lines, if false calling extrapolate
+     *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
+     *                    cause a failed assertation.
+     */
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
+    {
+        assert(extrapolate || applies(x.value));
+
+        // handle extrapolation
+        if (extrapolate) {
+            if (x.value < xMin()) {
+                Scalar m = evalDerivative_(xMin(), /*segmentIdx=*/0);
+                Scalar y0 = y_(0);
+                return Evaluation::createConstant(y0 + m*(x.value - xMin()));
+            }
+            else if (x > xMax()) {
+                Scalar m = evalDerivative_(xMax(), /*segmentIdx=*/numSamples()-2);
+                Scalar y0 = y_(numSamples() - 1);
+                return Evaluation::createConstant(y0 + m*(x.value - xMax()));
+            }
+        }
+
+        return eval_(x, segmentIdx_(x.value));
+    }
+
+    /*!
      * \brief Evaluate the spline's derivative at a given position.
      *
      * \param x The value on the abscissa where the spline's
@@ -885,7 +918,11 @@ public:
      *        Opm::MathError exception if there is more or less than
      *        one solution.
      */
-    Scalar intersect(Scalar a, Scalar b, Scalar c, Scalar d) const
+    template <class Evaluation>
+    Evaluation intersect(const Evaluation& a,
+                         const Evaluation& b,
+                         const Evaluation& c,
+                         const Evaluation& d) const
     {
         return intersectInterval(xMin(), xMax(), a, b, c, d);
     }
@@ -896,12 +933,16 @@ public:
      *        Opm::MathError exception if there is more or less than
      *        one solution.
      */
-    Scalar intersectInterval(Scalar x0, Scalar x1,
-                             Scalar a, Scalar b, Scalar c, Scalar d) const
+    template <class Evaluation>
+    Evaluation intersectInterval(Scalar x0, Scalar x1,
+                                 const Evaluation& a,
+                                 const Evaluation& b,
+                                 const Evaluation& c,
+                                 const Evaluation& d) const
     {
         assert(applies(x0) && applies(x1));
 
-        Scalar tmpSol[3], sol = 0;
+        Evaluation tmpSol[3], sol = 0;
         int nSol = 0;
         int iFirst = segmentIdx_(x0);
         int iLast = segmentIdx_(x1);
@@ -1485,6 +1526,29 @@ protected:
             + h11_(t) * slope_(i + 1)*delta;
     }
 
+    // evaluate the spline at a given the position and given the
+    // segment index
+    template <class Evaluation>
+    Evaluation eval_(const Evaluation& x, int i) const
+    {
+        // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
+        Scalar delta = h_(i + 1);
+        Scalar t = (x.value - x_(i))/delta;
+
+        Evaluation result;
+        result.value =
+            h00_(t) * y_(i)
+            + h10_(t) * slope_(i)*delta
+            + h01_(t) * y_(i + 1)
+            + h11_(t) * slope_(i + 1)*delta;
+
+        Scalar df_dg = evalDerivative_(x.value, i);
+        for (unsigned varIdx = 0; varIdx < result.derivatives.size(); ++ varIdx)
+            result.derivatives[varIdx] = df_dg*x.derivatives[varIdx];
+
+        return result;
+    }
+
     // evaluate the derivative of a spline given the actual position
     // and the segment index
     Scalar evalDerivative_(Scalar x, int i) const
@@ -1663,9 +1727,13 @@ protected:
      * \brief Find all the intersections of a segment of the spline
      *        with a cubic polynomial within a specified interval.
      */
-    int intersectSegment_(Scalar *sol,
+    template <class Evaluation>
+    int intersectSegment_(Evaluation *sol,
                           int segIdx,
-                          Scalar a, Scalar b, Scalar c, Scalar d,
+                          const Evaluation& a,
+                          const Evaluation& b,
+                          const Evaluation& c,
+                          const Evaluation& d,
                           Scalar x0 = -1e100, Scalar x1 = 1e100) const
     {
         int n = Opm::invertCubicPolynomial(sol,
@@ -1736,22 +1804,22 @@ protected:
     // returns the coefficient in front of the x^3 term. In Stoer this
     // is delta.
     Scalar a_(int i) const
-    { return evalDerivative3_(/*x=*/0, i)/6.0; }
+    { return evalDerivative3_(/*x=*/Scalar(0.0), i)/6.0; }
 
     // returns the coefficient in front of the x^2 term In Stoer this
     // is gamma.
     Scalar b_(int i) const
-    { return evalDerivative2_(/*x=*/0, i)/2.0; }
+    { return evalDerivative2_(/*x=*/Scalar(0.0), i)/2.0; }
 
     // returns the coefficient in front of the x^1 term. In Stoer this
     // is beta.
     Scalar c_(int i) const
-    { return evalDerivative_(/*x=*/0, i); }
+    { return evalDerivative_(/*x=*/Scalar(0.0), i); }
 
     // returns the coefficient in front of the x^0 term. In Stoer this
     // is alpha.
     Scalar d_(int i) const
-    { return eval_(/*x=*/0, i); }
+    { return eval_(/*x=*/Scalar(0.0), i); }
 
     Vector xPos_;
     Vector yPos_;

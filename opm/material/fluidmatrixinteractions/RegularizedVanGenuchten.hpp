@@ -244,7 +244,7 @@ public:
             const Spline<Scalar>& spline = params.pcnwHighSpline();
 
             return spline.intersectInterval(/*x0=*/SwThHigh, /*x1=*/1.0,
-                                            /*a=*/0, /*b=*/0, /*c=*/0, /*d=*/pC);
+                                            /*a=*/0.0, /*b=*/0.0, /*c=*/0.0, /*d=*/pC);
         }
 
         return Sw;
