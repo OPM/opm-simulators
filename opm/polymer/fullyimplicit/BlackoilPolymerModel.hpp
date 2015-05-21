@@ -69,7 +69,7 @@ namespace Opm {
         typedef WellStateFullyImplicitBlackoilPolymer WellState;
 
         /// Model-specific solver parameters.
-        struct ModelParameter
+        struct ModelParameters
         {
             double dp_max_rel_;
             double ds_max_;
@@ -79,8 +79,8 @@ namespace Opm {
             double tolerance_cnv_;
             double tolerance_wells_;
 
-            ModelParameter( const parameter::ParameterGroup& param );
-            ModelParameter();
+            explicit ModelParameters( const parameter::ParameterGroup& param );
+            ModelParameters();
 
             void reset();
         };
@@ -101,7 +101,7 @@ namespace Opm {
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] has_polymer      turn on polymer feature
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilPolymerModel(const ModelParameter&          param,
+        BlackoilPolymerModel(const ModelParameters&          param,
                              const Grid&                     grid ,
                              const BlackoilPropsAdInterface& fluid,
                              const DerivedGeology&           geo  ,
@@ -173,7 +173,7 @@ namespace Opm {
                          WellState& well_state);
 
         /// Return true if output to cout is wanted.
-        bool terminalOutput() const;
+        bool terminalOutputEnabled() const;
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
@@ -252,7 +252,7 @@ namespace Opm {
         const bool has_polymer_;
         const int  poly_pos_;
 
-        ModelParameter                 param_;
+        ModelParameters                 param_;
         bool use_threshold_pressure_;
         V threshold_pressures_by_interior_face_;
 
