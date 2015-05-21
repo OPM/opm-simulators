@@ -108,15 +108,15 @@ int main(int argc, char **argv)
         BaseFluidState baseFs;
 
         // TemperatureOverlayFluidState
-        {   Opm::TemperatureOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+        {   Opm::TemperatureOverlayFluidState<BaseFluidState> fs(baseFs);
             checkFluidState<Scalar>(fs); }
 
         // PressureOverlayFluidState
-        {   Opm::PressureOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+        {   Opm::PressureOverlayFluidState<BaseFluidState> fs(baseFs);
             checkFluidState<Scalar>(fs); }
 
         // SaturationOverlayFluidState
-        {   Opm::SaturationOverlayFluidState<Scalar, BaseFluidState> fs(baseFs);
+        {   Opm::SaturationOverlayFluidState<BaseFluidState> fs(baseFs);
             checkFluidState<Scalar>(fs); }
     }
 

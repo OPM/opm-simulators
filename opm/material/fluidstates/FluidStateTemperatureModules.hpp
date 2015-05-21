@@ -27,6 +27,7 @@
 
 #include <opm/material/common/Valgrind.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
@@ -125,11 +126,15 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        temperature_ = fs.temperature(/*phaseIdx=*/0);
+        typedef Opm::MathToolbox<Scalar> Toolbox;
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        temperature_ = FsToolbox::template toLhs<Scalar>(fs.temperature(/*phaseIdx=*/0));
 
 #ifndef NDEBUG
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            assert(std::abs(fs.temperature(phaseIdx) - temperature_) < 1e-30);
+            assert(std::abs(FsToolbox::value(fs.temperature(phaseIdx))
+                            - Toolbox::value(temperature_)) < 1e-30);
         }
 #endif
     }

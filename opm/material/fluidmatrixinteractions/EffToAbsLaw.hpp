@@ -112,7 +112,7 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         OverlayFluidState overlayFs(fs);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -138,7 +138,7 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         OverlayFluidState overlayFs(fs);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -165,7 +165,7 @@ public:
     template <class FluidState>
     static Scalar pcnw(const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         static_assert(FluidState::numPhases == numPhases,
                       "The fluid state and the material law must exhibit the same "
@@ -294,7 +294,7 @@ public:
     template <class FluidState>
     static Scalar krw(const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         static_assert(FluidState::numPhases == numPhases,
                       "The fluid state and the material law must exhibit the same "
@@ -322,7 +322,7 @@ public:
     template <class FluidState>
     static Scalar krn(const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         static_assert(FluidState::numPhases == numPhases,
                       "The fluid state and the material law must exhibit the same "
@@ -353,7 +353,7 @@ public:
     static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
     krg(const Params &params, const FluidState &fs)
     {
-        typedef Opm::SaturationOverlayFluidState<Scalar, FluidState> OverlayFluidState;
+        typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         static_assert(FluidState::numPhases == numPhases,
                       "The fluid state and the material law must exhibit the same "

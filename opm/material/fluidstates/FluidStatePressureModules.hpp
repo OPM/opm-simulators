@@ -24,8 +24,8 @@
 #ifndef OPM_FLUID_STATE_PRESSURE_MODULES_HPP
 #define OPM_FLUID_STATE_PRESSURE_MODULES_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 
@@ -51,14 +51,14 @@ public:
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    Scalar pressure(int phaseIdx) const
+    const Scalar& pressure(int phaseIdx) const
     { return pressure_[phaseIdx]; }
 
 
     /*!
      * \brief Set the pressure of a phase [Pa]
      */
-    void setPressure(int phaseIdx, Scalar value)
+    void setPressure(int phaseIdx, const Scalar& value)
     { pressure_[phaseIdx] = value; }
 
     /*!
@@ -68,8 +68,10 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            pressure_[phaseIdx] = fs.pressure(phaseIdx);
+            pressure_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.pressure(phaseIdx));
         }
     }
 
@@ -106,7 +108,7 @@ public:
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    Scalar pressure(int phaseIdx) const
+    const Scalar& pressure(int phaseIdx) const
     { OPM_THROW(std::logic_error, "Pressure is not provided by this fluid state"); }
 
 

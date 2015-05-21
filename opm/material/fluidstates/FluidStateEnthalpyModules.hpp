@@ -24,15 +24,15 @@
 #ifndef OPM_FLUID_STATE_ENTHALPY_MODULES_HPP
 #define OPM_FLUID_STATE_ENTHALPY_MODULES_HPP
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
 namespace Opm {
-
 /*!
  * \brief Module for the modular fluid state which stores the
  *       enthalpies explicitly.
@@ -51,7 +51,7 @@ public:
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    Scalar enthalpy(int phaseIdx) const
+    const Scalar& enthalpy(int phaseIdx) const
     { return enthalpy_[phaseIdx]; }
 
     /*!
@@ -63,7 +63,7 @@ public:
     /*!
      * \brief Set the specific enthalpy of a phase [J/kg]
      */
-    void setEnthalpy(int phaseIdx, Scalar value)
+    void setEnthalpy(int phaseIdx, const Scalar& value)
     { enthalpy_[phaseIdx] = value; }
 
     /*!
@@ -73,8 +73,10 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            enthalpy_[phaseIdx] = fs.enthalpy(phaseIdx);
+            enthalpy_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.enthalpy(phaseIdx));
         }
     }
 
@@ -100,8 +102,9 @@ protected:
 
 /*!
  * \brief Module for the modular fluid state which does not store the
- *        enthalpies but throws std::logic_error instead.
- */
+ *        enthalpies but returns 0 instead.
+ *
+ * Also, the returned values are marked as undefined in Valgrind... */
 template <class Scalar,
           class FluidSystem,
           class Implementation>
@@ -114,14 +117,22 @@ public:
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    Scalar internalEnergy(int phaseIdx) const
-    { OPM_THROW(std::logic_error, "Internal energy is not provided by this fluid state"); }
+    const Scalar& internalEnergy(int phaseIdx) const
+    {
+        static Scalar tmp = 0;
+        Valgrind::SetUndefined(tmp);
+        return tmp;
+    }
 
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    Scalar enthalpy(int phaseIdx) const
-    { OPM_THROW(std::logic_error, "Enthalpy is not provided by this fluid state"); }
+    const Scalar& enthalpy(int phaseIdx) const
+    {
+        static Scalar tmp = 0;
+        Valgrind::SetUndefined(tmp);
+        return tmp;
+    }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

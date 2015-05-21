@@ -24,10 +24,11 @@
 #ifndef OPM_FLUID_STATE_DENSITY_MODULES_HPP
 #define OPM_FLUID_STATE_DENSITY_MODULES_HPP
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
@@ -51,7 +52,7 @@ public:
     /*!
      * \brief The density of a fluid phase [kg/m^3]
      */
-    Scalar density(int phaseIdx) const
+    const Scalar& density(int phaseIdx) const
     { return density_[phaseIdx]; }
 
     /*!
@@ -69,7 +70,7 @@ public:
     /*!
      * \brief Set the density of a phase [kg/m^3]
      */
-    void setDensity(int phaseIdx, Scalar value)
+    void setDensity(int phaseIdx, const Scalar&  value)
     { density_[phaseIdx] = value; }
 
     /*!
@@ -79,8 +80,10 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            density_[phaseIdx] = fs.density(phaseIdx);
+            density_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.density(phaseIdx));
         }
     }
 
@@ -120,7 +123,7 @@ public:
     /*!
      * \brief The density of a fluid phase [kg/m^3]
      */
-    Scalar density(int phaseIdx) const
+    const Scalar& density(int phaseIdx) const
     { OPM_THROW(std::logic_error, "Density is not provided by this fluid state"); }
 
 

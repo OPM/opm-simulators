@@ -25,15 +25,15 @@
 #ifndef OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
 #define OPM_FLUID_STATE_VISCOSITY_MODULES_HPP
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
 namespace Opm {
-
 /*!
  * \brief Module for the modular fluid state which stores the
  *       viscosities explicitly.
@@ -68,8 +68,10 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            viscosity_[phaseIdx] = fs.viscosity(phaseIdx);
+            viscosity_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.viscosity(phaseIdx));
         }
     }
 

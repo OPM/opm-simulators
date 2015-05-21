@@ -24,10 +24,11 @@
 #ifndef OPM_FLUID_STATE_SATURATION_MODULES_HPP
 #define OPM_FLUID_STATE_SATURATION_MODULES_HPP
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
 
 #include <algorithm>
 
@@ -51,13 +52,13 @@ public:
     /*!
      * \brief The saturation of a fluid phase [-]
      */
-    Scalar saturation(int phaseIdx) const
+    const Scalar& saturation(int phaseIdx) const
     { return saturation_[phaseIdx]; }
 
     /*!
      * \brief Set the saturation of a phase [-]
      */
-    void setSaturation(int phaseIdx, Scalar value)
+    void setSaturation(int phaseIdx, const Scalar& value)
     { saturation_[phaseIdx] = value; }
 
     /*!
@@ -67,8 +68,10 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            saturation_[phaseIdx] = fs.saturation(phaseIdx);
+            saturation_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.saturation(phaseIdx));
         }
     }
 
@@ -105,7 +108,7 @@ public:
     /*!
      * \brief The saturation of a fluid phase [-]
      */
-    Scalar saturation(int phaseIdx) const
+    const Scalar& saturation(int phaseIdx) const
     { OPM_THROW(std::runtime_error, "Saturation is not provided by this fluid state"); }
 
     /*!

@@ -25,6 +25,7 @@
 #define OPM_FLUID_STATE_COMPOSITION_MODULES_HPP
 
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -57,7 +58,7 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFraction(int phaseIdx, int compIdx) const
+    const Scalar&  moleFraction(int phaseIdx, int compIdx) const
     { return moleFraction_[phaseIdx][compIdx]; }
 
     /*!
@@ -65,11 +66,13 @@ public:
      */
     Scalar massFraction(int phaseIdx, int compIdx) const
     {
+        typedef Opm::MathToolbox<Scalar> Toolbox;
+
         return
-            std::abs(sumMoleFractions_[phaseIdx])
-            * moleFraction_[phaseIdx][compIdx]
-            * FluidSystem::molarMass(compIdx)
-            / std::max(1e-40, std::abs(averageMolarMass_[phaseIdx]));
+            Toolbox::abs(sumMoleFractions_[phaseIdx])
+            *moleFraction_[phaseIdx][compIdx]
+            *FluidSystem::molarMass(compIdx)
+            / Toolbox::max(1e-40, Toolbox::abs(averageMolarMass_[phaseIdx]));
     }
 
     /*!
@@ -80,7 +83,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    Scalar averageMolarMass(int phaseIdx) const
+    const Scalar&  averageMolarMass(int phaseIdx) const
     { return averageMolarMass_[phaseIdx]; }
 
     /*!
@@ -100,7 +103,7 @@ public:
      *        and update the average molar mass [kg/mol] according
      *        to the current composition of the phase
      */
-    void setMoleFraction(int phaseIdx, int compIdx, Scalar value)
+    void setMoleFraction(int phaseIdx, int compIdx, const Scalar&  value)
     {
         Valgrind::CheckDefined(value);
         Valgrind::SetUndefined(sumMoleFractions_[phaseIdx]);
@@ -125,11 +128,16 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
+        typedef typename FluidState::Scalar FsScalar;
+        typedef Opm::MathToolbox<FsScalar> FsToolbox;
+
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             averageMolarMass_[phaseIdx] = 0;
             sumMoleFractions_[phaseIdx] = 0;
             for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                moleFraction_[phaseIdx][compIdx] = fs.moleFraction(phaseIdx, compIdx);
+                moleFraction_[phaseIdx][compIdx] =
+                    FsToolbox::template toLhs<Scalar>(fs.moleFraction(phaseIdx, compIdx));
+
                 averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
                 sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];
             }

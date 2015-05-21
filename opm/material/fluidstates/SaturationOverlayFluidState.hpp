@@ -34,10 +34,12 @@ namespace Opm {
  *        saturations and takes all other quantities from an other
  *        fluid state.
  */
-template <class Scalar, class FluidState>
+template <class FluidState>
 class SaturationOverlayFluidState
 {
 public:
+    typedef typename FluidState::Scalar Scalar;
+
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
 

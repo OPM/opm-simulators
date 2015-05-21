@@ -51,15 +51,17 @@
  * \brief This is a fluid state which makes sure that only the quantities
  *        allowed are accessed.
  */
-template <class Scalar,
+template <class ScalarT,
           class FluidSystem,
-          class BaseFluidState = Opm::CompositionalFluidState<Scalar, FluidSystem> >
+          class BaseFluidState = Opm::CompositionalFluidState<ScalarT, FluidSystem> >
 class HairSplittingFluidState
     : protected BaseFluidState
 {
 public:
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
+
+    typedef ScalarT Scalar;
 
     HairSplittingFluidState()
     {
@@ -220,6 +222,11 @@ void checkFluidState(const BaseFluidState &fs)
 
     // a fluid state must provide a checkDefined() method
     fs.checkDefined();
+
+    // fluid states must export the types which they use as Scalars
+    typedef typename BaseFluidState::Scalar FsScalar;
+    static_assert(std::is_same<FsScalar, Scalar>::value,
+                  "Fluid states must export the type they are given as scalar in an unmodified way");
 
     // make sure the fluid state provides all mandatory methods
     while (false) {
