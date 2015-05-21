@@ -25,6 +25,8 @@
 
 #include "GasPvtInterface.hpp"
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 

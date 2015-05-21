@@ -25,6 +25,8 @@
 
 #include "OilPvtInterface.hpp"
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>

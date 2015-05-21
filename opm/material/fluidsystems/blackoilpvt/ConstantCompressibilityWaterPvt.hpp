@@ -25,7 +25,11 @@
 
 #include "WaterPvtInterface.hpp"
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/material/common/OpmFinal.hpp>
+#include <opm/material/common/Tabulated1DFunction.hpp>
+
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif

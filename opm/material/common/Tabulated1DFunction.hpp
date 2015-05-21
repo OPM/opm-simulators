@@ -23,6 +23,15 @@
 #ifndef OPM_TABULATED_1D_FUNCTION_HPP
 #define OPM_TABULATED_1D_FUNCTION_HPP
 
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <iostream>
+#include <tuple>
+#include <vector>
+
 namespace Opm {
 /*!
  * \brief Implements a linearly interpolated scalar function that depends on one
