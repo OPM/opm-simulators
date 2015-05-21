@@ -46,13 +46,13 @@ public:
      *
      * \copydetails Opm::henryIAPWS
      */
-    template <class Scalar>
-    static Scalar henry(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation henry(const Evaluation& temperature)
     {
-        const Scalar E = 2388.8777;
-        const Scalar F = -14.9593;
-        const Scalar G = 42.0179;
-        const Scalar H = -29.4396;
+        const double E = 2388.8777;
+        const double F = -14.9593;
+        const double G = 42.0179;
+        const double H = -29.4396;
 
         return henryIAPWS(E, F, G, H, temperature);
     }
@@ -64,16 +64,16 @@ public:
      * \param temperature the temperature \f$\mathrm{[K]}\f$
      * \param pressure the phase pressure \f$\mathrm{[Pa]}\f$
      */
-    template <class Scalar>
-    static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef Opm::H2O<Scalar> H2O;
-        typedef Opm::N2<Scalar> N2;
+        typedef Opm::H2O<double> H2O;
+        typedef Opm::N2<double> N2;
 
         // atomic diffusion volumes
-        const Scalar SigmaNu[2] = { 13.1 /* H2O */,  18.5 /* N2 */ };
+        const double SigmaNu[2] = { 13.1 /* H2O */,  18.5 /* N2 */ };
         // molar masses [g/mol]
-        const Scalar M[2] = { H2O::molarMass()*Scalar(1e3), N2::molarMass()*Scalar(1e3) };
+        const double M[2] = { H2O::molarMass()*1e3, N2::molarMass()*1e3 };
 
         return fullerMethod(M, SigmaNu, temperature, pressure);
     }
@@ -96,11 +96,11 @@ public:
      * Oxygen in Water", Journal of Chemical Engineering and Data,
      * Vol. 12, No. 1, pp. 111-115, 1967
      */
-    template <class Scalar>
-    static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        const Scalar Texp = 273.15 + 25; // [K]
-        const Scalar Dexp = 2.01e-9; // [m^2/s]
+        const double Texp = 273.15 + 25; // [K]
+        const double Dexp = 2.01e-9; // [m^2/s]
 
         return Dexp * temperature/Texp;
     }

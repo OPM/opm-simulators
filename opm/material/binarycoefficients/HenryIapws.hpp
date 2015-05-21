@@ -31,27 +31,25 @@ namespace Opm
 {
 /*!
  * \ingroup Binarycoefficients
- * \brief The Henry constants in liquid water using the IAPWS 2004
- *        formulation.
+ * \brief The Henry constants in liquid water using the IAPWS 2004 formulation.
  *
  * This function calculates \f$K_D\f$, see:
  *
- * IAPWS: "Guideline on the Henry's Constant and Vapor-Liquid
- * Distribution Constant for Gases in H2O and D2O at High
- * Temperatures"
- * http://www.iapws.org/relguide/HenGuide.pdf
+ * IAPWS: "Guideline on the Henry's Constant and Vapor-Liquid Distribution Constant for
+ * Gases in H2O and D2O at High Temperatures" http://www.iapws.org/relguide/HenGuide.pdf
  */
-template <class Scalar>
-inline Scalar henryIAPWS(Scalar E,
-                         Scalar F,
-                         Scalar G,
-                         Scalar H,
-                         Scalar temperature)
+template <class Scalar, class Evaluation>
+inline Evaluation henryIAPWS(Scalar E,
+                             Scalar F,
+                             Scalar G,
+                             Scalar H,
+                             const Evaluation& temperature)
 {
-    typedef Opm::H2O<Scalar> H2O;
+    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    typedef Opm::H2O<Evaluation> H2O;
 
-    Scalar Tr = temperature/H2O::criticalTemperature();
-    Scalar tau = 1 - Tr;
+    Evaluation Tr = temperature/H2O::criticalTemperature();
+    Evaluation tau = 1 - Tr;
 
     static const Scalar c[6] = {
         1.99274064, 1.09965342, -0.510839303,
@@ -63,22 +61,22 @@ inline Scalar henryIAPWS(Scalar E,
     };
     static const Scalar q = -0.023767;
 
-    Scalar f = 0;
+    Evaluation f = 0;
     for (int i = 0; i < 6; ++i) {
-        f += c[i]*std::pow(tau, d[i]);
+        f += c[i]*Toolbox::pow(tau, d[i]);
     }
 
-    Scalar exponent =
+    const Evaluation& exponent =
         q*F +
         E/temperature*f +
         (F +
-         G*std::pow(tau, 2.0/3) +
+         G*Toolbox::pow(tau, 2.0/3) +
          H*tau)*
-        std::exp((H2O::tripleTemperature() - temperature)/100);
+        Toolbox::exp((H2O::tripleTemperature() - temperature)/100);
     // CAUTION: K_D is formulated in mole fractions. We have to
     // multiply it with the vapor pressure of water in order to get
     // derivative of the partial pressure.
-    return std::exp(exponent)*H2O::vaporPressure(temperature);
+    return Toolbox::exp(exponent)*H2O::vaporPressure(temperature);
 }
 } // namespace Opm
 

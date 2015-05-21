@@ -25,12 +25,12 @@
 #ifndef OPM_BINARY_COEFF_H2O_AIR_HPP
 #define OPM_BINARY_COEFF_H2O_AIR_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <cmath>
 
-namespace Opm
-{
-namespace BinaryCoeff
-{
+namespace Opm {
+namespace BinaryCoeff {
 
 /*!
  * \ingroup Binarycoefficients
@@ -49,12 +49,12 @@ public:
      * page 29 Formula (2.9) (nach Tchobanoglous & Schroeder, 1985)
      *
      */
-    template <class Scalar>
-    static Scalar henry(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation henry(const Evaluation& temperature)
     {
-        Scalar r = (0.8942+1.47*std::exp(-0.04394*(temperature-273.15)))*1.E-10;
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        return 1./r;
+        return 1.0/((0.8942+1.47*Toolbox::exp(-0.04394*(temperature-273.15)))*1.E-10);
     }
 
     /*!
@@ -68,18 +68,17 @@ public:
      * Dep. of Agricultural and Chemical Engineering, Colorado State University,
      * Fort Collins, 1981.
      */
-    template <class Scalar>
-    static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        const Scalar Theta=1.8;
-        const Scalar Daw=2.13e-5;  /* reference value */
-        const Scalar pg0=1.e5;     /* reference pressure */
-        const Scalar T0=273.15;    /* reference temperature */
-        Scalar Dgaw;
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        Dgaw=Daw*(pg0/pressure)*std::pow((temperature/T0),Theta);
+        double Theta=1.8;
+        double Daw=2.13e-5;  /* reference value */
+        double pg0=1.e5;     /* reference pressure */
+        double T0=273.15;    /* reference temperature */
 
-        return Dgaw;
+        return Daw*(pg0/pressure)*Toolbox::pow((temperature/T0),Theta);
     }
 
     /*!
@@ -102,12 +101,12 @@ public:
      * Oxygen in Water", Journal of Chemical Engineering and Data,
      * Vol. 12, No. 1, pp. 111-115, 1967
      */
-    template <class Scalar>
-    static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        const Scalar Texp = 273.15 + 25; // [K]
-        const Scalar Dexp = 2.01e-9; // [m^2/s]
-        return Dexp * temperature/Texp;
+        const double Texp = 273.15 + 25; // [K]
+        const double Dexp = 2.01e-9; // [m^2/s]
+        return Dexp/Texp*temperature;
     }
 };
 

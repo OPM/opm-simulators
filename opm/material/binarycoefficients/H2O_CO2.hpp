@@ -50,8 +50,8 @@ public:
      * Temperatures"
      * http://www.iapws.org/relguide/HenGuide.pdf
      */
-    template <class Scalar>
-    static Scalar henry(Scalar temperature)
+    template <class Scalar, class Evaluation = Scalar>
+    static Evaluation henry(const Evaluation& temperature)
     {
         const Scalar E = 1672.9376;
         const Scalar F = 28.1751;
@@ -66,8 +66,8 @@ public:
      *
      * To calculate the values, the \ref fullerMethod is used.
      */
-    template <class Scalar>
-    static Scalar gasDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Scalar, class Evaluation = Scalar>
+    static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
         typedef Opm::H2O<Scalar> H2O;
         typedef Opm::SimpleCO2<Scalar> CO2;
@@ -83,8 +83,8 @@ public:
     /*!
      * \brief Diffusion coefficent [m^2/s] for molecular CO2 in liquid water.
      */
-    template <class Scalar>
-    static Scalar liquidDiffCoeff(Scalar temperature, Scalar pressure)
+    template <class Scalar, class Evaluation = Scalar>
+    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
 };
 
