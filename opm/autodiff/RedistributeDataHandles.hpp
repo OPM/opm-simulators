@@ -1,6 +1,7 @@
 /*
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services.
   Coypright 2015 NTNU
+  Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -71,7 +72,7 @@ public:
         }
     }
     template<class B, class T>
-    void scatter(B& buffer, const T& e, std::size_t size)
+    void scatter(B& buffer, const T& e, std::size_t /* size */)
     {
         assert( T::codimension == 0);
         double val;

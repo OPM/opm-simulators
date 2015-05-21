@@ -1,5 +1,8 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014, 2015 Dr. Markus Blatt - HPC-Simulation-Software & Services
+  Copyright 2014, 2015 Statoil AS
+  Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -389,7 +392,9 @@ namespace Opm {
         ///                   maximum of tempV for the phase i.
         /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
         ///                   of B for the phase i.
+        /// \param[out] maxNormWell The maximum of the well equations for each phase.
         /// \param[in]  nc    The number of cells of the local grid.
+        /// \param[in]  nw    The number of wells on the local grid.
         /// \return The total pore volume over all cells.
         double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
@@ -398,7 +403,9 @@ namespace Opm {
                              std::array<double,MaxNumPhases>& R_sum,
                              std::array<double,MaxNumPhases>& maxCoeff,
                              std::array<double,MaxNumPhases>& B_avg,
-                             int nc) const;
+                             std::vector<double>& maxNormWell,
+                             int nc,
+                             int nw) const;
 
         void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
                                       const int it, const double relaxRelTol,

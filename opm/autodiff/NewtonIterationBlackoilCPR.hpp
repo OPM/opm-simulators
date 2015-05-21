@@ -1,6 +1,9 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
   Copyright 2015 IRIS AS
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 NTNU
+  Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -85,6 +88,7 @@ namespace Opm
         void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation,
+                                             const P& parallelInformationAe,
                                              Dune::InverseOperatorResult& result) const
         {
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
@@ -94,7 +98,8 @@ namespace Opm
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
             parallelInformation.copyOwnerToAll(istlb, istlb);
-            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation);
+            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation,
+                                   parallelInformationAe);
 
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
