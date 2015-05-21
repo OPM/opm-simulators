@@ -26,6 +26,8 @@
 
 #include "VanGenuchtenParams.hpp"
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cassert>
@@ -108,8 +110,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -119,7 +123,9 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = Sw(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = Sw<FluidState, Evaluation>(params, fs);
         values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
     }
 
@@ -136,8 +142,10 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -154,10 +162,14 @@ public:
      * \param fs The fluid state for which the capillary pressure
      *           ought to be calculated
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
         assert(0 <= Sw && Sw <= 1);
 
         return twoPhaseSatPcnw(params, Sw);
@@ -177,8 +189,13 @@ public:
      *               required by the van Genuchten law.
      * \param Sw The effective wetting phase saturation
      */
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
-    { return std::pow(std::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha(); }
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::pow(Toolbox::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+    }
 
     /*!
      * \brief The saturation-capillary pressure curve according to van Genuchten.
@@ -192,58 +209,38 @@ public:
      *               required by the van Genuchten law.
      * \param fs The fluid state containing valid phase pressures
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pC = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        Evaluation pC =
+            FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(pC >= 0);
 
-        return std::pow(std::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
+        return Toolbox::pow(Toolbox::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
-
-    /*!
-     * \brief The partial derivative of the capillary pressure with
-     *        regard to the saturation according to van Genuchten.
-     *
-     * This is equivalent to
-     * \f[
-     * \frac{\partial p_C}{\partial S_w} =
-     * -\frac{1}{\alpha n} ({S_w}^{-1/m} - 1)^{1/n - 1} {S_w}^{-1/m - 1}
-     * \f]
-     *
-     * \param params The parameter object expressing the coefficients
-     *               required by the van Genuchten law.
-     * \param fs The fluid state containing valid saturations
-     */
-    template <class FluidState>
-    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        assert(0 < Sw && Sw < 1);
-
-        Scalar powSw = std::pow(Sw, -1/params.vgM());
-        return
-            - 1/(params.vgAlpha() * params.vgN() * Sw)
-            * std::pow(powSw - 1, 1/params.vgN() - 1) * powSw;
-    }
 
     /*!
      * \brief The relative permeability for the wetting phase of the
@@ -255,42 +252,27 @@ public:
      * \param fs The fluid state for which the relative permeability
      *           ought to be calculated
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
-        assert(0 <= Sw && Sw <= 1);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar r = 1. - std::pow(1 - std::pow(Sw, 1/params.vgM()), params.vgM());
-        return std::sqrt(Sw)*r*r;
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrw(params, Sw);
     }
 
-    /*!
-     * \brief The derivative of the relative permeability of the
-     *        wetting phase in regard to the wetting saturation of the
-     *        medium implied according to the van Genuchten curve with
-     *        Mualem parameters.
-     *
-     * \param params The parameter object expressing the coefficients
-     *               required by the van Genuchten law.
-     * \param fs The fluid state for which the derivative
-     *           ought to be calculated
-     */
-    template <class FluidState>
-    static Scalar dKrw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
-        assert(0 <= Sw && Sw <= 1);
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        const Scalar x = 1 - std::pow(Sw, 1.0/params.vgM());
-        const Scalar xToM = std::pow(x, params.vgM());
-        return (1 - xToM)/std::sqrt(Sw) * ( (1 - xToM)/2 + 2*xToM*(1-x)/x );
+        assert(0.0 <= Sw && Sw <= 1.0);
+
+        Evaluation r = 1.0 - Toolbox::pow(1.0 - Toolbox::pow(Sw, 1/params.vgM()), params.vgM());
+        return Toolbox::sqrt(Sw)*r*r;
     }
-
 
     /*!
      * \brief The relative permeability for the non-wetting phase
@@ -301,43 +283,27 @@ public:
      * \param fs The fluid state for which the derivative
      *           ought to be calculated
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
-        assert(0 <= Sw && Sw <= 1);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        return
-            std::pow(1 - Sw, 1.0/3) *
-            std::pow(1 - std::pow(Sw, 1/params.vgM()), 2*params.vgM());
+        const Evaluation& Sw =
+            1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+
+        return twoPhaseSatKrn(params, Sw);
     }
 
-    /*!
-     * \brief The derivative of the relative permeability for the
-     *        non-wetting phase in regard to the wetting saturation of
-     *        the medium as implied by the van Genuchten
-     *        parameterization.
-     *
-     * \param params The parameter object expressing the coefficients
-     *               required by the van Genuchten law.
-     * \param fs The fluid state for which the derivative
-     *           ought to be calculated
-     */
-    template <class FluidState>
-    static Scalar dKrn_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrn_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, Evaluation Sw)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(0 <= Sw && Sw <= 1);
 
-        const Scalar x = std::pow(Sw, 1.0/params.vgM());
         return
-            -std::pow(1 - x, 2*params.vgM())
-            *std::pow(1 - Sw, -2/3)
-            *(1.0/3 + 2*x/Sw);
+            Toolbox::pow(1 - Sw, 1.0/3) *
+            Toolbox::pow(1 - Toolbox::pow(Sw, 1/params.vgM()), 2*params.vgM());
     }
 };
 } // namespace Opm

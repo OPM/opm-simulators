@@ -122,7 +122,7 @@ public:
                                                         phaseIdx));
         }
 
-        EffLaw::capillaryPressures(values, params, overlayFs);
+        EffLaw::template capillaryPressures<Container, OverlayFluidState>(values, params, overlayFs);
     }
 
     /*!
@@ -148,7 +148,7 @@ public:
                                                         phaseIdx));
         }
 
-        EffLaw::relativePermeabilities(values, params, overlayFs);
+        EffLaw::template relativePermeabilities<Container, OverlayFluidState>(values, params, overlayFs);
     }
 
     /*!
@@ -162,8 +162,8 @@ public:
      *         constitutive relation (e.g. Brooks & Corey, van
      *         Genuchten, linear...)
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
@@ -179,14 +179,14 @@ public:
                                                         phaseIdx));
         }
 
-        return EffLaw::pcnw(params, overlayFs);
+        return EffLaw::template pcnw<OverlayFluidState, Evaluation>(params, overlayFs);
     }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatPcnw(const Params &params, Scalar SwAbs)
+    template <class Evaluation>
+    static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
+    twoPhaseSatPcnw(const Params &params, const Evaluation& SwAbs)
     {
-        Scalar SwEff = effectiveSaturation(params, SwAbs, Traits::wettingPhaseIdx);
+        const Evaluation& SwEff = effectiveSaturation(params, SwAbs, Traits::wettingPhaseIdx);
 
         return EffLaw::twoPhaseSatPcnw(params, SwEff);
     }
@@ -197,7 +197,7 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        EffLaw::saturations(values, params, fs);
+        EffLaw::template saturations<Container, FluidState>(values, params, fs);
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             values[phaseIdx] = absoluteSaturation(params, values[phaseIdx], phaseIdx);
         }
@@ -207,27 +207,41 @@ public:
      * \brief Calculate wetting liquid phase saturation given that
      *        the rest of the fluid state has been initialized
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sw(params, fs), Traits::wettingPhaseIdx); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
+    {
+        return absoluteSaturation(params,
+                                  EffLaw::template Sw<FluidState, Evaluation>(params, fs),
+                                  Traits::wettingPhaseIdx);
+    }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatSw(const Params &params, Scalar Sw)
-    { return absoluteSaturation(params, EffLaw::twoPhaseSatSw(params, Sw), Traits::wettingPhaseIdx); }
+    template <class Evaluation>
+    static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
+    twoPhaseSatSw(const Params &params, const Evaluation& Sw)
+    { return absoluteSaturation(params,
+                                EffLaw::twoPhaseSatSw(params, Sw),
+                                Traits::wettingPhaseIdx); }
 
     /*!
      * \brief Calculate non-wetting liquid phase saturation given that
      *        the rest of the fluid state has been initialized
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sn(params, fs), Traits::nonWettingPhaseIdx); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    {
+        return absoluteSaturation(params,
+                                  EffLaw::template Sn<FluidState, Evaluation>(params, fs),
+                                  Traits::nonWettingPhaseIdx);
+    }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatSn(const Params &params, Scalar Sw)
-    { return absoluteSaturation(params, EffLaw::twoPhaseSatSn(params, Sw), Traits::nonWettingPhaseIdx); }
+    template <class Evaluation>
+    static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
+    twoPhaseSatSn(const Params &params, const Evaluation& Sw)
+    {
+        return absoluteSaturation(params,
+                                  EffLaw::twoPhaseSatSn(params, Sw),
+                                  Traits::nonWettingPhaseIdx);
+    }
 
     /*!
      * \brief Calculate gas phase saturation given that the rest of
@@ -235,51 +249,13 @@ public:
      *
      * This method is only available for at least three fluid phases
      */
-    template <class FluidState, class ScalarT = Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static typename std::enable_if< (Traits::numPhases > 2), Evaluation>::type
     Sg(const Params &params, const FluidState &fs)
-    { return absoluteSaturation(params, EffLaw::Sg(params, fs), Traits::gasPhaseIdx); }
-
-    /*!
-     * \brief Returns the partial derivative of the capillary
-     *        pressure w.r.t the absolute saturation.
-     *
-     * In this case the chain rule needs to be applied:
-     \f[
-             p_c = p_c( \overline S_w (S_w))
-             \rightarrow p_c ^\prime = \frac{\partial  p_c}{\partial \overline S_w} \frac{\partial \overline S_w}{\partial S_w}
-     \f]
-     * \param Sw        Absolute saturation of the wetting phase \f$\overline{S}_w\f$.
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Partial derivative of \f$p_c\f$ w.r.t. effective saturation according to EffLaw e.g. Brooks & Corey, van Genuchten, linear... .
-    */
-    static Scalar dpC_dSw(const Params &params, Scalar Sw)
     {
-        return EffLaw::dpC_dSw(params, SabsToSeff(params, Sw) )*dSwe_dSw_(params);
-    }
-
-    /*!
-     * \brief Returns the partial derivative of the absolute
-     *        saturation w.r.t. the capillary pressure.
-     *
-     * In this case the chain rule needs to be applied:
-     \f[
-            S_w = S_w(\overline{S}_w (p_c) )
-            \rightarrow S_w^\prime = \frac{\partial S_w}{\partial \overline S_w} \frac{\partial \overline S_w}{\partial p_c}
-     \f]
-     *
-     *
-     * \param pC        Capillary pressure \f$p_C\f$:
-     * \param params    A container object that is populated with the appropriate coefficients for the respective law.
-     *                  Therefore, in the (problem specific) spatialParameters  first, the material law is chosen, and then the params container
-     *                  is constructed accordingly. Afterwards the values are set there, too.
-     * \return          Partial derivative of effective saturation w.r.t. \f$p_c\f$ according to EffLaw e.g. Brooks & Corey, van Genuchten, linear... .
-     */
-    static Scalar dSw_dpC(const Params &params, Scalar pC)
-    {
-        return EffLaw::dSw_dpC(params, pC)*dSw_dSwe_(params);
+        return absoluteSaturation(params,
+                                  EffLaw::template Sg<FluidState, Evaluation>(params, fs),
+                                  Traits::gasPhaseIdx);
     }
 
     /*!
@@ -291,8 +267,8 @@ public:
      * \return          Relative permeability of the wetting phase calculated as implied by EffLaw e.g. Brooks & Corey, van Genuchten, linear... .
      *
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
@@ -308,19 +284,19 @@ public:
                                                         phaseIdx));
         }
 
-        return EffLaw::krw(params, overlayFs);
+        return EffLaw::template krw<OverlayFluidState, Evaluation>(params, overlayFs);
     }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatKrw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
+    twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     { return EffLaw::twoPhaseSatKrw(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
 
     /*!
      * \brief The relative permeability of the non-wetting phase.
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
@@ -336,12 +312,12 @@ public:
                                                         phaseIdx));
         }
 
-        return EffLaw::krn(params, overlayFs);
+        return EffLaw::template krn<OverlayFluidState, Evaluation>(params, overlayFs);
     }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<implementsTwoPhaseSatApi, ScalarT>::type
-    twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
+    twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     { return EffLaw::twoPhaseSatKrn(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
 
     /*!
@@ -349,8 +325,8 @@ public:
      *
      * This method is only available for at least three fluid phases
      */
-    template <class FluidState, class ScalarT=Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static typename std::enable_if< (Traits::numPhases > 2), Evaluation>::type
     krg(const Params &params, const FluidState &fs)
     {
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
@@ -367,20 +343,22 @@ public:
                                                         phaseIdx));
         }
 
-        return EffLaw::krg(params, overlayFs);
+        return EffLaw::template krg<OverlayFluidState, Evaluation>(params, overlayFs);
     }
 
     /*!
      * \brief Convert an absolute saturation to an effective one.
      */
-    static Scalar effectiveSaturation(const Params &params, Scalar S, int phaseIdx)
-    { return (S - params.residualSaturation(phaseIdx))/(1 - params.sumResidualSaturations()); }
+    template <class Evaluation>
+    static Evaluation effectiveSaturation(const Params &params, const Evaluation& S, int phaseIdx)
+    { return (S - params.residualSaturation(phaseIdx))/(1.0 - params.sumResidualSaturations()); }
 
     /*!
      * \brief Convert an effective saturation to an absolute one.
      */
-    static Scalar absoluteSaturation(const Params &params, Scalar S, int phaseIdx)
-    { return S*(1 - params.sumResidualSaturations()) + params.residualSaturation(phaseIdx); }
+    template <class Evaluation>
+    static Evaluation absoluteSaturation(const Params &params, const Evaluation& S, int phaseIdx)
+    { return S*(1.0 - params.sumResidualSaturations()) + params.residualSaturation(phaseIdx); }
 
 private:
     /*!

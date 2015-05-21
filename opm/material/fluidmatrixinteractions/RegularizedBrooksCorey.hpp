@@ -115,8 +115,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -126,7 +128,9 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = Sw(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = Sw<FluidState, Evaluation>(params, fs);
         values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
     }
 
@@ -143,8 +147,10 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -171,13 +177,19 @@ public:
      *
      * \sa BrooksCorey::pcnw
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
-        const Scalar Sthres = params.thresholdSw();
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return twoPhaseSatPcnw(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    {
+        const Scalar Sthres = params.pcnwLowSw();
 
         // make sure that the capilary pressure observes a
         // derivative != 0 for 'illegal' saturations. This is
@@ -186,13 +198,13 @@ public:
         // saturation moving to the right direction if it
         // temporarily is in an 'illegal' range.
         if (Sw <= Sthres) {
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
-            Scalar pcnw_SwLow = BrooksCorey::twoPhaseSatPcnw(params, Sthres);
+            Scalar m = params.pcnwSlopeLow();
+            Scalar pcnw_SwLow = params.pcnwLow();
             return pcnw_SwLow + m*(Sw - Sthres);
         }
-        else if (Sw > 1.0) {
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
-            Scalar pcnw_SwHigh = params.entryPressure();
+        else if (Sw >= 1.0) {
+            Scalar m = params.pcnwSlopeHigh();
+            Scalar pcnw_SwHigh = params.pcnwHigh();
             return pcnw_SwHigh + m*(Sw - 1.0);
         }
 
@@ -207,23 +219,28 @@ public:
      *
      * This is the inverse of the pcnw() method.
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pcnw = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
-        return twoPhaseSatSw(params, pcnw);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& pC =
+            FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+        return twoPhaseSatSw(params, pC);
     }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pcnw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pcnw)
     {
-        const Scalar Sthres = params.thresholdSw();
+        const Scalar Sthres = params.pcnwLowSw();
 
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized version of the
         // Brooks-Corey law. If the input capillary pressure is
         // smaller than the entry pressure, make sure that we will
         // regularize.
-        Scalar Sw = 1.5;
+        Evaluation Sw = 1.5;
         if (pcnw >= params.entryPressure())
             Sw = BrooksCorey::twoPhaseSatSw(params, pcnw);
 
@@ -235,13 +252,13 @@ public:
         // temporarily is in an 'illegal' range.
         if (Sw <= Sthres) {
             // invert the low saturation regularization of pcnw()
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
-            Scalar pcnw_SwLow = BrooksCorey::twoPhaseSatPcnw(params, Sthres);
+            Scalar m = params.pcnwSlopeLow();
+            Scalar pcnw_SwLow = params.pcnwLow();
             return Sthres + (pcnw - pcnw_SwLow)/m;
         }
         else if (Sw > 1.0) {
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
-            Scalar pcnw_SwHigh = BrooksCorey::twoPhaseSatPcnw(params, 1.0);
+            Scalar m = params.pcnwSlopeHigh();
+            Scalar pcnw_SwHigh = params.pcnwHigh();
             return 1.0 + (pcnw - pcnw_SwHigh)/m;;
         }
 
@@ -252,66 +269,13 @@ public:
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pcnw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pcnw)
     { return 1 - twoPhaseSatSw(params, pcnw); }
-
-    /*!
-     * \brief The derivative of the regularized Brooks-Corey capillary
-     *        pressure-saturation curve.
-     */
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        const Scalar Sthres = params.thresholdSw();
-
-        // derivative of the regualarization
-        if (Sw <= Sthres) {
-            // calculate the slope of the straight line used in pcnw()
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sthres);
-            return m;
-        }
-        else if (Sw > 1.0) {
-            // calculate the slope of the straight line used in pcnw()
-            Scalar m = BrooksCorey::twoPhaseSatDPcnw_dSw(params, 1.0);
-            return m;
-        }
-
-        return BrooksCorey::twoPhaseSatDPcnw_dSw(params, Sw);
-    }
-
-    /*!
-     * \brief The derivative of the regularized Brooks-Corey
-     *        saturation-capillary pressure curve.
-     */
-    static Scalar twoPhaseSatDSw_dpcnw(const Params &params, Scalar pcnw)
-    {
-        const Scalar Sthres = params.thresholdSw();
-
-        // calculate the saturation which corresponds to the
-        // saturation in the non-regularized version of the
-        // Brooks-Corey law
-        Scalar Sw;
-        if (pcnw < params.entryPressure())
-            Sw = 1.5; // make sure we regularize (see below)
-        else
-            Sw = BrooksCorey::Sw(params, pcnw);
-
-        // derivative of the regularization
-        if (Sw <= Sthres) {
-            // calculate the slope of the straight line used in pcnw()
-            Scalar m = BrooksCorey::dPcnw_dSw(params, Sthres);
-            return 1/m;
-        }
-        else if (Sw > 1.0) {
-            // calculate the slope of the straight line used in pcnw()
-            Scalar m = BrooksCorey::dPcnw_dSw(params, 1.0);
-            return 1/m;
-        }
-        return 1.0/BrooksCorey::dPcnw_dSw(params, Sw);
-    }
 
     /*!
      * \brief Regularized version of the relative permeability of the
@@ -327,26 +291,26 @@ public:
      *
      * \sa BrooksCorey::krw
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
-        if (Sw <= 0.0)
-            return 0.0;
-        else if (Sw >= 1.0)
-            return 1.0;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        return BrooksCorey::twoPhaseSatKrw(params, Sw);
+        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return twoPhaseSatKrw(params, Sw);
     }
 
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
-        if (Sw <= 0.0 || Sw >= 1.0)
-            return 0.0;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        return BrooksCorey::twoPhaseSatDKrw_dSw(params, Sw);
+        if (Sw <= 0.0)
+            return Toolbox::createConstant(0.0);
+        else if (Sw >= 1.0)
+            return Toolbox::createConstant(1.0);
+
+        return BrooksCorey::twoPhaseSatKrw(params, Sw);
     }
 
     /*!
@@ -363,28 +327,28 @@ public:
      *
      * \sa BrooksCorey::krn
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        return twoPhaseSatKrn(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         if (Sw >= 1.0)
-            return 0.0;
+            return Toolbox::createConstant(0.0);
         else if (Sw <= 0.0)
-            return 1.0;
+            return Toolbox::createConstant(1.0);
 
         return BrooksCorey::twoPhaseSatKrn(params, Sw);
     }
-
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
-    {
-        if (Sw <= 0.0 || Sw >= 1.0)
-            return 0.0;
-
-        return BrooksCorey::twoPhaseSatDKrn_dSw(params, Sw);
-    }
-
 };
 } // namespace Opm
 

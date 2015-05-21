@@ -97,8 +97,18 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setPcnwSamples(const ValueVector& SwValues, const ValueVector& values)
-    { SwSamples_ = SwValues; pcwnSamples_ = values; }
+    template <class Container>
+    void setPcnwSamples(const Container& SwValues, const Container& values)
+    {
+        assert(SwValues.size() == values.size());
+
+        int n = SwValues.size();
+        SwSamples_.resize(n);
+        pcwnSamples_.resize(n);
+
+        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(values.begin(), values.end(), pcwnSamples_.begin());
+    }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -115,8 +125,18 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrwSamples(const ValueVector& SwValues, const ValueVector& values)
-    { SwSamples_ = SwValues; krwSamples_ = values; }
+    template <class Container>
+    void setKrwSamples(const Container& SwValues, const Container& values)
+    {
+        assert(SwValues.size() == values.size());
+
+        int n = SwValues.size();
+        SwSamples_.resize(n);
+        krwSamples_.resize(n);
+
+        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(values.begin(), values.end(), krwSamples_.begin());
+    }
 
     /*!
      * \brief Return the sampling points for the relative permeability
@@ -133,8 +153,18 @@ public:
      *
      * This curve is assumed to depend on the wetting phase saturation
      */
-    void setKrnSamples(const ValueVector& SwValues, const ValueVector& values)
-    { SwSamples_ = SwValues; krnSamples_ = values; }
+    template <class Container>
+    void setKrnSamples(const Container& SwValues, const Container& values)
+    {
+        assert(SwValues.size() == values.size());
+
+        int n = SwValues.size();
+        SwSamples_.resize(n);
+        krnSamples_.resize(n);
+
+        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(values.begin(), values.end(), krnSamples_.begin());
+    }
 
 private:
 #ifndef NDEBUG

@@ -88,10 +88,12 @@ public:
      * \brief The capillary pressure-saturation curve.
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container &values, const Params &params, const FluidState &fluidState)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fluidState);
     }
 
     /*!
@@ -99,26 +101,31 @@ public:
      *        pressure differences.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    static void saturations(Container &values, const Params &params, const FluidState &fluidState)
     { OPM_THROW(std::logic_error, "Not implemented: saturations()"); }
 
     /*!
      * \brief The relative permeabilities
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fluidState)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fluidState);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fluidState);
     }
 
     /*!
      * \brief The capillary pressure-saturation curve
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fluidState)
     {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -126,89 +133,78 @@ public:
     /*!
      * \brief The saturation-capillary pressure curve
      */
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     { return params.pcnwSpline().eval(Sw, /*extrapolate=*/true); }
 
     /*!
      * \brief The saturation-capillary pressure curve
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fluidState)
     { OPM_THROW(std::logic_error, "Not implemented: Sw()"); }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
     { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fluidState)
+    { return 1 - Sw<FluidState, Evaluation>(params, fluidState); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
-
-    /*!
-     * \brief The partial derivative of the capillary pressure with
-     *        regard to the saturation
-     */
-    template <class FluidState>
-    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        assert(0 < Sw && Sw < 1);
-        return params.pcnwSpline().evalDerivative(Sw, /*extrapolate=*/true);
-    }
 
     /*!
      * \brief The relative permeability for the wetting phase of the
      *        porous medium
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fluidState)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
-    { return std::max(0.0, std::min(1.0, params.krwSpline().eval(Sw, /*extrapolate=*/true))); }
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
-    /*!
-     * \brief The derivative of the relative permeability of the
-     *        wetting phase in regard to the wetting saturation of the
-     *        porous medium
-     */
-    template <class FluidState>
-    static Scalar dKrw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
+        return twoPhaseSatKrw(params, Sw);
+    }
 
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
-    { return params.krwSpline().evalDerivative(Sw, /*extrapolate=*/true); }
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::max(0.0, Toolbox::min(1.0, params.krwSpline().eval(Sw, /*extrapolate=*/true)));
+    }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
      *        of the porous medium
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fluidState)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
-    { return std::max(0.0, std::min(1.0, params.krnSpline().eval(Sw, /*extrapolate=*/true))); }
+        const Evaluation& Sn =
+            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
-    /*!
-     * \brief The derivative of the relative permeability for the
-     *        non-wetting phase in regard to the wetting saturation of
-     *        the porous medium
-     */
-    template <class FluidState>
-    static Scalar dKrn_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrn_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
+        return twoPhaseSatKrn(params, 1.0 - Sn);
+    }
 
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
-    { return params.krnSpline().evalDerivative(Sw, /*extrapolate=*/true); }
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::max(0.0, Toolbox::min(1.0, params.krnSpline().eval(Sw, /*extrapolate=*/true)));
+    }
 };
 } // namespace Opm
 

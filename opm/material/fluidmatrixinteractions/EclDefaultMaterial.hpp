@@ -26,6 +26,7 @@
 #include "EclDefaultMaterialParams.hpp"
 
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
@@ -133,9 +134,13 @@ public:
                                    const Params &params,
                                    const FluidState &state)
     {
-        values[gasPhaseIdx] = pcgn(params, state);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+        values[gasPhaseIdx] = pcgn<FluidState, Evaluation>(params, state);
         values[oilPhaseIdx] = 0;
-        values[waterPhaseIdx] = - pcnw(params, state);
+        values[waterPhaseIdx] = - pcnw<FluidState, Evaluation>(params, state);
+        Valgrind::CheckDefined(values[gasPhaseIdx]);
+        Valgrind::CheckDefined(values[oilPhaseIdx]);
+        Valgrind::CheckDefined(values[waterPhaseIdx]);
     }
 
     /*!
@@ -147,11 +152,13 @@ public:
      * p_{c,gn} = p_g - p_n
      * \f]
      */
-    template <class FluidState>
-    static Scalar pcgn(const Params &params,
-                       const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcgn(const Params &params,
+                           const FluidState &fs)
     {
-        Scalar Sw = 1 - fs.saturation(gasPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& Sw = 1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -164,12 +171,17 @@ public:
      * p_{c,nw} = p_n - p_w
      * \f]
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params,
-                       const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params,
+                           const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(waterPhaseIdx);
-        return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(waterPhaseIdx));
+        Valgrind::CheckDefined(Sw);
+        const auto& result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
+        Valgrind::CheckDefined(result);
+        return result;
     }
 
     /*!
@@ -186,9 +198,9 @@ public:
     /*!
      * \brief The saturation of the gas phase.
      */
-    template <class FluidState>
-    static Scalar Sg(const Params &params,
-                      const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sg(const Params &params,
+                         const FluidState &fluidState)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sg()");
     }
@@ -196,9 +208,9 @@ public:
     /*!
      * \brief The saturation of the non-wetting (i.e., oil) phase.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params,
-                     const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params,
+                         const FluidState &fluidState)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sn()");
     }
@@ -206,9 +218,9 @@ public:
     /*!
      * \brief The saturation of the wetting (i.e., water) phase.
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params,
-                      const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params,
+                         const FluidState &fluidState)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sw()");
     }
@@ -233,57 +245,69 @@ public:
                                        const Params &params,
                                        const FluidState &fluidState)
     {
-        values[waterPhaseIdx] = krw(params, fluidState);
-        values[oilPhaseIdx] = krn(params, fluidState);
-        values[gasPhaseIdx] = krg(params, fluidState);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[waterPhaseIdx] = krw<FluidState, Evaluation>(params, fluidState);
+        values[oilPhaseIdx] = krn<FluidState, Evaluation>(params, fluidState);
+        values[gasPhaseIdx] = krg<FluidState, Evaluation>(params, fluidState);
     }
 
     /*!
      * \brief The relative permeability of the gas phase.
      */
-    template <class FluidState>
-    static Scalar krg(const Params &params,
-                      const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krg(const Params &params,
+                          const FluidState &fluidState)
     {
-        Scalar Sw = 1 - fluidState.saturation(gasPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw = 1 - FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
     /*!
      * \brief The relative permeability of the wetting phase.
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params,
-                      const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params,
+                          const FluidState &fluidState)
     {
-        Scalar Sw = fluidState.saturation(waterPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
     /*!
      * \brief The relative permeability of the non-wetting (i.e., oil) phase.
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params,
-                      const FluidState &fluidState)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params,
+                          const FluidState &fluidState)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         Scalar Swco = params.connateWaterSaturation();
 
-        Scalar Sw = std::min(1.0, std::max(Swco, fluidState.saturation(waterPhaseIdx)));
-        //Scalar So = std::min(1.0, std::max(0.0, fluidState.saturation(oilPhaseIdx)));
-        Scalar Sg = std::min(1.0, std::max(0.0, fluidState.saturation(gasPhaseIdx)));
+        Evaluation Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+//        Evaluation So = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
+        Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        Sw = Toolbox::min(1.0, Toolbox::max(Swco, Sw));
+        //So = Ewoms::Ad::min(1.0, Toolbox::max(0.0, So));
+        Sg = Toolbox::min(1.0, Toolbox::max(0.0, Sg));
 
-        if (Sg + Sw - Swco < 1e-50)
-            return 1.0; // avoid division by zero
+        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-50)
+            return Toolbox::createConstant(1.0); // avoid division by zero
         else {
-            Scalar kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sg + Sw);
-            Scalar kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Sw + Swco);
+            const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sg + Sw);
+            const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Sw + Swco);
 
-            Scalar weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
-            Scalar weightGasOil = 1 - weightOilWater;
+            const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
+            const auto& weightGasOil = 1 - weightOilWater;
 
-            Scalar kro = weightOilWater*kro_ow + weightGasOil*kro_go;
-            return std::min(1.0, std::max(0.0, kro));
+            Evaluation kro = weightOilWater*kro_ow + weightGasOil*kro_go;
+            return Toolbox::min(1.0, Toolbox::max(0.0, kro));
         }
     }
 };

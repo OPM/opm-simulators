@@ -27,6 +27,7 @@
 
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -94,8 +95,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -112,17 +115,21 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
      * \brief The capillary pressure-saturation curve
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        const auto& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -130,117 +137,94 @@ public:
     /*!
      * \brief The saturation-capillary pressure curve
      */
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     { return eval_(params.SwSamples(), params.pcnwSamples(), Sw); }
 
     /*!
      * \brief The saturation-capillary pressure curve
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     { OPM_THROW(std::logic_error, "Not implemented: Sw()"); }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
     { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Scalar>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
-
-    /*!
-     * \brief The partial derivative of the capillary pressure with
-     *        regard to the saturation
-     */
-    template <class FluidState>
-    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        assert(0 < Sw && Sw < 1);
-        return evalDeriv_(params.SwSamples(),
-                          params.pcnwSamples(),
-                          Sw);
-    }
 
     /*!
      * \brief The relative permeability for the wetting phase of the
      *        porous medium
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
-    { return std::max(0.0, std::min(1.0, eval_(params.SwSamples(), params.krwSamples(), Sw))); }
-
-    /*!
-     * \brief The derivative of the relative permeability of the
-     *        wetting phase in regard to the wetting saturation of the
-     *        porous medium
-     */
-    template <class FluidState>
-    static Scalar dKrw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
-        return evalDeriv_(params.SwSamples(),
-                          params.krwSamples(),
-                          Sw);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        const auto& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrw(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const auto& res = eval_(params.SwSamples(), params.krwSamples(), Sw);
+        return Toolbox::max(0.0, Toolbox::min(1.0, res));
     }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
      *        of the porous medium
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
-        return std::max(0.0, std::min(1.0, eval_(params.SwSamples(),
-                                                 params.krnSamples(),
-                                                 Sw)));
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        const auto& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrn(params, Sw);
     }
 
-    /*!
-     * \brief The derivative of the relative permeability for the
-     *        non-wetting phase in regard to the wetting saturation of
-     *        the porous medium
-     */
-    template <class FluidState>
-    static Scalar dKrn_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDkrn_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     {
-        if (Sw < params.SwSamples().front() || Sw > params.SwSamples().back())
-            return 0.0;
-        return evalDeriv_(params.SwSamples(),
-                          params.krnSamples(),
-                          Sw);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::max(0.0, Toolbox::min(1.0, eval_(params.SwSamples(),
+                                                         params.krnSamples(),
+                                                         Sw)));
     }
 
 private:
-    static Scalar eval_(const ValueVector &xValues,
-                        const ValueVector &yValues,
-                        Scalar x)
+    template <class Evaluation>
+    static Evaluation eval_(const ValueVector &xValues,
+                            const ValueVector &yValues,
+                            const Evaluation& x)
     {
-        if (x < xValues.front())
-            return yValues.front();
-        if (x > xValues.back())
-            return yValues.back();
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        int segIdx = findSegmentIndex_(xValues, x);
+        if (Toolbox::value(x) < xValues.front())
+            return Toolbox::createConstant(yValues.front());
+        if (Toolbox::value(x) > xValues.back())
+            return Toolbox::createConstant(yValues.back());
+
+        int segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -248,14 +232,24 @@ private:
         Scalar y0 = yValues[segIdx];
         Scalar y1 = yValues[segIdx + 1];
 
-        return y0 + (y1 - y0)*(x - x0)/(x1 - x0);
+        Scalar m = (y1 - y0)/(x1 - x0);
+
+        return y0 + (x - x0)*m;
     }
 
-    static Scalar evalDeriv_(const ValueVector &xValues,
-                             const ValueVector &yValues,
-                             Scalar x)
+    template <class Evaluation>
+    static Evaluation evalDeriv_(const ValueVector &xValues,
+                                 const ValueVector &yValues,
+                                 const Evaluation& x)
     {
-        int segIdx = findSegmentIndex_(xValues, x);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        if (Toolbox::value(x) < xValues.front())
+            return Toolbox::createConstant(0.0);
+        if (Toolbox::value(x) > xValues.back())
+            return Toolbox::createConstant(0.0);
+
+        int segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -263,7 +257,7 @@ private:
         Scalar y0 = yValues[segIdx];
         Scalar y1 = yValues[segIdx + 1];
 
-        return (y1 - y0)/(x1 - x0);
+        return Toolbox::createConstant((y1 - y0)/(x1 - x0));
     }
 
     static int findSegmentIndex_(const ValueVector &xValues, Scalar x)

@@ -113,8 +113,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -124,7 +126,9 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = Sw(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = Sw<FluidState, Evaluation>(params, fs);
         values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
     }
 
@@ -135,8 +139,10 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -151,11 +157,17 @@ public:
      *
      * \copydetails VanGenuchten::pC()
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wettingPhaseIdx)); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return twoPhaseSatPcnw(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
@@ -206,14 +218,19 @@ public:
          \copydetails VanGenuchten::Sw()
      *
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pC = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& pC =
+            FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pC)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
     {
         // retrieve the low and the high threshold saturations for the
         // unregularized capillary pressure curve from the parameters
@@ -223,14 +240,13 @@ public:
         // calculate the saturation which corrosponds to the
         // saturation in the non-regularized verision of van
         // Genuchten's law
-        Scalar Sw;
         if (pC <= 0) {
             // invert straight line for Sw > 1.0
             Scalar m1 = params.pcnwSlopeHigh();
             return pC/m1 + 1.0;
         }
-        else
-            Sw = VanGenuchten::twoPhaseSatSw(params, pC);
+
+        Evaluation Sw = VanGenuchten::twoPhaseSatSw(params, pC);
 
         // invert the regularization if necessary
         if (Sw <= SwThLow) {
@@ -243,8 +259,8 @@ public:
             // invert spline between threshold saturation and 1.0
             const Spline<Scalar>& spline = params.pcnwHighSpline();
 
-            return spline.intersectInterval(/*x0=*/SwThHigh, /*x1=*/1.0,
-                                            /*a=*/0.0, /*b=*/0.0, /*c=*/0.0, /*d=*/pC);
+            return spline.template intersectInterval<Evaluation>(/*x0=*/SwThHigh, /*x1=*/1.0,
+                                                                 /*a=*/0, /*b=*/0, /*c=*/0, /*d=*/pC);
         }
 
         return Sw;
@@ -254,91 +270,13 @@ public:
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pc)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
     { return 1 - twoPhaseSatSw(params, pc); }
-
-    /*!
-     * \brief A regularized version of the partial derivative
-     *        of the \f$p_c(\overline S_w)\f$ w.r.t. effective saturation
-     *        according to van Genuchten.
-     *
-     * regularized part:
-     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
-     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
-     *
-     *        For not-regularized part:
-     *
-     * \copydetails VanGenuchten::dpC_dSw()
-     *
-     */
-    template <class FluidState>
-    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatDPcnw_dSw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        // derivative of the regualarization
-        if (Sw < params.pcnwLowSw()) {
-            // the slope of the straight line used in pC()
-            return params.pcnwSlopeLow();
-        }
-        else if (params.pcnwHighSw() <= Sw) {
-            if (Sw < 1)
-                return params.pcnwHighSpline().evalDerivative(Sw);
-            else
-                // the slope of the straight line used for the right
-                // side of the capillary pressure function
-                return params.pcnwSlopeHigh();
-        }
-
-        return VanGenuchten::twoPhaseSatDPcnw_dSw(params, Sw);
-    }
-
-    /*!
-     * \brief A regularized version of the partial derivative
-     *        of the \f$\overline S_w(p_c)\f$ w.r.t. cap.pressure
-     *        according to van Genuchten.
-     *
-     *  regularized part:
-     *    - low saturation:  use the slope of the regularization point (i.e. no kink).
-     *    - high saturation: connect the high regularization point with \f$ \overline S_w =1\f$ by a straight line and use that slope (yes, there is a kink :-( ).
-     *
-     *        For not-regularized part:
-     * \copydetails VanGenuchten::dSw_dpC()
-     */
-    template <class FluidState>
-    static Scalar dSw_dpC(const Params &params, const FluidState &fs)
-    {
-        Scalar pC = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
-
-        // calculate the saturation which corrosponds to the
-        // saturation in the non-regularized verision of van
-        // Genuchten's law
-        Scalar Sw;
-        if (pC < 0)
-            Sw = 1.5; // make sure we regularize below
-        else
-            Sw = VanGenuchten::Sw_raw(params, pC);
-
-        // derivative of the regularization
-        if (Sw < params.pcnwLowSw()) {
-            // same as in dpC_dSw() but inverted
-            return 1/params.pcnwSlopeLow();
-        }
-        if (Sw > params.pcnwHighSw()) {
-            if (Sw < 1)
-                return 1/params.pcnwHighSpline().evalDerivative(Sw);
-
-            // same as in dpC_dSw() but inverted
-            return 1/params.pcnwSlopHigh();
-        }
-
-        return VanGenuchten::dSw_dpnw(params, fs);
-    }
 
     /*!
      * \brief   Regularized version of the  relative permeability
@@ -354,27 +292,27 @@ public:
      *  For not-regularized part:
         \copydetails VanGenuchten::krw()
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
-        // regularize
-        if (Sw < 0)
-            return 0;
-        else if (Sw > 1)
-            return 1;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        return VanGenuchten::twoPhaseSatKrw(params, Sw);
+        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return twoPhaseSatKrw(params, Sw);
     }
 
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
-        if (Sw <= 0.0 || Sw >= 1.0)
-            return 0.0;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        return VanGenuchten::twoPhaseSatDKrw_dSw(params, Sw);
+        // regularize
+        if (Sw <= 0)
+            return Toolbox::createConstant(0);
+        else if (Sw >= 1)
+            return Toolbox::createConstant(1);
+
+        return VanGenuchten::twoPhaseSatKrw(params, Sw);
     }
 
     /*!
@@ -391,27 +329,28 @@ public:
          \copydetails VanGenuchten::krn()
      *
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
-        // regularize
-        if (Sw <= 0)
-            return 1;
-        else if (Sw >= 1)
-            return 0;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        return VanGenuchten::twoPhaseSatKrn(params, Sw);
+        const Evaluation& Sw =
+            1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        return twoPhaseSatKrn(params, Sw);
     }
 
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     {
-        if (Sw <= 0.0 || Sw >= 1.0)
-            return 0.0;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        return VanGenuchten::twoPhaseSatDKrn_dSw(params, Sw);
+        // regularize
+        if (Sw <= 0)
+            return Toolbox::createConstant(1);
+        else if (Sw >= 1)
+            return Toolbox::createConstant(0);
+
+        return VanGenuchten::twoPhaseSatKrn(params, Sw);
     }
 };
 

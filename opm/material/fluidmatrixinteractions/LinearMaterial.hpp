@@ -25,8 +25,8 @@
 
 #include "LinearMaterialParams.hpp"
 
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 
@@ -97,8 +97,12 @@ public:
                                    const Params &params,
                                    const FluidState &state)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         for (int phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
-            Scalar S = state.saturation(phaseIdx);
+            const Evaluation& S =
+                FsToolbox::template toLhs<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
             values[phaseIdx] =
@@ -126,47 +130,55 @@ public:
                                        const Params &params,
                                        const FluidState &state)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+        typedef MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         for (int phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
-            Scalar S = state.saturation(phaseIdx);
+            const Evaluation& S =
+                FsToolbox::template toLhs<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
-            values[phaseIdx] = std::max(std::min(S,1.0),0.0);
+            values[phaseIdx] = Toolbox::max(Toolbox::min(S,1.0),0.0);
         }
     }
 
     /*!
      * \brief The difference between the pressures of the non-wetting and wetting phase.
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar S = fs.saturation(Traits::wettingPhaseIdx);
-        Valgrind::CheckDefined(S);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        Valgrind::CheckDefined(Sw);
 
-        Scalar wPhasePressure =
-            S*params.pcMaxSat(Traits::wettingPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::wettingPhaseIdx);
+        const Evaluation& wPhasePressure =
+            Sw*params.pcMaxSat(Traits::wettingPhaseIdx) +
+            (1.0 - Sw)*params.pcMinSat(Traits::wettingPhaseIdx);
 
-        S = fs.saturation(Traits::nonWettingPhaseIdx);
-        Valgrind::CheckDefined(S);
+        const Evaluation& Sn =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        Valgrind::CheckDefined(Sn);
 
-        Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nonWettingPhaseIdx);
+        const Evaluation& nPhasePressure =
+            Sn*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
+            (1.0 - Sn)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
         return nPhasePressure - wPhasePressure;
     }
 
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
+    twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     {
-        Scalar wPhasePressure =
+        const Evaluation& wPhasePressure =
             Sw*params.pcMaxSat(Traits::wettingPhaseIdx) +
             (1.0 - Sw)*params.pcMinSat(Traits::wettingPhaseIdx);
 
-        Scalar nPhasePressure =
+        const Evaluation& nPhasePressure =
             (1.0 - Sw)*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
             Sw*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
@@ -177,26 +189,26 @@ public:
      * \brief Calculate wetting phase saturation given that the rest
      *        of the fluid state has been initialized
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     { OPM_THROW(std::runtime_error, "Not implemented: Sw()"); }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatSw(const Params &params, Scalar Sw)
+    template <class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
+    twoPhaseSatSw(const Params &params, const Evaluation& Sw)
     { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate non-wetting liquid phase saturation given that
      *        the rest of the fluid state has been initialized
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
     { OPM_THROW(std::runtime_error, "Not implemented: Sn()"); }
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatSn(const Params &params, Scalar Sw)
+    template <class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
+    twoPhaseSatSn(const Params &params, const Evaluation& Sw)
     { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSn()"); }
 
     /*!
@@ -205,67 +217,100 @@ public:
      *
      * This method is only available for at least three fluid phases
      */
-    template <class FluidState, class ScalarT = Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
     Sg(const Params &params, const FluidState &fs)
     { OPM_THROW(std::runtime_error, "Not implemented: Sg()"); }
 
     /*!
      * \brief The relative permability of the wetting phase
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::wettingPhaseIdx))); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatKrw(const Params &params, Scalar Sw)
-    { return std::max(0.0, std::min(1.0, Sw)); }
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
+    }
+
+    template <class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
+    twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
+    }
 
     /*!
      * \brief The relative permability of the liquid non-wetting phase
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::nonWettingPhaseIdx))); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    template <class ScalarT = Scalar>
-    static typename std::enable_if<Traits::numPhases == 2, ScalarT>::type
-    twoPhaseSatKrn(const Params &params, Scalar Sw)
-    { return std::max(0.0, std::min(1.0, 1 - Sw)); }
+        const Evaluation& Sn =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        return Toolbox::max(0.0, Toolbox::min(1.0, Sn));
+    }
+
+    template <class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
+    twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
+    }
 
     /*!
      * \brief The relative permability of the gas phase
      *
      * This method is only available for at least three fluid phases
      */
-    template <class FluidState, class ScalarT=Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
     krg(const Params &params, const FluidState &fs)
-    { return std::max(0.0, std::min(1.0, fs.saturation(Traits::gasPhaseIdx))); }
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sg =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+        return Toolbox::max(0.0, Toolbox::min(1.0, Sg));
+    }
 
     /*!
      * \brief The difference between the pressures of the gas and the non-wetting phase.
      *
      * This method is only available for at least three fluid phases
      */
-    template <class FluidState, class ScalarT=Scalar>
-    static typename std::enable_if< (Traits::numPhases > 2), ScalarT>::type
+    template <class FluidState, class Evaluation = Scalar>
+    static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
     pcgn(const Params &params, const FluidState &fs)
     {
-        Scalar S = fs.saturation(Traits::nonWettingPhaseIdx);
-        Valgrind::CheckDefined(S);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar nPhasePressure =
-            S*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::nonWettingPhaseIdx);
+        const Evaluation& Sn =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        Valgrind::CheckDefined(Sn);
 
-        S = fs.saturation(Traits::gasPhaseIdx);
-        Valgrind::CheckDefined(S);
+        const Evaluation& nPhasePressure =
+            Sn*params.pcMaxSat(Traits::nonWettingPhaseIdx) +
+            (1.0 - Sn)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
-        Scalar gPhasePressure =
-            S*params.pcMaxSat(Traits::gasPhaseIdx) +
-            (1.0 - S)*params.pcMinSat(Traits::gasPhaseIdx);
+        const Evaluation& Sg =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+        Valgrind::CheckDefined(Sg);
+
+        const Evaluation& gPhasePressure =
+            Sg*params.pcMaxSat(Traits::gasPhaseIdx) +
+            (1.0 - Sg)*params.pcMinSat(Traits::gasPhaseIdx);
 
         return gPhasePressure - nPhasePressure;
     }

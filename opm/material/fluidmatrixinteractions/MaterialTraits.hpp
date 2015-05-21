@@ -35,12 +35,15 @@ namespace Opm {
  *
  * This traits class is intended to be used by the NullMaterial
  */
-template <class ScalarT, int numPhasesV>
+template <class ScalarT, int numPhasesV, class EvaluationT = ScalarT>
 class NullMaterialTraits
 {
 public:
     //! The type used for scalar floating point values
     typedef ScalarT Scalar;
+
+    //! Representation of a function evaluation and all its relevant derivatives
+    typedef EvaluationT Evaluation;
 
     //! The number of fluid phases
     static const int numPhases = numPhasesV;
@@ -51,21 +54,24 @@ public:
  *
  * \brief A generic traits class for two-phase material laws.
  */
-template <class ScalarT, int wettinPhaseIdxV, int nonWettingasPhaseIdxV>
+template <class ScalarT, int wettingPhaseIdxV, int nonWettingPhaseIdxV, class EvaluationT = ScalarT>
 class TwoPhaseMaterialTraits
 {
 public:
     //! The type used for scalar floating point values
     typedef ScalarT Scalar;
 
+    //! Representation of a function evaluation and all its relevant derivatives
+    typedef EvaluationT Evaluation;
+
     //! The number of fluid phases
     static const int numPhases = 2;
 
     //! The index of the wetting phase
-    static const int  wettingPhaseIdx = wettinPhaseIdxV;
+    static const int  wettingPhaseIdx = wettingPhaseIdxV;
 
     //! The index of the non-wetting phase
-    static const int nonWettingPhaseIdx = nonWettingasPhaseIdxV;
+    static const int nonWettingPhaseIdx = nonWettingPhaseIdxV;
 
     // some safety checks...
     static_assert(wettingPhaseIdx != nonWettingPhaseIdx,
@@ -77,12 +83,15 @@ public:
  *
  * \brief A generic traits class for three-phase material laws.
  */
-template <class ScalarT, int wettingPhaseIdxV, int nonWettingasPhaseIdxV, int gasPhaseIdxV>
+template <class ScalarT, int wettingPhaseIdxV, int nonWettingasPhaseIdxV, int gasPhaseIdxV, class EvaluationT = ScalarT>
 class ThreePhaseMaterialTraits
 {
 public:
     //! The type used for scalar floating point values
     typedef ScalarT Scalar;
+
+    //! Representation of a function evaluation and all its relevant derivatives
+    typedef EvaluationT Evaluation;
 
     //! The number of fluid phases
     static const int numPhases = 3;

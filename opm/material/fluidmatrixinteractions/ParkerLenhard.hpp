@@ -299,7 +299,9 @@ public:
     template <class FluidState>
     static void update(Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        Scalar Sw = FsToolbox::value(fs.saturation(Traits::wettingPhaseIdx));
 
         if (Sw > 1 - 1e-5) {
             // if the absolute saturation is almost 1,
@@ -315,7 +317,7 @@ public:
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
         // Sw at the current scanning curve
-        Scalar pc = pcnw(params, fs);
+        Scalar pc = pcnw<FluidState, Scalar>(params, fs);
         Scalar Sw_mic = VanGenuchten::twoPhaseSatSw(params.micParams(), pc);
         Scalar Sw_mdc = VanGenuchten::twoPhaseSatSw(params.mdcParams(), pc);
 
@@ -339,8 +341,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -358,25 +362,37 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
      * \brief Returns the capillary pressure dependend on
      *        the phase saturations.
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatPcnw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatPcnw(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         // calculate the current apparent saturation
-        ScanningCurve *sc = findScanningCurve_(params, Sw);
+        ScanningCurve *sc = findScanningCurve_(params, Toolbox::value(Sw));
 
         // calculate the apparant saturation
-        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
+        const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
 
         // if the apparent saturation exceeds the 'legal' limits,
         // we also the underlying material law decide what to do.
@@ -388,88 +404,98 @@ public:
         // drainage curve
         Scalar SwAppCurSC = absoluteToApparentSw_(params, sc->Sw());
         Scalar SwAppPrevSC = absoluteToApparentSw_(params, sc->prev()->Sw());
-        Scalar pos = (Sw_app - SwAppCurSC)/(SwAppPrevSC - SwAppCurSC);
+        const Evaluation& pos = (Sw_app - SwAppCurSC)/(SwAppPrevSC - SwAppCurSC);
         if (sc->isImbib()) {
-            Scalar SwMic =
+            const Evaluation& SwMic =
                 pos * (sc->prev()->SwMic() - sc->SwMic()) + sc->SwMic();
 
             return VanGenuchten::twoPhaseSatPcnw(params.micParams(), SwMic);
         }
         else { // sc->isDrain()
-            Scalar SwMdc =
+            const Evaluation& SwMdc =
                 pos*(sc->prev()->SwMdc() - sc->SwMdc()) + sc->SwMdc();
 
             return VanGenuchten::twoPhaseSatPcnw(params.mdcParams(), SwMdc);
         }
     }
 
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatDPcnw_dSw()"); }
-
     /*!
      * \brief Calculate the wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::Sw()"); }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pc)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pc)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pc)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
 
     /*!
      * \brief The relative permeability for the wetting phase of
      *        the medium.
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrw(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
-        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
+        const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::twoPhaseSatKrw(params.mdcParams(), Sw_app);
     }
-
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
-    { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatDKrw_dSw()"); }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
      *        of the params.
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, fs.saturation(Traits::wettingPhaseIdx)); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrn(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
-        Scalar Sw_app = absoluteToApparentSw_(params, Sw);
+        const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
         return VanGenuchten::twoPhaseSatKrn(params.mdcParams(), Sw_app);
     }
-
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
-    { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatDKrn_dSw()"); }
 
     /*!
      * \brief Convert an absolute wetting saturation to an apparent one.
      */
-    static Scalar absoluteToApparentSw_(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation absoluteToApparentSw_(const Params &params, const Evaluation& Sw)
     {
         return effectiveToApparentSw_(params, absoluteToEffectiveSw_(params, Sw));
     }
@@ -484,7 +510,8 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Effective saturation of the wetting phase.
      */
-    static Scalar absoluteToEffectiveSw_(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation absoluteToEffectiveSw_(const Params &params, const Evaluation& Sw)
     { return (Sw - params.SwrPc())/(1 - params.SwrPc()); }
 
     /*!
@@ -496,12 +523,14 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Absolute saturation of the non-wetting phase.
      */
-    static Scalar effectiveToAbsoluteSw_(const Params &params, Scalar Swe)
+    template <class Evaluation>
+    static Evaluation effectiveToAbsoluteSw_(const Params &params, const Evaluation& Swe)
     { return Swe*(1 - params.SwrPc()) + params.SwrPc(); }
 
     // return the effctive residual non-wetting saturation, given an
     // effective wetting saturation
-    static Scalar computeCurrentSnr_(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation computeCurrentSnr_(const Params &params, const Evaluation& Sw)
     {
         // regularize
         if (Sw > 1 - params.Snr())
@@ -514,7 +543,7 @@ private:
 
         // use Land's law
         Scalar R = 1.0/params.Snr() - 1;
-        Scalar curSnr = (1 - Sw)/(1 + R*(1 - Sw));
+        const Evaluation& curSnr = (1 - Sw)/(1 + R*(1 - Sw));
 
         // the current effective residual non-wetting saturation must
         // be smaller than the residual non-wetting saturation
@@ -525,9 +554,10 @@ private:
 
     // returns the trapped effective non-wetting saturation for a
     // given wetting phase saturation
-    static Scalar trappedEffectiveSn_(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation trappedEffectiveSn_(const Params &params, const Evaluation& Sw)
     {
-        Scalar Swe = absoluteToEffectiveSw_(params, Sw);
+        const Evaluation& Swe = absoluteToEffectiveSw_(params, Sw);
         Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
 
         Scalar Snre = absoluteToEffectiveSw_(params, params.currentSnr());
@@ -536,7 +566,8 @@ private:
 
     // returns the apparent saturation of the wetting phase depending
     // on the effective saturation
-    static Scalar effectiveToApparentSw_(const Params &params, Scalar Swe)
+    template <class Evaluation>
+    static Evaluation effectiveToApparentSw_(const Params &params, const Evaluation& Swe)
     {
         if (params.pisc() == NULL ||
             Swe <= absoluteToEffectiveSw_(params, params.pisc()->Sw()))
@@ -554,7 +585,8 @@ private:
     }
 
     // Returns the effective saturation to a given apparent one
-    static Scalar apparentToEffectiveSw_(const Params &params, Scalar Swapp)
+    template <class Evaluation>
+    static Evaluation apparentToEffectiveSw_(const Params &params, const Evaluation& Swapp)
     {
         Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
         if (params.pisc() == NULL || Swapp <= SwePisc) {

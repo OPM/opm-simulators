@@ -25,6 +25,9 @@
  */
 #include "config.h"
 
+// include the local AD framwork
+#include <opm/material/localad/Math.hpp>
+
 // include all capillary pressure laws
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
@@ -122,10 +125,20 @@ void testGenericApi()
         // test the generic methods which need to be implemented by
         // all material laws
         const FluidState fs;
-        double destValues[numPhases];
-        MaterialLaw::capillaryPressures(destValues, paramsConst, fs);
-        MaterialLaw::saturations(destValues, paramsConst, fs);
-        MaterialLaw::relativePermeabilities(destValues, paramsConst, fs);
+
+        {
+            double destValues[numPhases];
+            MaterialLaw::capillaryPressures(destValues, paramsConst, fs);
+            MaterialLaw::saturations(destValues, paramsConst, fs);
+            MaterialLaw::relativePermeabilities(destValues, paramsConst, fs);
+        }
+
+        {
+            typename FluidState::Scalar destValuesEval[numPhases];
+            MaterialLaw::capillaryPressures(destValuesEval, paramsConst, fs);
+            MaterialLaw::saturations(destValuesEval, paramsConst, fs);
+            MaterialLaw::relativePermeabilities(destValuesEval, paramsConst, fs);
+        }
     }
 }
 
@@ -155,11 +168,19 @@ void testTwoPhaseApi()
         const typename MaterialLaw::Params params;
 
         OPM_UNUSED Scalar v;
-        v = MaterialLaw::pcnw(params, fs);
-        v = MaterialLaw::Sw(params, fs);
-        v = MaterialLaw::Sn(params, fs);
-        v = MaterialLaw::krw(params, fs);
-        v = MaterialLaw::krn(params, fs);
+        v = MaterialLaw::template pcnw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template Sw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template Sn<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template krw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template krn<FluidState, Scalar>(params, fs);
+
+        OPM_UNUSED typename FluidState::Scalar vEval;
+        vEval = MaterialLaw::pcnw(params, fs);
+        vEval = MaterialLaw::Sw(params, fs);
+        vEval = MaterialLaw::Sn(params, fs);
+        vEval = MaterialLaw::krw(params, fs);
+        vEval = MaterialLaw::krn(params, fs);
+
     }
 }
 
@@ -194,6 +215,14 @@ void testTwoPhaseSatApi()
         v = MaterialLaw::twoPhaseSatSn(params, Sw);
         v = MaterialLaw::twoPhaseSatKrw(params, Sw);
         v = MaterialLaw::twoPhaseSatKrn(params, Sw);
+
+        typename FluidState::Scalar SwEval = 0;
+        OPM_UNUSED typename FluidState::Scalar vEval;
+        vEval = MaterialLaw::twoPhaseSatPcnw(params, SwEval);
+        vEval = MaterialLaw::twoPhaseSatSw(params, SwEval);
+        vEval = MaterialLaw::twoPhaseSatSn(params, SwEval);
+        vEval = MaterialLaw::twoPhaseSatKrw(params, SwEval);
+        vEval = MaterialLaw::twoPhaseSatKrn(params, SwEval);
     }
 }
 
@@ -217,13 +246,22 @@ void testThreePhaseApi()
         const typename MaterialLaw::Params params;
 
         OPM_UNUSED Scalar v;
-        v = MaterialLaw::pcnw(params, fs);
-        v = MaterialLaw::Sw(params, fs);
-        v = MaterialLaw::Sn(params, fs);
-        v = MaterialLaw::Sg(params, fs);
-        v = MaterialLaw::krw(params, fs);
-        v = MaterialLaw::krn(params, fs);
-        v = MaterialLaw::krg(params, fs);
+        v = MaterialLaw::template pcnw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template Sw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template Sn<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template Sg<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template krw<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template krn<FluidState, Scalar>(params, fs);
+        v = MaterialLaw::template krg<FluidState, Scalar>(params, fs);
+
+        OPM_UNUSED typename FluidState::Scalar vEval;
+        vEval = MaterialLaw::pcnw(params, fs);
+        vEval = MaterialLaw::Sw(params, fs);
+        vEval = MaterialLaw::Sn(params, fs);
+        vEval = MaterialLaw::Sg(params, fs);
+        vEval = MaterialLaw::krw(params, fs);
+        vEval = MaterialLaw::krn(params, fs);
+        vEval = MaterialLaw::krg(params, fs);
     }
 }
 
@@ -231,6 +269,8 @@ template <class MaterialLaw>
 void testThreePhaseSatApi()
 {
 }
+
+class TestAdTag;
 
 int main(int argc, char **argv)
 {
@@ -253,8 +293,9 @@ int main(int argc, char **argv)
                                           ThreePFluidSystem::oilPhaseIdx,
                                           ThreePFluidSystem::gasPhaseIdx> ThreePhaseTraits;
 
-    typedef Opm::ImmiscibleFluidState<Scalar, TwoPFluidSystem> TwoPhaseFluidState;
-    typedef Opm::ImmiscibleFluidState<Scalar, ThreePFluidSystem> ThreePhaseFluidState;
+    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
+    typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
 
     MyMpiHelper mpiHelper(argc, argv);
 

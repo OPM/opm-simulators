@@ -27,6 +27,8 @@
 
 #include "BrooksCoreyParams.hpp"
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -92,8 +94,10 @@ public:
     template <class Container, class FluidState>
     static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
         values[Traits::wettingPhaseIdx] = 0.0; // reference phase
-        values[Traits::nonWettingPhaseIdx] = pcnw(params, fs);
+        values[Traits::nonWettingPhaseIdx] = pcnw<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -103,7 +107,9 @@ public:
     template <class Container, class FluidState>
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = Sw(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = Sw<FluidState, Evaluation>(params, fs);
         values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
     }
 
@@ -120,8 +126,10 @@ public:
     template <class Container, class FluidState>
     static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
     {
-        values[Traits::wettingPhaseIdx] = krw(params, fs);
-        values[Traits::nonWettingPhaseIdx] = krn(params, fs);
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+
+        values[Traits::wettingPhaseIdx] = krw<FluidState, Evaluation>(params, fs);
+        values[Traits::nonWettingPhaseIdx] = krn<FluidState, Evaluation>(params, fs);
     }
 
     /*!
@@ -137,18 +145,27 @@ public:
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    template <class FluidState>
-    static Scalar pcnw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation pcnw(const Params &params, const FluidState &fs)
     {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        assert(0 <= Sw && Sw <= 1);
+
         return twoPhaseSatPcnw(params, Sw);
     }
 
-    static Scalar twoPhaseSatPcnw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(0 <= Sw && Sw <= 1);
 
-        return params.entryPressure()*std::pow(Sw, -1.0/params.lambda());
+        return params.entryPressure()*Toolbox::pow(Sw, -1.0/params.lambda());
     }
 
     /*!
@@ -163,78 +180,38 @@ public:
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    template <class FluidState>
-    static Scalar Sw(const Params &params, const FluidState &fs)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sw(const Params &params, const FluidState &fs)
     {
-        Scalar pc = fs.pressure(Traits::nonWettingPhaseIdx) - fs.pressure(Traits::wettingPhaseIdx);
-        return twoPhaseSatSw(params, pc);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        Evaluation pC =
+            FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - FsToolbox::template toLhs<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+        return twoPhaseSatSw(params, pC);
     }
 
-    static Scalar twoPhaseSatSw(const Params &params, Scalar pc)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pc)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(pc > 0); // if we don't assume that, std::pow will screw up!
 
-        return std::pow(pc/params.entryPressure(), -params.lambda());
+        return Toolbox::pow(pc/params.entryPressure(), -params.lambda());
     }
 
     /*!
      * \brief Calculate the non-wetting phase saturations depending on
      *        the phase pressures.
      */
-    template <class FluidState>
-    static Scalar Sn(const Params &params, const FluidState &fs)
-    { return 1 - Sw(params, fs); }
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation Sn(const Params &params, const FluidState &fs)
+    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
-    static Scalar twoPhaseSatSn(const Params &params, Scalar pc)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
     { return 1 - twoPhaseSatSw(params, pc); }
-
-    /*!
-     * \brief The partial derivative of the capillary
-     *        pressure w.r.t. the effective saturation according to Brooks & Corey.
-     *
-     * This is equivalent to
-     * \f[
-     \frac{\partial p_C}{\partial \overline{S}_w} =
-     -\frac{p_e}{\lambda} \overline{S}_w^{-1/\lambda - 1}
-     \f]
-     *
-     * \param params The parameters of the capillary pressure curve
-     *               (for Brooks-Corey: Entry pressure and shape factor)
-    */
-    template <class FluidState>
-    static Scalar dPcnw_dSw(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
-        return twoPhaseSatDPcnw_dSw(params, Sw);
-    }
-
-    static Scalar twoPhaseSatDPcnw_dSw(const Params &params, Scalar Sw)
-    {
-        assert(0 <= Sw && Sw <= 1);
-        return - params.entryPressure()/params.lambda() * std::pow(Sw, -1/params.lambda() - 1);
-    }
-
-    /*!
-     * \brief The partial derivative of the effective saturation with
-     *        regard to the capillary pressure according to Brooks and
-     *        Corey.
-     *
-     * \param params The parameters of the capillary pressure curve
-     *               (for Brooks-Corey: Entry pressure and shape factor)
-     */
-    template <class FluidState>
-    static Scalar dSw_dpcnw(const Params &params, const FluidState &fs)
-    {
-        Scalar Sw = fs.saturation(Traits::wettingPhaseIdx);
-        return twoPhaseSatDSw_dpcnw(params, Sw);
-    }
-
-    static Scalar twoPhaseSatDSw_dpcnw(const Params &params, Scalar Sw)
-    {
-        assert(pcnw > 0); // required for std::pow
-        return -params.lambda()/params.entryPressure() * std::pow(pcnw/params.entryPressure(), - params.lambda() - 1);
-    }
-
     /*!
      * \brief The relative permeability for the wetting phase of
      *        the medium implied by the Brooks-Corey
@@ -243,31 +220,25 @@ public:
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    template <class FluidState>
-    static Scalar krw(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrw(params, fs.saturation(Traits::wettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrw(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krw(const Params &params, const FluidState &fs)
     {
-        assert(0 <= Sw && Sw <= 1);
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        return std::pow(Sw, 2.0/params.lambda() + 3);
+        const auto& Sw =
+            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+
+        return twoPhaseSatKrw(params, Sw);
     }
 
-    /*!
-     * \brief The derivative of the relative permeability for the
-     *        wetting phase with regard to the wetting saturation of the
-     *        medium implied by the Brooks-Corey parameterization.
-     *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
-     * \param params The parameters of the capillary pressure curve
-     *               (for Brooks-Corey: Entry pressure and shape factor)
-     */
-    static Scalar twoPhaseSatDKrw_dSw(const Params &params, Scalar Sw)
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(0 <= Sw && Sw <= 1);
 
-        return (2.0/params.lambda() + 3)*std::pow(Sw, 2.0/params.lambda() + 2);
+        return Toolbox::pow(Sw, 2.0/params.lambda() + 3);
     }
 
     /*!
@@ -278,39 +249,28 @@ public:
      * \param params The parameters of the capillary pressure curve
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
-    template <class FluidState>
-    static Scalar krn(const Params &params, const FluidState &fs)
-    { return twoPhaseSatKrn(params, 1.0 - fs.saturation(Traits::nonWettingPhaseIdx)); }
-
-    static Scalar twoPhaseSatKrn(const Params &params, Scalar Sw)
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
+    static Evaluation krn(const Params &params, const FluidState &fs)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const Evaluation& Sw =
+            1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+
+        return twoPhaseSatKrn(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         assert(0 <= Sw && Sw <= 1);
 
         Scalar exponent = 2.0/params.lambda() + 1;
-        Scalar Sn = 1. - Sw;
-        return Sn*Sn*(1. - std::pow(Sw, exponent));
+        const Evaluation Sn = 1. - Sw;
+        return Sn*Sn*(1. - Toolbox::pow(Sw, exponent));
     }
-
-    /*!
-     * \brief The derivative of the relative permeability for the
-     *        non-wetting phase in regard to the wetting saturation of
-     *        the medium as implied by the Brooks-Corey
-     *        parameterization.
-     *
-     * \param Sw Effective saturation of the wetting phase \f$[-]\f$
-     * \param params The parameters of the capillary pressure curve
-     *               (for Brooks-Corey: Entry pressure and shape factor)
-     */
-    static Scalar twoPhaseSatDKrn_dSw(const Params &params, Scalar Sw)
-    {
-        assert(0 <= Sw && Sw <= 1);
-
-        Scalar alpha =
-            1.0/params.lambda() + 1.0/2 -
-            Sw*(1.0/params.lambda() + 1.0/2);
-        return 2.0*(Sw - 1)*(1 + std::pow(Sw, 2.0/params.lambda())*alpha);
-    }
-
 };
 } // namespace Opm
 

@@ -71,11 +71,11 @@ public:
         Parent::finalize();
 
         pcnwLow_ = VanGenuchten::twoPhaseSatPcnw(*this, pcnwLowSw_);
-        pcnwSlopeLow_ = VanGenuchten::twoPhaseSatDPcnw_dSw(*this, pcnwLowSw_);
+        pcnwSlopeLow_ = dPcnw_dSw_(pcnwLowSw_);
         pcnwHigh_ = VanGenuchten::twoPhaseSatPcnw(*this, pcnwHighSw_);
         pcnwSlopeHigh_ = 2*(0.0 - pcnwHigh_)/(1.0 - pcnwHighSw_);
 
-        Scalar mThreshold = VanGenuchten::twoPhaseSatDPcnw_dSw(*this, pcnwHighSw_);
+        Scalar mThreshold = dPcnw_dSw_(pcnwHighSw_);
 
         pcnwHighSpline_.set(pcnwHighSw_, 1.0, // x0, x1
                             pcnwHigh_, 0, // y0, y1
@@ -163,6 +163,16 @@ private:
     void assertFinalized_() const
     { }
 #endif
+
+    Scalar dPcnw_dSw_(Scalar Sw) const
+    {
+        // use finite differences to calculate the derivative w.r.t. Sw of the
+        // unregularized curve's capillary pressure.
+        const Scalar eps = 1e-7;
+        Scalar pc1 = VanGenuchten::twoPhaseSatPcnw(*this, Sw - eps);
+        Scalar pc2 = VanGenuchten::twoPhaseSatPcnw(*this, Sw + eps);
+        return (pc2 - pc1)/(2*eps);
+    }
 
     Scalar pcnwLowSw_;
     Scalar pcnwHighSw_;
