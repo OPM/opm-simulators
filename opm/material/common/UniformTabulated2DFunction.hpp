@@ -26,6 +26,8 @@
 
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/MathToolbox.hpp>
+
 
 #include <vector>
 
@@ -139,7 +141,8 @@ public:
      * position of the x value between the i-th and the (i+1)-th
      * sample point.
       */
-    Scalar xToI(Scalar x) const
+    template <class Evaluation>
+    Evaluation xToI(const Evaluation& x) const
     { return (x - xMin())/(xMax() - xMin())*(numX() - 1); }
 
     /*!
@@ -150,14 +153,20 @@ public:
      * position of the y value between the j-th and the (j+1)-th
      * sample point.
      */
-    Scalar yToJ(Scalar y) const
+    template <class Evaluation>
+    Evaluation yToJ(const Evaluation& y) const
     { return (y - yMin())/(yMax() - yMin())*(numY() - 1); }
 
     /*!
      * \brief Returns true iff a coordinate lies in the tabulated range
      */
-    bool applies(Scalar x, Scalar y) const
-    { return xMin() <= x && x <= xMax() && yMin() <= y && y <= yMax(); }
+    template <class Evaluation>
+    bool applies(const Evaluation& x, const Evaluation& y) const
+    {
+        return
+            xMin() <= x && x <= xMax() &&
+            yMin() <= y && y <= yMax();
+    }
 
     /*!
      * \brief Evaluate the function at a given (x,y) position.
@@ -165,8 +174,11 @@ public:
      * If this method is called for a value outside of the tabulated
      * range, a \c Opm::NumericalIssue exception is thrown.
      */
-    Scalar eval(Scalar x, Scalar y) const
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, const Evaluation& y) const
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
 #ifndef NDEBUG
         if (!applies(x,y))
         {
@@ -179,18 +191,18 @@ public:
         };
 #endif
 
-        Scalar alpha = xToI(x);
-        Scalar beta = yToJ(y);
+        Evaluation alpha = xToI(x);
+        Evaluation beta = yToJ(y);
 
-        int i = std::max(0, std::min(numX() - 2, static_cast<int>(alpha)));
-        int j = std::max(0, std::min(numY() - 2, static_cast<int>(beta)));
+        int i = std::max(0, std::min<int>(numX() - 2, Toolbox::value(alpha)));
+        int j = std::max(0, std::min<int>(numY() - 2, Toolbox::value(beta)));
 
         alpha -= i;
         beta -= j;
 
         // bi-linear interpolation
-        Scalar s1 = getSamplePoint(i, j)*(1.0 - alpha) + getSamplePoint(i + 1, j)*alpha;
-        Scalar s2 = getSamplePoint(i, j + 1)*(1.0 - alpha) + getSamplePoint(i + 1, j + 1)*alpha;
+        const Evaluation& s1 = getSamplePoint(i, j)*(1.0 - alpha) + getSamplePoint(i + 1, j)*alpha;
+        const Evaluation& s2 = getSamplePoint(i, j + 1)*(1.0 - alpha) + getSamplePoint(i + 1, j + 1)*alpha;
         return s1*(1.0 - beta) + s2*beta;
     }
 

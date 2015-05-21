@@ -24,6 +24,7 @@
 #ifndef OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 #define OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 
@@ -267,6 +268,68 @@ public:
         Scalar s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
         Scalar s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
         return s1*(1.0 - alpha) + s2*alpha;
+    }
+
+    /*!
+     * \brief Evaluate the function at a given (x,y) position.
+     *
+     * If this method is called for a value outside of the tabulated
+     * range, a \c Opm::NumericalProblem exception is thrown.
+     */
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate=false) const
+    {
+#ifndef NDEBUG
+        if (!extrapolate && !applies(x.value, y.value)) {
+            OPM_THROW(NumericalIssue,
+                      "Attempt to get undefined table value (" << x << ", " << y << ")");
+        };
+#endif
+
+        // bi-linear interpolation: first, calculate the x and y indices in the lookup
+        // table ...
+        Evaluation alpha = Evaluation::createConstant(xToI(x.value, extrapolate));
+        int i = std::max(0, std::min(numX() - 2, static_cast<int>(alpha.value)));
+        alpha -= i;
+
+        Evaluation beta1;
+        Evaluation beta2;
+
+        beta1.value = yToJ(i, y.value, extrapolate);
+        beta2.value = yToJ(i + 1, y.value, extrapolate);
+
+        int j1 = std::max(0, std::min(numY(i) - 2, static_cast<int>(beta1.value)));
+        int j2 = std::max(0, std::min(numY(i + 1) - 2, static_cast<int>(beta2.value)));
+
+        beta1.value -= j1;
+        beta2.value -= j2;
+
+        // set the correct derivatives of alpha and the betas
+        for (unsigned varIdx = 0; varIdx < x.derivatives.size(); ++varIdx) {
+            alpha.derivatives[varIdx] = x.derivatives[varIdx]/(xAt(i + 1) - xAt(i));
+
+            beta1.derivatives[varIdx] = y.derivatives[varIdx]/(yAt(i, j1 + 1) - yAt(i, j1));
+            beta2.derivatives[varIdx] = y.derivatives[varIdx]/(yAt(i + 1, j2 + 1) - yAt(i + 1, j2));
+        }
+
+        Valgrind::CheckDefined(alpha);
+        Valgrind::CheckDefined(beta1);
+        Valgrind::CheckDefined(beta2);
+
+        // ... then evaluate the two function values for the same y value ...
+        Evaluation s1, s2;
+        s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
+        s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
+
+        Valgrind::CheckDefined(s1);
+        Valgrind::CheckDefined(s2);
+
+        // ... and finally combine them using x the position
+        Evaluation result;
+        result = s1*(1.0 - alpha) + s2*alpha;
+        Valgrind::CheckDefined(result);
+
+        return result;
     }
 
     /*!

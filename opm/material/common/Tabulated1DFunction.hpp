@@ -254,6 +254,44 @@ public:
     }
 
     /*!
+     * \brief Evaluate the spline at a given position.
+     *
+     * \param x The value on the abscissa where the function ought to be evaluated
+     * \param extrapolate If this parameter is set to true, the function will be extended
+     *                    beyond its range by straight lines, if false calling
+     *                    extrapolate for \f$ x \not [x_{min}, x_{max}]\f$ will cause a
+     *                    failed assertation.
+     */
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
+    {
+        int segIdx;
+        if (extrapolate && x.value < xValues_.front())
+            segIdx = 0;
+        else if (extrapolate && x.value > xValues_.back())
+            segIdx = numSamples() - 2;
+        else {
+            assert(xValues_.front() <= x.value && x.value <= xValues_.back());
+            segIdx = findSegmentIndex_(x.value);
+        }
+
+        Scalar x0 = xValues_[segIdx];
+        Scalar x1 = xValues_[segIdx + 1];
+
+        Scalar y0 = yValues_[segIdx];
+        Scalar y1 = yValues_[segIdx + 1];
+
+        Scalar m = (y1 - y0)/(x1 - x0);
+
+        Evaluation result;
+        result.value = y0 + m*(x.value - x0);
+        for (unsigned varIdx = 0; varIdx < result.derivatives.size(); ++varIdx)
+            result.derivatives[varIdx] = m*x.derivatives[varIdx];
+
+        return result;
+    }
+
+    /*!
      * \brief Evaluate the spline's derivative at a given position.
      *
      * \param x The value on the abscissa where the function's
