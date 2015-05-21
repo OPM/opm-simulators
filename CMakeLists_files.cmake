@@ -32,6 +32,7 @@
 list (APPEND TEST_SOURCE_FILES
 	tests/test_fluidmatrixinteractions.cpp
 	tests/test_pengrobinson.cpp
+	tests/test_localad.cpp
 	tests/test_ncpflash.cpp
 	tests/test_spline.cpp
 	tests/test_tabulation.cpp

@@ -1,0 +1,383 @@
+/*
+  Copyright (C) 2015 by Andreas Lauser
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/*!
+ * \file
+ *
+ * \brief A number of commonly used algebraic functions for the localized OPM automatic
+ *        differentiation (AD) framework.
+ *
+ * This file provides AD variants of the the most commonly used functions of the <cmath>
+ * header file.
+ */
+#ifndef OPM_LOCAL_AD_MATH_HPP
+#define OPM_LOCAL_AD_MATH_HPP
+
+#include "Evaluation.hpp"
+
+namespace Opm {
+namespace LocalAd {
+// provide some algebraic functions
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::abs(x.value);
+
+    // derivatives use the chain rule
+    if (x.value < 0.0) {
+        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+            result.derivatives[curVarIdx] = -x.derivatives[curVarIdx];
+    }
+    else {
+        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+            result.derivatives[curVarIdx] = x.derivatives[curVarIdx];
+    }
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> min(const Evaluation<Scalar, VarSetTag, numVars>& x1,
+                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    if (x1.value < x2.value) {
+        result.value = x1.value;
+
+        std::copy(x1.derivatives.begin(),
+                  x1.derivatives.end(),
+                  result.derivatives.begin());
+    }
+    else  {
+        result.value = x2.value;
+
+        std::copy(x2.derivatives.begin(),
+                  x2.derivatives.end(),
+                  result.derivatives.begin());
+    }
+
+    return result;
+}
+
+template <class ScalarA, class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> min(ScalarA x1,
+                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    if (x1 < x2.value) {
+        result.value = x1;
+
+        std::fill(result.derivatives.begin(),
+                  result.derivatives.end(),
+                  0.0);
+    }
+    else  {
+        result.value = x2.value;
+
+        std::copy(x2.derivatives.begin(),
+                  x2.derivatives.end(),
+                  result.derivatives.begin());
+    }
+
+    return result;
+}
+
+template <class ScalarB, class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> min(const Evaluation<Scalar, VarSetTag, numVars>& x2,
+                                           ScalarB x1)
+{ return min(x1, x2); }
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> max(const Evaluation<Scalar, VarSetTag, numVars>& x1,
+                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    if (x1.value > x2.value) {
+        result.value = x1.value;
+
+        std::copy(x1.derivatives.begin(),
+                  x1.derivatives.end(),
+                  result.derivatives.begin());
+    }
+    else  {
+        result.value = x2.value;
+
+        std::copy(x2.derivatives.begin(),
+                  x2.derivatives.end(),
+                  result.derivatives.begin());
+    }
+
+    return result;
+}
+
+template <class ScalarA, class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> max(ScalarA x1,
+                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    if (x1 > x2.value) {
+        result.value = x1;
+
+        std::fill(result.derivatives.begin(),
+                  result.derivatives.end(),
+                  0.0);
+    }
+    else  {
+        result.value = x2.value;
+
+        std::copy(x2.derivatives.begin(),
+                  x2.derivatives.end(),
+                  result.derivatives.begin());
+    }
+
+    return result;
+}
+
+template <class ScalarB, class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> max(const Evaluation<Scalar, VarSetTag, numVars>& x2,
+                                           ScalarB x1)
+{ return max(x1, x2); }
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> tan(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar tmp = std::tan(x.value);
+    result.value = tmp;
+
+    // derivatives use the chain rule
+    Scalar df_dx = 1 + tmp*tmp;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> atan(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::atan(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = 1/(1 + x.value*x.value);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> atan2(const Evaluation<Scalar, VarSetTag, numVars>& x,
+                                             const Evaluation<Scalar, VarSetTag, numVars>& y)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::atan2(x.value, y.value);
+
+    // derivatives use the chain rule
+    Scalar alpha = 1/(1 + (x.value*x.value)/(y.value*y.value));
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
+        result.derivatives[curVarIdx] =
+            alpha
+            /(y.value*y.value)
+            *(x.derivatives[curVarIdx]*y.value - x.value*y.derivatives[curVarIdx]);
+    }
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> sin(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::sin(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = std::cos(x.value);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> asin(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::asin(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = 1.0/std::sqrt(1 - x.value*x.value);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> cos(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::cos(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = -std::sin(x.value);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> acos(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::acos(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = - 1.0/std::sqrt(1 - x.value*x.value);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> sqrt(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar sqrt_x = std::sqrt(x.value);
+    result.value = sqrt_x;
+
+    // derivatives use the chain rule
+    Scalar df_dx = 0.5/sqrt_x;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    }
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> exp(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar exp_x = std::exp(x.value);
+    result.value = exp_x;
+
+    // derivatives use the chain rule
+    Scalar df_dx = exp_x;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+// exponentiation of arbitrary base with a fixed constant
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, numVars>& base, Scalar exp)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar pow_x = std::pow(base.value, exp);
+    result.value = pow_x;
+
+    // derivatives use the chain rule
+    Scalar df_dx = pow_x/base.value*exp;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*base.derivatives[curVarIdx];
+
+    return result;
+}
+
+// exponentiation of constant base with an arbitrary exponent
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> pow(Scalar base, const Evaluation<Scalar, VarSetTag, numVars>& exp)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar lnBase = std::log(base);
+    result.value = std::exp(lnBase*exp.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = lnBase*result.value;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*exp.derivatives[curVarIdx];
+
+    return result;
+}
+
+// this is the most expensive power function. Computationally it is pretty expensive, so
+// one of the above two variants above should be preferred if possible.
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, numVars>& base, const Evaluation<Scalar, VarSetTag, numVars>& exp)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    Scalar valuePow = std::pow(base.value, exp.value);
+    result.value = valuePow;
+
+    // use the chain rule for the derivatives. since both, the base and the exponent can
+    // potentially depend on the variable set, calculating these is quite elaborate...
+    Scalar f = base.value;
+    Scalar g = exp.value;
+    Scalar logF = std::log(f);
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
+        Scalar fPrime = base.derivatives[curVarIdx];
+        Scalar gPrime = exp.derivatives[curVarIdx];
+        result.derivatives[curVarIdx] = (g*fPrime/f + logF*gPrime) * valuePow;
+    }
+
+    return result;
+}
+
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> log(const Evaluation<Scalar, VarSetTag, numVars>& x)
+{
+    Evaluation<Scalar, VarSetTag, numVars> result;
+
+    result.value = std::log(x.value);
+
+    // derivatives use the chain rule
+    Scalar df_dx = 1/x.value;
+    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+
+    return result;
+}
+
+} // namespace LocalAd
+
+}
+
+#endif
