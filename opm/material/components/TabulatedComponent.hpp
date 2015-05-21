@@ -32,9 +32,9 @@
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 
-namespace Opm
-{
+#include <opm/material/common/MathToolbox.hpp>
 
+namespace Opm {
 /*!
  * \ingroup Components
  *
@@ -50,10 +50,12 @@ namespace Opm
  *                          vapor pressure curve, if false use the
  *                          pressure range [p_min, p_max]
  */
-template <class Scalar, class RawComponent, bool useVaporPressure=true>
+template <class ScalarT, class RawComponent, bool useVaporPressure=true>
 class TabulatedComponent
 {
 public:
+    typedef ScalarT Scalar;
+
     static const bool isTabulated = true;
 
     /*!
@@ -248,12 +250,14 @@ public:
      *
      * \param T temperature of component
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        Scalar result = interpolateT_(vaporPressure_, T);
-        if (std::isnan(result)) {
-            return RawComponent::vaporPressure(T);
-        }
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateT_(vaporPressure_, temperature);
+        if (std::isnan(Toolbox::value(result)))
+            return RawComponent::vaporPressure(temperature);
         return result;
     }
 
@@ -263,14 +267,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateGasTP_(gasEnthalpy_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTP_(gasEnthalpy_,
+                                                     temperature,
+                                                     pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasEnthalpy(temperature, pressure);
-        }
         return result;
     }
 
@@ -280,14 +286,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidEnthalpy_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTP_(liquidEnthalpy_,
+                                                        temperature,
+                                                        pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidEnthalpy(temperature, pressure);
-        }
         return result;
     }
 
@@ -297,14 +305,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateGasTP_(gasHeatCapacity_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTP_(gasHeatCapacity_,
+                                                     temperature,
+                                                     pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasHeatCapacity(temperature, pressure);
-        }
         return result;
     }
 
@@ -314,14 +324,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidHeatCapacity_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTP_(liquidHeatCapacity_,
+                                                        temperature,
+                                                        pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidHeatCapacity(temperature, pressure);
-        }
         return result;
     }
 
@@ -331,12 +343,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
-    {
-        Scalar result =
-            gasEnthalpy(temperature, pressure) - pressure/gasDensity(temperature, pressure);
-        return result;
-    }
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
+    { return gasEnthalpy(temperature, pressure) - pressure/gasDensity(temperature, pressure); }
 
     /*!
      * \brief Specific internal energy of the liquid \f$\mathrm{[J/kg]}\f$.
@@ -344,12 +353,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
-    {
-        Scalar result =
-            liquidEnthalpy(temperature, pressure) - pressure/liquidDensity(temperature, pressure);
-        return result;
-    }
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
+    { return liquidEnthalpy(temperature, pressure) - pressure/liquidDensity(temperature, pressure); }
 
     /*!
      * \brief The pressure of gas in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
@@ -357,15 +363,17 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, Scalar density)
     {
-        Scalar result = interpolateGasTRho_(gasPressure_,
-                                            temperature,
-                                            density);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTRho_(gasPressure_,
+                                                       temperature,
+                                                       density);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasPressure(temperature,
                                              density);
-        }
         return result;
     }
 
@@ -375,15 +383,17 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation liquidPressure(const Evaluation& temperature, Scalar density)
     {
-        Scalar result = interpolateLiquidTRho_(liquidPressure_,
-                                               temperature,
-                                               density);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTRho_(liquidPressure_,
+                                                          temperature,
+                                                          density);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidPressure(temperature,
                                                 density);
-        }
         return result;
     }
 
@@ -413,14 +423,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateGasTP_(gasDensity_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTP_(gasDensity_,
+                                                     temperature,
+                                                     pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasDensity(temperature, pressure);
-        }
         return result;
     }
 
@@ -431,14 +443,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidDensity_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTP_(liquidDensity_,
+                                                        temperature,
+                                                        pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidDensity(temperature, pressure);
-        }
         return result;
     }
 
@@ -448,14 +462,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateGasTP_(gasViscosity_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTP_(gasViscosity_,
+                                                     temperature,
+                                                     pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasViscosity(temperature, pressure);
-        }
         return result;
     }
 
@@ -465,14 +481,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidViscosity_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTP_(liquidViscosity_,
+                                                        temperature,
+                                                        pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidViscosity(temperature, pressure);
-        }
         return result;
     }
 
@@ -482,14 +500,16 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateGasTP_(gasThermalConductivity_,
-                                          temperature,
-                                          pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateGasTP_(gasThermalConductivity_,
+                                                     temperature,
+                                                     pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::gasThermalConductivity(temperature, pressure);
-        }
         return result;
     }
 
@@ -499,26 +519,31 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar result = interpolateLiquidTP_(liquidThermalConductivity_,
-                                             temperature,
-                                             pressure);
-        if (std::isnan(result)) {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& result = interpolateLiquidTP_(liquidThermalConductivity_,
+                                                        temperature,
+                                                        pressure);
+        if (std::isnan(Toolbox::value(result)))
             return RawComponent::liquidThermalConductivity(temperature, pressure);
-        }
         return result;
     }
 
 private:
     // returns an interpolated value depending on temperature
-    static Scalar interpolateT_(const Scalar *values, Scalar T)
+    template <class Evaluation>
+    static Evaluation interpolateT_(const Scalar *values, const Evaluation& T)
     {
-        Scalar alphaT = tempIdx_(T);
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
             return std::numeric_limits<Scalar>::quiet_NaN();
 
-        unsigned iT = (unsigned) alphaT;
+        unsigned iT = (unsigned) Toolbox::value(alphaT);
         alphaT -= iT;
 
         return
@@ -528,34 +553,37 @@ private:
 
     // returns an interpolated value for liquid depending on
     // temperature and pressure
-    static Scalar interpolateLiquidTP_(const Scalar *values, Scalar T, Scalar p)
+    template <class Evaluation>
+    static Evaluation interpolateLiquidTP_(const Scalar *values, const Evaluation& T, const Evaluation& p)
     {
-        Scalar alphaT = tempIdx_(T);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            return std::numeric_limits<Scalar>::quiet_NaN();
+            return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, Toolbox::value(alphaT)));
         alphaT -= iT;
 
-        Scalar alphaP1 = pressLiquidIdx_(p, iT);
-        Scalar alphaP2 = pressLiquidIdx_(p, iT + 1);
+        Evaluation alphaP1 = pressLiquidIdx_(p, iT);
+        Evaluation alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
+        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP1)));
+        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP2)));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             OPM_THROW(NumericalIssue, "Temperature out of range: "
-                       << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
+                      << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
             OPM_THROW(NumericalIssue, "First liquid pressure out of range: "
-                       << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T)) << ", " << maxLiquidPressure_(tempIdx_(T)) << "]");
+                      << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T)) << ", " << maxLiquidPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
             OPM_THROW(NumericalIssue, "Second liquid pressure out of range: "
-                       << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T) + 1) << ", " << maxLiquidPressure_(tempIdx_(T) + 1) << "]");
+                      << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T) + 1) << ", " << maxLiquidPressure_(tempIdx_(T) + 1) << "]");
 #endif
 
         return
@@ -567,33 +595,36 @@ private:
 
     // returns an interpolated value for gas depending on
     // temperature and pressure
-    static Scalar interpolateGasTP_(const Scalar *values, Scalar T, Scalar p)
+    template <class Evaluation>
+    static Evaluation interpolateGasTP_(const Scalar *values, const Evaluation& T, const Evaluation& p)
     {
-        Scalar alphaT = tempIdx_(T);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1) {
-            return std::numeric_limits<Scalar>::quiet_NaN();
+            return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, Toolbox::value(alphaT)));
         alphaT -= iT;
 
-        Scalar alphaP1 = pressGasIdx_(p, iT);
-        Scalar alphaP2 = pressGasIdx_(p, iT + 1);
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP1));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, (int) alphaP2));
+        Evaluation alphaP1 = pressGasIdx_(p, iT);
+        Evaluation alphaP2 = pressGasIdx_(p, iT + 1);
+        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP1)));
+        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP2)));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
             OPM_THROW(NumericalIssue, "Temperature out of range: "
-                       << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
+                      << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
             OPM_THROW(NumericalIssue, "First gas pressure out of range: "
-                       << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T)) << ", " << maxGasPressure_(tempIdx_(T)) << "]");
+                      << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T)) << ", " << maxGasPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
             OPM_THROW(NumericalIssue, "Second gas pressure out of range: "
-                       << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T) + 1) << ", " << maxGasPressure_(tempIdx_(T) + 1) << "]");
+                      << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T) + 1) << ", " << maxGasPressure_(tempIdx_(T) + 1) << "]");
 #endif
 
         return
@@ -605,14 +636,15 @@ private:
 
     // returns an interpolated value for gas depending on
     // temperature and density
-    static Scalar interpolateGasTRho_(const Scalar *values, Scalar T, Scalar rho)
+    template <class Evaluation>
+    static Evaluation interpolateGasTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
-        Scalar alphaT = tempIdx_(T);
+        Evaluation alphaT = tempIdx_(T);
         unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
-        Scalar alphaP1 = densityGasIdx_(rho, iT);
-        Scalar alphaP2 = densityGasIdx_(rho, iT + 1);
+        Evaluation alphaP1 = densityGasIdx_(rho, iT);
+        Evaluation alphaP2 = densityGasIdx_(rho, iT + 1);
         unsigned iP1 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP1));
         unsigned iP2 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP2));
         alphaP1 -= iP1;
@@ -627,14 +659,15 @@ private:
 
     // returns an interpolated value for liquid depending on
     // temperature and density
-    static Scalar interpolateLiquidTRho_(const Scalar *values, Scalar T, Scalar rho)
+    template <class Evaluation>
+    static Evaluation interpolateLiquidTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
-        Scalar alphaT = tempIdx_(T);
+        Evaluation alphaT = tempIdx_(T);
         unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
-        Scalar alphaP1 = densityLiquidIdx_(rho, iT);
-        Scalar alphaP2 = densityLiquidIdx_(rho, iT + 1);
+        Evaluation alphaP1 = densityLiquidIdx_(rho, iT);
+        Evaluation alphaP2 = densityLiquidIdx_(rho, iT + 1);
         unsigned iP1 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP1));
         unsigned iP2 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP2));
         alphaP1 -= iP1;
@@ -649,13 +682,15 @@ private:
 
 
     // returns the index of an entry in a temperature field
-    static Scalar tempIdx_(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation tempIdx_(const Evaluation& temperature)
     {
         return (nTemp_ - 1)*(temperature - tempMin_)/(tempMax_ - tempMin_);
     }
 
     // returns the index of an entry in a pressure field
-    static Scalar pressLiquidIdx_(Scalar pressure, unsigned tempIdx)
+    template <class Evaluation>
+    static Evaluation pressLiquidIdx_(const Evaluation& pressure, unsigned tempIdx)
     {
         Scalar plMin = minLiquidPressure_(tempIdx);
         Scalar plMax = maxLiquidPressure_(tempIdx);
@@ -664,7 +699,8 @@ private:
     }
 
     // returns the index of an entry in a temperature field
-    static Scalar pressGasIdx_(Scalar pressure, unsigned tempIdx)
+    template <class Evaluation>
+    static Evaluation pressGasIdx_(const Evaluation& pressure, unsigned tempIdx)
     {
         Scalar pgMin = minGasPressure_(tempIdx);
         Scalar pgMax = maxGasPressure_(tempIdx);
@@ -673,7 +709,8 @@ private:
     }
 
     // returns the index of an entry in a density field
-    static Scalar densityLiquidIdx_(Scalar density, unsigned tempIdx)
+    template <class Evaluation>
+    static Evaluation densityLiquidIdx_(const Evaluation& density, unsigned tempIdx)
     {
         Scalar densityMin = minLiquidDensity_(tempIdx);
         Scalar densityMax = maxLiquidDensity_(tempIdx);
@@ -681,7 +718,8 @@ private:
     }
 
     // returns the index of an entry in a density field
-    static Scalar densityGasIdx_(Scalar density, unsigned tempIdx)
+    template <class Evaluation>
+    static Evaluation densityGasIdx_(const Evaluation& density, unsigned tempIdx)
     {
         Scalar densityMin = minGasDensity_(tempIdx);
         Scalar densityMax = maxGasDensity_(tempIdx);

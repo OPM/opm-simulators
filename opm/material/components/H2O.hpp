@@ -125,14 +125,15 @@ public:
      *
      * \param T Absolute temperature of the system in \f$\mathrm{[K]}\f$
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(Evaluation temperature)
     {
-        if (T > criticalTemperature())
-            T = criticalTemperature();
-        if (T < tripleTemperature())
-            T = tripleTemperature();
+        if (temperature > criticalTemperature())
+            temperature = criticalTemperature();
+        if (temperature < tripleTemperature())
+            temperature = tripleTemperature();
 
-        return Region4::saturationPressure(T);
+        return Region4::saturationPressure(temperature);
     }
     /*!
      * \brief The vapor temperature in \f$\mathrm{[Ka]}\f$ of pure water
@@ -146,7 +147,8 @@ public:
      *
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar vaporTemperature(Scalar pressure)
+    template <class Evaluation>
+    static Evaluation vaporTemperature(const Evaluation& pressure)
     {
         if (pressure > criticalPressure())
             pressure = criticalPressure();
@@ -168,14 +170,17 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasEnthalpy(Scalar temperature,
-                              Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Enthalpy of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Enthalpy of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
@@ -186,13 +191,13 @@ public:
             // dependence on pressure, so we can just return the
             // specific enthalpy at the point of regularization, i.e.
             // the triple pressure - 100Pa
-            return enthalpyRegion2_(temperature, triplePressure() - 100);
+            return enthalpyRegion2_(temperature, Toolbox::createConstant(triplePressure() - 100));
         }
-        Scalar pv = vaporPressure(temperature);
+        Evaluation pv = vaporPressure(temperature);
         if (pressure > pv) {
             // the pressure is too high, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
-            Scalar dh_dp =
+            Evaluation dh_dp =
                 Rs*temperature*
                 Region2::tau(temperature)*
                 Region2::dpi_dp(pv)*
@@ -218,25 +223,28 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidEnthalpy(Scalar temperature,
-                                 Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature,
+                                     const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Enthalpy of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Enthalpy of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
-        Scalar pv = vaporPressure(temperature);
+        const Evaluation& pv = vaporPressure(temperature);
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the enthalpy at the vapor pressure to regularize
-            Scalar dh_dp =
+            const Evaluation& dh_dp =
                 Rs * temperature*
                 Region1::tau(temperature)*
-                Region1::dpi_dp(pv)*
+                Region1::dpi_dp(Toolbox::value(pv))*
                 Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
@@ -259,27 +267,26 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasHeatCapacity(Scalar temperature,
-                                  Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature,
+                                      const Evaluation& pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Heat capacity of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
-        if (pressure < triplePressure() - 100) {
-            return heatCap_p_Region2_(temperature, triplePressure() - 100);
-        }
-        Scalar pv = vaporPressure(temperature);
-        if (pressure > pv) {
+        if (pressure < triplePressure() - 100)
+            return heatCap_p_Region2_(temperature, Evaluation(triplePressure() - 100));
+        const Evaluation& pv = vaporPressure(temperature);
+        if (pressure > pv)
             // the pressure is too high, in this case we use the heat
             // cap at the vapor pressure to regularize
-            return
-                heatCap_p_Region2_(temperature, pv);
-        };
+            return heatCap_p_Region2_(temperature, pv);
+
         return heatCap_p_Region2_(temperature, pressure);
     }
 
@@ -295,22 +302,23 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidHeatCapacity(Scalar temperature,
-                                     Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature,
+                                         const Evaluation& pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "heat Capacity of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "heat Capacity of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
-        Scalar pv = vaporPressure(temperature);
+        const Evaluation& pv = vaporPressure(temperature);
         if (pressure < pv) {
-            // the pressure is too low, in this case we use the heat cap at the vapor pressure to regularize
-            return
-                heatCap_p_Region1_(temperature, pv);
+            // the pressure is too low, in this case we use the heat capacity at the
+            // vapor pressure to regularize
+            return heatCap_p_Region1_(temperature, pv);
         };
 
         return heatCap_p_Region1_(temperature, pressure);
@@ -328,14 +336,15 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidInternalEnergy(Scalar temperature,
-                                       Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature,
+                                           const Evaluation& pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Internal Energy of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Internal Energy of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
 
@@ -385,13 +394,14 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Internal Energy of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Internal Energy of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
@@ -458,14 +468,15 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidHeatCapacityConstVolume(Scalar temperature,
-                                                Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacityConstVolume(const Evaluation& temperature,
+                                                    const Evaluation& pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Heat capacity of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Heat capacity of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
 
@@ -492,13 +503,14 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasHeatCapacityConstVolume(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacityConstVolume(const Evaluation& temperature, const Evaluation& pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Heat capacity of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Heat capacity of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
@@ -538,31 +550,36 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Density of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Density of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
         if (pressure < triplePressure() - 100) {
             // We assume an ideal gas for low pressures to avoid the
             // 0/0 for the internal energy and enthalpy.
-            Scalar rho0IAPWS = 1.0/volumeRegion2_(temperature,
-                                                  triplePressure() - 100);
-            Scalar rho0Id = IdealGas<Scalar>::density(molarMass(),
-                                                      temperature,
-                                                      triplePressure() - 100);
-            return
-                rho0IAPWS/rho0Id *
-                IdealGas<Scalar>::density(molarMass(),
+            const Evaluation& rho0IAPWS =
+                1.0/volumeRegion2_(temperature,
+                                   Evaluation(triplePressure() - 100));
+            const Evaluation& rho0Id =
+                IdealGas<Scalar>::density(Evaluation(molarMass()),
                                           temperature,
-                                          pressure);
+                                          Evaluation(triplePressure() - 100));
+            return
+                rho0IAPWS/rho0Id
+                *IdealGas<Scalar>::density(Evaluation(molarMass()),
+                                           temperature,
+                                           pressure);
         }
-        Scalar pv = vaporPressure(temperature);
+        Evaluation pv = vaporPressure(temperature);
         if (pressure > pv) {
             // the pressure is too high, in this case we use the slope
             // of the density energy at the vapor pressure to
@@ -570,10 +587,10 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = pv*1e-8;
-            Scalar v0 = volumeRegion2_(temperature, pv);
-            Scalar v1 = volumeRegion2_(temperature, pv + eps);
-            Scalar dv_dp = (v1 - v0)/eps;
+            Scalar eps = Toolbox::value(pv)*1e-8;
+            Evaluation v0 = volumeRegion2_(temperature, pv);
+            Evaluation v1 = volumeRegion2_(temperature, pv + eps);
+            Evaluation dv_dp = (v1 - v0)/eps;
             /*
               Scalar pi = Region2::pi(pv);
               Scalar dp_dpi = Region2::dp_dpi(pv);
@@ -589,7 +606,7 @@ public:
 
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
-            Scalar drho_dp = - 1/(v0*v0)*dv_dp;
+            Evaluation drho_dp = - 1/(v0*v0)*dv_dp;
 
             // use a straight line for extrapolation
             return 1.0/v0 + (pressure - pv)*drho_dp;
@@ -616,23 +633,26 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param density Density in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, Scalar density)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         Valgrind::CheckDefined(temperature);
         Valgrind::CheckDefined(density);
 
         // We use the newton method for this. For the initial value we
         // assume steam to be an ideal gas
-        Scalar pressure = IdealGas<Scalar>::pressure(temperature, density/molarMass());
+        Evaluation pressure = IdealGas<Scalar>::pressure(temperature, density/molarMass());
         Scalar eps = pressure*1e-7;
 
-        Scalar deltaP = pressure*2;
+        Evaluation deltaP = pressure*2;
         Valgrind::CheckDefined(pressure);
         Valgrind::CheckDefined(deltaP);
-        for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
-            Scalar f = gasDensity(temperature, pressure) - density;
+        for (int i = 0; i < 5 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP)); ++i) {
+            Evaluation f = gasDensity(temperature, pressure) - density;
 
-            Scalar df_dp;
+            Evaluation df_dp;
             df_dp = gasDensity(temperature, pressure + eps);
             df_dp -= gasDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
@@ -659,27 +679,30 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Density of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Density of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
         // regularization
-        Scalar pv = vaporPressure(temperature);
+        Evaluation pv = vaporPressure(temperature);
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the density at the vapor pressure to regularize
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = pv*1e-8;
-            Scalar v0 = volumeRegion1_(temperature, pv);
-            Scalar v1 = volumeRegion1_(temperature, pv + eps);
-            Scalar dv_dp = (v1 - v0)/eps;
+            Scalar eps = Toolbox::value(pv)*1e-8;
+            Evaluation v0 = volumeRegion1_(temperature, pv);
+            Evaluation v1 = volumeRegion1_(temperature, pv + eps);
+            Evaluation dv_dp = (v1 - v0)/eps;
 
             /*
               Scalar v0 = volumeRegion1_(temperature, pv);
@@ -697,7 +720,7 @@ public:
 
             // calculate the partial derivative of the density to the
             // pressure at vapor pressure
-            Scalar drho_dp = - 1/(v0*v0)*dv_dp;
+            Evaluation drho_dp = - 1/(v0*v0)*dv_dp;
 
             // use a straight line for extrapolation
             return 1.0/v0 + (pressure - pv)*drho_dp;
@@ -719,19 +742,22 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param density Density of the fluid in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation liquidPressure(const Evaluation& temperature, Scalar density)
     {
-        // We use the newton method for this. For the initial value we
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        // We use the Newton method for this. For the initial value we
         // assume the pressure to be 10% higher than the vapor
         // pressure
-        Scalar pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = pressure*1e-7;
+        Evaluation pressure = 1.1*vaporPressure(temperature);
+        Scalar eps = Toolbox::value(pressure)*1e-7;
 
-        Scalar deltaP = pressure*2;
-        for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
-            Scalar f = liquidDensity(temperature, pressure) - density;
+        Evaluation deltaP = pressure*2;
+        for (int i = 0; i < 5 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP)); ++i) {
+            Evaluation f = liquidDensity(temperature, pressure) - density;
 
-            Scalar df_dp;
+            Evaluation df_dp;
             df_dp = liquidDensity(temperature, pressure + eps);
             df_dp -= liquidDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
@@ -758,16 +784,17 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Viscosity of steam is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Viscosity of steam is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         }
 
-        Scalar rho = gasDensity(temperature, pressure);
+        Evaluation rho = gasDensity(temperature, pressure);
         return Common::viscosity(temperature, rho);
     }
 
@@ -782,16 +809,17 @@ public:
      * \param temperature Absolute temperature of the fluid in \f$\mathrm{[K]}\f$
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalIssue,
-                       "Viscosity of water is only implemented for temperatures below 623.15K and "
-                       "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
+                      "Viscosity of water is only implemented for temperatures below 623.15K and "
+                      "pressures below 100MPa. (T = " << temperature << ", p=" << pressure);
         };
 
-        Scalar rho = liquidDensity(temperature, pressure);
+        const Evaluation& rho = liquidDensity(temperature, pressure);
         return Common::viscosity(temperature, rho);
     }
 
@@ -808,9 +836,10 @@ public:
      * \param temperature Absolute temperature in K
      * \param pressure Phase pressure of the phase in Pa
      */
-    static Scalar liquidThermalConductivity(Scalar temperature,  Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& temperature,  const Evaluation& pressure)
     {
-        Scalar rho = liquidDensity(temperature, pressure);
+        const Evaluation& rho = liquidDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
     }
 
@@ -827,15 +856,17 @@ public:
      * \param temperature Absolute temperature in K
      * \param pressure Phase pressure of the phase in Pa
      */
-    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar rho = gasDensity(temperature, pressure);
+        const Evaluation& rho = gasDensity(temperature, pressure);
         return Common::thermalConductivityIAPWS(temperature, rho);
     }
 
 private:
     // the unregularized specific enthalpy for liquid water
-    static Scalar enthalpyRegion1_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation enthalpyRegion1_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Region1::tau(temperature) *
@@ -844,16 +875,19 @@ private:
     }
 
     // the unregularized specific isobaric heat capacity
-    static Scalar heatCap_p_Region1_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCap_p_Region1_(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
         return
-            - std::pow(Region1::tau(temperature), 2 ) *
+            - Toolbox::pow(Region1::tau(temperature), 2.0) *
             Region1::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }
 
     // the unregularized specific isochoric heat capacity
-    static Scalar heatCap_v_Region1_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCap_v_Region1_(const Evaluation& temperature, const Evaluation& pressure)
     {
         double tau = Region1::tau(temperature);
         double num = Region1::dgamma_dpi(temperature, pressure) - tau * Region1::ddgamma_dtaudpi(temperature, pressure);
@@ -866,7 +900,8 @@ private:
     }
 
     // the unregularized specific internal energy for liquid water
-    static Scalar internalEnergyRegion1_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation internalEnergyRegion1_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Rs * temperature *
@@ -875,7 +910,8 @@ private:
     }
 
     // the unregularized specific volume for liquid water
-    static Scalar volumeRegion1_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation volumeRegion1_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Region1::pi(pressure)*
@@ -884,7 +920,8 @@ private:
     }
 
     // the unregularized specific enthalpy for steam
-    static Scalar enthalpyRegion2_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation enthalpyRegion2_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Region2::tau(temperature) *
@@ -893,7 +930,8 @@ private:
     }
 
     // the unregularized specific internal energy for steam
-    static Scalar internalEnergyRegion2_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation internalEnergyRegion2_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Rs * temperature *
@@ -902,21 +940,25 @@ private:
     }
 
     // the unregularized specific isobaric heat capacity
-    static Scalar heatCap_p_Region2_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCap_p_Region2_(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         return
-            - std::pow(Region2::tau(temperature), 2 ) *
+            - Toolbox::pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }
 
     // the unregularized specific isochoric heat capacity
-    static Scalar heatCap_v_Region2_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatCap_v_Region2_(const Evaluation& temperature, const Evaluation& pressure)
     {
-        double tau = Region2::tau(temperature);
-        double pi = Region2::pi(pressure);
-        double num = 1 + pi * Region2::dgamma_dpi(temperature, pressure) + tau * pi * Region2::ddgamma_dtaudpi(temperature, pressure);
-        double diff = num * num / (1 - pi * pi * Region2::ddgamma_ddpi(temperature, pressure));
+        const Evaluation& tau = Region2::tau(temperature);
+        const Evaluation& pi = Region2::pi(pressure);
+        const Evaluation& num = 1 + pi * Region2::dgamma_dpi(temperature, pressure) + tau * pi * Region2::ddgamma_dtaudpi(temperature, pressure);
+        const Evaluation& diff = num * num / (1 - pi * pi * Region2::ddgamma_ddpi(temperature, pressure));
         return
             - std::pow(tau, 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) * Rs
@@ -924,7 +966,8 @@ private:
     }
 
     // the unregularized specific volume for steam
-    static Scalar volumeRegion2_(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation volumeRegion2_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             Region2::pi(pressure)*

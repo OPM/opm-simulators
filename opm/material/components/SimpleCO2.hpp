@@ -97,22 +97,25 @@ public:
     /*!
      * \copydoc Component::gasEnthalpy
      */
-    static const Scalar gasEnthalpy(Scalar temperature,
-                                    Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     { return 571.3e3 + (temperature - 298.15)*0.85e3; }
 
     /*!
      * \copydoc Component::liquidEnthalpy
      */
-    static const Scalar liquidEnthalpy(Scalar temperature,
-                                       Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature,
+                                     const Evaluation& pressure)
     { return (temperature - 298.15)*5e3; }
 
     /*!
      * \copydoc Component::gasInternalEnergy
      */
-    static const Scalar gasInternalEnergy(Scalar temperature,
-                                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
         return
             gasEnthalpy(temperature, pressure) -
@@ -123,10 +126,11 @@ public:
     /*!
      * \copydoc Component::gasDensity
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
         // Assume an ideal gas
-        return IdealGas::density(molarMass(), temperature, pressure);
+        return IdealGas::density(Evaluation(molarMass()), temperature, pressure);
     }
 
     /*!
@@ -137,7 +141,8 @@ public:
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 396-397, 667
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
         const Scalar Tc = criticalTemperature();
         const Scalar Vc = 93.9; // critical specific volume [cm^3/mol]

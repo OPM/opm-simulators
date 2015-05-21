@@ -24,6 +24,8 @@
 #ifndef OPM_IAPWS_REGION2_HPP
 #define OPM_IAPWS_REGION2_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <cmath>
 
 namespace Opm {
@@ -53,17 +55,18 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static bool isValid(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static bool isValid(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
             temperature <= 623.15 && pressure <= 100e6;
 
         // actually this is:
         /*
-        return
-           (273.15 <= temperature && temperature <= 623.15 && pressure <= vaporPressure(temperature)) ||
-           (623.15 < temperature && temperature <= 863.15 && pressure <= auxPressure(temperature)) ||
-           (863.15 < temperature && temperature <= 1073.15 && pressure < 100e6);
+          return
+          (273.15 <= temperature && temperature <= 623.15 && pressure <= vaporPressure(temperature)) ||
+          (623.15 < temperature && temperature <= 863.15 && pressure <= auxPressure(temperature)) ||
+          (863.15 < temperature && temperature <= 1073.15 && pressure < 100e6);
         */
     }
 
@@ -72,7 +75,8 @@ public:
      *
      * \param temperature temperature of component
      */
-    static Scalar tau(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation tau(const Evaluation& temperature)
     { return 540.0 / temperature; }
 
     /*!
@@ -81,7 +85,8 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
-    static Scalar dtau_dT(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation dtau_dT(const Evaluation& temperature)
     { return - 540.0 / (temperature*temperature); }
 
     /*!
@@ -89,7 +94,8 @@ public:
      *
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar pi(Scalar pressure)
+    template <class Evaluation>
+    static Evaluation pi(const Evaluation& pressure)
     { return pressure / 1e6; }
 
     /*!
@@ -98,7 +104,8 @@ public:
      *
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar dpi_dp(Scalar pressure)
+    template <class Evaluation>
+    static Scalar dpi_dp(const Evaluation& pressure)
     { return 1.0 / 1e6; }
 
     /*!
@@ -107,7 +114,8 @@ public:
      *
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar dp_dpi(Scalar pressure)
+    template <class Evaluation>
+    static Evaluation dp_dpi(const Evaluation& pressure)
     { return 1e6; }
 
     /*!
@@ -121,24 +129,27 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar gamma(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gamma(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau = tau(temperature);   /* reduced temperature */
-        Scalar pi = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        Scalar result;
+        const Evaluation& tau_ = tau(temperature); /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);      /* reduced pressure */
+
+        Evaluation result;
 
         // ideal gas part
-        result = ln(pi);
+        result = Toolbox::ln(pi_);
         for (int i = 0; i < 9; ++i)
-            result += n_g(i)*std::pow(tau, J_g(i));
+            result += n_g(i)*Toolbox::pow(tau_, J_g(i));
 
         // residual part
         for (int i = 0; i < 43; ++i)
             result +=
                 n_r(i)*
-                std::pow(pi, I_r(i))*
-                std::pow(tau - 0.5, J_r(i));
+                Toolbox::pow(pi_, I_r(i))*
+                Toolbox::pow(tau_ - 0.5, J_r(i));
         return result;
     }
 
@@ -154,27 +165,30 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar dgamma_dtau(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation dgamma_dtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau_ = tau(temperature);   /* reduced temperature */
-        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = 0;
+        Evaluation result = Toolbox::createConstant(0.0);
         for (int i = 0; i < 9; i++) {
             result +=
                 n_g(i) *
                 J_g(i) *
-                std::pow(tau_, J_g(i) - 1);
+                Toolbox::pow(tau_, static_cast<Scalar>(J_g(i) - 1));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                std::pow(pi_,  I_r(i)) *
+                Toolbox::pow(pi_,  static_cast<Scalar>(I_r(i))) *
                 J_r(i) *
-                std::pow(tau_ - 0.5, J_r(i) - 1);
+                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -192,21 +206,24 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar dgamma_dpi(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation dgamma_dpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau_ = tau(temperature);   /* reduced temperature */
-        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = 1/pi_;
+        Evaluation result = 1/pi_;
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
                 I_r(i) *
-                std::pow(pi_, I_r(i) - 1) *
-                std::pow(tau_ - 0.5, J_r(i));
+                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -224,13 +241,16 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar ddgamma_dtaudpi(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation ddgamma_dtaudpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau_ = tau(temperature);   /* reduced temperature */
-        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = 0;
+        Evaluation result = Toolbox::createConstant(0.0);
 
         // residual part
         for (int i = 0; i < 43; i++) {
@@ -238,8 +258,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 J_r(i) *
-                std::pow(pi_, I_r(i) - 1) *
-                std::pow(tau_ - 0.5, J_r(i) - 1);
+                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -257,13 +277,16 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar ddgamma_ddpi(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation ddgamma_ddpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau_ = tau(temperature);   /* reduced temperature */
-        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = -1/(pi_*pi_);
+        Evaluation result = -1/(pi_*pi_);
 
         // residual part
         for (int i = 0; i < 43; i++) {
@@ -271,8 +294,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 (I_r(i) - 1) *
-                std::pow(pi_, I_r(i) - 2) *
-                std::pow(tau_ - 0.5, J_r(i));
+                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 2)) *
+                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -290,29 +313,32 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar ddgamma_ddtau(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation ddgamma_ddtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar tau_ = tau(temperature);   /* reduced temperature */
-        Scalar pi_ = pi(pressure);    /* reduced pressure */
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
+        const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Scalar result = 0;
+        Evaluation result = Toolbox::createConstant(0.0);
         for (int i = 0; i < 9; i++) {
             result +=
                 n_g(i) *
                 J_g(i) *
                 (J_g(i) - 1) *
-                std::pow(tau_, J_g(i) - 2);
+                Toolbox::pow(tau_, static_cast<Scalar>(J_g(i) - 2));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                std::pow(pi_,  I_r(i)) *
+                Toolbox::pow(pi_,  I_r(i)) *
                 J_r(i) *
                 (J_r(i) - 1.) *
-                std::pow(tau_ - 0.5, J_r(i) - 2.);
+                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 2));
         }
 
         return result;
@@ -339,10 +365,10 @@ private:
             -0.26674547914087e-4, 0.20481737692309e-7, 0.43870667284435e-6,
             -0.32277677238570e-4, -0.15033924542148e-2, -0.40668253562649e-1,
             -0.78847309559367e-9, 0.12790717852285e-7, 0.48225372718507e-6,
-             0.22922076337661e-5, -0.16714766451061e-10, -0.21171472321355e-2,
+            0.22922076337661e-5, -0.16714766451061e-10, -0.21171472321355e-2,
             -0.23895741934104e2, -0.59059564324270e-17, -0.12621808899101e-5,
             -0.38946842435739e-1, 0.11256211360459e-10, -0.82311340897998e1,
-             0.19809712802088e-7, 0.10406965210174e-18, -0.10234747095929e-12,
+            0.19809712802088e-7, 0.10406965210174e-18, -0.10234747095929e-12,
             -0.10018179379511e-8, -0.80882908646985e-10, 0.10693031879409,
             -0.33662250574171, 0.89185845355421e-24, 0.30629316876232e-12,
             -0.42002467698208e-5, -0.59056029685639e-25, 0.37826947613457e-5,

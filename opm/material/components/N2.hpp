@@ -27,6 +27,7 @@
 #define OPM_N2_HPP
 
 #include <opm/material/IdealGas.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include "Component.hpp"
 
@@ -88,7 +89,7 @@ public:
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure molecular nitrogen
      *        at a given temperature.
      *
-     *\param T temperature of component in \f$\mathrm{[K]}\f$
+     *\param temperature temperature of component in \f$\mathrm{[K]}\f$
      *
      * Taken from:
      *
@@ -98,28 +99,31 @@ public:
      * Physical and Chemical Refefence Data, Vol. 29, No. 6,
      * pp. 1361-1433
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        if (T > criticalTemperature())
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        if (temperature > criticalTemperature())
             return criticalPressure();
-        if (T < tripleTemperature())
+        if (temperature < tripleTemperature())
             return 0; // N2 is solid: We don't take sublimation into
                       // account
 
         // note: this is the ancillary equation given on page 1368
-        Scalar sigma = Scalar(1.0) - T/criticalTemperature();
-        Scalar sqrtSigma = std::sqrt(sigma);
+        const Evaluation& sigma = 1.0 - temperature/criticalTemperature();
+        const Evaluation& sqrtSigma = Toolbox::sqrt(sigma);
         const Scalar N1 = -6.12445284;
         const Scalar N2 = 1.26327220;
         const Scalar N3 = -0.765910082;
         const Scalar N4 = -1.77570564;
         return
             criticalPressure() *
-            std::exp(criticalTemperature()/T*
-                     (sigma*(N1 +
-                             sqrtSigma*N2 +
-                             sigma*(sqrtSigma*N3 +
-                                    sigma*sigma*sigma*N4))));
+            Toolbox::exp(criticalTemperature()/temperature*
+                         (sigma*(N1 +
+                                 sqrtSigma*N2 +
+                                 sigma*(sqrtSigma*N3 +
+                                        sigma*sigma*sigma*N4))));
     }
 
     /*!
@@ -128,13 +132,14 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
         // Assume an ideal gas
-        return IdealGas::density(molarMass(), temperature, pressure);
+        return IdealGas::density(Evaluation(molarMass()), temperature, pressure);
     }
 
-     /*!
+    /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
      */
     static bool gasIsCompressible()
@@ -152,7 +157,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, const Evaluation& density)
     {
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
@@ -161,14 +167,15 @@ public:
     /*!
      * \brief Specific enthalpy \f$\mathrm{[J/kg]}\f$ of pure nitrogen gas.
      *
-     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * See: R. Reid, et al.: The Properties of Gases and Liquids, 4th
      * edition, McGraw-Hill, 1987, pp 154, 657, 665
      */
-    static const Scalar gasEnthalpy(Scalar T,
-                                    Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;
@@ -180,10 +187,10 @@ public:
         return
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
 
-            T*(cpVapA + T*
-               (cpVapB/2 + T*
-                (cpVapC/3 + T*
-                 (cpVapD/4))));
+            temperature*(cpVapA + temperature*
+                         (cpVapB/2 + temperature*
+                          (cpVapC/3 + temperature*
+                           (cpVapD/4))));
 
 //#warning NIST DATA STUPID INTERPOLATION
 //        Scalar T2 = 300.;
@@ -207,8 +214,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasInternalEnergy(Scalar temperature,
-                                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
         return
             gasEnthalpy(temperature, pressure) -
@@ -223,8 +231,9 @@ public:
      * This is equivalent to the partial derivative of the specific
      * enthalpy to the temperature.
      */
-    static const Scalar gasHeatCapacity(Scalar T,
-                                        Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature,
+                                      const Evaluation& pressure)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;
@@ -235,9 +244,9 @@ public:
         return
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
 
-            cpVapA + T*
-            (cpVapB + T*
-             (cpVapC + T*
+            cpVapA + temperature*
+            (cpVapB + temperature*
+             (cpVapC + temperature*
               (cpVapD)));
     }
 
@@ -254,8 +263,11 @@ public:
      * 5th edition, McGraw-Hill, 2001  pp 9.7-9.8 (omega and V_c taken from p. A.19)
      *
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         const Scalar Tc = criticalTemperature();
         const Scalar Vc = 90.1; // critical specific volume [cm^3/mol]
         const Scalar omega = 0.037; // accentric factor
@@ -267,12 +279,12 @@ public:
         mu_r4 *= mu_r4;
 
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
-        Scalar Tstar = 1.2593 * temperature/Tc;
-        Scalar Omega_v =
-            1.16145*std::pow(Tstar, -0.14874) +
-            0.52487*std::exp(- 0.77320*Tstar) +
-            2.16178*std::exp(- 2.43787*Tstar);
-        Scalar mu = 40.785*Fc*std::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
+        const Evaluation& Tstar = 1.2593 * temperature/Tc;
+        const Evaluation& Omega_v =
+            1.16145*Toolbox::pow(Tstar, -0.14874) +
+            0.52487*Toolbox::exp(- 0.77320*Tstar) +
+            2.16178*Toolbox::exp(- 2.43787*Tstar);
+        const Evaluation& mu = 40.785*Fc*Toolbox::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
 
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
@@ -289,8 +301,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasThermalConductivity(Scalar temperature,
-                                                  Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature,
+                                             const Evaluation& pressure)
     { return 0.024572; }
 };
 

@@ -79,10 +79,12 @@ public:
     { return 1.0; }
 
     /*!
-     * \copydoc Component::liquidIsCompressible
+     * \copydoc Component::vaporPressure
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& T)
     { return 1.0; }
+
     /*!
      * \copydoc Component::liquidIsCompressible
      */
@@ -104,74 +106,86 @@ public:
     /*!
      * \copydoc Component::liquidDensity
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::liquidViscosity
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::gasDensity
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::gasViscosity
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
 
     /*!
      * \copydoc Component::gasEnthalpy
      */
-    static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::liquidEnthalpy
      */
-    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::gasInternalEnergy
      */
-    static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::liquidInternalEnergy
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::gasThermalConductivity
      */
-    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::liquidThermalConductivity
      */
-    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::gasHeatCapacity
      */
-    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 
     /*!
      * \copydoc Component::liquidHeatCapacity
      */
-    static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { return 1.0; }
 };
 

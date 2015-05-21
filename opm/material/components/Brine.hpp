@@ -25,8 +25,7 @@
 #define OPM_BRINE_HPP
 
 #include <opm/material/components/Component.hpp>
-
-#include <cmath>
+#include <opm/material/common/MathToolbox.hpp>
 
 namespace Opm {
 
@@ -50,6 +49,24 @@ public:
      */
     static const char *name()
     { return "Brine"; }
+
+    /*!
+     * \copydoc H2O::gasIsIdeal
+     */
+    static bool gasIsIdeal()
+    { return H2O::gasIsIdeal(); }
+
+    /*!
+     * \copydoc H2O::gasIsCompressible
+     */
+    static bool gasIsCompressible()
+    { return H2O::gasIsCompressible(); }
+
+    /*!
+     * \copydoc H2O::liquidIsCompressible
+     */
+    static bool liquidIsCompressible()
+    { return H2O::liquidIsCompressible(); }
 
     /*!
      * \copydoc Component::molarMass
@@ -91,14 +108,16 @@ public:
     /*!
      * \copydoc H2O::vaporPressure
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& T)
     { return H2O::vaporPressure(T); /* [N/m^2] */ }
 
     /*!
      * \copydoc Component::gasEnthalpy
      */
-    static const Scalar gasEnthalpy(Scalar temperature,
-                                    Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     { return H2O::gasEnthalpy(temperature, pressure); /* [J/kg] */ }
 
     /*!
@@ -109,71 +128,71 @@ public:
      * - Michaelides 1981
      * - Daubert & Danner 1989
      */
-    static const Scalar liquidEnthalpy(Scalar temperature,
-                                       Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature,
+                                     const Evaluation& pressure)
     {
-        /*Numerical coefficents from PALLISER*/
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        // Numerical coefficents from Palliser and McKibbin
         static const Scalar f[] = {
-            2.63500E-1, 7.48368E-6, 1.44611E-6, -3.80860E-10
+            2.63500e-1, 7.48368e-6, 1.44611e-6, -3.80860e-10
         };
 
-        /*Numerical coefficents from MICHAELIDES for the enthalpy of brine*/
+        // Numerical coefficents from Michaelides for the enthalpy of brine
         static const Scalar a[4][3] = {
             { -9633.6, -4080.0, +286.49 },
             { +166.58, +68.577, -4.6856 },
-            { -0.90963, -0.36524, +0.249667E-1 },
-            { +0.17965E-2, +0.71924E-3, -0.4900E-4 }
+            { -0.90963, -0.36524, +0.249667e-1 },
+            { +0.17965e-2, +0.71924e-3, -0.4900e-4 }
         };
 
-        Scalar theta, h_NaCl;
-        Scalar m, h_ls, h_ls1, d_h;
-        Scalar S_lSAT, delta_h;
-        int i, j;
-        Scalar hw;
-
-        theta = temperature - 273.15;
+        Evaluation theta = temperature - 273.15;
 
         Scalar S = salinity;
-        S_lSAT = f[0] + f[1]*theta + f[2]*std::pow(theta,2) + f[3]*std::pow(theta,3);
-        /*Regularization*/
-        if (S>S_lSAT) {
+        Scalar S_lSAT =
+            f[0]
+            + f[1]*Toolbox::value(theta)
+            + f[2]*std::pow(Toolbox::value(theta), 2)
+            + f[3]*std::pow(Toolbox::value(theta), 3);
+
+        // Regularization
+        if (S > S_lSAT)
             S = S_lSAT;
-        }
 
-        hw = H2O::liquidEnthalpy(temperature, pressure)/1E3; /* kJ/kg */
+        Evaluation hw = H2O::liquidEnthalpy(temperature, pressure)/1e3; // [kJ/kg]
 
-        /*DAUBERT and DANNER*/
-        /*U=*/h_NaCl = (3.6710E4*temperature + 0.5*(6.2770E1)*temperature*temperature - ((6.6670E-2)/3)*temperature*temperature*temperature
-                        +((2.8000E-5)/4)*std::pow(temperature,4))/(58.44E3)- 2.045698e+02; /* kJ/kg */
+        // From Daubert and Danner
+        Evaluation h_NaCl =
+            (3.6710e4*temperature
+             + (6.2770e1/2)*temperature*temperature
+             - (6.6670e-2/3)*temperature*temperature*temperature
+             + (2.8000e-5/4)*std::pow(temperature,4))/58.44e3
+            - 2.045698e+02; // [kJ/kg]
 
-        m = (1E3/58.44)*(S/(1-S));
-        i = 0;
-        j = 0;
-        d_h = 0;
+        Scalar m = S/(1-S)/58.44e-3;
 
-        for (i = 0; i<=3; i++) {
-            for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * std::pow(theta, i) * std::pow(m, j);
+        Evaluation d_h = 0;
+        for (int i = 0; i<=3; ++i) {
+            for (int j = 0; j <= 2; ++j) {
+                d_h += a[i][j] * std::pow(theta, i) * std::pow(m, j);
             }
         }
 
-        delta_h = (4.184/(1E3 + (58.44 * m)))*d_h;
+        Evaluation delta_h = 4.184/(1e3 + (58.44 * m))*d_h;
 
-        /* Enthalpy of brine */
-
-        h_ls1 =(1-S)*hw + S*h_NaCl + S*delta_h; /* kJ/kg */
-
-        h_ls = h_ls1*1E3; /*J/kg*/
-
-        return (h_ls);
+        // Enthalpy of brine
+        Evaluation h_ls = (1-S)*hw + S*h_NaCl + S*delta_h; // [kJ/kg]
+        return h_ls*1e3; // convert to [J/kg]
     }
 
 
     /*!
      * \copydoc H2O::liquidHeatCapacity
      */
-    static const Scalar liquidHeatCapacity(Scalar temperature,
-                                        Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature,
+                                         const Evaluation& pressure)
     {
         Scalar eps = temperature*1e-8;
         return (liquidEnthalpy(temperature + eps, pressure) - liquidEnthalpy(temperature, pressure))/eps;
@@ -182,15 +201,17 @@ public:
     /*!
      * \copydoc H2O::gasHeatCapacity
      */
-    static const Scalar gasHeatCapacity(Scalar temperature,
-                                        Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature,
+                                      const Evaluation& pressure)
     { return H2O::gasHeatCapacity(temperature, pressure); }
 
     /*!
      * \copydoc H2O::gasInternalEnergy
      */
-    static const Scalar gasInternalEnergy(Scalar temperature,
-                                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
         return
             gasEnthalpy(temperature, pressure) -
@@ -200,26 +221,21 @@ public:
     /*!
      * \copydoc H2O::liquidInternalEnergy
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature,
-                                             Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature,
+                                           const Evaluation& pressure)
     {
         return
             liquidEnthalpy(temperature, pressure) -
             pressure/liquidDensity(temperature, pressure);
     }
 
-
     /*!
      * \copydoc H2O::gasDensity
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     { return H2O::gasDensity(temperature, pressure); }
-
-    /*!
-     * \copydoc H2O::gasIsIdeal
-     */
-    static bool gasIsIdeal()
-    { return H2O::gasIsIdeal(); }
 
     /*!
      * \copydoc Component::liquidDensity
@@ -228,12 +244,13 @@ public:
      * - Batzle & Wang (1992)
      * - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar TempC = temperature - 273.15;
-        Scalar pMPa = pressure/1.0E6;
+        Evaluation tempC = temperature - 273.15;
+        Evaluation pMPa = pressure/1.0E6;
 
-        Scalar rhow = H2O::liquidDensity(temperature, pressure);
+        const Evaluation rhow = H2O::liquidDensity(temperature, pressure);
         return
             rhow +
             1000*salinity*(
@@ -242,49 +259,44 @@ public:
                 1.0E-6*(
                     300*pMPa -
                     2400*pMPa*salinity +
-                    TempC*(
+                    tempC*(
                         80.0 -
-                        3*TempC -
+                        3*tempC -
                         3300*salinity -
                         13*pMPa +
                         47*pMPa*salinity)));
     }
 
     /*!
-     * \copydoc H2O::gasIsCompressible
-     */
-    static bool gasIsCompressible()
-    { return H2O::gasIsCompressible(); }
-
-    /*!
-     * \copydoc H2O::liquidIsCompressible
-     */
-    static bool liquidIsCompressible()
-    { return H2O::liquidIsCompressible(); }
-
-    /*!
      * \copydoc H2O::gasPressure
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, const Evaluation& density)
     { return H2O::gasPressure(temperature, density); }
 
     /*!
      * \copydoc H2O::liquidPressure
      */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation liquidPressure(const Evaluation& temperature, const Evaluation& density)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         // We use the newton method for this. For the initial value we
         // assume the pressure to be 10% higher than the vapor
         // pressure
-        Scalar pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = pressure*1e-7;
+        Evaluation pressure = 1.1*vaporPressure(temperature);
+        Scalar eps = Toolbox::value(pressure)*1e-7;
 
-        Scalar deltaP = pressure*2;
-        for (int i = 0; i < 5 && std::abs(pressure*1e-9) < std::abs(deltaP); ++i) {
-            Scalar f = liquidDensity(temperature, pressure) - density;
+        Evaluation deltaP = pressure*2;
+        for (int i = 0;
+             i < 5
+                 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP));
+             ++i)
+        {
+            const Evaluation& f = liquidDensity(temperature, pressure) - density;
 
-            Scalar df_dp;
-            df_dp = liquidDensity(temperature, pressure + eps);
+            Evaluation df_dp = liquidDensity(temperature, pressure + eps);
             df_dp -= liquidDensity(temperature, pressure - eps);
             df_dp /= 2*eps;
 
@@ -299,7 +311,8 @@ public:
     /*!
      * \copydoc H2O::gasViscosity
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     { return H2O::gasViscosity(temperature, pressure); }
 
     /*!
@@ -310,16 +323,19 @@ public:
      * - cited by: Bachu & Adams (2002)
      *   "Equations of State for basin geofluids"
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        if(temperature <= 275.) // regularisation
-        { temperature = 275; }
-        Scalar T_C = temperature - 273.15;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        Scalar A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*std::pow(T_C, 0.8);
-        Scalar mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*std::exp(-A);
+        Evaluation T_C = temperature - 273.15;
+        if(temperature <= 275.) // regularization
+            T_C = Toolbox::createConstant(275.0);
 
-        return mu_brine/1000.0; /* unit: Pa s */
+        Evaluation A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*Toolbox::pow(T_C, 0.8);
+        Evaluation mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*Toolbox::exp(-A);
+
+        return mu_brine/1000.0; // convert to [Pa s] (todo: check if correct cP->Pa s is times 10...)
     }
 };
 

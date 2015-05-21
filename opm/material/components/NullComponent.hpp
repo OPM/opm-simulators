@@ -35,7 +35,7 @@ namespace Opm
  * Its main purpose is to make things compile and give runtime errors
  * if it is actually used.
  */
-template <class Scalar, int isLiquidV=-1>
+template <class Scalar>
 class NullComponent : public Component<Scalar, NullComponent<Scalar> >
 {
 };

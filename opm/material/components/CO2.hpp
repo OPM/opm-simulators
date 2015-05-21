@@ -29,6 +29,7 @@
 #include <opm/material/Constants.hpp>
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/components/Component.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -124,22 +125,24 @@ public:
      * Physical and Chemical Reference Data, 25 (6), pp. 1509-1596,
      * 1996
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& T)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         static const Scalar a[4] =
             { -7.0602087, 1.9391218, -1.6463597, -3.2995634 };
         static const Scalar t[4] =
             { 1.0, 1.5, 2.0, 4.0 };
 
         // this is on page 1524 of the reference
-        Scalar exponent = 0;
-        Scalar Tred = T/criticalTemperature();
-        for (int i = 0; i < 5; ++i) {
-            exponent += a[i]*std::pow(1 - Tred, t[i]);
-        }
+        Evaluation exponent = 0;
+        Evaluation Tred = T/criticalTemperature();
+        for (int i = 0; i < 5; ++i)
+            exponent += a[i]*Toolbox::pow(1 - Tred, t[i]);
         exponent *= 1.0/Tred;
 
-        return std::exp(exponent)*criticalPressure();
+        return Toolbox::exp(exponent)*criticalPressure();
     }
 
 
@@ -158,8 +161,9 @@ public:
     /*!
      * \brief Specific enthalpy of gaseous CO2 [J/kg].
      */
-    static Scalar gasEnthalpy(Scalar temperature,
-                              Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     {
         return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure);
     }
@@ -167,19 +171,21 @@ public:
     /*!
      * \brief Specific internal energy of CO2 [J/kg].
      */
-    static Scalar gasInternalEnergy(Scalar temperature,
-                                    Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
-        Scalar h = gasEnthalpy(temperature, pressure);
-        Scalar rho = gasDensity(temperature, pressure);
+        const Evaluation& h = gasEnthalpy(temperature, pressure);
+        const Evaluation& rho = gasDensity(temperature, pressure);
 
         return h - (pressure / rho);
     }
 
     /*!
      * \brief The density of CO2 at a given pressure and temperature [kg/m^3].
-    */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+     */
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
         return CO2Tables::tabulatedDensity.eval(temperature, pressure);
     }
@@ -190,57 +196,46 @@ public:
      * Equations given in: - Vesovic et al., 1990
      *                        - Fenhour etl al., 1998
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure)
     {
-        static const double a0 = 0.235156;
-        static const double a1 = -0.491266;
-        static const double a2 = 5.211155E-2;
-        static const double a3 = 5.347906E-2;
-        static const double a4 = -1.537102E-2;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        static const double d11 = 0.4071119E-2;
-        static const double d21 = 0.7198037E-4;
-        static const double d64 = 0.2411697E-16;
-        static const double d81 = 0.2971072E-22;
-        static const double d82 = -0.1627888E-22;
+        const Scalar a0 = 0.235156;
+        const Scalar a1 = -0.491266;
+        const Scalar a2 = 5.211155e-2;
+        const Scalar a3 = 5.347906e-2;
+        const Scalar a4 = -1.537102e-2;
 
-        static const double ESP = 251.196;
+        const Scalar d11 = 0.4071119e-2;
+        const Scalar d21 = 0.7198037e-4;
+        const Scalar d64 = 0.2411697e-16;
+        const Scalar d81 = 0.2971072e-22;
+        const Scalar d82 = -0.1627888e-22;
 
-        double mu0, SigmaStar, TStar;
-        double dmu, rho;
-        double visco_CO2;
+        const Scalar ESP = 251.196;
 
         if(temperature < 275.) // regularization
-            temperature = 275;
+            temperature = Toolbox::createConstant(275.0);
+        Evaluation TStar = temperature/ESP;
 
-        TStar = temperature/ESP;
+        // mu0: viscosity in zero-density limit
+        const Evaluation& logTStar = Toolbox::log(TStar);
+        Evaluation SigmaStar = Toolbox::exp(a0 + logTStar*(a1 + logTStar*(a2 + logTStar*(a3 + logTStar*a4))));
 
-        /* mu0: viscosity in zero-density limit */
-        SigmaStar = exp(a0 + a1*log(TStar)
-                        + a2*log(TStar)*log(TStar)
-                        + a3*log(TStar)*log(TStar)*log(TStar)
-                        + a4*log(TStar)*log(TStar)*log(TStar)*log(TStar) );
+        Evaluation mu0 = 1.00697*Toolbox::sqrt(temperature) / SigmaStar;
 
-        mu0 = 1.00697*sqrt(temperature) / SigmaStar;
+        const Evaluation& rho = gasDensity(temperature, pressure); // CO2 mass density [kg/m^3]
 
-        /* dmu : excess viscosity at elevated density */
-        rho = gasDensity(temperature, pressure); /* CO2 mass density [kg/m^3] */
+        // dmu : excess viscosity at elevated density
+        Evaluation dmu =
+            d11*rho
+            + d21*rho*rho
+            + d64*Toolbox::pow(rho, 6.0)/(TStar*TStar*TStar)
+            + d81*Toolbox::pow(rho, 8.0)
+            + d82*Toolbox::pow(rho, 8.0)/TStar;
 
-        dmu = d11*rho + d21*rho*rho + d64*pow(rho,6)/(TStar*TStar*TStar)
-            + d81*pow(rho,8) + d82*pow(rho,8)/TStar;
-
-        /* dmucrit : viscosity increase near the critical point */
-
-        // False (Lybke 2July2007)
-        //e1 = 5.5930E-3;
-        //e2 = 6.1757E-5;
-        //e4 = 2.6430E-11;
-        //dmucrit = e1*rho + e2*rho*rho + e4*rho*rho*rho;
-        //visco_CO2 = (mu0 + dmu + dmucrit)/1.0E6;   /* conversion to [Pa s] */
-
-        visco_CO2 = (mu0 + dmu)/1.0E6;   /* conversion to [Pa s] */
-
-        return visco_CO2;
+        return (mu0 + dmu)/1.0e6; // conversion to [Pa s]
     }
 
     /*!
@@ -253,15 +248,16 @@ public:
      * \param temperature Temperature of component \f$\mathrm{[K]}\f$
      * \param pressure Pressure of component \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     {
         Scalar eps = 1e-6;
 
         // use central differences here because one-sided methods do
         // not come with a performance improvement. (central ones are
         // more accurate, though...)
-        Scalar h1 = gasEnthalpy(temperature - eps, pressure);
-        Scalar h2 = gasEnthalpy(temperature + eps, pressure);
+        const Evaluation& h1 = gasEnthalpy(temperature - eps, pressure);
+        const Evaluation& h2 = gasEnthalpy(temperature + eps, pressure);
 
         return (h2 - h1) / (2*eps) ;
     }

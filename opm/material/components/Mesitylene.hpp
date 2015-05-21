@@ -28,8 +28,9 @@
 #include <opm/material/components/Component.hpp>
 #include <opm/material/Constants.hpp>
 
-namespace Opm
-{
+#include <opm/material/common/MathToolbox.hpp>
+
+namespace Opm {
 /*!
  * \ingroup Components
  * \brief Component for Mesitylene
@@ -91,15 +92,18 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
-    static Scalar vaporPressure(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         const Scalar A = 7.07638;
         const Scalar B = 1571.005;
         const Scalar C = 209.728;
 
-        const Scalar T = temperature - 273.15;
+        const Evaluation& T = temperature - 273.15;
 
-        return 100 * 1.334 * std::pow(Scalar(10.0), Scalar(A - (B / (T + C))));
+        return 100 * 1.334 * Toolbox::pow(10.0, A - (B / (T + C)));
     }
 
 
@@ -109,7 +113,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
         // Gauss quadrature rule:
         // Interval: [0K; temperature (K)]
@@ -133,11 +138,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar heatVap(Scalar temperature,
-                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation heatVap(Evaluation temperature, const Evaluation& pressure)
     {
-        temperature = std::min(temperature, criticalTemperature()); // regularization
-        temperature = std::max(temperature, 0.0); // regularization
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        temperature = Toolbox::min(temperature, criticalTemperature()); // regularization
+        temperature = Toolbox::max(temperature, 0.0); // regularization
 
         const Scalar T_crit = criticalTemperature();
         const Scalar Tr1 = boilingTemperature()/criticalTemperature();
@@ -150,9 +157,9 @@ public:
             / (1.07 - Tr1); /* [J/mol] */
 
         /* Variation with temp according to Watson relation eq 7-12.1*/
-        const Scalar Tr2 = temperature/criticalTemperature();
+        const Evaluation& Tr2 = temperature/criticalTemperature();
         const Scalar n = 0.375;
-        const Scalar DH_vap = DH_v_boil * std::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
+        const Evaluation& DH_vap = DH_v_boil * Toolbox::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
         return (DH_vap/molarMass());          // we need [J/kg]
     }
@@ -167,7 +174,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
         return liquidEnthalpy(temperature,pressure) + heatVap(temperature, pressure);
     }
@@ -178,12 +186,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
-    {
-        return IdealGas<Scalar>::density(molarMass(),
-                                         temperature,
-                                         pressure);
-    }
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
+    { return IdealGas<Scalar>::density(Evaluation(molarMass()), temperature, pressure); }
 
     /*!
      * \brief The density of pure mesitylene at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
@@ -191,7 +196,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     { return molarLiquidDensity_(temperature)*molarMass(); }
 
     /*!
@@ -219,20 +225,23 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
+    template <class Evaluation>
+    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure, bool regularize=true)
     {
-        temperature = std::min(temperature, 500.0); // regularization
-        temperature = std::max(temperature, 250.0);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        temperature = Toolbox::min(temperature, 500.0); // regularization
+        temperature = Toolbox::max(temperature, 250.0);
 
         // reduced temperature
-        Scalar Tr = temperature/criticalTemperature();
+        const Evaluation& Tr = temperature/criticalTemperature();
 
         Scalar Fp0 = 1.0;
         Scalar xi = 0.00474;
-        Scalar eta_xi =
-            Fp0*(0.807*std::pow(Tr,0.618)
-                 - 0.357*std::exp(-0.449*Tr)
-                 + 0.34*std::exp(-4.058*Tr)
+        const Evaluation& eta_xi =
+            Fp0*(0.807*Toolbox::pow(Tr,0.618)
+                 - 0.357*Toolbox::exp(-0.449*Tr)
+                 + 0.34*Toolbox::exp(-4.058*Tr)
                  + 0.018);
 
         return eta_xi/xi/1e7; // [Pa s]
@@ -244,15 +253,18 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& pressure)
     {
-        temperature = std::min(temperature, 500.0); // regularization
-        temperature = std::max(temperature, 250.0);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        temperature = Toolbox::min(temperature, 500.0); // regularization
+        temperature = Toolbox::max(temperature, 250.0);
 
         const Scalar A = -6.749;
         const Scalar B = 2010.0;
 
-        return std::exp(A + B/temperature)*1e-3; // [Pa s]
+        return Toolbox::exp(A + B/temperature)*1e-3; // [Pa s]
     }
 
     /*!
@@ -264,28 +276,29 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      */
-    static Scalar liquidHeatCapacity(const Scalar temperature,
-                                     const Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature,
+                                     const Evaluation& pressure)
     {
         /* according Reid et al. : Missenard group contrib. method (s. example 5-8) */
         /* Mesitylen: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was to much!) */
         /* linear interpolation between table values [J/(mol K)]*/
-        Scalar H, CH3, C6H5;
+        Evaluation H, CH3, C6H5;
         if(temperature<298.) {
             // extrapolation for temperature < 273K
-            H = 13.4+1.2*(temperature-273.0)/25.;       // 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
-            CH3 = 40.0+1.6*(temperature-273.0)/25.;     // 40 + 1.6 = 41.6 = CH3(T=298K)
-            C6H5 = 113.0+4.2*(temperature-273.0)/25.;   // 113 + 4.2 =117.2 = C6H5(T=298K)
+            H = 13.4 + 1.2*(temperature-273.0)/25.;       // 13.4 + 1.2 = 14.6 = H(T=298K) i.e. interpolation of table values 273<T<298
+            CH3 = 40.0 + 1.6*(temperature-273.0)/25.;     // 40 + 1.6 = 41.6 = CH3(T=298K)
+            C6H5 = 113.0 + 4.2*(temperature-273.0)/25.;   // 113 + 4.2 =117.2 = C6H5(T=298K)
         }
         else if((temperature>=298.0)&&(temperature<323.)){ // i.e. interpolation of table values 298<T<323
-            H = 14.6+0.9*(temperature-298.0)/25.;
-            CH3 = 41.6+1.9*(temperature-298.0)/25.;
-            C6H5 = 117.2+6.2*(temperature-298.0)/25.;
+            H = 14.6 + 0.9*(temperature-298.0)/25.;
+            CH3 = 41.6 + 1.9*(temperature-298.0)/25.;
+            C6H5 = 117.2 + 6.2*(temperature-298.0)/25.;
         }
         else if((temperature>=323.0)&&(temperature<348.)){// i.e. interpolation of table values 323<T<348
-            H = 15.5+1.2*(temperature-323.0)/25.;
-            CH3 = 43.5+2.3*(temperature-323.0)/25.;
-            C6H5 = 123.4+6.3*(temperature-323.0)/25.;
+            H = 15.5 + 1.2*(temperature-323.0)/25.;
+            CH3 = 43.5 + 2.3*(temperature-323.0)/25.;
+            C6H5 = 123.4 + 6.3*(temperature-323.0)/25.;
         }
         else {
             assert(temperature>=348.0);
@@ -308,14 +321,17 @@ protected:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      */
-    static Scalar molarLiquidDensity_(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation molarLiquidDensity_(Evaluation temperature)
     {
-        temperature = std::min(temperature, 500.0); // regularization
-        temperature = std::max(temperature, 250.0);
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        temperature = Toolbox::min(temperature, 500.0); // regularization
+        temperature = Toolbox::max(temperature, 250.0);
 
         const Scalar Z_RA = 0.2556; // from equation
-        const Scalar expo = 1.0 + std::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
-        Scalar V = Consts::R*criticalTemperature()/criticalPressure()*std::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
+        const Evaluation& expo = 1.0 + Toolbox::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
+        const Evaluation& V = Consts::R*criticalTemperature()/criticalPressure()*Toolbox::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
 
         return 1.0/V; // molar density [mol/m^3]
     }

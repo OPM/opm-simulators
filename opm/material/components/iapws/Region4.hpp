@@ -25,6 +25,8 @@
 #ifndef OPM_IAPWS_REGION4_HPP
 #define OPM_IAPWS_REGION4_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <cmath>
 
 namespace Opm {
@@ -51,12 +53,15 @@ public:
      * \brief Returns the saturation pressure in \f$\mathrm{[Pa]}\f$ of pure water at a given
      *        temperature.
      *
-     *\param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      *
      * The saturation pressure is often also called vapor pressure.
      */
-    static Scalar saturationPressure(Scalar temperature)
+    template <class Evaluation>
+    static Evaluation saturationPressure(const Evaluation& temperature)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
@@ -64,13 +69,13 @@ public:
             0.65017534844798e3
         };
 
-        Scalar sigma = temperature + n[8]/(temperature - n[9]);
+        const Evaluation& sigma = temperature + n[8]/(temperature - n[9]);
 
-        Scalar A = (sigma + n[0])*sigma + n[1];
-        Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
-        Scalar C = (n[5]*sigma + n[6])*sigma + n[7];
+        const Evaluation& A = (sigma + n[0])*sigma + n[1];
+        const Evaluation& B = (n[2]*sigma + n[3])*sigma + n[4];
+        const Evaluation& C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Scalar tmp = 2*C/(std::sqrt(B*B - 4*A*C) - B);
+        Evaluation tmp = 2*C/(Toolbox::sqrt(B*B - 4*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
@@ -81,27 +86,30 @@ public:
      * \brief Returns the saturation temperature in \f$\mathrm{[K]}\f$ of pure water at a given
      *        pressure.
      *
-     *\param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      *
      * The saturation pressure is often also called vapor pressure.
      */
-    static Scalar vaporTemperature(Scalar pressure)
+    template <class Evaluation>
+    static Evaluation vaporTemperature(const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
             -0.48232657361591e4, 0.40511340542057e6, -0.23855557567849,
             0.65017534844798e3
         };
-        Scalar beta = pow((pressure/1e6 /*from Pa to MPa*/), (1./4.));
-        Scalar beta2 = pow(beta, 2.);
-        Scalar E = beta2 + n[2] * beta + n[5];
-        Scalar F = n[0]*beta2 + n[3]*beta + n[6];
-        Scalar G = n[1]*beta2 + n[4]*beta + n[7];
+        const Evaluation& beta = pow((pressure/1e6 /*from Pa to MPa*/), (1./4.));
+        const Evaluation& beta2 = pow(beta, 2.);
+        const Evaluation& E = beta2 + n[2] * beta + n[5];
+        const Evaluation& F = n[0]*beta2 + n[3]*beta + n[6];
+        const Evaluation& G = n[1]*beta2 + n[4]*beta + n[7];
 
-        Scalar D = ( 2.*G)/(-F -std::sqrt(pow(F,2.) - 4.*E*G));
+        const Evaluation& D = ( 2.*G)/(-F -Toolbox::sqrt(pow(F,2.) - 4.*E*G));
 
-        Scalar temperature = (n[9] + D - std::sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
+        const Evaluation& temperature = (n[9] + D - Toolbox::sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
 
         return temperature;
     }

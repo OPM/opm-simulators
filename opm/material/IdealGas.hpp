@@ -25,9 +25,7 @@
 
 #include <opm/material/Constants.hpp>
 
-namespace Opm
-{
-
+namespace Opm {
 /*!
  * \brief Relations valid for an ideal gas.
  */
@@ -42,25 +40,28 @@ public:
      * \brief The density of the gas in \f$\mathrm{[kg/m^3]}\f$, depending on
      *        pressure, temperature and average molar mass of the gas.
      */
-    static Scalar density(Scalar avgMolarMass,
-                          Scalar temperature,
-                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation density(const Evaluation& avgMolarMass,
+                              const Evaluation& temperature,
+                              const Evaluation& pressure)
     { return pressure*avgMolarMass/(R*temperature); }
 
     /*!
      * \brief The pressure of the gas in \f$\mathrm{[N/m^2]}\f$, depending on
      *        the molar density and temperature.
      */
-    static Scalar pressure(Scalar temperature,
-                           Scalar rhoMolar)
+    template <class Evaluation>
+    static Evaluation pressure(const Evaluation& temperature,
+                               const Evaluation& rhoMolar)
     { return R*temperature*rhoMolar; }
 
     /*!
      * \brief The molar density of the gas \f$\mathrm{[mol/m^3]}\f$,
      *        depending on pressure and temperature.
      */
-    static Scalar molarDensity(Scalar temperature,
-                                Scalar pressure)
+    template <class Evaluation>
+    static Evaluation molarDensity(const Evaluation& temperature,
+                                   const Evaluation& pressure)
     { return pressure/(R*temperature); }
 };
 

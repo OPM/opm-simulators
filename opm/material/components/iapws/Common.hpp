@@ -26,6 +26,7 @@
 #define OPM_IAPWS_COMMON_HPP
 
 #include <opm/material/Constants.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <cmath>
 
@@ -92,10 +93,13 @@ public:
      * IAPWS: "Release on the IAPWS Formulation 2008 for the Viscosity
      * of Ordinary Water Substance", http://www.iapws.org/relguide/visc.pdf
      */
-    static Scalar viscosity(Scalar temperature, Scalar rho)
+    template <class Evaluation>
+    static Evaluation viscosity(const Evaluation& temperature, const Evaluation& rho)
     {
-        Scalar rhoBar = rho/322.0;
-        Scalar TBar = temperature/criticalTemperature;
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        Evaluation rhoBar = rho/322.0;
+        Evaluation TBar = temperature/criticalTemperature;
 
         // muBar = muBar_1
         const Scalar Hij[6][7] = {
@@ -107,8 +111,8 @@ public:
             { 0, 1.20573e-1, 0, 0, 0, 0,-5.93264e-4 }
         };
 
-        Scalar tmp, tmp2, tmp3 = 1;
-        Scalar muBar = 0;
+        Evaluation tmp, tmp2, tmp3 = 1;
+        Evaluation muBar = 0;
         for (int i = 0; i <= 5; ++i) {
             tmp = 0;
             tmp2 = 1;
@@ -120,10 +124,10 @@ public:
             tmp3 *= 1.0/TBar - 1;
         };
         muBar *= rhoBar;
-        muBar = std::exp(muBar);
+        muBar = Toolbox::exp(muBar);
 
         // muBar *= muBar_0
-        muBar  *= 100*std::sqrt(TBar);
+        muBar  *= 100*Toolbox::sqrt(TBar);
         const Scalar H[4] = {
             1.67752, 2.20462, 0.6366564, -0.241605
         };
@@ -151,8 +155,11 @@ public:
     * \param T absolute temperature in K
     * \param rho density of water in kg/m^3
     */
-    static Scalar thermalConductivityIAPWS(Scalar T, Scalar rho)
+    template <class Evaluation>
+    static Evaluation thermalConductivityIAPWS(const Evaluation& T, const Evaluation& rho)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         static const Scalar thcond_tstar = 647.26 ;
         static const Scalar thcond_rhostar = 317.7 ;
         /*static const Scalar thcond_kstar = 1.0 ;*/
@@ -182,13 +189,13 @@ public:
             ,-0.00422464
         };
 
-        Scalar Tbar = T / thcond_tstar;
-        Scalar rhobar = rho / thcond_rhostar;
+        Evaluation Tbar = T / thcond_tstar;
+        Evaluation rhobar = rho / thcond_rhostar;
 
         /* fast implementation... minimised calls to 'pow' routine... */
-        Scalar Troot = std::sqrt(Tbar);
-        Scalar Tpow = Troot;
-        Scalar lam = 0;
+        Evaluation Troot = Toolbox::sqrt(Tbar);
+        Evaluation Tpow = Troot;
+        Evaluation lam = 0;
 
         for(int k = 0; k < thcond_a_count; ++k) {
             lam += thcond_a[k] * Tpow;
@@ -198,29 +205,28 @@ public:
         lam +=
             thcond_b0 + thcond_b1
             * rhobar + thcond_b2
-            * std::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
+            * Toolbox::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
 
-        Scalar DTbar = std::abs(Tbar - 1) + thcond_c4;
-        Scalar DTbarpow = std::pow(DTbar, 3./5);
-        Scalar Q = 2. + thcond_c5 / DTbarpow;
+        Evaluation DTbar = Toolbox::abs(Tbar - 1) + thcond_c4;
+        Evaluation DTbarpow = Toolbox::pow(DTbar, 3./5);
+        Evaluation Q = 2. + thcond_c5 / DTbarpow;
 
-        Scalar S;
-        if(Tbar >= 1){
+        Evaluation S;
+        if(Tbar >= 1)
             S = 1. / DTbar;
-        }else{
+        else
             S = thcond_c6 / DTbarpow;
-        }
 
-        Scalar rhobar18 = std::pow(rhobar, 1.8);
-        Scalar rhobarQ = std::pow(rhobar, Q);
+        Evaluation rhobar18 = Toolbox::pow(rhobar, 1.8);
+        Evaluation rhobarQ = Toolbox::pow(rhobar, Q);
 
         lam +=
-            (thcond_d1 / std::pow(Tbar,10) + thcond_d2) * rhobar18 *
-            std::exp(thcond_c1 * (1 - rhobar * rhobar18))
+            (thcond_d1 / Toolbox::pow(Tbar,10.0) + thcond_d2) * rhobar18 *
+            Toolbox::exp(thcond_c1 * (1 - rhobar * rhobar18))
             + thcond_d3 * S * rhobarQ *
-            std::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
+            Toolbox::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
             + thcond_d4 *
-            std::exp(thcond_c2 * std::pow(Troot,3) + thcond_c3 / std::pow(rhobar,5));
+            Toolbox::exp(thcond_c2 * Toolbox::pow(Troot,3.0) + thcond_c3 / Toolbox::pow(rhobar,5.0));
         return /*thcond_kstar * */ lam;
     }
 };

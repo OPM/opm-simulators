@@ -24,8 +24,10 @@
 #ifndef OPM_DNAPL_HPP
 #define OPM_DNAPL_HPP
 
-#include <opm/material/IdealGas.hpp>
 #include "Component.hpp"
+
+#include <opm/material/IdealGas.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 namespace Opm {
 /*!
@@ -49,19 +51,10 @@ public:
     { return "DNAPL"; }
 
     /*!
-     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
+     * \brief Returns true iff the gas phase is assumed to be ideal
      */
-    static Scalar molarMass()
-    { return 131.39e-3; /* [kg/mol] */ }
-
-    /*!
-     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
-     *        at a given temperature.
-     *
-     * \param T temperature of component in \f$\mathrm{[K]}\f$
-     */
-    static Scalar vaporPressure(Scalar T)
-    { return 3900; /* [Pa] (at 20C) */ }
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief Returns true iff the gas phase is assumed to be compressible
@@ -76,23 +69,40 @@ public:
     { return false; }
 
     /*!
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of TCE.
+     */
+    static Scalar molarMass()
+    {
+        return 131.39e-3; // [kg/mol]
+    }
+
+    /*!
+     * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of pure TCE
+     *        at a given temperature.
+     *
+     * \param T temperature of component in \f$\mathrm{[K]}\f$
+     */
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& T)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::createConstant(3900); // [Pa] (at 20C)
+    }
+
+    /*!
      * \brief The density of steam at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
-    */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+     */
+    template <class Evaluation>
+    static Evaluation gasDensity(Evaluation temperature, Evaluation pressure)
     {
-        return IdealGas<Scalar>::density(molarMass(),
+        return IdealGas<Scalar>::density(Evaluation(molarMass()),
                                          temperature,
                                          pressure);
     }
-
-    /*!
-     * \brief Returns true iff the gas phase is assumed to be ideal
-     */
-    static bool gasIsIdeal()
-    { return true; }
 
     /*!
      * \brief The density of pure TCE at a given pressure and temperature \f$\mathrm{[kg/m^3]}\f$.
@@ -100,8 +110,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
-    { return 1460.0; /* [kg/m^3] */ }
+    template <class Evaluation>
+    static Evaluation liquidDensity(Evaluation temperature, Evaluation pressure)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::createConstant(1460.0); // [kg/m^3]
+    }
 
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of pure TCE.
@@ -109,8 +124,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
-    { return 5.7e-4; /* [Pa s] */ }
+    template <class Evaluation>
+    static Evaluation liquidViscosity(Evaluation temperature, Evaluation pressure)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::createConstant(5.7e-4); // [Pa s]
+    }
 
     /*!
      * \brief The enthalpy of pure TCE at a given pressure and temperature \f$\mathrm{[J/kg]}\f$.
@@ -118,19 +138,27 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
-    { return 120.0/molarMass() * temperature; /* [J/kg] */ }
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(Evaluation temperature, Evaluation pressure)
+    {
+        return 120.0/molarMass() * temperature; // [J/kg]
+    }
 
     /*!
      * \brief Specific heat conductivity of liquid TCE \f$\mathrm{[W/(m K)]}\f$.
      *
-     * \todo  The value returned here is a guess which does not necessarily correspond to reality in any way!
+     * \todo The value returned here is a guess which does not necessarily correspond to reality in any way!
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
-    { return 0.3; }
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(Evaluation temperature, Evaluation pressure)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::createConstant(0.3);
+    }
 };
 
 } // namespace Opm

@@ -26,6 +26,7 @@
 #define OPM_AIR_HPP
 
 #include <opm/material/components/Component.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/IdealGas.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
@@ -47,10 +48,28 @@ class Air : public Component<Scalar, Air<Scalar> >
 
 public:
     /*!
+     * \brief Returns true iff the liquid phase is assumed to be compressible
+     */
+    static bool liquidIsCompressible()
+    { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidIsCompressible()"); }
+
+    /*!
      * \brief A human readable name for the \f$Air\f$.
      */
     static const char *name()
     { return "Air"; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of \f$AIR\f$.
@@ -77,24 +96,10 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of phase in \f$\mathrm{[Pa]}\f$
-    */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
-    {
-        // Assume an ideal gas
-        return IdealGas::density(molarMass(), temperature, pressure);
-    }
-
-    /*!
-     * \brief Returns true iff the gas phase is assumed to be compressible
      */
-    static bool gasIsCompressible()
-    { return true; }
-
-    /*!
-     * \brief Returns true iff the gas phase is assumed to be ideal
-     */
-    static bool gasIsIdeal()
-    { return true; }
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
+    { return IdealGas::density(Evaluation(molarMass()), temperature, pressure); }
 
     /*!
      * \brief The pressure of gaseous \f$AIR\f$ at a given density and temperature \f$\mathrm{[Pa]}\f$.
@@ -102,11 +107,10 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
-    {
-        // Assume an ideal gas
-        return IdealGas::pressure(temperature, density/molarMass());
-    }
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, Scalar density)
+    { return IdealGas::pressure(temperature, density/molarMass()); }
+
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$AIR\f$ at a given pressure and temperature.
      *
@@ -128,41 +132,41 @@ public:
      * V_c = (R*T_c)/p_c
      *
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        const Scalar Tc = criticalTemperature();
-        const Scalar Vc = 84.525138; // critical specific volume [cm^3/mol]
-        const Scalar omega = 0.078; // accentric factor
-        const Scalar M = molarMass() * 1e3; // molar mas [g/mol]
-        const Scalar dipole = 0.0; // dipole moment [debye]
+        Scalar Tc = criticalTemperature();
+        Scalar Vc = 84.525138; // critical specific volume [cm^3/mol]
+        Scalar omega = 0.078; // accentric factor
+        Scalar M = molarMass() * 1e3; // molar mas [g/mol]
+        Scalar dipole = 0.0; // dipole moment [debye]
 
         Scalar mu_r4 = 131.3 * dipole / std::sqrt(Vc * Tc);
         mu_r4 *= mu_r4;
         mu_r4 *= mu_r4;
 
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
-        Scalar Tstar = 1.2593 * temperature/Tc;
-        Scalar Omega_v =
-            1.16145*std::pow(Tstar, -0.14874) +
-            0.52487*std::exp(- 0.77320*Tstar) +
-            2.16178*std::exp(- 2.43787*Tstar);
-        Scalar mu = 40.785*Fc*std::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
-
-        // convertion from micro poise to Pa s
-        return mu/1e6 / 10;
+        Evaluation Tstar = 1.2593 * temperature/Tc;
+        Evaluation Omega_v =
+            1.16145*Toolbox::pow(Tstar, -0.14874) +
+            0.52487*Toolbox::exp(- 0.77320*Tstar) +
+            2.16178*Toolbox::exp(- 2.43787*Tstar);
+        return 40.7851e-7*Fc*Toolbox::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
     }
 
     // simpler method, from old constrelAir.hh
-    static Scalar simpleGasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        Scalar r;
-        if(temperature < 273.15 || temperature > 660.)
-            OPM_THROW(NumericalIssue, "Air: Temperature out of range at ");
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        r = 1.496*1.E-6*std::pow(temperature,1.5)/(temperature+120.);
-        return (r);
-
+        if(temperature < 273.15 || temperature > 660.) {
+            OPM_THROW(NumericalIssue,
+                      "Air: Temperature (" << temperature << "K) out of range");
+        }
+        return 1.496e-6*Toolbox::pow(temperature, 1.5)/(temperature + 120);
     }
 
     /*!
@@ -176,9 +180,10 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
-        return 1005*(temperature-273.15);
+        return 1005*(temperature - 273.15);
     }
 
     /*!
@@ -192,14 +197,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasInternalEnergy(Scalar temperature,
-                                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
         return
             gasEnthalpy(temperature, pressure)
-            -
-            IdealGas::R * temperature // = pressure * molar volume for an ideal gas
-            / molarMass(); // conversion from [J/(mol K)] to [J/(kg K)]
+            - (IdealGas::R*temperature/molarMass()); // <- specific volume of an ideal gas
     }
 
     /*!
@@ -213,8 +217,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasThermalConductivity(Scalar temperature,
-                                                  Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature,
+                                             const Evaluation& pressure)
     {
         // Isobaric Properties for Nitrogen in: NIST Standard
         // see http://webbook.nist.gov/chemistry/fluid/
@@ -241,26 +246,30 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature,
+                                      const Evaluation& pressure)
     {
-        // scale temperature with referenence temp of 100K
-        Scalar phi = temperature/100;
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        Scalar c_p =
+        // scale temperature by reference temp of 100K
+        Evaluation phi = temperature/100;
+
+        Evaluation c_p =
             0.661738E+01
             -0.105885E+01 * phi
-            +0.201650E+00 * std::pow(phi,2.)
-            -0.196930E-01 * std::pow(phi,3.)
-            +0.106460E-02 * std::pow(phi,4.)
-            -0.303284E-04 * std::pow(phi,5.)
-            +0.355861E-06 * std::pow(phi,6.);
+            +0.201650E+00 * Toolbox::pow(phi,2.)
+            -0.196930E-01 * Toolbox::pow(phi,3.)
+            +0.106460E-02 * Toolbox::pow(phi,4.)
+            -0.303284E-04 * Toolbox::pow(phi,5.)
+            +0.355861E-06 * Toolbox::pow(phi,6.);
         c_p +=
-            -0.549169E+01 * std::pow(phi,-1.)
-            +0.585171E+01* std::pow(phi,-2.)
-            -0.372865E+01* std::pow(phi,-3.)
-            +0.133981E+01* std::pow(phi,-4.)
-            -0.233758E+00* std::pow(phi,-5.)
-            +0.125718E-01* std::pow(phi,-6.);
+            -0.549169E+01 * Toolbox::pow(phi,-1.)
+            +0.585171E+01* Toolbox::pow(phi,-2.)
+            -0.372865E+01* Toolbox::pow(phi,-3.)
+            +0.133981E+01* Toolbox::pow(phi,-4.)
+            -0.233758E+00* Toolbox::pow(phi,-5.)
+            +0.125718E-01* Toolbox::pow(phi,-6.);
         c_p *= IdealGas::R / (molarMass() * 1000); // in J/mol/K * mol / kg / 1000 = kJ/kg/K
 
         return  c_p;

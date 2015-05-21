@@ -24,6 +24,7 @@
 #define OPM_SIMPLE_H2O_HPP
 
 #include <opm/material/IdealGas.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 
 #include "Component.hpp"
 
@@ -58,6 +59,24 @@ public:
      */
     static const char *name()
     { return "H2O"; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be compressible
+     */
+    static bool gasIsCompressible()
+    { return true; }
+
+    /*!
+     * \brief Returns true iff the liquid phase is assumed to be compressible
+     */
+    static bool liquidIsCompressible()
+    { return false; }
+
+    /*!
+     * \brief Returns true iff the gas phase is assumed to be ideal
+     */
+    static bool gasIsIdeal()
+    { return true; }
 
     /*!
      * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of water.
@@ -101,8 +120,11 @@ public:
      * 1997 for the Thermodynamic Properties of Water and Steam",
      * http://www.iapws.org/relguide/IF97-Rev.pdf
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& T)
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         if (T > criticalTemperature())
             return criticalPressure();
         if (T < tripleTemperature())
@@ -115,17 +137,17 @@ public:
             0.65017534844798e3
         };
 
-        Scalar sigma = T + n[8]/(T - n[9]);
+        Evaluation sigma = T + n[8]/(T - n[9]);
 
-        Scalar A = (sigma + n[0])*sigma + n[1];
-        Scalar B = (n[2]*sigma + n[3])*sigma + n[4];
-        Scalar C = (n[5]*sigma + n[6])*sigma + n[7];
+        Evaluation A = (sigma + n[0])*sigma + n[1];
+        Evaluation B = (n[2]*sigma + n[3])*sigma + n[4];
+        Evaluation C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Scalar tmp = Scalar(2.0)*C/(std::sqrt(B*B - Scalar(4.0)*A*C) - B);
+        Evaluation tmp = 2.0*C/(Toolbox::sqrt(B*B - 4.0*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
-        return Scalar(1e6)*tmp;
+        return 1e6*tmp;
     }
 
     /*!
@@ -134,8 +156,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasEnthalpy(Scalar temperature,
-                                    Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature,
+                                  const Evaluation& pressure)
     { return 1976*(temperature - 293.15) + 2.45e6; }
 
     /*!
@@ -144,8 +167,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidEnthalpy(Scalar temperature,
-                                       Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature,
+                                     const Evaluation& pressure)
     { return 4180*(temperature - 293.15); }
 
     /*!
@@ -161,8 +185,9 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasInternalEnergy(Scalar temperature,
-                                          Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature,
+                                        const Evaluation& pressure)
     {
         return
             gasEnthalpy(temperature, pressure) -
@@ -176,12 +201,14 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature,
-                                             Scalar pressure)
-    { return
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature,
+                                           const Evaluation& pressure)
+    {
+        return
             liquidEnthalpy(temperature, pressure) -
-            pressure/liquidDensity(temperature, pressure); }
-
+            pressure/liquidDensity(temperature, pressure);
+    }
 
     /*!
      * \brief Specific heat conductivity of liquid water \f$\mathrm{[W/(m K)]}\f$.
@@ -189,9 +216,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidThermalConductivity(Scalar temperature,
-                                                  Scalar pressure)
-    { return 0.578078; } // conductivity of liquid water [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& temperature,
+                                                const Evaluation& pressure)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        return Toolbox::createConstant(0.578078); // conductivity of liquid water [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+    }
 
     /*!
      * \brief Specific heat conductivity of steam \f$\mathrm{[W/(m K)]}\f$.
@@ -199,21 +230,13 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasThermalConductivity(Scalar temperature,
-                                                  Scalar pressure)
-    { return 0.028224; } // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
-
-    /*!
-     * \brief Returns true iff the gas phase is assumed to be compressible
-     */
-    static bool gasIsCompressible()
-    { return true; }
-
-    /*!
-     * \brief Returns true iff the liquid phase is assumed to be compressible
-     */
-    static bool liquidIsCompressible()
-    { return false; }
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature,
+                                             const Evaluation& pressure)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        return Toolbox::createConstant(0.028224); // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+    }
 
     /*!
      * \brief The density \f$\mathrm{[kg/m^3]}\f$ of steam at a given pressure and temperature.
@@ -221,17 +244,12 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
         // Assume an ideal gas
         return molarMass()*IdealGas::molarDensity(temperature, pressure);
     }
-
-    /*!
-     * \brief Returns true iff the gas phase is assumed to be ideal
-     */
-    static bool gasIsIdeal()
-    { return true; }
 
     /*!
      * \brief The pressure of steam in \f$\mathrm{[Pa]}\f$ at a given density and temperature.
@@ -239,7 +257,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar gasPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation gasPressure(const Evaluation& temperature, const Evaluation& density)
     {
         // Assume an ideal gas
         return IdealGas::pressure(temperature, density/molarMass());
@@ -251,9 +270,11 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        return 1000;
+        typedef MathToolbox<Evaluation> Toolbox;
+        return Toolbox::createConstant(1000);
     }
 
     /*!
@@ -262,10 +283,11 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
-    static Scalar liquidPressure(Scalar temperature, Scalar density)
+    template <class Evaluation>
+    static Evaluation liquidPressure(const Evaluation& temperature, const Evaluation& density)
     {
         OPM_THROW(std::logic_error,
-                   "The liquid pressure is undefined for incompressible fluids");
+                  "The liquid pressure is undefined for incompressible fluids");
     }
 
     /*!
@@ -275,9 +297,12 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure, bool regularize=true)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature,
+                                   const Evaluation& pressure)
     {
-        return 1e-05;
+        typedef MathToolbox<Evaluation> Toolbox;
+        return Toolbox::createConstant(1e-05);
     }
 
     /*!
@@ -286,9 +311,11 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        return 1e-03;
+        typedef MathToolbox<Evaluation> Toolbox;
+        return Toolbox::createConstant(1e-03);
     }
 };
 

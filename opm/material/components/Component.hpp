@@ -36,10 +36,12 @@ namespace Opm {
  * \tparam Scalar The type used for scalar values
  * \tparam Implementation Necessary for static polymorphism
  */
-template <class Scalar, class Implementation>
+template <class ScalarT, class Implementation>
 class Component
 {
 public:
+    typedef ScalarT Scalar;
+
     static const bool isTabulated = false;
 
     /*!
@@ -116,9 +118,10 @@ public:
      * \brief The vapor pressure in \f$\mathrm{[Pa]}\f$ of the component at a given
      *        temperature in \f$\mathrm{[K]}\f$.
      *
-     * \param T temperature of the component in \f$\mathrm{[K]}\f$
+     * \param temperature temperature of the component in \f$\mathrm{[K]}\f$
      */
-    static Scalar vaporPressure(Scalar T)
+    template <class Evaluation>
+    static Evaluation vaporPressure(const Evaluation& temperature)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::vaporPressure()"); }
 
     /*!
@@ -127,7 +130,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasDensity()"); }
 
     /*!
@@ -136,7 +140,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidDensity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidDensity()"); }
 
     /*!
@@ -145,7 +150,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasEnthalpy()"); }
 
     /*!
@@ -154,7 +160,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidEnthalpy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidEnthalpy()"); }
 
     /*!
@@ -163,7 +170,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar gasInternalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasInternalEnergy()"); }
 
     /*!
@@ -172,7 +180,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static const Scalar liquidInternalEnergy(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidInternalEnergy()"); }
 
     /*!
@@ -182,7 +191,8 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar gasViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasViscosity()"); }
 
     /*!
@@ -191,31 +201,36 @@ public:
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar liquidViscosity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidViscosity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a gas.
      */
-    static Scalar gasThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasThermalConductivity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a liquid.
      */
-    static Scalar liquidThermalConductivity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidThermalConductivity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a gas.
      */
-    static Scalar gasHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasHeatCapacity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a liquid.
      */
-    static Scalar liquidHeatCapacity(Scalar temperature, Scalar pressure)
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidHeatCapacity()"); }
 };
 
