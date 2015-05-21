@@ -40,7 +40,6 @@ class Co2InjectionFlash : public Opm::NcpFlash<Scalar, FluidSystem>
     typedef Opm::NcpFlash<Scalar, FluidSystem> ParentType;
 
     typedef typename FluidSystem::ParameterCache ParameterCache;
-    typedef typename ParentType::ComponentVector ComponentVector;
 
     enum { numPhases = FluidSystem::numPhases };
 
@@ -48,7 +47,7 @@ public:
     /*!
      * \brief Guess initial values for all quantities.
      */
-    template <class FluidState>
+    template <class FluidState, class ComponentVector>
     static void guessInitial(FluidState &fluidState, ParameterCache &paramCache,
                              const ComponentVector &globalMolarities)
     {
