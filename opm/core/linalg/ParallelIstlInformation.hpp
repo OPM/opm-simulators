@@ -403,6 +403,37 @@ private:
         BinaryOperator b_;
     };
 
+    /// \brief An operator for computing a parallel inner product.
+    template<class T>
+    struct InnerProductFunctor
+    {
+        /// \brief Apply the underlying binary operator according to the mask.
+        ///
+        /// The BinaryOperator will be called with t1, and mask*t2.
+        /// \param t1 first value
+        /// \param t2 second value (might be modified).
+        /// \param mask The mask (0 or 1).
+        template<class T1>
+        T operator()(const T& t1, const T& t2, const T1& mask)
+        {
+            T masked =  maskValue(t2, mask);
+            return t1 + masked * masked;
+        }
+        template<class T1>
+        T maskValue(const T& t, const T1& mask)
+        {
+            return t*mask;
+        }
+        std::plus<T> localOperator()
+        {
+            return std::plus<T>();
+        }
+        T getInitialValue()
+        {
+            return T();
+        }
+    };
+
     /// \brief An operator that converts the values where mask is 0 to the minimum value
     ///
     /// Could be used to compute a global maximum.
@@ -548,6 +579,12 @@ private:
         return MaskToMaxOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
             (std::pointer_to_binary_function<const T&,const T&,const T&>
              ((const T&(*)(const T&, const T&))std::min<T>));
+    }
+    template<class T>
+    InnerProductFunctor<T>
+    makeInnerProductFunctor()
+    {
+        return InnerProductFunctor<T>();
     }
     } // end namespace Reduction
 } // end namespace Opm

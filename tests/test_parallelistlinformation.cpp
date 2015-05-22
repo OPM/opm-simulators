@@ -48,16 +48,20 @@ void runSumMaxMinTest(const int offset)
     assert(comm.indexSet()->size()==x.size());
     for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
         x[i->local()]=i->global()+offset;
-    auto containers = std::make_tuple(x, x, x);
+    auto containers = std::make_tuple(x, x, x, x);
     auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
                                       Opm::Reduction::makeGlobalMaxFunctor<int>(),
-                                      Opm::Reduction::makeGlobalMinFunctor<int>());
-    auto values     = std::make_tuple(0,0,100000);
+                                      Opm::Reduction::makeGlobalMinFunctor<int>(),
+                                      Opm::Reduction::makeInnerProductFunctor<int>());
+    auto values     = std::make_tuple(0,0,100000, 0);
     auto oldvalues  = values;
+    start = offset;
+    end   = start+N;
     comm.computeReduction(containers,operators,values);
     BOOST_CHECK(std::get<0>(values)==std::get<0>(oldvalues)+((N-1+2*offset)*N)/2);
     BOOST_CHECK(std::get<1>(values)==std::max(N+offset-1, std::get<1>(oldvalues)));
     BOOST_CHECK(std::get<2>(values)==std::min(offset, std::get<2>(oldvalues)));
+    BOOST_CHECK(std::get<3>(values)==((end-1)*end*(2*end-1)-(start-1)*start*(2*start-1))/6+std::get<3>(oldvalues));
 }
 
 BOOST_AUTO_TEST_CASE(tupleReductionTest)
