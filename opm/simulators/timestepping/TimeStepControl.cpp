@@ -1,5 +1,7 @@
 /*
   Copyright 2014 IRIS AS
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
 
