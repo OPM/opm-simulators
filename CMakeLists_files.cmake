@@ -94,6 +94,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
+	opm/autodiff/BlackoilModel.hpp
+	opm/autodiff/BlackoilModel_impl.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
@@ -108,6 +110,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
+	opm/autodiff/NewtonSolver.hpp
+	opm/autodiff/NewtonSolver_impl.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp
