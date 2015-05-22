@@ -19,10 +19,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//#include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp>
-#include <opm/polymer/fullyimplicit/FullyImplicitBlackoilPolymerSolver.hpp>
+#include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
+#include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 
@@ -31,8 +31,8 @@
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/NewtonSolver.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
@@ -135,7 +135,7 @@ namespace Opm
         computeRESV(const std::size_t               step,
                     const Wells*                    wells,
                     const BlackoilState&     x,
-                    WellStateFullyImplicitBlackoil& xw);
+                    WellStateFullyImplicitBlackoilPolymer& xw);
     };
 
 
@@ -236,7 +236,7 @@ namespace Opm
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::Impl::run(SimulatorTimer& timer,
                                                                         PolymerBlackoilState& state)
     {
-        WellStateFullyImplicitBlackoil prev_well_state;
+        WellStateFullyImplicitBlackoilPolymer prev_well_state;
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -247,7 +247,13 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typename FullyImplicitBlackoilPolymerSolver<T>::SolverParameter solverParam( param_ );
+        typedef T Grid;
+        typedef BlackoilPolymerModel<Grid> Model;
+        typedef typename Model::ModelParameters ModelParams;
+        ModelParams modelParams( param_ );
+        typedef NewtonSolver<Model> Solver;
+        typedef typename Solver::SolverParameters SolverParams;
+        SolverParams solverParams( param_ );
 
         //adaptive time stepping
         //        std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -290,7 +296,7 @@ namespace Opm
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability());
             const Wells* wells = wells_manager.c_wells();
-            WellStateFullyImplicitBlackoil well_state;
+            WellStateFullyImplicitBlackoilPolymer well_state;
             well_state.init(wells, state.blackoilState(), prev_well_state);
 
             // compute polymer inflow
@@ -309,7 +315,8 @@ namespace Opm
             polymer_inflow_ptr->getInflowValues(timer.simulationTimeElapsed(), 
                                                 timer.simulationTimeElapsed() + timer.currentStepLength(),
                                                 polymer_inflow_c);
-            
+            well_state.polymerInflow() = polymer_inflow_c;
+
             // write simulation state at the report stage
             output_writer_.writeTimeStep( timer, state.blackoilState(), well_state );
 
@@ -323,10 +330,11 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            FullyImplicitBlackoilPolymerSolver<T> solver(solverParam, grid_, props_, geo_, rock_comp_props_, polymer_props_, wells, solver_, has_disgas_, has_vapoil_, has_polymer_, terminal_output_);
+            Model model(modelParams, grid_, props_, geo_, rock_comp_props_, polymer_props_, wells, solver_, has_disgas_, has_vapoil_, has_polymer_, terminal_output_);
             if (!threshold_pressures_by_face_.empty()) {
-                solver.setThresholdPressures(threshold_pressures_by_face_);
+                model.setThresholdPressures(threshold_pressures_by_face_);
             }
+            Solver solver(solverParams, model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
@@ -337,7 +345,7 @@ namespace Opm
             //                adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
             //            } else {
                 // solve for complete report step
-            solver.step(timer.currentStepLength(), state, well_state, polymer_inflow_c);
+            solver.step(timer.currentStepLength(), state, well_state);
                 //            }
 
             // take time that was used to solve system for this reportStep
@@ -504,7 +512,7 @@ namespace Opm
     Impl::computeRESV(const std::size_t               step,
                       const Wells*                    wells,
                       const BlackoilState&            x,
-                      WellStateFullyImplicitBlackoil& xw)
+                      WellStateFullyImplicitBlackoilPolymer& xw)
     {
         typedef SimFIBODetails::WellMap WellMap;
 
