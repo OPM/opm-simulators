@@ -21,7 +21,10 @@
 
 #include <vector>
 
+#include <boost/any.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <opm/core/simulator/TimeStepControlInterface.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 namespace Opm
 {
@@ -73,8 +76,12 @@ namespace Opm
         /// \brief constructor
         /// \param tol      tolerance for the relative changes of the numerical solution to be accepted
         ///                 in one time step (default is 1e-3)
+        /// \paramm pinfo   The information about the parallel information. Needed to
+        ///                 compute parallel scalarproducts.
         /// \param verbose  if true get some output (default = false)
-        PIDTimeStepControl( const double tol = 1e-3, const bool verbose = false );
+        PIDTimeStepControl( const double tol = 1e-3,
+                            const boost::any& pinfo = boost::any(),
+                            const bool verbose = false );
 
         /// \brief \copydoc TimeStepControlInterface::initialize
         void initialize( const SimulatorState& state );
@@ -83,15 +90,38 @@ namespace Opm
         double computeTimeStepSize( const double dt, const int /* iterations */, const SimulatorState& state ) const;
 
     protected:
-        // return inner product for given container, here std::vector
         template <class Iterator>
-        double euclidianNormSquared( Iterator it, const Iterator end ) const
+        double euclidianNormSquared( Iterator it, const Iterator end,
+                                           int num_components=1 ) const
         {
-            double product = 0.0 ;
-            for( ; it != end; ++it ) {
-                product += ( *it * *it );
+#if HAVE_MPI
+            if ( parallel_information_.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(parallel_information_);
+                std::size_t size_per_component = (end - it) / num_components;
+                assert((end - it) == num_components * size_per_component);
+                double component_product = 0.0;
+                for( std::size_t i = 0; i < num_components; ++i )
+                {
+                    auto component_container =
+                        boost::make_iterator_range(it + i * size_per_component,
+                                                   it + (i + 1) * size_per_component);
+                    info.computeReduction(component_container,
+                                           Opm::Reduction::makeInnerProductFunctor<double>(),
+                                           component_product);
+                }
+                return component_product;
             }
-            return product;
+            else
+#endif
+            {
+                double product = 0.0 ;
+                for( ; it != end; ++it ) {
+                    product += ( *it * *it );
+                }
+                return product;
+            }
         }
 
     protected:
@@ -102,6 +132,8 @@ namespace Opm
         mutable std::vector< double > errors_;
 
         const bool verbose_;
+    private:
+        const boost::any parallel_information_;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,10 +151,13 @@ namespace Opm
         /// \param tol        tolerance for the relative changes of the numerical solution to be accepted
         ///                   in one time step (default is 1e-3)
         //  \param maxgrowth  max growth factor for new time step in relation of old time step (default = 3.0)
+        /// \paramm pinfo     The information about the parallel information. Needed to
+        ///                   compute parallel scalarproducts.
         /// \param verbose    if true get some output (default = false)
         PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
                                              const double tol = 1e-3,
                                              const double maxgrowth = 3.0,
+                                             const boost::any& = boost::any(),
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize

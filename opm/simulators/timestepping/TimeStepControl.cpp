@@ -16,7 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include <config.h>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -80,12 +80,14 @@ namespace Opm
     //
     ////////////////////////////////////////////////////////
 
-    PIDTimeStepControl::PIDTimeStepControl( const double tol, const bool verbose )
+    PIDTimeStepControl::PIDTimeStepControl( const double tol, const boost::any& pinfo,
+                                            const bool verbose )
         : p0_()
         , sat0_()
         , tol_( tol )
         , errors_( 3, tol_ )
         , verbose_( verbose )
+        , parallel_information_(pinfo)
     {}
 
     void PIDTimeStepControl::initialize( const SimulatorState& state )
@@ -114,11 +116,13 @@ namespace Opm
 
         // compute || u^n - u^n+1 ||
         const double stateOld  = euclidianNormSquared( p0_.begin(),   p0_.end() ) +
-                                 euclidianNormSquared( sat0_.begin(), sat0_.end() );
+                                 euclidianNormSquared( sat0_.begin(), sat0_.end(),
+                                                       state.numPhases() );
 
         // compute || u^n+1 ||
         const double stateNew  = euclidianNormSquared( state.pressure().begin(),   state.pressure().end()   ) +
-                                 euclidianNormSquared( state.saturation().begin(), state.saturation().end() );
+                                 euclidianNormSquared( state.saturation().begin(), state.saturation().end(),
+                                                       state.numPhases() );
 
         // shift errors
         for( int i=0; i<2; ++i ) {
@@ -164,8 +168,9 @@ namespace Opm
     PIDAndIterationCountTimeStepControl( const int target_iterations,
                                          const double tol,
                                          const double maxgrowth,
+                                         const boost::any& pinfo,
                                          const bool verbose)
-        : BaseType( tol, verbose )
+        : BaseType( tol, pinfo, verbose )
         , target_iterations_( target_iterations )
         , maxgrowth_( maxgrowth )
     {}

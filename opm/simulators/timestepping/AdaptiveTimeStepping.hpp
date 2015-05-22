@@ -37,7 +37,11 @@ namespace Opm {
     {
     public:
         //! \brief contructor taking parameter object
-        AdaptiveTimeStepping( const parameter::ParameterGroup& param );
+        //! \param param The parameter object
+        //! \param pinfo The information about the data distribution
+        //!              and communication for a parallel run.
+        AdaptiveTimeStepping( const parameter::ParameterGroup& param,
+                              const boost::any& pinfo=boost::any() );
 
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps

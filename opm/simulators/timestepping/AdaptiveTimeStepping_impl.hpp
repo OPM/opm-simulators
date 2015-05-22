@@ -33,7 +33,8 @@ namespace Opm {
     // AdaptiveTimeStepping
     //---------------------
 
-    AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param )
+    AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
+                                            const boost::any& parallel_information )
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
@@ -51,13 +52,13 @@ namespace Opm {
 
         const double tol = param.getDefault("timestep.control.tol", double(1e-3) );
         if( control == "pid" ) {
-            timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol ) );
+            timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol, parallel_information ) );
         }
         else if ( control == "pid+iteration" )
         {
             const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
             const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(3.0) );
-            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth ) );
+            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth, parallel_information ) );
         }
         else if ( control == "iterationcount" )
         {
