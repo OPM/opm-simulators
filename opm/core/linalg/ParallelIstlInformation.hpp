@@ -298,9 +298,7 @@ private:
             //auto newVal = container.begin();
             auto mask   = ownerMask_.begin();
             auto& value = std::get<I>(values);
-            value = reduceOperator.maskValue(container[0], *mask);
-            ++mask;
-            //++newVal;
+            value =  reduceOperator.getInitialValue();
 
             for( auto endVal=ownerMask_.end(); mask!=endVal;
                  /*++newVal,*/ ++mask )
@@ -372,6 +370,11 @@ private:
     template<typename BinaryOperator>
     struct MaskIDOperator
     {
+        // This is a real nice one: numeric limits needs a type without const
+        // or reference qualifier. Otherwise we get complete nonesense.
+        typedef typename std::remove_cv<
+            typename std::remove_reference<typename BinaryOperator::result_type>::type
+            >::type Result;
         /// \brief Apply the underlying binary operator according to the mask.
         ///
         /// The BinaryOperator will be called with t1, and mask*t2.
@@ -391,6 +394,10 @@ private:
         BinaryOperator& localOperator()
         {
             return b_;
+        }
+        Result getInitialValue()
+        {
+            return Result();
         }
     private:
         BinaryOperator b_;
@@ -433,17 +440,21 @@ private:
             }
             else
             {
-                //g++-4.4 does not support std::numeric_limits<T>::lowest();
-                // we rely on IEE 754 for floating point values and use min()
-                // for integral types.
-                if( std::is_integral<T>::value )
-                {
-                    return -std::numeric_limits<Result>::min();
-                }
-                else
-                {
-                    return -std::numeric_limits<Result>::max();
-                }
+                return getInitialValue();
+            }
+        }
+        Result getInitialValue()
+        {
+            //g++-4.4 does not support std::numeric_limits<T>::lowest();
+            // we rely on IEE 754 for floating point values and use min()
+            // for integral types.
+            if( std::is_integral<Result>::value )
+            {
+                return -std::numeric_limits<Result>::min();
+            }
+            else
+            {
+                return -std::numeric_limits<Result>::max();
             }
         }
         /// \brief Get the underlying binary operator.
@@ -499,6 +510,10 @@ private:
         BinaryOperator& localOperator()
         {
             return b_;
+        }
+        Result getInitialValue()
+        {
+            return std::numeric_limits<Result>::max();
         }
     private:
         BinaryOperator b_;
