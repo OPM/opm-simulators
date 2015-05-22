@@ -404,6 +404,12 @@ private:
     template<typename BinaryOperator>
     struct MaskToMinOperator
     {
+        // This is a real nice one: numeric limits has to a type without const
+        // or reference. Otherwise we get complete nonesense.
+        typedef typename std::remove_reference<
+            typename std::remove_const<typename BinaryOperator::result_type>::type
+            >::type Result;
+
         MaskToMinOperator(BinaryOperator b)
         : b_(b)
         {}
@@ -432,11 +438,11 @@ private:
                 // for integral types.
                 if( std::is_integral<T>::value )
                 {
-                    return -std::numeric_limits<float>::min();
+                    return -std::numeric_limits<Result>::min();
                 }
                 else
                 {
-                    return -std::numeric_limits<float>::max();
+                    return -std::numeric_limits<Result>::max();
                 }
             }
         }
@@ -458,6 +464,12 @@ private:
     template<typename BinaryOperator>
     struct MaskToMaxOperator
     {
+        // This is a real nice one: numeric limits has to a type without const
+        // or reference. Otherwise we get complete nonesense.
+        typedef typename std::remove_cv<
+            typename std::remove_reference<typename BinaryOperator::result_type>::type
+            >::type Result;
+
         MaskToMaxOperator(BinaryOperator b)
         : b_(b)
         {}
