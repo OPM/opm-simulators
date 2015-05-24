@@ -1908,7 +1908,8 @@ namespace detail {
             auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
             info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
 
-            for ( int idx=0; idx<MaxNumPhases; ++idx )
+            // TODO: code below is wrong, should not compute maxNormWell[MaxNumPhases].
+            for ( int idx=0; idx<MaxNumPhases+1; ++idx )
             {
                 if (active_[idx]) {
                     auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
@@ -1933,7 +1934,7 @@ namespace detail {
                     maxNormWell[idx] = R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
                 }
             }
-            info.communicator().max(&maxNormWell[0], MaxNumPhases);
+            info.communicator().max(&maxNormWell[0], MaxNumPhases+1);
             // Compute pore volume
             #warning Missing polymer code for MPI version
             return std::get<1>(nc_and_pv);
@@ -1941,9 +1942,9 @@ namespace detail {
         else
 #endif
         {
-            for ( int idx=0; idx<MaxNumPhases; ++idx )
+            for ( int idx=0; idx<MaxNumPhases+1; ++idx )
             {
-                if (active_[idx]) {
+                if (idx == MaxNumPhases || active_[idx]) { // Dealing with polymer *or* an active phase.
                     B_avg[idx] = B.col(idx).sum()/nc;
                     maxCoeff[idx]=tempV.col(idx).maxCoeff();
                     R_sum[idx] = R.col(idx).sum();
@@ -1952,10 +1953,11 @@ namespace detail {
                 {
                     R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
                 }
-                maxNormWell[idx] = 0.0;
-                for ( int w=0; w<nw; ++w )
-                {
-                    maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                if (idx != MaxNumPhases) { // We do not compute a well flux residual for polymer.
+                    maxNormWell[idx] = 0.0;
+                    for ( int w=0; w<nw; ++w ) {
+                        maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    }
                 }
             }
             if (has_polymer_) {
@@ -1992,7 +1994,7 @@ namespace detail {
         std::array<double,MaxNumPhases+1> B_avg                 = {{0., 0., 0., 0.}};
         std::array<double,MaxNumPhases+1> maxCoeff              = {{0., 0., 0., 0.}};
         std::array<double,MaxNumPhases+1> mass_balance_residual = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases+1> well_flux_residual    = {{0., 0., 0., 0.}};
+        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
         std::size_t cols = MaxNumPhases+1; // needed to pass the correct type to Eigen
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases+1> B(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases+1> R(nc, cols);
@@ -2029,9 +2031,10 @@ namespace detail {
             mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB               = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
-            well_flux_residual[idx]    = B_avg[idx] * dt * maxNormWell[idx];
-
-            converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            if (idx != MaxNumPhases) { // No well flux residual for polymer.
+                well_flux_residual[idx]    = B_avg[idx] * dt * maxNormWell[idx];
+                converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            }
         }
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
@@ -2040,27 +2043,27 @@ namespace detail {
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
+        if (std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[MaxNumPhases])   || mass_balance_residual[MaxNumPhases]   > maxResidualAllowed() ||                 std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[MaxNumPhases])   || mass_balance_residual[MaxNumPhases]   > maxResidualAllowed() ||
+            std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
             std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
             std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
             std::isnan(CNV[MaxNumPhases]) || CNV[MaxNumPhases] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[MaxNumPhases]) || well_flux_residual[MaxNumPhases] > maxResidualAllowed() ||
             std::isnan(residualWell)     || residualWell     > maxResidualAllowed() )
         {
-            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
+            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
         }
 
         if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)    MB(POLY)      CNVW       CNVO       CNVG       CNVP   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)  W-FLUX(P)\n";
+                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)    MB(POLY)      CNVW       CNVO       CNVG       CNVP   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
             }
             const std::streamsize oprec = std::cout.precision(3);
             const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
@@ -2076,7 +2079,6 @@ namespace detail {
                       << std::setw(11) << well_flux_residual[Water]
                       << std::setw(11) << well_flux_residual[Oil]
                       << std::setw(11) << well_flux_residual[Gas]
-                      << std::setw(11) << well_flux_residual[MaxNumPhases]
                       << std::endl;
             std::cout.precision(oprec);
             std::cout.flags(oflags);
