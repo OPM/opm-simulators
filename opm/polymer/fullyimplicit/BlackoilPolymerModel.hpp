@@ -21,30 +21,14 @@
 #ifndef OPM_BLACKOILPOLYMERMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILPOLYMERMODEL_HEADER_INCLUDED
 
-#include <cassert>
-
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/BlackoilModelBase.hpp>
+#include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
-
-#include <array>
-
-struct UnstructuredGrid;
-struct Wells;
+#include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 
 namespace Opm {
-
-    namespace parameter { class ParameterGroup; }
-    class DerivedGeology;
-    class RockCompressibility;
-    class NewtonIterationBlackoilInterface;
-    class PolymerBlackoilState;
-    class WellStateFullyImplicitBlackoilPolymer;
-
 
     /// A model implementation for three-phase black oil with polymer.
     ///
@@ -56,36 +40,15 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilPolymerModel
+    class BlackoilPolymerModel : public BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >
     {
     public:
 
         // ---------  Types and enums  ---------
 
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-        typedef PolymerBlackoilState ReservoirState;
-        typedef WellStateFullyImplicitBlackoilPolymer WellState;
-
-        /// Model-specific solver parameters.
-        struct ModelParameters
-        {
-            double dp_max_rel_;
-            double ds_max_;
-            double dr_max_rel_;
-            double max_residual_allowed_;
-            double tolerance_mb_;
-            double tolerance_cnv_;
-            double tolerance_wells_;
-
-            explicit ModelParameters( const parameter::ParameterGroup& param );
-            ModelParameters();
-
-            void reset();
-        };
-
-        // ---------  Public methods  ---------
+        typedef BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> > Base;
+        typedef typename Base::ReservoirState ReservoirState;
+        typedef typename Base::WellState WellState;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -101,28 +64,18 @@ namespace Opm {
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] has_polymer      turn on polymer feature
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilPolymerModel(const ModelParameters&          param,
-                             const Grid&                     grid ,
-                             const BlackoilPropsAdInterface& fluid,
-                             const DerivedGeology&           geo  ,
-                             const RockCompressibility*      rock_comp_props,
-                             const PolymerPropsAd&           polymer_props_ad,
-                             const Wells*                    wells,
+        BlackoilPolymerModel(const typename Base::ModelParameters&   param,
+                             const Grid&                             grid,
+                             const BlackoilPropsAdInterface&         fluid,
+                             const DerivedGeology&                   geo,
+                             const RockCompressibility*              rock_comp_props,
+                             const PolymerPropsAd&                   polymer_props_ad,
+                             const Wells*                            wells,
                              const NewtonIterationBlackoilInterface& linsolver,
-                             const bool has_disgas,
-                             const bool has_vapoil,
-                             const bool has_polymer,
-                             const bool terminal_output);
-
-        /// \brief Set threshold pressures that prevent or reduce flow.
-        /// This prevents flow across faces if the potential
-        /// difference is less than the threshold. If the potential
-        /// difference is greater, the threshold value is subtracted
-        /// before calculating flow. This is treated symmetrically, so
-        /// flow is prevented or reduced in both directions equally.
-        /// \param[in]  threshold_pressures_by_face   array of size equal to the number of faces
-        ///                                   of the grid passed in the constructor.
-        void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
+                             const bool                              has_disgas,
+                             const bool                              has_vapoil,
+                             const bool                              has_polymer,
+                             const bool                              terminal_output);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size
@@ -147,18 +100,14 @@ namespace Opm {
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
                       const bool initial_assembly);
-
+        // void assemble(const PolymerBlackoilState& reservoir_state,
+        //               WellStateFullyImplicitBlackoilPolymer& well_state,
+        //               const bool initial_assembly);
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
         /// \return a vector that contains for each phase the norm of the mass balance
         /// and afterwards the norm of the residual of the well flux and the well equation.
         std::vector<double> computeResidualNorms() const;
-
-        /// The size (number of unknowns) of the nonlinear system of equations.
-        int sizeNonLinear() const;
-
-        /// Number of linear iterations used in last call to solveJacobianSystem().
-        int linearIterationsLastSolve() const;
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
@@ -172,138 +121,86 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
-        /// Return true if output to cout is wanted.
-        bool terminalOutputEnabled() const;
-
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         /// \param[in]   dt          timestep length
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const double dt, const int iteration);
 
-        /// The number of active phases in the model.
-        int numPhases() const;
-
-    private:
+    protected:
 
         // ---------  Types and enums  ---------
 
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
-
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              head;  // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
-
-        struct SolutionState {
-            SolutionState(const int np);
-            ADB              pressure;
-            ADB              temperature;
-            std::vector<ADB> saturation;
-            ADB              rs;
-            ADB              rv;
-            ADB              concentration;
-            ADB              qs;
-            ADB              bhp;
-            // Below are quantities stored in the state for optimization purposes.
-            std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
-        };
-
-        struct WellOps {
-            WellOps(const Wells* wells);
-            M w2p;              // well -> perf (scatter)
-            M p2w;              // perf -> well (gather)
-        };
-
-        enum { Water        = BlackoilPropsAdInterface::Water,
-               Oil          = BlackoilPropsAdInterface::Oil  ,
-               Gas          = BlackoilPropsAdInterface::Gas  ,
-               MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases
-         };
-
-        enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
+        typedef typename Base::SolutionState SolutionState;
+        typedef typename Base::DataBlock DataBlock;
 
         // ---------  Data members  ---------
 
-        const Grid&         grid_;
-        const BlackoilPropsAdInterface& fluid_;
-        const DerivedGeology&           geo_;
-        const RockCompressibility*      rock_comp_props_;
-        const PolymerPropsAd&           polymer_props_ad_;
-        const Wells*                    wells_;
-        const NewtonIterationBlackoilInterface&    linsolver_;
-        // For each canonical phase -> true if active
-        const std::vector<bool>         active_;
-        // Size = # active phases. Maps active -> canonical phase indices.
-        const std::vector<int>          canph_;
-        const std::vector<int>          cells_;  // All grid cells
-        HelperOps                       ops_;
-        const WellOps                   wops_;
-        V                               cmax_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
+        const PolymerPropsAd& polymer_props_ad_;
         const bool has_polymer_;
         const int  poly_pos_;
+        V cmax_;
 
-        ModelParameters                 param_;
-        bool use_threshold_pressure_;
-        V threshold_pressures_by_interior_face_;
+        // Need to declare Base members we want to use here.
+        using Base::grid_;
+        using Base::fluid_;
+        using Base::geo_;
+        using Base::rock_comp_props_;
+        using Base::wells_;
+        using Base::linsolver_;
+        using Base::active_;
+        using Base::canph_;
+        using Base::cells_;
+        using Base::ops_;
+        using Base::wops_;
+        using Base::has_disgas_;
+        using Base::has_vapoil_;
+        using Base::param_;
+        using Base::use_threshold_pressure_;
+        using Base::threshold_pressures_by_interior_face_;
+        using Base::rq_;
+        using Base::phaseCondition_;
+        using Base::well_perforation_pressure_diffs_;
+        using Base::residual_;
+        using Base::terminal_output_;
+        using Base::primalVariable_;
+        using Base::pvdt_;
 
-        std::vector<ReservoirResidualQuant> rq_;
-        std::vector<PhasePresence> phaseCondition_;
-        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+        // ---------  Protected methods  ---------
 
-        LinearisedBlackoilResidual residual_;
-
-        /// \brief Whether we print something to std::cout
-        bool terminal_output_;
-
-        std::vector<int>         primalVariable_;
-        V pvdt_;
-
-        // ---------  Private methods  ---------
-
-        // return true if wells are available
-        bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
-        // return wells object
-        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
+        // Need to declare Base members we want to use here.
+        using Base::wellsActive;
+        using Base::wells;
 
         SolutionState
-        constantState(const PolymerBlackoilState& x,
-                      const WellStateFullyImplicitBlackoilPolymer& xw) const;
+        constantState(const ReservoirState& x,
+                      const WellState& xw) const;
 
         void
         makeConstantState(SolutionState& state) const;
 
         SolutionState
-        variableState(const PolymerBlackoilState& x,
-                      const WellStateFullyImplicitBlackoilPolymer& xw) const;
+        variableState(const ReservoirState& x,
+                      const WellState& xw) const;
 
         void
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
         void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellStateFullyImplicitBlackoilPolymer& xw);
+                                            const WellState& xw);
 
         void
         addWellControlEq(const SolutionState& state,
-                         const WellStateFullyImplicitBlackoilPolymer& xw,
+                         const WellState& xw,
                          const V& aliveWells);
 
         void
         addWellEq(const SolutionState& state,
-                  WellStateFullyImplicitBlackoilPolymer& xw,
+                  WellState& xw,
                   V& aliveWells);
 
-        void updateWellControls(WellStateFullyImplicitBlackoilPolymer& xw) const;
+        void updateWellControls(WellState& xw) const;
 
         std::vector<ADB>
         computePressures(const SolutionState& state) const;
@@ -331,7 +228,7 @@ namespace Opm {
                         const SolutionState&    state );
 
         void
-        computeCmax(PolymerBlackoilState& state);
+        computeCmax(ReservoirState& state);
 
         ADB
         computeMc(const SolutionState& state) const;
@@ -396,16 +293,16 @@ namespace Opm {
                           std::vector<PhasePresence>& cond ) const;
 
         const std::vector<PhasePresence>
-        phaseCondition() const {return phaseCondition_;}
+        phaseCondition() const {return this->phaseCondition_;}
 
         void
-        classifyCondition(const PolymerBlackoilState&        state);
+        classifyCondition(const ReservoirState&        state);
 
 
         /// update the primal variable for Sg, Rv or Rs. The Gas phase must
         /// be active to call this method.
         void
-        updatePrimalVariableFromState(const PolymerBlackoilState&        state);
+        updatePrimalVariableFromState(const ReservoirState&        state);
 
         /// Update the phaseCondition_ member based on the primalVariable_ member.
         void
@@ -441,12 +338,39 @@ namespace Opm {
                              int nc,
                              int nw) const;
 
-        double dpMaxRel() const { return param_.dp_max_rel_; }
-        double dsMax() const { return param_.ds_max_; }
-        double drMaxRel() const { return param_.dr_max_rel_; }
-        double maxResidualAllowed() const { return param_.max_residual_allowed_; }
+        double dpMaxRel() const { return this->param_.dp_max_rel_; }
+        double dsMax() const { return this->param_.ds_max_; }
+        double drMaxRel() const { return this->param_.dr_max_rel_; }
+        double maxResidualAllowed() const { return this->param_.max_residual_allowed_; }
 
     };
+
+
+
+    /// Need to include concentration in our state variables, otherwise all is as
+    /// the default blackoil model.
+    struct BlackoilPolymerSolutionState : public DefaultBlackoilSolutionState
+    {
+        explicit BlackoilPolymerSolutionState(const int np)
+            : DefaultBlackoilSolutionState(np),
+              concentration( ADB::null())
+        {
+        }
+        ADB concentration;
+    };
+
+
+
+    /// Providing types by template specialisation of ModelTraits for BlackoilPolymerModel.
+    template <class Grid>
+    struct ModelTraits< BlackoilPolymerModel<Grid> >
+    {
+        typedef PolymerBlackoilState ReservoirState;
+        typedef WellStateFullyImplicitBlackoilPolymer WellState;
+        typedef BlackoilModelParameters ModelParameters;
+        typedef BlackoilPolymerSolutionState SolutionState;
+    };
+
 } // namespace Opm
 
 #include "BlackoilPolymerModel_impl.hpp"

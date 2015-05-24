@@ -25,8 +25,6 @@
 #define OPM_BLACKOILPOLYMERMODEL_IMPL_HEADER_INCLUDED
 
 #include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
-#include <opm/polymer/PolymerBlackoilState.hpp>
-#include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -50,205 +48,57 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
-//#include <fstream>
-
-// A debugging utility.
-#define OPM_AD_DUMP(foo)                                                \
-    do {                                                                \
-        std::cout << "==========================================\n"     \
-                  << #foo ":\n"                                         \
-                  << collapseJacs(foo) << std::endl;                    \
-    } while (0)
-
-#define OPM_AD_DUMPVAL(foo)                                             \
-    do {                                                                \
-        std::cout << "==========================================\n"     \
-                  << #foo ":\n"                                         \
-                  << foo.value() << std::endl;                          \
-    } while (0)
-
-#define OPM_AD_DISKVAL(foo)                                             \
-    do {                                                                \
-        std::ofstream os(#foo);                                         \
-        os.precision(16);                                               \
-        os << foo.value() << std::endl;                                 \
-    } while (0)
-
 
 namespace Opm {
 
-typedef AutoDiffBlock<double> ADB;
-typedef ADB::V V;
-typedef ADB::M M;
-typedef Eigen::Array<double,
-                     Eigen::Dynamic,
-                     Eigen::Dynamic,
-                     Eigen::RowMajor> DataBlock;
 
 
-namespace detail {
+    namespace detail {
 
-
-    std::vector<int>
-    buildAllCells(const int nc)
-    {
-        std::vector<int> all_cells(nc);
-
-        for (int c = 0; c < nc; ++c) { all_cells[c] = c; }
-
-        return all_cells;
-    }
-
-
-
-    template <class PU>
-    std::vector<bool>
-    activePhases(const PU& pu)
-    {
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
-        std::vector<bool> active(maxnp, false);
-
-        for (int p = 0; p < pu.MaxNumPhases; ++p) {
-            active[ p ] = pu.phase_used[ p ] != 0;
-        }
-
-        return active;
-    }
-
-
-
-    template <class PU>
-    std::vector<int>
-    active2Canonical(const PU& pu)
-    {
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
-        std::vector<int> act2can(maxnp, -1);
-
-        for (int phase = 0; phase < maxnp; ++phase) {
-            if (pu.phase_used[ phase ]) {
-                act2can[ pu.phase_pos[ phase ] ] = phase;
+        template <class PU>
+        int polymerPos(const PU& pu)
+        {
+            const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+            int pos = 0;
+            for (int phase = 0; phase < maxnp; ++phase) {
+                if (pu.phase_used[phase]) {
+                    pos++;
+                }
             }
+
+            return pos;
         }
 
-        return act2can;
-    }
+    } // namespace detail
 
-
-
-    template <class PU>
-    int polymerPos(const PU& pu)
-    {
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
-        int pos = 0;
-        for (int phase = 0; phase < maxnp; ++phase) {
-            if (pu.phase_used[phase]) {
-                pos++;
-            }
-        }
-
-        return pos;
-    }
-
-} // namespace detail
-
-    template <class Grid>
-    void BlackoilPolymerModel<Grid>::ModelParameters::
-    reset()
-    {
-        // default values for the solver parameters
-        dp_max_rel_      = 1.0e9;
-        ds_max_          = 0.2;
-        dr_max_rel_      = 1.0e9;
-        max_residual_allowed_ = 1e7;
-        tolerance_mb_    = 1.0e-5;
-        tolerance_cnv_   = 1.0e-2;
-        tolerance_wells_ = 5.0e-1;
-    }
-
-    template <class Grid>
-    BlackoilPolymerModel<Grid>::ModelParameters::
-    ModelParameters()
-    {
-        // set default values
-        reset();
-    }
-
-    template <class Grid>
-    BlackoilPolymerModel<Grid>::ModelParameters::
-    ModelParameters( const parameter::ParameterGroup& param )
-    {
-        // set default values
-        reset();
-
-        // overload with given parameters
-        dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
-        ds_max_      = param.getDefault("ds_max", ds_max_);
-        dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
-        max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
-        tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
-        tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
-        tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-    }
 
 
     template <class Grid>
-    BlackoilPolymerModel<Grid>::
-    BlackoilPolymerModel(const ModelParameters&          param,
-                         const Grid&                     grid ,
-                         const BlackoilPropsAdInterface& fluid,
-                         const DerivedGeology&           geo  ,
-                         const RockCompressibility*      rock_comp_props,
-                         const PolymerPropsAd&           polymer_props_ad,
-                         const Wells*                    wells,
-                         const NewtonIterationBlackoilInterface&    linsolver,
-                         const bool has_disgas,
-                         const bool has_vapoil,
-                         const bool has_polymer,
-                         const bool terminal_output)
-        : grid_  (grid)
-        , fluid_ (fluid)
-        , geo_   (geo)
-        , rock_comp_props_(rock_comp_props)
-        , polymer_props_ad_(polymer_props_ad)
-        , wells_ (wells)
-        , linsolver_ (linsolver)
-        , active_(detail::activePhases(fluid.phaseUsage()))
-        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
-        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid)
-        , wops_  (wells_)
-        , cmax_(V::Zero(Opm::AutoDiffGrid::numCells(grid)))
-        , has_disgas_(has_disgas)
-        , has_vapoil_(has_vapoil)
-        , has_polymer_(has_polymer)
-        , poly_pos_(detail::polymerPos(fluid.phaseUsage()))
-        , param_( param )
-        , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases())
-        , phaseCondition_(AutoDiffGrid::numCells(grid))
-        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
-                        ADB::null(),
-                        ADB::null() } )
-        , terminal_output_ (terminal_output)
+    BlackoilPolymerModel<Grid>::BlackoilPolymerModel(const typename Base::ModelParameters&   param,
+                                                     const Grid&                             grid,
+                                                     const BlackoilPropsAdInterface&         fluid,
+                                                     const DerivedGeology&                   geo,
+                                                     const RockCompressibility*              rock_comp_props,
+                                                     const PolymerPropsAd&                   polymer_props_ad,
+                                                     const Wells*                            wells,
+                                                     const NewtonIterationBlackoilInterface& linsolver,
+                                                     const bool                              has_disgas,
+                                                     const bool                              has_vapoil,
+                                                     const bool                              has_polymer,
+                                                     const bool                              terminal_output)
+        : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
+               has_disgas, has_vapoil, terminal_output),
+          polymer_props_ad_(polymer_props_ad),
+          has_polymer_(has_polymer),
+          poly_pos_(detail::polymerPos(fluid.phaseUsage()))
     {
-#if HAVE_MPI
-        if ( terminal_output_ ) {
-            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-                // Only rank 0 does print to std::cout if terminal_output is enabled
-                terminal_output_ = (info.communicator().rank()==0);
-            }
-        }
-#endif
         if (has_polymer_) {
             if (!active_[Water]) {
                 OPM_THROW(std::logic_error, "Polymer must solved in water!\n");
             }
             // If deck has polymer, residual_ should contain polymer equation.
-            rq_.resize(fluid_.numPhases()+1);
-            residual_.material_balance_eq.resize(fluid_.numPhases()+1, ADB::null());
+            rq_.resize(fluid_.numPhases() + 1);
+            residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
             assert(poly_pos_ == fluid_.numPhases());
         }
     }
@@ -260,12 +110,9 @@ namespace detail {
     BlackoilPolymerModel<Grid>::
     prepareStep(const double dt,
                 ReservoirState& reservoir_state,
-                WellState& /* well_state */)
+                WellState& well_state)
     {
-        pvdt_ = geo_.poreVolume() / dt;
-        if (active_[Gas]) {
-            updatePrimalVariableFromState(reservoir_state);
-        }
+        Base::prepareStep(dt, reservoir_state, well_state);
         // Initial max concentration of this time step from PolymerBlackoilState.
         cmax_ = Eigen::Map<const V>(reservoir_state.maxconcentration().data(), Opm::AutoDiffGrid::numCells(grid_));
     }
@@ -286,144 +133,11 @@ namespace detail {
 
 
 
-    template <class Grid>
-    int
-    BlackoilPolymerModel<Grid>::
-    sizeNonLinear() const
-    {
-        return residual_.sizeNonLinear();
-    }
-
-
-
-
-    template <class Grid>
-    int
-    BlackoilPolymerModel<Grid>::
-    linearIterationsLastSolve() const
-    {
-        return linsolver_.iterations();
-    }
-
-
-
-
-    template <class Grid>
-    bool
-    BlackoilPolymerModel<Grid>::
-    terminalOutputEnabled() const
-    {
-        return terminal_output_;
-    }
-
-
-
-
-    template <class Grid>
-    int
-    BlackoilPolymerModel<Grid>::
-    numPhases() const
-    {
-        return fluid_.numPhases();
-    }
-
-
-
-
-    template <class Grid>
-    void
-    BlackoilPolymerModel<Grid>::
-    setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
-    {
-        const int num_faces = AutoDiffGrid::numFaces(grid_);
-        if (int(threshold_pressures_by_face.size()) != num_faces) {
-            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures_by_face input, must be equal to number of faces.");
-        }
-        use_threshold_pressure_ = true;
-        // Map to interior faces.
-        const int num_ifaces = ops_.internal_faces.size();
-        threshold_pressures_by_interior_face_.resize(num_ifaces);
-        for (int ii = 0; ii < num_ifaces; ++ii) {
-            threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
-        }
-    }
-
-
-
-
-
-    template <class Grid>
-    BlackoilPolymerModel<Grid>::ReservoirResidualQuant::ReservoirResidualQuant()
-        : accum(2, ADB::null())
-        , mflux(   ADB::null())
-        , b    (   ADB::null())
-        , head (   ADB::null())
-        , mob  (   ADB::null())
-    {
-    }
-
-
-
-
-
-    template <class Grid>
-    BlackoilPolymerModel<Grid>::SolutionState::SolutionState(const int np)
-        : pressure  (    ADB::null())
-        , temperature(   ADB::null())
-        , saturation(np, ADB::null())
-        , rs        (    ADB::null())
-        , rv        (    ADB::null())
-        , concentration( ADB::null())
-        , qs        (    ADB::null())
-        , bhp       (    ADB::null())
-        , canonical_phase_pressures(3, ADB::null())
-    {
-    }
-
-
-
-
-
-    template <class Grid>
-    BlackoilPolymerModel<Grid>::
-    WellOps::WellOps(const Wells* wells)
-      : w2p(),
-        p2w()
-    {
-        if( wells )
-        {
-            w2p = M(wells->well_connpos[ wells->number_of_wells ], wells->number_of_wells);
-            p2w = M(wells->number_of_wells, wells->well_connpos[ wells->number_of_wells ]);
-
-            const int        nw   = wells->number_of_wells;
-            const int* const wpos = wells->well_connpos;
-
-            typedef Eigen::Triplet<double> Tri;
-
-            std::vector<Tri> scatter, gather;
-            scatter.reserve(wpos[nw]);
-            gather .reserve(wpos[nw]);
-
-            for (int w = 0, i = 0; w < nw; ++w) {
-                for (; i < wpos[ w + 1 ]; ++i) {
-                    scatter.push_back(Tri(i, w, 1.0));
-                    gather .push_back(Tri(w, i, 1.0));
-                }
-            }
-
-            w2p.setFromTriplets(scatter.begin(), scatter.end());
-            p2w.setFromTriplets(gather .begin(), gather .end());
-        }
-    }
-
-
-
-
 
     template <class Grid>
     typename BlackoilPolymerModel<Grid>::SolutionState
-    BlackoilPolymerModel<Grid>::constantState(const PolymerBlackoilState& x,
-                                              const WellStateFullyImplicitBlackoilPolymer& xw) const
+    BlackoilPolymerModel<Grid>::constantState(const ReservoirState& x,
+                                              const WellState& xw) const
     {
         auto state = variableState(x, xw);
         makeConstantState(state);
@@ -466,8 +180,8 @@ namespace detail {
 
     template <class Grid>
     typename BlackoilPolymerModel<Grid>::SolutionState
-    BlackoilPolymerModel<Grid>::variableState(const PolymerBlackoilState& x,
-                                              const WellStateFullyImplicitBlackoilPolymer& xw) const
+    BlackoilPolymerModel<Grid>::variableState(const ReservoirState& x,
+                                              const WellState& xw) const
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -693,7 +407,7 @@ namespace detail {
 
 
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::computeCmax(PolymerBlackoilState& state)
+    void BlackoilPolymerModel<Grid>::computeCmax(ReservoirState& state)
     {
         const int nc = AutoDiffGrid::numCells(grid_);
         V tmp = V::Zero(nc);
@@ -709,7 +423,7 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
-                                                                    const WellStateFullyImplicitBlackoilPolymer& xw)
+                                                                    const WellState& xw)
     {
         if( ! wellsActive() ) return ;
 
@@ -803,8 +517,8 @@ namespace detail {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
-    assemble(const PolymerBlackoilState& reservoir_state,
-             WellStateFullyImplicitBlackoilPolymer& well_state,
+    assemble(const ReservoirState& reservoir_state,
+             WellState& well_state,
              const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
@@ -898,7 +612,7 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::addWellEq(const SolutionState& state,
-                                               WellStateFullyImplicitBlackoilPolymer& xw,
+                                               WellState& xw,
                                                V& aliveWells)
     {
         if( ! wellsActive() ) return ;
@@ -1073,85 +787,8 @@ namespace detail {
 
 
 
-    namespace detail
-    {
-        double rateToCompare(const std::vector<double>& well_phase_flow_rate,
-                             const int well,
-                             const int num_phases,
-                             const double* distr)
-        {
-            double rate = 0.0;
-            for (int phase = 0; phase < num_phases; ++phase) {
-                // Important: well_phase_flow_rate is ordered with all phase rates for first
-                // well first, then all phase rates for second well etc.
-                rate += well_phase_flow_rate[well*num_phases + phase] * distr[phase];
-            }
-            return rate;
-        }
-
-        bool constraintBroken(const std::vector<double>& bhp,
-                              const std::vector<double>& well_phase_flow_rate,
-                              const int well,
-                              const int num_phases,
-                              const WellType& well_type,
-                              const WellControls* wc,
-                              const int ctrl_index)
-        {
-            const WellControlType ctrl_type = well_controls_iget_type(wc, ctrl_index);
-            const double target = well_controls_iget_target(wc, ctrl_index);
-            const double* distr = well_controls_iget_distr(wc, ctrl_index);
-
-            bool broken = false;
-
-            switch (well_type) {
-            case INJECTOR:
-            {
-                switch (ctrl_type) {
-                case BHP:
-                    broken = bhp[well] > target;
-                    break;
-
-                case RESERVOIR_RATE: // Intentional fall-through
-                case SURFACE_RATE:
-                    broken = rateToCompare(well_phase_flow_rate,
-                                           well, num_phases, distr) > target;
-                    break;
-                }
-            }
-            break;
-
-            case PRODUCER:
-            {
-                switch (ctrl_type) {
-                case BHP:
-                    broken = bhp[well] < target;
-                    break;
-
-                case RESERVOIR_RATE: // Intentional fall-through
-                case SURFACE_RATE:
-                    // Note that the rates compared below are negative,
-                    // so breaking the constraints means: too high flow rate
-                    // (as for injection).
-                    broken = rateToCompare(well_phase_flow_rate,
-                                           well, num_phases, distr) < target;
-                    break;
-                }
-            }
-            break;
-
-            default:
-                OPM_THROW(std::logic_error, "Can only handle INJECTOR and PRODUCER wells.");
-            }
-
-            return broken;
-        }
-    } // namespace detail
-
-
-
-
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::updateWellControls(WellStateFullyImplicitBlackoilPolymer& xw) const
+    void BlackoilPolymerModel<Grid>::updateWellControls(WellState& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1227,7 +864,7 @@ namespace detail {
 
     template <class Grid>
     void BlackoilPolymerModel<Grid>::addWellControlEq(const SolutionState& state,
-                                                      const WellStateFullyImplicitBlackoilPolymer& xw,
+                                                      const WellState& xw,
                                                       const V& aliveWells)
     {
         if( ! wellsActive() ) return;
@@ -1306,68 +943,10 @@ namespace detail {
 
 
 
-    namespace detail
-    {
-        /// \brief Compute the L-infinity norm of a vector
-        /// \warn This function is not suitable to compute on the well equations.
-        /// \param a The container to compute the infinity norm on.
-        ///          It has to have one entry for each cell.
-        /// \param info In a parallel this holds the information about the data distribution.
-        double infinityNorm( const ADB& a, const boost::any& pinfo = boost::any() )
-        {
-#if HAVE_MPI
-            if ( pinfo.type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& real_info =
-                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
-                double result=0;
-                real_info.computeReduction(a.value(), Reduction::makeGlobalMaxFunctor<double>(), result);
-                return result;
-            }
-            else
-#endif
-            {
-                if( a.value().size() > 0 ) {
-                    return a.value().matrix().lpNorm<Eigen::Infinity> ();
-                }
-                else { // this situation can occur when no wells are present
-                    return 0.0;
-                }
-            }
-            (void)pinfo; // Suppress unused warning for non-MPI.
-        }
-
-        /// \brief Compute the L-infinity norm of a vector representing a well equation.
-        /// \param a The container to compute the infinity norm on.
-        /// \param info In a parallel this holds the information about the data distribution.
-        double infinityNormWell( const ADB& a, const boost::any& pinfo )
-        {
-            double result=0;
-            if( a.value().size() > 0 ) {
-                result = a.value().matrix().lpNorm<Eigen::Infinity> ();
-            }
-#if HAVE_MPI
-            if ( pinfo.type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& real_info =
-                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
-                result = real_info.communicator().max(result);
-            }
-#endif
-            return result;
-            (void)pinfo; // Suppress unused warning for non-MPI.
-        }
-
-    } // namespace detail
-
-
-
-
-
     template <class Grid>
     void BlackoilPolymerModel<Grid>::updateState(const V& dx,
-                                                 PolymerBlackoilState& reservoir_state,
-                                                 WellStateFullyImplicitBlackoilPolymer& well_state)
+                                                 ReservoirState& reservoir_state,
+                                                 WellState& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
@@ -2321,7 +1900,7 @@ namespace detail {
 
     template <class Grid>
     void
-    BlackoilPolymerModel<Grid>::classifyCondition(const PolymerBlackoilState& state)
+    BlackoilPolymerModel<Grid>::classifyCondition(const ReservoirState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -2359,7 +1938,7 @@ namespace detail {
 
     template <class Grid>
     void
-    BlackoilPolymerModel<Grid>::updatePrimalVariableFromState(const PolymerBlackoilState& state)
+    BlackoilPolymerModel<Grid>::updatePrimalVariableFromState(const ReservoirState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
