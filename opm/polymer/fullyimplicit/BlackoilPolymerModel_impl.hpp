@@ -1908,10 +1908,9 @@ namespace detail {
             auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
             info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
 
-            // TODO: code below is wrong, should not compute maxNormWell[MaxNumPhases].
             for ( int idx=0; idx<MaxNumPhases+1; ++idx )
             {
-                if (active_[idx]) {
+                if (idx == MaxNumPhases || active_[idx]) { // Dealing with polymer *or* an active phase.
                     auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
                     auto containers = std::make_tuple(B.col(idx),
                                                       tempV.col(idx),
@@ -1923,10 +1922,11 @@ namespace detail {
                     B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
                     maxCoeff[idx]    = std::get<1>(values);
                     R_sum[idx]       = std::get<2>(values);
-                    maxNormWell[idx] = 0.0;
-                    for ( int w=0; w<nw; ++w )
-                    {
-                        maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    if (idx != MaxNumPhases) { // We do not compute a well flux residual for polymer.
+                        maxNormWell[idx] = 0.0;
+                        for ( int w=0; w<nw; ++w ) {
+                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                        }
                     }
                 }
                 else
