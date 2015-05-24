@@ -136,44 +136,6 @@ namespace detail {
 
 } // namespace detail
 
-    template <class Grid>
-    void BlackoilModel<Grid>::ModelParameters::
-    reset()
-    {
-        // default values for the solver parameters
-        dp_max_rel_      = 1.0e9;
-        ds_max_          = 0.2;
-        dr_max_rel_      = 1.0e9;
-        max_residual_allowed_ = 1e7;
-        tolerance_mb_    = 1.0e-5;
-        tolerance_cnv_   = 1.0e-2;
-        tolerance_wells_ = 5.0e-1;
-    }
-
-    template <class Grid>
-    BlackoilModel<Grid>::ModelParameters::
-    ModelParameters()
-    {
-        // set default values
-        reset();
-    }
-
-    template <class Grid>
-    BlackoilModel<Grid>::ModelParameters::
-    ModelParameters( const parameter::ParameterGroup& param )
-    {
-        // set default values
-        reset();
-
-        // overload with given parameters
-        dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
-        ds_max_      = param.getDefault("ds_max", ds_max_);
-        dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
-        max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
-        tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
-        tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
-        tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-    }
 
 
     template <class Grid>

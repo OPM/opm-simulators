@@ -136,48 +136,9 @@ namespace detail {
 
 } // namespace detail
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::ModelParameters::
-    reset()
-    {
-        // default values for the solver parameters
-        dp_max_rel_      = 1.0e9;
-        ds_max_          = 0.2;
-        dr_max_rel_      = 1.0e9;
-        max_residual_allowed_ = 1e7;
-        tolerance_mb_    = 1.0e-5;
-        tolerance_cnv_   = 1.0e-2;
-        tolerance_wells_ = 5.0e-1;
-    }
 
-    template <class Grid>
-    BlackoilModelBase<Grid>::ModelParameters::
-    ModelParameters()
-    {
-        // set default values
-        reset();
-    }
-
-    template <class Grid>
-    BlackoilModelBase<Grid>::ModelParameters::
-    ModelParameters( const parameter::ParameterGroup& param )
-    {
-        // set default values
-        reset();
-
-        // overload with given parameters
-        dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
-        ds_max_      = param.getDefault("ds_max", ds_max_);
-        dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
-        max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
-        tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
-        tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
-        tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-    }
-
-
-    template <class Grid>
-    BlackoilModelBase<Grid>::
+    template <class Grid, class Implementation>
+    BlackoilModelBase<Grid, Implementation>::
     BlackoilModelBase(const ModelParameters&          param,
                   const Grid&                     grid ,
                   const BlackoilPropsAdInterface& fluid,
@@ -225,9 +186,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     prepareStep(const double dt,
                 ReservoirState& reservoir_state,
                 WellState& /* well_state */)
@@ -241,9 +202,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     afterStep(const double /* dt */,
               ReservoirState& /* reservoir_state */,
               WellState& /* well_state */)
@@ -254,9 +215,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     int
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     sizeNonLinear() const
     {
         return residual_.sizeNonLinear();
@@ -265,9 +226,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     int
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     linearIterationsLastSolve() const
     {
         return linsolver_.iterations();
@@ -276,9 +237,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     bool
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     terminalOutputEnabled() const
     {
         return terminal_output_;
@@ -287,9 +248,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     int
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     numPhases() const
     {
         return fluid_.numPhases();
@@ -298,9 +259,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
     {
         const int num_faces = AutoDiffGrid::numFaces(grid_);
@@ -319,8 +280,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    BlackoilModelBase<Grid>::ReservoirResidualQuant::ReservoirResidualQuant()
+    template <class Grid, class Implementation>
+    BlackoilModelBase<Grid, Implementation>::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
@@ -333,8 +294,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    BlackoilModelBase<Grid>::SolutionState::SolutionState(const int np)
+    template <class Grid, class Implementation>
+    BlackoilModelBase<Grid, Implementation>::SolutionState::SolutionState(const int np)
         : pressure  (    ADB::null())
         , temperature(   ADB::null())
         , saturation(np, ADB::null())
@@ -350,8 +311,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    BlackoilModelBase<Grid>::
+    template <class Grid, class Implementation>
+    BlackoilModelBase<Grid, Implementation>::
     WellOps::WellOps(const Wells* wells)
       : w2p(),
         p2w()
@@ -386,9 +347,9 @@ namespace detail {
 
 
 
-    template <class Grid>
-    typename BlackoilModelBase<Grid>::SolutionState
-    BlackoilModelBase<Grid>::constantState(const BlackoilState& x,
+    template <class Grid, class Implementation>
+    typename BlackoilModelBase<Grid, Implementation>::SolutionState
+    BlackoilModelBase<Grid, Implementation>::constantState(const BlackoilState& x,
                                                   const WellStateFullyImplicitBlackoil&     xw) const
     {
         auto state = variableState(x, xw);
@@ -400,9 +361,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::makeConstantState(SolutionState& state) const
+    BlackoilModelBase<Grid, Implementation>::makeConstantState(SolutionState& state) const
     {
         // HACK: throw away the derivatives. this may not be the most
         // performant way to do things, but it will make the state
@@ -429,9 +390,9 @@ namespace detail {
 
 
 
-    template <class Grid>
-    typename BlackoilModelBase<Grid>::SolutionState
-    BlackoilModelBase<Grid>::variableState(const BlackoilState& x,
+    template <class Grid, class Implementation>
+    typename BlackoilModelBase<Grid, Implementation>::SolutionState
+    BlackoilModelBase<Grid, Implementation>::variableState(const BlackoilState& x,
                                                   const WellStateFullyImplicitBlackoil&     xw) const
     {
         using namespace Opm::AutoDiffGrid;
@@ -587,9 +548,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::computeAccum(const SolutionState& state,
+    BlackoilModelBase<Grid, Implementation>::computeAccum(const SolutionState& state,
                                               const int            aix  )
     {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -634,8 +595,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::computeWellConnectionPressures(const SolutionState& state,
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
                                                                         const WellStateFullyImplicitBlackoil& xw)
     {
         if( ! wellsActive() ) return ;
@@ -727,9 +688,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     assemble(const BlackoilState& reservoir_state,
              WellStateFullyImplicitBlackoil& well_state,
              const bool initial_assembly)
@@ -820,8 +781,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::addWellEq(const SolutionState& state,
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
                                                    WellStateFullyImplicitBlackoil& xw,
                                                    V& aliveWells)
     {
@@ -1062,8 +1023,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1138,8 +1099,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::addWellControlEq(const SolutionState& state,
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::addWellControlEq(const SolutionState& state,
                                                           const WellStateFullyImplicitBlackoil& xw,
                                                           const V& aliveWells)
     {
@@ -1209,8 +1170,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    V BlackoilModelBase<Grid>::solveJacobianSystem() const
+    template <class Grid, class Implementation>
+    V BlackoilModelBase<Grid, Implementation>::solveJacobianSystem() const
     {
         return linsolver_.computeNewtonIncrement(residual_);
     }
@@ -1228,6 +1189,7 @@ namespace detail {
         /// \param info In a parallel this holds the information about the data distribution.
         double infinityNorm( const ADB& a, const boost::any& pinfo = boost::any() )
         {
+            static_cast<void>(pinfo); // Suppress warning in non-MPI case.
 #if HAVE_MPI
             if ( pinfo.type() == typeid(ParallelISTLInformation) )
             {
@@ -1254,6 +1216,7 @@ namespace detail {
         /// \param info In a parallel this holds the information about the data distribution.
         double infinityNormWell( const ADB& a, const boost::any& pinfo )
         {
+            static_cast<void>(pinfo); // Suppress warning in non-MPI case.
             double result=0;
             if( a.value().size() > 0 ) {
                 result = a.value().matrix().lpNorm<Eigen::Infinity> ();
@@ -1275,8 +1238,8 @@ namespace detail {
 
 
 
-    template <class Grid>
-    void BlackoilModelBase<Grid>::updateState(const V& dx,
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::updateState(const V& dx,
                                           BlackoilState& reservoir_state,
                                           WellStateFullyImplicitBlackoil& well_state)
     {
@@ -1537,9 +1500,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     std::vector<ADB>
-    BlackoilModelBase<Grid>::computeRelPerm(const SolutionState& state) const
+    BlackoilModelBase<Grid, Implementation>::computeRelPerm(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
@@ -1566,9 +1529,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     std::vector<ADB>
-    BlackoilModelBase<Grid>::computePressures(const SolutionState& state) const
+    BlackoilModelBase<Grid, Implementation>::computePressures(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
@@ -1596,9 +1559,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     std::vector<ADB>
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     computePressures(const ADB& po,
                      const ADB& sw,
                      const ADB& so,
@@ -1633,9 +1596,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     V
-    BlackoilModelBase<Grid>::computeGasPressure(const V& po,
+    BlackoilModelBase<Grid, Implementation>::computeGasPressure(const V& po,
                                                        const V& sw,
                                                        const V& so,
                                                        const V& sg) const
@@ -1652,9 +1615,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::computeMassFlux(const int               actph ,
+    BlackoilModelBase<Grid, Implementation>::computeMassFlux(const int               actph ,
                                                  const V&                transi,
                                                  const ADB&              kr    ,
                                                  const ADB&              phasePressure,
@@ -1698,9 +1661,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::applyThresholdPressures(ADB& dp)
+    BlackoilModelBase<Grid, Implementation>::applyThresholdPressures(ADB& dp)
     {
         // We support reversible threshold pressures only.
         // Method: if the potential difference is lower (in absolute
@@ -1729,9 +1692,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     std::vector<double>
-    BlackoilModelBase<Grid>::computeResidualNorms() const
+    BlackoilModelBase<Grid, Implementation>::computeResidualNorms() const
     {
         std::vector<double> residualNorms;
 
@@ -1771,9 +1734,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     double
-    BlackoilModelBase<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
+    BlackoilModelBase<Grid, Implementation>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
                                               const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
                                               const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
                                               std::array<double,MaxNumPhases>& R_sum,
@@ -1855,9 +1818,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     bool
-    BlackoilModelBase<Grid>::getConvergence(const double dt, const int iteration)
+    BlackoilModelBase<Grid, Implementation>::getConvergence(const double dt, const int iteration)
     {
         const double tol_mb    = param_.tolerance_mb_;
         const double tol_cnv   = param_.tolerance_cnv_;
@@ -1960,9 +1923,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::fluidViscosity(const int               phase,
+    BlackoilModelBase<Grid, Implementation>::fluidViscosity(const int               phase,
                                                    const ADB&              p    ,
                                                    const ADB&              temp ,
                                                 const ADB&              rs   ,
@@ -1987,9 +1950,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::fluidReciprocFVF(const int               phase,
+    BlackoilModelBase<Grid, Implementation>::fluidReciprocFVF(const int               phase,
                                                   const ADB&              p    ,
                                                   const ADB&              temp ,
                                                   const ADB&              rs   ,
@@ -2014,9 +1977,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::fluidDensity(const int               phase,
+    BlackoilModelBase<Grid, Implementation>::fluidDensity(const int               phase,
                                                  const ADB&              p    ,
                                                  const ADB&              temp ,
                                               const ADB&              rs   ,
@@ -2042,9 +2005,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     V
-    BlackoilModelBase<Grid>::fluidRsSat(const V&                p,
+    BlackoilModelBase<Grid, Implementation>::fluidRsSat(const V&                p,
                                                const V&                satOil,
                                                const std::vector<int>& cells) const
     {
@@ -2055,9 +2018,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::fluidRsSat(const ADB&              p,
+    BlackoilModelBase<Grid, Implementation>::fluidRsSat(const ADB&              p,
                                                const ADB&              satOil,
                                                const std::vector<int>& cells) const
     {
@@ -2065,9 +2028,9 @@ namespace detail {
     }
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     V
-    BlackoilModelBase<Grid>::fluidRvSat(const V&                p,
+    BlackoilModelBase<Grid, Implementation>::fluidRvSat(const V&                p,
                                                const V&              satOil,
                                                const std::vector<int>& cells) const
     {
@@ -2078,9 +2041,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::fluidRvSat(const ADB&              p,
+    BlackoilModelBase<Grid, Implementation>::fluidRvSat(const ADB&              p,
                                                const ADB&              satOil,
                                                const std::vector<int>& cells) const
     {
@@ -2089,9 +2052,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::poroMult(const ADB& p) const
+    BlackoilModelBase<Grid, Implementation>::poroMult(const ADB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -2117,9 +2080,9 @@ namespace detail {
 
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid>::transMult(const ADB& p) const
+    BlackoilModelBase<Grid, Implementation>::transMult(const ADB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -2143,9 +2106,9 @@ namespace detail {
 
 
     /*
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::
+    BlackoilModelBase<Grid, Implementation>::
     classifyCondition(const SolutionState&        state,
                       std::vector<PhasePresence>& cond ) const
     {
@@ -2185,9 +2148,9 @@ namespace detail {
     } */
 
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::classifyCondition(const BlackoilState& state)
+    BlackoilModelBase<Grid, Implementation>::classifyCondition(const BlackoilState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -2223,9 +2186,9 @@ namespace detail {
 
     }
 
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::updatePrimalVariableFromState(const BlackoilState& state)
+    BlackoilModelBase<Grid, Implementation>::updatePrimalVariableFromState(const BlackoilState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -2273,9 +2236,9 @@ namespace detail {
 
 
     /// Update the phaseCondition_ member based on the primalVariable_ member.
-    template <class Grid>
+    template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid>::updatePhaseCondFromPrimalVariable()
+    BlackoilModelBase<Grid, Implementation>::updatePhaseCondFromPrimalVariable()
     {
         if (! active_[Gas]) {
             OPM_THROW(std::logic_error, "updatePhaseCondFromPrimarVariable() logic requires active gas phase.");

@@ -46,6 +46,13 @@ namespace Opm {
     class WellStateFullyImplicitBlackoil;
 
 
+    /// Traits to encapsulate the types used by classes using or
+    /// extending this model. Forward declared here, must be
+    /// specialised for each concrete model class.
+    template <class ConcreteModel>
+    struct ModelTraits;
+
+
     /// A model implementation for three-phase black oil.
     ///
     /// The simulator is capable of handling three-phase problems
@@ -55,7 +62,9 @@ namespace Opm {
     ///
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
-    template<class Grid>
+    /// \tparam  Grid            UnstructuredGrid or CpGrid.
+    /// \tparam  Implementation  Provides concrete state types.
+    template<class Grid, class Implementation>
     class BlackoilModelBase
     {
     public:
@@ -63,25 +72,10 @@ namespace Opm {
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
-        typedef BlackoilState ReservoirState;
-        typedef WellStateFullyImplicitBlackoil WellState;
 
-        /// Model-specific solver parameters.
-        struct ModelParameters
-        {
-            double dp_max_rel_;
-            double ds_max_;
-            double dr_max_rel_;
-            double max_residual_allowed_;
-            double tolerance_mb_;
-            double tolerance_cnv_;
-            double tolerance_wells_;
-
-            explicit ModelParameters( const parameter::ParameterGroup& param );
-            ModelParameters();
-
-            void reset();
-        };
+        typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
+        typedef typename ModelTraits<Implementation>::WellState WellState;
+        typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
 
         // ---------  Public methods  ---------
 
@@ -180,7 +174,7 @@ namespace Opm {
         /// The number of active phases in the model.
         int numPhases() const;
 
-    private:
+    protected:
 
         // ---------  Types and enums  ---------
 
@@ -259,7 +253,7 @@ namespace Opm {
         std::vector<int>         primalVariable_;
         V pvdt_;
 
-        // ---------  Private methods  ---------
+        // ---------  Protected methods  ---------
 
         // return true if wells are available
         bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
