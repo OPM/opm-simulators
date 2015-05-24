@@ -33,7 +33,6 @@
 
 #include <array>
 
-struct UnstructuredGrid;
 struct Wells;
 
 namespace Opm {
@@ -42,8 +41,35 @@ namespace Opm {
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
-    class BlackoilState;
-    class WellStateFullyImplicitBlackoil;
+
+
+    /// Struct for containing iteration variables.
+    struct DefaultBlackoilSolutionState
+    {
+        typedef AutoDiffBlock<double> ADB;
+        explicit DefaultBlackoilSolutionState(const int np)
+            : pressure  (    ADB::null())
+            , temperature(   ADB::null())
+            , saturation(np, ADB::null())
+            , rs        (    ADB::null())
+            , rv        (    ADB::null())
+            , qs        (    ADB::null())
+            , bhp       (    ADB::null())
+            , canonical_phase_pressures(3, ADB::null())
+        {
+        }
+        ADB              pressure;
+        ADB              temperature;
+        std::vector<ADB> saturation;
+        ADB              rs;
+        ADB              rv;
+        ADB              qs;
+        ADB              bhp;
+        // Below are quantities stored in the state for optimization purposes.
+        std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
+    };
+
+
 
 
     /// Traits to encapsulate the types used by classes using or
@@ -76,6 +102,7 @@ namespace Opm {
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
         typedef typename ModelTraits<Implementation>::WellState WellState;
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
+        typedef typename ModelTraits<Implementation>::SolutionState SolutionState;
 
         // ---------  Public methods  ---------
 
@@ -190,19 +217,6 @@ namespace Opm {
             ADB              b;     // Reciprocal FVF
             ADB              head;  // Pressure drop across int. interfaces
             ADB              mob;   // Phase mobility (per cell)
-        };
-
-        struct SolutionState {
-            SolutionState(const int np);
-            ADB              pressure;
-            ADB              temperature;
-            std::vector<ADB> saturation;
-            ADB              rs;
-            ADB              rv;
-            ADB              qs;
-            ADB              bhp;
-            // Below are quantities stored in the state for optimization purposes.
-            std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
         };
 
         struct WellOps {

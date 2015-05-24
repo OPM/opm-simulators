@@ -295,23 +295,6 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    BlackoilModelBase<Grid, Implementation>::SolutionState::SolutionState(const int np)
-        : pressure  (    ADB::null())
-        , temperature(   ADB::null())
-        , saturation(np, ADB::null())
-        , rs        (    ADB::null())
-        , rv        (    ADB::null())
-        , qs        (    ADB::null())
-        , bhp       (    ADB::null())
-        , canonical_phase_pressures(3, ADB::null())
-    {
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
     BlackoilModelBase<Grid, Implementation>::
     WellOps::WellOps(const Wells* wells)
       : w2p(),

@@ -68,10 +68,10 @@ namespace Opm {
                       const bool                              has_disgas,
                       const bool                              has_vapoil,
                       const bool                              terminal_output)
-                : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
-                       has_disgas, has_vapoil, terminal_output)
-            {
-            }
+            : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
+                   has_disgas, has_vapoil, terminal_output)
+        {
+        }
     };
 
 
@@ -81,8 +81,8 @@ namespace Opm {
     {
         typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
-        typedef BlackoilModelBase< Grid, BlackoilModel<Grid> > Base;
         typedef BlackoilModelParameters ModelParameters;
+        typedef DefaultBlackoilSolutionState SolutionState;
     };
 
 } // namespace Opm
