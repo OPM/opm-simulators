@@ -1,7 +1,7 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2014, 2015 Statoil ASA.
   Copyright 2014, 2015 Dr. Markus Blatt - HPC-Simulation-Software & Services
-  Copyright 2014, 2015 Statoil AS
   Copyright 2015 NTNU
 
   This file is part of the Open Porous Media project (OPM).
@@ -20,8 +20,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
-#define OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
+#ifndef OPM_BLACKOILMODELBASE_HEADER_INCLUDED
+#define OPM_BLACKOILMODELBASE_HEADER_INCLUDED
 
 #include <cassert>
 
@@ -46,48 +46,46 @@ namespace Opm {
     class WellStateFullyImplicitBlackoil;
 
 
-    /// A fully implicit solver for the black-oil problem.
+    /// A model implementation for three-phase black oil.
     ///
     /// The simulator is capable of handling three-phase problems
-    /// where gas can be dissolved in oil (but not vice versa). It
+    /// where gas can be dissolved in oil and vice versa. It
     /// uses an industry-standard TPFA discretization with per-phase
     /// upwind weighting of mobilities.
     ///
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
-    template<class T>
-    class FullyImplicitBlackoilSolver
+    template<class Grid>
+    class BlackoilModelBase
     {
     public:
-        // the Newton relaxation type
-        enum RelaxType { DAMPEN, SOR };
+        // ---------  Types and enums  ---------
+        typedef AutoDiffBlock<double> ADB;
+        typedef ADB::V V;
+        typedef ADB::M M;
+        typedef BlackoilState ReservoirState;
+        typedef WellStateFullyImplicitBlackoil WellState;
 
-        // class holding the solver parameters
-        struct SolverParameter
+        /// Model-specific solver parameters.
+        struct ModelParameters
         {
-            double                          dp_max_rel_;
-            double                          ds_max_;
-            double                          dr_max_rel_;
-            enum RelaxType                  relax_type_;
-            double                          relax_max_;
-            double                          relax_increment_;
-            double                          relax_rel_tol_;
-            double                          max_residual_allowed_;
-            double                          tolerance_mb_;
-            double                          tolerance_cnv_;
-            double                          tolerance_wells_;
-            int                             max_iter_; // max newton iterations
-            int                             min_iter_; // min newton iterations
+            double dp_max_rel_;
+            double ds_max_;
+            double dr_max_rel_;
+            double max_residual_allowed_;
+            double tolerance_mb_;
+            double tolerance_cnv_;
+            double tolerance_wells_;
 
-            SolverParameter( const parameter::ParameterGroup& param );
-            SolverParameter();
+            explicit ModelParameters( const parameter::ParameterGroup& param );
+            ModelParameters();
 
             void reset();
         };
 
-        /// \brief The type of the grid that we use.
-        typedef T Grid;
-        /// Construct a solver. It will retain references to the
+        // ---------  Public methods  ---------
+
+        /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
         /// \param[in] param            parameters
@@ -97,16 +95,19 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
-        FullyImplicitBlackoilSolver(const SolverParameter&          param,
-                                    const Grid&                     grid ,
-                                    const BlackoilPropsAdInterface& fluid,
-                                    const DerivedGeology&           geo  ,
-                                    const RockCompressibility*      rock_comp_props,
-                                    const Wells*                    wells,
-                                    const NewtonIterationBlackoilInterface& linsolver,
-                                    const bool has_disgas,
-                                    const bool has_vapoil,
-                                    const bool terminal_output);
+        /// \param[in] has_disgas       turn on dissolved gas
+        /// \param[in] has_vapoil       turn on vaporized oil feature
+        /// \param[in] terminal_output  request output to cout/cerr
+        BlackoilModelBase(const ModelParameters&          param,
+                          const Grid&                     grid ,
+                          const BlackoilPropsAdInterface& fluid,
+                          const DerivedGeology&           geo  ,
+                          const RockCompressibility*      rock_comp_props,
+                          const Wells*                    wells,
+                          const NewtonIterationBlackoilInterface& linsolver,
+                          const bool has_disgas,
+                          const bool has_vapoil,
+                          const bool terminal_output);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
         /// This prevents flow across faces if the potential
@@ -118,29 +119,71 @@ namespace Opm {
         ///                                   of the grid passed in the constructor.
         void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
 
-        /// Take a single forward step, modifiying
-        ///   state.pressure()
-        ///   state.faceflux()
-        ///   state.saturation()
-        ///   state.gasoilratio()
-        ///   wstate.bhp()
-        /// \param[in] dt        time step size
-        /// \param[in] state     reservoir state
-        /// \param[in] wstate    well state
-        /// \return              number of linear iterations used
-        int
-        step(const double   dt    ,
-             BlackoilState& state ,
-             WellStateFullyImplicitBlackoil&     wstate);
+        /// Called once before each time step.
+        /// \param[in] dt                     time step size
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        void prepareStep(const double dt,
+                         ReservoirState& reservoir_state,
+                         WellState& well_state);
 
-        unsigned int newtonIterations () const { return newtonIterations_; }
-        unsigned int linearIterations () const { return linearIterations_; }
+        /// Called once after each time step.
+        /// In this class, this function does nothing.
+        /// \param[in] dt                     time step size
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        void afterStep(const double dt,
+                       ReservoirState& reservoir_state,
+                       WellState& well_state);
+
+        /// Assemble the residual and Jacobian of the nonlinear system.
+        /// \param[in]      reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
+        void assemble(const BlackoilState& reservoir_state,
+                      WellStateFullyImplicitBlackoil& well_state,
+                      const bool initial_assembly);
+
+        /// \brief Compute the residual norms of the mass balance for each phase,
+        /// the well flux, and the well equation.
+        /// \return a vector that contains for each phase the norm of the mass balance
+        /// and afterwards the norm of the residual of the well flux and the well equation.
+        std::vector<double> computeResidualNorms() const;
+
+        /// The size (number of unknowns) of the nonlinear system of equations.
+        int sizeNonLinear() const;
+
+        /// Number of linear iterations used in last call to solveJacobianSystem().
+        int linearIterationsLastSolve() const;
+
+        /// Solve the Jacobian system Jx = r where J is the Jacobian and
+        /// r is the residual.
+        V solveJacobianSystem() const;
+
+        /// Apply an update to the primary variables, chopped if appropriate.
+        /// \param[in]      dx                updates to apply to primary variables
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        void updateState(const V& dx,
+                         BlackoilState& reservoir_state,
+                         WellStateFullyImplicitBlackoil& well_state);
+
+        /// Return true if output to cout is wanted.
+        bool terminalOutputEnabled() const;
+
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        /// \param[in]   dt          timestep length
+        /// \param[in]   iteration   current iteration number
+        bool getConvergence(const double dt, const int iteration);
+
+        /// The number of active phases in the model.
+        int numPhases() const;
 
     private:
-        // Types and enums
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
+
+        // ---------  Types and enums  ---------
+
         typedef Eigen::Array<double,
                              Eigen::Dynamic,
                              Eigen::Dynamic,
@@ -182,7 +225,8 @@ namespace Opm {
 
         enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
-        // Member data
+        // ---------  Data members  ---------
+
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
@@ -199,7 +243,7 @@ namespace Opm {
         const bool has_disgas_;
         const bool has_vapoil_;
 
-        SolverParameter                 param_;
+        ModelParameters                 param_;
         bool use_threshold_pressure_;
         V threshold_pressures_by_interior_face_;
 
@@ -211,12 +255,11 @@ namespace Opm {
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
-        unsigned int newtonIterations_;
-        unsigned int linearIterations_;
 
         std::vector<int>         primalVariable_;
+        V pvdt_;
 
-        // Private methods.
+        // ---------  Private methods  ---------
 
         // return true if wells are available
         bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
@@ -253,18 +296,6 @@ namespace Opm {
 
         void updateWellControls(WellStateFullyImplicitBlackoil& xw) const;
 
-        void
-        assemble(const V&             dtpv,
-                 const BlackoilState& x,
-                 const bool initial_assembly,
-                 WellStateFullyImplicitBlackoil& xw);
-
-        V solveJacobianSystem() const;
-
-        void updateState(const V& dx,
-                         BlackoilState& state,
-                         WellStateFullyImplicitBlackoil& well_state);
-
         std::vector<ADB>
         computePressures(const SolutionState& state) const;
 
@@ -291,12 +322,6 @@ namespace Opm {
                         const SolutionState&    state );
 
         void applyThresholdPressures(ADB& dp);
-
-        /// \brief Compute the residual norms of the mass balance for each phase,
-        /// the well flux, and the well equation.
-        /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residual of the well flux and the well equation.
-        std::vector<double> computeResidualNorms() const;
 
         ADB
         fluidViscosity(const int               phase,
@@ -371,10 +396,6 @@ namespace Opm {
         void
         updatePhaseCondFromPrimalVariable();
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        bool getConvergence(const double dt, const int iteration);
-
         /// \brief Compute the reduction within the convergence check.
         /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
         ///                  as the number of cells of the grid. B.col(i) contains the values
@@ -407,26 +428,14 @@ namespace Opm {
                              int nc,
                              int nw) const;
 
-        void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                      const int it, const double relaxRelTol,
-                                      bool& oscillate, bool& stagnate) const;
-
-        void stablizeNewton(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
-
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
-        enum RelaxType relaxType() const { return param_.relax_type_; }
-        double relaxMax() const { return param_.relax_max_; };
-        double relaxIncrement() const { return param_.relax_increment_; };
-        double relaxRelTol() const { return param_.relax_rel_tol_; };
-        double maxIter() const     { return param_.max_iter_; }
-        double minIter() const     { return param_.min_iter_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     };
 } // namespace Opm
 
-#include "FullyImplicitBlackoilSolver_impl.hpp"
+#include "BlackoilModelBase_impl.hpp"
 
-#endif // OPM_FULLYIMPLICITBLACKOILSOLVER_HEADER_INCLUDED
+#endif // OPM_BLACKOILMODELBASE_HEADER_INCLUDED
