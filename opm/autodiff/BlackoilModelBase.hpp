@@ -388,10 +388,6 @@ namespace Opm {
         ADB
         transMult(const ADB& p) const;
 
-        void
-        classifyCondition(const SolutionState&        state,
-                          std::vector<PhasePresence>& cond ) const;
-
         const std::vector<PhasePresence>
         phaseCondition() const {return phaseCondition_;}
 
