@@ -298,9 +298,6 @@ namespace Opm {
         void updateWellControls(WellState& xw) const;
 
         std::vector<ADB>
-        computePressures(const SolutionState& state) const;
-
-        std::vector<ADB>
         computePressures(const ADB& po,
                          const ADB& sw,
                          const ADB& so,

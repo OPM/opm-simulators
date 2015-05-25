@@ -1507,36 +1507,6 @@ namespace detail {
 
     template <class Grid, class Implementation>
     std::vector<ADB>
-    BlackoilModelBase<Grid, Implementation>::computePressures(const SolutionState& state) const
-    {
-        using namespace Opm::AutoDiffGrid;
-        const int               nc   = numCells(grid_);
-
-        const ADB null = ADB::constant(V::Zero(nc));
-
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB& sw = (active_[ Water ]
-                        ? state.saturation[ pu.phase_pos[ Water ] ]
-                        : null);
-
-        const ADB& so = (active_[ Oil ]
-                        ? state.saturation[ pu.phase_pos[ Oil ] ]
-                        : null);
-
-        const ADB& sg = (active_[ Gas ]
-                        ? state.saturation[ pu.phase_pos[ Gas ] ]
-                        : null);
-        return computePressures(state.pressure, sw, so, sg);
-
-
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
-    std::vector<ADB>
     BlackoilModelBase<Grid, Implementation>::
     computePressures(const ADB& po,
                      const ADB& sw,
