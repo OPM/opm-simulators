@@ -263,6 +263,20 @@ namespace Opm {
 
         // ---------  Protected methods  ---------
 
+        /// Access the most-derived class used for
+        /// static polymorphism (CRTP).
+        Implementation& asImpl()
+        {
+            return static_cast<Implementation&>(*this);
+        }
+
+        /// Access the most-derived class used for
+        /// static polymorphism (CRTP).
+        const Implementation& asImpl() const
+        {
+            return static_cast<const Implementation&>(*this);
+        }
+
         // return true if wells are available
         bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
         // return wells object

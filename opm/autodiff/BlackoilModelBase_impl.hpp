@@ -669,15 +669,15 @@ namespace detail {
         updateWellControls(well_state);
 
         // Create the primary variables.      
-        SolutionState state = variableState(reservoir_state, well_state);
+        SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
             // Create the (constant, derivativeless) initial state.
             SolutionState state0 = state;
-            makeConstantState(state0);
+            asImpl().makeConstantState(state0);
             // Compute initial accumulation contributions
             // and well connection pressures.
-            computeAccum(state0, 0);
+            asImpl().computeAccum(state0, 0);
             computeWellConnectionPressures(state0, well_state);
         }
 
@@ -691,11 +691,11 @@ namespace detail {
         // OPM_AD_DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
-        assembleMassBalanceEq(state);
+        asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
         V aliveWells;
-        addWellEq(state, well_state, aliveWells);
+        asImpl().addWellEq(state, well_state, aliveWells);
         addWellControlEq(state, well_state, aliveWells);
     }
 
@@ -714,14 +714,14 @@ namespace detail {
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
         // on the initial call to assemble() and stored in rq_[phase].accum[0].
-        computeAccum(state, 1);
+        asImpl().computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            asImpl().computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
