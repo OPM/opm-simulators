@@ -49,6 +49,9 @@ namespace Opm {
         typedef BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> > Base;
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
+        // The next line requires C++11 support available in g++ 4.7.
+        // friend Base;
+        friend BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -93,25 +96,11 @@ namespace Opm {
                        ReservoirState& reservoir_state,
                        WellState& well_state);
 
-        /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in]      reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        void assemble(const ReservoirState& reservoir_state,
-                      WellState& well_state,
-                      const bool initial_assembly);
-        // void assemble(const PolymerBlackoilState& reservoir_state,
-        //               WellStateFullyImplicitBlackoilPolymer& well_state,
-        //               const bool initial_assembly);
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
         /// \return a vector that contains for each phase the norm of the mass balance
         /// and afterwards the norm of the residual of the well flux and the well equation.
         std::vector<double> computeResidualNorms() const;
-
-        /// Solve the Jacobian system Jx = r where J is the Jacobian and
-        /// r is the residual.
-        V solveJacobianSystem() const;
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -171,10 +160,18 @@ namespace Opm {
         // Need to declare Base members we want to use here.
         using Base::wellsActive;
         using Base::wells;
-
-        SolutionState
-        constantState(const ReservoirState& x,
-                      const WellState& xw) const;
+        using Base::computePressures;
+        using Base::computeGasPressure;
+        using Base::applyThresholdPressures;
+        using Base::fluidViscosity;
+        using Base::fluidReciprocFVF;
+        using Base::fluidDensity;
+        using Base::fluidRsSat;
+        using Base::fluidRvSat;
+        using Base::poroMult;
+        using Base::transMult;
+        using Base::updatePrimalVariableFromState;
+        using Base::updatePhaseCondFromPrimalVariable;
 
         void
         makeConstantState(SolutionState& state) const;
@@ -187,38 +184,13 @@ namespace Opm {
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
-
         void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
+        assembleMassBalanceEq(const SolutionState& state);
 
         void
         addWellEq(const SolutionState& state,
                   WellState& xw,
                   V& aliveWells);
-
-        void updateWellControls(WellState& xw) const;
-
-        std::vector<ADB>
-        computePressures(const SolutionState& state) const;
-
-        std::vector<ADB>
-        computePressures(const ADB& po,
-                         const ADB& sw,
-                         const ADB& so,
-                         const ADB& sg) const;
-
-        V
-        computeGasPressure(const V& po,
-                           const V& sw,
-                           const V& so,
-                           const V& sg) const;
-
-        std::vector<ADB>
-        computeRelPerm(const SolutionState& state) const;
 
         void
         computeMassFlux(const int               actph ,
@@ -233,80 +205,8 @@ namespace Opm {
         ADB
         computeMc(const SolutionState& state) const;
 
-        void applyThresholdPressures(ADB& dp);
-
-        ADB
-        fluidViscosity(const int               phase,
-                       const ADB&              p    ,
-                       const ADB&              temp ,
-                       const ADB&              rs   ,
-                       const ADB&              rv   ,
-                       const std::vector<PhasePresence>& cond,
-                       const std::vector<int>& cells) const;
-
-        ADB
-        fluidReciprocFVF(const int               phase,
-                         const ADB&              p    ,
-                         const ADB&              temp ,
-                         const ADB&              rs   ,
-                         const ADB&              rv   ,
-                         const std::vector<PhasePresence>& cond,
-                         const std::vector<int>& cells) const;
-
-        ADB
-        fluidDensity(const int               phase,
-                     const ADB&              p    ,
-                     const ADB&              temp ,
-                     const ADB&              rs   ,
-                     const ADB&              rv   ,
-                     const std::vector<PhasePresence>& cond,
-                     const std::vector<int>& cells) const;
-
-        V
-        fluidRsSat(const V&                p,
-                   const V&                so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        fluidRsSat(const ADB&              p,
-                   const ADB&              so,
-                   const std::vector<int>& cells) const;
-
-        V
-        fluidRvSat(const V&                p,
-                   const V&                so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        fluidRvSat(const ADB&              p,
-                   const ADB&              so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        poroMult(const ADB& p) const;
-
-        ADB
-        transMult(const ADB& p) const;
-
-        void
-        classifyCondition(const SolutionState&        state,
-                          std::vector<PhasePresence>& cond ) const;
-
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
-
-        void
-        classifyCondition(const ReservoirState&        state);
-
-
-        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
-        /// be active to call this method.
-        void
-        updatePrimalVariableFromState(const ReservoirState&        state);
-
-        /// Update the phaseCondition_ member based on the primalVariable_ member.
-        void
-        updatePhaseCondFromPrimalVariable();
 
         /// \brief Compute the reduction within the convergence check.
         /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
