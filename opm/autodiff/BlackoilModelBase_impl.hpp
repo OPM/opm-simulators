@@ -32,13 +32,11 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -332,8 +330,8 @@ namespace detail {
 
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
-    BlackoilModelBase<Grid, Implementation>::constantState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw) const
+    BlackoilModelBase<Grid, Implementation>::constantState(const ReservoirState& x,
+                                                  const WellState&     xw) const
     {
         auto state = variableState(x, xw);
         makeConstantState(state);
@@ -375,8 +373,8 @@ namespace detail {
 
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
-    BlackoilModelBase<Grid, Implementation>::variableState(const BlackoilState& x,
-                                                  const WellStateFullyImplicitBlackoil&     xw) const
+    BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
+                                                  const WellState&     xw) const
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -580,7 +578,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
-                                                                        const WellStateFullyImplicitBlackoil& xw)
+                                                                        const WellState& xw)
     {
         if( ! wellsActive() ) return ;
 
@@ -674,8 +672,8 @@ namespace detail {
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::
-    assemble(const BlackoilState& reservoir_state,
-             WellStateFullyImplicitBlackoil& well_state,
+    assemble(const ReservoirState& reservoir_state,
+             WellState& well_state,
              const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
@@ -766,7 +764,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
-                                                   WellStateFullyImplicitBlackoil& xw,
+                                                   WellState& xw,
                                                    V& aliveWells)
     {
         if( ! wellsActive() ) return ;
@@ -1007,7 +1005,7 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellStateFullyImplicitBlackoil& xw) const
+    void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
         if( ! wellsActive() ) return ;
 
@@ -1084,7 +1082,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellControlEq(const SolutionState& state,
-                                                          const WellStateFullyImplicitBlackoil& xw,
+                                                          const WellState& xw,
                                                           const V& aliveWells)
     {
         if( ! wellsActive() ) return;
@@ -1223,8 +1221,8 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateState(const V& dx,
-                                          BlackoilState& reservoir_state,
-                                          WellStateFullyImplicitBlackoil& well_state)
+                                          ReservoirState& reservoir_state,
+                                          WellState& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
@@ -2133,7 +2131,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::classifyCondition(const BlackoilState& state)
+    BlackoilModelBase<Grid, Implementation>::classifyCondition(const ReservoirState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
@@ -2171,7 +2169,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::updatePrimalVariableFromState(const BlackoilState& state)
+    BlackoilModelBase<Grid, Implementation>::updatePrimalVariableFromState(const ReservoirState& state)
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);

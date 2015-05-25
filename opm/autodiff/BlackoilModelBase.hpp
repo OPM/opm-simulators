@@ -162,8 +162,8 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        void assemble(const BlackoilState& reservoir_state,
-                      WellStateFullyImplicitBlackoil& well_state,
+        void assemble(const ReservoirState& reservoir_state,
+                      WellState& well_state,
                       const bool initial_assembly);
 
         /// \brief Compute the residual norms of the mass balance for each phase,
@@ -187,8 +187,8 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         void updateState(const V& dx,
-                         BlackoilState& reservoir_state,
-                         WellStateFullyImplicitBlackoil& well_state);
+                         ReservoirState& reservoir_state,
+                         WellState& well_state);
 
         /// Return true if output to cout is wanted.
         bool terminalOutputEnabled() const;
@@ -269,34 +269,34 @@ namespace Opm {
         const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
 
         SolutionState
-        constantState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw) const;
+        constantState(const ReservoirState& x,
+                      const WellState& xw) const;
 
         void
         makeConstantState(SolutionState& state) const;
 
         SolutionState
-        variableState(const BlackoilState& x,
-                      const WellStateFullyImplicitBlackoil& xw) const;
+        variableState(const ReservoirState& x,
+                      const WellState& xw) const;
 
         void
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
         void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellStateFullyImplicitBlackoil& xw);
+                                            const WellState& xw);
 
         void
         addWellControlEq(const SolutionState& state,
-                         const WellStateFullyImplicitBlackoil& xw,
+                         const WellState& xw,
                          const V& aliveWells);
 
         void
         addWellEq(const SolutionState& state,
-                  WellStateFullyImplicitBlackoil& xw,
+                  WellState& xw,
                   V& aliveWells);
 
-        void updateWellControls(WellStateFullyImplicitBlackoil& xw) const;
+        void updateWellControls(WellState& xw) const;
 
         std::vector<ADB>
         computePressures(const SolutionState& state) const;
@@ -386,13 +386,13 @@ namespace Opm {
         phaseCondition() const {return phaseCondition_;}
 
         void
-        classifyCondition(const BlackoilState&        state);
+        classifyCondition(const ReservoirState& state);
 
 
         /// update the primal variable for Sg, Rv or Rs. The Gas phase must
         /// be active to call this method.
         void
-        updatePrimalVariableFromState(const BlackoilState&        state);
+        updatePrimalVariableFromState(const ReservoirState& state);
 
         /// Update the phaseCondition_ member based on the primalVariable_ member.
         void
