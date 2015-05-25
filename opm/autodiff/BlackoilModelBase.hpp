@@ -283,6 +283,9 @@ namespace Opm {
                                             const WellState& xw);
 
         void
+        assembleMassBalanceEq(const SolutionState& state);
+
+        void
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
                          const V& aliveWells);

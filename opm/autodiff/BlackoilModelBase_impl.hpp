@@ -691,7 +691,23 @@ namespace detail {
         // OPM_AD_DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
+        assembleMassBalanceEq(state);
 
+        // -------- Well equations ----------
+        V aliveWells;
+        addWellEq(state, well_state, aliveWells);
+        addWellControlEq(state, well_state, aliveWells);
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::
+    assembleMassBalanceEq(const SolutionState& state)
+    {
         // Compute b_p and the accumulation term b_p*s_p for each phase,
         // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
         // These quantities are stored in rq_[phase].accum[1].
@@ -735,13 +751,6 @@ namespace detail {
             // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
 
         }
-
-        // -------- Well equations ----------
-
-        // Add contribution from wells and set up the well equations.
-        V aliveWells;
-        addWellEq(state, well_state, aliveWells);
-        addWellControlEq(state, well_state, aliveWells);
     }
 
 
