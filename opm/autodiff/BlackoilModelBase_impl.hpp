@@ -2051,47 +2051,7 @@ namespace detail {
     }
 
 
-    /*
-    template <class Grid, class Implementation>
-    void
-    BlackoilModelBase<Grid, Implementation>::
-    classifyCondition(const SolutionState&        state,
-                      std::vector<PhasePresence>& cond ) const
-    {
-        const PhaseUsage& pu = fluid_.phaseUsage();
 
-        if (active_[ Gas ]) {
-            // Oil/Gas or Water/Oil/Gas system
-            const int po = pu.phase_pos[ Oil ];
-            const int pg = pu.phase_pos[ Gas ];
-
-            const V&  so = state.saturation[ po ].value();
-            const V&  sg = state.saturation[ pg ].value();
-
-            cond.resize(sg.size());
-
-            for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                if (so[c] > 0)        { cond[c].setFreeOil  (); }
-                if (sg[c] > 0)        { cond[c].setFreeGas  (); }
-                if (active_[ Water ]) { cond[c].setFreeWater(); }
-            }
-        }
-        else {
-            // Water/Oil system
-            assert (active_[ Water ]);
-
-            const int po = pu.phase_pos[ Oil ];
-            const V&  so = state.saturation[ po ].value();
-
-            cond.resize(so.size());
-
-            for (V::Index c = 0, e = so.size(); c != e; ++c) {
-                cond[c].setFreeWater();
-
-                if (so[c] > 0) { cond[c].setFreeOil(); }
-            }
-        }
-    } */
 
 
     template <class Grid, class Implementation>
@@ -2128,9 +2088,11 @@ namespace detail {
                 if (so[c] > 0) { phaseCondition_[c].setFreeOil(); }
             }
         }
-
-
     }
+
+
+
+
 
     template <class Grid, class Implementation>
     void
