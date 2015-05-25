@@ -98,6 +98,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilModel.hpp
 	opm/autodiff/BlackoilModelBase.hpp
 	opm/autodiff/BlackoilModelBase_impl.hpp
+	opm/autodiff/BlackoilModelEnums.hpp
 	opm/autodiff/BlackoilModelParameters.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp

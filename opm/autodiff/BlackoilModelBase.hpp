@@ -30,6 +30,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <array>
 
@@ -225,13 +226,6 @@ namespace Opm {
             M p2w;              // perf -> well (gather)
         };
 
-        enum { Water        = BlackoilPropsAdInterface::Water,
-               Oil          = BlackoilPropsAdInterface::Oil  ,
-               Gas          = BlackoilPropsAdInterface::Gas  ,
-               MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases
-         };
-
-        enum PrimalVariables { Sg = 0, RS = 1, RV = 2 };
 
         // ---------  Data members  ---------
 
