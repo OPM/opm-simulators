@@ -329,20 +329,6 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    typename BlackoilModelBase<Grid, Implementation>::SolutionState
-    BlackoilModelBase<Grid, Implementation>::constantState(const ReservoirState& x,
-                                                  const WellState&     xw) const
-    {
-        auto state = variableState(x, xw);
-        makeConstantState(state);
-        return state;
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::makeConstantState(SolutionState& state) const
     {
