@@ -338,35 +338,27 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::computeMassFlux(const int               actph ,
-                                                           const V&                transi,
-                                                           const ADB&              kr    ,
-                                                           const ADB&              phasePressure,
-                                                           const SolutionState&    state)
+                                                const V&                transi,
+                                                const ADB&              kr    ,
+                                                const ADB&              phasePressure,
+                                                const SolutionState&    state)
     {
+        // Compute and store mobilities.
         const int canonicalPhaseIdx = canph_[ actph ];
-
-        const std::vector<PhasePresence> cond = phaseCondition();
-
+        const std::vector<PhasePresence>& cond = phaseCondition();
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
-
+        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
-
-        ADB& head = rq_[ actph ].dh;
-
-        // compute gravity potensial using the face average as in eclipse and MRST
+        // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
+        const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         const ADB rhoavg = ops_.caver * rho;
-
-        ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-
+        rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
-            applyThresholdPressures(dp);
+            applyThresholdPressures(rq_[ actph ].dh);
         }
 
-        head = transi*dp;
-
+        // Polymer treatment.
         if (canonicalPhaseIdx == Water) {
             if(has_polymer_) {
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
@@ -381,19 +373,16 @@ namespace Opm {
                 rq_[poly_pos_].b = rq_[actph].b;
                 rq_[poly_pos_].dh = rq_[actph].dh;
                 UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].dh.value());
-                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].dh;
+                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * (transi * rq_[poly_pos_].dh);
             }
         }
 
-        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
-
-        UpwindSelector<double> upwind(grid_, ops_, head.value());
-
-        const ADB& b       = rq_[ actph ].b;
-        const ADB& mob     = rq_[ actph ].mob;
-        rq_[ actph ].mflux = upwind.select(b * mob) * head;
-        // OPM_AD_DUMP(rq_[ actph ].mob);
-        // OPM_AD_DUMP(rq_[ actph ].mflux);
+        // Compute phase fluxes with upwinding of formation value factor and mobility.
+        const ADB& b   = rq_[ actph ].b;
+        const ADB& mob = rq_[ actph ].mob;
+        const ADB& dh  = rq_[ actph ].dh;
+        UpwindSelector<double> upwind(grid_, ops_, dh.value());
+        rq_[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
     }
 
 
