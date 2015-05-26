@@ -152,7 +152,7 @@ namespace Opm {
                                                       const WellState& xw) const
     {
         std::vector<V> vars0 = Base::variableStateInitials(x, xw);
-        assert(vars0.size() == fluid_.numPhases() + 2);
+        assert(int(vars0.size()) == fluid_.numPhases() + 2);
 
         // Initial polymer concentration.
         if (has_polymer_) {
@@ -176,7 +176,7 @@ namespace Opm {
     BlackoilPolymerModel<Grid>::variableStateIndices() const
     {
         std::vector<int> ind = Base::variableStateIndices();
-        assert(int.size() == 5);
+        assert(ind.size() == 5);
         if (has_polymer_) {
             ind.resize(6);
             // Concentration belongs after other reservoir vars but before well vars.
