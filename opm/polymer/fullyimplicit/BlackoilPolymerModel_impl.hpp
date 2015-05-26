@@ -211,54 +211,24 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::computeAccum(const SolutionState& state,
-                                                        const int            aix  )
+                                             const int            aix  )
     {
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        Base::computeAccum(state, aix);
 
-        const ADB&              press = state.pressure;
-        const ADB&              temp  = state.temperature;
-        const std::vector<ADB>& sat   = state.saturation;
-        const ADB&              rs    = state.rs;
-        const ADB&              rv    = state.rv;
-        const ADB&              c     = state.concentration;
-
-        const std::vector<PhasePresence> cond = phaseCondition();
-
-        const ADB pv_mult = poroMult(press);
-
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
-        for (int phase = 0; phase < maxnp; ++phase) {
-            if (active_[ phase ]) {
-                const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond, cells_);
-                rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
-                // OPM_AD_DUMP(rq_[pos].b);
-                // OPM_AD_DUMP(rq_[pos].accum[aix]);
-            }
-        }
-
-        if (active_[ Oil ] && active_[ Gas ]) {
-            // Account for gas dissolved in oil and vaporized oil
-            const int po = pu.phase_pos[ Oil ];
-            const int pg = pu.phase_pos[ Gas ];
-
-            // Temporary copy to avoid contribution of dissolved gas in the vaporized oil
-            // when both dissolved gas and vaporized oil are present.
-            const ADB accum_gas_copy =rq_[pg].accum[aix];
-
-            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
-            rq_[po].accum[aix] += state.rv * accum_gas_copy;
-            // OPM_AD_DUMP(rq_[pg].accum[aix]);
-        }
-                
+        // Compute accumulation of polymer equation only if needed.
         if (has_polymer_) {
+            const ADB& press = state.pressure;
+            const std::vector<ADB>& sat = state.saturation;
+            const ADB& c = state.concentration;
+            const ADB pv_mult = poroMult(press); // also computed in Base::computeAccum, could be optimized.
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             // compute polymer properties.
             const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
             const ADB ads  = polymer_props_ad_.adsorption(state.concentration, cmax);
             const double rho_rock = polymer_props_ad_.rockDensity();
-            const V phi = Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1);
+            const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], AutoDiffGrid::numCells(grid_));
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-            // compute total phases and determin polymer position.
+            // Compute polymer accumulation term.
             rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) 
                                         + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
