@@ -343,46 +343,32 @@ namespace Opm {
                                                 const ADB&              phasePressure,
                                                 const SolutionState&    state)
     {
-        // Compute and store mobilities.
-        const int canonicalPhaseIdx = canph_[ actph ];
-        const std::vector<PhasePresence>& cond = phaseCondition();
-        const ADB tr_mult = transMult(state.pressure);
-        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
-        rq_[ actph ].mob = tr_mult * kr / mu;
-
-        // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
-        const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
-        const ADB rhoavg = ops_.caver * rho;
-        rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-        if (use_threshold_pressure_) {
-            applyThresholdPressures(rq_[ actph ].dh);
-        }
+        Base::computeMassFlux(actph, transi, kr, phasePressure, state);
 
         // Polymer treatment.
+        const int canonicalPhaseIdx = canph_[ actph ];
         if (canonicalPhaseIdx == Water) {
-            if(has_polymer_) {
+            if (has_polymer_) {
+                const std::vector<PhasePresence>& cond = phaseCondition();
+                const ADB tr_mult = transMult(state.pressure);
+                const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
                 const ADB mc = computeMc(state);
-                ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                 cmax,
-                                                                 kr,
-                                                                 state.saturation[canonicalPhaseIdx]);
-                ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+                const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr, state.saturation[actph]);
+                const ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+                // Reduce mobility of water phase by relperm reduction and effective viscosity increase.
                 rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                // Compute polymer mobility.
                 rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
                 rq_[poly_pos_].b = rq_[actph].b;
                 rq_[poly_pos_].dh = rq_[actph].dh;
                 UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].dh.value());
+                // Compute polymer flux.
                 rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * (transi * rq_[poly_pos_].dh);
+                // Must recompute water flux since we have to use modified mobilities.
+                rq_[ actph ].mflux = upwind.select(rq_[actph].b * rq_[actph].mob) * (transi * rq_[actph].dh);
             }
         }
-
-        // Compute phase fluxes with upwinding of formation value factor and mobility.
-        const ADB& b   = rq_[ actph ].b;
-        const ADB& mob = rq_[ actph ].mob;
-        const ADB& dh  = rq_[ actph ].dh;
-        UpwindSelector<double> upwind(grid_, ops_, dh.value());
-        rq_[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
     }
 
 
