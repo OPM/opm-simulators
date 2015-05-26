@@ -122,6 +122,7 @@ namespace Opm {
 
         typedef typename Base::SolutionState SolutionState;
         typedef typename Base::DataBlock DataBlock;
+        enum { Concentration = CanonicalVariablePositions::Next };
 
         // ---------  Data members  ---------
 
@@ -160,6 +161,7 @@ namespace Opm {
         // Need to declare Base members we want to use here.
         using Base::wellsActive;
         using Base::wells;
+        using Base::variableState;
         using Base::computePressures;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;
@@ -181,9 +183,17 @@ namespace Opm {
         void
         makeConstantState(SolutionState& state) const;
 
+        std::vector<V>
+        variableStateInitials(const ReservoirState& x,
+                              const WellState& xw) const;
+
+        std::vector<int>
+        variableStateIndices() const;
+
         SolutionState
-        variableState(const ReservoirState& x,
-                      const WellState& xw) const;
+        variableStateExtractVars(const ReservoirState& x,
+                                 const std::vector<int>& indices,
+                                 std::vector<ADB>& vars) const;
 
         void
         computeAccum(const SolutionState& state,

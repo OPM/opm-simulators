@@ -147,164 +147,56 @@ namespace Opm {
 
 
     template <class Grid>
-    typename BlackoilPolymerModel<Grid>::SolutionState
-    BlackoilPolymerModel<Grid>::variableState(const ReservoirState& x,
-                                              const WellState& xw) const
+    std::vector<V>
+    BlackoilPolymerModel<Grid>::variableStateInitials(const ReservoirState& x,
+                                                      const WellState& xw) const
     {
-        using namespace Opm::AutoDiffGrid;
-        const int nc = numCells(grid_);
-        const int np = x.numPhases();
+        std::vector<V> vars0 = Base::variableStateInitials(x, xw);
+        assert(vars0.size() == fluid_.numPhases() + 2);
 
-        std::vector<V> vars0;
-        // p, Sw and Rs, Rv or Sg, concentration is used as primary depending on solution conditions
-        vars0.reserve(np + 2);
-        // Initial pressure.
-        assert (not x.pressure().empty());
-        const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
-        vars0.push_back(p);
-
-        // Initial saturation.
-        assert (not x.saturation().empty());
-        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
-        const Opm::PhaseUsage pu = fluid_.phaseUsage();
-        // We do not handle a Water/Gas situation correctly, guard against it.
-        assert (active_[ Oil]);
-        if (active_[ Water ]) {
-            const V sw = s.col(pu.phase_pos[ Water ]);
-            vars0.push_back(sw);
-        }
-
-        // store cell status in vectors
-        V isRs = V::Zero(nc,1);
-        V isRv = V::Zero(nc,1);
-        V isSg = V::Zero(nc,1);
-
-        if (active_[ Gas ]){
-            for (int c = 0; c < nc ; c++ ) {
-                switch (primalVariable_[c]) {
-                case PrimalVariables::RS:
-                    isRs[c] = 1;
-                    break;
-
-                case PrimalVariables::RV:
-                    isRv[c] = 1;
-                    break;
-
-                default:
-                    isSg[c] = 1;
-                    break;
-                }
-            }
-
-
-            // define new primary variable xvar depending on solution condition
-            V xvar(nc);
-            const V sg = s.col(pu.phase_pos[ Gas ]);
-            const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
-            const V rv = Eigen::Map<const V>(& x.rv()[0], x.rv().size());
-            xvar = isRs*rs + isRv*rv + isSg*sg;
-            vars0.push_back(xvar);
-        }
-        
         // Initial polymer concentration.
         if (has_polymer_) {
             assert (not x.concentration().empty());
-            const V c = Eigen::Map<const V>(& x.concentration()[0], nc, 1);
-            vars0.push_back(c);
+            const int nc = x.concentration().size();
+            const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
+            // Concentration belongs after other reservoir vars but before well vars.
+            auto concentration_pos = vars0.begin() + fluid_.numPhases();
+            assert(concentration_pos == vars0.end() - 2);
+            vars0.insert(concentration_pos, c);
         }
+        return vars0;
+    }
 
-        // Initial well rates.
-        if( wellsActive() ) {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            const int nw = wells().number_of_wells;
 
-            // The transpose() below switches the ordering.
-            const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-            const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            vars0.push_back(qs);
 
-            // Initial well bottom-hole pressure.
-            assert (not xw.bhp().empty());
-            const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
-            vars0.push_back(bhp);
-        } else {
-            // push null states for qs and bhp
-            vars0.push_back(V());
-            vars0.push_back(V());
-        }
 
-        std::vector<ADB> vars = ADB::variables(vars0);
 
-        SolutionState state(np);
+    template <class Grid>
+    std::vector<int>
+    BlackoilPolymerModel<Grid>::variableStateIndices() const
+    {
+        std::vector<int> ind = Base::variableStateIndices();
+        assert(int.size() == 5);
+        ind.resize(6);
+        // Concentration belongs after other reservoir vars but before well vars.
+        ind[Concentration] = fluid_.numPhases();
+        // Concentration is pushing back the well vars.
+        ++ind[Qs];
+        ++ind[Bhp];
+        return ind;
+    }
 
-        // Pressure.
-        int nextvar = 0;
-        state.pressure = std::move(vars[ nextvar++ ]);
 
-        // temperature
-        const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
-        state.temperature = ADB::constant(temp);
 
-        // Saturations
-        {
 
-            ADB so = ADB::constant(V::Ones(nc, 1));
-
-            if (active_[ Water ]) {
-                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[ nextvar++ ]);
-                const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
-                so -= sw;
-            }
-
-            if (active_[ Gas ]) {
-                // Define Sg Rs and Rv in terms of xvar.
-                // Xvar is only defined if gas phase is active
-                const ADB& xvar = vars[ nextvar++ ];
-                ADB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
-                sg = isSg*xvar + isRv* so;
-                so -= sg;
-
-                if (active_[ Oil ]) {
-                    // RS and RV is only defined if both oil and gas phase are active.
-                    const ADB& sw = (active_[ Water ]
-                                             ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1)));
-                    state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
-                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
-                    if (has_disgas_) {
-                        state.rs = (1-isRs) * rsSat + isRs*xvar;
-                    } else {
-                        state.rs = rsSat;
-                    }
-                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
-                    if (has_vapoil_) {
-                        state.rv = (1-isRv) * rvSat + isRv*xvar;
-                    } else {
-                        state.rv = rvSat;
-                    }
-                }
-            }
-
-            if (active_[ Oil ]) {
-                // Note that so is never a primary variable.
-                state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
-            }
-        }
-
-        // Concentration.
-        if (has_polymer_) {
-            state.concentration = std::move(vars[ nextvar++ ]);
-        }
-
-        // Qs.
-        state.qs = std::move(vars[ nextvar++ ]);
-
-        // Bhp.
-        state.bhp = std::move(vars[ nextvar++ ]);
-
-        assert(nextvar == int(vars.size()));
-
+    template <class Grid>
+    typename BlackoilPolymerModel<Grid>::SolutionState
+    BlackoilPolymerModel<Grid>::variableStateExtractVars(const ReservoirState& x,
+                                                         const std::vector<int>& indices,
+                                                         std::vector<ADB>& vars) const
+    {
+        SolutionState state = Base::variableStateExtractVars(x, indices, vars);
+        state.concentration = std::move(vars[indices[Concentration]]);
         return state;
     }
 
