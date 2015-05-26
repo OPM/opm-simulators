@@ -1591,43 +1591,33 @@ namespace detail {
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::computeMassFlux(const int               actph ,
-                                                 const V&                transi,
-                                                 const ADB&              kr    ,
-                                                 const ADB&              phasePressure,
-                                                 const SolutionState&    state)
+                                                             const V&                transi,
+                                                             const ADB&              kr    ,
+                                                             const ADB&              phasePressure,
+                                                             const SolutionState&    state)
     {
+        // Compute and store mobilities.
         const int canonicalPhaseIdx = canph_[ actph ];
-
-        const std::vector<PhasePresence> cond = phaseCondition();
-
+        const std::vector<PhasePresence>& cond = phaseCondition();
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
-
+        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         rq_[ actph ].mob = tr_mult * kr / mu;
 
-        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
-
-        ADB& head = rq_[ actph ].head;
-
-        // compute gravity potensial using the face average as in eclipse and MRST
+        // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
+        const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         const ADB rhoavg = ops_.caver * rho;
-
         ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-
         if (use_threshold_pressure_) {
             applyThresholdPressures(dp);
         }
-
+        ADB& head = rq_[ actph ].head;
         head = transi*dp;
-        //head      = transi*(ops_.ngrad * phasePressure) + gflux;
 
+        // Compute phase fluxes with upwinding of formation value factor and mobility.
         UpwindSelector<double> upwind(grid_, ops_, head.value());
-
         const ADB& b       = rq_[ actph ].b;
         const ADB& mob     = rq_[ actph ].mob;
         rq_[ actph ].mflux = upwind.select(b * mob) * head;
-        // OPM_AD_DUMP(rq_[ actph ].mob);
-        // OPM_AD_DUMP(rq_[ actph ].mflux);
     }
 
 
