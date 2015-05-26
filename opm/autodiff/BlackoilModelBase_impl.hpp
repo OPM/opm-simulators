@@ -362,9 +362,9 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
                                                            const WellState&     xw) const
     {
-        std::vector<V> vars0 = variableStateInitials(x, xw);
+        std::vector<V> vars0 = asImpl().variableStateInitials(x, xw);
         std::vector<ADB> vars = ADB::variables(vars0);
-        return variableStateExtractVars(x, variableStateIndices(), vars);
+        return asImpl().variableStateExtractVars(x, asImpl().variableStateIndices(), vars);
     }
 
 
