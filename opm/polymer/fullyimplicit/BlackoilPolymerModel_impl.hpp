@@ -376,45 +376,6 @@ namespace Opm {
 
 
     template <class Grid>
-    std::vector<double>
-    BlackoilPolymerModel<Grid>::computeResidualNorms() const
-    {
-        std::vector<double> residualNorms;
-
-        std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
-        const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
-
-        for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-            const double massBalanceResid = detail::infinityNorm( (*massBalanceIt) );
-            if (!std::isfinite(massBalanceResid)) {
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
-            }
-            residualNorms.push_back(massBalanceResid);
-        }
-
-        // the following residuals are not used in the oscillation detection now
-        const double wellFluxResid = detail::infinityNorm( residual_.well_flux_eq );
-        if (!std::isfinite(wellFluxResid)) {
-            OPM_THROW(Opm::NumericalProblem,
-               "Encountered a non-finite residual");
-        }
-        residualNorms.push_back(wellFluxResid);
-
-        const double wellResid = detail::infinityNorm( residual_.well_eq );
-        if (!std::isfinite(wellResid)) {
-           OPM_THROW(Opm::NumericalProblem,
-               "Encountered a non-finite residual");
-        }
-        residualNorms.push_back(wellResid);
-
-        return residualNorms;
-    }
-
-
-
-
-    template <class Grid>
     double
     BlackoilPolymerModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
                                                      const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,

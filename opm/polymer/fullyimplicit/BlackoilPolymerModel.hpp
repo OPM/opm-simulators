@@ -96,12 +96,6 @@ namespace Opm {
                        ReservoirState& reservoir_state,
                        WellState& well_state);
 
-        /// \brief Compute the residual norms of the mass balance for each phase,
-        /// the well flux, and the well equation.
-        /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residual of the well flux and the well equation.
-        std::vector<double> computeResidualNorms() const;
-
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
