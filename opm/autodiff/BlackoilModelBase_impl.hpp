@@ -286,7 +286,7 @@ namespace detail {
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
-        , head (   ADB::null())
+        , dh   (   ADB::null())
         , mob  (   ADB::null())
     {
     }
@@ -770,11 +770,11 @@ namespace detail {
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
 
             const UpwindSelector<double> upwindOil(grid_, ops_,
-                                                rq_[po].head.value());
+                                                rq_[po].dh.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
             const UpwindSelector<double> upwindGas(grid_, ops_,
-                                                rq_[pg].head.value());
+                                                rq_[pg].dh.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
             residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
@@ -1606,18 +1606,17 @@ namespace detail {
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
         const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         const ADB rhoavg = ops_.caver * rho;
-        ADB dp = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
-            applyThresholdPressures(dp);
+            applyThresholdPressures(rq_[ actph ].dh);
         }
-        ADB& head = rq_[ actph ].head;
-        head = transi*dp;
 
         // Compute phase fluxes with upwinding of formation value factor and mobility.
-        UpwindSelector<double> upwind(grid_, ops_, head.value());
-        const ADB& b       = rq_[ actph ].b;
-        const ADB& mob     = rq_[ actph ].mob;
-        rq_[ actph ].mflux = upwind.select(b * mob) * head;
+        const ADB& b   = rq_[ actph ].b;
+        const ADB& mob = rq_[ actph ].mob;
+        const ADB& dh  = rq_[ actph ].dh;
+        UpwindSelector<double> upwind(grid_, ops_, dh.value());
+        rq_[ actph ].mflux = upwind.select(b * mob) * transi * dh;
     }
 
 

@@ -216,7 +216,7 @@ namespace Opm {
             std::vector<ADB> accum; // Accumulations
             ADB              mflux; // Mass flux (surface conditions)
             ADB              b;     // Reciprocal FVF
-            ADB              head;  // Pressure drop across int. interfaces
+            ADB              dh;    // Pressure drop across int. interfaces
             ADB              mob;   // Phase mobility (per cell)
         };
 
