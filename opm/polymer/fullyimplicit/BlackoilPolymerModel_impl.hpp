@@ -354,7 +354,7 @@ namespace Opm {
 
         const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv,cond, cells_);
 
-        ADB& head = rq_[ actph ].head;
+        ADB& head = rq_[ actph ].dh;
 
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rhoavg = ops_.caver * rho;
@@ -379,9 +379,9 @@ namespace Opm {
                 rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
                 rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
                 rq_[poly_pos_].b = rq_[actph].b;
-                rq_[poly_pos_].head = rq_[actph].head;
-                UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].head.value());
-                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
+                rq_[poly_pos_].dh = rq_[actph].dh;
+                UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].dh.value());
+                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].dh;
             }
         }
 
