@@ -226,7 +226,6 @@ namespace Opm {
             M p2w;              // perf -> well (gather)
         };
 
-
         // ---------  Data members  ---------
 
         const Grid&         grid_;
@@ -288,6 +287,18 @@ namespace Opm {
         SolutionState
         variableState(const ReservoirState& x,
                       const WellState& xw) const;
+
+        std::vector<V>
+        variableStateInitials(const ReservoirState& x,
+                              const WellState& xw) const;
+
+        std::vector<int>
+        variableStateIndices() const;
+
+        SolutionState
+        variableStateExtractVars(const ReservoirState& x,
+                                 const std::vector<int>& indices,
+                                 std::vector<ADB>& vars) const;
 
         void
         computeAccum(const SolutionState& state,

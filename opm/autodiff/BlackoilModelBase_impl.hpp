@@ -360,8 +360,24 @@ namespace detail {
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
     BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
-                                                  const WellState&     xw) const
+                                                           const WellState&     xw) const
     {
+        std::vector<V> vars0 = variableStateInitials(x, xw);
+        std::vector<ADB> vars = ADB::variables(vars0);
+        return variableStateExtractVars(x, variableStateIndices(), vars);
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    std::vector<V>
+    BlackoilModelBase<Grid, Implementation>::variableStateInitials(const ReservoirState& x,
+                                                                   const WellState&     xw) const
+    {
+        assert(active_[ Oil ]);
+
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
         const int np = x.numPhases();
@@ -385,28 +401,24 @@ namespace detail {
             vars0.push_back(sw);
         }
 
-        // store cell status in vectors
-        V isRs = V::Zero(nc,1);
-        V isRv = V::Zero(nc,1);
-        V isSg = V::Zero(nc,1);
-
-        if (active_[ Gas ]){
+        if (active_[ Gas ]) {
+            // store cell status in vectors
+            V isRs = V::Zero(nc,1);
+            V isRv = V::Zero(nc,1);
+            V isSg = V::Zero(nc,1);
             for (int c = 0; c < nc ; c++ ) {
                 switch (primalVariable_[c]) {
                 case PrimalVariables::RS:
                     isRs[c] = 1;
                     break;
-
                 case PrimalVariables::RV:
                     isRv[c] = 1;
                     break;
-
                 default:
                     isSg[c] = 1;
                     break;
                 }
             }
-
 
             // define new primary variable xvar depending on solution condition
             V xvar(nc);
@@ -419,7 +431,7 @@ namespace detail {
 
 
         // Initial well rates.
-        if( wellsActive() )
+        if ( wellsActive() )
         {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
@@ -442,25 +454,63 @@ namespace detail {
             vars0.push_back(V());
         }
 
-        std::vector<ADB> vars = ADB::variables(vars0);
+        return vars0;
+    }
 
-        SolutionState state(np);
+
+
+
+
+    template <class Grid, class Implementation>
+    std::vector<int>
+    BlackoilModelBase<Grid, Implementation>::variableStateIndices() const
+    {
+        assert(active_[Oil]);
+        const int np = fluid_.numPhases();
+        std::vector<int> indices(np + 2, -1);
+        int next = 0;
+        indices[Pressure] = next++;
+        if (active_[Water]) {
+            indices[Sw] = next++;
+        }
+        if (active_[Gas]) {
+            indices[Xvar] = next++;
+        }
+        indices[Qs] = next++;
+        indices[Bhp] = next++;
+        assert(next == np + 2);
+        return indices;
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    typename BlackoilModelBase<Grid, Implementation>::SolutionState
+    BlackoilModelBase<Grid, Implementation>::variableStateExtractVars(const ReservoirState& x,
+                                                                      const std::vector<int>& indices,
+                                                                      std::vector<ADB>& vars) const
+    {
+        //using namespace Opm::AutoDiffGrid;
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const Opm::PhaseUsage pu = fluid_.phaseUsage();
+
+        SolutionState state(fluid_.numPhases());
 
         // Pressure.
-        int nextvar = 0;
-        state.pressure = std::move(vars[ nextvar++ ]);
+        state.pressure = std::move(vars[indices[Pressure]]);
 
-        // temperature
+        // Temperature cannot be a variable at this time (only constant).
         const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
         state.temperature = ADB::constant(temp);
 
         // Saturations
         {
-
             ADB so = ADB::constant(V::Ones(nc, 1));
 
             if (active_[ Water ]) {
-                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[ nextvar++ ]);
+                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[indices[Sw]]);
                 const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
                 so -= sw;
             }
@@ -468,7 +518,23 @@ namespace detail {
             if (active_[ Gas ]) {
                 // Define Sg Rs and Rv in terms of xvar.
                 // Xvar is only defined if gas phase is active
-                const ADB& xvar = vars[ nextvar++ ];
+                V isRs = V::Zero(nc,1);
+                V isRv = V::Zero(nc,1);
+                V isSg = V::Zero(nc,1);
+                for (int c = 0; c < nc ; c++ ) {
+                    switch (primalVariable_[c]) {
+                    case PrimalVariables::RS:
+                        isRs[c] = 1;
+                        break;
+                    case PrimalVariables::RV:
+                        isRv[c] = 1;
+                        break;
+                    default:
+                        isSg[c] = 1;
+                        break;
+                    }
+                }
+                const ADB& xvar = vars[indices[Xvar]];
                 ADB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
                 sg = isSg*xvar + isRv* so;
                 so -= sg;
@@ -501,12 +567,10 @@ namespace detail {
         }
 
         // Qs.
-        state.qs = std::move(vars[ nextvar++ ]);
+        state.qs = std::move(vars[indices[Qs]]);
 
         // Bhp.
-        state.bhp = std::move(vars[ nextvar++ ]);
-
-        assert(nextvar == int(vars.size()));
+        state.bhp = std::move(vars[indices[Bhp]]);
 
         return state;
     }

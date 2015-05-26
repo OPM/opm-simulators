@@ -39,6 +39,14 @@ namespace Opm
     };
 
 
+    enum CanonicalVariablePositions {
+        Pressure = 0,
+        Sw = 1,
+        Xvar = 2,
+        Qs = 3,
+        Bhp = 4
+    };
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODELENUMS_HEADER_INCLUDED
