@@ -44,7 +44,8 @@ namespace Opm
         Sw = 1,
         Xvar = 2,
         Qs = 3,
-        Bhp = 4
+        Bhp = 4,
+        Next // For extension.
     };
 
 } // namespace Opm
