@@ -466,8 +466,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::variableStateIndices() const
     {
         assert(active_[Oil]);
-        const int np = fluid_.numPhases();
-        std::vector<int> indices(np + 2, -1);
+        std::vector<int> indices(5, -1);
         int next = 0;
         indices[Pressure] = next++;
         if (active_[Water]) {
@@ -478,7 +477,7 @@ namespace detail {
         }
         indices[Qs] = next++;
         indices[Bhp] = next++;
-        assert(next == np + 2);
+        assert(next == fluid_.numPhases() + 2);
         return indices;
     }
 
