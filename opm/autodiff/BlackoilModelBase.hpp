@@ -250,6 +250,9 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+        V isRs_;
+        V isRv_;
+        V isSg_;
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
@@ -420,6 +423,7 @@ namespace Opm {
         updatePrimalVariableFromState(const ReservoirState& state);
 
         /// Update the phaseCondition_ member based on the primalVariable_ member.
+        /// Also updates isRs_, isRv_ and isSg_;
         void
         updatePhaseCondFromPrimalVariable();
 

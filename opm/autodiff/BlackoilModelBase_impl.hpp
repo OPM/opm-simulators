@@ -164,6 +164,9 @@ namespace detail {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
+        , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
+        , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
+        , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null() } )
@@ -402,30 +405,12 @@ namespace detail {
         }
 
         if (active_[ Gas ]) {
-            // store cell status in vectors
-            V isRs = V::Zero(nc,1);
-            V isRv = V::Zero(nc,1);
-            V isSg = V::Zero(nc,1);
-            for (int c = 0; c < nc ; c++ ) {
-                switch (primalVariable_[c]) {
-                case PrimalVariables::RS:
-                    isRs[c] = 1;
-                    break;
-                case PrimalVariables::RV:
-                    isRv[c] = 1;
-                    break;
-                default:
-                    isSg[c] = 1;
-                    break;
-                }
-            }
-
             // define new primary variable xvar depending on solution condition
             V xvar(nc);
             const V sg = s.col(pu.phase_pos[ Gas ]);
             const V rs = Eigen::Map<const V>(& x.gasoilratio()[0], x.gasoilratio().size());
             const V rv = Eigen::Map<const V>(& x.rv()[0], x.rv().size());
-            xvar = isRs*rs + isRv*rv + isSg*sg;
+            xvar = isRs_*rs + isRv_*rv + isSg_*sg;
             vars0.push_back(xvar);
         }
 
@@ -517,25 +502,9 @@ namespace detail {
             if (active_[ Gas ]) {
                 // Define Sg Rs and Rv in terms of xvar.
                 // Xvar is only defined if gas phase is active
-                V isRs = V::Zero(nc,1);
-                V isRv = V::Zero(nc,1);
-                V isSg = V::Zero(nc,1);
-                for (int c = 0; c < nc ; c++ ) {
-                    switch (primalVariable_[c]) {
-                    case PrimalVariables::RS:
-                        isRs[c] = 1;
-                        break;
-                    case PrimalVariables::RV:
-                        isRv[c] = 1;
-                        break;
-                    default:
-                        isSg[c] = 1;
-                        break;
-                    }
-                }
                 const ADB& xvar = vars[indices[Xvar]];
                 ADB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
-                sg = isSg*xvar + isRv* so;
+                sg = isSg_*xvar + isRv_*so;
                 so -= sg;
 
                 if (active_[ Oil ]) {
@@ -546,13 +515,13 @@ namespace detail {
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
-                        state.rs = (1-isRs) * rsSat + isRs*xvar;
+                        state.rs = (1-isRs_)*rsSat + isRs_*xvar;
                     } else {
                         state.rs = rsSat;
                     }
                     const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
-                        state.rv = (1-isRv) * rvSat + isRv*xvar;
+                        state.rv = (1-isRv_)*rvSat + isRv_*xvar;
                     } else {
                         state.rv = rvSat;
                     }
@@ -1307,28 +1276,6 @@ namespace detail {
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
 
-        // store cell status in vectors
-        V isRs = V::Zero(nc,1);
-        V isRv = V::Zero(nc,1);
-        V isSg = V::Zero(nc,1);
-        if (active_[Gas]) {
-            for (int c = 0; c < nc; ++c) {
-                switch (primalVariable_[c]) {
-                case PrimalVariables::RS:
-                    isRs[c] = 1;
-                    break;
-
-                case PrimalVariables::RV:
-                    isRv[c] = 1;
-                    break;
-
-                default:
-                    isSg[c] = 1;
-                    break;
-                }
-            }
-        }
-
         // Extract parts of dx corresponding to each part.
         const V dp = subset(dx, Span(nc));
         int varstart = nc;
@@ -1372,7 +1319,7 @@ namespace detail {
 
             V dsg;
             if (active_[Gas]){
-                dsg = isSg * dxvar - isRv * dsw;
+                dsg = isSg_ * dxvar - isRv_ * dsw;
                 maxVal = dsg.abs().max(maxVal);
                 dso = dso - dsg;
             }
@@ -1454,14 +1401,14 @@ namespace detail {
         V rs;
         if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-            const V drs = isRs * dxvar;
+            const V drs = isRs_ * dxvar;
             const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
             rs = rs_old - drs_limited;
         }
         V rv;
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-            const V drv = isRv * dxvar;
+            const V drv = isRv_ * dxvar;
             const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
             rv = rv_old - drv_limited;
         }
@@ -1478,11 +1425,11 @@ namespace detail {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rsSat = fluidRsSat(p, so, cells_);
             // The obvious case
-            auto hasGas = (sg > 0 && isRs == 0);
+            auto hasGas = (sg > 0 && isRs_ == 0);
 
             // Set oil saturated if previous rs is sufficiently large
             const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
+            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs_ == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasGas || gasVaporized;
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
@@ -1504,11 +1451,11 @@ namespace detail {
             const V rvSat = fluidRvSat(gaspress, so, cells_);
 
             // The obvious case
-            auto hasOil = (so > 0 && isRv == 0);
+            auto hasOil = (so > 0 && isRv_ == 0);
 
             // Set oil saturated if previous rv is sufficiently large
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
+            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv_ == 1) && (rv_old > rvSat0 * (1-epsilon)) );
             auto useSg = watOnly || hasOil || oilCondensed;
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
@@ -2232,6 +2179,9 @@ namespace detail {
             OPM_THROW(std::logic_error, "updatePhaseCondFromPrimarVariable() logic requires active gas phase.");
         }
         const int nc = primalVariable_.size();
+        isRs_ = V::Zero(nc);
+        isRv_ = V::Zero(nc);
+        isSg_ = V::Zero(nc);
         for (int c = 0; c < nc; ++c) {
             phaseCondition_[c] = PhasePresence(); // No free phases.
             phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
@@ -2239,12 +2189,15 @@ namespace detail {
             case PrimalVariables::Sg:
                 phaseCondition_[c].setFreeOil();
                 phaseCondition_[c].setFreeGas();
+                isSg_[c] = 1;
                 break;
             case PrimalVariables::RS:
                 phaseCondition_[c].setFreeOil();
+                isRs_[c] = 1;
                 break;
             case PrimalVariables::RV:
                 phaseCondition_[c].setFreeGas();
+                isRv_[c] = 1;
                 break;
             default:
                 OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << primalVariable_[c]);
