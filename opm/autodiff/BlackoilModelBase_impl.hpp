@@ -1616,7 +1616,7 @@ namespace detail {
         const ADB& mob = rq_[ actph ].mob;
         const ADB& dh  = rq_[ actph ].dh;
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
-        rq_[ actph ].mflux = upwind.select(b * mob) * transi * dh;
+        rq_[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
     }
 
 
