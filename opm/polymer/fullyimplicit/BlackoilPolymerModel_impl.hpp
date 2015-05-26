@@ -304,267 +304,31 @@ namespace Opm {
                                                  ReservoirState& reservoir_state,
                                                  WellState& well_state)
     {
-        using namespace Opm::AutoDiffGrid;
-        const int np = fluid_.numPhases();
-        const int nc = numCells(grid_);
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
-        const V null;
-        assert(null.size() == 0);
-        const V zero = V::Zero(nc);
-
-        // store cell status in vectors
-        V isRs = V::Zero(nc,1);
-        V isRv = V::Zero(nc,1);
-        V isSg = V::Zero(nc,1);
-        if (active_[Gas]) {
-            for (int c = 0; c < nc; ++c) {
-                switch (primalVariable_[c]) {
-                case PrimalVariables::RS:
-                    isRs[c] = 1;
-                    break;
-
-                case PrimalVariables::RV:
-                    isRv[c] = 1;
-                    break;
-
-                default:
-                    isSg[c] = 1;
-                    break;
-                }
-            }
-        }
-
-        // Extract parts of dx corresponding to each part.
-        const V dp = subset(dx, Span(nc));
-        int varstart = nc;
-        const V dsw = active_[Water] ? subset(dx, Span(nc, 1, varstart)) : null;
-        varstart += dsw.size();
-
-        const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
-        varstart += dxvar.size();
-        
-        const V dc = (has_polymer_) ? subset(dx, Span(nc, 1, varstart)) : null;
-        varstart += dc.size();
-        
-        const V dqs = subset(dx, Span(np*nw, 1, varstart));
-        varstart += dqs.size();
-        const V dbhp = subset(dx, Span(nw, 1, varstart));
-        varstart += dbhp.size();
-        assert(varstart == dx.size());
-
-        // Pressure update.
-        const double dpmaxrel = dpMaxRel();
-        const V p_old = Eigen::Map<const V>(&reservoir_state.pressure()[0], nc, 1);
-        const V absdpmax = dpmaxrel*p_old.abs();
-        const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
-        const V p = (p_old - dp_limited).max(zero);
-        std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
-
-
-        // Saturation updates.
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const DataBlock s_old = Eigen::Map<const DataBlock>(& reservoir_state.saturation()[0], nc, np);
-        const double dsmax = dsMax();
-
-        V so;
-        V sw;
-        V sg;
-
-        {
-            V maxVal = zero;
-            V dso = zero;
-            if (active_[Water]){
-                maxVal = dsw.abs().max(maxVal);
-                dso = dso - dsw;
-            }
-
-            V dsg;
-            if (active_[Gas]){
-                dsg = isSg * dxvar - isRv * dsw;
-                maxVal = dsg.abs().max(maxVal);
-                dso = dso - dsg;
-            }
-
-            maxVal = dso.abs().max(maxVal);
-
-            V step = dsmax/maxVal;
-            step = step.min(1.);
-
-            if (active_[Water]) {
-                const int pos = pu.phase_pos[ Water ];
-                const V sw_old = s_old.col(pos);
-                sw = sw_old - step * dsw;
-            }
-
-            if (active_[Gas]) {
-                const int pos = pu.phase_pos[ Gas ];
-                const V sg_old = s_old.col(pos);
-                sg = sg_old - step * dsg;
-            }
-
-            const int pos = pu.phase_pos[ Oil ];
-            const V so_old = s_old.col(pos);
-            so = so_old - step * dso;
-        }
-
-        // Appleyard chop process.
-        auto ixg = sg < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixg[c]) {
-                sw[c] = sw[c] / (1-sg[c]);
-                so[c] = so[c] / (1-sg[c]);
-                sg[c] = 0;
-            }
-        }
-
-
-        auto ixo = so < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixo[c]) {
-                sw[c] = sw[c] / (1-so[c]);
-                sg[c] = sg[c] / (1-so[c]);
-                so[c] = 0;
-            }
-        }
-
-        auto ixw = sw < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixw[c]) {
-                so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-sw[c]);
-                sw[c] = 0;
-            }
-        }
-
-        const V sumSat = sw + so + sg;
-        sw = sw / sumSat;
-        so = so / sumSat;
-        sg = sg / sumSat;
-
-        // Update the reservoir_state
-        for (int c = 0; c < nc; ++c) {
-            reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
-        }
-
-        for (int c = 0; c < nc; ++c) {
-            reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
-        }
-
-        if (active_[ Oil ]) {
-            const int pos = pu.phase_pos[ Oil ];
-            for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pos] = so[c];
-            }
-        }
-
-        // Update rs and rv
-        const double drmaxrel = drMaxRel();
-        V rs;
-        if (has_disgas_) {
-            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-            const V drs = isRs * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
-            rs = rs_old - drs_limited;
-        }
-        V rv;
-        if (has_vapoil_) {
-            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-            const V drv = isRv * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
-            rv = rv_old - drv_limited;
-        }
-
-
-        // Sg is used as primal variable for water only cells.
-        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-        auto watOnly = sw >  (1 - epsilon);
-
-        // phase translation sg <-> rs
-        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
-
-        if (has_disgas_) {
-            const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-            const V rsSat = fluidRsSat(p, so, cells_);
-            // The obvious case
-            auto hasGas = (sg > 0 && isRs == 0);
-
-            // Set oil saturated if previous rs is sufficiently large
-            const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-            auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
-            auto useSg = watOnly || hasGas || gasVaporized;
-            for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) {
-                    rs[c] = rsSat[c];
-                } else {
-                    primalVariable_[c] = PrimalVariables::RS;
-                }
-            }
-
-        }
-
-        // phase transitions so <-> rv
-        if (has_vapoil_) {
-
-            // The gas pressure is needed for the rvSat calculations
-            const V gaspress_old = computeGasPressure(p_old, s_old.col(Water), s_old.col(Oil), s_old.col(Gas));
-            const V gaspress = computeGasPressure(p, sw, so, sg);
-            const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
-            const V rvSat = fluidRvSat(gaspress, so, cells_);
-
-            // The obvious case
-            auto hasOil = (so > 0 && isRv == 0);
-
-            // Set oil saturated if previous rv is sufficiently large
-            const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-            auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-            auto useSg = watOnly || hasOil || oilCondensed;
-            for (int c = 0; c < nc; ++c) {
-                if (useSg[c]) {
-                    rv[c] = rvSat[c];
-                } else {
-                    primalVariable_[c] = PrimalVariables::RV;
-                }
-            }
-
-        }
-
-        // Update the reservoir_state
-        if (has_disgas_) {
-            std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
-        }
-
-        if (has_vapoil_) {
-            std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
-        }
-
-        //Polymer concentration updates.
         if (has_polymer_) {
+            // Extract concentration change.
+            const int np = fluid_.numPhases();
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+            const V zero = V::Zero(nc);
+            const int concentration_start = nc * np;
+            const V dc = subset(dx, Span(nc, 1, concentration_start));
+
+            // Create new dx with the dc part deleted.
+            V modified_dx = V::Zero(dx.size() - nc);
+            modified_dx.head(concentration_start) = dx.head(concentration_start);
+            const int tail_len = dx.size() - concentration_start - nc;
+            modified_dx.tail(tail_len) = dx.tail(tail_len);
+
+            // Call base version.
+            Base::updateState(modified_dx, reservoir_state, well_state);
+
+            // Update concentration.
             const V c_old = Eigen::Map<const V>(&reservoir_state.concentration()[0], nc, 1);
             const V c = (c_old - dc).max(zero);
             std::copy(&c[0], &c[0] + nc, reservoir_state.concentration().begin());
+        } else {
+            // Just forward call to base version.
+            Base::updateState(dx, reservoir_state, well_state);
         }
-        
-        if( wellsActive() )
-        {
-            // Qs update.
-            // Since we need to update the wellrates, that are ordered by wells,
-            // from dqs which are ordered by phase, the simplest is to compute
-            // dwr, which is the data from dqs but ordered by wells.
-            const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
-            const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
-            const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
-            const V wr = wr_old - dwr;
-            std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
-
-            // Bhp update.
-            const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-            const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
-            const V bhp = bhp_old - dbhp_limited;
-            std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
-        }
-
-        // Update phase conditions used for property calculations.
-        updatePhaseCondFromPrimalVariable();
     }
 
 
