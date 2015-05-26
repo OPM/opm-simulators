@@ -172,6 +172,11 @@ namespace Opm {
         using Base::transMult;
         using Base::updatePrimalVariableFromState;
         using Base::updatePhaseCondFromPrimalVariable;
+        using Base::dpMaxRel;
+        using Base::dsMax;
+        using Base::drMaxRel;
+        using Base::maxResidualAllowed;
+
 
         void
         makeConstantState(SolutionState& state) const;
@@ -237,12 +242,6 @@ namespace Opm {
                              std::vector<double>& maxNormWell,
                              int nc,
                              int nw) const;
-
-        double dpMaxRel() const { return this->param_.dp_max_rel_; }
-        double dsMax() const { return this->param_.ds_max_; }
-        double drMaxRel() const { return this->param_.dr_max_rel_; }
-        double maxResidualAllowed() const { return this->param_.max_residual_allowed_; }
-
     };
 
 
