@@ -113,7 +113,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         const PhaseUsage& phaseUsage,
                                         const std::map<int,int>& cartesian_to_compressed,
                                         const double* permeability,
-                                        const NTG& ntg)
+                                        const NTG& ntg,
+                                        std::vector<int>& wells_on_proc)
 {
     if (dimensions != 3) {
         OPM_THROW(std::domain_error,
@@ -122,9 +123,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     }
 
     std::vector<std::vector<PerfData> > wellperf_data;
-    std::vector<int>                    well_on_proc;
     wellperf_data.resize(wells.size());
-    well_on_proc.resize(wells.size(), 1);
+    wells_on_proc.resize(wells.size(), 1);
 
     int well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
@@ -206,7 +206,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                                                       completion_on_proc.end(),0);
                 if ( sum_completions_on_proc == 0 )
                 {
-                    const_cast<Well&>(*well).setStatus(timeStep, WellCommon::SHUT);
+                    // Mark well as not existent on this process
+                    wells_on_proc[wellIter-wells.begin()] = 0;
                     continue;
                 }
                 // Check that the complete well is on this process
@@ -233,7 +234,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
 
         well_index++;
     }
-
+    std::cout<<"well_index="<<well_index<<" no wells="<<wells.size()<<std::endl;
     // Set up reference depths that were defaulted. Count perfs.
 
     const int num_wells = well_data.size();
@@ -347,6 +348,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
 
     ScheduleConstPtr          schedule = eclipseState->getSchedule();
     std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
+    std::vector<int>          wells_on_proc;
 
     well_names.reserve(wells.size());
     well_data.reserve(wells.size());
@@ -362,9 +364,10 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                          begin_face_centroids,
                          dimensions,
                          well_names, well_data, well_names_to_index,
-                         pu, cartesian_to_compressed, permeability, ntg);
+                         pu, cartesian_to_compressed, permeability, ntg,
+                         wells_on_proc);
 
-    setupWellControls(wells, timeStep, well_names, pu);
+    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc);
 
     {
         GroupTreeNodeConstPtr fieldNode =

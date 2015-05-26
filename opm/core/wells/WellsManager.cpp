@@ -407,10 +407,19 @@ namespace Opm
 
 
     void WellsManager::setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
-                                         std::vector<std::string>& well_names, const PhaseUsage& phaseUsage) {
+                                         std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
+                                         const std::vector<int>& wells_on_proc) {
         int well_index = 0;
-        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-            WellConstPtr well = (*wellIter);
+        auto well_on_proc = wells_on_proc.begin();
+
+        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter, ++well_on_proc) {
+            if( ! *well_on_proc )
+            {
+                // Wells not stored on the process are not in the list
+                continue;
+            }
+
+           WellConstPtr well = (*wellIter);
 
             if (well->getStatus(timeStep) == WellCommon::STOP) {
                 // STOPed wells are kept in the well list but marked as stopped.

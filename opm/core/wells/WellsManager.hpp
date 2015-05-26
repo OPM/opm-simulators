@@ -155,7 +155,8 @@ namespace Opm
         WellsManager& operator=(const WellsManager& other);
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
-                               std::vector<std::string>& well_names, const PhaseUsage& phaseUsage);
+                               std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
+                               const std::vector<int>& wells_on_proc);
 
         template<class C2F, class FC, class NTG>
         void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
@@ -169,7 +170,8 @@ namespace Opm
                                    const PhaseUsage& phaseUsage,
                                    const std::map<int,int>& cartesian_to_compressed,
                                    const double* permeability,
-                                   const NTG& ntg);
+                                   const NTG& ntg,
+                                   std::vector<int>& wells_on_proc);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
         void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
