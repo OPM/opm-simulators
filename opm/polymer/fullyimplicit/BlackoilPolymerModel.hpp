@@ -203,9 +203,12 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        addWellEq(const SolutionState& state,
-                  WellState& xw,
-                  V& aliveWells);
+        extraAddWellEq(const SolutionState& state,
+                       const WellState& xw,
+                       const std::vector<ADB>& cq_ps,
+                       const std::vector<ADB>& cmix_s,
+                       const ADB& cqt_is,
+                       const std::vector<int>& well_cells);
 
         void
         computeMassFlux(const int               actph ,
