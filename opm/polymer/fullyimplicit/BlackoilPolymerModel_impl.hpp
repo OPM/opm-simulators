@@ -177,12 +177,14 @@ namespace Opm {
     {
         std::vector<int> ind = Base::variableStateIndices();
         assert(int.size() == 5);
-        ind.resize(6);
-        // Concentration belongs after other reservoir vars but before well vars.
-        ind[Concentration] = fluid_.numPhases();
-        // Concentration is pushing back the well vars.
-        ++ind[Qs];
-        ++ind[Bhp];
+        if (has_polymer_) {
+            ind.resize(6);
+            // Concentration belongs after other reservoir vars but before well vars.
+            ind[Concentration] = fluid_.numPhases();
+            // Concentration is pushing back the well vars.
+            ++ind[Qs];
+            ++ind[Bhp];
+        }
         return ind;
     }
 
@@ -196,7 +198,9 @@ namespace Opm {
                                                          std::vector<ADB>& vars) const
     {
         SolutionState state = Base::variableStateExtractVars(x, indices, vars);
-        state.concentration = std::move(vars[indices[Concentration]]);
+        if (has_polymer_) {
+            state.concentration = std::move(vars[indices[Concentration]]);
+        }
         return state;
     }
 
