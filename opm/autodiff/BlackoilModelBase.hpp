@@ -320,6 +320,14 @@ namespace Opm {
                   WellState& xw,
                   V& aliveWells);
 
+        void
+        extraAddWellEq(const SolutionState& state,
+                       const WellState& xw,
+                       const std::vector<ADB>& cq_ps,
+                       const std::vector<ADB>& cmix_s,
+                       const ADB& cqt_is,
+                       const std::vector<int>& well_cells);
+
         void updateWellControls(WellState& xw) const;
 
         std::vector<ADB>

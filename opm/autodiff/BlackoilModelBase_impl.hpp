@@ -822,8 +822,8 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
-                                                   WellState& xw,
-                                                   V& aliveWells)
+                                                            WellState& xw,
+                                                            V& aliveWells)
     {
         if( ! wellsActive() ) return ;
 
@@ -979,6 +979,23 @@ namespace detail {
         xw.perfPhaseRates() = cq_d;
 
         residual_.well_flux_eq = qs;
+
+        asImpl().extraAddWellEq(state, xw, cq_ps, cmix_s, cqt_is, well_cells);
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::extraAddWellEq(const SolutionState& /* state */,
+                                                                 const WellState& /* xw */,
+                                                                 const std::vector<ADB>& /* cq_ps */,
+                                                                 const std::vector<ADB>& /* cmix_s */,
+                                                                 const ADB& /* cqt_is */,
+                                                                 const std::vector<int>& /* well_cells */)
+    {
+        // Does nothing in this model.
     }
 
 
