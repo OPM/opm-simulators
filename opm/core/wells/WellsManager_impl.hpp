@@ -234,7 +234,6 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
 
         well_index++;
     }
-    std::cout<<"well_index="<<well_index<<" no wells="<<wells.size()<<std::endl;
     // Set up reference depths that were defaulted. Count perfs.
 
     const int num_wells = well_data.size();
