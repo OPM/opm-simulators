@@ -18,122 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-
-#include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/NewtonSolver.hpp>
-#include <opm/autodiff/BlackoilModel.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/RateConverter.hpp>
-
-#include <opm/core/grid.h>
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
-#include <opm/core/pressure/flow_bc.h>
-
-#include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
-#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
-#include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
-#include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
-
-#include <opm/core/props/rock/RockCompressibility.hpp>
-
-#include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
-#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
-
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
-
-
-#include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-
-#include <algorithm>
-#include <cstddef>
-#include <cassert>
-#include <functional>
-#include <memory>
-#include <numeric>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
 namespace Opm
 {
-    template<class GridT, class Implementation>
-    class SimulatorBase<GridT, Implementation>::Impl
-    {
-    public:
-        Impl(const parameter::ParameterGroup& param,
-             const Grid& grid,
-             const DerivedGeology& geo,
-             BlackoilPropsAdInterface& props,
-             const RockCompressibility* rock_comp_props,
-             NewtonIterationBlackoilInterface& linsolver,
-             const double* gravity,
-             bool has_disgas,
-             bool has_vapoil,
-             std::shared_ptr<EclipseState> eclipse_state,
-             BlackoilOutputWriter& output_writer,
-             const std::vector<double>& threshold_pressures_by_face);
-
-        SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state);
-
-    private:
-        // Data.
-        typedef RateConverter::
-        SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
-                                   std::vector<int> > RateConverterType;
-
-        const parameter::ParameterGroup param_;
-
-        // Observed objects.
-        const Grid& grid_;
-        BlackoilPropsAdInterface& props_;
-        const RockCompressibility* rock_comp_props_;
-        const double* gravity_;
-        // Solvers
-        const DerivedGeology& geo_;
-        NewtonIterationBlackoilInterface& solver_;
-        // Misc. data
-        std::vector<int> allcells_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
-        bool       terminal_output_;
-        // eclipse_state
-        std::shared_ptr<EclipseState> eclipse_state_;
-        // output_writer
-        BlackoilOutputWriter& output_writer_;
-        RateConverterType rateConverter_;
-        // Threshold pressures.
-        std::vector<double> threshold_pressures_by_face_;
-        // Whether this a parallel simulation or not
-        bool is_parallel_run_;
-
-        void
-        computeRESV(const std::size_t               step,
-                    const Wells*                    wells,
-                    const BlackoilState&            x,
-                    WellStateFullyImplicitBlackoil& xw);
-    };
-
-
-
-
     template<class GridT, class Implementation>
     SimulatorBase<GridT, Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
                                                         const Grid& grid,
@@ -148,37 +34,6 @@ namespace Opm
                                                         BlackoilOutputWriter& output_writer,
                                                         const std::vector<double>& threshold_pressures_by_face)
 
-    {
-        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil,
-                              eclipse_state, output_writer, threshold_pressures_by_face));
-    }
-
-
-
-
-
-    template<class GridT, class Implementation>
-    SimulatorReport SimulatorBase<GridT, Implementation>::run(SimulatorTimer& timer,
-                                                              BlackoilState& state)
-    {
-        return pimpl_->run(timer, state);
-    }
-
-
-    // \TODO: Treat bcs.
-    template<class GridT, class Implementation>
-    SimulatorBase<GridT, Implementation>::Impl::Impl(const parameter::ParameterGroup& param,
-                                                     const Grid& grid,
-                                                     const DerivedGeology& geo,
-                                                     BlackoilPropsAdInterface& props,
-                                                     const RockCompressibility* rock_comp_props,
-                                                     NewtonIterationBlackoilInterface& linsolver,
-                                                     const double* gravity,
-                                                     const bool has_disgas,
-                                                     const bool has_vapoil,
-                                                     std::shared_ptr<EclipseState> eclipse_state,
-                                                     BlackoilOutputWriter& output_writer,
-                                                     const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
           props_(props),
@@ -214,12 +69,9 @@ namespace Opm
 #endif
     }
 
-
-
-
     template<class GridT, class Implementation>
-    SimulatorReport SimulatorBase<GridT, Implementation>::Impl::run(SimulatorTimer& timer,
-                                                                    BlackoilState& state)
+    SimulatorReport SimulatorBase<GridT, Implementation>::run(SimulatorTimer& timer,
+                                                              BlackoilState& state)
     {
         WellStateFullyImplicitBlackoil prev_well_state;
 
@@ -476,12 +328,10 @@ namespace Opm
     } // namespace SimFIBODetails
 
     template <class GridT, class Implementation>
-    void
-    SimulatorBase<GridT, Implementation>::
-    Impl::computeRESV(const std::size_t               step,
-                      const Wells*                    wells,
-                      const BlackoilState&            x,
-                      WellStateFullyImplicitBlackoil& xw)
+    void SimulatorBase<GridT, Implementation>::computeRESV(const std::size_t               step,
+                                                           const Wells*                    wells,
+                                                           const BlackoilState&            x,
+                                                           WellStateFullyImplicitBlackoil& xw)
     {
         typedef SimFIBODetails::WellMap WellMap;
 

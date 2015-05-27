@@ -20,27 +20,60 @@
 #ifndef OPM_SIMULATORBASE_HEADER_INCLUDED
 #define OPM_SIMULATORBASE_HEADER_INCLUDED
 
-#include <memory>
-#include <vector>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
-struct UnstructuredGrid;
-struct Wells;
-struct FlowBoundaryConditions;
+#include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/NewtonSolver.hpp>
+#include <opm/autodiff/BlackoilModel.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/RateConverter.hpp>
+
+#include <opm/core/grid.h>
+#include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
+#include <opm/core/pressure/flow_bc.h>
+
+#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
+#include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
+
+#include <opm/core/props/rock/RockCompressibility.hpp>
+
+#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
+#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
+
+
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <cassert>
+#include <functional>
+#include <memory>
+#include <numeric>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace Opm
 {
-    namespace parameter { class ParameterGroup; }
-    class BlackoilPropsAdInterface;
-    class RockCompressibility;
-    class DerivedGeology;
-    class NewtonIterationBlackoilInterface;
-    class SimulatorTimer;
-    class BlackoilState;
-    class WellStateFullyImplicitBlackoil;
-    class EclipseState;
-    class BlackoilOutputWriter;
-    struct SimulatorReport;
-
     /// Class collecting all necessary components for a two-phase simulation.
     template<class GridT, class Implementation>
     class SimulatorBase
@@ -98,13 +131,45 @@ namespace Opm
         SimulatorReport run(SimulatorTimer& timer,
                             BlackoilState& state);
 
-    private:
+    protected:
         Implementation& asImp_() { return *static_cast<Implementation*>(this); }
         const Implementation& asImp_() const { return *static_cast<const Implementation*>(this); }
 
-        class Impl;
-        // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        std::shared_ptr<Impl> pimpl_;
+        void
+        computeRESV(const std::size_t               step,
+                    const Wells*                    wells,
+                    const BlackoilState&            x,
+                    WellStateFullyImplicitBlackoil& xw);
+
+        // Data.
+        typedef RateConverter::
+        SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
+                                   std::vector<int> > RateConverterType;
+
+        const parameter::ParameterGroup param_;
+
+        // Observed objects.
+        const Grid& grid_;
+        BlackoilPropsAdInterface& props_;
+        const RockCompressibility* rock_comp_props_;
+        const double* gravity_;
+        // Solvers
+        const DerivedGeology& geo_;
+        NewtonIterationBlackoilInterface& solver_;
+        // Misc. data
+        std::vector<int> allcells_;
+        const bool has_disgas_;
+        const bool has_vapoil_;
+        bool       terminal_output_;
+        // eclipse_state
+        std::shared_ptr<EclipseState> eclipse_state_;
+        // output_writer
+        BlackoilOutputWriter& output_writer_;
+        RateConverterType rateConverter_;
+        // Threshold pressures.
+        std::vector<double> threshold_pressures_by_face_;
+        // Whether this a parallel simulation or not
+        bool is_parallel_run_;
     };
 
 } // namespace Opm
