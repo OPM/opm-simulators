@@ -23,13 +23,25 @@
 #include "SimulatorBase.hpp"
 
 namespace Opm {
+template<class GridT>
+class SimulatorFullyImplicitBlackoil;
+
+template<class GridT>
+struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
+{
+    typedef WellStateFullyImplicitBlackoil WellState;
+    typedef BlackoilState ReservoirState;
+    typedef BlackoilOutputWriter OutputWriter;
+    typedef GridT Grid;
+    typedef BlackoilModel<Grid> Model;
+};
 
 /// a simulator for the blackoil model
 template<class GridT>
 class SimulatorFullyImplicitBlackoil
-    : public SimulatorBase<GridT, SimulatorFullyImplicitBlackoil<GridT> >
+    : public SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> >
 {
-    typedef SimulatorBase<GridT, SimulatorFullyImplicitBlackoil<GridT> > Base;
+    typedef SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> > Base;
 public:
     // forward the constructor to the base class
     SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,

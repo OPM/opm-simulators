@@ -20,20 +20,19 @@
 
 namespace Opm
 {
-    template<class GridT, class Implementation>
-    SimulatorBase<GridT, Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
-                                                        const Grid& grid,
-                                                        const DerivedGeology& geo,
-                                                        BlackoilPropsAdInterface& props,
-                                                        const RockCompressibility* rock_comp_props,
-                                                        NewtonIterationBlackoilInterface& linsolver,
-                                                        const double* gravity,
-                                                        const bool has_disgas,
-                                                        const bool has_vapoil,
-                                                        std::shared_ptr<EclipseState> eclipse_state,
-                                                        BlackoilOutputWriter& output_writer,
-                                                        const std::vector<double>& threshold_pressures_by_face)
-
+    template<class Implementation>
+    SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
+                                                 const Grid& grid,
+                                                 const DerivedGeology& geo,
+                                                 BlackoilPropsAdInterface& props,
+                                                 const RockCompressibility* rock_comp_props,
+                                                 NewtonIterationBlackoilInterface& linsolver,
+                                                 const double* gravity,
+                                                 const bool has_disgas,
+                                                 const bool has_vapoil,
+                                                 std::shared_ptr<EclipseState> eclipse_state,
+                                                 OutputWriter& output_writer,
+                                                 const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
           props_(props),
@@ -69,11 +68,11 @@ namespace Opm
 #endif
     }
 
-    template<class GridT, class Implementation>
-    SimulatorReport SimulatorBase<GridT, Implementation>::run(SimulatorTimer& timer,
-                                                              BlackoilState& state)
+    template<class Implementation>
+    SimulatorReport SimulatorBase<Implementation>::run(SimulatorTimer& timer,
+                                                       ReservoirState& state)
     {
-        WellStateFullyImplicitBlackoil prev_well_state;
+        WellState prev_well_state;
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -84,8 +83,6 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typedef GridT Grid;
-        typedef BlackoilModel<Grid> Model;
         typedef typename Model::ModelParameters ModelParams;
         ModelParams modelParams( param_ );
         typedef NewtonSolver<Model> Solver;
@@ -134,8 +131,11 @@ namespace Opm
                                        props_.permeability(),
                                        is_parallel_run_);
             const Wells* wells = wells_manager.c_wells();
-            WellStateFullyImplicitBlackoil well_state;
+            WellState well_state;
             well_state.init(wells, state, prev_well_state);
+
+            // give the polymer and surfactant simulators the chance to do their stuff
+            asImp_().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
             // write simulation state at the report stage
             output_writer_.writeTimeStep( timer, state, well_state );
@@ -145,16 +145,16 @@ namespace Opm
             props_.updateSatHyst(state.saturation(), allcells_);
 
             // Compute reservoir volumes for RESV controls.
-            computeRESV(timer.currentStepNum(), wells, state, well_state);
+            asImp_().computeRESV(timer.currentStepNum(), wells, state, well_state);
 
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            Model model(modelParams, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
+            auto model = asImp_().createModel(modelParams, wells);
             if (!threshold_pressures_by_face_.empty()) {
-                model.setThresholdPressures(threshold_pressures_by_face_);
+                model->setThresholdPressures(threshold_pressures_by_face_);
             }
-            Solver solver(solverParams, model);
+            Solver solver(solverParams, *model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
@@ -327,11 +327,11 @@ namespace Opm
         }
     } // namespace SimFIBODetails
 
-    template <class GridT, class Implementation>
-    void SimulatorBase<GridT, Implementation>::computeRESV(const std::size_t               step,
-                                                           const Wells*                    wells,
-                                                           const BlackoilState&            x,
-                                                           WellStateFullyImplicitBlackoil& xw)
+    template <class Implementation>
+    void SimulatorBase<Implementation>::computeRESV(const std::size_t               step,
+                                                    const Wells*                    wells,
+                                                    const BlackoilState&            x,
+                                                    WellState& xw)
     {
         typedef SimFIBODetails::WellMap WellMap;
 

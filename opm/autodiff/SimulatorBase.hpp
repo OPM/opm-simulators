@@ -74,13 +74,22 @@
 
 namespace Opm
 {
+    template<class Simulator>
+    struct SimulatorTraits;
+
     /// Class collecting all necessary components for a two-phase simulation.
-    template<class GridT, class Implementation>
+    template<class Implementation>
     class SimulatorBase
     {
+        typedef SimulatorTraits<Implementation> Traits;
+
     public:
-        /// \brief The type of the grid that we use.
-        typedef GridT Grid;
+        typedef typename Traits::ReservoirState ReservoirState;
+        typedef typename Traits::WellState WellState;
+        typedef typename Traits::OutputWriter OutputWriter;
+        typedef typename Traits::Grid Grid;
+        typedef typename Traits::Model Model;
+
         /// Initialise from parameters and objects to observe.
         /// \param[in] param       parameters, this class accepts the following:
         ///     parameter (default)            effect
@@ -118,7 +127,7 @@ namespace Opm
                       const bool disgas,
                       const bool vapoil,
                       std::shared_ptr<EclipseState> eclipse_state,
-                      BlackoilOutputWriter& output_writer,
+                      OutputWriter& output_writer,
                       const std::vector<double>& threshold_pressures_by_face);
 
         /// Run the simulation.
@@ -129,17 +138,39 @@ namespace Opm
         /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state);
+                            ReservoirState& state);
 
     protected:
         Implementation& asImp_() { return *static_cast<Implementation*>(this); }
         const Implementation& asImp_() const { return *static_cast<const Implementation*>(this); }
 
+        void handleAdditionalWellInflow(SimulatorTimer& timer,
+                                        WellsManager& wells_manager,
+                                        WellState& well_state,
+                                        const Wells* wells)
+        {};
+
+        std::shared_ptr<Model> createModel(const typename Model::ModelParameters &modelParams,
+                                           const Wells* wells)
+
+        {
+            return std::make_shared<Model>(modelParams,
+                                           grid_,
+                                           props_,
+                                           geo_,
+                                           rock_comp_props_,
+                                           wells,
+                                           solver_,
+                                           has_disgas_,
+                                           has_vapoil_,
+                                           terminal_output_);
+        }
+
         void
         computeRESV(const std::size_t               step,
                     const Wells*                    wells,
                     const BlackoilState&            x,
-                    WellStateFullyImplicitBlackoil& xw);
+                    WellState& xw);
 
         // Data.
         typedef RateConverter::
@@ -164,7 +195,7 @@ namespace Opm
         // eclipse_state
         std::shared_ptr<EclipseState> eclipse_state_;
         // output_writer
-        BlackoilOutputWriter& output_writer_;
+        OutputWriter& output_writer_;
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
