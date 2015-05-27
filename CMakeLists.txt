@@ -17,20 +17,18 @@
 cmake_minimum_required (VERSION 2.8)
 
 set( OPM_CMAKE_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
+option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
-include (OpmInit OPTIONAL RESULT_VARIABLE OPM_INIT)
+if(NOT OPM_CMAKE_ROOT)
+   find_package(opm-cmake QUIET)
+endif()
 
-if (OPM_INIT) 
-
-   # We actually found the OpmInit module without using the OPM_CMAKE_ROOT variable.
-   # The build needs the variable $OPM_MACROS_ROOT to be set, so here we infer it 
-   # by backtracing from the location of the OpmInit module.
-   get_filename_component( TMP1 ${OPM_INIT} PATH )
-   get_filename_component( TMP2 ${TMP1} PATH )
-   get_filename_component( OPM_MACROS_ROOT ${TMP2} PATH )
-
+if (opm-cmake_FOUND)
+   include(OpmInit)
 else()
-
+   if (NOT OPM_CMAKE_ROOT AND SIBLING_SEARCH)
+      set(OPM_CMAKE_ROOT ${PROJECT_SOURCE_DIR}/../opm-cmake)
+   endif()
    if (OPM_CMAKE_ROOT)
       list( APPEND CMAKE_MODULE_PATH "${OPM_CMAKE_ROOT}/cmake/Modules")
       include (OpmInit OPTIONAL RESULT_VARIABLE OPM_INIT)
@@ -38,7 +36,7 @@ else()
    endif()
 
    if (NOT OPM_INIT)
-      message( "" )       
+      message( "" )
       message( " /-------------------------------------------------------------------------------\\")
       message( " |  Could not locate the opm build macros. The opm build macros                  |")
       message( " |  are in a separate repository - instructions to proceed:                      |")
@@ -46,9 +44,9 @@ else()
       message( " |    1. Clone the repository: git clone git@github.com:OPM/opm-cmake.git        |")
       message( " |                                                                               |")
       message( " |    2. Run cmake in the current project with -DOPM_CMAKE_ROOT=<path>/opm-cmake |")
-      message( " |                                                                               |") 
+      message( " |                                                                               |")
       message( " \\-------------------------------------------------------------------------------/")
-      message( "" )       
+      message( "" )
       message( FATAL_ERROR "Could not find OPM Macros")
    endif()
 
