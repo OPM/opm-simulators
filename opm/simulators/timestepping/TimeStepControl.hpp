@@ -93,9 +93,9 @@ namespace Opm
 
     protected:
         template <class Iterator>
-        double euclidianNormSquared( Iterator it, const Iterator end,
-                                           int num_components=1 ) const
+        double euclidianNormSquared( Iterator it, const Iterator end, int num_components = 1 ) const
         {
+            static_cast<void>(num_components); // Suppress warning in the serial case.
 #if HAVE_MPI
             if ( parallel_information_.type() == typeid(ParallelISTLInformation) )
             {
