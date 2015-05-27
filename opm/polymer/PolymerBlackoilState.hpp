@@ -30,7 +30,7 @@ namespace Opm
 
     /// Simulator state for a compressible two-phase simulator with polymer.
     /// We use the Blackoil state parameters.
-    class PolymerBlackoilState
+    class PolymerBlackoilState : public BlackoilState
     {
     public:
         void init(const UnstructuredGrid& g, int num_phases)
@@ -40,53 +40,18 @@ namespace Opm
 
         void init(int number_of_cells, int number_of_faces, int num_phases)
         {
-            state_blackoil_.init(number_of_cells, number_of_faces, num_phases);
+            BlackoilState::init(number_of_cells, number_of_faces, num_phases);
             concentration_.resize(number_of_cells, 0.0);
             cmax_.resize(number_of_cells, 0.0);
         }
-        int numPhases() const
-        {
-            return state_blackoil_.numPhases();
-        }
 
-        enum ExtremalSat { MinSat = BlackoilState::MinSat, MaxSat = BlackoilState::MaxSat };
-
-        void setFirstSat(const std::vector<int>& cells,
-                         const Opm::BlackoilPropertiesInterface& props,
-                         ExtremalSat es)
-        {
-            // A better solution for embedding BlackoilState::ExtremalSat could perhaps
-            // be found, to avoid the cast.
-            state_blackoil_.setFirstSat(cells, props, static_cast<BlackoilState::ExtremalSat>(es));
-        }
-
-        std::vector<double>& pressure    ()     { return state_blackoil_.pressure(); }
-        std::vector<double>& temperature ()     { return state_blackoil_.temperature(); }
-        std::vector<double>& surfacevol  ()     { return state_blackoil_.surfacevol(); }
-        std::vector<double>& facepressure()     { return state_blackoil_.facepressure(); }
-        std::vector<double>& faceflux    ()     { return state_blackoil_.faceflux(); }
-        std::vector<double>& saturation  ()     { return state_blackoil_.saturation(); }
-        std::vector<double>& gasoilratio ()     { return state_blackoil_.gasoilratio(); }
-        std::vector<double>& rv          ()     { return state_blackoil_.rv(); }
         std::vector<double>& concentration()    { return concentration_; }
         std::vector<double>& maxconcentration() { return cmax_; }
 
-        const std::vector<double>& pressure    () const     { return state_blackoil_.pressure(); }
-        const std::vector<double>& temperature () const     { return state_blackoil_.temperature(); }
-        const std::vector<double>& surfacevol  () const     { return state_blackoil_.surfacevol(); }
-        const std::vector<double>& facepressure() const     { return state_blackoil_.facepressure(); }
-        const std::vector<double>& faceflux    () const     { return state_blackoil_.faceflux(); }
-        const std::vector<double>& saturation  () const     { return state_blackoil_.saturation(); }
-        const std::vector<double>& gasoilratio() const     { return state_blackoil_.gasoilratio(); }
-        const std::vector<double>& rv          () const     { return state_blackoil_.rv(); }
         const std::vector<double>& concentration() const    { return concentration_; }
         const std::vector<double>& maxconcentration() const { return cmax_; }
 
-        BlackoilState& blackoilState() { return state_blackoil_; }
-        const BlackoilState& blackoilState() const { return state_blackoil_; }
-
     private:
-        BlackoilState state_blackoil_;
         std::vector<double> concentration_;
         std::vector<double> cmax_;
     };

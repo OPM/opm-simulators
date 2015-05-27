@@ -167,10 +167,10 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::PolymerBlackoilOutputWriter outputWriter(cGrid,
-                                                  param,
-                                                  eclipseState,
-                                                  pu );
+    Opm::BlackoilOutputWriter outputWriter(cGrid,
+                                           param,
+                                           eclipseState,
+                                           pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
@@ -224,7 +224,7 @@ try
     SimulatorReport fullReport;
     // Create and run simulator.
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
-    SimulatorFullyImplicitCompressiblePolymer<UnstructuredGrid>
+    SimulatorFullyImplicitCompressiblePolymer
         simulator(param,
                   *grid->c_grid(),
                   geology,

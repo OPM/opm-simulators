@@ -179,10 +179,10 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::PolymerBlackoilOutputWriter outputWriter(cGrid,
-                                                  param,
-                                                  eclipseState,
-                                                  pu );
+    Opm::BlackoilOutputWriter outputWriter(cGrid,
+                                           param,
+                                           eclipseState,
+                                           pu );
 
     // Rock and fluid init
     props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
@@ -201,8 +201,8 @@ try
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state.blackoilState());
-        initBlackoilSurfvol(*grid->c_grid(), *props, state.blackoilState());
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        initBlackoilSurfvol(*grid->c_grid(), *props, state);
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
             const int np = props->numPhases();
@@ -215,10 +215,10 @@ try
     } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
         state.init(*grid->c_grid(), props->numPhases());
         const double grav = param.getDefault("gravity", unit::gravity);
-        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state.blackoilState());
+        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state);
         state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state.blackoilState());
+        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
     }
 
     // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
@@ -268,21 +268,21 @@ try
 
     std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
 
-    SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid> simulator(param,
-                                             *grid->c_grid(),
-                                             geology,
-                                             *new_props,
-                                             polymer_props_ad,
-                                             rock_comp->isActive() ? rock_comp.get() : 0,
-                                             *fis_solver,
-                                             grav,
-                                             deck->hasKeyword("DISGAS"),
-                                             deck->hasKeyword("VAPOIL"),
-                                             polymer,
-                                             eclipseState,
-                                             outputWriter,
-                                             deck,
-                                             threshold_pressures);
+    SimulatorFullyImplicitBlackoilPolymer simulator(param,
+                                                    *grid->c_grid(),
+                                                    geology,
+                                                    *new_props,
+                                                    polymer_props_ad,
+                                                    rock_comp->isActive() ? rock_comp.get() : 0,
+                                                    *fis_solver,
+                                                    grav,
+                                                    deck->hasKeyword("DISGAS"),
+                                                    deck->hasKeyword("VAPOIL"),
+                                                    polymer,
+                                                    eclipseState,
+                                                    outputWriter,
+                                                    deck,
+                                                    threshold_pressures);
 
     if (!schedule->initOnly()){
         std::cout << "\n\n================ Starting main simulation loop ===============\n"

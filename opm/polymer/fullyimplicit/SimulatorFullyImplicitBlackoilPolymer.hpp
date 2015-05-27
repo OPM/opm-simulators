@@ -25,7 +25,6 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
-#include <opm/polymer/fullyimplicit/PolymerBlackoilOutputWriter.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 
@@ -79,31 +78,29 @@
 
 namespace Opm
 {
-    template<class GridT>
     class SimulatorFullyImplicitBlackoilPolymer;
 
-    template<class GridT>
-    struct SimulatorTraits<SimulatorFullyImplicitBlackoilPolymer<GridT> >
+    template<>
+    struct SimulatorTraits<SimulatorFullyImplicitBlackoilPolymer>
     {
         typedef WellStateFullyImplicitBlackoilPolymer WellState;
         typedef PolymerBlackoilState ReservoirState;
-        typedef PolymerBlackoilOutputWriter OutputWriter;
+        typedef BlackoilOutputWriter OutputWriter;
+        typedef UnstructuredGrid Grid;
+        typedef BlackoilPolymerModel<Grid> Model;
     };
 
-    /// Class collecting all necessary components for a two-phase simulation.
-    template<class GridT>
+    /// Class collecting all necessary components for a blackoil simulation with polymer
+    /// injection.
     class SimulatorFullyImplicitBlackoilPolymer
-        : public SimulatorBase<GridT, SimulatorFullyImplicitBlackoilPolymer<GridT> >
+        : public SimulatorBase<SimulatorFullyImplicitBlackoilPolymer >
     {
-        typedef SimulatorFullyImplicitBlackoilPolymer<GridT> ThisType;
-        typedef SimulatorBase<GridT, ThisType> BaseType;
+        typedef SimulatorFullyImplicitBlackoilPolymer ThisType;
+        typedef SimulatorBase<ThisType> BaseType;
 
     public:
-        /// \brief The type of the grid that we use.
-        typedef GridT Grid;
-
         SimulatorFullyImplicitBlackoilPolymer(const parameter::ParameterGroup& param,
-                                              const Grid& grid,
+                                              const typename BaseType::Grid& grid,
                                               const DerivedGeology& geo,
                                               BlackoilPropsAdInterface& props,
                                               const PolymerPropsAd& polymer_props,
@@ -114,21 +111,25 @@ namespace Opm
                                               const bool vapoil,
                                               const bool polymer,
                                               std::shared_ptr<EclipseState> eclipse_state,
-                                              PolymerBlackoilOutputWriter& output_writer,
+                                              BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
-#if 0
-        SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state);
-#endif
-
-        void computeRESV(const std::size_t step,
-                         const Wells* wells,
-                         const PolymerBlackoilState& x,
-                         WellState& xw)
+        std::shared_ptr<Model> createModel(const typename Model::ModelParameters &modelParams,
+                                           const Wells* wells)
         {
-            BaseType::computeRESV(step, wells, x.blackoilState(), xw);
+            return std::make_shared<Model>(modelParams,
+                                           BaseType::grid_,
+                                           BaseType::props_,
+                                           BaseType::geo_,
+                                           BaseType::rock_comp_props_,
+                                           polymer_props_,
+                                           wells,
+                                           BaseType::solver_,
+                                           BaseType::has_disgas_,
+                                           BaseType::has_vapoil_,
+                                           has_polymer_,
+                                           BaseType::terminal_output_);
         }
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
@@ -164,4 +165,5 @@ namespace Opm
 } // namespace Opm
 
 #include "SimulatorFullyImplicitBlackoilPolymer_impl.hpp"
+
 #endif // OPM_SIMULATORFULLYIMPLICITBLACKOILPOLYMER_HEADER_INCLUDED

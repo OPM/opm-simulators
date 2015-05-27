@@ -30,7 +30,7 @@
 #include <opm/autodiff/SimulatorBase.hpp>
 
 #include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
-#include <opm/polymer/fullyimplicit/PolymerBlackoilOutputWriter.hpp>
+#include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
@@ -68,24 +68,25 @@
 
 namespace Opm
 {
-    template <class GridT>
     class SimulatorFullyImplicitCompressiblePolymer;
 
-    template<class GridT>
-    struct SimulatorTraits<SimulatorFullyImplicitCompressiblePolymer<GridT> >
+    template <>
+    struct SimulatorTraits<SimulatorFullyImplicitCompressiblePolymer>
     {
         typedef PolymerBlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
-        typedef PolymerBlackoilOutputWriter OutputWriter;
+        typedef BlackoilOutputWriter OutputWriter;
+        typedef UnstructuredGrid Grid;
+#warning TODO: the 2p polymer solver does not yet adhere to The New Order!
+        typedef BlackoilPolymerModel<Grid> Model;
     };
 
     /// Class collecting all necessary components for a two-phase simulation.
-    template <class GridT>
     class SimulatorFullyImplicitCompressiblePolymer
-        : public SimulatorBase<GridT, SimulatorFullyImplicitCompressiblePolymer<GridT> >
+        : public SimulatorBase<SimulatorFullyImplicitCompressiblePolymer>
     {
-        typedef SimulatorFullyImplicitCompressiblePolymer<GridT> ThisType;
-        typedef SimulatorBase<GridT, ThisType> BaseType;
+        typedef SimulatorFullyImplicitCompressiblePolymer ThisType;
+        typedef SimulatorBase<ThisType> BaseType;
 
     public:
         /// Initialise from parameters and objects to observe.
@@ -96,7 +97,7 @@ namespace Opm
                                        			  const PolymerPropsAd&    polymer_props,
                                        			  const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
-                                                  PolymerBlackoilOutputWriter& output_writer,
+                                                  BlackoilOutputWriter& output_writer,
                                                   Opm::DeckConstPtr& deck,
                                        			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
