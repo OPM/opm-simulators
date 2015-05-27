@@ -38,23 +38,24 @@
 #include <functional>
 #ifdef HAVE_DUNE_ISTL
 
-void runSumMaxMinTest(const int offset)
+template<typename T>
+void runSumMaxMinTest(const T offset)
 {
     const int N=100;
     int start, end, istart, iend;
     std::tie(start,istart,iend,end) = computeRegions(N);
     Opm::ParallelISTLInformation comm(MPI_COMM_WORLD);
     auto mat = create1DLaplacian(*comm.indexSet(), N, start, end, istart, iend);
-    std::vector<int> x(end-start);
+    std::vector<T> x(end-start);
     assert(comm.indexSet()->size()==x.size());
     for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
         x[i->local()]=i->global()+offset;
     auto containers = std::make_tuple(x, x, x, x);
-    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
-                                      Opm::Reduction::makeGlobalMaxFunctor<int>(),
-                                      Opm::Reduction::makeGlobalMinFunctor<int>(),
-                                      Opm::Reduction::makeInnerProductFunctor<int>());
-    auto values     = std::make_tuple(0,0,100000, 0);
+    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<T>(),
+                                      Opm::Reduction::makeGlobalMaxFunctor<T>(),
+                                      Opm::Reduction::makeGlobalMinFunctor<T>(),
+                                      Opm::Reduction::makeInnerProductFunctor<T>());
+    auto values     = std::tuple<T,T,T,T>(0,0,100000, 0);
     auto oldvalues  = values;
     start = offset;
     end   = start+N;
@@ -65,12 +66,25 @@ void runSumMaxMinTest(const int offset)
     BOOST_CHECK(std::get<3>(values)==((end-1)*end*(2*end-1)-(start-1)*start*(2*start-1))/6+std::get<3>(oldvalues));
 }
 
-BOOST_AUTO_TEST_CASE(tupleReductionTest)
+BOOST_AUTO_TEST_CASE(tupleReductionTestInt)
 {
-    runSumMaxMinTest(0);
-    runSumMaxMinTest(20);
-    runSumMaxMinTest(-20);
+    runSumMaxMinTest<int>(0);
+    runSumMaxMinTest<int>(20);
+    runSumMaxMinTest<int>(-20);
 }
+
+BOOST_AUTO_TEST_CASE(tupleReductionTestUnsignedInt)
+{
+    runSumMaxMinTest<std::size_t>(0);
+    runSumMaxMinTest<std::size_t>(20);
+}
+BOOST_AUTO_TEST_CASE(tupleReductionTestFloat)
+{
+    runSumMaxMinTest<float>(0);
+    runSumMaxMinTest<float>(20);
+    runSumMaxMinTest<float>(-20);
+}
+
 BOOST_AUTO_TEST_CASE(singleContainerReductionTest)
 {
     int N=100;
