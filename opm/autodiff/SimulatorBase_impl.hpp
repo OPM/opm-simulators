@@ -73,8 +73,8 @@
 
 namespace Opm
 {
-    template<class T>
-    class SimulatorFullyImplicitBlackoil<T>::Impl
+    template<class GridT, class Implementation>
+    class SimulatorBase<GridT, Implementation>::Impl
     {
     public:
         Impl(const parameter::ParameterGroup& param,
@@ -134,19 +134,19 @@ namespace Opm
 
 
 
-    template<class T>
-    SimulatorFullyImplicitBlackoil<T>::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                                                   const Grid& grid,
-                                                                   const DerivedGeology& geo,
-                                                                   BlackoilPropsAdInterface& props,
-                                                                   const RockCompressibility* rock_comp_props,
-                                                                   NewtonIterationBlackoilInterface& linsolver,
-                                                                   const double* gravity,
-                                                                   const bool has_disgas,
-                                                                   const bool has_vapoil,
-                                                                   std::shared_ptr<EclipseState> eclipse_state,
-                                                                   BlackoilOutputWriter& output_writer,
-                                                                   const std::vector<double>& threshold_pressures_by_face)
+    template<class GridT, class Implementation>
+    SimulatorBase<GridT, Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
+                                                        const Grid& grid,
+                                                        const DerivedGeology& geo,
+                                                        BlackoilPropsAdInterface& props,
+                                                        const RockCompressibility* rock_comp_props,
+                                                        NewtonIterationBlackoilInterface& linsolver,
+                                                        const double* gravity,
+                                                        const bool has_disgas,
+                                                        const bool has_vapoil,
+                                                        std::shared_ptr<EclipseState> eclipse_state,
+                                                        BlackoilOutputWriter& output_writer,
+                                                        const std::vector<double>& threshold_pressures_by_face)
 
     {
         pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil,
@@ -157,28 +157,28 @@ namespace Opm
 
 
 
-    template<class T>
-    SimulatorReport SimulatorFullyImplicitBlackoil<T>::run(SimulatorTimer& timer,
-                                                        BlackoilState& state)
+    template<class GridT, class Implementation>
+    SimulatorReport SimulatorBase<GridT, Implementation>::run(SimulatorTimer& timer,
+                                                              BlackoilState& state)
     {
         return pimpl_->run(timer, state);
     }
 
 
     // \TODO: Treat bcs.
-    template<class T>
-    SimulatorFullyImplicitBlackoil<T>::Impl::Impl(const parameter::ParameterGroup& param,
-                                               const Grid& grid,
-                                               const DerivedGeology& geo,
-                                               BlackoilPropsAdInterface& props,
-                                               const RockCompressibility* rock_comp_props,
-                                               NewtonIterationBlackoilInterface& linsolver,
-                                               const double* gravity,
-                                               const bool has_disgas,
-                                               const bool has_vapoil,
-                                               std::shared_ptr<EclipseState> eclipse_state,
-                                               BlackoilOutputWriter& output_writer,
-                                               const std::vector<double>& threshold_pressures_by_face)
+    template<class GridT, class Implementation>
+    SimulatorBase<GridT, Implementation>::Impl::Impl(const parameter::ParameterGroup& param,
+                                                     const Grid& grid,
+                                                     const DerivedGeology& geo,
+                                                     BlackoilPropsAdInterface& props,
+                                                     const RockCompressibility* rock_comp_props,
+                                                     NewtonIterationBlackoilInterface& linsolver,
+                                                     const double* gravity,
+                                                     const bool has_disgas,
+                                                     const bool has_vapoil,
+                                                     std::shared_ptr<EclipseState> eclipse_state,
+                                                     BlackoilOutputWriter& output_writer,
+                                                     const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
           props_(props),
@@ -217,9 +217,9 @@ namespace Opm
 
 
 
-    template<class T>
-    SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
-                                                                 BlackoilState& state)
+    template<class GridT, class Implementation>
+    SimulatorReport SimulatorBase<GridT, Implementation>::Impl::run(SimulatorTimer& timer,
+                                                                    BlackoilState& state)
     {
         WellStateFullyImplicitBlackoil prev_well_state;
 
@@ -232,7 +232,7 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typedef T Grid;
+        typedef GridT Grid;
         typedef BlackoilModel<Grid> Model;
         typedef typename Model::ModelParameters ModelParams;
         ModelParams modelParams( param_ );
@@ -475,9 +475,9 @@ namespace Opm
         }
     } // namespace SimFIBODetails
 
-    template <class T>
+    template <class GridT, class Implementation>
     void
-    SimulatorFullyImplicitBlackoil<T>::
+    SimulatorBase<GridT, Implementation>::
     Impl::computeRESV(const std::size_t               step,
                       const Wells*                    wells,
                       const BlackoilState&            x,
