@@ -12,7 +12,7 @@ usage() {
     echo "Usage:"
     echo
     echo "runTest.sh TEST_TYPE TEST_BINARY [TEST_ARGS]"
-    echo "where TEST_TYPE can either be --plain,  --simulation or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
+    echo "where TEST_TYPE can either be --plain, --simulation or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
 validateResults() {
