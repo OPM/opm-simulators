@@ -17,14 +17,18 @@
 cmake_minimum_required (VERSION 2.8)
 
 set( OPM_CMAKE_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
+option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
 if(NOT OPM_CMAKE_ROOT)
-   find_package(opm-cmake)
+   find_package(opm-cmake QUIET)
 endif()
 
 if (opm-cmake_FOUND)
    include(OpmInit)
 else()
+   if (NOT OPM_CMAKE_ROOT AND SIBLING_SEARCH)
+      set(OPM_CMAKE_ROOT ${PROJECT_SOURCE_DIR}/../opm-cmake)
+   endif()
    if (OPM_CMAKE_ROOT)
       list( APPEND CMAKE_MODULE_PATH "${OPM_CMAKE_ROOT}/cmake/Modules")
       include (OpmInit OPTIONAL RESULT_VARIABLE OPM_INIT)
