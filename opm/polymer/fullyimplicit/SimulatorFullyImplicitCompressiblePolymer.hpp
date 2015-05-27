@@ -30,6 +30,7 @@
 #include <opm/autodiff/SimulatorBase.hpp>
 
 #include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
+#include <opm/polymer/fullyimplicit/PolymerBlackoilOutputWriter.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/pressure/flow_bc.h>
@@ -67,6 +68,17 @@
 
 namespace Opm
 {
+    template <class GridT>
+    class SimulatorFullyImplicitCompressiblePolymer;
+
+    template<class GridT>
+    struct SimulatorTraits<SimulatorFullyImplicitCompressiblePolymer<GridT> >
+    {
+        typedef PolymerBlackoilState ReservoirState;
+        typedef WellStateFullyImplicitBlackoil WellState;
+        typedef PolymerBlackoilOutputWriter OutputWriter;
+    };
+
     /// Class collecting all necessary components for a two-phase simulation.
     template <class GridT>
     class SimulatorFullyImplicitCompressiblePolymer
@@ -84,7 +96,7 @@ namespace Opm
                                        			  const PolymerPropsAd&    polymer_props,
                                        			  const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
-                                                  BlackoilOutputWriter& output_writer,
+                                                  PolymerBlackoilOutputWriter& output_writer,
                                                   Opm::DeckConstPtr& deck,
                                        			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
@@ -96,7 +108,7 @@ namespace Opm
         /// \param[in,out] state       state of reservoir: pressure, fluxes
         /// \return                    simulation report, with timing data
         SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state);
+                            typename BaseType::ReservoirState& state);
 
 private:
         Opm::DeckConstPtr deck_;

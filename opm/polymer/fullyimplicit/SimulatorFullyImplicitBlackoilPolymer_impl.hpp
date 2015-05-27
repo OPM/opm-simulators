@@ -35,7 +35,7 @@ namespace Opm
                                           const bool has_vapoil,
                                           const bool has_polymer,
                                           std::shared_ptr<EclipseState> eclipse_state,
-                                          BlackoilOutputWriter& output_writer,
+                                          PolymerBlackoilOutputWriter& output_writer,
                                           Opm::DeckConstPtr& deck,
                                           const std::vector<double>& threshold_pressures_by_face)
     : BaseType(param,
@@ -54,28 +54,9 @@ namespace Opm
         , has_polymer_(has_polymer)
         , deck_(deck)
     {
-        // Misc init.
-        const int num_cells = AutoDiffGrid::numCells(grid);
-        BaseType::allcells_.resize(num_cells);
-        for (int cell = 0; cell < num_cells; ++cell) {
-            BaseType::allcells_[cell] = cell;
-        }
-#if HAVE_MPI
-        if ( BaseType::terminal_output_ ) {
-            if ( BaseType::solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(BaseType::solver_.parallelInformation());
-                // Only rank 0 does print to std::cout
-                BaseType::terminal_output_= (info.communicator().rank()==0);
-            }
-        }
-#endif
     }
 
-
-
-
+#if 0
     template<class T>
     SimulatorReport SimulatorFullyImplicitBlackoilPolymer<T>::run(SimulatorTimer& timer,
                                                                   PolymerBlackoilState& state)
@@ -233,4 +214,5 @@ namespace Opm
         report.total_linear_iterations = totalLinearIterations;
         return report;
     }
+#endif
 } // namespace Opm

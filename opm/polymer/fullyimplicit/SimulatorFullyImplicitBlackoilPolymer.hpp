@@ -25,6 +25,7 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
+#include <opm/polymer/fullyimplicit/PolymerBlackoilOutputWriter.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 
@@ -78,6 +79,17 @@
 
 namespace Opm
 {
+    template<class GridT>
+    class SimulatorFullyImplicitBlackoilPolymer;
+
+    template<class GridT>
+    struct SimulatorTraits<SimulatorFullyImplicitBlackoilPolymer<GridT> >
+    {
+        typedef WellStateFullyImplicitBlackoilPolymer WellState;
+        typedef PolymerBlackoilState ReservoirState;
+        typedef PolymerBlackoilOutputWriter OutputWriter;
+    };
+
     /// Class collecting all necessary components for a two-phase simulation.
     template<class GridT>
     class SimulatorFullyImplicitBlackoilPolymer
@@ -102,12 +114,46 @@ namespace Opm
                                               const bool vapoil,
                                               const bool polymer,
                                               std::shared_ptr<EclipseState> eclipse_state,
-                                              BlackoilOutputWriter& output_writer,
+                                              PolymerBlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
+#if 0
         SimulatorReport run(SimulatorTimer& timer,
                             PolymerBlackoilState& state);
+#endif
+
+        void computeRESV(const std::size_t step,
+                         const Wells* wells,
+                         const PolymerBlackoilState& x,
+                         WellState& xw)
+        {
+            BaseType::computeRESV(step, wells, x.blackoilState(), xw);
+        }
+
+        void handleAdditionalWellInflow(SimulatorTimer& timer,
+                                        WellsManager& wells_manager,
+                                        typename BaseType::WellState& well_state,
+                                        const Wells* wells)
+        {
+            // compute polymer inflow
+            std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
+            if (deck_->hasKeyword("WPOLYMER")) {
+                if (wells_manager.c_wells() == 0) {
+                    OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
+                }
+                polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+            } else {
+                polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
+                                                                1.0*Opm::unit::day,
+                                                                0.0));
+            }
+            std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(BaseType::grid_));
+            polymer_inflow_ptr->getInflowValues(timer.simulationTimeElapsed(),
+                                                timer.simulationTimeElapsed() + timer.currentStepLength(),
+                                                polymer_inflow_c);
+            well_state.polymerInflow() = polymer_inflow_c;
+        }
 
     private:
         const PolymerPropsAd& polymer_props_;
