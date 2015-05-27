@@ -481,7 +481,7 @@ private:
             // for integral types.
             if( std::is_integral<Result>::value )
             {
-                return -std::numeric_limits<Result>::min();
+                return std::numeric_limits<Result>::min();
             }
             else
             {
