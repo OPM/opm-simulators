@@ -88,6 +88,7 @@ namespace Opm
         typedef BlackoilOutputWriter OutputWriter;
         typedef UnstructuredGrid Grid;
         typedef BlackoilPolymerModel<Grid> Model;
+        typedef NewtonSolver<Model> Solver;
     };
 
     /// Class collecting all necessary components for a blackoil simulation with polymer
@@ -97,6 +98,8 @@ namespace Opm
     {
         typedef SimulatorFullyImplicitBlackoilPolymer ThisType;
         typedef SimulatorBase<ThisType> BaseType;
+
+        typedef SimulatorTraits<ThisType> Traits;
 
     public:
         SimulatorFullyImplicitBlackoilPolymer(const parameter::ParameterGroup& param,
@@ -115,21 +118,33 @@ namespace Opm
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
-        std::shared_ptr<Model> createModel(const typename Model::ModelParameters &modelParams,
-                                           const Wells* wells)
+        std::shared_ptr<Solver> createSolver(const Wells* wells)
         {
-            return std::make_shared<Model>(modelParams,
-                                           BaseType::grid_,
-                                           BaseType::props_,
-                                           BaseType::geo_,
-                                           BaseType::rock_comp_props_,
-                                           polymer_props_,
-                                           wells,
-                                           BaseType::solver_,
-                                           BaseType::has_disgas_,
-                                           BaseType::has_vapoil_,
-                                           has_polymer_,
-                                           BaseType::terminal_output_);
+            typedef typename Traits::Model Model;
+            typedef typename Model::ModelParameters ModelParams;
+            ModelParams modelParams( param_ );
+            typedef NewtonSolver<Model> Solver;
+
+            auto model = std::make_shared<Model>(modelParams,
+                                                 BaseType::grid_,
+                                                 BaseType::props_,
+                                                 BaseType::geo_,
+                                                 BaseType::rock_comp_props_,
+                                                 polymer_props_,
+                                                 wells,
+                                                 BaseType::solver_,
+                                                 BaseType::has_disgas_,
+                                                 BaseType::has_vapoil_,
+                                                 has_polymer_,
+                                                 BaseType::terminal_output_);
+
+            if (!threshold_pressures_by_face_.empty()) {
+                model->setThresholdPressures(threshold_pressures_by_face_);
+            }
+
+            typedef typename Solver::SolverParameters SolverParams;
+            SolverParams solverParams( param_ );
+            return std::make_shared<Solver>(solverParams, model);
         }
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
