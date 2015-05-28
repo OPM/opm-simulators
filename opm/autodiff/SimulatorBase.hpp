@@ -147,36 +147,9 @@ namespace Opm
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,
                                         WellState& well_state,
-                                        const Wells* wells)
-        {};
+                                        const Wells* wells);
 
-        std::shared_ptr<Solver> createSolver(const Wells* wells)
-
-        {
-            typedef typename Traits::Model Model;
-            typedef typename Model::ModelParameters ModelParams;
-            ModelParams modelParams( param_ );
-            typedef NewtonSolver<Model> Solver;
-
-            auto model = std::make_shared<Model>(modelParams,
-                                                 grid_,
-                                                 props_,
-                                                 geo_,
-                                                 rock_comp_props_,
-                                                 wells,
-                                                 solver_,
-                                                 has_disgas_,
-                                                 has_vapoil_,
-                                                 terminal_output_);
-
-            if (!threshold_pressures_by_face_.empty()) {
-                model->setThresholdPressures(threshold_pressures_by_face_);
-            }
-
-            typedef typename Solver::SolverParameters SolverParams;
-            SolverParams solverParams( param_ );
-            return std::make_shared<Solver>(solverParams, model);
-        }
+        std::shared_ptr<Solver> createSolver(const Wells* wells);
 
         void
         computeRESV(const std::size_t               step,
