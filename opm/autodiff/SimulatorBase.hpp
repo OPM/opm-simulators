@@ -88,7 +88,7 @@ namespace Opm
         typedef typename Traits::WellState WellState;
         typedef typename Traits::OutputWriter OutputWriter;
         typedef typename Traits::Grid Grid;
-        typedef typename Traits::Model Model;
+        typedef typename Traits::Solver Solver;
 
         /// Initialise from parameters and objects to observe.
         /// \param[in] param       parameters, this class accepts the following:
@@ -150,20 +150,32 @@ namespace Opm
                                         const Wells* wells)
         {};
 
-        std::shared_ptr<Model> createModel(const typename Model::ModelParameters &modelParams,
-                                           const Wells* wells)
+        std::shared_ptr<Solver> createSolver(const Wells* wells)
 
         {
-            return std::make_shared<Model>(modelParams,
-                                           grid_,
-                                           props_,
-                                           geo_,
-                                           rock_comp_props_,
-                                           wells,
-                                           solver_,
-                                           has_disgas_,
-                                           has_vapoil_,
-                                           terminal_output_);
+            typedef typename Traits::Model Model;
+            typedef typename Model::ModelParameters ModelParams;
+            ModelParams modelParams( param_ );
+            typedef NewtonSolver<Model> Solver;
+
+            auto model = std::make_shared<Model>(modelParams,
+                                                 grid_,
+                                                 props_,
+                                                 geo_,
+                                                 rock_comp_props_,
+                                                 wells,
+                                                 solver_,
+                                                 has_disgas_,
+                                                 has_vapoil_,
+                                                 terminal_output_);
+
+            if (!threshold_pressures_by_face_.empty()) {
+                model->setThresholdPressures(threshold_pressures_by_face_);
+            }
+
+            typedef typename Solver::SolverParameters SolverParams;
+            SolverParams solverParams( param_ );
+            return std::make_shared<Solver>(solverParams, model);
         }
 
         void

@@ -83,12 +83,6 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        typedef typename Model::ModelParameters ModelParams;
-        ModelParams modelParams( param_ );
-        typedef NewtonSolver<Model> Solver;
-        typedef typename Solver::SolverParameters SolverParams;
-        SolverParams solverParams( param_ );
-
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
@@ -150,11 +144,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto model = asImp_().createModel(modelParams, wells);
-            if (!threshold_pressures_by_face_.empty()) {
-                model->setThresholdPressures(threshold_pressures_by_face_);
-            }
-            Solver solver(solverParams, *model);
+            auto solver = asImp_().createSolver(wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
@@ -162,19 +152,19 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
+                adaptiveTimeStepping->step( timer, *solver, state, well_state,  output_writer_ );
             }
             else {
                 // solve for complete report step
-                solver.step(timer.currentStepLength(), state, well_state);
+                solver->step(timer.currentStepLength(), state, well_state);
             }
 
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
 
             // accumulate the number of Newton and Linear Iterations
-            totalNewtonIterations += solver.newtonIterations();
-            totalLinearIterations += solver.linearIterations();
+            totalNewtonIterations += solver->newtonIterations();
+            totalLinearIterations += solver->linearIterations();
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();

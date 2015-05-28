@@ -22,6 +22,8 @@
 
 #include "SimulatorBase.hpp"
 
+#include "NewtonSolver.hpp"
+
 namespace Opm {
 template<class GridT>
 class SimulatorFullyImplicitBlackoil;
@@ -34,6 +36,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
     typedef BlackoilOutputWriter OutputWriter;
     typedef GridT Grid;
     typedef BlackoilModel<Grid> Model;
+    typedef NewtonSolver<Model> Solver;
 };
 
 /// a simulator for the blackoil model

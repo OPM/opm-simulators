@@ -29,7 +29,7 @@ namespace Opm
 {
     template <class PhysicalModel>
     NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameters& param,
-                                              PhysicalModel& model)
+                                              std::shared_ptr<PhysicalModel> model)
         : param_(param),
           model_(model),
           newtonIterations_(0),
@@ -58,21 +58,21 @@ namespace Opm
          WellState& well_state)
     {
         // Do model-specific once-per-step calculations.
-        model_.prepareStep(dt, reservoir_state, well_state);
+        model_->prepareStep(dt, reservoir_state, well_state);
 
         // For each iteration we store in a vector the norms of the residual of
         // the mass balance for each active phase, the well flux and the well equations.
         std::vector<std::vector<double>> residual_norms_history;
 
         // Assemble residual and Jacobian, store residual norms.
-        model_.assemble(reservoir_state, well_state, true);
-        residual_norms_history.push_back(model_.computeResidualNorms());
+        model_->assemble(reservoir_state, well_state, true);
+        residual_norms_history.push_back(model_->computeResidualNorms());
 
         // Set up for main Newton loop.
         double omega = 1.0;
         int iteration = 0;
-        bool converged = model_.getConvergence(dt, iteration);
-        const int sizeNonLinear = model_.sizeNonLinear();
+        bool converged = model_->getConvergence(dt, iteration);
+        const int sizeNonLinear = model_->sizeNonLinear();
         V dxOld = V::Zero(sizeNonLinear);
         bool isOscillate = false;
         bool isStagnate = false;
@@ -82,17 +82,17 @@ namespace Opm
         // ----------  Main Newton loop  ----------
         while ( (!converged && (iteration < maxIter())) || (minIter() > iteration)) {
             // Compute the Newton update to the primary variables.
-            V dx = model_.solveJacobianSystem();
+            V dx = model_->solveJacobianSystem();
 
             // Store number of linear iterations used.
-            linearIterations += model_.linearIterationsLastSolve();
+            linearIterations += model_->linearIterationsLastSolve();
 
             // Stabilize the Newton update.
             detectNewtonOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
-                if (model_.terminalOutputEnabled()) {
+                if (model_->terminalOutputEnabled()) {
                     std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
                 }
             }
@@ -100,20 +100,20 @@ namespace Opm
 
             // Apply the update, the model may apply model-dependent
             // limitations and chopping of the update.
-            model_.updateState(dx, reservoir_state, well_state);
+            model_->updateState(dx, reservoir_state, well_state);
 
             // Assemble residual and Jacobian, store residual norms.
-            model_.assemble(reservoir_state, well_state, false);
-            residual_norms_history.push_back(model_.computeResidualNorms());
+            model_->assemble(reservoir_state, well_state, false);
+            residual_norms_history.push_back(model_->computeResidualNorms());
 
             // increase iteration counter
             ++iteration;
 
-            converged = model_.getConvergence(dt, iteration);
+            converged = model_->getConvergence(dt, iteration);
         }
 
         if (!converged) {
-            if (model_.terminalOutputEnabled()) {
+            if (model_->terminalOutputEnabled()) {
                 std::cerr << "WARNING: Failed to compute converged solution in " << iteration << " iterations." << std::endl;
             }
             return -1; // -1 indicates that the solver has to be restarted
@@ -125,7 +125,7 @@ namespace Opm
         newtonIterationsLast_ = iteration;
 
         // Do model-specific post-step actions.
-        model_.afterStep(dt, reservoir_state, well_state);
+        model_->afterStep(dt, reservoir_state, well_state);
 
         return linearIterations;
     }
@@ -197,7 +197,7 @@ namespace Opm
         const std::vector<double>& F0 = residual_history[it];
         const std::vector<double>& F1 = residual_history[it - 1];
         const std::vector<double>& F2 = residual_history[it - 2];
-        for (int p= 0; p < model_.numPhases(); ++p){
+        for (int p= 0; p < model_->numPhases(); ++p){
             const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
             const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 

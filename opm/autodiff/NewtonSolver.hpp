@@ -66,7 +66,7 @@ namespace Opm {
         /// \param[in]      param   parameters controlling nonlinear Newton process
         /// \param[in, out] model   physical simulation model
         explicit NewtonSolver(const SolverParameters& param,
-                              PhysicalModel& model);
+                              std::shared_ptr<PhysicalModel> model);
 
         /// Take a single forward step, after which the states will be modified
         /// according to the physical model.
@@ -94,7 +94,7 @@ namespace Opm {
     private:
         // ---------  Data members  ---------
         SolverParameters param_;
-        PhysicalModel& model_;
+        std::shared_ptr<PhysicalModel> model_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
         unsigned int newtonIterationsLast_;
