@@ -1,6 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2014 IRIS AS
+  Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,7 +21,8 @@
 
 namespace Opm
 {
-    template<class Implementation>
+
+    template <class Implementation>
     SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
                                                  const Grid& grid,
                                                  const DerivedGeology& geo,
@@ -68,7 +70,7 @@ namespace Opm
 #endif
     }
 
-    template<class Implementation>
+    template <class Implementation>
     SimulatorReport SimulatorBase<Implementation>::run(SimulatorTimer& timer,
                                                        ReservoirState& state)
     {
@@ -129,7 +131,7 @@ namespace Opm
             well_state.init(wells, state, prev_well_state);
 
             // give the polymer and surfactant simulators the chance to do their stuff
-            asImp_().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
+            asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
             // write simulation state at the report stage
             output_writer_.writeTimeStep( timer, state, well_state );
@@ -139,12 +141,12 @@ namespace Opm
             props_.updateSatHyst(state.saturation(), allcells_);
 
             // Compute reservoir volumes for RESV controls.
-            asImp_().computeRESV(timer.currentStepNum(), wells, state, well_state);
+            asImpl().computeRESV(timer.currentStepNum(), wells, state, well_state);
 
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = asImp_().createSolver(wells);
+            auto solver = asImpl().createSolver(wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge

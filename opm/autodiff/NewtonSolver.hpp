@@ -63,8 +63,12 @@ namespace Opm {
         // ---------  Public methods  ---------
 
         /// Construct solver for a given model.
+        ///
+        /// The model is a std::shared_ptr because the object to which model points to is
+        /// not allowed to be deleted as long as the NewtonSolver object exists.
+        ///
         /// \param[in]      param   parameters controlling nonlinear Newton process
-        /// \param[in, out] model   physical simulation model
+        /// \param[in, out] model   physical simulation model.
         explicit NewtonSolver(const SolverParameters& param,
                               std::shared_ptr<PhysicalModel> model);
 

@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -74,11 +75,12 @@
 
 namespace Opm
 {
-    template<class Simulator>
+
+    template <class Simulator>
     struct SimulatorTraits;
 
     /// Class collecting all necessary components for a two-phase simulation.
-    template<class Implementation>
+    template <class Implementation>
     class SimulatorBase
     {
         typedef SimulatorTraits<Implementation> Traits;
@@ -141,8 +143,8 @@ namespace Opm
                             ReservoirState& state);
 
     protected:
-        Implementation& asImp_() { return *static_cast<Implementation*>(this); }
-        const Implementation& asImp_() const { return *static_cast<const Implementation*>(this); }
+        Implementation& asImpl() { return *static_cast<Implementation*>(this); }
+        const Implementation& asImpl() const { return *static_cast<const Implementation*>(this); }
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,

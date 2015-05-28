@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -25,10 +26,11 @@
 #include "NewtonSolver.hpp"
 
 namespace Opm {
-template<class GridT>
+
+template <class GridT>
 class SimulatorFullyImplicitBlackoil;
 
-template<class GridT>
+template <class GridT>
 struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
 {
     typedef WellStateFullyImplicitBlackoil WellState;
@@ -40,7 +42,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
 };
 
 /// a simulator for the blackoil model
-template<class GridT>
+template <class GridT>
 class SimulatorFullyImplicitBlackoil
     : public SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> >
 {
