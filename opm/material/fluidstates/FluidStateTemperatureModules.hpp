@@ -126,12 +126,12 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        typedef Opm::MathToolbox<Scalar> Toolbox;
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         temperature_ = FsToolbox::template toLhs<Scalar>(fs.temperature(/*phaseIdx=*/0));
 
 #ifndef NDEBUG
+        typedef Opm::MathToolbox<Scalar> Toolbox;
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             assert(std::abs(FsToolbox::value(fs.temperature(phaseIdx))
                             - Toolbox::value(temperature_)) < 1e-30);
