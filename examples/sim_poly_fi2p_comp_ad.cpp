@@ -224,7 +224,7 @@ try
     SimulatorReport fullReport;
     // Create and run simulator.
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
-    SimulatorFullyImplicitCompressiblePolymer
+    SimulatorFullyImplicitCompressiblePolymer<UnstructuredGrid>
         simulator(param,
                   *grid->c_grid(),
                   geology,

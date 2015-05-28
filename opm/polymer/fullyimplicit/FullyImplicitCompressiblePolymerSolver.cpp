@@ -255,9 +255,15 @@ namespace {
         return it;
     }
 
+    int FullyImplicitCompressiblePolymerSolver::newtonIterations() const
+    {
+        return newtonIterations_;
+    }
 
-
-
+    int FullyImplicitCompressiblePolymerSolver::linearIterations() const
+    {
+        return linearIterations_;
+    }
 
     FullyImplicitCompressiblePolymerSolver::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())

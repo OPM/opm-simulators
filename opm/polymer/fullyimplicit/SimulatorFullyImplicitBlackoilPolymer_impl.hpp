@@ -21,9 +21,10 @@
 
 namespace Opm
 {
-    SimulatorFullyImplicitBlackoilPolymer::
+    template <class GridT>
+    SimulatorFullyImplicitBlackoilPolymer<GridT>::
     SimulatorFullyImplicitBlackoilPolymer(const parameter::ParameterGroup& param,
-                                          const Grid& grid,
+                                          const GridT& grid,
                                           const DerivedGeology& geo,
                                           BlackoilPropsAdInterface& props,
                                           const PolymerPropsAd& polymer_props,
@@ -54,4 +55,63 @@ namespace Opm
         , deck_(deck)
     {
     }
+
+    template <class GridT>
+    auto SimulatorFullyImplicitBlackoilPolymer<GridT>::
+    createSolver(const Wells* wells)
+        -> std::shared_ptr<Solver>
+    {
+        typedef typename Traits::Model Model;
+        typedef typename Model::ModelParameters ModelParams;
+        ModelParams modelParams( BaseType::param_ );
+        typedef NewtonSolver<Model> Solver;
+
+        auto model = std::make_shared<Model>(modelParams,
+                                             BaseType::grid_,
+                                             BaseType::props_,
+                                             BaseType::geo_,
+                                             BaseType::rock_comp_props_,
+                                             polymer_props_,
+                                             wells,
+                                             BaseType::solver_,
+                                             BaseType::has_disgas_,
+                                             BaseType::has_vapoil_,
+                                             has_polymer_,
+                                             BaseType::terminal_output_);
+
+        if (!BaseType::threshold_pressures_by_face_.empty()) {
+            model->setThresholdPressures(BaseType::threshold_pressures_by_face_);
+        }
+
+        typedef typename Solver::SolverParameters SolverParams;
+        SolverParams solverParams( BaseType::param_ );
+        return std::make_shared<Solver>(solverParams, model);
+    }
+
+    template <class GridT>
+    void SimulatorFullyImplicitBlackoilPolymer<GridT>::
+    handleAdditionalWellInflow(SimulatorTimer& timer,
+                                    WellsManager& wells_manager,
+                                    typename BaseType::WellState& well_state,
+                                    const Wells* wells)
+    {
+        // compute polymer inflow
+        std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
+        if (deck_->hasKeyword("WPOLYMER")) {
+            if (wells_manager.c_wells() == 0) {
+                OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
+            }
+            polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+        } else {
+            polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
+                                                            1.0*Opm::unit::day,
+                                                            0.0));
+        }
+        std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(BaseType::grid_));
+        polymer_inflow_ptr->getInflowValues(timer.simulationTimeElapsed(),
+                                            timer.simulationTimeElapsed() + timer.currentStepLength(),
+                                            polymer_inflow_c);
+        well_state.polymerInflow() = polymer_inflow_c;
+    }
+
 } // namespace Opm

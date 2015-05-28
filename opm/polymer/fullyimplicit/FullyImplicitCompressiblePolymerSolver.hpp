@@ -85,10 +85,8 @@ namespace Opm {
              PolymerBlackoilState& 		state ,
              WellStateFullyImplicitBlackoilPolymer& wstate);
 
-        int newtonIterations() const
-        { return newtonIterations_; }
-        int linearIterations() const
-        { return linearIterations_; }
+        int newtonIterations() const;
+        int linearIterations() const;
 
     private:
         typedef AutoDiffBlock<double> ADB;

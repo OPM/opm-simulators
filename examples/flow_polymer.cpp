@@ -268,21 +268,22 @@ try
 
     std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
 
-    SimulatorFullyImplicitBlackoilPolymer simulator(param,
-                                                    *grid->c_grid(),
-                                                    geology,
-                                                    *new_props,
-                                                    polymer_props_ad,
-                                                    rock_comp->isActive() ? rock_comp.get() : 0,
-                                                    *fis_solver,
-                                                    grav,
-                                                    deck->hasKeyword("DISGAS"),
-                                                    deck->hasKeyword("VAPOIL"),
-                                                    polymer,
-                                                    eclipseState,
-                                                    outputWriter,
-                                                    deck,
-                                                    threshold_pressures);
+    SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid>
+        simulator(param,
+                  *grid->c_grid(),
+                  geology,
+                  *new_props,
+                  polymer_props_ad,
+                  rock_comp->isActive() ? rock_comp.get() : 0,
+                  *fis_solver,
+                  grav,
+                  deck->hasKeyword("DISGAS"),
+                  deck->hasKeyword("VAPOIL"),
+                  polymer,
+                  eclipseState,
+                  outputWriter,
+                  deck,
+                  threshold_pressures);
 
     if (!schedule->initOnly()){
         std::cout << "\n\n================ Starting main simulation loop ===============\n"

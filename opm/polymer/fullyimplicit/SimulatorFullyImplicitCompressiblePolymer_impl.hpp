@@ -24,9 +24,10 @@ namespace Opm
 {
 
 /// Class collecting all necessary components for a two-phase simulation.
-SimulatorFullyImplicitCompressiblePolymer::
+template <class GridT>
+SimulatorFullyImplicitCompressiblePolymer<GridT>::
 SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
-                                          const UnstructuredGrid& grid,
+                                          const GridT& grid,
                                           const DerivedGeology& geo,
                                           BlackoilPropsAdInterface& props,
                                           const PolymerPropsAd&    polymer_props,
@@ -53,6 +54,47 @@ SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param
 
 {
 }
+
+template <class GridT>
+auto SimulatorFullyImplicitCompressiblePolymer<GridT>::
+createSolver(const Wells* wells)
+    -> std::shared_ptr<Solver>
+{
+    return std::make_shared<Solver>(BaseType::grid_,
+                                    BaseType::props_,
+                                    BaseType::geo_,
+                                    BaseType::rock_comp_props_,
+                                    polymer_props_,
+                                    *wells,
+                                    BaseType::solver_);
+}
+
+template <class GridT>
+void SimulatorFullyImplicitCompressiblePolymer<GridT>::
+handleAdditionalWellInflow(SimulatorTimer& timer,
+                           WellsManager& wells_manager,
+                           typename BaseType::WellState& well_state,
+                           const Wells* wells)
+{
+    // compute polymer inflow
+    std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
+    if (deck_->hasKeyword("WPOLYMER")) {
+        if (wells_manager.c_wells() == 0) {
+            OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
+        }
+        polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+    } else {
+        polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
+                                                        1.0*Opm::unit::day,
+                                                        0.0));
+    }
+    std::vector<double> polymer_inflow_c(Opm::UgGridHelpers::numCells(BaseType::grid_));
+    polymer_inflow_ptr->getInflowValues(timer.simulationTimeElapsed(),
+                                        timer.simulationTimeElapsed() + timer.currentStepLength(),
+                                        polymer_inflow_c);
+    well_state.polymerInflow() = polymer_inflow_c;
+}
+
 
 } // namespace Opm
 
