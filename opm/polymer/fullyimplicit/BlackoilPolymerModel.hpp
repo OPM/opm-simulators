@@ -51,7 +51,7 @@ namespace Opm {
         typedef typename Base::WellState WellState;
         // The next line requires C++11 support available in g++ 4.7.
         // friend Base;
-        friend BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >;
+        friend class BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
