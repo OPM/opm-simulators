@@ -36,6 +36,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
+	opm/autodiff/BlackoilModelParameters.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
 	)
@@ -95,7 +96,10 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
 	opm/autodiff/BlackoilModel.hpp
-	opm/autodiff/BlackoilModel_impl.hpp
+	opm/autodiff/BlackoilModelBase.hpp
+	opm/autodiff/BlackoilModelBase_impl.hpp
+	opm/autodiff/BlackoilModelEnums.hpp
+	opm/autodiff/BlackoilModelParameters.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
@@ -105,8 +109,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
-	opm/autodiff/FullyImplicitBlackoilSolver.hpp
-	opm/autodiff/FullyImplicitBlackoilSolver_impl.hpp
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
