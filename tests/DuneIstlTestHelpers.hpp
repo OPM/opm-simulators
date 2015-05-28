@@ -26,6 +26,8 @@
 #error "This file needs to compiled with MPI support!"
 #endif
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpicollectivecommunication.hh>
@@ -39,6 +41,8 @@
 #include <dune/common/parallel/communicator.hh>
 #include <dune/common/parallel/remoteindices.hh>
 #include <dune/istl/owneroverlapcopy.hh>
+
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <tuple>
 

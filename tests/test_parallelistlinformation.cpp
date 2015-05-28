@@ -48,8 +48,8 @@ void runSumMaxMinTest(const T offset)
     auto mat = create1DLaplacian(*comm.indexSet(), N, start, end, istart, iend);
     std::vector<T> x(end-start);
     assert(comm.indexSet()->size()==x.size());
-    for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
-        x[i->local()]=i->global()+offset;
+    for(auto it=comm.indexSet()->begin(), itend=comm.indexSet()->end(); it!=itend; ++it)
+        x[it->local()]=it->global()+offset;
     auto containers = std::make_tuple(x, x, x, x);
     auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<T>(),
                                       Opm::Reduction::makeGlobalMaxFunctor<T>(),
@@ -94,8 +94,8 @@ BOOST_AUTO_TEST_CASE(singleContainerReductionTest)
     auto mat = create1DLaplacian(*comm.indexSet(), N, start, end, istart, iend);
     std::vector<int> x(end-start);
     assert(comm.indexSet()->size()==x.size());
-    for(auto i=comm.indexSet()->begin(), iend=comm.indexSet()->end(); i!=iend; ++i)
-        x[i->local()]=i->global();
+    for(auto it=comm.indexSet()->begin(), itend=comm.indexSet()->end(); it!=itend; ++it)
+        x[it->local()]=it->global();
     int value = 1;
     int oldvalue = value;
     comm.computeReduction(x,Opm::Reduction::makeGlobalSumFunctor<int>(),value);
