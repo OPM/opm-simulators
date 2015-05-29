@@ -196,36 +196,6 @@ try
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
-    // Initialising src
-    int num_cells = grid->c_grid()->number_of_cells;
-    std::vector<double> src(num_cells, 0.0);
-    if (use_deck) {
-        // Do nothing, wells will be the driving force, not source terms.
-    } else {
-        // Compute pore volumes, in order to enable specifying injection rate
-        // terms of total pore volume.
-        std::vector<double> porevol;
-        if (rock_comp->isActive()) {
-            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state.pressure(), porevol);
-        } else {
-            computePorevolume(*grid->c_grid(), props->porosity(), porevol);
-        }
-        const double tot_porevol_init = std::accumulate(porevol.begin(), porevol.end(), 0.0);
-        const double default_injection = use_gravity ? 0.0 : 0.1;
-        const double flow_per_sec = param.getDefault<double>("injected_porevolumes_per_day", default_injection)
-            *tot_porevol_init/unit::day;
-        src[0] = flow_per_sec;
-        src[num_cells - 1] = -flow_per_sec;
-    }
-
-    // Boundary conditions.
-    FlowBCManager bcs;
-    if (param.getDefault("use_pside", false)) {
-        int pside = param.get<int>("pside");
-        double pside_pressure = param.get<double>("pside_pressure");
-        bcs.pressureSide(*grid->c_grid(), FlowBCManager::Side(pside), pside_pressure);
-    }
-
     // Linear solver.
     LinearSolverFactory linsolver(param);
 
@@ -262,8 +232,6 @@ try
                                                rock_comp->isActive() ? rock_comp.get() : 0,
                                                wells,
                                                polymer_inflow,
-                                               src,
-                                               bcs.c_bcs(),
                                                linsolver,
                                                grav);
         SimulatorTimer simtimer;
@@ -325,8 +293,6 @@ try
                                                    rock_comp->isActive() ? rock_comp.get() : 0,
                                                    wells,
                                                    *polymer_inflow,
-                                                   src,
-                                                   bcs.c_bcs(),
                                                    linsolver,
                                                    grav);
             if (reportStepIdx == 0) {

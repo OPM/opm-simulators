@@ -67,8 +67,6 @@ namespace Opm
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells_manager    well manager, may manage no (null) wells
         /// \param[in] polymer_inflow   polymer inflow controls
-        /// \param[in] src              source terms
-        /// \param[in] bcs              boundary conditions, treat as all noflow if null
         /// \param[in] linsolver        linear solver
         /// \param[in] gravity          if non-null, gravity vector
         SimulatorCompressiblePolymer(const parameter::ParameterGroup& param,
@@ -78,8 +76,6 @@ namespace Opm
                                      const RockCompressibility* rock_comp_props,
                                      WellsManager& wells_manager,
                                      const PolymerInflowInterface& polymer_inflow,
-                                     const std::vector<double>& src,
-                                     const FlowBoundaryConditions* bcs,
                                      LinearSolverInterface& linsolver,
                                      const double* gravity);
 

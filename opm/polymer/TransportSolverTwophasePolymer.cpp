@@ -116,13 +116,6 @@ namespace
 	return std::max(std::abs(res[0]), std::abs(res[1]));
     }
 
-    bool solveNewtonStepSC(const double* , const Opm::TransportSolverTwophasePolymer::ResidualEquation&,
-			   const double*, double*);
-    bool solveNewtonStepC(const double* , const Opm::TransportSolverTwophasePolymer::ResidualEquation&,
-                          const double*, double*);
-
-
-
     // Define a piecewise linear curve along which we will look for zero of the "s" or "r" residual.
     // The curve starts at "x", goes along the direction "direction" until it hits the boundary of the box of
     // admissible values for "s" and "x" (which is given by "[x_min[0], x_max[0]]x[x_min[1], x_max[1]]").
@@ -1553,63 +1546,6 @@ namespace
         res_eq_.tm.scToc(x_of_t, x_c);
 	return res_eq_.computeResidualC(x_c);
     }
-
-    bool solveNewtonStepSC(const double* xx, const  Opm::TransportSolverTwophasePolymer::ResidualEquation& res_eq,
-                           const double* res, double* x_new) {
-
-    	double dres_s_dsdc[2];
-    	double dres_c_dsdc[2];
-	double dx=1e-8;
-	double x[2];
-	if(!(x[0]>0)){
-	    x[0] = dx;
-            x[1] = 0;
-	} else {
-	    x[0] = xx[0];
-            x[1] = xx[1];
-	}
-	res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
-	
-	double dFx_dx=(dres_s_dsdc[0]-x[1]*dres_s_dsdc[1]);
-	double dFx_dy= (dres_s_dsdc[1]/x[0]);
-	double dFy_dx=(dres_c_dsdc[0]-x[1]*dres_c_dsdc[1]);
-	double dFy_dy= (dres_c_dsdc[1]/x[0]);
-
-	double det = dFx_dx*dFy_dy - dFy_dx*dFx_dy;
-    	if (std::abs(det) < 1e-8) {
-    	    return false;
-    	} else {
-	    x_new[0] = x[0] - (res[0]*dFy_dy - res[1]*dFx_dy)/det;
-	    x_new[1] = x[1]*x[0] - (res[1]*dFx_dx - res[0]*dFy_dx)/det;
-	    x_new[1] = (x_new[0]>0) ?  x_new[1]/x_new[0] : 0.0;
-	    return true;
-	}
-    }
-    bool solveNewtonStepC(const double* xx, const  Opm::TransportSolverTwophasePolymer::ResidualEquation& res_eq,
-                          const double* res, double* x_new) {
-	
-	double dres_s_dsdc[2];
-	double dres_c_dsdc[2];
-        double dx=1e-8;
-        double x[2];
-        if(!(x[0]>0)){
-            x[0] = dx;
-            x[1] = 0;
-        } else {
-	    x[0] = xx[0];
-            x[1] = xx[1];
-        }
-        res_eq.computeJacobiRes(x, dres_s_dsdc, dres_c_dsdc);
-        double det = dres_s_dsdc[0]*dres_c_dsdc[1] - dres_c_dsdc[0]*dres_s_dsdc[1];
-	if (std::abs(det) < 1e-8) {
-    	    return false;
-    	} else {
-    	    x_new[0] = x[0] - (res[0]*dres_c_dsdc[1] - res[1]*dres_s_dsdc[1])/det;
-	    x_new[1] = x[1] - (res[1]*dres_s_dsdc[0] - res[0]*dres_c_dsdc[0])/det;
-	    return true;
-	}
-    }
-
 
 } // Anonymous namespace
 

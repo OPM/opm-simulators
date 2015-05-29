@@ -93,18 +93,18 @@ namespace Opm
     public:
         /// Initialise from parameters and objects to observe.
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
-                        		                  const GridT& grid,
+                                                  const GridT& grid,
                                                   const DerivedGeology& geo,
-                                   				  BlackoilPropsAdInterface& props,
-                                       			  const PolymerPropsAd&    polymer_props,
-                                       			  const RockCompressibility* rock_comp_props,
+                                                  BlackoilPropsAdInterface& props,
+                                                  const PolymerPropsAd&    polymer_props,
+                                                  const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
                                                   BlackoilOutputWriter& output_writer,
                                                   Opm::DeckConstPtr& deck,
-                                       			  NewtonIterationBlackoilInterface& linsolver,
-                                       			  const double* gravity);
+                                                  NewtonIterationBlackoilInterface& linsolver,
+                                                  const double* gravity);
 
-        Solver* createSolver(const Wells* wells);
+        std::unique_ptr<Solver> createSolver(const Wells* wells);
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,

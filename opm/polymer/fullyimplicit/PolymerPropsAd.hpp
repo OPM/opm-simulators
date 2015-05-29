@@ -101,7 +101,7 @@ namespace Opm {
 		/// \param[in] relperm			Array of n relative water relperm values.
 		/// \return						Array of n adsorption values.
         ADB
-        effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw, const ADB& sw) const;
+        effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw) const;
 
     private:
         const PolymerProperties& polymer_props_;
