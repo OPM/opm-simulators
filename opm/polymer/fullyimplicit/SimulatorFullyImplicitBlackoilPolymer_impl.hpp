@@ -59,25 +59,25 @@ namespace Opm
     template <class GridT>
     auto SimulatorFullyImplicitBlackoilPolymer<GridT>::
     createSolver(const Wells* wells)
-        -> std::shared_ptr<Solver>
+        -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
         typedef typename Model::ModelParameters ModelParams;
         ModelParams modelParams( BaseType::param_ );
         typedef NewtonSolver<Model> Solver;
 
-        auto model = std::make_shared<Model>(modelParams,
-                                             BaseType::grid_,
-                                             BaseType::props_,
-                                             BaseType::geo_,
-                                             BaseType::rock_comp_props_,
-                                             polymer_props_,
-                                             wells,
-                                             BaseType::solver_,
-                                             BaseType::has_disgas_,
-                                             BaseType::has_vapoil_,
-                                             has_polymer_,
-                                             BaseType::terminal_output_);
+        auto model = std::unique_ptr<Model>(new Model(modelParams,
+                                                      BaseType::grid_,
+                                                      BaseType::props_,
+                                                      BaseType::geo_,
+                                                      BaseType::rock_comp_props_,
+                                                      polymer_props_,
+                                                      wells,
+                                                      BaseType::solver_,
+                                                      BaseType::has_disgas_,
+                                                      BaseType::has_vapoil_,
+                                                      has_polymer_,
+                                                      BaseType::terminal_output_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
             model->setThresholdPressures(BaseType::threshold_pressures_by_face_);
@@ -85,7 +85,7 @@ namespace Opm
 
         typedef typename Solver::SolverParameters SolverParams;
         SolverParams solverParams( BaseType::param_ );
-        return std::make_shared<Solver>(solverParams, model);
+        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
     }
 
     template <class GridT>

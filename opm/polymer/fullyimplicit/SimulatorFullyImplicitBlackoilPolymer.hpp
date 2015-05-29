@@ -121,7 +121,7 @@ namespace Opm
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
-        std::shared_ptr<Solver> createSolver(const Wells* wells);
+        std::unique_ptr<Solver> createSolver(const Wells* wells);
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,
