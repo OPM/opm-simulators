@@ -95,34 +95,35 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp
-	opm/autodiff/BlackoilModel.hpp
 	opm/autodiff/BlackoilModelBase.hpp
 	opm/autodiff/BlackoilModelBase_impl.hpp
 	opm/autodiff/BlackoilModelEnums.hpp
+	opm/autodiff/BlackoilModel.hpp
 	opm/autodiff/BlackoilModelParameters.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
-	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
+	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
+	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/NewtonSolver.hpp
 	opm/autodiff/NewtonSolver_impl.hpp
-	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp
+	opm/autodiff/SimulatorBase.hpp
+	opm/autodiff/SimulatorBase_impl.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
-	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
-	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	)
 
