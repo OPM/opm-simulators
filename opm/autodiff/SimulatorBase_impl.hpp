@@ -19,6 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
+
 namespace Opm
 {
 
@@ -328,23 +330,23 @@ namespace Opm
 
     template <class Implementation>
     auto SimulatorBase<Implementation>::createSolver(const Wells* wells)
-        -> std::shared_ptr<Solver>
+        -> Solver*
     {
         typedef typename Traits::Model Model;
         typedef typename Model::ModelParameters ModelParams;
         ModelParams modelParams( param_ );
         typedef NewtonSolver<Model> Solver;
 
-        auto model = std::make_shared<Model>(modelParams,
-                                             grid_,
-                                             props_,
-                                             geo_,
-                                             rock_comp_props_,
-                                             wells,
-                                             solver_,
-                                             has_disgas_,
-                                             has_vapoil_,
-                                             terminal_output_);
+        auto model = std::unique_ptr<Model>(new Model(modelParams,
+                                                      grid_,
+                                                      props_,
+                                                      geo_,
+                                                      rock_comp_props_,
+                                                      wells,
+                                                      solver_,
+                                                      has_disgas_,
+                                                      has_vapoil_,
+                                                      terminal_output_));
 
         if (!threshold_pressures_by_face_.empty()) {
             model->setThresholdPressures(threshold_pressures_by_face_);
@@ -352,7 +354,7 @@ namespace Opm
 
         typedef typename Solver::SolverParameters SolverParams;
         SolverParams solverParams( param_ );
-        return std::make_shared<Solver>(solverParams, model);
+        return new Solver(solverParams, std::move(model));
     }
 
     template <class Implementation>

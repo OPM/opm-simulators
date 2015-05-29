@@ -151,7 +151,7 @@ namespace Opm
                                         WellState& well_state,
                                         const Wells* wells);
 
-        std::shared_ptr<Solver> createSolver(const Wells* wells);
+        Solver* createSolver(const Wells* wells);
 
         void
         computeRESV(const std::size_t               step,
