@@ -90,7 +90,7 @@ namespace Opm
     {
         c_ = &state.concentration();
         cmax_ = &state.maxconcentration();
-        CompressibleTpfa::solve(dt, state.blackoilState(), well_state);
+        CompressibleTpfa::solve(dt, state, well_state);
     }
 
     /// Compute per-solve dynamic properties.

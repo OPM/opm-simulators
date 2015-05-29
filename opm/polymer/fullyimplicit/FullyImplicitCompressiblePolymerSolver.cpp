@@ -195,13 +195,14 @@ namespace {
 
 
 
-    void
+    int
     FullyImplicitCompressiblePolymerSolver::
     step(const double          dt,
          PolymerBlackoilState& x ,
-         WellStateFullyImplicitBlackoil& xw,
-         const std::vector<double>& polymer_inflow)
+         WellStateFullyImplicitBlackoilPolymer& xw)
     {
+        const std::vector<double>& polymer_inflow = xw.polymerInflow();
+
         // Initial max concentration of this time step from PolymerBlackoilState.
         cmax_ = Eigen::Map<V>(&x.maxconcentration()[0], Opm::AutoDiffGrid::numCells(grid_));
 
@@ -215,7 +216,7 @@ namespace {
 
         const double r0  = residualNorm();
         const double r_polymer = residual_.material_balance_eq[2].value().matrix().lpNorm<Eigen::Infinity>();
-        int          it  = 0;
+        int it  = 0;
         std::cout << "\nIteration         Residual     Polymer Res\n"
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::setprecision(9)
@@ -223,6 +224,9 @@ namespace {
         bool resTooLarge = r0 > atol;
         while (resTooLarge && (it < maxit)) {
             const V dx = solveJacobianSystem();
+
+            // update the number of linear iterations used.
+            linearIterations_ += linsolver_.iterations();
 
             updateState(dx, x, xw);
             assemble(dt, x, xw, polymer_inflow);
@@ -233,6 +237,7 @@ namespace {
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
+            newtonIterations_ += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::setprecision(9)
                   << std::setw(18) << rr_polymer << std::endl;
@@ -240,16 +245,25 @@ namespace {
 
         if (resTooLarge) {
             std::cerr << "Failed to compute converged solution in " << it << " iterations. Ignoring!\n";
+            return -1;
             // OPM_THROW(std::runtime_error, "Failed to compute converged solution in " << it << " iterations.");
         }
 
         // Update max concentration.
         computeCmax(x);
+
+        return it;
     }
 
+    int FullyImplicitCompressiblePolymerSolver::newtonIterations() const
+    {
+        return newtonIterations_;
+    }
 
-
-
+    int FullyImplicitCompressiblePolymerSolver::linearIterations() const
+    {
+        return linearIterations_;
+    }
 
     FullyImplicitCompressiblePolymerSolver::ReservoirResidualQuant::ReservoirResidualQuant()
         : accum(2, ADB::null())

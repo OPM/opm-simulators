@@ -27,6 +27,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
+#include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 
 struct UnstructuredGrid;
@@ -79,11 +80,13 @@ namespace Opm {
         /// \param[in] state     reservoir state
         /// \param[in] wstate    well state
         /// \param[in] polymer_inflow	polymer influx
-        void
+        int
         step(const double   			dt,
              PolymerBlackoilState& 		state ,
-             WellStateFullyImplicitBlackoil& wstate,
-             const std::vector<double>& polymer_inflow);
+             WellStateFullyImplicitBlackoilPolymer& wstate);
+
+        int newtonIterations() const;
+        int linearIterations() const;
 
     private:
         typedef AutoDiffBlock<double> ADB;
@@ -142,6 +145,10 @@ namespace Opm {
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.
         LinearisedBlackoilResidual  residual_;
+
+        unsigned int newtonIterations_;
+        unsigned int linearIterations_;
+
         // Private methods.
         SolutionState
         constantState(const PolymerBlackoilState& x,

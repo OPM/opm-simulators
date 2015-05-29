@@ -21,86 +21,102 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 
-#include <memory>
-#include <vector>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 
-struct UnstructuredGrid;
-struct Wells;
+#include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/SimulatorBase.hpp>
+
+#include <opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp>
+#include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
+#include <opm/core/grid.h>
+#include <opm/core/wells.h>
+#include <opm/core/pressure/flow_bc.h>
+
+#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/core/utility/miscUtilities.hpp>
+#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
+
+#include <opm/core/wells/WellsManager.hpp>
+
+#include <opm/core/props/rock/RockCompressibility.hpp>
+
+#include <opm/core/grid/ColumnExtract.hpp>
+#include <opm/polymer/PolymerBlackoilState.hpp>
+#include <opm/polymer/PolymerInflow.hpp>
+#include <opm/core/simulator/WellState.hpp>
+#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <numeric>
+#include <fstream>
+#include <iostream>
 
 namespace Opm
 {
-    namespace parameter { class ParameterGroup; }
-    class BlackoilPropsAdInterface;
-    class RockCompressibility;
-    class DerivedGeology;
-    class WellStateFullyImplicitBlackoil;
-    class WellsManager;
-    class EclipseWriter;
-    class EclipseState;
-    class NewtonIterationBlackoilInterface;
-    class SimulatorTimer;
-    class PolymerBlackoilState;
-    class PolymerPropsAd;
-    class PolymerInflowInterface;
-    struct SimulatorReport;
+    template <class GridT>
+    class SimulatorFullyImplicitCompressiblePolymer;
+
+    template <class GridT>
+    struct SimulatorTraits<SimulatorFullyImplicitCompressiblePolymer<GridT> >
+    {
+        typedef PolymerBlackoilState ReservoirState;
+        typedef WellStateFullyImplicitBlackoilPolymer WellState;
+        typedef BlackoilOutputWriter OutputWriter;
+        typedef GridT Grid;
+        typedef FullyImplicitCompressiblePolymerSolver Solver;
+    };
 
     /// Class collecting all necessary components for a two-phase simulation.
+    template <class GridT>
     class SimulatorFullyImplicitCompressiblePolymer
+        : public SimulatorBase<SimulatorFullyImplicitCompressiblePolymer<GridT> >
     {
+        typedef SimulatorFullyImplicitCompressiblePolymer ThisType;
+        typedef SimulatorBase<ThisType> BaseType;
+        typedef typename BaseType::Solver Solver;
+
     public:
         /// Initialise from parameters and objects to observe.
-        /// \param[in] param       parameters, this class accepts the following:
-        ///     parameter (default)            effect
-        ///     -----------------------------------------------------------
-        ///     output (true)                  write output to files?
-        ///     output_dir ("output")          output directoty
-        ///     output_interval (1)            output every nth step
-        ///     nl_pressure_residual_tolerance (0.0) pressure solver residual tolerance (in Pascal)
-        ///     nl_pressure_change_tolerance (1.0)   pressure solver change tolerance (in Pascal)
-        ///     nl_pressure_maxiter (10)       max nonlinear iterations in pressure
-        ///     nl_maxiter (30)                max nonlinear iterations in transport
-        ///     nl_tolerance (1e-9)            transport solver absolute residual tolerance
-        ///     num_transport_substeps (1)     number of transport steps per pressure step
-        ///     use_segregation_split (false)  solve for gravity segregation (if false,
-        ///                                    segregation is ignored).
-        ///
-        /// \param[in] grid          grid data structure
-        /// \param[in] props         fluid and rock properties
-        /// \param[in] polymer_props polymer properties
-        /// \param[in] rock_comp_props if non-null, rock compressibility properties
-        /// \param[in] eclipse_state  
-        /// \param[in] eclipse_writer
-        /// \param[in] deck
-        /// \param[in] linsolver     linear solver
-        /// \param[in] gravity       if non-null, gravity vector
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
-                        		                  const UnstructuredGrid& grid,
+                        		                  const GridT& grid,
                                                   const DerivedGeology& geo,
-                                   				  const BlackoilPropsAdInterface& props,
+                                   				  BlackoilPropsAdInterface& props,
                                        			  const PolymerPropsAd&    polymer_props,
                                        			  const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
-                                                  EclipseWriter& eclipse_writer,
+                                                  BlackoilOutputWriter& output_writer,
                                                   Opm::DeckConstPtr& deck,
                                        			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
 
-        /// Run the simulation.
-        /// This will run succesive timesteps until timer.done() is true. It will
-        /// modify the reservoir and well states.
-        /// \param[in,out] timer       governs the requested reporting timesteps
-        /// \param[in,out] state       state of reservoir: pressure, fluxes
-        /// \return                    simulation report, with timing data
-        SimulatorReport run(SimulatorTimer& timer,
-                            PolymerBlackoilState& state);
+        Solver* createSolver(const Wells* wells);
 
-    private:
-        class Impl;
-        // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        std::shared_ptr<Impl> pimpl_;
+        void handleAdditionalWellInflow(SimulatorTimer& timer,
+                                        WellsManager& wells_manager,
+                                        typename BaseType::WellState& well_state,
+                                        const Wells* wells);
+private:
+        Opm::DeckConstPtr deck_;
+        const PolymerPropsAd& polymer_props_;
     };
 
 } // namespace Opm
+
+#include "SimulatorFullyImplicitCompressiblePolymer_impl.hpp"
 
 #endif // OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
