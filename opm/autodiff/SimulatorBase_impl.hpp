@@ -330,7 +330,7 @@ namespace Opm
 
     template <class Implementation>
     auto SimulatorBase<Implementation>::createSolver(const Wells* wells)
-        -> Solver*
+        -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
         typedef typename Model::ModelParameters ModelParams;
@@ -354,7 +354,7 @@ namespace Opm
 
         typedef typename Solver::SolverParameters SolverParams;
         SolverParams solverParams( param_ );
-        return new Solver(solverParams, std::move(model));
+        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
     }
 
     template <class Implementation>
