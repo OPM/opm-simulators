@@ -104,7 +104,7 @@ namespace Opm
                                        			  NewtonIterationBlackoilInterface& linsolver,
                                        			  const double* gravity);
 
-        std::shared_ptr<Solver> createSolver(const Wells* wells);
+        Solver* createSolver(const Wells* wells);
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,
