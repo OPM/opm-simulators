@@ -29,9 +29,9 @@ namespace Opm
 {
     template <class PhysicalModel>
     NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameters& param,
-                                              std::shared_ptr<PhysicalModel> model)
+                                              std::unique_ptr<PhysicalModel> model)
         : param_(param),
-          model_(model),
+          model_(std::move(model)),
           newtonIterations_(0),
           linearIterations_(0)
     {
