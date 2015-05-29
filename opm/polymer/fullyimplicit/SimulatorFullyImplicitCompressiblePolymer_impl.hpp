@@ -58,15 +58,15 @@ SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param
 template <class GridT>
 auto SimulatorFullyImplicitCompressiblePolymer<GridT>::
 createSolver(const Wells* wells)
-    -> Solver*
+    -> std::unique_ptr<Solver>
 {
-    return new Solver(BaseType::grid_,
-                      BaseType::props_,
-                      BaseType::geo_,
-                      BaseType::rock_comp_props_,
-                      polymer_props_,
-                      *wells,
-                      BaseType::solver_);
+    return std::unique_ptr<Solver>(new Solver(BaseType::grid_,
+                                              BaseType::props_,
+                                              BaseType::geo_,
+                                              BaseType::rock_comp_props_,
+                                              polymer_props_,
+                                              *wells,
+                                              BaseType::solver_));
 }
 
 template <class GridT>

@@ -244,8 +244,7 @@ namespace Opm {
     ADB
     PolymerPropsAd::effectiveRelPerm(const ADB& c,
                                      const ADB& cmax_cells,
-                                     const ADB& krw,
-                                     const ADB& sw) const
+                                     const ADB& krw) const
     {
         const int nc = c.value().size();
         V one = V::Ones(nc);

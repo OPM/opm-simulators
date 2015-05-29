@@ -95,8 +95,6 @@ namespace Opm
              const RockCompressibility* rock_comp_props,
              WellsManager& wells_manager,
              const PolymerInflowInterface& polymer_inflow,
-             const std::vector<double>& src,
-             const FlowBoundaryConditions* bcs,
              LinearSolverInterface& linsolver,
              const double* gravity);
 
@@ -146,13 +144,11 @@ namespace Opm
                                                                const RockCompressibility* rock_comp_props,
                                                                WellsManager& wells_manager,
                                                                const PolymerInflowInterface& polymer_inflow,
-                                                               const std::vector<double>& src,
-                                                               const FlowBoundaryConditions* bcs,
                                                                LinearSolverInterface& linsolver,
                                                                const double* gravity)
     {
         pimpl_.reset(new Impl(param, grid, props, poly_props, rock_comp_props,
-                              wells_manager, polymer_inflow, src, bcs, linsolver, gravity));
+                              wells_manager, polymer_inflow, linsolver, gravity));
     }
 
 
@@ -177,8 +173,6 @@ namespace Opm
                                              const RockCompressibility* rock_comp_props,
                                              WellsManager& wells_manager,
                                              const PolymerInflowInterface& polymer_inflow,
-                                             const std::vector<double>& src,
-                                             const FlowBoundaryConditions* bcs,
                                              LinearSolverInterface& linsolver,
                                              const double* gravity)
         : grid_(grid),

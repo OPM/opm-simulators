@@ -407,8 +407,8 @@ namespace {
         // Initial saturation.
         assert (not x.saturation().empty());
         const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
-        const V sw = s.col(0);
-        vars0.push_back(sw);
+        const V sw0 = s.col(0);
+        vars0.push_back(sw0);
 
         // Initial concentration.
         assert (not x.concentration().empty());
@@ -542,7 +542,7 @@ namespace {
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
         const std::vector<ADB> kr = computeRelPerm(state);
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0], state.saturation[0]);
+        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0]);
         const ADB mc = computeMc(state);
         computeMassFlux(trans, mc, kr[1], krw_eff, state);
         residual_.material_balance_eq[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
@@ -797,27 +797,6 @@ namespace {
         const ADB so = state.saturation[1];
         const ADB sg = null;
         return fluid_.relperm(sw, so, sg, cells_);
-    }
-
-
-
-
-
-    std::vector<ADB>
-    FullyImplicitCompressiblePolymerSolver::computeRelPermWells(const SolutionState& state,
-                                                     const DataBlock& well_s,
-                                                     const std::vector<int>& well_cells) const
-    {
-        const int nw = wells_.number_of_wells;
-        const int nperf = wells_.well_connpos[nw];
-        const std::vector<int>& bpat = state.pressure.blockPattern();
-
-        const ADB null = ADB::constant(V::Zero(nperf), bpat);
-
-        const ADB sw = state.saturation[0];
-        const ADB so = state.saturation[1];
-        const ADB sg = null;
-        return fluid_.relperm(sw, so, sg, well_cells);
     }
 
 
