@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,91 +21,51 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include <memory>
-#include <vector>
+#include "SimulatorBase.hpp"
 
-struct UnstructuredGrid;
-struct Wells;
-struct FlowBoundaryConditions;
+#include "NewtonSolver.hpp"
 
-namespace Opm
+namespace Opm {
+
+template <class GridT>
+class SimulatorFullyImplicitBlackoil;
+
+template <class GridT>
+struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
 {
-    namespace parameter { class ParameterGroup; }
-    class BlackoilPropsAdInterface;
-    class RockCompressibility;
-    class DerivedGeology;
-    class NewtonIterationBlackoilInterface;
-    class SimulatorTimer;
-    class BlackoilState;
-    class WellStateFullyImplicitBlackoil;
-    class EclipseState;
-    class BlackoilOutputWriter;
-    struct SimulatorReport;
+    typedef WellStateFullyImplicitBlackoil WellState;
+    typedef BlackoilState ReservoirState;
+    typedef BlackoilOutputWriter OutputWriter;
+    typedef GridT Grid;
+    typedef BlackoilModel<Grid> Model;
+    typedef NewtonSolver<Model> Solver;
+};
 
-    /// Class collecting all necessary components for a two-phase simulation.
-    template<class T>
-    class SimulatorFullyImplicitBlackoil
-    {
-    public:
-        /// \brief The type of the grid that we use.
-        typedef T Grid;
-        /// Initialise from parameters and objects to observe.
-        /// \param[in] param       parameters, this class accepts the following:
-        ///     parameter (default)            effect
-        ///     -----------------------------------------------------------
-        ///     output (true)                  write output to files?
-        ///     output_dir ("output")          output directoty
-        ///     output_interval (1)            output every nth step
-        ///     nl_pressure_residual_tolerance (0.0) pressure solver residual tolerance (in Pascal)
-        ///     nl_pressure_change_tolerance (1.0)   pressure solver change tolerance (in Pascal)
-        ///     nl_pressure_maxiter (10)       max nonlinear iterations in pressure
-        ///     nl_maxiter (30)                max nonlinear iterations in transport
-        ///     nl_tolerance (1e-9)            transport solver absolute residual tolerance
-        ///     num_transport_substeps (1)     number of transport steps per pressure step
-        ///     use_segregation_split (false)  solve for gravity segregation (if false,
-        ///                                    segregation is ignored).
-        ///
-        /// \param[in] grid          grid data structure
-        /// \param[in] geo           derived geological properties
-        /// \param[in] props         fluid and rock properties
-        /// \param[in] rock_comp_props     if non-null, rock compressibility properties
-        /// \param[in] linsolver     linear solver
-        /// \param[in] gravity       if non-null, gravity vector
-        /// \param[in] disgas        true for dissolved gas option
-        /// \param[in] vapoil        true for vaporized oil option
-        /// \param[in] eclipse_state
-        /// \param[in] output_writer
-        /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
-        SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                       const Grid& grid,
-                                       const DerivedGeology& geo,
-                                       BlackoilPropsAdInterface& props,
-                                       const RockCompressibility* rock_comp_props,
-                                       NewtonIterationBlackoilInterface& linsolver,
-                                       const double* gravity,
-                                       const bool disgas,
-                                       const bool vapoil,
-                                       std::shared_ptr<EclipseState> eclipse_state,
-                                       BlackoilOutputWriter& output_writer,
-                                       const std::vector<double>& threshold_pressures_by_face);
-
-        /// Run the simulation.
-        /// This will run succesive timesteps until timer.done() is true. It will
-        /// modify the reservoir and well states.
-        /// \param[in,out] timer       governs the requested reporting timesteps
-        /// \param[in,out] state       state of reservoir: pressure, fluxes
-        /// \param[in,out] well_state  state of wells: bhp, perforation rates
-        /// \return                    simulation report, with timing data
-        SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state);
-
-    private:
-        class Impl;
-        // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
-        std::shared_ptr<Impl> pimpl_;
-    };
+/// a simulator for the blackoil model
+template <class GridT>
+class SimulatorFullyImplicitBlackoil
+    : public SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> >
+{
+    typedef SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> > Base;
+public:
+    // forward the constructor to the base class
+    SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
+                                   const typename Base::Grid& grid,
+                                   const DerivedGeology& geo,
+                                   BlackoilPropsAdInterface& props,
+                                   const RockCompressibility* rock_comp_props,
+                                   NewtonIterationBlackoilInterface& linsolver,
+                                   const double* gravity,
+                                   const bool disgas,
+                                   const bool vapoil,
+                                   std::shared_ptr<EclipseState> eclipse_state,
+                                   BlackoilOutputWriter& output_writer,
+                                   const std::vector<double>& threshold_pressures_by_face)
+    : Base(param, grid, geo, props, rock_comp_props, linsolver, gravity, disgas, vapoil,
+           eclipse_state, output_writer, threshold_pressures_by_face)
+    {}
+};
 
 } // namespace Opm
 
-#include "SimulatorFullyImplicitBlackoil_impl.hpp"
 #endif // OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED

@@ -1,6 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
   Copyright 2014 IRIS AS
+  Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,167 +19,24 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-
-#include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/NewtonSolver.hpp>
-#include <opm/autodiff/BlackoilModel.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/RateConverter.hpp>
-
-#include <opm/core/grid.h>
-#include <opm/core/wells.h>
-#include <opm/core/well_controls.h>
-#include <opm/core/pressure/flow_bc.h>
-
-#include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
-#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
-#include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
-#include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/miscUtilitiesBlackoil.hpp>
-
-#include <opm/core/props/rock/RockCompressibility.hpp>
-
-#include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
-#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
-
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
-
-
-#include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <algorithm>
-#include <cstddef>
-#include <cassert>
-#include <functional>
-#include <memory>
-#include <numeric>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
 namespace Opm
 {
-    template<class T>
-    class SimulatorFullyImplicitBlackoil<T>::Impl
-    {
-    public:
-        Impl(const parameter::ParameterGroup& param,
-             const Grid& grid,
-             const DerivedGeology& geo,
-             BlackoilPropsAdInterface& props,
-             const RockCompressibility* rock_comp_props,
-             NewtonIterationBlackoilInterface& linsolver,
-             const double* gravity,
-             bool has_disgas,
-             bool has_vapoil,
-             std::shared_ptr<EclipseState> eclipse_state,
-             BlackoilOutputWriter& output_writer,
-             const std::vector<double>& threshold_pressures_by_face);
 
-        SimulatorReport run(SimulatorTimer& timer,
-                            BlackoilState& state);
-
-    private:
-        // Data.
-        typedef RateConverter::
-        SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
-                                   std::vector<int> > RateConverterType;
-
-        const parameter::ParameterGroup param_;
-
-        // Observed objects.
-        const Grid& grid_;
-        BlackoilPropsAdInterface& props_;
-        const RockCompressibility* rock_comp_props_;
-        const double* gravity_;
-        // Solvers
-        const DerivedGeology& geo_;
-        NewtonIterationBlackoilInterface& solver_;
-        // Misc. data
-        std::vector<int> allcells_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
-        bool       terminal_output_;
-        // eclipse_state
-        std::shared_ptr<EclipseState> eclipse_state_;
-        // output_writer
-        BlackoilOutputWriter& output_writer_;
-        RateConverterType rateConverter_;
-        // Threshold pressures.
-        std::vector<double> threshold_pressures_by_face_;
-        // Whether this a parallel simulation or not
-        bool is_parallel_run_;
-
-        void
-        computeRESV(const std::size_t               step,
-                    const Wells*                    wells,
-                    const BlackoilState&            x,
-                    WellStateFullyImplicitBlackoil& xw);
-    };
-
-
-
-
-    template<class T>
-    SimulatorFullyImplicitBlackoil<T>::SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
-                                                                   const Grid& grid,
-                                                                   const DerivedGeology& geo,
-                                                                   BlackoilPropsAdInterface& props,
-                                                                   const RockCompressibility* rock_comp_props,
-                                                                   NewtonIterationBlackoilInterface& linsolver,
-                                                                   const double* gravity,
-                                                                   const bool has_disgas,
-                                                                   const bool has_vapoil,
-                                                                   std::shared_ptr<EclipseState> eclipse_state,
-                                                                   BlackoilOutputWriter& output_writer,
-                                                                   const std::vector<double>& threshold_pressures_by_face)
-
-    {
-        pimpl_.reset(new Impl(param, grid, geo, props, rock_comp_props, linsolver, gravity, has_disgas, has_vapoil,
-                              eclipse_state, output_writer, threshold_pressures_by_face));
-    }
-
-
-
-
-
-    template<class T>
-    SimulatorReport SimulatorFullyImplicitBlackoil<T>::run(SimulatorTimer& timer,
-                                                        BlackoilState& state)
-    {
-        return pimpl_->run(timer, state);
-    }
-
-
-    // \TODO: Treat bcs.
-    template<class T>
-    SimulatorFullyImplicitBlackoil<T>::Impl::Impl(const parameter::ParameterGroup& param,
-                                               const Grid& grid,
-                                               const DerivedGeology& geo,
-                                               BlackoilPropsAdInterface& props,
-                                               const RockCompressibility* rock_comp_props,
-                                               NewtonIterationBlackoilInterface& linsolver,
-                                               const double* gravity,
-                                               const bool has_disgas,
-                                               const bool has_vapoil,
-                                               std::shared_ptr<EclipseState> eclipse_state,
-                                               BlackoilOutputWriter& output_writer,
-                                               const std::vector<double>& threshold_pressures_by_face)
+    template <class Implementation>
+    SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
+                                                 const Grid& grid,
+                                                 const DerivedGeology& geo,
+                                                 BlackoilPropsAdInterface& props,
+                                                 const RockCompressibility* rock_comp_props,
+                                                 NewtonIterationBlackoilInterface& linsolver,
+                                                 const double* gravity,
+                                                 const bool has_disgas,
+                                                 const bool has_vapoil,
+                                                 std::shared_ptr<EclipseState> eclipse_state,
+                                                 OutputWriter& output_writer,
+                                                 const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
           grid_(grid),
           props_(props),
@@ -214,14 +72,11 @@ namespace Opm
 #endif
     }
 
-
-
-
-    template<class T>
-    SimulatorReport SimulatorFullyImplicitBlackoil<T>::Impl::run(SimulatorTimer& timer,
-                                                                 BlackoilState& state)
+    template <class Implementation>
+    SimulatorReport SimulatorBase<Implementation>::run(SimulatorTimer& timer,
+                                                       ReservoirState& state)
     {
-        WellStateFullyImplicitBlackoil prev_well_state;
+        WellState prev_well_state;
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -231,14 +86,6 @@ namespace Opm
         total_timer.start();
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
-
-        typedef T Grid;
-        typedef BlackoilModel<Grid> Model;
-        typedef typename Model::ModelParameters ModelParams;
-        ModelParams modelParams( param_ );
-        typedef NewtonSolver<Model> Solver;
-        typedef typename Solver::SolverParameters SolverParams;
-        SolverParams solverParams( param_ );
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -282,8 +129,11 @@ namespace Opm
                                        props_.permeability(),
                                        is_parallel_run_);
             const Wells* wells = wells_manager.c_wells();
-            WellStateFullyImplicitBlackoil well_state;
+            WellState well_state;
             well_state.init(wells, state, prev_well_state);
+
+            // give the polymer and surfactant simulators the chance to do their stuff
+            asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
             // write simulation state at the report stage
             output_writer_.writeTimeStep( timer, state, well_state );
@@ -293,16 +143,12 @@ namespace Opm
             props_.updateSatHyst(state.saturation(), allcells_);
 
             // Compute reservoir volumes for RESV controls.
-            computeRESV(timer.currentStepNum(), wells, state, well_state);
+            asImpl().computeRESV(timer.currentStepNum(), wells, state, well_state);
 
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            Model model(modelParams, grid_, props_, geo_, rock_comp_props_, wells, solver_, has_disgas_, has_vapoil_, terminal_output_);
-            if (!threshold_pressures_by_face_.empty()) {
-                model.setThresholdPressures(threshold_pressures_by_face_);
-            }
-            Solver solver(solverParams, model);
+            auto solver = asImpl().createSolver(wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are to large for the solver to converge
@@ -310,19 +156,19 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( timer, solver, state, well_state,  output_writer_ );
+                adaptiveTimeStepping->step( timer, *solver, state, well_state,  output_writer_ );
             }
             else {
                 // solve for complete report step
-                solver.step(timer.currentStepLength(), state, well_state);
+                solver->step(timer.currentStepLength(), state, well_state);
             }
 
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
 
             // accumulate the number of Newton and Linear Iterations
-            totalNewtonIterations += solver.newtonIterations();
-            totalLinearIterations += solver.linearIterations();
+            totalNewtonIterations += solver->newtonIterations();
+            totalLinearIterations += solver->linearIterations();
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
@@ -475,13 +321,47 @@ namespace Opm
         }
     } // namespace SimFIBODetails
 
-    template <class T>
-    void
-    SimulatorFullyImplicitBlackoil<T>::
-    Impl::computeRESV(const std::size_t               step,
-                      const Wells*                    wells,
-                      const BlackoilState&            x,
-                      WellStateFullyImplicitBlackoil& xw)
+    template <class Implementation>
+    void SimulatorBase<Implementation>::handleAdditionalWellInflow(SimulatorTimer& /* timer */,
+                                                                   WellsManager& /* wells_manager */,
+                                                                   WellState& /* well_state */,
+                                                                   const Wells* /* wells */)
+    { }
+
+    template <class Implementation>
+    auto SimulatorBase<Implementation>::createSolver(const Wells* wells)
+        -> std::unique_ptr<Solver>
+    {
+        typedef typename Traits::Model Model;
+        typedef typename Model::ModelParameters ModelParams;
+        ModelParams modelParams( param_ );
+        typedef NewtonSolver<Model> Solver;
+
+        auto model = std::unique_ptr<Model>(new Model(modelParams,
+                                                      grid_,
+                                                      props_,
+                                                      geo_,
+                                                      rock_comp_props_,
+                                                      wells,
+                                                      solver_,
+                                                      has_disgas_,
+                                                      has_vapoil_,
+                                                      terminal_output_));
+
+        if (!threshold_pressures_by_face_.empty()) {
+            model->setThresholdPressures(threshold_pressures_by_face_);
+        }
+
+        typedef typename Solver::SolverParameters SolverParams;
+        SolverParams solverParams( param_ );
+        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
+    }
+
+    template <class Implementation>
+    void SimulatorBase<Implementation>::computeRESV(const std::size_t               step,
+                                                    const Wells*                    wells,
+                                                    const BlackoilState&            x,
+                                                    WellState& xw)
     {
         typedef SimFIBODetails::WellMap WellMap;
 

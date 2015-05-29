@@ -23,6 +23,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <memory>
 
 namespace Opm {
 
@@ -63,10 +64,14 @@ namespace Opm {
         // ---------  Public methods  ---------
 
         /// Construct solver for a given model.
+        ///
+        /// The model is a std::unique_ptr because the object to which model points to is
+        /// not allowed to be deleted as long as the NewtonSolver object exists.
+        ///
         /// \param[in]      param   parameters controlling nonlinear Newton process
-        /// \param[in, out] model   physical simulation model
+        /// \param[in, out] model   physical simulation model.
         explicit NewtonSolver(const SolverParameters& param,
-                              PhysicalModel& model);
+                              std::unique_ptr<PhysicalModel> model);
 
         /// Take a single forward step, after which the states will be modified
         /// according to the physical model.
@@ -94,7 +99,7 @@ namespace Opm {
     private:
         // ---------  Data members  ---------
         SolverParameters param_;
-        PhysicalModel& model_;
+        std::unique_ptr<PhysicalModel> model_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
         unsigned int newtonIterationsLast_;
