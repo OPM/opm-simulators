@@ -322,10 +322,10 @@ namespace Opm
     } // namespace SimFIBODetails
 
     template <class Implementation>
-    void SimulatorBase<Implementation>::handleAdditionalWellInflow(SimulatorTimer& timer,
-                                                                   WellsManager& wells_manager,
-                                                                   WellState& well_state,
-                                                                   const Wells* wells)
+    void SimulatorBase<Implementation>::handleAdditionalWellInflow(SimulatorTimer& /* timer */,
+                                                                   WellsManager& /* wells_manager */,
+                                                                   WellState& /* well_state */,
+                                                                   const Wells* /* wells */)
     { }
 
     template <class Implementation>
