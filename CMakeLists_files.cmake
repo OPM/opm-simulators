@@ -117,8 +117,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp
+	opm/autodiff/SimulatorBase.hpp
+	opm/autodiff/SimulatorBase_impl.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
-	opm/autodiff/SimulatorFullyImplicitBlackoil_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
