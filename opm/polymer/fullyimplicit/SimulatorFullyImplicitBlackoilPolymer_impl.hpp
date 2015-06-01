@@ -34,6 +34,7 @@ namespace Opm
                                           const bool has_disgas,
                                           const bool has_vapoil,
                                           const bool has_polymer,
+                                          const bool has_plyshlog,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
                                           Opm::DeckConstPtr& deck,
@@ -52,6 +53,7 @@ namespace Opm
                threshold_pressures_by_face)
         , polymer_props_(polymer_props)
         , has_polymer_(has_polymer)
+        , has_plyshlog_(has_plyshlog)
         , deck_(deck)
     {
     }
@@ -77,6 +79,7 @@ namespace Opm
                                                       BaseType::has_disgas_,
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
+                                                      has_plyshlog_,
                                                       BaseType::terminal_output_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
