@@ -108,6 +108,7 @@ namespace Opm {
                                            const bool has_disgas,
                                            const bool has_vapoil,
                                            const bool has_polymer,
+                                           const bool has_plyshlog,
                                            const bool terminal_output);
 
         /// \brief Set threshold pressures that prevent or reduce flow.
@@ -205,6 +206,7 @@ namespace Opm {
         const bool has_disgas_;
         const bool has_vapoil_;
         const bool has_polymer_;
+        const bool has_plyshlog_;
         const int  poly_pos_;
 
         SolverParameter                 param_;

@@ -85,11 +85,13 @@ namespace Opm {
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
+                                                     const bool                              has_plyshlog,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
+          has_plyshlog_(has_plyshlog),
           poly_pos_(detail::polymerPos(fluid.phaseUsage()))
     {
         if (has_polymer_) {

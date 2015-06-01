@@ -66,6 +66,7 @@ namespace Opm {
         /// \param[in] has_disgas       turn on dissolved gas
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] has_polymer      turn on polymer feature
+        /// \param[in] has_plyshlog     true when PLYSHLOG keyword available
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilPolymerModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
@@ -78,6 +79,7 @@ namespace Opm {
                              const bool                              has_disgas,
                              const bool                              has_vapoil,
                              const bool                              has_polymer,
+                             const bool                              has_plyshlog,
                              const bool                              terminal_output);
 
         /// Called once before each time step.
@@ -122,6 +124,7 @@ namespace Opm {
 
         const PolymerPropsAd& polymer_props_ad_;
         const bool has_polymer_;
+        const bool has_plyshlog_;
         const int  poly_pos_;
         V cmax_;
 

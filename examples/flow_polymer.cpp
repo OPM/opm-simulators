@@ -279,6 +279,7 @@ try
                   grav,
                   deck->hasKeyword("DISGAS"),
                   deck->hasKeyword("VAPOIL"),
+                  deck->hasKeyword("PLYSHLOG"),
                   polymer,
                   eclipseState,
                   outputWriter,

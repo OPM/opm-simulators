@@ -220,6 +220,7 @@ namespace detail {
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        const bool has_polymer,
+                                       const bool has_plyshlog,
                                        const bool terminal_output)
         : grid_  (grid)
         , fluid_ (fluid)
@@ -237,6 +238,7 @@ namespace detail {
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
         , has_polymer_(has_polymer)
+        , has_plyshlog_(has_plyshlog)
         , poly_pos_(detail::polymerPos(fluid.phaseUsage()))
         , param_( param )
         , use_threshold_pressure_(false)

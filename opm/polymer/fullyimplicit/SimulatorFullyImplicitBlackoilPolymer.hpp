@@ -116,6 +116,7 @@ namespace Opm
                                               const bool disgas,
                                               const bool vapoil,
                                               const bool polymer,
+                                              const bool plyshlog,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
@@ -131,6 +132,8 @@ namespace Opm
     private:
         const PolymerPropsAd& polymer_props_;
         bool has_polymer_;
+        /// flag for PLYSHLOG keywords
+        bool has_plyshlog_;
         DeckConstPtr deck_;
     };
 
