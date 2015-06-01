@@ -30,6 +30,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/ExtractParallelGridInformationToISTL.cpp
 	opm/autodiff/NewtonIterationBlackoilCPR.cpp
 	opm/autodiff/NewtonIterationBlackoilSimple.cpp
+	opm/autodiff/NewtonIterationBlackoilInterleaved.cpp
 	opm/autodiff/GridHelpers.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
@@ -111,6 +112,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
 	opm/autodiff/NewtonIterationBlackoilInterface.hpp
+	opm/autodiff/NewtonIterationBlackoilInterleaved.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/NewtonSolver.hpp
 	opm/autodiff/NewtonSolver_impl.hpp
