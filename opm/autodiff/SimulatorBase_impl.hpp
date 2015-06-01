@@ -38,6 +38,8 @@ namespace Opm
                                                  OutputWriter& output_writer,
                                                  const std::vector<double>& threshold_pressures_by_face)
         : param_(param),
+          model_param_(param),
+          solver_param_(param),
           grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
@@ -332,12 +334,7 @@ namespace Opm
     auto SimulatorBase<Implementation>::createSolver(const Wells* wells)
         -> std::unique_ptr<Solver>
     {
-        typedef typename Traits::Model Model;
-        typedef typename Model::ModelParameters ModelParams;
-        ModelParams modelParams( param_ );
-        typedef NewtonSolver<Model> Solver;
-
-        auto model = std::unique_ptr<Model>(new Model(modelParams,
+        auto model = std::unique_ptr<Model>(new Model(model_param_,
                                                       grid_,
                                                       props_,
                                                       geo_,
@@ -352,9 +349,7 @@ namespace Opm
             model->setThresholdPressures(threshold_pressures_by_face_);
         }
 
-        typedef typename Solver::SolverParameters SolverParams;
-        SolverParams solverParams( param_ );
-        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
+        return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
     }
 
     template <class Implementation>
