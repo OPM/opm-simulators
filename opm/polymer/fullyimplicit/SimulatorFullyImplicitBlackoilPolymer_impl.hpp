@@ -154,6 +154,8 @@ namespace Opm
                                std::vector<double>&            wells_perf_length)
     {
 
+        // TODO, the function does not work for parallel running
+        // to be fixed later.
         int number_of_cells = Opm::UgGridHelpers::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
         const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
