@@ -166,8 +166,13 @@ namespace Opm
             return;
         }
 
+        const size_t n_perf = wells_rep_radius.size();
+
         wells_rep_radius.clear();
         wells_perf_length.clear();
+
+        wells_rep_radius.reserve(n_perf);
+        wells_perf_length.reserve(n_perf);
 
         std::map<int,int> cartesian_to_compressed;
 
