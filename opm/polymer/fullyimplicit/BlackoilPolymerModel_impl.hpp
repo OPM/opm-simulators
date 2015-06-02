@@ -86,8 +86,8 @@ namespace Opm {
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
                                                      const bool                              has_plyshlog,
-                                                     std::vector<double>&                    wells_rep_radius,
-                                                     std::vector<double>&                    wells_perf_length,
+                                                     const std::vector<double>&              wells_rep_radius,
+                                                     const std::vector<double>&              wells_perf_length,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                has_disgas, has_vapoil, terminal_output),

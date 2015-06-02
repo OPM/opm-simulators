@@ -80,8 +80,8 @@ namespace Opm {
                              const bool                              has_vapoil,
                              const bool                              has_polymer,
                              const bool                              has_plyshlog,
-                             std::vector<double>&                    wells_rep_radius,
-                             std::vector<double>&                    wells_perf_length,
+                             const std::vector<double>&              wells_rep_radius,
+                             const std::vector<double>&              wells_perf_length,
                              const bool                              terminal_output);
 
         /// Called once before each time step.
