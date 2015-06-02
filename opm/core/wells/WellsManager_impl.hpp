@@ -170,7 +170,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                         pd.cell = cell;
                         {
                             const Value<double>& transmissibilityFactor = completion->getConnectionTransmissibilityFactorAsValueObject();
-
+                            const double wellPi = completion ->getWellPi();
                             if (transmissibilityFactor.hasValue()) {
                                 pd.well_index = transmissibilityFactor.getValue();
                             } else {
@@ -190,6 +190,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                                                          completion->getDirection(),
                                                                          ntg[cell]);
                             }
+                            pd.well_index *= wellPi;
                         }
                         wellperf_data[well_index].push_back(pd);
                     }
