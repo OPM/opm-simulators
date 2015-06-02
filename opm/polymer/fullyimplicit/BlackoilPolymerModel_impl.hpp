@@ -587,6 +587,36 @@ namespace Opm {
         return polymer_props_ad_.polymerWaterVelocityRatio(state.concentration);
     }
 
+    template<class Grid>
+    bool
+    BlackoilPolymerModel<Grid>::findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point){
+
+        const double x1 = line_segment1[0].x;
+        const double y1 = line_segment1[0].y;
+        const double x2 = line_segment1[1].x;
+        const double y2 = line_segment1[1].y;
+
+        const double x3 = line2[0].x;
+        const double y3 = line2[0].y;
+        const double x4 = line2[1].x;
+        const double y4 = line2[1].y;
+
+        const double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        if (d == 0.) { return false; }
+
+        const double x = ((x3 - x4) * (x1 * y2 - y1 * x2) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d;
+        const double y = ((y3 - y4) * (x1 * y2 - y1 * x2) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d;
+
+        if( x >= std::min(x1,x2) && x <= std::max(x1,x2) ){
+            intersection_point.x = x;
+            intersection_point.y = y;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILPOLYMERMODEL_IMPL_HEADER_INCLUDED

@@ -261,6 +261,16 @@ namespace Opm {
                              int nw) const;
 
 
+        struct Point2D {
+            double x;
+            double y;
+        };
+
+        /// Finding the intersection point of a line segment and a line.
+        /// return true, if found.
+        bool findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point);
+
+
 
     };
 
