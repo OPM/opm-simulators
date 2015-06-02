@@ -86,13 +86,17 @@ namespace Opm {
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
                                                      const bool                              has_plyshlog,
+                                                     std::vector<double>&                    wells_rep_radius,
+                                                     std::vector<double>&                    wells_perf_length,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
           has_plyshlog_(has_plyshlog),
-          poly_pos_(detail::polymerPos(fluid.phaseUsage()))
+          poly_pos_(detail::polymerPos(fluid.phaseUsage())),
+          wells_rep_radius_(wells_rep_radius),
+          wells_perf_length_(wells_perf_length)
     {
         if (has_polymer_) {
             if (!active_[Water]) {
@@ -576,18 +580,12 @@ namespace Opm {
         return converged;
     }
 
-
-
-
-
     template <class Grid>
     ADB
     BlackoilPolymerModel<Grid>::computeMc(const SolutionState& state) const
     {
         return polymer_props_ad_.polymerWaterVelocityRatio(state.concentration);
     }
-
-
 
 } // namespace Opm
 

@@ -80,6 +80,8 @@ namespace Opm {
                              const bool                              has_vapoil,
                              const bool                              has_polymer,
                              const bool                              has_plyshlog,
+                             std::vector<double>&                    wells_rep_radius,
+                             std::vector<double>&                    wells_perf_length,
                              const bool                              terminal_output);
 
         /// Called once before each time step.
@@ -127,6 +129,11 @@ namespace Opm {
         const bool has_plyshlog_;
         const int  poly_pos_;
         V cmax_;
+
+        // representative radius and perforation length of well perforations
+        // to be used in shear-thinning computation.
+        std::vector<double> wells_rep_radius_;
+        std::vector<double> wells_perf_length_;
 
         // Need to declare Base members we want to use here.
         using Base::grid_;
@@ -252,6 +259,9 @@ namespace Opm {
                              std::vector<double>& maxNormWell,
                              int nc,
                              int nw) const;
+
+
+
     };
 
 

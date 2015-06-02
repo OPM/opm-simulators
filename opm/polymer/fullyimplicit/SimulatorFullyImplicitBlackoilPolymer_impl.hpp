@@ -68,6 +68,7 @@ namespace Opm
         ModelParams modelParams( BaseType::param_ );
         typedef NewtonSolver<Model> Solver;
 
+
         auto model = std::unique_ptr<Model>(new Model(modelParams,
                                                       BaseType::grid_,
                                                       BaseType::props_,
@@ -80,6 +81,8 @@ namespace Opm
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
                                                       has_plyshlog_,
+                                                      wells_rep_radius_,
+                                                      wells_perf_length_,
                                                       BaseType::terminal_output_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
@@ -90,6 +93,9 @@ namespace Opm
         SolverParams solverParams( BaseType::param_ );
         return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
     }
+
+
+
 
     template <class GridT>
     void SimulatorFullyImplicitBlackoilPolymer<GridT>::
@@ -115,6 +121,134 @@ namespace Opm
                                             timer.simulationTimeElapsed() + timer.currentStepLength(),
                                             polymer_inflow_c);
         well_state.polymerInflow() = polymer_inflow_c;
+
+        computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_);
+    }
+
+
+    template <class GridT>
+    void SimulatorFullyImplicitBlackoilPolymer<GridT>::
+    setupCompressedToCartesian(const int* global_cell, int number_of_cells,
+                               std::map<int,int>& cartesian_to_compressed )
+    {
+        if (global_cell) {
+            for (int i = 0; i < number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+            }
+        }
+        else {
+            for (int i = 0; i < number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(i, i));
+            }
+        }
+
+    }
+
+
+    template <class GridT>
+    void SimulatorFullyImplicitBlackoilPolymer<GridT>::
+    computeRepRadiusPerfLength(const Opm::EclipseStateConstPtr eclipseState,
+                               const size_t                    timeStep,
+                               const GridT&                    grid,
+                               std::vector<double>&            wells_rep_radius,
+                               std::vector<double>&            wells_perf_length)
+    {
+
+        int number_of_cells = Opm::UgGridHelpers::numCells(grid);
+        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+        const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
+        auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
+        auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
+
+        if (eclipseState->getSchedule()->numWells() == 0) {
+            OPM_MESSAGE("No wells specified in Schedule section, "
+                        "initializing no wells");
+            return;
+        }
+
+        wells_rep_radius.clear();
+        wells_perf_length.clear();
+
+        std::map<int,int> cartesian_to_compressed;
+
+        setupCompressedToCartesian(global_cell, number_of_cells,
+                                   cartesian_to_compressed);
+
+        ScheduleConstPtr          schedule = eclipseState->getSchedule();
+        std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
+
+        int well_index = 0;
+
+        for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
+             WellConstPtr well = (*wellIter);
+
+             if (well->getStatus(timeStep) == WellCommon::SHUT) {
+                 continue;
+             }
+             {   // COMPDAT handling
+                 CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
+                 for (size_t c=0; c<completionSet->size(); c++) {
+                     CompletionConstPtr completion = completionSet->get(c);
+                     if (completion->getState() == WellCompletion::OPEN) {
+                         int i = completion->getI();
+                         int j = completion->getJ();
+                         int k = completion->getK();
+
+                         const int* cpgdim = cart_dims;
+                         int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
+                         std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
+                         if (cgit == cartesian_to_compressed.end()) {
+                             OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                                       << k << " not found in grid (well = " << well->name() << ')');
+                         }
+                         int cell = cgit->second;
+
+                         {
+                             double radius = 0.5*completion->getDiameter();
+                             if (radius <= 0.0) {
+                                 radius = 0.5*unit::feet;
+                                 OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
+                             }
+
+                             const std::array<double, 3> cubical =
+                             WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
+
+                             WellCompletion::DirectionEnum direction = completion->getDirection();
+
+                             double re; // area equivalent radius of the grid block
+                             double perf_length; // the length of the well perforation
+
+                             switch (direction) {
+                                 case Opm::WellCompletion::DirectionEnum::X:
+                                     re = std::sqrt(cubical[1] * cubical[2] / M_PI);
+                                     perf_length = cubical[0];
+                                     break;
+                                 case Opm::WellCompletion::DirectionEnum::Y:
+                                     re = std::sqrt(cubical[0] * cubical[2] / M_PI);
+                                     perf_length = cubical[1];
+                                     break;
+                                 case Opm::WellCompletion::DirectionEnum::Z:
+                                     re = std::sqrt(cubical[0] * cubical[1] / M_PI);
+                                     perf_length = cubical[2];
+                                     break;
+                                 default:
+                                     OPM_THROW(std::runtime_error, " Dirtecion of well is not supported ");
+                             }
+
+                             double repR = std::sqrt(re * radius);
+                             wells_rep_radius.push_back(repR);
+                             wells_perf_length.push_back(perf_length);
+                         }
+                     } else {
+                         if (completion->getState() != WellCompletion::SHUT) {
+                             OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
+                         }
+                     }
+
+                 }
+            }
+            well_index++;
+        }
     }
 
 } // namespace Opm

@@ -124,17 +124,37 @@ namespace Opm
 
         std::unique_ptr<Solver> createSolver(const Wells* wells);
 
+
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,
                                         typename BaseType::WellState& well_state,
                                         const Wells* wells);
 
+
     private:
         const PolymerPropsAd& polymer_props_;
         bool has_polymer_;
-        /// flag for PLYSHLOG keywords
+        // flag for PLYSHLOG keyword
         bool has_plyshlog_;
         DeckConstPtr deck_;
+
+        std::vector<double> wells_rep_radius_;
+        std::vector<double> wells_perf_length_;
+
+        // generate the mapping from Cartesian grid cells to global compressed cells,
+        // copied from opm-core, to be used in function computeRepRadiusPerfLength()
+        static void
+        setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed);
+
+        //  calculate the representative radius and length for for well peforations
+        //  it will be used in the shear-thinning calcluation only.
+        void
+        computeRepRadiusPerfLength(const Opm::EclipseStateConstPtr eclipseState,
+                                   const size_t                    timeStep,
+                                   const GridT&                    grid,
+                                   std::vector<double>&            wells_rep_radius,
+                                   std::vector<double>&            wells_perf_length);
+
     };
 
 } // namespace Opm
