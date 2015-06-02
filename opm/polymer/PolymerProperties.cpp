@@ -69,6 +69,38 @@ namespace Opm
         return water_vel_vals_;
     } 
 
+    const std::vector<double>&
+    PolymerProperties::shearViscosityReductionFactor() const
+    {
+        return shear_vrf_vals_;
+    }
+
+    double PolymerProperties:: plyshlogRefConc() const
+    {
+        return plyshlog_ref_conc_;
+    }
+
+    bool PolymerProperties::hasPlyshlogRefSalinity() const
+    {
+        return has_plyshlog_ref_salinity_;
+    }
+
+    bool PolymerProperties::hasPlyshlogRefTemp() const
+    {
+        return has_plyshlog_ref_temp_;
+    }
+
+    double PolymerProperties::plyshlogRefSalinity() const
+    {
+        return plyshlog_ref_salinity_;
+    }
+
+    double PolymerProperties::plyshlogRefTemp() const
+    {
+        return plyshlog_ref_temp_;
+    }
+
+
     double
     PolymerProperties::shearVrf(const double velocity) const
     {
