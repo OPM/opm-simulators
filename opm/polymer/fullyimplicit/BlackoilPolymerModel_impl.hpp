@@ -589,7 +589,8 @@ namespace Opm {
 
     template<class Grid>
     bool
-    BlackoilPolymerModel<Grid>::findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point){
+    BlackoilPolymerModel<Grid>::findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point)
+    {
 
         const double x1 = line_segment1[0].x;
         const double y1 = line_segment1[0].y;
@@ -619,7 +620,8 @@ namespace Opm {
 
     template<class Grid>
     bool
-    BlackoilPolymerModel<Grid>::computeShearMultLog( std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult){
+    BlackoilPolymerModel<Grid>::computeShearMultLog( std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult)
+    {
 
         double refConcentration = polymer_props_ad_.plyshlogRefConc();
         double refViscMult = polymer_props_ad_.viscMult(refConcentration);
@@ -716,7 +718,8 @@ namespace Opm {
     void
     BlackoilPolymerModel<Grid>::computeWaterShearVelocityFaces(const V& transi, const std::vector<ADB>& kr,
                                                                const std::vector<ADB>& phasePressure, const SolutionState& state,
-                                                               std::vector<double>& water_vel, std::vector<double>& visc_mult){
+                                                               std::vector<double>& water_vel, std::vector<double>& visc_mult)
+    {
 
         std::vector<double> b_faces;
 
