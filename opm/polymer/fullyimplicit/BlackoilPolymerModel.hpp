@@ -279,6 +279,10 @@ namespace Opm {
                                             const std::vector<ADB>& phasePressure, const SolutionState& state,
                                             std::vector<double>& water_vel, std::vector<double>& visc_mult);
 
+        void computeWaterShearVelocityWells(const SolutionState& state, WellStateFullyImplicitBlackoil& xw,
+                                            V& aliveWells, const std::vector<double>& polymer_inflow,
+                                            std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
+
     };
 
 
