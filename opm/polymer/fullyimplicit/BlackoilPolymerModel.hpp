@@ -135,6 +135,11 @@ namespace Opm {
         std::vector<double> wells_rep_radius_;
         std::vector<double> wells_perf_length_;
 
+        // shear-thinning factor for cell faces
+        std::vector<double> shear_mult_faces_;
+        // shear-thinning factor for well perforations
+        std::vector<double> shear_mult_wells_;
+
         // Need to declare Base members we want to use here.
         using Base::grid_;
         using Base::fluid_;
