@@ -114,6 +114,15 @@ namespace Opm {
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const double dt, const int iteration);
 
+        /// Assemble the residual and Jacobian of the nonlinear system.
+        /// \param[in]      reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
+        void assemble(const ReservoirState& reservoir_state,
+                      WellState& well_state,
+                      const bool initial_assembly);
+
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -188,6 +197,12 @@ namespace Opm {
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
 
+        // using Base::addWellEq;
+        using Base::updateWellControls;
+        using Base::computeWellConnectionPressures;
+        using Base::addWellControlEq;
+        using Base::computeRelPerm;
+
 
         void
         makeConstantState(SolutionState& state) const;
@@ -210,6 +225,11 @@ namespace Opm {
 
         void
         assembleMassBalanceEq(const SolutionState& state);
+
+        void
+        addWellEq(const SolutionState& state,
+                  WellState& xw,
+                  V& aliveWells);
 
         void
         extraAddWellEq(const SolutionState& state,
@@ -284,9 +304,9 @@ namespace Opm {
                                             const std::vector<ADB>& phasePressure, const SolutionState& state,
                                             std::vector<double>& water_vel, std::vector<double>& visc_mult);
 
-        void computeWaterShearVelocityWells(const SolutionState& state, WellStateFullyImplicitBlackoil& xw,
-                                            V& aliveWells, const std::vector<double>& polymer_inflow,
-                                            std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
+        void computeWaterShearVelocityWells(const SolutionState& state, WellState& well_state,
+                                            V& aliveWells, std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
+
 
     };
 

@@ -266,7 +266,65 @@ namespace Opm {
     BlackoilPolymerModel<Grid>::
     assembleMassBalanceEq(const SolutionState& state)
     {
-        Base::assembleMassBalanceEq(state);
+        // Base::assembleMassBalanceEq(state);
+
+        // Compute b_p and the accumulation term b_p*s_p for each phase,
+        // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
+        // These quantities are stored in rq_[phase].accum[1].
+        // The corresponding accumulation terms from the start of
+        // the timestep (b^0_p*s^0_p etc.) were already computed
+        // on the initial call to assemble() and stored in rq_[phase].accum[0].
+        computeAccum(state, 1);
+
+        // Set up the common parts of the mass balance equations
+        // for each active phase.
+        const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
+        const std::vector<ADB> kr = computeRelPerm(state);
+
+
+        if (has_plyshlog_) {
+            std::vector<double> water_vel;
+            std::vector<double> visc_mult;
+
+            computeWaterShearVelocityFaces(transi, kr, state.canonical_phase_pressures, state, water_vel, visc_mult);
+            if(!computeShearMultLog(water_vel, visc_mult, shear_mult_faces_)) {
+                // std::cerr << " failed in calculating the shear-multiplier " << std::endl;
+                OPM_THROW(std::runtime_error, " failed in calculating the shear-multiplier. ");
+            }
+        }
+
+        for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+
+            residual_.material_balance_eq[ phaseIdx ] =
+                pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
+                + ops_.div*rq_[phaseIdx].mflux;
+        }
+
+        // -------- Extra (optional) rs and rv contributions to the mass balance equations --------
+
+        // Add the extra (flux) terms to the mass balance equations
+        // From gas dissolved in the oil phase (rs) and oil vaporized in the gas phase (rv)
+        // The extra terms in the accumulation part of the equation are already handled.
+        if (active_[ Oil ] && active_[ Gas ]) {
+            const int po = fluid_.phaseUsage().phase_pos[ Oil ];
+            const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
+
+            const UpwindSelector<double> upwindOil(grid_, ops_,
+                                                rq_[po].dh.value());
+            const ADB rs_face = upwindOil.select(state.rs);
+
+            const UpwindSelector<double> upwindGas(grid_, ops_,
+                                                rq_[pg].dh.value());
+            const ADB rv_face = upwindGas.select(state.rv);
+
+            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
+            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
+
+            // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
+
+        }
+
         // Add polymer equation.
         if (has_polymer_) {
             residual_.material_balance_eq[poly_pos_] = pvdt_ * (rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
@@ -373,6 +431,14 @@ namespace Opm {
                 rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * (transi * rq_[poly_pos_].dh);
                 // Must recompute water flux since we have to use modified mobilities.
                 rq_[ actph ].mflux = upwind.select(rq_[actph].b * rq_[actph].mob) * (transi * rq_[actph].dh);
+
+                // applying the shear-thinning factors
+                if (has_plyshlog_) {
+                    V shear_mult_faces_v = Eigen::Map<V>(shear_mult_faces_.data(), shear_mult_faces_.size());
+                    ADB shear_mult_faces_adb = ADB::constant(shear_mult_faces_v);
+                    rq_[poly_pos_].mflux = rq_[poly_pos_].mflux / shear_mult_faces_adb;
+                    rq_[actph].mflux = rq_[actph].mflux / shear_mult_faces_adb;
+                }
             }
         }
     }
@@ -462,6 +528,72 @@ namespace Opm {
             // Compute total pore volume
             return geo_.poreVolume().sum();
         }
+    }
+
+
+    template <class Grid>
+    void
+    BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
+                                         WellState& well_state,
+                                         const bool initial_assembly)
+    {
+        using namespace Opm::AutoDiffGrid;
+
+        // Possibly switch well controls and updating well state to
+        // get reasonable initial conditions for the wells
+        updateWellControls(well_state);
+
+        // Create the primary variables.
+        SolutionState state = variableState(reservoir_state, well_state);
+
+        if (initial_assembly) {
+            // Create the (constant, derivativeless) initial state.
+            SolutionState state0 = state;
+            makeConstantState(state0);
+            // Compute initial accumulation contributions
+            // and well connection pressures.
+            computeAccum(state0, 0);
+            computeWellConnectionPressures(state0, well_state);
+        }
+
+        // OPM_AD_DISKVAL(state.pressure);
+        // OPM_AD_DISKVAL(state.saturation[0]);
+        // OPM_AD_DISKVAL(state.saturation[1]);
+        // OPM_AD_DISKVAL(state.saturation[2]);
+        // OPM_AD_DISKVAL(state.rs);
+        // OPM_AD_DISKVAL(state.rv);
+        // OPM_AD_DISKVAL(state.qs);
+        // OPM_AD_DISKVAL(state.bhp);
+
+        // -------- Mass balance equations --------
+        assembleMassBalanceEq(state);
+
+        // -------- Well equations ----------
+        V aliveWells;
+
+        if (has_plyshlog_) {
+            std::vector<double> water_vel_wells;
+            std::vector<double> visc_mult_wells;
+
+            computeWaterShearVelocityWells(state, well_state, aliveWells, water_vel_wells, visc_mult_wells);
+
+            if (!computeShearMultLog(water_vel_wells, visc_mult_wells, shear_mult_wells_)) {
+                // std::cout << " failed in calculating the shear factors for wells " << std::endl;
+                OPM_THROW(std::runtime_error, " failed in calculating the shear factors for wells ");
+            }
+
+            /* const int nw = wells().number_of_wells;
+            const int nperf = wells().well_connpos[nw];
+
+            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+
+            // assuming the water phase is the first phase
+            const int nw = wells().number_of_wells;
+            mob_perfcells = subset(rq_[0].mob,well_cells); */
+        }
+
+        addWellEq(state, well_state, aliveWells);
+        addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -586,6 +718,180 @@ namespace Opm {
     {
         return polymer_props_ad_.polymerWaterVelocityRatio(state.concentration);
     }
+
+
+    template <class Grid>
+    void
+    BlackoilPolymerModel<Grid>::addWellEq(const SolutionState& state,
+                                                            WellState& xw,
+                                                            V& aliveWells)
+    {
+        if( ! wellsActive() ) return ;
+
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        V Tw = Eigen::Map<const V>(wells().WI, nperf);
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+
+        // pressure diffs computed already (once per step, not changing per iteration)
+        const V& cdp = well_perforation_pressure_diffs_;
+
+        // Extract needed quantities for the perforation cells
+        const ADB& p_perfcells = subset(state.pressure, well_cells);
+        const ADB& rv_perfcells = subset(state.rv,well_cells);
+        const ADB& rs_perfcells = subset(state.rs,well_cells);
+        std::vector<ADB> mob_perfcells(np, ADB::null());
+        std::vector<ADB> b_perfcells(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            mob_perfcells[phase] = subset(rq_[phase].mob,well_cells);
+            b_perfcells[phase] = subset(rq_[phase].b,well_cells);
+        }
+
+        // applying the shear-thinning to the water face
+        if (has_plyshlog_) {
+            V shear_mult_wells_v = Eigen::Map<V>(shear_mult_wells_.data(), shear_mult_wells_.size());
+            ADB shear_mult_wells_adb = ADB::constant(shear_mult_wells_v);
+            mob_perfcells[0] = mob_perfcells[0] / shear_mult_wells_adb;
+        }
+
+
+        // Perforation pressure
+        const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
+        std::vector<double> perfpressure_d(perfpressure.value().data(), perfpressure.value().data() + nperf);
+        xw.perfPress() = perfpressure_d;
+
+        // Pressure drawdown (also used to determine direction of flow)
+        const ADB drawdown =  p_perfcells - perfpressure;
+
+        // Compute vectors with zero and ones that
+        // selects the wanted quantities.
+
+        // selects injection perforations
+        V selectInjectingPerforations = V::Zero(nperf);
+        // selects producing perforations
+        V selectProducingPerforations = V::Zero(nperf);
+        for (int c = 0; c < nperf; ++c){
+            if (drawdown.value()[c] < 0)
+                selectInjectingPerforations[c] = 1;
+            else
+                selectProducingPerforations[c] = 1;
+        }   
+
+        // HANDLE FLOW INTO WELLBORE
+
+        // compute phase volumetric rates at standard conditions
+        std::vector<ADB> cq_ps(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
+            cq_ps[phase] = b_perfcells[phase] * cq_p;
+        }
+        if (active_[Oil] && active_[Gas]) {
+            const int oilpos = pu.phase_pos[Oil];
+            const int gaspos = pu.phase_pos[Gas];
+            const ADB cq_psOil = cq_ps[oilpos];
+            const ADB cq_psGas = cq_ps[gaspos];
+            cq_ps[gaspos] += rs_perfcells * cq_psOil;
+            cq_ps[oilpos] += rv_perfcells * cq_psGas;
+        }
+
+        // HANDLE FLOW OUT FROM WELLBORE
+
+        // Using total mobilities
+        ADB total_mob = mob_perfcells[0];
+        for (int phase = 1; phase < np; ++phase) {
+            total_mob += mob_perfcells[phase];
+        }
+        // injection perforations total volume rates
+        const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
+
+        // compute wellbore mixture for injecting perforations
+        // The wellbore mixture depends on the inflow from the reservoar
+        // and the well injection rates.
+
+        // compute avg. and total wellbore phase volumetric rates at standard conds
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+        std::vector<ADB> wbq(np, ADB::null());
+        ADB wbqt = ADB::constant(V::Zero(nw));
+        for (int phase = 0; phase < np; ++phase) {
+            const ADB& q_ps = wops_.p2w * cq_ps[phase];
+            const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
+            Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
+            const int pos = pu.phase_pos[phase];
+            wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s,ADB::constant(V::Zero(nw))))  - q_ps;
+            wbqt += wbq[phase];
+        }
+
+        // compute wellbore mixture at standard conditions.
+        Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
+        std::vector<ADB> cmix_s(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            const int pos = pu.phase_pos[phase];
+            cmix_s[phase] = wops_.w2p * notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
+        }
+
+        // compute volume ratio between connection at standard conditions
+        ADB volumeRatio = ADB::constant(V::Zero(nperf));
+        const ADB d = V::Constant(nperf,1.0) -  rv_perfcells * rs_perfcells;
+        for (int phase = 0; phase < np; ++phase) {
+            ADB tmp = cmix_s[phase];
+
+            if (phase == Oil && active_[Gas]) {
+                const int gaspos = pu.phase_pos[Gas];
+                tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
+            }
+            if (phase == Gas && active_[Oil]) {
+                const int oilpos = pu.phase_pos[Oil];
+                tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
+            }
+            volumeRatio += tmp / b_perfcells[phase];
+        }
+
+        // injecting connections total volumerates at standard conditions
+        ADB cqt_is = cqt_i/volumeRatio;
+
+        // connection phase volumerates at standard conditions
+        std::vector<ADB> cq_s(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
+        }
+
+        // Add well contributions to mass balance equations
+        for (int phase = 0; phase < np; ++phase) {
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
+        }
+
+        // WELL EQUATIONS
+        ADB qs = state.qs;
+        for (int phase = 0; phase < np; ++phase) {
+            qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+
+        }
+
+        // check for dead wells (used in the well controll equations)
+        aliveWells = V::Constant(nw, 1.0);
+        for (int w = 0; w < nw; ++w) {
+            if (wbqt.value()[w] == 0) {
+                aliveWells[w] = 0.0;
+            }
+        }
+
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore)
+        V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
+        for (int phase = 1; phase < np; ++phase) {
+            cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
+        }
+
+        std::vector<double> cq_d(cq.data(), cq.data() + nperf*np);
+        xw.perfPhaseRates() = cq_d;
+
+        residual_.well_flux_eq = qs;
+
+        extraAddWellEq(state, xw, cq_ps, cmix_s, cqt_is, well_cells);
+    }
+
 
     template<class Grid>
     bool
@@ -725,64 +1031,53 @@ namespace Opm {
 
         for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
             const int canonicalPhaseIdx = canph_[phase];
+
+            // only compute the velocity of Water phase
+            if (canonicalPhaseIdx != Water) {
+                continue;
+            }
+
             const std::vector<PhasePresence> cond = phaseCondition();
 
             const ADB tr_mult = transMult(state.pressure);
             const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
-
             rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
 
-            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
-
-            // some following parts only need to update for the water phase, TOBE FIXED later.
-
-            ADB& head = rq_[phase].head;
 
             // compute gravity potensial using the face average as in eclipse and MRST
+            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
             const ADB rhoavg = ops_.caver * rho;
-
-            ADB dp = ops_.ngrad * phasePressure[canonicalPhaseIdx] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-
+            rq_[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
             if (use_threshold_pressure_) {
-                applyThresholdPressures(dp);
+                applyThresholdPressures(rq_[ phase ].dh);
             }
 
-            head = transi*dp;
+            const ADB& b   = rq_[ phase ].b;
+            const ADB& mob = rq_[ phase ].mob;
+            const ADB& dh  = rq_[ phase ].dh;
+            UpwindSelector<double> upwind(grid_, ops_, dh.value());
 
-            if (canonicalPhaseIdx == Water) {
-                //head      = transi*(ops_.ngrad * phasePressure) + gflux;
-                UpwindSelector<double> upwind(grid_, ops_, head.value());
+            const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+            const ADB mc = computeMc(state);
+            ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
+                                                                cmax,
+                                                                kr[canonicalPhaseIdx]);
+            ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+            rq_[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
 
-                if(has_polymer_) {
-                    const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-                    const ADB mc = computeMc(state);
-                    ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                     cmax,
-                                                                     kr[canonicalPhaseIdx],
-                                                                     state.saturation[canonicalPhaseIdx]);
-                    ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
-                    rq_[phase].mob = tr_mult * krw_eff * inv_wat_eff_visc;
-                    rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
-                    rq_[poly_pos_].b = rq_[phase].b;
-                    rq_[poly_pos_].head = rq_[phase].head;
-                    rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * rq_[poly_pos_].head;
+            const V& polymer_conc = state.concentration.value();
+            V visc_mult_cells = polymer_props_ad_.viscMult(polymer_conc);
+            V visc_mult_faces = upwind.select(visc_mult_cells);
 
-                    const V& polymer_conc = state.concentration.value();
-                    V visc_mult_cells = polymer_props_ad_.viscMult(polymer_conc);
-                    V visc_mult_faces = upwind.select(visc_mult_cells);
+            int nface = visc_mult_faces.size();
+            visc_mult.resize(nface);
+            std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
 
-                    int nface = visc_mult_faces.size();
-                    visc_mult.resize(nface);
-                    std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
-                }
+            rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
 
-                const ADB& b       = rq_[phase].b;
-                const ADB& mob     = rq_[phase].mob;
-                rq_[phase].mflux = upwind.select(b * mob) * head;
-                const auto& tempb_faces = upwind.select(b);
-                b_faces.resize(tempb_faces.size());
-                std::copy(&(tempb_faces.value()[0]), &(tempb_faces.value()[0]) + tempb_faces.size(), b_faces.begin());
-            }
+            const auto& tempb_faces = upwind.select(b);
+            b_faces.resize(tempb_faces.size());
+            std::copy(&(tempb_faces.value()[0]), &(tempb_faces.value()[0]) + tempb_faces.size(), b_faces.begin());
         }
 
         const auto& internal_faces = ops_.internal_faces;
@@ -795,7 +1090,6 @@ namespace Opm {
         }
 
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
-
         const ADB temp_phiavg  = ops_.caver * phi;
 
         std::vector<double> phiavg;
@@ -813,9 +1107,8 @@ namespace Opm {
 
     template<class Grid>
     void
-    BlackoilPolymerModel<Grid>::computeWaterShearVelocityWells(const SolutionState& state, WellStateFullyImplicitBlackoil& xw,
-                                                               V& aliveWells, const std::vector<double>& polymer_inflow,
-                                                               std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells)
+    BlackoilPolymerModel<Grid>::computeWaterShearVelocityWells(const SolutionState& state, WellState& xw,
+                                                               V& aliveWells, std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells)
     {
         if( ! wellsActive() ) return ;
 
@@ -955,11 +1248,11 @@ namespace Opm {
         std::copy(&(temp_visc_mult_wells[0]), &(temp_visc_mult_wells[0]) + temp_visc_mult_wells.size(), visc_mult_wells.begin());
 
         // for the injection wells
-        for (int i = 0; i < well_cells.size(); ++i) {
+        /* for (int i = 0; i < well_cells.size(); ++i) {
             if (polymer_inflow[well_cells[i]] == 0. && selectInjectingPerforations[i] == 1.) { // maybe comparison with epsilon?
                 visc_mult_wells[i] = 1.;
             }
-        }
+        }*/
 
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
 
