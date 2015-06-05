@@ -163,6 +163,15 @@ namespace Opm
                 water_vel_vals_ = plyshlogTable.getWaterVelocityColumn();
                 shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn();
 
+                // do the unit version here for the water_vel_vals_
+                Opm::UnitSystem unitSystem = *deck->getActiveUnitSystem();
+                double siFactor = unitSystem.parse("Length/Time")->getSIScaling();
+
+                for (size_t i = 0; i < water_vel_vals_.size(); ++i) {
+                    water_vel_vals_[i] *= siFactor;
+                }
+
+
                 plyshlog_ref_conc_ = plyshlogTable.getRefPolymerConcentration();
 
                 if(plyshlogTable.hasRefSalinity()) {
