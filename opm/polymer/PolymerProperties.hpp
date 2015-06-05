@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <vector>
+#include <opm/core/utility/ErrorMacros.hpp>
 
 
 namespace Opm
@@ -154,9 +155,10 @@ namespace Opm
             c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
             ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
 
-            plyshlog_ = deck->hasKeyword("PLYSHLOG");
+            has_plyshlog_ = deck->hasKeyword("PLYSHLOG");
+            has_shrate_ = deck->hasKeyword("SHRATE");
 
-            if(plyshlog_){
+            if(has_plyshlog_){
                 // Assuming NTPVT == 1 always due to the limitation of the parser
                 const auto& plyshlogTable = eclipseState->getPlyshlogTables()[0];
 
@@ -165,7 +167,21 @@ namespace Opm
 
                 // do the unit version here for the water_vel_vals_
                 Opm::UnitSystem unitSystem = *deck->getActiveUnitSystem();
-                double siFactor = unitSystem.parse("Length/Time")->getSIScaling();
+                double siFactor;
+                if (has_shrate_) {
+                    siFactor = unitSystem.parse("1/Time")->getSIScaling();
+                    DeckKeywordConstPtr shrateKeyword = deck->getKeyword("SHRATE");
+                    std::vector<double> shrate = shrateKeyword->getSIDoubleData();
+                    if (shrate.size() == 1) {
+                        shrate_ = shrate[0];
+                    } else if (shrate.size() == 0) {
+                        shrate_ = 4.8; // default value
+                    } else {
+                        OPM_THROW(std::logic_error, "Only NTPVT == 1 is allowed for SHRATE keyword now !\n");
+                    }
+                } else {
+                    siFactor = unitSystem.parse("Length/Time")->getSIScaling();
+                }
 
                 for (size_t i = 0; i < water_vel_vals_.size(); ++i) {
                     water_vel_vals_[i] *= siFactor;
@@ -204,6 +220,9 @@ namespace Opm
 
         int adsIndex() const;
 
+        /// indicate whehter PLYSHLOG is specified
+        bool hasPlyshlog() const;
+
         /// the water velocity or water shear rate in PLYSHLOG table
         const std::vector<double>& shearWaterVelocity() const;
 
@@ -224,6 +243,12 @@ namespace Opm
 
         /// the reference temperature in PLYSHLOG
         double plyshlogRefTemp() const;
+
+        /// indicate whether SHRATE keyword is specified
+        bool hasShrate() const;
+
+        /// the value of SHRATE
+        double shrate() const;
 
         double shearVrf(const double velocity) const;
 
@@ -334,7 +359,12 @@ namespace Opm
         double res_factor_;
         double c_max_ads_;
 
-        bool   plyshlog_;
+        bool   has_plyshlog_;
+        bool   has_shrate_;
+        // Assuming NTPVT == 1 always due to the limitation of the parser
+        // only one SHRATE value
+        // TODO: to be extended later when parser is improved.
+        double shrate_;
         AdsorptionBehaviour ads_index_;
         std::vector<double> c_vals_visc_;
         std::vector<double> visc_mult_vals_;
