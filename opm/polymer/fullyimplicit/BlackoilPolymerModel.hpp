@@ -84,6 +84,7 @@ namespace Opm {
                              const bool                              has_shrate,
                              const std::vector<double>&              wells_rep_radius,
                              const std::vector<double>&              wells_perf_length,
+                             const std::vector<double>&              wells_bore_diameter,
                              const bool                              terminal_output);
 
         /// Called once before each time step.
@@ -146,6 +147,8 @@ namespace Opm {
         // to be used in shear-thinning computation.
         std::vector<double> wells_rep_radius_;
         std::vector<double> wells_perf_length_;
+        // wellbore diameters
+        std::vector<double> wells_bore_diameter_;
 
         // shear-thinning factor for cell faces
         std::vector<double> shear_mult_faces_;

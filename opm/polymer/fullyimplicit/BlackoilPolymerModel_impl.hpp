@@ -89,6 +89,7 @@ namespace Opm {
                                                      const bool                              has_shrate,
                                                      const std::vector<double>&              wells_rep_radius,
                                                      const std::vector<double>&              wells_perf_length,
+                                                     const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                has_disgas, has_vapoil, terminal_output),
@@ -98,7 +99,8 @@ namespace Opm {
           has_shrate_(has_shrate),
           poly_pos_(detail::polymerPos(fluid.phaseUsage())),
           wells_rep_radius_(wells_rep_radius),
-          wells_perf_length_(wells_perf_length)
+          wells_perf_length_(wells_perf_length),
+          wells_bore_diameter_(wells_bore_diameter)
     {
         if (has_polymer_) {
             if (!active_[Water]) {
