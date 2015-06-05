@@ -1098,6 +1098,51 @@ namespace Opm {
         for (int i = 0; i < nface; ++i) {
             water_vel[i] = water_vel[i] / (b_faces[i] * phiavg[i] * internal_face_areas[i]);
         }
+
+        // for SHRATE keyword treatment
+        if (has_shrate_) {
+
+            // get the upwind water saturation
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
+            const ADB& sw_upwind_adb = upwind.select(sw);
+
+            std::vector<double> sw_upwind;
+            sw_upwind.resize(sw_upwind_adb.size());
+            std::copy(&(sw_upwind_adb.value()[0]), &(sw_upwind_adb.value()[0]) + sw_upwind_adb.size(), sw_upwind.begin());
+
+            // get the absolute permeability for the faces
+            std::vector<double> perm;
+            perm.resize(transi.size());
+
+            for (size_t i = 0; i < transi.size(); ++i) {
+                perm[i] = transi[i] / internal_faces[i];
+            }
+
+            // get the upwind krw_eff
+            const ADB& krw_adb = upwind.select(krw_eff);
+            std::vector<double> krw_upwind;
+            krw_upwind.resize(krw_adb.size());
+            std::copy(&(krw_adb.value()[0]), &(krw_adb.value()[0]) + krw_adb.size(), krw_upwind.begin());
+
+            const double& shrate_const = polymer_props_ad_.shrate();
+
+            const double epsilon = std::numeric_limits<double>::epsilon();
+            // std::cout << "espilon is " << epsilon << std::endl;
+            // std::cin.ignore();
+
+            for (size_t i = 0; i < water_vel.size(); ++i) {
+                // assuming only when upwinding water saturation is not zero
+                // there will be non-zero water velocity
+                if (std::abs(water_vel[i]) < epsilon) {
+                    continue;
+                }
+
+                water_vel[i] *= shrate_const * std::sqrt(phiavg[i] / (perm[i] * sw_upwind[i] * krw_upwind[i]));
+
+            }
+        }
+
     }
 
     template<class Grid>
