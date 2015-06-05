@@ -62,6 +62,9 @@ namespace Opm {
         /// \ return    The reference temperature in PLYSHLOG keyword
         double plyshlogRefTemp() const;
 
+        /// \ return   the value of SHRATE
+        double shrate() const;
+
         double viscMult(double c) const; // multipler interpolated from PLYVISC table
 
 		typedef AutoDiffBlock<double> ADB;
