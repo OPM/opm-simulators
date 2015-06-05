@@ -1248,11 +1248,11 @@ namespace Opm {
         std::copy(&(temp_visc_mult_wells[0]), &(temp_visc_mult_wells[0]) + temp_visc_mult_wells.size(), visc_mult_wells.begin());
 
         // for the injection wells
-        /* for (int i = 0; i < well_cells.size(); ++i) {
-            if (polymer_inflow[well_cells[i]] == 0. && selectInjectingPerforations[i] == 1.) { // maybe comparison with epsilon?
+        for (int i = 0; i < well_cells.size(); ++i) {
+            if (xw.polymerInflow()[well_cells[i]] == 0. && selectInjectingPerforations[i] == 1) { // maybe comparison with epsilon threshold
                 visc_mult_wells[i] = 1.;
             }
-        }*/
+        }
 
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
 
