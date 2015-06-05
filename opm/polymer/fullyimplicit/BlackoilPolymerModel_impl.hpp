@@ -1029,56 +1029,50 @@ namespace Opm {
 
         std::vector<double> b_faces;
 
-        for (int phase = 0; phase < fluid_.numPhases(); ++phase) {
-            const int canonicalPhaseIdx = canph_[phase];
+        const int phase = fluid_.phaseUsage().phase_pos[BlackoilPhases::Aqua]; // water position
 
-            // only compute the velocity of Water phase
-            if (canonicalPhaseIdx != Water) {
-                continue;
-            }
+        const int canonicalPhaseIdx = canph_[phase];
 
-            const std::vector<PhasePresence> cond = phaseCondition();
+        const std::vector<PhasePresence> cond = phaseCondition();
 
-            const ADB tr_mult = transMult(state.pressure);
-            const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
-            rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+        const ADB tr_mult = transMult(state.pressure);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
 
-
-            // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
-            const ADB rhoavg = ops_.caver * rho;
-            rq_[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
-            if (use_threshold_pressure_) {
-                applyThresholdPressures(rq_[ phase ].dh);
-            }
-
-            const ADB& b   = rq_[ phase ].b;
-            const ADB& mob = rq_[ phase ].mob;
-            const ADB& dh  = rq_[ phase ].dh;
-            UpwindSelector<double> upwind(grid_, ops_, dh.value());
-
-            const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-            const ADB mc = computeMc(state);
-            ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
-                                                                cmax,
-                                                                kr[canonicalPhaseIdx]);
-            ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
-            rq_[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
-
-            const V& polymer_conc = state.concentration.value();
-            V visc_mult_cells = polymer_props_ad_.viscMult(polymer_conc);
-            V visc_mult_faces = upwind.select(visc_mult_cells);
-
-            int nface = visc_mult_faces.size();
-            visc_mult.resize(nface);
-            std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
-
-            rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
-
-            const auto& tempb_faces = upwind.select(b);
-            b_faces.resize(tempb_faces.size());
-            std::copy(&(tempb_faces.value()[0]), &(tempb_faces.value()[0]) + tempb_faces.size(), b_faces.begin());
+        // compute gravity potensial using the face average as in eclipse and MRST
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        const ADB rhoavg = ops_.caver * rho;
+        rq_[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        if (use_threshold_pressure_) {
+            applyThresholdPressures(rq_[ phase ].dh);
         }
+
+        const ADB& b   = rq_[ phase ].b;
+        const ADB& mob = rq_[ phase ].mob;
+        const ADB& dh  = rq_[ phase ].dh;
+        UpwindSelector<double> upwind(grid_, ops_, dh.value());
+
+        const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+        const ADB mc = computeMc(state);
+        ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
+                                                         cmax,
+                                                         kr[canonicalPhaseIdx]);
+        ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value().data());
+        rq_[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+
+        const V& polymer_conc = state.concentration.value();
+        V visc_mult_cells = polymer_props_ad_.viscMult(polymer_conc);
+        V visc_mult_faces = upwind.select(visc_mult_cells);
+
+        size_t nface = visc_mult_faces.size();
+        visc_mult.resize(nface);
+        std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
+
+        rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
+
+        const auto& tempb_faces = upwind.select(b);
+        b_faces.resize(tempb_faces.size());
+        std::copy(&(tempb_faces.value()[0]), &(tempb_faces.value()[0]) + tempb_faces.size(), b_faces.begin());
 
         const auto& internal_faces = ops_.internal_faces;
 
@@ -1096,7 +1090,6 @@ namespace Opm {
         phiavg.resize(temp_phiavg.size());
         std::copy(&(temp_phiavg.value()[0]), &(temp_phiavg.value()[0]) + temp_phiavg.size(), phiavg.begin());
 
-        size_t nface = rq_[0].mflux.value().size();
         water_vel.resize(nface);
         std::copy(&(rq_[0].mflux.value()[0]), &(rq_[0].mflux.value()[0]) + nface, water_vel.begin());
 
