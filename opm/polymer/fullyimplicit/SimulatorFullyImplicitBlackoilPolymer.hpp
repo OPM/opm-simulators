@@ -117,6 +117,7 @@ namespace Opm
                                               const bool vapoil,
                                               const bool polymer,
                                               const bool plyshlog,
+                                              const bool shrate,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
@@ -136,6 +137,8 @@ namespace Opm
         bool has_polymer_;
         // flag for PLYSHLOG keyword
         bool has_plyshlog_;
+        // flag for SHRATE keyword
+        bool has_shrate_;
         DeckConstPtr deck_;
 
         std::vector<double> wells_rep_radius_;

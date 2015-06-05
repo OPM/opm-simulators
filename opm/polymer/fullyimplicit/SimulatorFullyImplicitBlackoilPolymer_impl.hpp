@@ -35,6 +35,7 @@ namespace Opm
                                           const bool has_vapoil,
                                           const bool has_polymer,
                                           const bool has_plyshlog,
+                                          const bool has_shrate,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
                                           Opm::DeckConstPtr& deck,
@@ -54,6 +55,7 @@ namespace Opm
         , polymer_props_(polymer_props)
         , has_polymer_(has_polymer)
         , has_plyshlog_(has_plyshlog)
+        , has_shrate_(has_shrate)
         , deck_(deck)
     {
     }
@@ -81,6 +83,7 @@ namespace Opm
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
                                                       has_plyshlog_,
+                                                      has_shrate_,
                                                       wells_rep_radius_,
                                                       wells_perf_length_,
                                                       BaseType::terminal_output_));

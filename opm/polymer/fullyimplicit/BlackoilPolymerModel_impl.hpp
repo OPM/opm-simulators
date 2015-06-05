@@ -86,6 +86,7 @@ namespace Opm {
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
                                                      const bool                              has_plyshlog,
+                                                     const bool                              has_shrate,
                                                      const std::vector<double>&              wells_rep_radius,
                                                      const std::vector<double>&              wells_perf_length,
                                                      const bool                              terminal_output)
@@ -94,6 +95,7 @@ namespace Opm {
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
           has_plyshlog_(has_plyshlog),
+          has_shrate_(has_shrate),
           poly_pos_(detail::polymerPos(fluid.phaseUsage())),
           wells_rep_radius_(wells_rep_radius),
           wells_perf_length_(wells_perf_length)
