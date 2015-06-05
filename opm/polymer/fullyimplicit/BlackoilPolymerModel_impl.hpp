@@ -1005,7 +1005,7 @@ namespace Opm {
                     return false; // failed in finding the solution.
                 }
             }else{
-                if (water_vel[i] < maxShearVel) {
+                if (std::abs(water_vel[i]) < maxShearVel) {
                     std::cout << " the veclocity is " << water_vel[i] << std::endl;
                     std::cout << " max shear velocity is " << maxShearVel << std::endl;
                     std::cerr << " something wrong happend in finding segment" << std::endl;
