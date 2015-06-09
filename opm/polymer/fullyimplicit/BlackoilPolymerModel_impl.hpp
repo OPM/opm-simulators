@@ -895,7 +895,7 @@ namespace Opm {
 
     template<class Grid>
     bool
-    BlackoilPolymerModel<Grid>::findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point)
+    BlackoilPolymerModel<Grid>::findIntersection(Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point)
     {
 
         const double x1 = line_segment1[0].x;
@@ -910,12 +910,14 @@ namespace Opm {
 
         const double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-        if (d == 0.) { return false; }
+        if (d == 0.) {
+            return false;
+        }
 
         const double x = ((x3 - x4) * (x1 * y2 - y1 * x2) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d;
         const double y = ((y3 - y4) * (x1 * y2 - y1 * x2) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d;
 
-        if( x >= std::min(x1,x2) && x <= std::max(x1,x2) ){
+        if (x >= std::min(x1,x2) && x <= std::max(x1,x2)) {
             intersection_point.x = x;
             intersection_point.y = y;
             return true;
@@ -926,7 +928,7 @@ namespace Opm {
 
     template<class Grid>
     bool
-    BlackoilPolymerModel<Grid>::computeShearMultLog( std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult)
+    BlackoilPolymerModel<Grid>::computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult)
     {
 
         double refConcentration = polymer_props_ad_.plyshlogRefConc();
@@ -942,7 +944,7 @@ namespace Opm {
         logShearVRF.resize(shear_water_vel.size());
 
         // converting the table using the reference condition
-        for(int i = 0; i < shear_vrf.size(); ++i){
+        for (int i = 0; i < shear_vrf.size(); ++i) {
             shear_vrf[i] = (refViscMult * shear_vrf[i] - 1.) / (refViscMult - 1);
             logShearWaterVel[i] = std::log(shear_water_vel[i]);
         }
@@ -954,14 +956,14 @@ namespace Opm {
         const double maxShearVel = shear_water_vel.back();
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
 
-        for(int i = 0; i < water_vel.size(); ++i){
+        for (int i = 0; i < water_vel.size(); ++i) {
 
-            if( visc_mult[i] - 1. < epsilon || std::abs(water_vel[i]) < minShearVel ) {
+            if (visc_mult[i] - 1. < epsilon || std::abs(water_vel[i]) < minShearVel) {
                  shear_mult[i] = 1.0;
                  continue;
             }
 
-            for(int j = 0; j < shear_vrf.size(); ++j){
+            for (int j = 0; j < shear_vrf.size(); ++j) {
                 logShearVRF[j] = (1 + (visc_mult[i] - 1.0) * shear_vrf[j]) / visc_mult[i];
                 logShearVRF[j] = std::log(logShearVRF[j]);
             }
@@ -972,7 +974,7 @@ namespace Opm {
             int iIntersection; // finding the intersection on the iIntersectionth table segment
             bool foundSegment = false;
 
-            for(iIntersection = 0; iIntersection < shear_vrf.size() - 1; ++iIntersection){
+            for (iIntersection = 0; iIntersection < shear_vrf.size() - 1; ++iIntersection) {
 
                 double temp1 = logShearVRF[iIntersection] + logShearWaterVel[iIntersection] - logWaterVelO;
                 double temp2 = logShearVRF[iIntersection + 1] + logShearWaterVel[iIntersection + 1] - logWaterVelO;
@@ -985,7 +987,7 @@ namespace Opm {
                 }
             }
 
-            if(foundSegment == true){
+            if (foundSegment == true) {
                 Point2D lineSegment[2];
                 lineSegment[0] = Point2D{logShearWaterVel[iIntersection], logShearVRF[iIntersection]};
                 lineSegment[1] = Point2D{logShearWaterVel[iIntersection + 1], logShearVRF[iIntersection + 1]};
@@ -998,13 +1000,13 @@ namespace Opm {
 
                 bool foundIntersection = findIntersection(lineSegment, line, intersectionPoint);
 
-                if(foundIntersection){
+                if (foundIntersection) {
                     shear_mult[i] = std::exp(intersectionPoint.y);
-                }else{
+                } else {
                     std::cerr << " failed in finding the solution for shear-thinning multiplier " << std::endl;
                     return false; // failed in finding the solution.
                 }
-            }else{
+            } else {
                 if (std::abs(water_vel[i]) < maxShearVel) {
                     std::cout << " the veclocity is " << water_vel[i] << std::endl;
                     std::cout << " max shear velocity is " << maxShearVel << std::endl;

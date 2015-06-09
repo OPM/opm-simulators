@@ -293,10 +293,10 @@ namespace Opm {
 
         /// Finding the intersection point of a line segment and a line.
         /// return true, if found.
-        bool findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point);
+        bool findIntersection(Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point);
 
         /// Computing the shear multiplier based on the water velocity/shear rate with PLYSHLOG keyword
-        bool computeShearMultLog( std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult);
+        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult);
 
         /// Computing the water velocity without shear-thinning for the cell faces.
         /// The water velocity will be used for shear-thinning calculation.

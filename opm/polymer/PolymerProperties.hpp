@@ -156,7 +156,7 @@ namespace Opm
 
             plyshlog_ = deck->hasKeyword("PLYSHLOG");
 
-            if(plyshlog_){
+            if (plyshlog_) {
                 // Assuming NTPVT == 1 always due to the limitation of the parser
                 const auto& plyshlogTable = eclipseState->getPlyshlogTables()[0];
 
@@ -174,14 +174,14 @@ namespace Opm
 
                 plyshlog_ref_conc_ = plyshlogTable.getRefPolymerConcentration();
 
-                if(plyshlogTable.hasRefSalinity()) {
+                if (plyshlogTable.hasRefSalinity()) {
                     has_plyshlog_ref_salinity_ = true;
                     plyshlog_ref_salinity_ = plyshlogTable.getRefSalinity();
                 } else {
                     has_plyshlog_ref_salinity_ = false;
                 }
 
-                if(plyshlogTable.hasRefTemperature()) {
+                if (plyshlogTable.hasRefTemperature()) {
                     has_plyshlog_ref_temp_ = true;
                     plyshlog_ref_temp_ = plyshlogTable.getRefTemperature();
                 } else {
