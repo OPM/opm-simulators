@@ -163,8 +163,13 @@ namespace Opm
         typedef RateConverter::
         SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
                                    std::vector<int> > RateConverterType;
+        typedef typename Traits::Model Model;
+        typedef typename Model::ModelParameters ModelParameters;
+        typedef typename Solver::SolverParameters SolverParameters;
 
         const parameter::ParameterGroup param_;
+        ModelParameters model_param_;
+        SolverParameters solver_param_;
 
         // Observed objects.
         const Grid& grid_;
