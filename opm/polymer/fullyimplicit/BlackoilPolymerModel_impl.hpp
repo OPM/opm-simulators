@@ -25,6 +25,7 @@
 #define OPM_BLACKOILPOLYMERMODEL_IMPL_HEADER_INCLUDED
 
 #include <opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp>
+#include <opm/polymer/Point2D.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -892,40 +893,6 @@ namespace Opm {
         extraAddWellEq(state, xw, cq_ps, cmix_s, cqt_is, well_cells);
     }
 
-
-    template<class Grid>
-    bool
-    BlackoilPolymerModel<Grid>::findIntersection(Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point)
-    {
-
-        const double x1 = line_segment1[0].x;
-        const double y1 = line_segment1[0].y;
-        const double x2 = line_segment1[1].x;
-        const double y2 = line_segment1[1].y;
-
-        const double x3 = line2[0].x;
-        const double y3 = line2[0].y;
-        const double x4 = line2[1].x;
-        const double y4 = line2[1].y;
-
-        const double d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-        if (d == 0.) {
-            return false;
-        }
-
-        const double x = ((x3 - x4) * (x1 * y2 - y1 * x2) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d;
-        const double y = ((y3 - y4) * (x1 * y2 - y1 * x2) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d;
-
-        if (x >= std::min(x1,x2) && x <= std::max(x1,x2)) {
-            intersection_point.x = x;
-            intersection_point.y = y;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     template<class Grid>
     bool
     BlackoilPolymerModel<Grid>::computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult)
@@ -988,20 +955,20 @@ namespace Opm {
             }
 
             if (foundSegment == true) {
-                Point2D lineSegment[2];
-                lineSegment[0] = Point2D{logShearWaterVel[iIntersection], logShearVRF[iIntersection]};
-                lineSegment[1] = Point2D{logShearWaterVel[iIntersection + 1], logShearVRF[iIntersection + 1]};
+                detail::Point2D lineSegment[2];
+                lineSegment[0] = detail::Point2D{logShearWaterVel[iIntersection], logShearVRF[iIntersection]};
+                lineSegment[1] = detail::Point2D{logShearWaterVel[iIntersection + 1], logShearVRF[iIntersection + 1]};
 
-                Point2D line[2];
-                line[0] = Point2D{0, logWaterVelO};
-                line[1] = Point2D{logWaterVelO, 0};
+                detail::Point2D line[2];
+                line[0] = detail::Point2D{0, logWaterVelO};
+                line[1] = detail::Point2D{logWaterVelO, 0};
 
-                Point2D intersectionPoint;
+                detail::Point2D intersectionPoint;
 
-                bool foundIntersection = findIntersection(lineSegment, line, intersectionPoint);
+                bool foundIntersection = detail::Point2D::findIntersection(lineSegment, line, intersectionPoint);
 
                 if (foundIntersection) {
-                    shear_mult[i] = std::exp(intersectionPoint.y);
+                    shear_mult[i] = std::exp(intersectionPoint.getY());
                 } else {
                     std::cerr << " failed in finding the solution for shear-thinning multiplier " << std::endl;
                     return false; // failed in finding the solution.
