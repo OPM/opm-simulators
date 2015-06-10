@@ -98,7 +98,7 @@ namespace Opm
         /// \return                       solution to complete system.
         V recoverVariable(const ADB& equation, const V& partial_solution, const int n);
 
-        /// Form an elliptic system of equations.
+        /// Form an interleaved system of equations.
         /// \param[in]       num_phases  the number of fluid phases
         /// \param[in]       eqs         the equations
         /// \param[out]      A           the resulting full system matrix
@@ -106,10 +106,10 @@ namespace Opm
         /// This function will deal with the first num_phases
         /// equations in eqs, and return a matrix A for the full
         /// system that has a elliptic upper left corner, if possible.
-        void formEllipticSystem(const int num_phases,
-                                const std::vector<ADB>& eqs,
-                                Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
-                                V& b);
+        void formInterleavedSystem(const int num_phases,
+                                   const std::vector<ADB>& eqs,
+                                   Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                   V& b);
 
     } // anonymous namespace
 
@@ -120,8 +120,7 @@ namespace Opm
     /// Construct a system solver.
     NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
                                                                            const boost::any& parallelInformation)
-      : cpr_param_( param ),
-        iterations_( 0 ),
+      : iterations_( 0 ),
         parallelInformation_(parallelInformation),
         newton_use_gmres_( param.getDefault("newton_use_gmres", false ) ),
         linear_solver_reduction_( param.getDefault("linear_solver_reduction", 1e-2 ) ),
@@ -172,17 +171,16 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Add material balance equations (or other manipulations) to
-        // form pressure equation in top left of full system.
+        // Form interleaved system.
         Eigen::SparseMatrix<double, Eigen::RowMajor> A;
         V b;
-        formEllipticSystem(np, eqs, A, b);
+        formInterleavedSystem(np, eqs, A, b);
 
-        // Scale pressure equation.
-        const double pscale = 200*unit::barsa;
-        const int nc = residual.material_balance_eq[0].size();
-        A.topRows(nc) *= pscale;
-        b.topRows(nc) *= pscale;
+        // // Scale pressure equation.
+        // const double pscale = 200*unit::barsa;
+        // const int nc = residual.material_balance_eq[0].size();
+        // A.topRows(nc) *= pscale;
+        // b.topRows(nc) *= pscale;
 
         // Solve reduced system.
         SolutionVector dx(SolutionVector::Zero(b.size()));
@@ -191,7 +189,7 @@ namespace Opm
         DuneMatrix istlA( A );
 
         // Create ISTL matrix for elliptic part.
-        DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
+        // DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
 
         // Right hand side.
         Vector istlb(istlA.N());
@@ -201,31 +199,11 @@ namespace Opm
         x = 0.0;
 
         Dune::InverseOperatorResult result;
-#if HAVE_MPI
-        if(parallelInformation_.type()==typeid(ParallelISTLInformation))
-        {
-            typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
-            Comm istlComm(info.communicator());
-            Comm istlAeComm(info.communicator());
-            info.copyValuesTo(istlAeComm.indexSet(), istlAeComm.remoteIndices());
-            info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices(),
-                              istlAe.N(), istlA.N()/istlAe.N());
-            // Construct operator, scalar product and vectors needed.
-            typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
-            Operator opA(istlA, istlComm);
-            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, istlAe, x, istlb, istlComm, istlAeComm, result);
-        }
-        else
-#endif
-        {
-            // Construct operator, scalar product and vectors needed.
-            typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
-            Operator opA(istlA);
-            Dune::Amg::SequentialInformation info;
-            constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, info, result);
-        }
+        // Construct operator, scalar product and vectors needed.
+        typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
+        Operator opA(istlA);
+        Dune::Amg::SequentialInformation info;
+        constructPreconditionerAndSolve(opA, x, istlb, info, result);
 
         // store number of iterations
         iterations_ = result.iterations;
@@ -395,7 +373,7 @@ namespace Opm
 
 
 
-        /// Form an elliptic system of equations.
+        /// Form an interleaved system of equations.
         /// \param[in]       num_phases  the number of fluid phases
         /// \param[in]       eqs         the equations
         /// \param[out]      A           the resulting full system matrix
@@ -403,14 +381,13 @@ namespace Opm
         /// This function will deal with the first num_phases
         /// equations in eqs, and return a matrix A for the full
         /// system that has a elliptic upper left corner, if possible.
-        void formEllipticSystem(const int num_phases,
-                                const std::vector<ADB>& eqs_in,
-                                Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
-                                // M& A,
-                                V& b)
+        void formInterleavedSystem(const int num_phases,
+                                   const std::vector<ADB>& eqs_in,
+                                   Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                   V& b)
         {
             if (num_phases != 3) {
-                OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases.");
+                OPM_THROW(std::logic_error, "formInterleavedSystem() requires 3 phases.");
             }
 
             // A concession to MRST, to obtain more similar behaviour:

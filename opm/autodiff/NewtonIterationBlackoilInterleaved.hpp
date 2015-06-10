@@ -101,21 +101,20 @@ namespace Opm
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
         template<int category=Dune::SolverCategory::sequential, class O, class P>
-        void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
+        void constructPreconditionerAndSolve(O& opA,
                                              Vector& x, Vector& istlb,
                                              const P& parallelInformation,
-                                             const P& parallelInformationAe,
                                              Dune::InverseOperatorResult& result) const
         {
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
             std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
                 sp(ScalarProductChooser::construct(parallelInformation));
             // Construct preconditioner.
-            // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
-           typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
+            typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
+            // typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
             parallelInformation.copyOwnerToAll(istlb, istlb);
-            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation,
-                                   parallelInformationAe);
+            const double relax = 1.0;
+            Preconditioner precond(opA.getmat(), relax);
 
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
@@ -133,8 +132,6 @@ namespace Opm
                 linsolve.apply(x, istlb, result);
             }
         }
-
-        CPRParameter cpr_param_;
 
         mutable int iterations_;
         boost::any parallelInformation_;
