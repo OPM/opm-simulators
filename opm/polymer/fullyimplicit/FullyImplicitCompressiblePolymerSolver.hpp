@@ -88,6 +88,9 @@ namespace Opm {
         int newtonIterations() const;
         int linearIterations() const;
 
+        /// Not used by this class except to satisfy interface requirements.
+        typedef parameter::ParameterGroup SolverParameters;
+
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
