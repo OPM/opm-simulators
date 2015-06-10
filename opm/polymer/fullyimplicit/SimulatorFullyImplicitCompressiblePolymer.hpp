@@ -79,6 +79,11 @@ namespace Opm
         typedef BlackoilOutputWriter OutputWriter;
         typedef GridT Grid;
         typedef FullyImplicitCompressiblePolymerSolver Solver;
+        /// Dummy class, this Solver does not use a Model.
+        struct Model
+        {
+            typedef parameter::ParameterGroup ModelParameters;
+        };
     };
 
     /// Class collecting all necessary components for a two-phase simulation.
