@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_POINT2DINTERSECTION_INCLUDED
-#define OPM_POINT2DINTERSECTION_INCLUDED
+#ifndef OPM_POINT2D_HEADER_INCLUDED
+#define OPM_POINT2D_HEADER_INCLUDED
 
 namespace Opm {
 
@@ -98,5 +98,5 @@ namespace Opm {
 
 } // namespace Opm
 
-#endif // OPM_POINT2DINTERSECTION_INCLUDED
+#endif // OPM_POINT2D_HEADER_INCLUDED
 
