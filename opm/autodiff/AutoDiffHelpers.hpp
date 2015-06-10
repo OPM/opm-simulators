@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -24,7 +25,8 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
-
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <iostream>
 #include <vector>
 
@@ -58,6 +60,109 @@ struct HelperOps
     /// Extract for each cell the sum of all its adjacent faces' (signed) values.
     M fulldiv;
 
+    /// Non-neighboring connections
+    typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
+    TwoColInt nnc_cells;
+
+    /// The NNC transmissibilities
+    V nnc_trans;
+
+    /// Constructs all helper vectors and matrices.
+    template<class Grid>
+    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState)
+    {
+        using namespace AutoDiffGrid;
+        const int nc = numCells(grid);
+        const int nf = numFaces(grid);
+        // Define some neighbourhood-derived helper arrays.
+
+        TwoColInt nbi;
+        extractInternalFaces(grid, internal_faces, nbi);
+        int num_internal=internal_faces.size();
+        // num_connections may also include non-neighboring connections
+        int num_connections = num_internal;
+        int numNNC = 0;
+
+        // handle non-neighboring connections
+        std::shared_ptr<const NNC> nnc = eclState->getNNC();
+        if (nnc->hasNNC()) {
+            numNNC = nnc->numNNC();
+            num_connections += numNNC;
+            //std::cout << "Added " << numNNC << " NNC" <<std::endl;
+            nbi.resize(num_internal, 2);
+
+            // the nnc's acts on global indicies and must be mapped to cell indicies
+            size_t cartesianSize = eclState->getEclipseGrid()->getCartesianSize();
+            std::vector<int> global2localIdx(cartesianSize,0);
+            for (int i = 0; i< nc; ++i) {
+                global2localIdx[grid.global_cell[i]] = i;
+            }
+            const std::vector<size_t>& NNC1 = nnc->nnc1();
+            const std::vector<size_t>& NNC2 = nnc->nnc2();
+            nnc_cells.resize(numNNC,2);
+            for (int i = 0; i < numNNC; ++i) {
+                nnc_cells(i,0) = global2localIdx[NNC1[i]];
+                nnc_cells(i,1) = global2localIdx[NNC2[i]];
+            }
+            // store the nnc transmissibilities for later usage.
+            nnc_trans = Eigen::Map<const V>(nnc->trans().data(), numNNC);
+        } else {
+            nnc_trans.resize(0);
+            nnc_cells.resize(0,0);
+        }
+
+
+        // std::cout << "nbi = \n" << nbi << std::endl;
+        // Create matrices.
+        ngrad.resize(num_connections, nc);
+        caver.resize(num_connections, nc);
+        typedef Eigen::Triplet<double> Tri;
+        std::vector<Tri> ngrad_tri;
+        std::vector<Tri> caver_tri;
+        ngrad_tri.reserve(2*num_connections);
+        caver_tri.reserve(2*num_connections);
+        for (int i = 0; i < num_internal; ++i) {
+            ngrad_tri.emplace_back(i, nbi(i,0), 1.0);
+            ngrad_tri.emplace_back(i, nbi(i,1), -1.0);
+            caver_tri.emplace_back(i, nbi(i,0), 0.5);
+            caver_tri.emplace_back(i, nbi(i,1), 0.5);
+        }
+        // add contribution from NNC
+        if (nnc->hasNNC()) {
+            for (int i = 0; i < numNNC; ++i) {
+                ngrad_tri.emplace_back(i+num_internal, nnc_cells(i,0), 1.0);
+                ngrad_tri.emplace_back(i+num_internal, nnc_cells(i,1), -1.0);
+                caver_tri.emplace_back(i+num_internal, nnc_cells(i,0), 0.5);
+                caver_tri.emplace_back(i+num_internal, nnc_cells(i,1), 0.5);
+            }
+        }
+        ngrad.setFromTriplets(ngrad_tri.begin(), ngrad_tri.end());
+        caver.setFromTriplets(caver_tri.begin(), caver_tri.end());
+        grad = -ngrad;
+        div = ngrad.transpose();
+
+        std::vector<Tri> fullngrad_tri;
+        fullngrad_tri.reserve(2*(nf+numNNC));
+        typename ADFaceCellTraits<Grid>::Type nb=faceCellsToEigen(grid);
+        for (int i = 0; i < nf; ++i) {
+            if (nb(i,0) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
+            }
+            if (nb(i,1) >= 0) {
+                fullngrad_tri.emplace_back(i, nb(i,1), -1.0);
+            }
+        }
+        // add contribution from NNC
+        if (nnc->hasNNC()) {
+            for (int i = 0; i < numNNC; ++i) {
+                fullngrad_tri.emplace_back(i+nf, nnc_cells(i,0), 1.0);
+                fullngrad_tri.emplace_back(i+nf, nnc_cells(i,1), -1.0);
+            }
+        }
+        fullngrad.resize(nf+numNNC, nc);
+        fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
+        fulldiv = fullngrad.transpose();
+    }
     /// Constructs all helper vectors and matrices.
     template<class Grid>
     HelperOps(const Grid& grid)
@@ -66,7 +171,7 @@ struct HelperOps
         const int nc = numCells(grid);
         const int nf = numFaces(grid);
         // Define some neighbourhood-derived helper arrays.
-        typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
+        //typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
         TwoColInt nbi;
         extractInternalFaces(grid, internal_faces, nbi);
         int num_internal=internal_faces.size();
@@ -127,11 +232,15 @@ struct HelperOps
             const IFIndex nif = h.internal_faces.size();
             typename ADFaceCellTraits<Grid>::Type
                 face_cells = faceCellsToEigen(g);
-            assert(nif == ifaceflux.size());
+
+            // num connections may possibly include NNCs
+            size_t num_nnc = h.nnc_trans.size();
+            size_t num_connections= nif + num_nnc;
+            assert(num_connections == ifaceflux.size());
 
             // Define selector structure.
             typedef typename Eigen::Triplet<Scalar> Triplet;
-            std::vector<Triplet> s;  s.reserve(nif);
+            std::vector<Triplet> s;  s.reserve(num_connections);
             for (IFIndex iface = 0; iface < nif; ++iface) {
                 const int f  = h.internal_faces[iface];
                 const int c1 = face_cells(f,0);
@@ -144,9 +253,15 @@ struct HelperOps
 
                 s.push_back(Triplet(iface, c, Scalar(1)));
             }
+            if (num_nnc>0) {
+                for (int i = 0; i<num_nnc; ++i) {
+                    const int c = (ifaceflux[i+nif] >= 0) ? h.nnc_cells(i,0) : h.nnc_cells(i,1);
+                    s.push_back(Triplet(i+nif,c,Scalar(1)));
+                }
+            }
 
             // Assemble explicit selector operator.
-            select_.resize(nif, numCells(g));
+            select_.resize(num_connections, numCells(g));
             select_.setFromTriplets(s.begin(), s.end());
         }
 

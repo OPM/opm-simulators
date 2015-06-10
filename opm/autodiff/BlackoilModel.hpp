@@ -55,6 +55,7 @@ namespace Opm {
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
+        /// \param[in] eclState         eclipse state
         /// \param[in] has_disgas       turn on dissolved gas
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] terminal_output  request output to cout/cerr
@@ -65,11 +66,12 @@ namespace Opm {
                       const RockCompressibility*              rock_comp_props,
                       const Wells*                            wells,
                       const NewtonIterationBlackoilInterface& linsolver,
+                      Opm::EclipseStateConstPtr               eclState,
                       const bool                              has_disgas,
                       const bool                              has_vapoil,
                       const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
-                   has_disgas, has_vapoil, terminal_output)
+                   eclState, has_disgas, has_vapoil, terminal_output)
         {
         }
     };

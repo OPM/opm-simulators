@@ -341,6 +341,7 @@ namespace Opm
                                                       rock_comp_props_,
                                                       wells,
                                                       solver_,
+                                                      eclipse_state_,
                                                       has_disgas_,
                                                       has_vapoil_,
                                                       terminal_output_));
