@@ -752,9 +752,10 @@ namespace Opm {
 
         // applying the shear-thinning to the water face
         if (has_plyshlog_) {
+            const int water_pos = pu.phase_pos[Water];
             V shear_mult_wells_v = Eigen::Map<V>(shear_mult_wells_.data(), shear_mult_wells_.size());
             ADB shear_mult_wells_adb = ADB::constant(shear_mult_wells_v);
-            mob_perfcells[0] = mob_perfcells[0] / shear_mult_wells_adb;
+            mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
 
 
@@ -901,7 +902,7 @@ namespace Opm {
 
         std::vector<double> b_faces;
 
-        const int phase = fluid_.phaseUsage().phase_pos[BlackoilPhases::Aqua]; // water position
+        const int phase = fluid_.phaseUsage().phase_pos[Water]; // water position
 
         const int canonicalPhaseIdx = canph_[phase];
 
@@ -1100,8 +1101,9 @@ namespace Opm {
         }
 
         water_vel_wells.resize(cq_s[0].size());
-        std::copy(&(cq_s[0].value()[0]), &(cq_s[0].value()[0]) + cq_s[0].size(), water_vel_wells.begin());
 
+        const int water_pos = pu.phase_pos[Water];
+        std::copy(&(cq_s[water_pos].value()[0]), &(cq_s[water_pos].value()[0]) + cq_s[water_pos].size(), water_vel_wells.begin());
 
         const V& polymer_conc = state.concentration.value();
 
