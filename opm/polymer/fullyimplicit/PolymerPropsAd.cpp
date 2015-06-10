@@ -317,4 +317,12 @@ namespace Opm {
         return krw / rk;
     }
 
+
+    bool
+    PolymerPropsAd::computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const
+    {
+        return polymer_props_.computeShearMultLog(water_vel, visc_mult, shear_mult);
+    }
+
+
 }// namespace Opm

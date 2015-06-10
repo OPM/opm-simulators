@@ -285,9 +285,6 @@ namespace Opm {
                              int nc,
                              int nw) const;
 
-        /// Computing the shear multiplier based on the water velocity/shear rate with PLYSHLOG keyword
-        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult);
-
         /// Computing the water velocity without shear-thinning for the cell faces.
         /// The water velocity will be used for shear-thinning calculation.
         void computeWaterShearVelocityFaces(const V& transi, const std::vector<ADB>& kr,
