@@ -294,14 +294,31 @@ namespace Opm {
         std::vector<V>
         variableStateInitials(const ReservoirState& x,
                               const WellState& xw) const;
+        void
+        variableReservoirStateInitials(const ReservoirState& x,
+                                       std::vector<V>& vars0) const;
+        void
+        variableWellStateInitials(const WellState& xw,
+                                  std::vector<V>& vars0) const;
 
         std::vector<int>
         variableStateIndices() const;
+
+        std::vector<int>
+        variableWellsStateIndices() const;
+
+        void
+        addWellContribution2MassBalanceEq(const std::vector<ADB>& cq_s);
 
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,
                                  std::vector<ADB>& vars) const;
+
+        void
+        variableStateExtractWellsVars(const std::vector<int>& indices,
+                                      std::vector<ADB>& vars,
+                                      SolutionState& state) const;
 
         void
         computeAccum(const SolutionState& state,
@@ -321,7 +338,8 @@ namespace Opm {
         void
         addWellEq(const SolutionState& state,
                   WellState& xw,
-                  V& aliveWells);
+                  V& aliveWells,
+                  std::vector<ADB>& cq_s);
 
         void
         extraAddWellEq(const SolutionState& state,
@@ -332,6 +350,9 @@ namespace Opm {
                        const std::vector<int>& well_cells);
 
         void updateWellControls(WellState& xw) const;
+
+        void updateWellState(const V& dx,
+                         WellState& well_state);
 
         std::vector<ADB>
         computePressures(const ADB& po,

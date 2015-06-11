@@ -356,10 +356,6 @@ namespace detail {
         }
     }
 
-
-
-
-
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
     BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
@@ -381,13 +377,23 @@ namespace detail {
     {
         assert(active_[ Oil ]);
 
-        using namespace Opm::AutoDiffGrid;
-        const int nc = numCells(grid_);
         const int np = x.numPhases();
 
         std::vector<V> vars0;
         // p, Sw and Rs, Rv or Sg is used as primary depending on solution conditions
+        // and bhp and Q for the wells
         vars0.reserve(np + 1);
+        variableReservoirStateInitials(x,vars0);
+        variableWellStateInitials(xw,vars0);
+        return vars0;
+    }
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::variableReservoirStateInitials(const ReservoirState& x, std::vector<V>& vars0) const
+    {
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
+        const int np = x.numPhases();
         // Initial pressure.
         assert (not x.pressure().empty());
         const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
@@ -413,14 +419,19 @@ namespace detail {
             xvar = isRs_*rs + isRv_*rv + isSg_*sg;
             vars0.push_back(xvar);
         }
+    }
 
-
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::variableWellStateInitials(const WellState&     xw, std::vector<V>& vars0) const
+    {
         // Initial well rates.
         if ( wellsActive() )
         {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
             const int nw = wells().number_of_wells;
+            const int np = wells().number_of_phases;
 
             // The transpose() below switches the ordering.
             const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
@@ -438,8 +449,6 @@ namespace detail {
             vars0.push_back(V());
             vars0.push_back(V());
         }
-
-        return vars0;
     }
 
 
@@ -465,10 +474,17 @@ namespace detail {
         assert(next == fluid_.numPhases() + 2);
         return indices;
     }
-
-
-
-
+    template <class Grid, class Implementation>
+    std::vector<int>
+    BlackoilModelBase<Grid, Implementation>::variableWellsStateIndices() const
+    {
+        std::vector<int> indices(2, -1);
+        int next = 0;
+        indices[0] = next++;
+        indices[1] = next++;
+        assert(next == 2);
+        return indices;
+    }
 
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
@@ -533,14 +549,21 @@ namespace detail {
                 state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
             }
         }
-
+        // wells
+        variableStateExtractWellsVars(indices,vars,state);
+        return state;
+    }
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::variableStateExtractWellsVars(const std::vector<int>& indices,
+                                                                          std::vector<ADB>& vars,
+                                                                          SolutionState& state) const
+    {
         // Qs.
         state.qs = std::move(vars[indices[Qs]]);
 
         // Bhp.
         state.bhp = std::move(vars[indices[Bhp]]);
-
-        return state;
     }
 
 
@@ -727,7 +750,11 @@ namespace detail {
 
         // -------- Well equations ----------
         V aliveWells;
-        asImpl().addWellEq(state, well_state, aliveWells);
+        const int np = wells().number_of_phases;
+        std::vector<ADB> cq_s(np, ADB::null());
+        asImpl().addWellEq(state, well_state, aliveWells,cq_s);
+        addWellContribution2MassBalanceEq(cq_s);
+
         addWellControlEq(state, well_state, aliveWells);
     }
 
@@ -787,12 +814,25 @@ namespace detail {
 
 
 
-
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::addWellContribution2MassBalanceEq(const std::vector<ADB>& cq_s)
+    {
+        // Add well contributions to mass balance equations
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        const int np = wells().number_of_phases;
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+        for (int phase = 0; phase < np; ++phase) {
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
+        }
+    }
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
                                                             WellState& xw,
-                                                            V& aliveWells)
+                                                            V& aliveWells,
+                                                            std::vector<ADB>& cq_s)
     {
         if( ! wellsActive() ) return ;
 
@@ -913,14 +953,9 @@ namespace detail {
         ADB cqt_is = cqt_i/volumeRatio;
 
         // connection phase volumerates at standard conditions
-        std::vector<ADB> cq_s(np, ADB::null());
+        //std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
-        }
-
-        // Add well contributions to mass balance equations
-        for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
         // WELL EQUATIONS
@@ -1285,6 +1320,10 @@ namespace detail {
         const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
         varstart += dxvar.size();
 
+        // Extract well parts np phase rates + bhp
+        const V dwells = subset(dx, Span((np+1)*nw, 1, varstart));
+        varstart += dwells.size();
+
         const V dqs = subset(dx, Span(np*nw, 1, varstart));
         varstart += dqs.size();
         const V dbhp = subset(dx, Span(nw, 1, varstart));
@@ -1476,8 +1515,34 @@ namespace detail {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
+
+        updateWellState(dwells,well_state);
+
+        // Update phase conditions used for property calculations.
+        updatePhaseCondFromPrimalVariable();
+    }
+
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dx,
+                                          WellState& well_state)
+    {
+
         if( wellsActive() )
         {
+        const int np = wells().number_of_phases;
+        const int nw = wellsActive() ? wells().number_of_wells : 0;
+
+        // Extract parts of dx corresponding to each part.
+        int varstart = 0;
+        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        varstart += dqs.size();
+        const V dbhp = subset(dx, Span(nw, 1, varstart));
+        varstart += dbhp.size();
+        assert(varstart == dx.size());
+
+        const double dpmaxrel = dpMaxRel();
+
+
             // Qs update.
             // Since we need to update the wellrates, that are ordered by wells,
             // from dqs which are ordered by phase, the simplest is to compute
@@ -1495,9 +1560,8 @@ namespace detail {
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
         }
 
-        // Update phase conditions used for property calculations.
-        updatePhaseCondFromPrimalVariable();
     }
+
 
 
 
