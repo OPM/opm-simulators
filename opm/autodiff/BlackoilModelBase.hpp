@@ -336,8 +336,16 @@ namespace Opm {
                          const V& aliveWells);
 
         void
+        solveWellEq(const std::vector<ADB>& mob_perfcells,
+                    const std::vector<ADB>& b_perfcells,
+                    SolutionState& state,
+                    WellState& well_state);
+
+        void
         addWellEq(const SolutionState& state,
                   WellState& xw,
+                  const std::vector<ADB>& mob_perfcells,
+                  const std::vector<ADB>& b_perfcells,
                   V& aliveWells,
                   std::vector<ADB>& cq_s);
 
@@ -353,6 +361,8 @@ namespace Opm {
 
         void updateWellState(const V& dx,
                          WellState& well_state);
+
+        bool getWellConvergence(const int iteration);
 
         std::vector<ADB>
         computePressures(const ADB& po,
