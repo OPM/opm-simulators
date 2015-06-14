@@ -319,7 +319,11 @@ public:
             /////////////
             // influence of grid on well
             auto &curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+            elemCtx.updateStencil(*dofVars.elementPtr);
+#else
             elemCtx.updateStencil(*(*dofVars.elementPtr));
+#endif
             curBlock = 0.0;
             for (int priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current

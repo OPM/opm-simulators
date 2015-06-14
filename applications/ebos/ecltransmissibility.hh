@@ -170,8 +170,8 @@ public:
                 const auto& inside = intersection.inside();
                 const auto& outside = intersection.outside();
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                int insideElemIdx = elementMapper.index(*inside);
-                int outsideElemIdx = elementMapper.index(*outside);
+                int insideElemIdx = elementMapper.index(inside);
+                int outsideElemIdx = elementMapper.index(outside);
 #else
                 int insideElemIdx = elementMapper.map(*inside);
                 int outsideElemIdx = elementMapper.map(*outside);
