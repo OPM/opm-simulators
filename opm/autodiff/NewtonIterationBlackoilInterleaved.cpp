@@ -390,11 +390,11 @@ namespace Opm
                 OPM_THROW(std::logic_error, "formInterleavedSystem() requires 3 phases.");
             }
 
+#if 1
             // A concession to MRST, to obtain more similar behaviour:
             // swap the first two equations, so that oil is first, then water.
             auto eqs = eqs_in;
             eqs[0].swap(eqs[1]);
-
             // Characterize the material balance equations.
             const int n = eqs[0].size();
             const double ratio_limit = 0.01;
@@ -465,6 +465,11 @@ namespace Opm
             // Create output as product of L with equations.
             A = L * total_residual.derivative()[0];
             b = L * total_residual.value().matrix();
+#else
+            ADB total_residual = vertcatCollapseJacs(eqs_in);
+            A = total_residual.derivative()[0];
+            b = total_residual.value().matrix();
+#endif
         }
 
     } // anonymous namespace
