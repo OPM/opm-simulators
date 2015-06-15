@@ -61,8 +61,8 @@ namespace Opm
     /// as a block-structured matrix (one block for all cell variables).
     class NewtonIterationBlackoilInterleaved : public NewtonIterationBlackoilInterface
     {
-        typedef Dune::FieldVector<double, 1   > VectorBlockType;
-        typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
+        typedef Dune::FieldVector<double, 3   > VectorBlockType;
+        typedef Dune::FieldMatrix<double, 3, 3> MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
         typedef Dune::BlockVector<VectorBlockType>        Vector;
 
