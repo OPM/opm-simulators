@@ -216,6 +216,13 @@ try
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     grid->processEclipseFormat(deck, false, false, false, porv);
 
+    // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
+    if (param.has("output_interval")) {
+        int output_interval = param.get<int>("output_interval");
+        IOConfigPtr ioConfig = eclipseState->getIOConfig();
+        ioConfig->overrideRestartWriteInterval((size_t)output_interval);
+    }
+
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::BlackoilOutputWriter outputWriter(*grid, param, eclipseState, pu );
 

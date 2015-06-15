@@ -176,6 +176,14 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+
+    // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
+    if (param.has("output_interval")) {
+        int output_interval = param.get<int>("output_interval");
+        IOConfigPtr ioConfig = eclipseState->getIOConfig();
+        ioConfig->overrideRestartWriteInterval((size_t)output_interval);
+    }
+
     Opm::BlackoilOutputWriter outputWriter(cGrid,
                                            param,
                                            eclipseState,
