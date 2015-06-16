@@ -187,6 +187,8 @@ namespace detail {
 
 
 
+
+
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::
@@ -199,6 +201,7 @@ namespace detail {
             updatePrimalVariableFromState(reservoir_state);
         }
     }
+
 
 
 
@@ -216,6 +219,7 @@ namespace detail {
 
 
 
+
     template <class Grid, class Implementation>
     int
     BlackoilModelBase<Grid, Implementation>::
@@ -223,6 +227,7 @@ namespace detail {
     {
         return residual_.sizeNonLinear();
     }
+
 
 
 
@@ -238,6 +243,7 @@ namespace detail {
 
 
 
+
     template <class Grid, class Implementation>
     bool
     BlackoilModelBase<Grid, Implementation>::
@@ -249,6 +255,7 @@ namespace detail {
 
 
 
+
     template <class Grid, class Implementation>
     int
     BlackoilModelBase<Grid, Implementation>::
@@ -256,6 +263,7 @@ namespace detail {
     {
         return fluid_.numPhases();
     }
+
 
 
 
@@ -277,6 +285,7 @@ namespace detail {
             threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
         }
     }
+
 
 
 
@@ -356,6 +365,10 @@ namespace detail {
         }
     }
 
+
+
+
+
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
     BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
@@ -387,6 +400,11 @@ namespace detail {
         variableWellStateInitials(xw,vars0);
         return vars0;
     }
+
+
+
+
+
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::variableReservoirStateInitials(const ReservoirState& x, std::vector<V>& vars0) const
@@ -420,6 +438,10 @@ namespace detail {
             vars0.push_back(xvar);
         }
     }
+
+
+
+
 
     template <class Grid, class Implementation>
     void
@@ -474,6 +496,10 @@ namespace detail {
         assert(next == fluid_.numPhases() + 2);
         return indices;
     }
+
+
+
+
     template <class Grid, class Implementation>
     std::vector<int>
     BlackoilModelBase<Grid, Implementation>::variableWellStateIndices() const
@@ -487,6 +513,10 @@ namespace detail {
         assert(next == 2);
         return indices;
     }
+
+
+
+
 
     template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
@@ -555,6 +585,11 @@ namespace detail {
         variableStateExtractWellsVars(indices,vars,state);
         return state;
     }
+
+
+
+
+
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::variableStateExtractWellsVars(const std::vector<int>& indices,
@@ -832,6 +867,8 @@ namespace detail {
 
 
 
+
+
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s)
@@ -846,6 +883,10 @@ namespace detail {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
     }
+
+
+
+
 
     template <class Grid, class Implementation>
     void
@@ -1095,6 +1136,7 @@ namespace detail {
 
 
 
+
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
@@ -1167,6 +1209,10 @@ namespace detail {
 
         }
     }
+
+
+
+
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::solveWellEq(const std::vector<ADB>& mob_perfcells,
@@ -1249,6 +1295,7 @@ namespace detail {
         }
 
     }
+
 
 
 
@@ -1616,6 +1663,10 @@ namespace detail {
         updatePhaseCondFromPrimalVariable();
     }
 
+
+
+
+
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dx,
                                           WellState& well_state)
@@ -1653,7 +1704,6 @@ namespace detail {
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
         }
     }
-
 
 
 
@@ -1810,6 +1860,7 @@ namespace detail {
 
 
 
+
     template <class Grid, class Implementation>
     std::vector<double>
     BlackoilModelBase<Grid, Implementation>::computeResidualNorms() const
@@ -1848,6 +1899,7 @@ namespace detail {
 
         return residualNorms;
     }
+
 
 
 
@@ -1932,6 +1984,7 @@ namespace detail {
             return geo_.poreVolume().sum();
         }
     }
+
 
 
 
@@ -2038,6 +2091,10 @@ namespace detail {
         return converged;
     }
 
+
+
+
+
     template <class Grid, class Implementation>
     bool
     BlackoilModelBase<Grid, Implementation>::getWellConvergence(const int iteration)
@@ -2110,6 +2167,7 @@ namespace detail {
         }
         return converged;
     }
+
 
 
 
@@ -2219,6 +2277,9 @@ namespace detail {
     }
 
 
+
+
+
     template <class Grid, class Implementation>
     V
     BlackoilModelBase<Grid, Implementation>::fluidRvSat(const V&                p,
@@ -2240,6 +2301,8 @@ namespace detail {
     {
         return fluid_.rvSat(p, satOil, cells);
     }
+
+
 
 
 
