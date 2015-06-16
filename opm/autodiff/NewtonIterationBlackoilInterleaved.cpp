@@ -1,5 +1,7 @@
 /*
   Copyright 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 NTNU
   Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
@@ -25,6 +27,8 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/core/utility/Exceptions.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
@@ -159,11 +163,30 @@ namespace Opm
         x = 0.0;
 
         Dune::InverseOperatorResult result;
-        // Construct operator, scalar product and vectors needed.
-        typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
-        Operator opA(istlA);
-        Dune::Amg::SequentialInformation info;
-        constructPreconditionerAndSolve(opA, x, istlb, info, result);
+// Parallel version is deactivated until we figure out how to do it properly.
+#if 0 // HAVE_MPI
+        if (parallelInformation_.type() == typeid(ParallelISTLInformation))
+        {
+            typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
+            Comm istlComm(info.communicator());
+            info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices(),
+                              size, np);
+            // Construct operator, scalar product and vectors needed.
+            typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
+            Operator opA(istlA, istlComm);
+            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, istlb, istlComm, result);
+        }
+        else
+#endif
+        {
+            // Construct operator, scalar product and vectors needed.
+            typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
+            Operator opA(istlA);
+            Dune::Amg::SequentialInformation info;
+            constructPreconditionerAndSolve(opA, x, istlb, info, result);
+        }
 
         // store number of iterations
         iterations_ = result.iterations;
