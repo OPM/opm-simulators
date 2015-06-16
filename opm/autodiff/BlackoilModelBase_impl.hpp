@@ -1675,17 +1675,17 @@ namespace detail {
 
         if( wellsActive() )
         {
-        const int np = wells().number_of_phases;
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
+            const int np = wells().number_of_phases;
+            const int nw = wellsActive() ? wells().number_of_wells : 0;
 
-        // Extract parts of dwells corresponding to each part.
-        int varstart = 0;
-        const V dqs = subset(dwells, Span(np*nw, 1, varstart));
-        varstart += dqs.size();
-        const V dbhp = subset(dwells, Span(nw, 1, varstart));
-        varstart += dbhp.size();
-        assert(varstart == dwells.size());
-        const double dpmaxrel = dpMaxRel();
+            // Extract parts of dwells corresponding to each part.
+            int varstart = 0;
+            const V dqs = subset(dwells, Span(np*nw, 1, varstart));
+            varstart += dqs.size();
+            const V dbhp = subset(dwells, Span(nw, 1, varstart));
+            varstart += dbhp.size();
+            assert(varstart == dwells.size());
+            const double dpmaxrel = dpMaxRel();
 
 
             // Qs update.
