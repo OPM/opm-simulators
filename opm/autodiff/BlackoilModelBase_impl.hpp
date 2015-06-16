@@ -1668,8 +1668,9 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dx,
-                                          WellState& well_state)
+    void
+    BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dwells,
+                                                             WellState& well_state)
     {
 
         if( wellsActive() )
@@ -1677,13 +1678,13 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wellsActive() ? wells().number_of_wells : 0;
 
-        // Extract parts of dx corresponding to each part.
+        // Extract parts of dwells corresponding to each part.
         int varstart = 0;
-        const V dqs = subset(dx, Span(np*nw, 1, varstart));
+        const V dqs = subset(dwells, Span(np*nw, 1, varstart));
         varstart += dqs.size();
-        const V dbhp = subset(dx, Span(nw, 1, varstart));
+        const V dbhp = subset(dwells, Span(nw, 1, varstart));
         varstart += dbhp.size();
-        assert(varstart == dx.size());
+        assert(varstart == dwells.size());
         const double dpmaxrel = dpMaxRel();
 
 

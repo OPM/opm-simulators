@@ -359,8 +359,8 @@ namespace Opm {
 
         void updateWellControls(WellState& xw) const;
 
-        void updateWellState(const V& dx,
-                         WellState& well_state);
+        void updateWellState(const V& dwells,
+                             WellState& well_state);
 
         bool getWellConvergence(const int iteration);
 
