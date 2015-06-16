@@ -1266,6 +1266,7 @@ namespace detail {
             const std::vector<M>& Jn = total_residual.derivative();
             const Eigen::SparseLU< M > solver(Jn[0]);
             const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
+            assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
             updateWellState(dx.array(), well_state);
             updateWellControls(well_state);
 
