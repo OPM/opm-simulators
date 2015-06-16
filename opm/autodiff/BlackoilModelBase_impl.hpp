@@ -1227,29 +1227,37 @@ namespace detail {
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
-
-        int          it  = 0;
-        std::vector<V> vars0;
-        //bhp and Q for the wells
-        vars0.reserve(2);
-        variableWellStateInitials(well_state, vars0);
-        std::vector<ADB> vars = ADB::variables(vars0);
         std::vector<int> indices = variableWellStateIndices();
         SolutionState state0 = state;
         asImpl().makeConstantState(state0);
-        SolutionState wellSolutionState = state0;
-        variableStateExtractWellsVars(indices, vars, wellSolutionState);
+
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
             b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
         }
-        asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells,cq_s);
-        addWellControlEq(wellSolutionState, well_state, aliveWells);
-        bool converged = getWellConvergence(it);
-        while ( (!converged && (it < 15))) {
 
+        int it  = 0;
+        bool converged;
+        do {
+            // bhp and Q for the wells
+            std::vector<V> vars0;
+            vars0.reserve(2);
+            variableWellStateInitials(well_state, vars0);
+            std::vector<ADB> vars = ADB::variables(vars0);
+
+            SolutionState wellSolutionState = state0;
+            variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            addWellControlEq(wellSolutionState, well_state, aliveWells);
+            converged = getWellConvergence(it);
+
+            if (converged) {
+                break;
+            }
+
+            ++it;
             std::vector<ADB> eqs;
             eqs.reserve(2);
             eqs.push_back(residual_.well_flux_eq);
@@ -1263,17 +1271,9 @@ namespace detail {
             std::copy_n(dx.data(), numeq, dx_V.data());
             updateWellState(dx_V, well_state);
             updateWellControls(well_state);
-            //bhp and Q for the wells
-            vars0.clear();
-            variableWellStateInitials(well_state, vars0);
-            vars = ADB::variables(vars0);
-            wellSolutionState = state0;
-            variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
-            addWellControlEq(wellSolutionState, well_state, aliveWells);
-            it++;
-            converged = getWellConvergence(it);
-        }
+
+        } while (it < 15);
+
         if (converged) {
             std::cout << "well converged iter: " << it << std::endl;
             const int nw = wells().number_of_wells;
