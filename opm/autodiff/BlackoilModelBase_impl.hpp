@@ -787,6 +787,10 @@ namespace detail {
 
         // -------- Well equations ----------
 
+        if ( ! wellsActive() ) {
+            return;
+        }
+
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
