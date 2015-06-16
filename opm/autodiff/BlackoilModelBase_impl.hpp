@@ -2064,7 +2064,7 @@ namespace detail {
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
             std::isnan(residualWell) || residualWell > maxResidualAllowed() )
         {
-            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or to large!");
+            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
         }
 
         if ( terminal_output_ )
@@ -2147,7 +2147,7 @@ namespace detail {
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() )
         {
-            OPM_THROW(Opm::NumericalProblem,"One of the well residuals is NaN or to large!");
+            OPM_THROW(Opm::NumericalProblem,"One of the well residuals is NaN or too large!");
         }
 
         if ( terminal_output_ )
