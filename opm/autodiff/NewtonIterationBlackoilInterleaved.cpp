@@ -164,7 +164,7 @@ namespace Opm
 
         Dune::InverseOperatorResult result;
 // Parallel version is deactivated until we figure out how to do it properly.
-#if 0 // HAVE_MPI
+#if HAVE_MPI
         if (parallelInformation_.type() == typeid(ParallelISTLInformation))
         {
             typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
