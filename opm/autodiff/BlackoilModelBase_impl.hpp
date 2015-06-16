@@ -476,7 +476,7 @@ namespace detail {
     }
     template <class Grid, class Implementation>
     std::vector<int>
-    BlackoilModelBase<Grid, Implementation>::variableWellsStateIndices() const
+    BlackoilModelBase<Grid, Implementation>::variableWellStateIndices() const
     {
         // Black oil model standard is 5 equation.
         // For the pure well solve, only the well equations are picked.
@@ -1183,7 +1183,7 @@ namespace detail {
         vars0.reserve(2);
         variableWellStateInitials(well_state,vars0);
         std::vector<ADB> vars = ADB::variables(vars0);
-        std::vector<int> indices = variableWellsStateIndices();
+        std::vector<int> indices = variableWellStateIndices();
         SolutionState state0 = state;
         asImpl().makeConstantState(state0);
         SolutionState wellSolutionState = state0;

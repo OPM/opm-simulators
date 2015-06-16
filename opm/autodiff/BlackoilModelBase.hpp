@@ -305,7 +305,7 @@ namespace Opm {
         variableStateIndices() const;
 
         std::vector<int>
-        variableWellsStateIndices() const;
+        variableWellStateIndices() const;
 
         void
         addWellContribution2MassBalanceEq(const std::vector<ADB>& cq_s);
