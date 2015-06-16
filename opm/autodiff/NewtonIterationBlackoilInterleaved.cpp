@@ -182,31 +182,13 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // // Write matrices to disk for analysis.
-        // const std::string eqnames[] = { "wat", "oil", "gas" };
-        // const std::string varnames[] = { "p", "sw", "x" };
-        // for (int p1 = 0; p1 < np; ++p1) {
-        //     for (int p2 = 0; p2 < np; ++p2) {
-        //         DuneMatrix m(eqs[p1].derivative()[p2]);
-        //         std::string filename = "mat-";
-        //         filename += eqnames[p1];
-        //         filename += "-";
-        //         filename += varnames[p2];
-        //         writeMatrixToMatlab(m, filename.c_str());
-        //     }
-        // }
-
-        // Find sparsity structure as union of basic block sparsity structures.
+        // Find sparsity structure as union of basic block sparsity structures,
+        // corresponding to the jacobians with respect to pressure.
         // Use addition to get to the union structure.
         Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
-        for (int p1 = 0; p1 < np; ++p1) {
-            for (int p2 = 0; p2 < np; ++p2) {
-                structure += eqs[p1].derivative()[p2];
-            }
+        for (int phase = 0; phase < np; ++phase) {
+            structure += eqs[phase].derivative()[0];
         }
-        // DuneMatrix ms(structure);
-        // writeMatrixToMatlab(ms, "structurematrix");
-        // Get row major form.
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
 
         // Form modified system.
