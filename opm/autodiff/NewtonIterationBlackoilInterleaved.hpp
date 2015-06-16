@@ -1,27 +1,5 @@
 /*
   Copyright 2015 SINTEF ICT, Applied Mathematics.
-
-  This file is part of the Open Porous Media project (OPM).
-
-  OPM is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  OPM is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
-#define OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
-
-/*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
   Copyright 2015 IRIS AS
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
@@ -43,14 +21,23 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/DuneMatrix.hpp>
+#ifndef OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
+#define OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
+
+
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/linalg/LinearSolverInterface.hpp>
+
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
-#include <dune/istl/bvector.hh>
+#include <dune/istl/preconditioners.hh>
+#include <dune/istl/solvers.hh>
+#include <dune/istl/paamg/amg.hh>
+
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+
 #include <memory>
 
 namespace Opm
