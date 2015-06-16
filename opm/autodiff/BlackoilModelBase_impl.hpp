@@ -805,7 +805,7 @@ namespace detail {
             mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
             b_perfcells[phase] = subset(rq_[phase].b, well_cells);
         }
-        if (param_.solve_wellEq_initially_ && initial_assembly) {
+        if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }

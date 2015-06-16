@@ -46,7 +46,7 @@ namespace Opm
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
         tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
-        solve_wellEq_initially_ = param.getDefault("solve_wellEq_initially",solve_wellEq_initially_);
+        solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
     }
 
 
@@ -62,7 +62,7 @@ namespace Opm
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 1.0e-3;
-        solve_wellEq_initially_ = false;
+        solve_welleq_initially_ = false;
     }
 
 

@@ -44,7 +44,7 @@ namespace Opm
         double tolerance_wells_;
 
         /// Solve well equation initially
-        bool solve_wellEq_initially_;
+        bool solve_welleq_initially_;
 
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const parameter::ParameterGroup& param );
