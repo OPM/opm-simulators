@@ -1469,10 +1469,6 @@ namespace detail {
         const V dwells = subset(dx, Span((np+1)*nw, 1, varstart));
         varstart += dwells.size();
 
-        const V dqs = subset(dx, Span(np*nw, 1, varstart));
-        varstart += dqs.size();
-        const V dbhp = subset(dx, Span(nw, 1, varstart));
-        varstart += dbhp.size();
         assert(varstart == dx.size());
 
         // Pressure update.
