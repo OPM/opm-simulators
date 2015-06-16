@@ -396,8 +396,8 @@ namespace detail {
         // p, Sw and Rs, Rv or Sg is used as primary depending on solution conditions
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
-        variableReservoirStateInitials(x,vars0);
-        variableWellStateInitials(xw,vars0);
+        variableReservoirStateInitials(x, vars0);
+        variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
@@ -582,7 +582,7 @@ namespace detail {
             }
         }
         // wells
-        variableStateExtractWellsVars(indices,vars,state);
+        variableStateExtractWellsVars(indices, vars, state);
         return state;
     }
 
@@ -798,15 +798,15 @@ namespace detail {
         std::vector<ADB> mob_perfcells(np, ADB::null());
         std::vector<ADB> b_perfcells(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob,well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b,well_cells);
+            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
+            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
         }
         if (param_.solve_wellEq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            solveWellEq(mob_perfcells,b_perfcells,state,well_state);
+            solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells,cq_s);
+        asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         addWellContributionToMassBalanceEq(cq_s);
         addWellControlEq(state, well_state, aliveWells);        
     }
@@ -880,7 +880,7 @@ namespace detail {
         const int np = wells().number_of_phases;
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
         }
     }
 
@@ -911,8 +911,8 @@ namespace detail {
         const V& cdp = well_perforation_pressure_diffs_;
         // Extract needed quantities for the perforation cells
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const ADB& rv_perfcells = subset(state.rv,well_cells);
-        const ADB& rs_perfcells = subset(state.rs,well_cells);
+        const ADB& rv_perfcells = subset(state.rv, well_cells);
+        const ADB& rs_perfcells = subset(state.rs, well_cells);
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
@@ -1228,13 +1228,13 @@ namespace detail {
         std::vector<V> vars0;
         //bhp and Q for the wells
         vars0.reserve(2);
-        variableWellStateInitials(well_state,vars0);
+        variableWellStateInitials(well_state, vars0);
         std::vector<ADB> vars = ADB::variables(vars0);
         std::vector<int> indices = variableWellStateIndices();
         SolutionState state0 = state;
         asImpl().makeConstantState(state0);
         SolutionState wellSolutionState = state0;
-        variableStateExtractWellsVars(indices,vars,wellSolutionState);
+        variableStateExtractWellsVars(indices, vars, wellSolutionState);
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
@@ -1256,16 +1256,16 @@ namespace detail {
             const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
             const int numeq = well_state.numWells()*(well_state.numPhases()+1);
             V dx_V = V(numeq);
-            std::copy_n(dx.data(),numeq, dx_V.data());
-            updateWellState(dx_V,well_state);
+            std::copy_n(dx.data(), numeq, dx_V.data());
+            updateWellState(dx_V, well_state);
             updateWellControls(well_state);
             //bhp and Q for the wells
             vars0.clear();
-            variableWellStateInitials(well_state,vars0);
+            variableWellStateInitials(well_state, vars0);
             vars = ADB::variables(vars0);
             wellSolutionState = state0;
-            variableStateExtractWellsVars(indices,vars,wellSolutionState);
-            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells,cq_s);
+            variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             addWellControlEq(wellSolutionState, well_state, aliveWells);
             it++;
             converged = getWellConvergence(it);
