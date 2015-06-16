@@ -308,7 +308,7 @@ namespace Opm {
         variableWellStateIndices() const;
 
         void
-        addWellContribution2MassBalanceEq(const std::vector<ADB>& cq_s);
+        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s);
 
         SolutionState
         variableStateExtractVars(const ReservoirState& x,

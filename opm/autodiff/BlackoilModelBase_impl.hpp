@@ -772,7 +772,7 @@ namespace detail {
         }
 
         asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells,cq_s);
-        addWellContribution2MassBalanceEq(cq_s);
+        addWellContributionToMassBalanceEq(cq_s);
         addWellControlEq(state, well_state, aliveWells);        
     }
 
@@ -833,7 +833,8 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::addWellContribution2MassBalanceEq(const std::vector<ADB>& cq_s)
+    void
+    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s)
     {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -847,13 +848,13 @@ namespace detail {
     }
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
-                                                            WellState& xw,
-                                                            const std::vector<ADB>& mob_perfcells,
-                                                            const std::vector<ADB>& b_perfcells,
-                                                            V& aliveWells,
-                                                            std::vector<ADB>& cq_s
-                                                            )
+    void
+    BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
+                                                       WellState& xw,
+                                                       const std::vector<ADB>& mob_perfcells,
+                                                       const std::vector<ADB>& b_perfcells,
+                                                       V& aliveWells,
+                                                       std::vector<ADB>& cq_s)
     {
         if( ! wellsActive() ) return ;
 
