@@ -127,6 +127,26 @@ namespace Opm
         std::vector<double>& perfPress() { return perfpress_; }
         const std::vector<double>& perfPress() const { return perfpress_; }
 
+        size_t getRestartBhpOffset() const {
+            return 0;
+        }
+
+        size_t getRestartPerfPressOffset() const {
+            return bhp_.size();
+        }
+
+        size_t getRestartPerfRatesOffset() const {
+            return getRestartPerfPressOffset() + perfpress_.size();
+        }
+
+        size_t getRestartTemperatureOffset() const {
+            return getRestartPerfRatesOffset() + perfrates_.size();
+        }
+
+        size_t getRestartWellRatesOffset() const {
+            return getRestartTemperatureOffset() + temperature_.size();
+        }
+
     private:
         std::vector<double> bhp_;
         std::vector<double> temperature_;
