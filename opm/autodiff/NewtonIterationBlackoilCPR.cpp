@@ -28,6 +28,7 @@
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/Units.hpp>
+#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #if HAVE_UMFPACK
