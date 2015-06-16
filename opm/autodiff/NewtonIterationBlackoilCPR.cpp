@@ -27,32 +27,15 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
-
-
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
-
-// #include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/io.hh>
-#include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/preconditioners.hh>
-#include <dune/istl/schwarz.hh>
-#include <dune/istl/solvers.hh>
-#include <dune/istl/paamg/amg.hh>
-#include <dune/istl/paamg/kamg.hh>
-#include <dune/istl/paamg/pinfo.hh>
-
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
 #else
 #include <Eigen/SparseLU>
 #endif
+
 
 namespace Opm
 {
@@ -61,8 +44,6 @@ namespace Opm
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
-    typedef Dune::FieldMatrix<double, 1, 1> MatrixBlockType;
-    typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
 
 
 
@@ -191,8 +172,7 @@ namespace Opm
         // Copy solver output to dx.
         std::copy(x.begin(), x.end(), dx.data());
 
-        if( hasWells )
-        {
+        if ( hasWells ) {
             // Compute full solution using the eliminated equations.
             // Recovery in inverse order of elimination.
             dx = recoverVariable(elim_eqs[1], dx, np);
