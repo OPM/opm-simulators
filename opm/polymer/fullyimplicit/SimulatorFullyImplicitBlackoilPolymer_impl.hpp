@@ -64,12 +64,9 @@ namespace Opm
         -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
-        typedef typename Model::ModelParameters ModelParams;
-        ModelParams modelParams( BaseType::param_ );
-        typedef NewtonSolver<Model> Solver;
 
 
-        auto model = std::unique_ptr<Model>(new Model(modelParams,
+        auto model = std::unique_ptr<Model>(new Model(BaseType::model_param_,
                                                       BaseType::grid_,
                                                       BaseType::props_,
                                                       BaseType::geo_,
