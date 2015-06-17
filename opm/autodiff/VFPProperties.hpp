@@ -70,29 +70,29 @@ namespace Opm {
 
         VFPProperties(int table_num,
             double datum_depth,
-			FLO_TYPE flo_type,
-			WFR_TYPE wfr_type,
-			GFR_TYPE gfr_type,
-			ALQ_TYPE alq_type,
-			const std::vector<double>& flo_data,
-			const std::vector<double>& thp_data,
-			const std::vector<double>& wfr_data,
-			const std::vector<double>& gfr_data,
-			const std::vector<double>& alq_data,
-			array_type data
-			) :
-				table_num_(table_num),
-				datum_depth_(datum_depth),
-				flo_type_(flo_type),
-				wfr_type_(wfr_type),
-				gfr_type_(gfr_type),
-				alq_type_(alq_type),
-				flo_data_(flo_data),
-				thp_data_(thp_data),
-				wfr_data_(wfr_data),
-				gfr_data_(gfr_data),
-				alq_data_(alq_data),
-				data_(data) {
+            FLO_TYPE flo_type,
+            WFR_TYPE wfr_type,
+            GFR_TYPE gfr_type,
+            ALQ_TYPE alq_type,
+            const std::vector<double>& flo_data,
+            const std::vector<double>& thp_data,
+            const std::vector<double>& wfr_data,
+            const std::vector<double>& gfr_data,
+            const std::vector<double>& alq_data,
+            array_type data
+            ) :
+                table_num_(table_num),
+                datum_depth_(datum_depth),
+                flo_type_(flo_type),
+                wfr_type_(wfr_type),
+                gfr_type_(gfr_type),
+                alq_type_(alq_type),
+                flo_data_(flo_data),
+                thp_data_(thp_data),
+                wfr_data_(wfr_data),
+                gfr_data_(gfr_data),
+                alq_data_(alq_data),
+                data_(data) {
 
         }
 
@@ -105,99 +105,99 @@ namespace Opm {
 
             //Rate type
             try {
-				std::string flo_string = header->getItem("RATE_TYPE")->getString(0);
-				if (flo_string == "OIL") {
-					flo_type_ = FLO_OIL;
-				}
-				else if (flo_string == "LIQ") {
-					flo_type_ = FLO_LIQ;
-				}
-				else if (flo_string == "GAS") {
-					flo_type_ = FLO_GAS;
-				}
-				else {
-					flo_type_ = FLO_INVALID;
-				}
+                std::string flo_string = header->getItem("RATE_TYPE")->getString(0);
+                if (flo_string == "OIL") {
+                    flo_type_ = FLO_OIL;
+                }
+                else if (flo_string == "LIQ") {
+                    flo_type_ = FLO_LIQ;
+                }
+                else if (flo_string == "GAS") {
+                    flo_type_ = FLO_GAS;
+                }
+                else {
+                    flo_type_ = FLO_INVALID;
+                }
             }
-			catch (std::invalid_argument& e) {
-				//TODO: log here
-				flo_type_ = FLO_INVALID;
-			}
+            catch (std::invalid_argument& e) {
+                //TODO: log here
+                flo_type_ = FLO_INVALID;
+            }
 
             //Water fraction
             try {
-				std::string wfr_string = header->getItem("WFR")->getString(0);
-				if (wfr_string == "WOR") {
-					wfr_type_ = WFR_WOR;
-				}
-				else if (wfr_string == "WCT") {
-					wfr_type_ = WFR_WCT;
-				}
-				else if (wfr_string == "WGR") {
-					wfr_type_ = WFR_WGR;
-				}
-				else {
-					wfr_type_ = WFR_INVALID;
-				}
+                std::string wfr_string = header->getItem("WFR")->getString(0);
+                if (wfr_string == "WOR") {
+                    wfr_type_ = WFR_WOR;
+                }
+                else if (wfr_string == "WCT") {
+                    wfr_type_ = WFR_WCT;
+                }
+                else if (wfr_string == "WGR") {
+                    wfr_type_ = WFR_WGR;
+                }
+                else {
+                    wfr_type_ = WFR_INVALID;
+                }
             }
-			catch (std::invalid_argument& e) {
-				//TODO: log here
-				wfr_type_ = WFR_INVALID;
-			}
+            catch (std::invalid_argument& e) {
+                //TODO: log here
+                wfr_type_ = WFR_INVALID;
+            }
 
             //Gas fraction
             try {
-				std::string gfr_string = header->getItem("GFR")->getString(0);
-				if (gfr_string == "GOR") {
-					gfr_type_ = GFR_GOR;
-				}
-				else if (gfr_string == "GLR") {
-					gfr_type_ = GFR_GLR;
-				}
-				else if (gfr_string == "OGR") {
-					gfr_type_ = GFR_OGR;
-				}
-				else {
-					gfr_type_ = GFR_INVALID;
-				}
+                std::string gfr_string = header->getItem("GFR")->getString(0);
+                if (gfr_string == "GOR") {
+                    gfr_type_ = GFR_GOR;
+                }
+                else if (gfr_string == "GLR") {
+                    gfr_type_ = GFR_GLR;
+                }
+                else if (gfr_string == "OGR") {
+                    gfr_type_ = GFR_OGR;
+                }
+                else {
+                    gfr_type_ = GFR_INVALID;
+                }
             }
             catch (std::invalid_argument& e) {
-            	//TODO: log here
-            	gfr_type_ = GFR_INVALID;
+                //TODO: log here
+                gfr_type_ = GFR_INVALID;
             }
 
             //Artificial lift
             try {
-				std::string alq_string = header->getItem("ALQ")->getString(0);
-				if (alq_string == "GRAT") {
-					alq_type_ = ALQ_GRAT;
-				}
-				else if (alq_string == "IGLR") {
-					alq_type_ = ALQ_IGLR;
-				}
-				else if (alq_string == "TGLR") {
-					alq_type_ = ALQ_TGLR;
-				}
-				else if (alq_string == "PUMP") {
-					alq_type_ = ALQ_PUMP;
-				}
-				else if (alq_string == "COMP") {
-					alq_type_ = ALQ_COMP;
-				}
-				else if (alq_string == "BEAN") {
-					alq_type_ = ALQ_BEAN;
-				}
-				else if (alq_string == "UNDEF") {
-					alq_type_ = ALQ_UNDEF;
-				}
-				else {
-					alq_type_ = ALQ_INVALID;
-				}
+                std::string alq_string = header->getItem("ALQ")->getString(0);
+                if (alq_string == "GRAT") {
+                    alq_type_ = ALQ_GRAT;
+                }
+                else if (alq_string == "IGLR") {
+                    alq_type_ = ALQ_IGLR;
+                }
+                else if (alq_string == "TGLR") {
+                    alq_type_ = ALQ_TGLR;
+                }
+                else if (alq_string == "PUMP") {
+                    alq_type_ = ALQ_PUMP;
+                }
+                else if (alq_string == "COMP") {
+                    alq_type_ = ALQ_COMP;
+                }
+                else if (alq_string == "BEAN") {
+                    alq_type_ = ALQ_BEAN;
+                }
+                else if (alq_string == "UNDEF") {
+                    alq_type_ = ALQ_UNDEF;
+                }
+                else {
+                    alq_type_ = ALQ_INVALID;
+                }
             }
-			catch (std::invalid_argument& e) {
-            	//TODO: log here
-				alq_type_ = ALQ_INVALID;
-			}
+            catch (std::invalid_argument& e) {
+                //TODO: log here
+                alq_type_ = ALQ_INVALID;
+            }
 
             //Get actual rate / flow values
             flo_data_ = (*iter++)->getItem("FLOW_VALUES")->getRawDoubleData();
@@ -304,8 +304,8 @@ namespace Opm {
             //Find interpolation ratio
             double dist = (*ceil_iter - *floor_iter);
             if (dist > 0) {
-            	//Possible source for floating point error here if value and floor are large,
-            	//but very close to each other
+                //Possible source for floating point error here if value and floor are large,
+                //but very close to each other
                 retval.factor_ = (value-*floor_iter) / dist;
             }
             else {
@@ -319,7 +319,7 @@ namespace Opm {
                 const InterpData& wfr_i, const InterpData& gfr_i, const InterpData& alq_i) {
             //extents shape({{2, 2, 2, 2, 2}});
             //array_type nn(shape);
-        	double nn[2][2][2][2][2];
+            double nn[2][2][2][2][2];
 
             //Pick out nearest neighbors (nn) to our evaluation point
             //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
