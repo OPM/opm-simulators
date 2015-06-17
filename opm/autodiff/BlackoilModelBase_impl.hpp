@@ -903,7 +903,6 @@ namespace detail {
     {
         if( ! wellsActive() ) return ;
 
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
@@ -1010,7 +1009,6 @@ namespace detail {
         ADB cqt_is = cqt_i/volumeRatio;
 
         // connection phase volumerates at standard conditions
-        //std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
         }
@@ -2124,8 +2122,8 @@ namespace detail {
                 tempV.col(idx)   = R.col(idx).abs()/pv;
             }
         }
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
-                                                  maxNormWell, nc, nw);
+
+        convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc, nw);
 
         bool converged_Well = true;
         // Finish computation
