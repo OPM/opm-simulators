@@ -35,8 +35,8 @@
 #include <dune/common/mpihelper.hh>
 #endif
 
-#if HAVE_DUNE_CORNERPOINT && defined(WANT_DUNE_CORNERPOINTGRID)
-#define USE_DUNE_CORNERPOINTGRID
+#if HAVE_DUNE_CORNERPOINT && WANT_DUNE_CORNERPOINTGRID
+#define USE_DUNE_CORNERPOINTGRID 1
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/common/GridAdapter.hpp>
 #else
@@ -119,7 +119,7 @@ main(int argc, char** argv)
 try
 {
     using namespace Opm;
-#ifdef USE_DUNE_CORNERPOINTGRID
+#if USE_DUNE_CORNERPOINTGRID
     // Must ensure an instance of the helper is created to initialise MPI.
     const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
     const int mpi_rank = mpi_helper.rank();
@@ -229,7 +229,7 @@ try
     }
 
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-#ifdef USE_DUNE_CORNERPOINTGRID
+#if USE_DUNE_CORNERPOINTGRID
     // Dune::CpGrid as grid manager
     typedef Dune::CpGrid  Grid;
     std::shared_ptr<Grid> gridPtr;
