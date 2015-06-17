@@ -153,7 +153,7 @@ namespace Opm
             auto solver = asImpl().createSolver(wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
-            // in case the report steps are to large for the solver to converge
+            // in case the report steps are too large for the solver to converge
             //
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
