@@ -284,26 +284,26 @@ namespace Opm {
             InterpData retval;
 
             //First element greater than or equal to value
+            //Start with the second element, so that floor_iter does not go out of range
             //Don't access out-of-range, therefore values.end()-1
-            auto ceil_iter = std::lower_bound(values.begin(), values.end()-1, value);
+            auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, value);
 
-            //Find last element smaller than or equal to range
-            auto floor_iter = ceil_iter;
-            if (*floor_iter == value) {
-                // floor_iter == ceil_iter == value
-            }
-            else if (floor_iter > values.begin()) {
-                // floor_iter <= value <= ceil_iter
-                --floor_iter;
-            }
+            //Find last element smaller than range
+            auto floor_iter = ceil_iter-1;
 
-            //Now set these in the retval struct
-            retval.ind_[0] = floor_iter - values.begin();
-            retval.ind_[1] = ceil_iter - values.begin();
+            //Find the indices
+            int a = floor_iter - values.begin();
+            int b = ceil_iter - values.begin();
+            int max_size = static_cast<int>(values.size())-1;
+
+            //Clamp indices to range of vector
+            retval.ind_[0] = a;
+            retval.ind_[1] = std::min(b, max_size);
 
             //Find interpolation ratio
             double dist = (*ceil_iter - *floor_iter);
-            if (dist > 0) {
+            assert(dist >= 0.0);
+            if (dist > 0.0) {
                 //Possible source for floating point error here if value and floor are large,
                 //but very close to each other
                 retval.factor_ = (value-*floor_iter) / dist;
@@ -315,14 +315,15 @@ namespace Opm {
             return retval;
         }
 
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-loops")
         double interpolate(const InterpData& flo_i, const InterpData& thp_i,
                 const InterpData& wfr_i, const InterpData& gfr_i, const InterpData& alq_i) {
-            //extents shape({{2, 2, 2, 2, 2}});
-            //array_type nn(shape);
             double nn[2][2][2][2][2];
 
             //Pick out nearest neighbors (nn) to our evaluation point
             //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
+            //If needed, this can be manually unrolled
             //This is not really required, but performance-wise it may pay off, since the 32-elements
             //we copy to (nn) will fit better in cache than the full original table for the
             //interpolation below.
@@ -332,11 +333,11 @@ namespace Opm {
                         for (int a=0; a<=1; ++a) {
                             for (int f=0; f<=1; ++f) {
                                 //Shorthands for indexing
-                                int ti = thp_i.ind_[t];
-                                int wi = wfr_i.ind_[w];
-                                int gi = gfr_i.ind_[g];
-                                int ai = alq_i.ind_[a];
-                                int fi = flo_i.ind_[f];
+                                const int ti = thp_i.ind_[t];
+                                const int wi = wfr_i.ind_[w];
+                                const int gi = gfr_i.ind_[g];
+                                const int ai = alq_i.ind_[a];
+                                const int fi = flo_i.ind_[f];
 
                                 //Copy element
                                 nn[t][w][g][a][f] = data_[ti][wi][gi][ai][fi];
@@ -385,6 +386,7 @@ namespace Opm {
             tf = thp_i.factor_;
             return (1.0-tf)*nn[0][0][0][0][0] + tf*nn[1][0][0][0][0];
         }
+#pragma GCC pop_options //unroll loops
 
         //"Header" variables
         int table_num_;

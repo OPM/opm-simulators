@@ -288,6 +288,101 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
 
 
 
+/**
+ * Test that we can generate some dummy one-data, and
+ * interpolate something the analytic solution
+ */
+BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
+{
+    //All of our axes go from 0 to 1
+    const std::vector<double>& thp_axis{0.0, 1.0};
+    const std::vector<double>& wfr_axis{0.0, 0.5, 1.0};
+    const std::vector<double>& gfr_axis{0.0, 0.25, 0.5, 0.75, 1};
+    const std::vector<double>& alq_axis{0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1};
+    const std::vector<double>& flo_axis{0.0, 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375,
+                                         0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.9375, 1};
+
+    int nx = static_cast<int>(thp_axis.size());
+    int ny = static_cast<int>(wfr_axis.size());
+    int nz = static_cast<int>(gfr_axis.size());
+    int nu = static_cast<int>(alq_axis.size());
+    int nv = static_cast<int>(flo_axis.size());
+
+    //Allocate data and fill with trivial data (zeros)
+    Opm::VFPProperties::extents size = {{ nx, ny, nz, nu, nv }};
+    Opm::VFPProperties::array_type data(size);
+    for (int i=0; i<nx; ++i) {
+        double x = i / static_cast<double>(nx-1);
+        for (int j=0; j<ny; ++j) {
+            double y = j / static_cast<double>(ny-1);
+            for (int k=0; k<nz; ++k) {
+                double z = k / static_cast<double>(nz-1);
+                for (int l=0; l<nu; ++l) {
+                    double u = l / static_cast<double>(nu-1);
+                    for (int m=0; m<nv; ++m) {
+                        double v = m / static_cast<double>(nv-1);
+
+                        data[i][j][k][l][m] = x + 2*y + 3*z + 4*u + 5*v;
+                    }
+                }
+            }
+        }
+    }
+
+    //Create table
+    Opm::VFPProperties table(1,
+            1000.0,
+            Opm::VFPProperties::FLO_OIL,
+            Opm::VFPProperties::WFR_WOR,
+            Opm::VFPProperties::GFR_GOR,
+            Opm::VFPProperties::ALQ_UNDEF,
+            flo_axis,
+            thp_axis,
+            wfr_axis,
+            gfr_axis,
+            alq_axis,
+            data);
+
+    //Check linear extrapolation (i.e., using values of x, y, etc. outside our interpolant domain)
+    double sum = 0.0;
+    double reference_sum = 0.0;
+    double sad = 0.0; // Sum absolute difference
+    double max_d = 0.0; // Maximum difference
+    int n=1;
+    for (int i=-5; i<=n+5; ++i) {
+        const double x = i / static_cast<double>(n);
+        for (int j=-5; j<=n+5; ++j) {
+            const double y = j / static_cast<double>(n);
+            for (int k=-5; k<=n+5; ++k) {
+                const double z = k / static_cast<double>(n);
+                for (int l=-5; l<=n+5; ++l) {
+                    const double u = l / static_cast<double>(n);
+                    for (int m=-5; m<=n+5; ++m) {
+                        const double v = m / static_cast<double>(n);
+                        double reference = x + 2*y + 3*z + 4*u + 5*v;
+                        reference_sum += reference;
+
+                        //Note order of arguments!
+                        double value = table.bhp(v, x, y, z, u);
+                        sum += value;
+
+                        double abs_diff = std::abs(value - reference);
+
+                        sad += std::abs(abs_diff);
+                        max_d = std::max(max_d, abs_diff);
+                    }
+                }
+            }
+        }
+    }
+
+    BOOST_CHECK_CLOSE(sum, reference_sum, 0.0001);
+    BOOST_CHECK_SMALL(max_d, 0.0005);
+    BOOST_CHECK_SMALL(sad, 0.1);
+}
+
+
+
 
 /**
  * Tests that we can actually parse some input data, and interpolate within that space
