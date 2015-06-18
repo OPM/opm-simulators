@@ -571,7 +571,29 @@ namespace Opm {
         assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
+        if ( ! wellsActive() ) {
+            return;
+        }
+
         V aliveWells;
+
+        const int np = wells().number_of_phases;
+        std::vector<ADB> cq_s(np, ADB::null());
+
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+
+        std::vector<ADB> mob_perfcells(np, ADB::null());
+        std::vector<ADB> b_perfcells(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
+            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
+        }
+        if (param_.solve_welleq_initially_ && initial_assembly) {
+            // solve the well equations as a pre-processing step
+            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        }
 
         if (has_plyshlog_) {
             std::vector<double> water_vel_wells;
@@ -594,7 +616,9 @@ namespace Opm {
             mob_perfcells = subset(rq_[0].mob,well_cells); */
         }
 
-        addWellEq(state, well_state, aliveWells);
+        // addWellEq(state, well_state, aliveWells);
+        addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s, false);
+        addWellContributionToMassBalanceEq(state, well_state, cq_s);
         addWellControlEq(state, well_state, aliveWells);
     }
 
@@ -725,12 +749,15 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::addWellEq(const SolutionState& state,
-                                                            WellState& xw,
-                                                            V& aliveWells)
+                                          WellState& xw,
+                                          std::vector<ADB>& mob_perfcells,
+                                          const std::vector<ADB>& b_perfcells,
+                                          V& aliveWells,
+                                          std::vector<ADB>& cq_s,
+                                          const bool welleq_initial)
     {
         if( ! wellsActive() ) return ;
 
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
@@ -740,26 +767,18 @@ namespace Opm {
 
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = well_perforation_pressure_diffs_;
-
         // Extract needed quantities for the perforation cells
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const ADB& rv_perfcells = subset(state.rv,well_cells);
-        const ADB& rs_perfcells = subset(state.rs,well_cells);
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob,well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b,well_cells);
-        }
+        const ADB& rv_perfcells = subset(state.rv, well_cells);
+        const ADB& rs_perfcells = subset(state.rs, well_cells);
 
         // applying the shear-thinning to the water face
-        if (has_plyshlog_) {
+        if (has_plyshlog_ && (!welleq_initial)) {
             const int water_pos = pu.phase_pos[Water];
             V shear_mult_wells_v = Eigen::Map<V>(shear_mult_wells_.data(), shear_mult_wells_.size());
             ADB shear_mult_wells_adb = ADB::constant(shear_mult_wells_v);
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
-
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
@@ -784,7 +803,6 @@ namespace Opm {
         }   
 
         // HANDLE FLOW INTO WELLBORE
-
         // compute phase volumetric rates at standard conditions
         std::vector<ADB> cq_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
@@ -801,7 +819,6 @@ namespace Opm {
         }
 
         // HANDLE FLOW OUT FROM WELLBORE
-
         // Using total mobilities
         ADB total_mob = mob_perfcells[0];
         for (int phase = 1; phase < np; ++phase) {
@@ -826,7 +843,6 @@ namespace Opm {
             wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s,ADB::constant(V::Zero(nw))))  - q_ps;
             wbqt += wbq[phase];
         }
-
         // compute wellbore mixture at standard conditions.
         Selector<double> notDeadWells_selector(wbqt.value(), Selector<double>::Zero);
         std::vector<ADB> cmix_s(np, ADB::null());
@@ -856,14 +872,8 @@ namespace Opm {
         ADB cqt_is = cqt_i/volumeRatio;
 
         // connection phase volumerates at standard conditions
-        std::vector<ADB> cq_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
-        }
-
-        // Add well contributions to mass balance equations
-        for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase],well_cells,nc);
         }
 
         // WELL EQUATIONS
@@ -892,6 +902,7 @@ namespace Opm {
 
         residual_.well_flux_eq = qs;
     }
+
 
     template<class Grid>
     void

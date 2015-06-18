@@ -229,7 +229,11 @@ namespace Opm {
         void
         addWellEq(const SolutionState& state,
                   WellState& xw,
-                  V& aliveWells);
+                  std::vector<ADB>& mob_perfcells,
+                  const std::vector<ADB>& b_perfcells,
+                  V& aliveWells,
+                  std::vector<ADB>& cq_s,
+                  const bool welleq_initial);
 
         void
         addWellContributionToMassBalanceEq(const SolutionState& state,
