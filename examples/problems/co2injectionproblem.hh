@@ -54,15 +54,15 @@
 #include <string>
 
 namespace Ewoms {
+//! \cond SKIP_THIS
 template <class TypeTag>
 class Co2InjectionProblem;
 
 namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
 }
-} // namespace Ewoms
+//! \endcond
 
-namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
