@@ -86,9 +86,7 @@ namespace Opm
             model->setThresholdPressures(BaseType::threshold_pressures_by_face_);
         }
 
-        typedef typename Solver::SolverParameters SolverParams;
-        SolverParams solverParams( BaseType::param_ );
-        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
+        return std::unique_ptr<Solver>(new Solver(BaseType::solver_param_, std::move(model)));
     }
 
 
