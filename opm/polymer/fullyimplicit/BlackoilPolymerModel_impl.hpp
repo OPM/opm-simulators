@@ -337,23 +337,25 @@ namespace Opm {
 
 
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::extraAddWellEq(const SolutionState& state,
-                                                    const WellState& xw,
-                                                    const std::vector<ADB>& cq_ps,
-                                                    const std::vector<ADB>& cmix_s,
-                                                    const ADB& cqt_is,
-                                                    const std::vector<int>& well_cells)
+    void BlackoilPolymerModel<Grid>::addWellContributionToMassBalanceEq(const SolutionState& state,
+                                                                        const WellState& xw,
+                                                                        const std::vector<ADB>& cq_s)
     {
+        Base::addWellContributionToMassBalanceEq(state, xw, cq_s);
+
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
             const ADB mc = computeMc(state);
             const int nc = xw.polymerInflow().size();
             const V polyin = Eigen::Map<const V>(xw.polymerInflow().data(), nc);
+            const int nperf = wells().well_connpos[wells().number_of_wells];
+            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
             const V poly_in_perf = subset(polyin, well_cells);
-            const V poly_mc_perf = subset(mc, well_cells).value();
-            const PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB cq_s_poly = cq_ps[pu.phase_pos[Water]] * poly_mc_perf
-                + cmix_s[pu.phase_pos[Water]] * cqt_is * poly_in_perf;
+            const V poly_mc_perf = subset(mc.value(), well_cells);
+            const ADB& cq_s_water = cq_s[fluid_.phaseUsage().phase_pos[Water]];
+            Selector<double> injector_selector(cq_s_water.value());
+            const V poly_perf = injector_selector.select(poly_in_perf, poly_mc_perf);
+            const ADB cq_s_poly =  cq_s_water * poly_perf;
             residual_.material_balance_eq[poly_pos_] -= superset(cq_s_poly, well_cells, nc);
         }
     }
@@ -889,8 +891,6 @@ namespace Opm {
         xw.perfPhaseRates() = cq_d;
 
         residual_.well_flux_eq = qs;
-
-        extraAddWellEq(state, xw, cq_ps, cmix_s, cqt_is, well_cells);
     }
 
     template<class Grid>
