@@ -811,7 +811,7 @@ namespace detail {
         }
 
         asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        addWellContributionToMassBalanceEq(cq_s);
+        asImpl().addWellContributionToMassBalanceEq(state, well_state, cq_s);
         addWellControlEq(state, well_state, aliveWells);        
     }
 
@@ -875,7 +875,9 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s)
+    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const SolutionState&,
+                                                                                const WellState&,
+                                                                                const std::vector<ADB>& cq_s)
     {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -1038,23 +1040,6 @@ namespace detail {
         xw.perfPhaseRates() = cq_d;
 
         residual_.well_flux_eq = qs;
-
-        asImpl().extraAddWellEq(state, xw, cq_ps, cmix_s, cqt_is, well_cells);
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::extraAddWellEq(const SolutionState& /* state */,
-                                                                 const WellState& /* xw */,
-                                                                 const std::vector<ADB>& /* cq_ps */,
-                                                                 const std::vector<ADB>& /* cmix_s */,
-                                                                 const ADB& /* cqt_is */,
-                                                                 const std::vector<int>& /* well_cells */)
-    {
-        // Does nothing in this model.
     }
 
 
