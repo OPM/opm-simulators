@@ -177,10 +177,6 @@ try
         return EXIT_FAILURE;
     }
 
-    std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
-    std::shared_ptr<RockCompressibility> rock_comp;
-    BlackoilState state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
@@ -232,17 +228,14 @@ try
 #if USE_DUNE_CORNERPOINTGRID
     // Dune::CpGrid as grid manager
     typedef Dune::CpGrid  Grid;
-    std::shared_ptr<Grid> gridPtr;
     // Grid init
-    gridPtr.reset(new Grid);
-    Grid& grid = *gridPtr;
+    Grid grid;
     grid.processEclipseFormat(deck, false, false, false, porv);
 #else
     // UnstructuredGrid as grid manager
     typedef UnstructuredGrid  Grid;
-    std::shared_ptr<GridManager> gridManager;
-    gridManager.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
-    const Grid& grid = *(gridManager->c_grid());
+    GridManager gridManager( eclipseState->getEclipseGrid(), porv );
+    const Grid& grid = *(gridManager.c_grid());
 #endif
 
     // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
@@ -256,21 +249,24 @@ try
     Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState,
-                                               Opm::UgGridHelpers::numCells(grid),
-                                               Opm::UgGridHelpers::globalCell(grid),
-                                               Opm::UgGridHelpers::cartDims(grid),
-                                               Opm::UgGridHelpers::beginCellCentroids(grid),
-                                               Opm::UgGridHelpers::dimensions(grid), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, grid));
+    BlackoilPropertiesFromDeck props( deck, eclipseState,
+                                      Opm::UgGridHelpers::numCells(grid),
+                                      Opm::UgGridHelpers::globalCell(grid),
+                                      Opm::UgGridHelpers::cartDims(grid),
+                                      Opm::UgGridHelpers::beginCellCentroids(grid),
+                                      Opm::UgGridHelpers::dimensions(grid), param);
+
+    BlackoilPropsAdFromDeck new_props( deck, eclipseState, grid );
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(deck, eclipseState));
+
+    RockCompressibility rock_comp(deck, eclipseState);
 
     // Gravity.
     gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
+    BlackoilState state;
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(Opm::UgGridHelpers::numCells(grid),
@@ -281,25 +277,25 @@ try
                        Opm::UgGridHelpers::beginFaceCentroids(grid),
                        Opm::UgGridHelpers::beginCellCentroids(grid),
                        Opm::UgGridHelpers::dimensions(grid),
-                       *props, param, gravity[2], state);
+                       props, param, gravity[2], state);
 
-        initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), *props, state);
+        initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state);
 
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
-            const int numPhases = props->numPhases();
+            const int numPhases = props.numPhases();
             const int numCells  = Opm::UgGridHelpers::numCells(grid);
             for (int c = 0; c < numCells; ++c) {
                 state.gasoilratio()[c] = state.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
                     / state.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
             }
         }
-    } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
+    } else if (deck->hasKeyword("EQUIL") && props.numPhases() == 3) {
         state.init(Opm::UgGridHelpers::numCells(grid),
                    Opm::UgGridHelpers::numFaces(grid),
-                   props->numPhases());
+                   props.numPhases());
         const double grav = param.getDefault("gravity", unit::gravity);
-        initStateEquil(grid, *props, deck, eclipseState, grav, state);
+        initStateEquil(grid, props, deck, eclipseState, grav, state);
         state.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
     } else {
         initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
@@ -309,7 +305,7 @@ try
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
                                   Opm::UgGridHelpers::beginCellCentroids(grid),
                                   Opm::UgGridHelpers::dimensions(grid),
-                                  *props, deck, gravity[2], state);
+                                  props, deck, gravity[2], state);
     }
 
 
@@ -319,8 +315,8 @@ try
         std::vector<int> cells(numCells);
         for (int c = 0; c < numCells; ++c) { cells[c] = c; }
         std::vector<double> pc = state.saturation();
-        props->capPress(numCells, state.saturation().data(), cells.data(), pc.data(),NULL);
-        new_props->setSwatInitScaling(state.saturation(),pc);
+        props.capPress(numCells, state.saturation().data(), cells.data(), pc.data(),NULL);
+        new_props.setSwatInitScaling(state.saturation(),pc);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -328,8 +324,7 @@ try
 
     const bool use_local_perm = param.getDefault("use_local_perm", true);
 
-    std::shared_ptr<DerivedGeology> geoprops;
-    geoprops.reset(new Opm::DerivedGeology(grid, *new_props, eclipseState, use_local_perm, grav));
+    DerivedGeology geoprops(grid, new_props, eclipseState, use_local_perm, grav);
     boost::any parallel_information;
 
     // At this point all properties and state variables are correctly initialized
@@ -345,7 +340,7 @@ try
         	return EXIT_FAILURE;
         }
 
-        Opm::distributeGridAndData( grid, eclipseState, state, *new_props, *geoprops, parallel_information, use_local_perm );
+        Opm::distributeGridAndData( grid, eclipseState, state, new_props, geoprops, parallel_information, use_local_perm );
     }
 
     // Solver for Newton iterations.
@@ -367,9 +362,9 @@ try
 
     SimulatorFullyImplicitBlackoil< Grid >  simulator(param,
                                                       grid,
-                                                      *geoprops,
-                                                      *new_props,
-                                                      rock_comp->isActive() ? rock_comp.get() : 0,
+                                                      geoprops,
+                                                      new_props,
+                                                      rock_comp.isActive() ? &rock_comp : 0,
                                                       *fis_solver,
                                                       grav,
                                                       deck->hasKeyword("DISGAS"),
