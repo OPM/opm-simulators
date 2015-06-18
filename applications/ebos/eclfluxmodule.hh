@@ -49,7 +49,7 @@ template <class TypeTag>
 class EclTransBaseProblem;
 
 /*!
- * \ingroup EclTransmissibility
+ * \ingroup EclBlackOilSimulator
  * \brief Specifies a flux module which uses ECL transmissibilities.
  */
 template <class TypeTag>
@@ -67,7 +67,7 @@ struct EclTransFluxModule
 };
 
 /*!
- * \ingroup EclTransmissibility
+ * \ingroup EclBlackOilSimulator
  * \brief Provides the defaults for the parameters required by the
  *        transmissibility based volume flux calculation.
  */
@@ -76,7 +76,7 @@ class EclTransBaseProblem
 { };
 
 /*!
- * \ingroup EclTransmissibility
+ * \ingroup EclBlackOilSimulator
  * \brief Provides the intensive quantities for the ECL flux module
  */
 template <class TypeTag>
@@ -89,7 +89,7 @@ protected:
 };
 
 /*!
- * \ingroup EclTransmissibility
+ * \ingroup EclBlackOilSimulator
  * \brief Provides the ECL flux module
  */
 template <class TypeTag>
