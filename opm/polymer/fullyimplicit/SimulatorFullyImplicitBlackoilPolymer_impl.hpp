@@ -64,12 +64,9 @@ namespace Opm
         -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
-        typedef typename Model::ModelParameters ModelParams;
-        ModelParams modelParams( BaseType::param_ );
-        typedef NewtonSolver<Model> Solver;
 
 
-        auto model = std::unique_ptr<Model>(new Model(modelParams,
+        auto model = std::unique_ptr<Model>(new Model(BaseType::model_param_,
                                                       BaseType::grid_,
                                                       BaseType::props_,
                                                       BaseType::geo_,
@@ -89,9 +86,7 @@ namespace Opm
             model->setThresholdPressures(BaseType::threshold_pressures_by_face_);
         }
 
-        typedef typename Solver::SolverParameters SolverParams;
-        SolverParams solverParams( BaseType::param_ );
-        return std::unique_ptr<Solver>(new Solver(solverParams, std::move(model)));
+        return std::unique_ptr<Solver>(new Solver(BaseType::solver_param_, std::move(model)));
     }
 
 
