@@ -155,6 +155,10 @@ namespace Opm
             }
         }
 
+        void formInterleavedSystem(const std::vector<LinearisedBlackoilResidual::ADB>& eqs,
+                                   const Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                   Mat& istlA) const;
+
         mutable int iterations_;
         boost::any parallelInformation_;
 
