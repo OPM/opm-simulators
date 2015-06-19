@@ -111,9 +111,6 @@ namespace Opm
 
 
         typedef Dune::SeqILU0<Mat, Vector, Vector> SeqPreconditioner;
-        typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-        typedef Dune::BlockPreconditioner<Vector, Vector, Comm, SeqPreconditioner> ParPreconditioner;
-
 
         template <class Operator>
         SeqPreconditioner constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
@@ -123,6 +120,9 @@ namespace Opm
             return precond;
         }
 
+#if HAVE_MPI
+        typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
+        typedef Dune::BlockPreconditioner<Vector, Vector, Comm, SeqPreconditioner> ParPreconditioner;
 
         template <class Operator>
         ParPreconditioner constructPrecond(Operator& opA, const Comm& comm) const
@@ -132,7 +132,7 @@ namespace Opm
             ParPreconditioner precond(seq_precond, comm);
             return precond;
         }
-
+#endif
 
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>
