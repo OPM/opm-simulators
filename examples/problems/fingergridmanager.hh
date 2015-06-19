@@ -25,7 +25,6 @@
 #ifndef EWOMS_FINGER_GRID_MANAGER_HH
 #define EWOMS_FINGER_GRID_MANAGER_HH
 
-#include <ewoms/parallel/mpihelper.hh>
 #include <ewoms/io/basegridmanager.hh>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
