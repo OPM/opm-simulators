@@ -299,6 +299,8 @@ namespace Opm
         void setSwatInitScaling(const std::vector<double>& saturation,
                       const std::vector<double>& pc);
 
+        //ARB: hasVFP... og getVFP... må muligens legges i interface-klassen...
+
 
     private:
         /// Initializes the properties.
@@ -348,6 +350,8 @@ namespace Opm
         // Densities, one std::array per PVT region.
         std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
         
+        // ARB: Smart pointer to VFPProperties.
+
         // VAPPARS
         double vap1_;
         double vap2_;

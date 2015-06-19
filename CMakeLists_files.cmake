@@ -41,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilModelParameters.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
+	opm/autodiff/VFPProperties.cpp
 	)
 
 # originally generated with the command:

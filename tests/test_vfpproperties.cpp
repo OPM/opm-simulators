@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE(Integration)
 #endif
 
     BOOST_CHECK_SMALL(max_d, 0.0005);
-    BOOST_CHECK_SMALL(sad, 0.1);
+    BOOST_CHECK_SMALL(sad, 0.00001);
 }
 
 

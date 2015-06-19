@@ -1345,6 +1345,7 @@ namespace detail {
                 rate_targets(w) = -1e100;
             }
             break;
+            //ARB: case THP:
 
             case RESERVOIR_RATE: // Intentional fall-through
             case SURFACE_RATE:
@@ -1368,6 +1369,8 @@ namespace detail {
         }
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
+        //ARB: add here const ... thp_residual = state.bhp - vfpprop.bhp(thp_ctrl, state.qs, alq?); //Make bhp function take ADB's as input params.
+        //wells
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);
         residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
