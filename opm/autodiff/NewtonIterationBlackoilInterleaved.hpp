@@ -27,7 +27,7 @@
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/linalg/ParallelISTLInformation.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
