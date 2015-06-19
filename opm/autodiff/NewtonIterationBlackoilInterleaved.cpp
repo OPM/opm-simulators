@@ -105,53 +105,21 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Find sparsity structure as union of basic block sparsity structures,
-        // corresponding to the jacobians with respect to pressure.
-        // Use addition to get to the union structure.
-        Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
-        for (int phase = 0; phase < np; ++phase) {
-            structure += eqs[phase].derivative()[0];
-        }
-        Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
-
         // Form modified system.
         Eigen::SparseMatrix<double, Eigen::RowMajor> A;
         V b;
         formEllipticSystem(np, eqs, A, b);
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
-        assert(np == 3);
-        Mat istlA(s.rows(), s.cols(), s.nonZeros(), Mat::row_wise);
-        const int* ia = s.outerIndexPtr();
-        const int* ja = s.innerIndexPtr();
-        for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
-            int ri = row.index();
-            for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
-                row.insert(ja[i]);
-            }
-        }
-        const int size = s.rows();
-        Span span[3] = { Span(size, 1, 0),
-                         Span(size, 1, size),
-                         Span(size, 1, 2*size) };
-        for (int row = 0; row < size; ++row) {
-            for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
-                const int col = ja[col_ix];
-                MatrixBlockType block;
-                for (int p1 = 0; p1 < np; ++p1) {
-                    for (int p2 = 0; p2 < np; ++p2) {
-                        block[p1][p2] = A.coeff(span[p1][row], span[p2][col]);
-                    }
-                }
-                istlA[row][col] = block;
-            }
-        }
+        Mat istlA;
+        formInterleavedSystem(eqs, A, istlA);
 
         // Solve reduced system.
         SolutionVector dx(SolutionVector::Zero(b.size()));
 
         // Right hand side.
-        Vector istlb(istlA.N());
+        const int size = istlA.N();
+        Vector istlb(size);
         for (int i = 0; i < size; ++i) {
             istlb[i][0] = b(i);
             istlb[i][1] = b(size + i);
@@ -210,6 +178,55 @@ namespace Opm
             dx = recoverVariable(elim_eqs[0], dx, np);
         }
         return dx;
+    }
+
+
+
+
+
+    void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
+                                                                   const Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                                                   Mat& istlA) const
+    {
+        const int np = eqs.size();
+
+        // Find sparsity structure as union of basic block sparsity structures,
+        // corresponding to the jacobians with respect to pressure.
+        // Use addition to get to the union structure.
+        Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
+        for (int phase = 0; phase < np; ++phase) {
+            structure += eqs[phase].derivative()[0];
+        }
+        Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
+
+        // Create ISTL matrix with interleaved rows and columns (block structured).
+        assert(np == 3);
+        istlA.setSize(s.rows(), s.cols(), s.nonZeros());
+        istlA.setBuildMode(Mat::row_wise);
+        const int* ia = s.outerIndexPtr();
+        const int* ja = s.innerIndexPtr();
+        for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
+            int ri = row.index();
+            for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                row.insert(ja[i]);
+            }
+        }
+        const int size = s.rows();
+        Span span[3] = { Span(size, 1, 0),
+                         Span(size, 1, size),
+                         Span(size, 1, 2*size) };
+        for (int row = 0; row < size; ++row) {
+            for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
+                const int col = ja[col_ix];
+                MatrixBlockType block;
+                for (int p1 = 0; p1 < np; ++p1) {
+                    for (int p2 = 0; p2 < np; ++p2) {
+                        block[p1][p2] = A.coeff(span[p1][row], span[p2][col]);
+                    }
+                }
+                istlA[row][col] = block;
+            }
+        }
     }
 
 
