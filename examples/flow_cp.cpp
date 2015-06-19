@@ -61,6 +61,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
@@ -338,7 +339,9 @@ try
     
     boost::any parallel_information;
     Opm::extractParallelGridInformationToISTL(*grid, parallel_information);
-    if (param.getDefault("use_cpr", true)) {
+    if (param.getDefault("use_interleaved", false)) {
+        fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
+    } else if (param.getDefault("use_cpr", true)) {
         fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
     } else {
         fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
