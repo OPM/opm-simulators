@@ -197,7 +197,7 @@ namespace Opm {
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
 
-        // using Base::addWellEq;
+        using Base::addWellEq;
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
@@ -225,15 +225,6 @@ namespace Opm {
 
         void
         assembleMassBalanceEq(const SolutionState& state);
-
-        void
-        addWellEq(const SolutionState& state,
-                  WellState& xw,
-                  std::vector<ADB>& mob_perfcells,
-                  const std::vector<ADB>& b_perfcells,
-                  V& aliveWells,
-                  std::vector<ADB>& cq_s,
-                  const bool welleq_initial);
 
         void
         addWellContributionToMassBalanceEq(const SolutionState& state,
