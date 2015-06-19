@@ -810,7 +810,7 @@ namespace detail {
             solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s, false);
         asImpl().addWellContributionToMassBalanceEq(state, well_state, cq_s);
         addWellControlEq(state, well_state, aliveWells);        
     }
@@ -898,10 +898,11 @@ namespace detail {
     void
     BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
                                                        WellState& xw,
-                                                       const std::vector<ADB>& mob_perfcells,
+                                                       std::vector<ADB>& mob_perfcells,
                                                        const std::vector<ADB>& b_perfcells,
                                                        V& aliveWells,
-                                                       std::vector<ADB>& cq_s)
+                                                       std::vector<ADB>& cq_s,
+                                                       const bool)
     {
         if( ! wellsActive() ) return ;
 
@@ -1232,7 +1233,7 @@ namespace detail {
 
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s, true);
             addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = getWellConvergence(it);
 
