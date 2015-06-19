@@ -26,7 +26,6 @@
 #ifndef EWOMS_FRACTURE_PROBLEM_HH
 #define EWOMS_FRACTURE_PROBLEM_HH
 
-#include <ewoms/parallel/mpihelper.hh>
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
 #if HAVE_DUNE_ALUGRID
