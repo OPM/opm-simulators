@@ -282,6 +282,8 @@ namespace Opm {
                                             const std::vector<ADB>& phasePressure, const SolutionState& state,
                                             std::vector<double>& water_vel, std::vector<double>& visc_mult);
 
+        /// Computing the water velocity without shear-thinning for the well perforations based on the water flux rate.
+        /// The water velocity will be used for shear-thinning calculation.
         void computeWaterShearVelocityWells(const SolutionState& state, WellState& xw, const ADB& cq_sw,
                                             std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
 

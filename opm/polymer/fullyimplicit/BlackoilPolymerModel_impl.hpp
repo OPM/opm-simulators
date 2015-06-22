@@ -606,7 +606,6 @@ namespace Opm {
             computeWaterShearVelocityWells(state, well_state, cq_s[water_pos], water_vel_wells, visc_mult_wells);
 
             if ( !polymer_props_ad_.computeShearMultLog(water_vel_wells, visc_mult_wells, shear_mult_wells_) ) {
-                // std::cout << " failed in calculating the shear factors for wells " << std::endl;
                 OPM_THROW(std::runtime_error, " failed in calculating the shear factors for wells ");
             }
 
@@ -614,15 +613,6 @@ namespace Opm {
             V shear_mult_wells_v = Eigen::Map<V>(shear_mult_wells_.data(), shear_mult_wells_.size());
             ADB shear_mult_wells_adb = ADB::constant(shear_mult_wells_v);
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
-
-            /* const int nw = wells().number_of_wells;
-            const int nperf = wells().well_connpos[nw];
-
-            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-            // assuming the water phase is the first phase
-            const int nw = wells().number_of_wells;
-            mob_perfcells = subset(rq_[0].mob,well_cells); */
         }
 
         Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
