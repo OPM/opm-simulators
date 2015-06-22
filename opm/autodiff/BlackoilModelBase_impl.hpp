@@ -810,8 +810,10 @@ namespace detail {
             solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        asImpl().addWellEq(state, well_state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().addWellContributionToMassBalanceEq(state, well_state, cq_s);
+        asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        asImpl().addWellFluxEq(cq_s, state);
+        asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         addWellControlEq(state, well_state, aliveWells);        
     }
 
@@ -875,9 +877,9 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const SolutionState&,
-                                                                                const WellState&,
-                                                                                const std::vector<ADB>& cq_s)
+    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                                                                const SolutionState&,
+                                                                                const WellState&)
     {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -896,12 +898,11 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::addWellEq(const SolutionState& state,
-                                                       WellState& xw,
-                                                       const std::vector<ADB>& mob_perfcells,
-                                                       const std::vector<ADB>& b_perfcells,
-                                                       V& aliveWells,
-                                                       std::vector<ADB>& cq_s)
+    BlackoilModelBase<Grid, Implementation>::computeWellFlux(const SolutionState& state,
+                                                             const std::vector<ADB>& mob_perfcells,
+                                                             const std::vector<ADB>& b_perfcells,
+                                                             V& aliveWells,
+                                                             std::vector<ADB>& cq_s)
     {
         if( ! wellsActive() ) return ;
 
@@ -921,8 +922,6 @@ namespace detail {
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
-        std::vector<double> perfpressure_d(perfpressure.value().data(), perfpressure.value().data() + nperf);
-        xw.perfPress() = perfpressure_d;
 
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcells - perfpressure;
@@ -1015,13 +1014,6 @@ namespace detail {
             cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
         }
 
-        // WELL EQUATIONS
-        ADB qs = state.qs;
-        for (int phase = 0; phase < np; ++phase) {
-            qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
-
-        }
-
         // check for dead wells (used in the well controll equations)
         aliveWells = V::Constant(nw, 1.0);
         for (int w = 0; w < nw; ++w) {
@@ -1029,15 +1021,48 @@ namespace detail {
                 aliveWells[w] = 0.0;
             }
         }
+    }
 
-        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore)
+
+
+
+
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                                                                   const SolutionState& state,
+                                                                                   WellState& xw)
+    {
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {
             cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
         }
+        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
 
-        std::vector<double> cq_d(cq.data(), cq.data() + nperf*np);
-        xw.perfPhaseRates() = cq_d;
+        // Update the perforation pressures.
+        const V& cdp = well_perforation_pressure_diffs_;
+        const V perfpressure = (wops_.w2p * state.bhp.value().matrix()).array() + cdp;
+        xw.perfPress().assign(perfpressure.data(), perfpressure.data() + nperf);
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
+                                                                const SolutionState& state)
+    {
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        ADB qs = state.qs;
+        for (int phase = 0; phase < np; ++phase) {
+            qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+
+        }
 
         residual_.well_flux_eq = qs;
     }
@@ -1232,7 +1257,9 @@ namespace detail {
 
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().addWellEq(wellSolutionState, well_state, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            asImpl().addWellFluxEq(cq_s, wellSolutionState);
             addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = getWellConvergence(it);
 
