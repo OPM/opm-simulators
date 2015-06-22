@@ -39,7 +39,7 @@ public:
 
     ///Rate type
     enum FLO_TYPE {
-        FLO_OIL, //< Oil rate
+        FLO_OIL=1, //< Oil rate
         FLO_LIQ, //< Liquid rate
         FLO_GAS, //< Gas rate
         //FLO_WG
@@ -49,7 +49,7 @@ public:
 
     ///Water fraction variable
     enum WFR_TYPE {
-        WFR_WOR, //< Water-oil ratio
+        WFR_WOR=11, //< Water-oil ratio
         WFR_WCT, //< Water cut
         WFR_WGR, //< Water-gas ratio
         WFR_INVALID
@@ -57,7 +57,7 @@ public:
 
     ///Gas fraction variable
     enum GFR_TYPE {
-        GFR_GOR, //< Gas-oil ratio
+        GFR_GOR=21, //< Gas-oil ratio
         GFR_GLR, //< Gas-liquid ratio
         GFR_OGR, //< Oil-gas ratio
         GFR_INVALID
@@ -65,7 +65,7 @@ public:
 
     ///Artificial lift quantity
     enum ALQ_TYPE {
-        ALQ_GRAT, //< Lift as injection rate
+        ALQ_GRAT=31, //< Lift as injection rate
         ALQ_IGLR, //< Injection gas-liquid ratio
         ALQ_TGLR, //< Total gas-liquid ratio
         ALQ_PUMP, //< Pump rating
@@ -102,22 +102,7 @@ public:
         const std::vector<double>& wfr_data,
         const std::vector<double>& gfr_data,
         const std::vector<double>& alq_data,
-        array_type data
-        ) :
-            table_num_(table_num),
-            datum_depth_(datum_depth),
-            flo_type_(flo_type),
-            wfr_type_(wfr_type),
-            gfr_type_(gfr_type),
-            alq_type_(alq_type),
-            flo_data_(flo_data),
-            thp_data_(thp_data),
-            wfr_data_(wfr_data),
-            gfr_data_(gfr_data),
-            alq_data_(alq_data),
-            data_(data) {
-
-    }
+        array_type data);
 
     /**
      * Constructor which parses a deck keyword and retrieves the relevant parts for a
@@ -150,9 +135,45 @@ public:
      */
     double bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq);
 
+    /**
+     * Linear interpolation of bhp as a function of the input parameters given as ADBs
+     * @param flo Production rate of oil, gas or liquid
+     * @param thp Tubing head pressure
+     * @param wfr Water-oil ratio, water cut, or water-gas ratio
+     * @param gfr Gas-oil ratio, gas-liquid ratio, or oil-gas ratio
+     * @param alq Artificial lift or other parameter
+     *
+     * @return The bottom hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table, for each entry in the
+     * input ADB objects.
+     */
     ADB bhp(const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq);
 
+    /**
+     * Computes the flo parameter according to the flo_type_
+     * @return Production rate of oil, gas or liquid.
+     */
+    ADB getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour);
+
+    /**
+     * Computes the wfr parameter according to the wfr_type_
+     * @return Production rate of oil, gas or liquid.
+     */
+    ADB getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour);
+
+    /**
+     * Computes the gfr parameter according to the gfr_type_
+     * @return Production rate of oil, gas or liquid.
+     */
+    ADB getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour);
+
 private:
+    /**
+     * Debug function that runs a series of asserts to check for sanity of inputs.
+     * Called after constructor to check that everything looks ok.
+     */
+    void check();
+
     /**
      * Helper struct for linear interpolation
      */

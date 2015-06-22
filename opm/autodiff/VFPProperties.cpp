@@ -24,6 +24,7 @@
 
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <algorithm>
 
 namespace Opm {
 
@@ -127,7 +128,9 @@ VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
     }
     catch (std::invalid_argument& e) {
         //TODO: log here
-        alq_type_ = ALQ_INVALID;
+        //FIXME:  header->getItem("ALQ")->getString(0); appears to fail, ignoring in current implementation
+        //alq_type_ = ALQ_INVALID;
+        alq_type_ = ALQ_UNDEF;
     }
 
     //Get actual rate / flow values
@@ -169,14 +172,87 @@ VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
         //Rest of values (bottom hole pressure or tubing head temperature) have index of flo value
         const std::vector<double>& bhp_tht = (*iter)->getItem("VALUES")->getRawDoubleData();
         std::copy(bhp_tht.begin(), bhp_tht.end(), &data_[t][w][g][a][0]);
+    }
 
-        //Check for large values
-        for (size_t i = 0; i<bhp_tht.size(); ++i) {
-            if (bhp_tht[i] > 1.0e10) {
-                //TODO: Replace with proper log message
-                std::cerr << "Too large value encountered in VFPPROD in ["
-                        << t << "," << w << "," << g << "," << a << "]="
-                        << bhp_tht[i] << std::endl;
+    check();
+}
+
+
+VFPProperties::VFPProperties(int table_num,
+    double datum_depth,
+    FLO_TYPE flo_type,
+    WFR_TYPE wfr_type,
+    GFR_TYPE gfr_type,
+    ALQ_TYPE alq_type,
+    const std::vector<double>& flo_data,
+    const std::vector<double>& thp_data,
+    const std::vector<double>& wfr_data,
+    const std::vector<double>& gfr_data,
+    const std::vector<double>& alq_data,
+    array_type data
+    ) :
+        table_num_(table_num),
+        datum_depth_(datum_depth),
+        flo_type_(flo_type),
+        wfr_type_(wfr_type),
+        gfr_type_(gfr_type),
+        alq_type_(alq_type),
+        flo_data_(flo_data),
+        thp_data_(thp_data),
+        wfr_data_(wfr_data),
+        gfr_data_(gfr_data),
+        alq_data_(alq_data),
+        data_(data) {
+    check();
+}
+
+
+void VFPProperties::check() {
+    //Table number
+    assert(table_num_ > 0);
+
+    //Misc types
+    assert(flo_type_ >= FLO_OIL && flo_type_ < FLO_INVALID);
+    assert(wfr_type_ >= WFR_WOR && flo_type_ < WFR_INVALID);
+    assert(gfr_type_ >= GFR_GOR && flo_type_ < GFR_INVALID);
+    assert(alq_type_ >= ALQ_GRAT && flo_type_ < ALQ_INVALID);
+
+    //Data axis size
+    assert(flo_data_.size() > 0);
+    assert(thp_data_.size() > 0);
+    assert(wfr_data_.size() > 0);
+    assert(gfr_data_.size() > 0);
+    assert(alq_data_.size() > 0);
+
+    //Data axis sorted?
+    assert(is_sorted(flo_data_.begin(), flo_data_.end()));
+    assert(is_sorted(thp_data_.begin(), thp_data_.end()));
+    assert(is_sorted(wfr_data_.begin(), wfr_data_.end()));
+    assert(is_sorted(gfr_data_.begin(), gfr_data_.end()));
+    assert(is_sorted(alq_data_.begin(), alq_data_.end()));
+
+    //Check data size matches axes
+    assert(data_.num_dimensions() == 5);
+    assert(data_.shape()[0] == thp_data_.size());
+    assert(data_.shape()[1] == wfr_data_.size());
+    assert(data_.shape()[2] == gfr_data_.size());
+    assert(data_.shape()[3] == alq_data_.size());
+    assert(data_.shape()[4] == flo_data_.size());
+
+    //Finally, check that all data is within reasonable ranges, defined to be up-to 1.0e10...
+    for (int t=0; t<data_.shape()[0]; ++t) {
+        for (int w=0; w<data_.shape()[1]; ++w) {
+            for (int g=0; g<data_.shape()[2]; ++g) {
+                for (int a=0; a<data_.shape()[3]; ++a) {
+                    for (int f=0; f<data_.shape()[4]; ++f) {
+                        if (data_[t][w][g][a][f] > 1.0e10) {
+                            //TODO: Replace with proper log message
+                            std::cerr << "Too large value encountered in VFPPROD in ["
+                                    << t << "," << w << "," << g << "," << a << "," << f << "]="
+                                    << data_[t][w][g][a][f] << std::endl;
+                        }
+                    }
+                }
             }
         }
     }
@@ -218,10 +294,6 @@ VFPProperties::ADB VFPProperties::bhp(const ADB& flo, const ADB& thp, const ADB&
 
 
 VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
-    ADB flo = ADB::null();
-    ADB wfr = ADB::null();
-    ADB gfr = ADB::null();
-
     const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
 
@@ -230,80 +302,94 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    switch (flo_type_) {
-        case FLO_OIL: //Oil = oil phase
-            //TODO assert("has oil phase")
-            flo = o;
-            break;
-        case FLO_LIQ: //Liquid = water + oil phases
-            flo = w + o;
-            break;
-        case FLO_GAS: //Gas = gas phase
-            flo = g;
-            break;
-        case FLO_INVALID: //Intentional fall-through
-        default:
-            //TODO: Log
-            std::cerr << "ERROR, FLO_INVALID" << std::endl;
-    }
+    ADB flo = getFlo(w, o, g);
+    ADB wfr = getWFR(w, o, g);
+    ADB gfr = getGFR(w, o, g);
 
-    switch(wfr_type_) {
-        case WFR_WOR: //Water-oil ratio = water / oil
-            wfr = w / o;
-            break;
-        case WFR_WCT: //Water cut = water / (oil + gas)
-            wfr = w / (o + g);
-            break;
-        case WFR_WGR: //Water-gas ratio = water / gas
-            wfr = w / g;
-            break;
-        case WFR_INVALID: //Intentional fall-through
-        default:
-            //TODO: Log
-            std::cerr << "ERROR, WFR_INVALID" << std::endl;
-    }
-
-    switch(gfr_type_) {
-        case GFR_GOR: // Gas-oil ratio = gas / oil
-            gfr = g / o;
-            break;
-        case GFR_GLR: // Gas-liquid ratio = gas / (oil + water)
-            gfr = g / (o + w);
-            break;
-        case GFR_OGR: // Oil-gas ratio = oil / gas
-            gfr = o / g;
-            break;
-        case GFR_INVALID: //Intentional fall-through
-        default:
-            //TODO: Log
-            std::cerr << "ERROR, GFR_INVALID" << std::endl;
-    }
-
-    //TODO: What is this actually used for, and how to check?
+    //TODO: What is this actually supposed to be used for?
     switch(alq_type_) {
-        case ALQ_GRAT: //< Lift as injection rate
+        case ALQ_GRAT: // Lift as injection rate
             break;
-        case ALQ_IGLR: //< Injection gas-liquid ratio
+        case ALQ_IGLR: // Injection gas-liquid ratio
             break;
-        case ALQ_TGLR: //< Total gas-liquid ratio
+        case ALQ_TGLR: // Total gas-liquid ratio
             break;
-        case ALQ_PUMP: //< Pump rating
+        case ALQ_PUMP: // Pump rating
             break;
-        case ALQ_COMP: //< Compressor power
+        case ALQ_COMP: // Compressor power
             break;
-        case ALQ_BEAN: //< Choke diameter
+        case ALQ_BEAN: // Choke diameter
             break;
-        case ALQ_UNDEF: //< Undefined
+        case ALQ_UNDEF: // Undefined
             break;
         case ALQ_INVALID: //Intentional fall-through
         default:
-            //TODO: Log
+            //TODO: Log/throw
             std::cerr << "ERROR, ALQ_INVALID" << std::endl;
     }
 
     return bhp(flo, thp, wfr, gfr, alq);
 }
 
+
+VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
+    switch (flo_type_) {
+        case FLO_OIL:
+            //Oil = liquid phase
+            //TODO assert("qs has oil phase")
+            return liquid;
+        case FLO_LIQ:
+            //Liquid = aqua + liquid phases
+            return aqua + liquid;
+        case FLO_GAS:
+            //Gas = vapor phase
+            return vapour;
+        case FLO_INVALID: //Intentional fall-through
+        default:
+            //TODO: Log/throw
+            std::cerr << "ERROR, FLO_INVALID" << std::endl;
+            return ADB::null();
+    }
+}
+
+VFPProperties::ADB VFPProperties::getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
+    switch(wfr_type_) {
+        case WFR_WOR:
+            //Water-oil ratio = water / oil
+            return aqua / liquid;
+        case WFR_WCT:
+            //Water cut = water / (water + oil + gas)
+            return aqua / (aqua + liquid + vapour);
+        case WFR_WGR:
+            //Water-gas ratio = water / gas
+            return aqua / vapour;
+        case WFR_INVALID: //Intentional fall-through
+        default:
+            //TODO: Log/throw
+            std::cerr << "ERROR, WFR_INVALID" << std::endl;
+            return ADB::null();
+    }
+}
+
+
+VFPProperties::ADB VFPProperties::getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
+    switch(gfr_type_) {
+        case GFR_GOR:
+            // Gas-oil ratio = gas / oil
+            return vapour / liquid;
+        case GFR_GLR:
+            // Gas-liquid ratio = gas / (oil + water)
+            return vapour / (liquid + aqua);
+        case GFR_OGR:
+            // Oil-gas ratio = oil / gas
+            return liquid / vapour;
+        case GFR_INVALID: //Intentional fall-through
+        default:
+            //TODO: Log/throw
+            std::cerr << "ERROR, GFR_INVALID" << std::endl;
+            return ADB::null();
+    }
+}
 
 
 VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, const std::vector<double>& values) {
