@@ -197,7 +197,6 @@ namespace Opm {
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
 
-        using Base::addWellEq;
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
@@ -283,9 +282,8 @@ namespace Opm {
                                             const std::vector<ADB>& phasePressure, const SolutionState& state,
                                             std::vector<double>& water_vel, std::vector<double>& visc_mult);
 
-        void computeWaterShearVelocityWells(const SolutionState& state, WellState& well_state,
-                                            V& aliveWells, std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
-
+        void computeWaterShearVelocityWells(const SolutionState& state, WellState& xw, const ADB& cq_sw,
+                                            std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
 
     };
 
