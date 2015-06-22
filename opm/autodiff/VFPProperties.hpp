@@ -135,7 +135,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB bhp(const Wells& wells, ADB qs, ADB thp, ADB alq);
+    ADB bhp(const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -148,14 +148,16 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(double flo, double thp, double wfr, double gfr, double alq);
+    double bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq);
+
+    ADB bhp(const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq);
 
 private:
     /**
      * Helper struct for linear interpolation
      */
     struct InterpData {
-        InterpData() : factor_(0.0) {}
+        InterpData() : ind_{0, 0}, factor_(0.0) {}
         int ind_[2]; //[First element greater than or equal to value, Last element smaller than or equal to value]
         double factor_; //Interpolation factor
     };
@@ -163,7 +165,7 @@ private:
     /**
      * Helper function to find indices etc. for linear interpolation
      */
-    static InterpData find_interp_data(double value, const std::vector<double>& values);
+    static InterpData find_interp_data(const double& value, const std::vector<double>& values);
 
     /**
      * Helper function which interpolates data using the indices etc. given in the inputs.

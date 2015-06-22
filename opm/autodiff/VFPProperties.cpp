@@ -184,7 +184,7 @@ VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
 
 
 
-double VFPProperties::bhp(double flo, double thp, double wfr, double gfr, double alq) {
+double VFPProperties::bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
     //First, find the values to interpolate between
     auto flo_i = find_interp_data(flo, flo_data_);
     auto thp_i = find_interp_data(thp, thp_data_);
@@ -196,9 +196,28 @@ double VFPProperties::bhp(double flo, double thp, double wfr, double gfr, double
     return interpolate(flo_i, thp_i, wfr_i, gfr_i, alq_i);
 }
 
+VFPProperties::ADB VFPProperties::bhp(const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
+    const ADB::V& f_v = flo.value();
+    const ADB::V& t_v = thp.value();
+    const ADB::V& w_v = wfr.value();
+    const ADB::V& g_v = gfr.value();
+    const ADB::V& a_v = alq.value();
+
+    const int nw = f_v.size();
+
+    //Compute the BHP for each well independently
+    ADB::V bhp_vals;
+    bhp_vals.resize(nw);
+    for (int i=0; i<nw; ++i) {
+        bhp_vals[i] = bhp(f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
+    }
+    //Create an ADB constant value.
+    return ADB::constant(bhp_vals);
+}
 
 
-VFPProperties::ADB VFPProperties::bhp(const Wells& wells, ADB qs, ADB thp, ADB alq) {
+
+VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
     ADB flo = ADB::null();
     ADB wfr = ADB::null();
     ADB gfr = ADB::null();
@@ -282,30 +301,12 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, ADB qs, ADB thp, ADB a
             std::cerr << "ERROR, ALQ_INVALID" << std::endl;
     }
 
-    //for (int phase = 0; phase < np; ++phase) {
-    //const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
-//    return bhp(flo, thp, wfr, gfr, alq);
-    ADB::V f_v = flo.value();
-    ADB::V t_v = thp.value();
-    ADB::V w_v = wfr.value();
-    ADB::V g_v = gfr.value();
-    ADB::V a_v = alq.value();
-
-    //Compute the BHP for each well independently
-    ADB::V bhp_vals;
-    bhp_vals.resize(nw);
-    for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = bhp(f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
-    }
-    //Create an ADB constant value.
-    ADB retval = ADB::constant(bhp_vals);
-
-    return retval;
+    return bhp(flo, thp, wfr, gfr, alq);
 }
 
 
 
-VFPProperties::InterpData VFPProperties::find_interp_data(double value, const std::vector<double>& values) {
+VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
     //First element greater than or equal to value
@@ -317,9 +318,9 @@ VFPProperties::InterpData VFPProperties::find_interp_data(double value, const st
     auto floor_iter = ceil_iter-1;
 
     //Find the indices
-    int a = floor_iter - values.begin();
-    int b = ceil_iter - values.begin();
-    int max_size = static_cast<int>(values.size())-1;
+    const int a = floor_iter - values.begin();
+    const int b = ceil_iter - values.begin();
+    const int max_size = std::max(static_cast<int>(values.size()) - 1, 0);
 
     //Clamp indices to range of vector
     retval.ind_[0] = a;
