@@ -388,12 +388,13 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
             alq_axis,
             data);
 
-    //Temporary variables used to cast a single double to an ADB
-    ADB::V xx(1);
-    ADB::V yy(1);
-    ADB::V zz(1);
-    ADB::V uu(1);
-    ADB::V vv(1);
+    //Temporary variables used to represent independent wells
+    const int num_wells = 5;
+    ADB::V xx(num_wells);
+    ADB::V yy(num_wells);
+    ADB::V zz(num_wells);
+    ADB::V uu(num_wells);
+    ADB::V vv(num_wells);
 
     //Check linear extrapolation (i.e., using values of x, y, etc. outside our interpolant domain)
     double sum = 0.0;
@@ -411,14 +412,13 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                     const double u = l / static_cast<double>(n);
                     for (int m=-5; m<=n+5; ++m) {
                         const double v = m / static_cast<double>(n);
-                        double reference = x + 2*y + 3*z + 4*u + 5*v;
-                        reference_sum += reference;
-
-                        xx[0] = x;
-                        yy[0] = y;
-                        zz[0] = z;
-                        uu[0] = u;
-                        vv[0] = v;
+                        for (unsigned int w=0; w<num_wells; ++w) {
+                            xx[w] = x*w;
+                            yy[w] = y*w;
+                            zz[w] = z*w;
+                            uu[w] = u*w;
+                            vv[w] = v*w;
+                        }
 
                         ADB flo = ADB::constant(vv);
                         ADB thp = ADB::constant(xx);
@@ -427,10 +427,17 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         ADB alq = ADB::constant(uu);
 
                         ADB bhp_val = table.bhp(flo, thp, wfr, gfr, alq);
-                        double value = bhp_val.value()[0];
+
+                        double value = 0.0;
+                        double reference = 0.0;
+                        for (int w=0; w < num_wells; ++w) {
+                            reference += x*w + 2*y*w + 3*z*w + 4*u*w + 5*v*w;
+                            value += bhp_val.value()[w];
+                        }
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
+                        reference_sum += reference;
 
                         sad += std::abs(abs_diff);
                         max_d = std::max(max_d, abs_diff);
