@@ -279,11 +279,12 @@ namespace Opm {
 
 
     template <class Grid>
-    void BlackoilPolymerModel<Grid>::addWellContributionToMassBalanceEq(const SolutionState& state,
-                                                                        const WellState& xw,
-                                                                        const std::vector<ADB>& cq_s)
+    void BlackoilPolymerModel<Grid>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                                                        const SolutionState& state,
+                                                                        WellState& xw)
+
     {
-        Base::addWellContributionToMassBalanceEq(state, xw, cq_s);
+        Base::addWellContributionToMassBalanceEq(cq_s, state, xw);
 
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
