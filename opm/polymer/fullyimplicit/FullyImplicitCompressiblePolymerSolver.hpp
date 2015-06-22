@@ -29,6 +29,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
