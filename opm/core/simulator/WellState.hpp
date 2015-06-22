@@ -24,6 +24,7 @@
 #include <opm/core/well_controls.h>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 namespace Opm
 {
