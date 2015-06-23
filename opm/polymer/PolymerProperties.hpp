@@ -158,7 +158,7 @@ namespace Opm
             has_plyshlog_ = deck->hasKeyword("PLYSHLOG");
             has_shrate_ = deck->hasKeyword("SHRATE");
 
-            if(has_plyshlog_){
+            if (has_plyshlog_) {
                 // Assuming NTPVT == 1 always due to the limitation of the parser
                 const auto& plyshlogTable = eclipseState->getPlyshlogTables()[0];
 
