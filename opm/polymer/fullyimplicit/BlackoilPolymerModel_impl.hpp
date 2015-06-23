@@ -756,8 +756,6 @@ namespace Opm {
                                                                std::vector<double>& water_vel, std::vector<double>& visc_mult)
     {
 
-        std::vector<double> b_faces;
-
         const int phase = fluid_.phaseUsage().phase_pos[Water]; // water position
 
         const int canonicalPhaseIdx = canph_[phase];
@@ -800,8 +798,7 @@ namespace Opm {
         rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
 
         const auto& b_faces_adb = upwind.select(b);
-        b_faces.resize(b_faces_adb.size());
-        std::copy(b_faces_adb.value().data(), b_faces_adb.value().data() + b_faces_adb.size(), b_faces.begin());
+        std::vector<double> b_faces(b_faces_adb.value().data(), b_faces_adb.value().data() + b_faces_adb.size());
 
         const auto& internal_faces = ops_.internal_faces;
 
@@ -815,9 +812,7 @@ namespace Opm {
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
         const ADB phiavg_adb  = ops_.caver * phi;
 
-        std::vector<double> phiavg;
-        phiavg.resize(phiavg_adb.size());
-        std::copy(phiavg_adb.value().data(), phiavg_adb.value().data() + phiavg_adb.size(), phiavg.begin());
+        std::vector<double> phiavg(phiavg_adb.value().data(), phiavg_adb.value().data() + phiavg_adb.size());
 
         water_vel.resize(nface);
         std::copy(rq_[0].mflux.value().data(), rq_[0].mflux.value().data() + nface, water_vel.begin());
@@ -833,10 +828,7 @@ namespace Opm {
             const Opm::PhaseUsage pu = fluid_.phaseUsage();
             const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
             const ADB& sw_upwind_adb = upwind.select(sw);
-
-            std::vector<double> sw_upwind;
-            sw_upwind.resize(sw_upwind_adb.size());
-            std::copy(sw_upwind_adb.value().data(), sw_upwind_adb.value().data() + sw_upwind_adb.size(), sw_upwind.begin());
+            std::vector<double> sw_upwind(sw_upwind_adb.value().data(), sw_upwind_adb.value().data() + sw_upwind_adb.size());
 
             // get the absolute permeability for the faces
             std::vector<double> perm;
@@ -848,9 +840,7 @@ namespace Opm {
 
             // get the upwind krw_eff
             const ADB& krw_adb = upwind.select(krw_eff);
-            std::vector<double> krw_upwind;
-            krw_upwind.resize(krw_adb.size());
-            std::copy(krw_adb.value().data(), krw_adb.value().data() + krw_adb.size(), krw_upwind.begin());
+            std::vector<double> krw_upwind(krw_adb.value().data(), krw_adb.value().data() + krw_adb.size());
 
             const double& shrate_const = polymer_props_ad_.shrate();
 
@@ -921,13 +911,9 @@ namespace Opm {
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
         const ADB phi_wells_adb = subset(phi, well_cells);
 
-        std::vector<double> phi_wells;
-        phi_wells.resize(phi_wells_adb.size());
-        std::copy(phi_wells_adb.value().data(), phi_wells_adb.value().data() + phi_wells_adb.size(), phi_wells.begin());
+        std::vector<double> phi_wells(phi_wells_adb.value().data(), phi_wells_adb.value().data() + phi_wells_adb.size());
 
-        std::vector<double> b_wells;
-        b_wells.resize(b_perfcells.size());
-        std::copy(b_perfcells.value().data(), b_perfcells.value().data() + b_perfcells.size(), b_wells.begin());
+        std::vector<double> b_wells(b_perfcells.value().data(), b_perfcells.value().data() + b_perfcells.size());
 
         for (size_t i = 0; i < water_vel_wells.size(); ++i) {
             water_vel_wells[i] = b_wells[i] * water_vel_wells[i] / (phi_wells[i] * 2. * M_PI * wells_rep_radius_[i] * wells_perf_length_[i]);
