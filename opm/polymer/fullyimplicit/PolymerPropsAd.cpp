@@ -60,6 +60,64 @@ namespace Opm {
 		return polymer_props_.cMax();
 	}
 
+    const std::vector<double>&
+    PolymerPropsAd::shearWaterVelocity() const
+    {
+        return polymer_props_.shearWaterVelocity();
+    }
+
+    const std::vector<double>&
+    PolymerPropsAd::shearViscosityReductionFactor() const
+    {
+        return polymer_props_.shearViscosityReductionFactor();
+    }
+
+    double
+    PolymerPropsAd::plyshlogRefConc() const
+    {
+        return polymer_props_.plyshlogRefConc();
+    }
+
+    bool
+    PolymerPropsAd::hasPlyshlogRefSalinity() const
+    {
+        return polymer_props_.hasPlyshlogRefSalinity();
+    }
+
+    bool
+    PolymerPropsAd::hasPlyshlogRefTemp() const
+    {
+        return polymer_props_.hasPlyshlogRefTemp();
+    }
+
+    double
+    PolymerPropsAd::plyshlogRefSalinity() const
+    {
+        return polymer_props_.plyshlogRefSalinity();
+    }
+
+    double
+    PolymerPropsAd::plyshlogRefTemp() const
+    {
+        return polymer_props_.plyshlogRefTemp();
+    }
+
+    double
+    PolymerPropsAd::viscMult(double c) const
+    {
+        return polymer_props_.viscMult(c);
+    }
+
+    V
+    PolymerPropsAd::viscMult(const V& c) const
+    {
+        int nc = c.size();
+        V visc_mult(nc);
+        for (int i = 0; i < nc; ++i) {
+            visc_mult[i] = polymer_props_.viscMult(c[i]);
+        }
+        return visc_mult;
+    }
 
 
 	
@@ -258,5 +316,13 @@ namespace Opm {
         
         return krw / rk;
     }
+
+
+    bool
+    PolymerPropsAd::computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const
+    {
+        return polymer_props_.computeShearMultLog(water_vel, visc_mult, shear_mult);
+    }
+
 
 }// namespace Opm

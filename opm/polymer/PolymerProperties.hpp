@@ -153,6 +153,41 @@ namespace Opm
 
             c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
             ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
+
+            plyshlog_ = deck->hasKeyword("PLYSHLOG");
+
+            if (plyshlog_) {
+                // Assuming NTPVT == 1 always due to the limitation of the parser
+                const auto& plyshlogTable = eclipseState->getPlyshlogTables()[0];
+
+                water_vel_vals_ = plyshlogTable.getWaterVelocityColumn();
+                shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn();
+
+                // do the unit version here for the water_vel_vals_
+                Opm::UnitSystem unitSystem = *deck->getActiveUnitSystem();
+                double siFactor = unitSystem.parse("Length/Time")->getSIScaling();
+
+                for (size_t i = 0; i < water_vel_vals_.size(); ++i) {
+                    water_vel_vals_[i] *= siFactor;
+                }
+
+
+                plyshlog_ref_conc_ = plyshlogTable.getRefPolymerConcentration();
+
+                if (plyshlogTable.hasRefSalinity()) {
+                    has_plyshlog_ref_salinity_ = true;
+                    plyshlog_ref_salinity_ = plyshlogTable.getRefSalinity();
+                } else {
+                    has_plyshlog_ref_salinity_ = false;
+                }
+
+                if (plyshlogTable.hasRefTemperature()) {
+                    has_plyshlog_ref_temp_ = true;
+                    plyshlog_ref_temp_ = plyshlogTable.getRefTemperature();
+                } else {
+                    has_plyshlog_ref_temp_ = false;
+                }
+            }
         }
 
         double cMax() const;
@@ -168,8 +203,27 @@ namespace Opm
         double cMaxAds() const;
 
         int adsIndex() const;
-        
+
+        /// the water velocity or water shear rate in PLYSHLOG table
         const std::vector<double>& shearWaterVelocity() const;
+
+        /// the viscosity reduction factor PLYSHLOG table
+        const std::vector<double>& shearViscosityReductionFactor() const;
+
+        /// the reference polymer concentration in PLYSHLOG
+        double plyshlogRefConc() const;
+
+        /// indicate wheter reference salinity is specified in PLYSHLOG
+        bool hasPlyshlogRefSalinity() const;
+
+        /// indicate whether reference temperature is specified in PLYSHLOG
+        bool hasPlyshlogRefTemp() const;
+
+        /// the reference salinity in PLYSHLOG
+        double plyshlogRefSalinity() const;
+
+        /// the reference temperature in PLYSHLOG
+        double plyshlogRefTemp() const;
 
         double shearVrf(const double velocity) const;
 
@@ -272,6 +326,9 @@ namespace Opm
         void computeMcBoth(const double& c, double& mc,
                            double& dmc_dc, bool if_with_der) const;
 
+        /// Computing the shear multiplier based on the water velocity/shear rate with PLYSHLOG keyword
+        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const;
+
     private:
         double c_max_;
         double mix_param_;
@@ -279,6 +336,8 @@ namespace Opm
         double dead_pore_vol_;
         double res_factor_;
         double c_max_ads_;
+
+        bool   plyshlog_;
         AdsorptionBehaviour ads_index_;
         std::vector<double> c_vals_visc_;
         std::vector<double> visc_mult_vals_;
@@ -286,6 +345,14 @@ namespace Opm
         std::vector<double> ads_vals_;
         std::vector<double> water_vel_vals_;
         std::vector<double> shear_vrf_vals_;
+
+        double plyshlog_ref_conc_;
+        double plyshlog_ref_salinity_;
+        double plyshlog_ref_temp_;
+        bool has_plyshlog_ref_salinity_;
+        bool has_plyshlog_ref_temp_;
+
+
         void simpleAdsorptionBoth(double c, double& c_ads,
                                   double& dc_ads_dc, bool if_with_der) const;
         void adsorptionBoth(double c, double cmax,
@@ -302,6 +369,7 @@ namespace Opm
                                   double& deff_relperm_wat_ds,
                                   double& deff_relperm_wat_dc,
                                   bool if_with_der) const;
+
     };
 
 } // namespace Opm

@@ -41,8 +41,35 @@ namespace Opm {
 		/// \return 	The max concentration injected.
        	double cMax() const; 
 
+        /// \ return    The water velcoity or shear rate in the PLYSHLOG table
+        const std::vector<double>& shearWaterVelocity() const;
+
+        /// \ return    The viscosity reducation factor in the PLYSHLOG table
+        const std::vector<double>& shearViscosityReductionFactor() const;
+
+        /// \ return    The reference polymer concentration for PLYSHLOG table
+        double plyshlogRefConc() const;
+
+        /// \ return    The flag indicating if reference salinity is specified in PLYSHLOG keyword
+        bool hasPlyshlogRefSalinity() const;
+
+        /// \ return    The flag indicating if reference temperature is specified in PLYSHLOG keyword
+        bool hasPlyshlogRefTemp() const;
+
+        /// \ return    The reference salinity in PLYSHLOG keyword
+        double plyshlogRefSalinity() const;
+
+        /// \ return    The reference temperature in PLYSHLOG keyword
+        double plyshlogRefTemp() const;
+
+        double viscMult(double c) const; // multipler interpolated from PLYVISC table
+
 		typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
+
+        V viscMult(const V& c) const;
+		/// \param[in] c		Array of n polymer concentraion values.
+		/// \return 			Array of n viscosity multiplier from PLVISC table.
 
 		/// Constructor wrapping a polymer props.	
         PolymerPropsAd(const PolymerProperties& polymer_props);
@@ -102,6 +129,14 @@ namespace Opm {
 		/// \return						Array of n adsorption values.
         ADB
         effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw) const;
+
+        /// \param[in]  water_vel      Array of the n values of water velocity or shear rate.
+        /// \param[in]  visc_mult      Array of the n values of the viscosity multiplier from PLYVISC table.
+        /// \parma[out] shear_mult     Array of the n values of calculated shear multiplier with PLYSHLOG keyword.
+        /// \return                    TRUE if the calculation of shear multiplier is sucessful,
+        ///                            FALSE if the calculation of shear multplier is failed.
+        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const;
+
 
     private:
         const PolymerProperties& polymer_props_;
