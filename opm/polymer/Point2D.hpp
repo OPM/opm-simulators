@@ -1,5 +1,5 @@
 /*
-  Copyright 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 Statoil ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,7 +22,11 @@
 
 namespace Opm {
 
+
+
     namespace detail {
+
+
         class Point2D
         {
             public:
@@ -51,7 +55,8 @@ namespace Opm {
                     x_ = x;
                 }
 
-                void setY(const double y){
+                void setY(const double y)
+                {
                     y_ = y;
                 }
 
@@ -94,7 +99,10 @@ namespace Opm {
 
         }; // class Point2D
 
+
     } // namespace detail
+
+
 
 } // namespace Opm
 
