@@ -805,7 +805,7 @@ namespace Opm {
         std::vector<double> internal_face_areas;
         internal_face_areas.resize(internal_faces.size());
 
-        for (int i = 0; i < internal_faces.size(); ++i) {
+        for (size_t i = 0; i < internal_faces.size(); ++i) {
             internal_face_areas[i] = grid_.face_areas[internal_faces[i]];
         }
 
@@ -924,7 +924,7 @@ namespace Opm {
         // for SHRATE treatment
         if (has_shrate_) {
             const double& shrate_const = polymer_props_ad_.shrate();
-            for (int i = 0; i < water_vel_wells.size(); ++i) {
+            for (size_t i = 0; i < water_vel_wells.size(); ++i) {
                 water_vel_wells[i] = shrate_const * water_vel_wells[i] / wells_bore_diameter_[i];
             }
         }
