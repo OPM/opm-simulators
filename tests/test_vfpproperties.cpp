@@ -18,7 +18,6 @@
 */
 
 
-
 #include <config.h>
 
 #if HAVE_DYNAMIC_BOOST_TEST
@@ -27,12 +26,15 @@
 
 #define BOOST_TEST_MODULE AutoDiffBlockTest
 
+#include <algorithm>
 #include <memory>
 #include <vector>
+#include <sstream>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 
+#include <opm/core/wells.h>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -438,16 +440,17 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         double value = 0.0;
                         double reference = 0.0;
                         for (int w=0; w < num_wells; ++w) {
-                            reference += x*w + 2*y*w + 3*z*w + 4*u*w + 5*v*w;
-                            value += bhp_val.value()[w];
+                            reference = x*w + 2*y*w + 3*z*w + 4*u*w + 5*v*w;
+                            value = bhp_val.value()[w];
+
+                            sum += value;
+                            reference_sum += reference;
+
+                            double abs_diff = std::abs(value - reference);
+
+                            sad += std::abs(abs_diff);
+                            max_d = std::max(max_d, abs_diff);
                         }
-                        sum += value;
-
-                        double abs_diff = std::abs(value - reference);
-                        reference_sum += reference;
-
-                        sad += std::abs(abs_diff);
-                        max_d = std::max(max_d, abs_diff);
                     }
                 }
             }
@@ -467,7 +470,101 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
  */
 BOOST_AUTO_TEST_CASE(Wells_Qs_thp_and_alq_interpolation)
 {
-    BOOST_WARN("Not implemented");
+    fillPlane();
+
+    //Create table
+    Opm::VFPProperties table(1,
+            1000.0,
+            Opm::VFPProperties::FLO_OIL,
+            Opm::VFPProperties::WFR_WOR,
+            Opm::VFPProperties::GFR_GOR,
+            Opm::VFPProperties::ALQ_UNDEF,
+            flo_axis,
+            thp_axis,
+            wfr_axis,
+            gfr_axis,
+            alq_axis,
+            data);
+
+    //Create wells
+    const int nphases = 3;
+    const int nwells  = 5;
+    const int nperfs  = 1;
+    std::shared_ptr<Wells> wells(create_wells(nphases, nwells, nperfs),
+                                destroy_wells);
+    int cells = 1;
+    for (int i=0; i<nwells; ++i) {
+        //Just give the cells a set of different indices
+        cells *= 2;
+
+        std::stringstream ss;
+        ss << "WELL_" << i;
+        const bool ok = add_well(INJECTOR, 0.0, 1, NULL, &cells,
+                              NULL, ss.str().c_str(), wells.get());
+        BOOST_REQUIRE(ok);
+    }
+
+    //Create some artificial flow values for our wells between 0 and 1
+    ADB::V qs_vals(nphases*nwells);
+    for (int j=0; j<nphases; ++j) {
+        for (int i=0; i<nwells; ++i) {
+            qs_vals[j*nwells+i] = (j*nwells+i) / static_cast<double>(nwells*nphases-1.0);
+        }
+    }
+    ADB qs = ADB::constant(qs_vals);
+
+    //Create the THP for each well
+    ADB::V thp_vals(nwells);
+    for (int i=0; i<nwells; ++i) {
+        thp_vals[i] = (i) / static_cast<double>(nwells-1.0);
+    }
+    ADB thp =  ADB::constant(thp_vals);
+
+    //Create the ALQ for each well
+    ADB::V alq_vals(nwells);
+    for (int i=0; i<nwells; ++i) {
+        alq_vals[i] = 0.0;
+    }
+    ADB alq =  ADB::constant(alq_vals);
+
+    //Call the bhp function
+    ADB bhp = table.bhp(*wells, qs, thp, alq);
+
+    //Calculate reference
+    //First, find the three phases
+    std::vector<double> water(nwells);
+    std::vector<double> oil(nwells);
+    std::vector<double> gas(nwells);
+    for (int i=0; i<nwells; ++i) {
+        water[i] = qs_vals[i];
+        oil[i] = qs_vals[nwells+i];
+        gas[i] = qs_vals[2*nwells+i];
+    }
+
+    //Compute reference value
+    std::vector<double> reference(nwells);
+    for (int i=0; i<nwells; ++i) {
+        double flo = oil[i];
+        double wor = water[i]/oil[i];
+        double gor = gas[i]/oil[i];
+        reference[i] = thp_vals[i] + 2*wor + 3*gor + 4*alq_vals[i] + 5*flo;
+    }
+
+    //Check that interpolation matches
+    const ADB::V& values = bhp.value();
+    BOOST_REQUIRE_EQUAL(values.size(), nwells);
+    double sad = 0.0;
+    double max_d = 0.0;
+    for (int i=0; i<nwells; ++i) {
+        double value = values[i];
+        double ref = reference[i];
+        double abs_diff = std::abs(value-ref);
+        sad += abs_diff;
+        max_d = std::max(abs_diff, max_d);
+    }
+
+    BOOST_CHECK_SMALL(sad, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, 1.0e-10);
 }
 
 
@@ -669,6 +766,7 @@ BOOST_AUTO_TEST_CASE(getGFR)
         checkEqual(flo, reference[i]);
     }
 }
+
 
 
 BOOST_AUTO_TEST_SUITE_END() // unit tests
