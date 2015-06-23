@@ -40,12 +40,12 @@ namespace Opm {
                 {
                 }
 
-                const double getX() const
+                double getX() const
                 {
                     return x_;
                 }
 
-                const double getY() const
+                double getY() const
                 {
                     return y_;
                 }
