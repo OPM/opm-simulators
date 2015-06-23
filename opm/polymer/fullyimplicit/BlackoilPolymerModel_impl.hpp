@@ -822,7 +822,7 @@ namespace Opm {
         water_vel.resize(nface);
         std::copy(&(rq_[0].mflux.value()[0]), &(rq_[0].mflux.value()[0]) + nface, water_vel.begin());
 
-        for (int i = 0; i < nface; ++i) {
+        for (size_t i = 0; i < nface; ++i) {
             water_vel[i] = water_vel[i] / (b_faces[i] * phiavg[i] * internal_face_areas[i]);
         }
 
@@ -912,7 +912,7 @@ namespace Opm {
         }
 
         // for the injection wells
-        for (int i = 0; i < well_cells.size(); ++i) {
+        for (size_t i = 0; i < well_cells.size(); ++i) {
             if (xw.polymerInflow()[well_cells[i]] == 0. && selectInjectingPerforations[i] == 1) { // maybe comparison with epsilon threshold
                 visc_mult_wells[i] = 1.;
             }
@@ -929,7 +929,7 @@ namespace Opm {
         b_wells.resize(b_perfcells.size());
         std::copy(&(b_perfcells.value()[0]), &(b_perfcells.value()[0]) + b_perfcells.size(), b_wells.begin());
 
-        for (int i = 0; i < water_vel_wells.size(); ++i) {
+        for (size_t i = 0; i < water_vel_wells.size(); ++i) {
             water_vel_wells[i] = b_wells[i] * water_vel_wells[i] / (phi_wells[i] * 2. * M_PI * wells_rep_radius_[i] * wells_perf_length_[i]);
             // TODO: CHECK to make sure this formulation is corectly used. Why muliplied by bW.
             // Although this formulation works perfectly with the tests compared with other formulations
