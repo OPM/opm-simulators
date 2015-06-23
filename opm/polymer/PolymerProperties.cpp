@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <opm/polymer/PolymerProperties.hpp>
+#include <opm/polymer/Point2D.hpp>
 #include <cmath>
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
@@ -423,5 +424,99 @@ namespace Opm
         } else {
             dmc_dc = 0.;
         }
+    }
+
+    bool PolymerProperties::computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const
+    {
+
+        double refConcentration = plyshlogRefConc();
+        double refViscMult = viscMult(refConcentration);
+
+        std::vector<double> shear_water_vel = shearWaterVelocity();
+        std::vector<double> shear_vrf = shearViscosityReductionFactor();
+
+        std::vector<double> logShearWaterVel;
+        std::vector<double> logShearVRF;
+
+        logShearWaterVel.resize(shear_water_vel.size());
+        logShearVRF.resize(shear_water_vel.size());
+
+        // converting the table using the reference condition
+        for (size_t i = 0; i < shear_vrf.size(); ++i) {
+            shear_vrf[i] = (refViscMult * shear_vrf[i] - 1.) / (refViscMult - 1);
+            logShearWaterVel[i] = std::log(shear_water_vel[i]);
+        }
+
+        shear_mult.resize(water_vel.size());
+
+        // the mimum velocity to apply the shear-thinning
+        const double minShearVel = shear_water_vel[0];
+        const double maxShearVel = shear_water_vel.back();
+        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+
+        for (size_t i = 0; i < water_vel.size(); ++i) {
+
+            if (visc_mult[i] - 1. < epsilon || std::abs(water_vel[i]) < minShearVel) {
+                 shear_mult[i] = 1.0;
+                 continue;
+            }
+
+            for (size_t j = 0; j < shear_vrf.size(); ++j) {
+                logShearVRF[j] = (1 + (visc_mult[i] - 1.0) * shear_vrf[j]) / visc_mult[i];
+                logShearVRF[j] = std::log(logShearVRF[j]);
+            }
+
+            // const double logWaterVelO = std::log(water_vel[i]);
+            const double logWaterVelO = std::log(std::abs(water_vel[i]));
+
+            size_t iIntersection; // finding the intersection on the iIntersectionth table segment
+            bool foundSegment = false;
+
+            for (iIntersection = 0; iIntersection < shear_vrf.size() - 1; ++iIntersection) {
+
+                double temp1 = logShearVRF[iIntersection] + logShearWaterVel[iIntersection] - logWaterVelO;
+                double temp2 = logShearVRF[iIntersection + 1] + logShearWaterVel[iIntersection + 1] - logWaterVelO;
+
+                // ignore the cases the temp1 or temp2 is zero first for simplicity.
+                // several more complicated cases remain to be implemented.
+                if( temp1 * temp2 < 0.){
+                    foundSegment = true;
+                    break;
+                }
+            }
+
+            if (foundSegment == true) {
+                detail::Point2D lineSegment[2];
+                lineSegment[0] = detail::Point2D{logShearWaterVel[iIntersection], logShearVRF[iIntersection]};
+                lineSegment[1] = detail::Point2D{logShearWaterVel[iIntersection + 1], logShearVRF[iIntersection + 1]};
+
+                detail::Point2D line[2];
+                line[0] = detail::Point2D{0, logWaterVelO};
+                line[1] = detail::Point2D{logWaterVelO, 0};
+
+                detail::Point2D intersectionPoint;
+
+                bool foundIntersection = detail::Point2D::findIntersection(lineSegment, line, intersectionPoint);
+
+                if (foundIntersection) {
+                    shear_mult[i] = std::exp(intersectionPoint.getY());
+                } else {
+                    std::cerr << " failed in finding the solution for shear-thinning multiplier " << std::endl;
+                    return false; // failed in finding the solution.
+                }
+            } else {
+                if (std::abs(water_vel[i]) < maxShearVel) {
+                    std::cout << " the veclocity is " << water_vel[i] << std::endl;
+                    std::cout << " max shear velocity is " << maxShearVel << std::endl;
+                    std::cerr << " something wrong happend in finding segment" << std::endl;
+                    return false;
+                } else {
+                    shear_mult[i] = std::exp(logShearVRF.back());
+                }
+            }
+
+        }
+
+        return true;
     }
 }

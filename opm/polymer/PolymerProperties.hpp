@@ -190,14 +190,14 @@ namespace Opm
 
                 plyshlog_ref_conc_ = plyshlogTable.getRefPolymerConcentration();
 
-                if(plyshlogTable.hasRefSalinity()) {
+                if (plyshlogTable.hasRefSalinity()) {
                     has_plyshlog_ref_salinity_ = true;
                     plyshlog_ref_salinity_ = plyshlogTable.getRefSalinity();
                 } else {
                     has_plyshlog_ref_salinity_ = false;
                 }
 
-                if(plyshlogTable.hasRefTemperature()) {
+                if (plyshlogTable.hasRefTemperature()) {
                     has_plyshlog_ref_temp_ = true;
                     plyshlog_ref_temp_ = plyshlogTable.getRefTemperature();
                 } else {
@@ -351,6 +351,9 @@ namespace Opm
         void computeMcBoth(const double& c, double& mc,
                            double& dmc_dc, bool if_with_der) const;
 
+        /// Computing the shear multiplier based on the water velocity/shear rate with PLYSHLOG keyword
+        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const;
+
     private:
         double c_max_;
         double mix_param_;
@@ -396,6 +399,7 @@ namespace Opm
                                   double& deff_relperm_wat_ds,
                                   double& deff_relperm_wat_dc,
                                   bool if_with_der) const;
+
     };
 
 } // namespace Opm

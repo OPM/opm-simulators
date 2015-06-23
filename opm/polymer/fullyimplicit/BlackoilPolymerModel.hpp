@@ -203,7 +203,6 @@ namespace Opm {
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
 
-        // using Base::addWellEq;
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
@@ -233,17 +232,9 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        addWellEq(const SolutionState& state,
-                  WellState& xw,
-                  V& aliveWells);
-
-        void
-        extraAddWellEq(const SolutionState& state,
-                       const WellState& xw,
-                       const std::vector<ADB>& cq_ps,
-                       const std::vector<ADB>& cmix_s,
-                       const ADB& cqt_is,
-                       const std::vector<int>& well_cells);
+        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                           const SolutionState& state,
+                                           WellState& xw);
 
         void
         computeMassFlux(const int               actph ,
@@ -291,28 +282,16 @@ namespace Opm {
                              int nc,
                              int nw) const;
 
-
-        struct Point2D {
-            double x;
-            double y;
-        };
-
-        /// Finding the intersection point of a line segment and a line.
-        /// return true, if found.
-        bool findIntersection (Point2D line_segment1[2], Point2D line2[2], Point2D& intersection_point);
-
-        /// Computing the shear multiplier based on the water velocity/shear rate with PLYSHLOG keyword
-        bool computeShearMultLog( std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult);
-
         /// Computing the water velocity without shear-thinning for the cell faces.
         /// The water velocity will be used for shear-thinning calculation.
         void computeWaterShearVelocityFaces(const V& transi, const std::vector<ADB>& kr,
                                             const std::vector<ADB>& phasePressure, const SolutionState& state,
                                             std::vector<double>& water_vel, std::vector<double>& visc_mult);
 
-        void computeWaterShearVelocityWells(const SolutionState& state, WellState& well_state,
-                                            V& aliveWells, std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
-
+        /// Computing the water velocity without shear-thinning for the well perforations based on the water flux rate.
+        /// The water velocity will be used for shear-thinning calculation.
+        void computeWaterShearVelocityWells(const SolutionState& state, WellState& xw, const ADB& cq_sw,
+                                            std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells);
 
     };
 

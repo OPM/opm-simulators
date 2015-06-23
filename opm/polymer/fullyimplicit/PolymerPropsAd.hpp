@@ -133,6 +133,14 @@ namespace Opm {
         ADB
         effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw) const;
 
+        /// \param[in]  water_vel      Array of the n values of water velocity or shear rate.
+        /// \param[in]  visc_mult      Array of the n values of the viscosity multiplier from PLYVISC table.
+        /// \parma[out] shear_mult     Array of the n values of calculated shear multiplier with PLYSHLOG keyword.
+        /// \return                    TRUE if the calculation of shear multiplier is sucessful,
+        ///                            FALSE if the calculation of shear multplier is failed.
+        bool computeShearMultLog(std::vector<double>& water_vel, std::vector<double>& visc_mult, std::vector<double>& shear_mult) const;
+
+
     private:
         const PolymerProperties& polymer_props_;
     };

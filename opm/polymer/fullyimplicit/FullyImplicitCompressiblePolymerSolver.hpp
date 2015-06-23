@@ -29,6 +29,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -87,6 +88,9 @@ namespace Opm {
 
         int newtonIterations() const;
         int linearIterations() const;
+
+        /// Not used by this class except to satisfy interface requirements.
+        typedef parameter::ParameterGroup SolverParameters;
 
     private:
         typedef AutoDiffBlock<double> ADB;
