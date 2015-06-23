@@ -705,7 +705,7 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
     std::shared_ptr<Opm::EclipseState> eclipseState;
 
     Opm::ParserPtr parser(new Opm::Parser());
-    boost::filesystem::path file("../opm-parser/testdata/integration_tests/VFPPROD/VFPPROD1");
+    boost::filesystem::path file("tests/VFPPROD1");
 
     deck = parser->parseFile(file.string());
     Opm::checkDeck(deck);
@@ -740,11 +740,24 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
             for (int g=0; g<n; ++g) {
                 //for (unsigned int a=0; a<n; ++a) { //n==1, skip this loop
                     for (int f=0; f<n; ++f) {
+
+                        //Liq given as SM3/day
                         double f_i = liq[f];
-                        double t_i = thp[t];
+
+                        //THP given as BARSA => convert to Pascal
+                        double t_i = thp[t]*100000.0;
+
+                        //WCT given as fraction
                         double w_i = wct[w];
+
+                        //GOR given as SM3
                         double g_i = gor[g];
+
+                        //ALQ unit not relevant in this case
                         double a_i = 0.0;
+
+                        //Value given as BARSA
+                        //FIXME: should convert to Pascal when proper conversion in VFPProperties.cpp is in place
                         double value_i = tables[0].bhp(f_i, t_i, w_i, g_i, a_i);
 
                         double abs_diff = std::abs(value_i - reference[i]);

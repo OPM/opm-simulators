@@ -24,83 +24,109 @@
 
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <algorithm>
 
 namespace Opm {
+
+/**
+ * Helper function that checks if an item exists in a record, and has a
+ * non-zero size
+ */
+bool itemValid(DeckRecordConstPtr& record, const char* name) {
+    if (record->size() == 0) {
+        return false;
+    }
+    else {
+        DeckItemPtr item;
+        //TODO: Should we instead here allow the exception to propagate?
+        try {
+            item = record->getItem(name);
+        }
+        catch (...) {
+            return false;
+        }
+
+        if (item->size() > 0) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+}
 
 VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
     auto iter = table->begin();
 
     auto header = (*iter++);
+
+    assert(itemValid(header, "TABLE"));
     table_num_ = header->getItem("TABLE")->getInt(0);
+
+    assert(itemValid(header, "DATUM_DEPTH"));
     datum_depth_ = header->getItem("DATUM_DEPTH")->getRawDouble(0);
 
     //Rate type
-    try {
-        std::string flo_string = header->getItem("RATE_TYPE")->getString(0);
-        if (flo_string == "OIL") {
-            flo_type_ = FLO_OIL;
-        }
-        else if (flo_string == "LIQ") {
-            flo_type_ = FLO_LIQ;
-        }
-        else if (flo_string == "GAS") {
-            flo_type_ = FLO_GAS;
-        }
-        else {
-            flo_type_ = FLO_INVALID;
-        }
+    assert(itemValid(header, "RATE_TYPE"));
+    std::string flo_string = header->getItem("RATE_TYPE")->getString(0);
+    if (flo_string == "OIL") {
+        flo_type_ = FLO_OIL;
     }
-    catch (std::invalid_argument& e) {
-        //TODO: log here
+    else if (flo_string == "LIQ") {
+        flo_type_ = FLO_LIQ;
+    }
+    else if (flo_string == "GAS") {
+        flo_type_ = FLO_GAS;
+    }
+    else {
         flo_type_ = FLO_INVALID;
+        OPM_THROW(std::runtime_error, "Invalid RATE_TYPE string: '" << flo_string << "'");
     }
 
     //Water fraction
-    try {
-        std::string wfr_string = header->getItem("WFR")->getString(0);
-        if (wfr_string == "WOR") {
-            wfr_type_ = WFR_WOR;
-        }
-        else if (wfr_string == "WCT") {
-            wfr_type_ = WFR_WCT;
-        }
-        else if (wfr_string == "WGR") {
-            wfr_type_ = WFR_WGR;
-        }
-        else {
-            wfr_type_ = WFR_INVALID;
-        }
+    assert(itemValid(header, "WFR"));
+    std::string wfr_string = header->getItem("WFR")->getString(0);
+    if (wfr_string == "WOR") {
+        wfr_type_ = WFR_WOR;
     }
-    catch (std::invalid_argument& e) {
-        //TODO: log here
+    else if (wfr_string == "WCT") {
+        wfr_type_ = WFR_WCT;
+    }
+    else if (wfr_string == "WGR") {
+        wfr_type_ = WFR_WGR;
+    }
+    else {
         wfr_type_ = WFR_INVALID;
+        OPM_THROW(std::runtime_error, "Invalid WFR string: '" << wfr_string << "'");
     }
 
     //Gas fraction
-    try {
-        std::string gfr_string = header->getItem("GFR")->getString(0);
-        if (gfr_string == "GOR") {
-            gfr_type_ = GFR_GOR;
-        }
-        else if (gfr_string == "GLR") {
-            gfr_type_ = GFR_GLR;
-        }
-        else if (gfr_string == "OGR") {
-            gfr_type_ = GFR_OGR;
-        }
-        else {
-            gfr_type_ = GFR_INVALID;
-        }
+    assert(itemValid(header, "GFR"));
+    std::string gfr_string = header->getItem("GFR")->getString(0);
+    if (gfr_string == "GOR") {
+        gfr_type_ = GFR_GOR;
     }
-    catch (std::invalid_argument& e) {
-        //TODO: log here
+    else if (gfr_string == "GLR") {
+        gfr_type_ = GFR_GLR;
+    }
+    else if (gfr_string == "OGR") {
+        gfr_type_ = GFR_OGR;
+    }
+    else {
         gfr_type_ = GFR_INVALID;
+        OPM_THROW(std::runtime_error, "Invalid GFR string: '" << gfr_string << "'");
+    }
+
+    //Definition of THP values, must be THP
+    if (itemValid(header, "PRESSURE_DEF")) {
+        std::string quantity_string = header->getItem("PRESSURE_DEF")->getString(0);
+        assert(quantity_string == "THP");
     }
 
     //Artificial lift
-    try {
-        std::string alq_string = header->getItem("ALQ")->getString(0);
+    if (itemValid(header, "ALQ_DEF")) {
+        std::string alq_string = header->getItem("ALQ_DEF")->getString(0);
         if (alq_string == "GRAT") {
             alq_type_ = ALQ_GRAT;
         }
@@ -124,29 +150,65 @@ VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
         }
         else {
             alq_type_ = ALQ_INVALID;
+            OPM_THROW(std::runtime_error, "Invalid ALQ_DEF string: '" << alq_string << "'");
         }
     }
-    catch (std::invalid_argument& e) {
-        //TODO: log here
-        //FIXME:  header->getItem("ALQ")->getString(0); appears to fail, ignoring in current implementation
-        //alq_type_ = ALQ_INVALID;
+    else {
         alq_type_ = ALQ_UNDEF;
     }
 
+    //Units used for this table
+    if (itemValid(header, "UNITS")) {
+        //TODO: Should check that table unit matches rest of deck.
+        std::string unit_string = header->getItem("UNITS")->getString(0);
+        if (unit_string == "METRIC") {
+        }
+        else if (unit_string == "FIELD") {
+        }
+        else if (unit_string == "LAB") {
+        }
+        else if (unit_string == "PVT-M") {
+        }
+        else {
+            OPM_THROW(std::runtime_error, "Invalid UNITS string: '" << unit_string << "'");
+        }
+    }
+    else {
+        //Do nothing, table implicitly same unit as rest of deck
+    }
+
+    //Quantity in the body of the table
+    if (itemValid(header, "BODY_DEF")) {
+        std::string body_string = header->getItem("BODY_DEF")->getString(0);
+        if (body_string == "TEMP") {
+            OPM_THROW(std::logic_error, "Invalid BODY_DEF string: TEMP not supported");
+        }
+        else if (body_string == "BHP") {
+
+        }
+        else {
+            OPM_THROW(std::runtime_error, "Invalid BODY_DEF string: '" << body_string << "'");
+        }
+    }
+    else {
+        //Default to BHP
+    }
+
+
     //Get actual rate / flow values
-    flo_data_ = (*iter++)->getItem("FLOW_VALUES")->getRawDoubleData();
+    flo_data_ = (*iter++)->getItem("FLOW_VALUES")->getSIDoubleData();
 
     //Get actual tubing head pressure values
-    thp_data_ = (*iter++)->getItem("THP_VALUES")->getRawDoubleData();
+    thp_data_ = (*iter++)->getItem("THP_VALUES")->getSIDoubleData();
 
     //Get actual water fraction values
-    wfr_data_ = (*iter++)->getItem("WFR_VALUES")->getRawDoubleData();
+    wfr_data_ = (*iter++)->getItem("WFR_VALUES")->getRawDoubleData(); //FIXME: unit
 
     //Get actual gas fraction values
-    gfr_data_ = (*iter++)->getItem("GFR_VALUES")->getRawDoubleData();
+    gfr_data_ = (*iter++)->getItem("GFR_VALUES")->getRawDoubleData(); //FIXME: unit
 
     //Get actual gas fraction values
-    alq_data_ = (*iter++)->getItem("ALQ_VALUES")->getRawDoubleData();
+    alq_data_ = (*iter++)->getItem("ALQ_VALUES")->getRawDoubleData(); //FIXME: unit
 
     //Finally, read the actual table itself.
     size_t nt = thp_data_.size();
@@ -170,7 +232,7 @@ VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
         int a = (*iter)->getItem("ALQ_INDEX")->getInt(0) - 1;
 
         //Rest of values (bottom hole pressure or tubing head temperature) have index of flo value
-        const std::vector<double>& bhp_tht = (*iter)->getItem("VALUES")->getRawDoubleData();
+        const std::vector<double>& bhp_tht = (*iter)->getItem("VALUES")->getRawDoubleData(); //FIXME: unit
         std::copy(bhp_tht.begin(), bhp_tht.end(), &data_[t][w][g][a][0]);
     }
 
@@ -213,9 +275,9 @@ void VFPProperties::check() {
 
     //Misc types
     assert(flo_type_ >= FLO_OIL && flo_type_ < FLO_INVALID);
-    assert(wfr_type_ >= WFR_WOR && flo_type_ < WFR_INVALID);
-    assert(gfr_type_ >= GFR_GOR && flo_type_ < GFR_INVALID);
-    assert(alq_type_ >= ALQ_GRAT && flo_type_ < ALQ_INVALID);
+    assert(wfr_type_ >= WFR_WOR && wfr_type_ < WFR_INVALID);
+    assert(gfr_type_ >= GFR_GOR && gfr_type_ < GFR_INVALID);
+    assert(alq_type_ >= ALQ_GRAT && alq_type_ < ALQ_INVALID);
 
     //Data axis size
     assert(flo_data_.size() > 0);
@@ -240,11 +302,12 @@ void VFPProperties::check() {
     assert(data_.shape()[4] == flo_data_.size());
 
     //Finally, check that all data is within reasonable ranges, defined to be up-to 1.0e10...
-    for (int t=0; t<data_.shape()[0]; ++t) {
-        for (int w=0; w<data_.shape()[1]; ++w) {
-            for (int g=0; g<data_.shape()[2]; ++g) {
-                for (int a=0; a<data_.shape()[3]; ++a) {
-                    for (int f=0; f<data_.shape()[4]; ++f) {
+    typedef array_type::size_type size_type;
+    for (size_type t=0; t<data_.shape()[0]; ++t) {
+        for (size_type w=0; w<data_.shape()[1]; ++w) {
+            for (size_type g=0; g<data_.shape()[2]; ++g) {
+                for (size_type a=0; a<data_.shape()[3]; ++a) {
+                    for (size_type f=0; f<data_.shape()[4]; ++f) {
                         if (data_[t][w][g][a][f] > 1.0e10) {
                             //TODO: Replace with proper log message
                             std::cerr << "Too large value encountered in VFPPROD in ["
@@ -298,6 +361,8 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
+    //TODO enable support for two-phase.
+    assert(np == 3);
     const ADB& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
@@ -306,27 +371,7 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
     ADB wfr = getWFR(w, o, g);
     ADB gfr = getGFR(w, o, g);
 
-    //TODO: What is this actually supposed to be used for?
-    switch(alq_type_) {
-        case ALQ_GRAT: // Lift as injection rate
-            break;
-        case ALQ_IGLR: // Injection gas-liquid ratio
-            break;
-        case ALQ_TGLR: // Total gas-liquid ratio
-            break;
-        case ALQ_PUMP: // Pump rating
-            break;
-        case ALQ_COMP: // Compressor power
-            break;
-        case ALQ_BEAN: // Choke diameter
-            break;
-        case ALQ_UNDEF: // Undefined
-            break;
-        case ALQ_INVALID: //Intentional fall-through
-        default:
-            //TODO: Log/throw
-            std::cerr << "ERROR, ALQ_INVALID" << std::endl;
-    }
+    //TODO: Check ALQ type here?
 
     return bhp(flo, thp, wfr, gfr, alq);
 }
@@ -336,7 +381,6 @@ VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, con
     switch (flo_type_) {
         case FLO_OIL:
             //Oil = liquid phase
-            //TODO assert("qs has oil phase")
             return liquid;
         case FLO_LIQ:
             //Liquid = aqua + liquid phases
@@ -346,8 +390,7 @@ VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, con
             return vapour;
         case FLO_INVALID: //Intentional fall-through
         default:
-            //TODO: Log/throw
-            std::cerr << "ERROR, FLO_INVALID" << std::endl;
+            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << flo_type_ << "'");
             return ADB::null();
     }
 }
@@ -365,8 +408,7 @@ VFPProperties::ADB VFPProperties::getWFR(const ADB& aqua, const ADB& liquid, con
             return aqua / vapour;
         case WFR_INVALID: //Intentional fall-through
         default:
-            //TODO: Log/throw
-            std::cerr << "ERROR, WFR_INVALID" << std::endl;
+            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << wfr_type_ << "'");
             return ADB::null();
     }
 }
@@ -385,8 +427,7 @@ VFPProperties::ADB VFPProperties::getGFR(const ADB& aqua, const ADB& liquid, con
             return liquid / vapour;
         case GFR_INVALID: //Intentional fall-through
         default:
-            //TODO: Log/throw
-            std::cerr << "ERROR, GFR_INVALID" << std::endl;
+            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << flo_type_ << "'");
             return ADB::null();
     }
 }
