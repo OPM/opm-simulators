@@ -795,13 +795,13 @@ namespace Opm {
 
         size_t nface = visc_mult_faces.size();
         visc_mult.resize(nface);
-        std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
+        std::copy(visc_mult_faces.data(), visc_mult_faces.data() + nface, visc_mult.begin());
 
         rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
 
         const auto& b_faces_adb = upwind.select(b);
         b_faces.resize(b_faces_adb.size());
-        std::copy(&(b_faces_adb.value()[0]), &(b_faces_adb.value()[0]) + b_faces_adb.size(), b_faces.begin());
+        std::copy(b_faces_adb.value().data(), b_faces_adb.value().data() + b_faces_adb.size(), b_faces.begin());
 
         const auto& internal_faces = ops_.internal_faces;
 
@@ -817,10 +817,10 @@ namespace Opm {
 
         std::vector<double> phiavg;
         phiavg.resize(phiavg_adb.size());
-        std::copy(&(phiavg_adb.value()[0]), &(phiavg_adb.value()[0]) + phiavg_adb.size(), phiavg.begin());
+        std::copy(phiavg_adb.value().data(), phiavg_adb.value().data() + phiavg_adb.size(), phiavg.begin());
 
         water_vel.resize(nface);
-        std::copy(&(rq_[0].mflux.value()[0]), &(rq_[0].mflux.value()[0]) + nface, water_vel.begin());
+        std::copy(rq_[0].mflux.value().data(), rq_[0].mflux.value().data() + nface, water_vel.begin());
 
         for (size_t i = 0; i < nface; ++i) {
             water_vel[i] = water_vel[i] / (b_faces[i] * phiavg[i] * internal_face_areas[i]);
@@ -836,7 +836,7 @@ namespace Opm {
 
             std::vector<double> sw_upwind;
             sw_upwind.resize(sw_upwind_adb.size());
-            std::copy(&(sw_upwind_adb.value()[0]), &(sw_upwind_adb.value()[0]) + sw_upwind_adb.size(), sw_upwind.begin());
+            std::copy(sw_upwind_adb.value().data(), sw_upwind_adb.value().data() + sw_upwind_adb.size(), sw_upwind.begin());
 
             // get the absolute permeability for the faces
             std::vector<double> perm;
@@ -850,7 +850,7 @@ namespace Opm {
             const ADB& krw_adb = upwind.select(krw_eff);
             std::vector<double> krw_upwind;
             krw_upwind.resize(krw_adb.size());
-            std::copy(&(krw_adb.value()[0]), &(krw_adb.value()[0]) + krw_adb.size(), krw_upwind.begin());
+            std::copy(krw_adb.value().data(), krw_adb.value().data() + krw_adb.size(), krw_upwind.begin());
 
             const double& shrate_const = polymer_props_ad_.shrate();
 
@@ -884,7 +884,7 @@ namespace Opm {
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         water_vel_wells.resize(cq_sw.size());
-        std::copy(&(cq_sw.value()[0]), &(cq_sw.value()[0]) + cq_sw.size(), water_vel_wells.begin());
+        std::copy(cq_sw.value().data(), cq_sw.value().data() + cq_sw.size(), water_vel_wells.begin());
 
         const V& polymer_conc = state.concentration.value();
 
@@ -892,7 +892,7 @@ namespace Opm {
         V visc_mult_wells_v = subset(visc_mult_cells, well_cells);
 
         visc_mult_wells.resize(visc_mult_wells_v.size());
-        std::copy(&(visc_mult_wells_v[0]), &(visc_mult_wells_v[0]) + visc_mult_wells_v.size(), visc_mult_wells.begin());
+        std::copy(visc_mult_wells_v.data(), visc_mult_wells_v.data() + visc_mult_wells_v.size(), visc_mult_wells.begin());
 
         const int water_pos = fluid_.phaseUsage().phase_pos[Water];
         ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
@@ -923,11 +923,11 @@ namespace Opm {
 
         std::vector<double> phi_wells;
         phi_wells.resize(phi_wells_adb.size());
-        std::copy(&(phi_wells_adb.value()[0]), &(phi_wells_adb.value()[0]) + phi_wells_adb.size(), phi_wells.begin());
+        std::copy(phi_wells_adb.value().data(), phi_wells_adb.value().data() + phi_wells_adb.size(), phi_wells.begin());
 
         std::vector<double> b_wells;
         b_wells.resize(b_perfcells.size());
-        std::copy(&(b_perfcells.value()[0]), &(b_perfcells.value()[0]) + b_perfcells.size(), b_wells.begin());
+        std::copy(b_perfcells.value().data(), b_perfcells.value().data() + b_perfcells.size(), b_wells.begin());
 
         for (size_t i = 0; i < water_vel_wells.size(); ++i) {
             water_vel_wells[i] = b_wells[i] * water_vel_wells[i] / (phi_wells[i] * 2. * M_PI * wells_rep_radius_[i] * wells_perf_length_[i]);
