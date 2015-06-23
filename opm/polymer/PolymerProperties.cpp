@@ -101,6 +101,22 @@ namespace Opm
         return plyshlog_ref_temp_;
     }
 
+    bool PolymerProperties::hasPlyshlog() const
+    {
+        return has_plyshlog_;
+    }
+
+    bool PolymerProperties::hasShrate() const
+    {
+        return has_shrate_;
+    }
+
+
+    double PolymerProperties::shrate() const
+    {
+        return shrate_;
+    }
+
 
     double
     PolymerProperties::shearVrf(const double velocity) const

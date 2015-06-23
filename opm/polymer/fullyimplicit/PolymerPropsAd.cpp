@@ -102,6 +102,16 @@ namespace Opm {
         return polymer_props_.plyshlogRefTemp();
     }
 
+    double PolymerPropsAd::shrate() const
+    {
+        if (polymer_props_.hasShrate()) {
+            return polymer_props_.shrate();
+        } else {
+            OPM_THROW(std::logic_error, "the SHRATE keyword is not specified while requested \n");
+        }
+    }
+
+
     double
     PolymerPropsAd::viscMult(double c) const
     {

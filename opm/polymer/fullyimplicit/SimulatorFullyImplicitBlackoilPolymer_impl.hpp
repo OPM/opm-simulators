@@ -35,6 +35,7 @@ namespace Opm
                                           const bool has_vapoil,
                                           const bool has_polymer,
                                           const bool has_plyshlog,
+                                          const bool has_shrate,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
                                           Opm::DeckConstPtr& deck,
@@ -54,6 +55,7 @@ namespace Opm
         , polymer_props_(polymer_props)
         , has_polymer_(has_polymer)
         , has_plyshlog_(has_plyshlog)
+        , has_shrate_(has_shrate)
         , deck_(deck)
     {
     }
@@ -78,8 +80,10 @@ namespace Opm
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
                                                       has_plyshlog_,
+                                                      has_shrate_,
                                                       wells_rep_radius_,
                                                       wells_perf_length_,
+                                                      wells_bore_diameter_,
                                                       BaseType::terminal_output_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
@@ -117,7 +121,7 @@ namespace Opm
                                             polymer_inflow_c);
         well_state.polymerInflow() = polymer_inflow_c;
 
-        computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_);
+        computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
     }
 
 
@@ -146,7 +150,8 @@ namespace Opm
                                const size_t                    timeStep,
                                const GridT&                    grid,
                                std::vector<double>&            wells_rep_radius,
-                               std::vector<double>&            wells_perf_length)
+                               std::vector<double>&            wells_perf_length,
+                               std::vector<double>&            wells_bore_diameter)
     {
 
         // TODO, the function does not work for parallel running
@@ -167,9 +172,11 @@ namespace Opm
 
         wells_rep_radius.clear();
         wells_perf_length.clear();
+        wells_bore_diameter.clear();
 
         wells_rep_radius.reserve(n_perf);
         wells_perf_length.reserve(n_perf);
+        wells_bore_diameter.reserve(n_perf);
 
         std::map<int,int> cartesian_to_compressed;
 
@@ -240,6 +247,7 @@ namespace Opm
                              double repR = std::sqrt(re * radius);
                              wells_rep_radius.push_back(repR);
                              wells_perf_length.push_back(perf_length);
+                             wells_bore_diameter.push_back(2. * radius);
                          }
                      } else {
                          if (completion->getState() != WellCompletion::SHUT) {

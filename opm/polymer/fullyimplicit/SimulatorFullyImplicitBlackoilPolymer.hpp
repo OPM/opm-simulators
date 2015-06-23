@@ -117,6 +117,7 @@ namespace Opm
                                               const bool vapoil,
                                               const bool polymer,
                                               const bool plyshlog,
+                                              const bool shrate,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
@@ -136,10 +137,13 @@ namespace Opm
         bool has_polymer_;
         // flag for PLYSHLOG keyword
         bool has_plyshlog_;
+        // flag for SHRATE keyword
+        bool has_shrate_;
         DeckConstPtr deck_;
 
         std::vector<double> wells_rep_radius_;
         std::vector<double> wells_perf_length_;
+        std::vector<double> wells_bore_diameter_;
 
         // generate the mapping from Cartesian grid cells to global compressed cells,
         // copied from opm-core, to be used in function computeRepRadiusPerfLength()
@@ -147,13 +151,15 @@ namespace Opm
         setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed);
 
         //  calculate the representative radius and length for for well peforations
+        //  and store the wellbore diameters
         //  it will be used in the shear-thinning calcluation only.
         void
         computeRepRadiusPerfLength(const Opm::EclipseStateConstPtr eclipseState,
                                    const size_t                    timeStep,
                                    const GridT&                    grid,
                                    std::vector<double>&            wells_rep_radius,
-                                   std::vector<double>&            wells_perf_length);
+                                   std::vector<double>&            wells_perf_length,
+                                   std::vector<double>&            wells_bore_diameter);
 
     };
 

@@ -56,17 +56,21 @@ namespace Opm {
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
-        /// \param[in] param            parameters
-        /// \param[in] grid             grid data structure
-        /// \param[in] fluid            fluid properties
-        /// \param[in] geo              rock properties
-        /// \param[in] rock_comp_props  if non-null, rock compressibility properties
-        /// \param[in] wells            well structure
-        /// \param[in] linsolver        linear solver
-        /// \param[in] has_disgas       turn on dissolved gas
-        /// \param[in] has_vapoil       turn on vaporized oil feature
-        /// \param[in] has_polymer      turn on polymer feature
-        /// \param[in] has_plyshlog     true when PLYSHLOG keyword available
+        /// \param[in] param               parameters
+        /// \param[in] grid                grid data structure
+        /// \param[in] fluid               fluid properties
+        /// \param[in] geo                 rock properties
+        /// \param[in] rock_comp_props     if non-null, rock compressibility properties
+        /// \param[in] wells               well structure
+        /// \param[in] linsolver           linear solver
+        /// \param[in] has_disgas          turn on dissolved gas
+        /// \param[in] has_vapoil          turn on vaporized oil feature
+        /// \param[in] has_polymer         turn on polymer feature
+        /// \param[in] has_plyshlog        true when PLYSHLOG keyword available
+        /// \param[in] has_shrate          true when PLYSHLOG keyword available
+        /// \param[in] wells_rep_radius    representative radius of well perforations during shear effects calculation
+        /// \param[in] wells_perf_length   perforation length for well perforations
+        /// \param[in] wells_bore_diameter wellbore diameters for well performations
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilPolymerModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
@@ -80,8 +84,10 @@ namespace Opm {
                              const bool                              has_vapoil,
                              const bool                              has_polymer,
                              const bool                              has_plyshlog,
+                             const bool                              has_shrate,
                              const std::vector<double>&              wells_rep_radius,
                              const std::vector<double>&              wells_perf_length,
+                             const std::vector<double>&              wells_bore_diameter,
                              const bool                              terminal_output);
 
         /// Called once before each time step.
@@ -136,6 +142,7 @@ namespace Opm {
         const PolymerPropsAd& polymer_props_ad_;
         const bool has_polymer_;
         const bool has_plyshlog_;
+        const bool has_shrate_;
         const int  poly_pos_;
         V cmax_;
 
@@ -143,6 +150,8 @@ namespace Opm {
         // to be used in shear-thinning computation.
         std::vector<double> wells_rep_radius_;
         std::vector<double> wells_perf_length_;
+        // wellbore diameters
+        std::vector<double> wells_bore_diameter_;
 
         // shear-thinning factor for cell faces
         std::vector<double> shear_mult_faces_;

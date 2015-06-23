@@ -281,6 +281,7 @@ try
                   deck->hasKeyword("VAPOIL"),
                   polymer,
                   deck->hasKeyword("PLYSHLOG"),
+                  deck->hasKeyword("SHRATE"),
                   eclipseState,
                   outputWriter,
                   deck,

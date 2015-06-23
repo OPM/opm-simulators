@@ -86,17 +86,21 @@ namespace Opm {
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
                                                      const bool                              has_plyshlog,
+                                                     const bool                              has_shrate,
                                                      const std::vector<double>&              wells_rep_radius,
                                                      const std::vector<double>&              wells_perf_length,
+                                                     const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
           has_plyshlog_(has_plyshlog),
+          has_shrate_(has_shrate),
           poly_pos_(detail::polymerPos(fluid.phaseUsage())),
           wells_rep_radius_(wells_rep_radius),
-          wells_perf_length_(wells_perf_length)
+          wells_perf_length_(wells_perf_length),
+          wells_bore_diameter_(wells_bore_diameter)
     {
         if (has_polymer_) {
             if (!active_[Water]) {
@@ -752,8 +756,6 @@ namespace Opm {
                                                                std::vector<double>& water_vel, std::vector<double>& visc_mult)
     {
 
-        std::vector<double> b_faces;
-
         const int phase = fluid_.phaseUsage().phase_pos[Water]; // water position
 
         const int canonicalPhaseIdx = canph_[phase];
@@ -791,36 +793,73 @@ namespace Opm {
 
         size_t nface = visc_mult_faces.size();
         visc_mult.resize(nface);
-        std::copy(&(visc_mult_faces[0]), &(visc_mult_faces[0]) + nface, visc_mult.begin());
+        std::copy(visc_mult_faces.data(), visc_mult_faces.data() + nface, visc_mult.begin());
 
         rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
 
         const auto& b_faces_adb = upwind.select(b);
-        b_faces.resize(b_faces_adb.size());
-        std::copy(&(b_faces_adb.value()[0]), &(b_faces_adb.value()[0]) + b_faces_adb.size(), b_faces.begin());
+        std::vector<double> b_faces(b_faces_adb.value().data(), b_faces_adb.value().data() + b_faces_adb.size());
 
         const auto& internal_faces = ops_.internal_faces;
 
         std::vector<double> internal_face_areas;
         internal_face_areas.resize(internal_faces.size());
 
-        for (int i = 0; i < internal_faces.size(); ++i) {
+        for (size_t i = 0; i < internal_faces.size(); ++i) {
             internal_face_areas[i] = grid_.face_areas[internal_faces[i]];
         }
 
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
         const ADB phiavg_adb  = ops_.caver * phi;
 
-        std::vector<double> phiavg;
-        phiavg.resize(phiavg_adb.size());
-        std::copy(&(phiavg_adb.value()[0]), &(phiavg_adb.value()[0]) + phiavg_adb.size(), phiavg.begin());
+        std::vector<double> phiavg(phiavg_adb.value().data(), phiavg_adb.value().data() + phiavg_adb.size());
 
         water_vel.resize(nface);
-        std::copy(&(rq_[0].mflux.value()[0]), &(rq_[0].mflux.value()[0]) + nface, water_vel.begin());
+        std::copy(rq_[0].mflux.value().data(), rq_[0].mflux.value().data() + nface, water_vel.begin());
 
         for (size_t i = 0; i < nface; ++i) {
             water_vel[i] = water_vel[i] / (b_faces[i] * phiavg[i] * internal_face_areas[i]);
         }
+
+        // for SHRATE keyword treatment
+        if (has_shrate_) {
+
+            // get the upwind water saturation
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
+            const ADB& sw_upwind_adb = upwind.select(sw);
+            std::vector<double> sw_upwind(sw_upwind_adb.value().data(), sw_upwind_adb.value().data() + sw_upwind_adb.size());
+
+            // get the absolute permeability for the faces
+            std::vector<double> perm;
+            perm.resize(transi.size());
+
+            for (size_t i = 0; i < transi.size(); ++i) {
+                perm[i] = transi[i] / internal_faces[i];
+            }
+
+            // get the upwind krw_eff
+            const ADB& krw_adb = upwind.select(krw_eff);
+            std::vector<double> krw_upwind(krw_adb.value().data(), krw_adb.value().data() + krw_adb.size());
+
+            const double& shrate_const = polymer_props_ad_.shrate();
+
+            const double epsilon = std::numeric_limits<double>::epsilon();
+            // std::cout << "espilon is " << epsilon << std::endl;
+            // std::cin.ignore();
+
+            for (size_t i = 0; i < water_vel.size(); ++i) {
+                // assuming only when upwinding water saturation is not zero
+                // there will be non-zero water velocity
+                if (std::abs(water_vel[i]) < epsilon) {
+                    continue;
+                }
+
+                water_vel[i] *= shrate_const * std::sqrt(phiavg[i] / (perm[i] * sw_upwind[i] * krw_upwind[i]));
+
+            }
+        }
+
     }
 
     template<class Grid>
@@ -835,7 +874,7 @@ namespace Opm {
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         water_vel_wells.resize(cq_sw.size());
-        std::copy(&(cq_sw.value()[0]), &(cq_sw.value()[0]) + cq_sw.size(), water_vel_wells.begin());
+        std::copy(cq_sw.value().data(), cq_sw.value().data() + cq_sw.size(), water_vel_wells.begin());
 
         const V& polymer_conc = state.concentration.value();
 
@@ -843,7 +882,7 @@ namespace Opm {
         V visc_mult_wells_v = subset(visc_mult_cells, well_cells);
 
         visc_mult_wells.resize(visc_mult_wells_v.size());
-        std::copy(&(visc_mult_wells_v[0]), &(visc_mult_wells_v[0]) + visc_mult_wells_v.size(), visc_mult_wells.begin());
+        std::copy(visc_mult_wells_v.data(), visc_mult_wells_v.data() + visc_mult_wells_v.size(), visc_mult_wells.begin());
 
         const int water_pos = fluid_.phaseUsage().phase_pos[Water];
         ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
@@ -872,18 +911,22 @@ namespace Opm {
         const ADB phi = Opm::AutoDiffBlock<double>::constant(Eigen::Map<const V>(& fluid_.porosity()[0], AutoDiffGrid::numCells(grid_), 1));
         const ADB phi_wells_adb = subset(phi, well_cells);
 
-        std::vector<double> phi_wells;
-        phi_wells.resize(phi_wells_adb.size());
-        std::copy(&(phi_wells_adb.value()[0]), &(phi_wells_adb.value()[0]) + phi_wells_adb.size(), phi_wells.begin());
+        std::vector<double> phi_wells(phi_wells_adb.value().data(), phi_wells_adb.value().data() + phi_wells_adb.size());
 
-        std::vector<double> b_wells;
-        b_wells.resize(b_perfcells.size());
-        std::copy(&(b_perfcells.value()[0]), &(b_perfcells.value()[0]) + b_perfcells.size(), b_wells.begin());
+        std::vector<double> b_wells(b_perfcells.value().data(), b_perfcells.value().data() + b_perfcells.size());
 
         for (size_t i = 0; i < water_vel_wells.size(); ++i) {
             water_vel_wells[i] = b_wells[i] * water_vel_wells[i] / (phi_wells[i] * 2. * M_PI * wells_rep_radius_[i] * wells_perf_length_[i]);
             // TODO: CHECK to make sure this formulation is corectly used. Why muliplied by bW.
             // Although this formulation works perfectly with the tests compared with other formulations
+        }
+
+        // for SHRATE treatment
+        if (has_shrate_) {
+            const double& shrate_const = polymer_props_ad_.shrate();
+            for (size_t i = 0; i < water_vel_wells.size(); ++i) {
+                water_vel_wells[i] = shrate_const * water_vel_wells[i] / wells_bore_diameter_[i];
+            }
         }
 
         return;
