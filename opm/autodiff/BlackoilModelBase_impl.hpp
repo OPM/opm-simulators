@@ -1821,7 +1821,8 @@ namespace detail {
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
         const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
         const ADB rhoavg = ops_.caver * rho;
-        rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        const V gdz = geo_.gravity()[2] * (ops_.ngrad * geo_.z().matrix());
+        rq_[ actph ].dh = ops_.ngrad * phasePressure - rhoavg * gdz;
         if (use_threshold_pressure_) {
             applyThresholdPressures(rq_[ actph ].dh);
         }
@@ -1831,7 +1832,7 @@ namespace detail {
         const ADB& mob = rq_[ actph ].mob;
         const ADB& dh  = rq_[ actph ].dh;
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
-        rq_[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
+        rq_[ actph ].mflux = (transi * upwind.select(b * mob)) * dh;
     }
 
 
