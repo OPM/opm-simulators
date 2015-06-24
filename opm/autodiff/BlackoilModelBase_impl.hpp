@@ -628,7 +628,7 @@ namespace detail {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond, cells_);
+                rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // OPM_AD_DUMP(rq_[pos].b);
                 // OPM_AD_DUMP(rq_[pos].accum[aix]);
@@ -1815,11 +1815,11 @@ namespace detail {
         const int canonicalPhaseIdx = canph_[ actph ];
         const std::vector<PhasePresence>& cond = phaseCondition();
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
+        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
         rq_[ actph ].mob = tr_mult * kr / mu;
 
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
-        const ADB rho = fluidDensity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
+        const ADB rho = fluidDensity(canonicalPhaseIdx, rq_[actph].b, state.rs, state.rv);
         const ADB rhoavg = ops_.caver * rho;
         const V gdz = geo_.gravity()[2] * (ops_.ngrad * geo_.z().matrix());
         rq_[ actph ].dh = ops_.ngrad * phasePressure - rhoavg * gdz;
@@ -2185,21 +2185,19 @@ namespace detail {
     template <class Grid, class Implementation>
     ADB
     BlackoilModelBase<Grid, Implementation>::fluidViscosity(const int               phase,
-                                                   const ADB&              p    ,
-                                                   const ADB&              temp ,
-                                                const ADB&              rs   ,
-                                                const ADB&              rv   ,
-                                                const std::vector<PhasePresence>& cond,
-                                                const std::vector<int>& cells) const
+                                                            const ADB&              p    ,
+                                                            const ADB&              temp ,
+                                                            const ADB&              rs   ,
+                                                            const ADB&              rv   ,
+                                                            const std::vector<PhasePresence>& cond) const
     {
         switch (phase) {
         case Water:
-            return fluid_.muWat(p, temp, cells);
-        case Oil: {
-            return fluid_.muOil(p, temp, rs, cond, cells);
-        }
+            return fluid_.muWat(p, temp, cells_);
+        case Oil:
+            return fluid_.muOil(p, temp, rs, cond, cells_);
         case Gas:
-            return fluid_.muGas(p, temp, rv, cond, cells);
+            return fluid_.muGas(p, temp, rv, cond, cells_);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -2212,21 +2210,19 @@ namespace detail {
     template <class Grid, class Implementation>
     ADB
     BlackoilModelBase<Grid, Implementation>::fluidReciprocFVF(const int               phase,
-                                                  const ADB&              p    ,
-                                                  const ADB&              temp ,
-                                                  const ADB&              rs   ,
-                                                  const ADB&              rv   ,
-                                                  const std::vector<PhasePresence>& cond,
-                                                  const std::vector<int>& cells) const
+                                                              const ADB&              p    ,
+                                                              const ADB&              temp ,
+                                                              const ADB&              rs   ,
+                                                              const ADB&              rv   ,
+                                                              const std::vector<PhasePresence>& cond) const
     {
         switch (phase) {
         case Water:
-            return fluid_.bWat(p, temp, cells);
-        case Oil: {
-            return fluid_.bOil(p, temp, rs, cond, cells);
-        }
+            return fluid_.bWat(p, temp, cells_);
+        case Oil:
+            return fluid_.bOil(p, temp, rs, cond, cells_);
         case Gas:
-            return fluid_.bGas(p, temp, rv, cond, cells);
+            return fluid_.bGas(p, temp, rv, cond, cells_);
         default:
             OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
         }
@@ -2238,24 +2234,20 @@ namespace detail {
 
     template <class Grid, class Implementation>
     ADB
-    BlackoilModelBase<Grid, Implementation>::fluidDensity(const int               phase,
-                                                 const ADB&              p    ,
-                                                 const ADB&              temp ,
-                                              const ADB&              rs   ,
-                                              const ADB&              rv   ,
-                                              const std::vector<PhasePresence>& cond,
-                                              const std::vector<int>& cells) const
+    BlackoilModelBase<Grid, Implementation>::fluidDensity(const int  phase,
+                                                          const ADB& b,
+                                                          const ADB& rs,
+                                                          const ADB& rv) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidReciprocFVF(phase, p, temp, rs, rv, cond, cells);
-        ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        ADB rho = rhos[phase] * b;
         if (phase == Oil && active_[Gas]) {
             // It is correct to index into rhos with canonical phase indices.
-            rho += V::Constant(p.size(), 1, rhos[Gas]) * rs * b;
+            rho += rhos[Gas] * rs * b;
         }
         if (phase == Gas && active_[Oil]) {
             // It is correct to index into rhos with canonical phase indices.
-            rho += V::Constant(p.size(), 1, rhos[Oil]) * rv * b;
+            rho += rhos[Oil] * rv * b;
         }
         return rho;
     }
