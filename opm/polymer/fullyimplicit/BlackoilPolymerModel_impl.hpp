@@ -422,7 +422,7 @@ namespace Opm {
             if (has_polymer_) {
                 const std::vector<PhasePresence>& cond = phaseCondition();
                 const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond, cells_);
+                const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
                 const ADB mc = computeMc(state);
                 const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr);
@@ -763,11 +763,11 @@ namespace Opm {
         const std::vector<PhasePresence> cond = phaseCondition();
 
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv, cond);
         rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
 
         // compute gravity potensial using the face average as in eclipse and MRST
-        const ADB rho   = fluidDensity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv,cond, cells_);
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, rq_[phase].b, state.rs, state.rv);
         const ADB rhoavg = ops_.caver * rho;
         rq_[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
@@ -795,7 +795,8 @@ namespace Opm {
         visc_mult.resize(nface);
         std::copy(visc_mult_faces.data(), visc_mult_faces.data() + nface, visc_mult.begin());
 
-        rq_[ phase ].mflux = upwind.select(b * mob) * (transi * dh);
+        rq_[ phase ].mflux = (transi * upwind.select(b * mob)) * dh;
+
 
         const auto& b_faces_adb = upwind.select(b);
         std::vector<double> b_faces(b_faces_adb.value().data(), b_faces_adb.value().data() + b_faces_adb.size());
