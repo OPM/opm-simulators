@@ -800,7 +800,6 @@ extern const double reference[];
 BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
 {
     Opm::DeckConstPtr deck;
-    std::shared_ptr<Opm::EclipseState> eclipseState;
 
     Opm::ParserPtr parser(new Opm::Parser());
     boost::filesystem::path file("tests/VFPPROD1");
