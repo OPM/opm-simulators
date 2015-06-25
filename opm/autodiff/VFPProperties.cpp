@@ -19,317 +19,31 @@
 
 #include "config.h"
 
-
 #include <opm/autodiff/VFPProperties.hpp>
 
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+
 #include <algorithm>
 
 namespace Opm {
 
-/**
- * Helper function that checks if an item exists in a record, and has a
- * non-zero size
- */
-bool itemValid(DeckRecordConstPtr& record, const char* name) {
-    if (record->size() == 0) {
-        return false;
-    }
-    else {
-        DeckItemPtr item;
-        //TODO: Should we instead here allow the exception to propagate?
-        try {
-            item = record->getItem(name);
-        }
-        catch (...) {
-            return false;
-        }
 
-        if (item->size() > 0) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
+VFPProperties::VFPProperties(VFPProdTable* table) : table_(table) {
+
 }
 
-VFPProperties::VFPProperties(DeckKeywordConstPtr table) {
-    auto iter = table->begin();
-
-    auto header = (*iter++);
-
-    assert(itemValid(header, "TABLE"));
-    table_num_ = header->getItem("TABLE")->getInt(0);
-
-    assert(itemValid(header, "DATUM_DEPTH"));
-    datum_depth_ = header->getItem("DATUM_DEPTH")->getRawDouble(0);
-
-    //Rate type
-    assert(itemValid(header, "RATE_TYPE"));
-    std::string flo_string = header->getItem("RATE_TYPE")->getString(0);
-    if (flo_string == "OIL") {
-        flo_type_ = FLO_OIL;
-    }
-    else if (flo_string == "LIQ") {
-        flo_type_ = FLO_LIQ;
-    }
-    else if (flo_string == "GAS") {
-        flo_type_ = FLO_GAS;
-    }
-    else {
-        flo_type_ = FLO_INVALID;
-        OPM_THROW(std::runtime_error, "Invalid RATE_TYPE string: '" << flo_string << "'");
-    }
-
-    //Water fraction
-    assert(itemValid(header, "WFR"));
-    std::string wfr_string = header->getItem("WFR")->getString(0);
-    if (wfr_string == "WOR") {
-        wfr_type_ = WFR_WOR;
-    }
-    else if (wfr_string == "WCT") {
-        wfr_type_ = WFR_WCT;
-    }
-    else if (wfr_string == "WGR") {
-        wfr_type_ = WFR_WGR;
-    }
-    else {
-        wfr_type_ = WFR_INVALID;
-        OPM_THROW(std::runtime_error, "Invalid WFR string: '" << wfr_string << "'");
-    }
-
-    //Gas fraction
-    assert(itemValid(header, "GFR"));
-    std::string gfr_string = header->getItem("GFR")->getString(0);
-    if (gfr_string == "GOR") {
-        gfr_type_ = GFR_GOR;
-    }
-    else if (gfr_string == "GLR") {
-        gfr_type_ = GFR_GLR;
-    }
-    else if (gfr_string == "OGR") {
-        gfr_type_ = GFR_OGR;
-    }
-    else {
-        gfr_type_ = GFR_INVALID;
-        OPM_THROW(std::runtime_error, "Invalid GFR string: '" << gfr_string << "'");
-    }
-
-    //Definition of THP values, must be THP
-    if (itemValid(header, "PRESSURE_DEF")) {
-        std::string quantity_string = header->getItem("PRESSURE_DEF")->getString(0);
-        assert(quantity_string == "THP");
-    }
-
-    //Artificial lift
-    if (itemValid(header, "ALQ_DEF")) {
-        std::string alq_string = header->getItem("ALQ_DEF")->getString(0);
-        if (alq_string == "GRAT") {
-            alq_type_ = ALQ_GRAT;
-        }
-        else if (alq_string == "IGLR") {
-            alq_type_ = ALQ_IGLR;
-        }
-        else if (alq_string == "TGLR") {
-            alq_type_ = ALQ_TGLR;
-        }
-        else if (alq_string == "PUMP") {
-            alq_type_ = ALQ_PUMP;
-        }
-        else if (alq_string == "COMP") {
-            alq_type_ = ALQ_COMP;
-        }
-        else if (alq_string == "BEAN") {
-            alq_type_ = ALQ_BEAN;
-        }
-        else if (alq_string == "UNDEF") {
-            alq_type_ = ALQ_UNDEF;
-        }
-        else {
-            alq_type_ = ALQ_INVALID;
-            OPM_THROW(std::runtime_error, "Invalid ALQ_DEF string: '" << alq_string << "'");
-        }
-    }
-    else {
-        alq_type_ = ALQ_UNDEF;
-    }
-
-    //Units used for this table
-    if (itemValid(header, "UNITS")) {
-        //TODO: Should check that table unit matches rest of deck.
-        std::string unit_string = header->getItem("UNITS")->getString(0);
-        if (unit_string == "METRIC") {
-        }
-        else if (unit_string == "FIELD") {
-        }
-        else if (unit_string == "LAB") {
-        }
-        else if (unit_string == "PVT-M") {
-        }
-        else {
-            OPM_THROW(std::runtime_error, "Invalid UNITS string: '" << unit_string << "'");
-        }
-    }
-    else {
-        //Do nothing, table implicitly same unit as rest of deck
-    }
-
-    //Quantity in the body of the table
-    if (itemValid(header, "BODY_DEF")) {
-        std::string body_string = header->getItem("BODY_DEF")->getString(0);
-        if (body_string == "TEMP") {
-            OPM_THROW(std::logic_error, "Invalid BODY_DEF string: TEMP not supported");
-        }
-        else if (body_string == "BHP") {
-
-        }
-        else {
-            OPM_THROW(std::runtime_error, "Invalid BODY_DEF string: '" << body_string << "'");
-        }
-    }
-    else {
-        //Default to BHP
-    }
-
-
-    //Get actual rate / flow values
-    flo_data_ = (*iter++)->getItem("FLOW_VALUES")->getSIDoubleData();
-
-    //Get actual tubing head pressure values
-    thp_data_ = (*iter++)->getItem("THP_VALUES")->getSIDoubleData();
-
-    //Get actual water fraction values
-    wfr_data_ = (*iter++)->getItem("WFR_VALUES")->getRawDoubleData(); //FIXME: unit
-
-    //Get actual gas fraction values
-    gfr_data_ = (*iter++)->getItem("GFR_VALUES")->getRawDoubleData(); //FIXME: unit
-
-    //Get actual gas fraction values
-    alq_data_ = (*iter++)->getItem("ALQ_VALUES")->getRawDoubleData(); //FIXME: unit
-
-    //Finally, read the actual table itself.
-    size_t nt = thp_data_.size();
-    size_t nw = wfr_data_.size();
-    size_t ng = gfr_data_.size();
-    size_t na = alq_data_.size();
-    size_t nf = flo_data_.size();
-    extents shape;
-    shape[0] = nt;
-    shape[1] = nw;
-    shape[2] = ng;
-    shape[3] = na;
-    shape[4] = nf;
-    data_.resize(shape);
-
-    for (; iter!=table->end(); ++iter) {
-        //Get indices (subtract 1 to get 0-based index)
-        int t = (*iter)->getItem("THP_INDEX")->getInt(0) - 1;
-        int w = (*iter)->getItem("WFR_INDEX")->getInt(0) - 1;
-        int g = (*iter)->getItem("GFR_INDEX")->getInt(0) - 1;
-        int a = (*iter)->getItem("ALQ_INDEX")->getInt(0) - 1;
-
-        //Rest of values (bottom hole pressure or tubing head temperature) have index of flo value
-        const std::vector<double>& bhp_tht = (*iter)->getItem("VALUES")->getRawDoubleData(); //FIXME: unit
-        std::copy(bhp_tht.begin(), bhp_tht.end(), &data_[t][w][g][a][0]);
-    }
-
-    check();
-}
-
-
-VFPProperties::VFPProperties(int table_num,
-    double datum_depth,
-    FLO_TYPE flo_type,
-    WFR_TYPE wfr_type,
-    GFR_TYPE gfr_type,
-    ALQ_TYPE alq_type,
-    const std::vector<double>& flo_data,
-    const std::vector<double>& thp_data,
-    const std::vector<double>& wfr_data,
-    const std::vector<double>& gfr_data,
-    const std::vector<double>& alq_data,
-    array_type data
-    ) :
-        table_num_(table_num),
-        datum_depth_(datum_depth),
-        flo_type_(flo_type),
-        wfr_type_(wfr_type),
-        gfr_type_(gfr_type),
-        alq_type_(alq_type),
-        flo_data_(flo_data),
-        thp_data_(thp_data),
-        wfr_data_(wfr_data),
-        gfr_data_(gfr_data),
-        alq_data_(alq_data),
-        data_(data) {
-    check();
-}
-
-
-void VFPProperties::check() {
-    //Table number
-    assert(table_num_ > 0);
-
-    //Misc types
-    assert(flo_type_ >= FLO_OIL && flo_type_ < FLO_INVALID);
-    assert(wfr_type_ >= WFR_WOR && wfr_type_ < WFR_INVALID);
-    assert(gfr_type_ >= GFR_GOR && gfr_type_ < GFR_INVALID);
-    assert(alq_type_ >= ALQ_GRAT && alq_type_ < ALQ_INVALID);
-
-    //Data axis size
-    assert(flo_data_.size() > 0);
-    assert(thp_data_.size() > 0);
-    assert(wfr_data_.size() > 0);
-    assert(gfr_data_.size() > 0);
-    assert(alq_data_.size() > 0);
-
-    //Data axis sorted?
-    assert(is_sorted(flo_data_.begin(), flo_data_.end()));
-    assert(is_sorted(thp_data_.begin(), thp_data_.end()));
-    assert(is_sorted(wfr_data_.begin(), wfr_data_.end()));
-    assert(is_sorted(gfr_data_.begin(), gfr_data_.end()));
-    assert(is_sorted(alq_data_.begin(), alq_data_.end()));
-
-    //Check data size matches axes
-    assert(data_.num_dimensions() == 5);
-    assert(data_.shape()[0] == thp_data_.size());
-    assert(data_.shape()[1] == wfr_data_.size());
-    assert(data_.shape()[2] == gfr_data_.size());
-    assert(data_.shape()[3] == alq_data_.size());
-    assert(data_.shape()[4] == flo_data_.size());
-
-    //Finally, check that all data is within reasonable ranges, defined to be up-to 1.0e10...
-    typedef array_type::size_type size_type;
-    for (size_type t=0; t<data_.shape()[0]; ++t) {
-        for (size_type w=0; w<data_.shape()[1]; ++w) {
-            for (size_type g=0; g<data_.shape()[2]; ++g) {
-                for (size_type a=0; a<data_.shape()[3]; ++a) {
-                    for (size_type f=0; f<data_.shape()[4]; ++f) {
-                        if (data_[t][w][g][a][f] > 1.0e10) {
-                            //TODO: Replace with proper log message
-                            std::cerr << "Too large value encountered in VFPPROD in ["
-                                    << t << "," << w << "," << g << "," << a << "," << f << "]="
-                                    << data_[t][w][g][a][f] << std::endl;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 
 double VFPProperties::bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
     //First, find the values to interpolate between
-    auto flo_i = find_interp_data(flo, flo_data_);
-    auto thp_i = find_interp_data(thp, thp_data_);
-    auto wfr_i = find_interp_data(wfr, wfr_data_);
-    auto gfr_i = find_interp_data(gfr, gfr_data_);
-    auto alq_i = find_interp_data(alq, alq_data_);
+    auto flo_i = find_interp_data(flo, table_->getFloAxis());
+    auto thp_i = find_interp_data(thp, table_->getTHPAxis());
+    auto wfr_i = find_interp_data(wfr, table_->getWFRAxis());
+    auto gfr_i = find_interp_data(gfr, table_->getGFRAxis());
+    auto alq_i = find_interp_data(alq, table_->getALQAxis());
 
     //Then perform the interpolation itself
     return interpolate(flo_i, thp_i, wfr_i, gfr_i, alq_i);
@@ -367,9 +81,9 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    ADB flo = getFlo(w, o, g);
-    ADB wfr = getWFR(w, o, g);
-    ADB gfr = getGFR(w, o, g);
+    ADB flo = getFlo(w, o, g, table_->getFloType());
+    ADB wfr = getWFR(w, o, g, table_->getWFRType());
+    ADB gfr = getGFR(w, o, g, table_->getGFRType());
 
     //TODO: Check ALQ type here?
 
@@ -377,57 +91,60 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
 }
 
 
-VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
-    switch (flo_type_) {
-        case FLO_OIL:
+VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour,
+                                         const VFPProdTable::FLO_TYPE& type) {
+    switch (type) {
+        case VFPProdTable::FLO_OIL:
             //Oil = liquid phase
             return liquid;
-        case FLO_LIQ:
+        case VFPProdTable::FLO_LIQ:
             //Liquid = aqua + liquid phases
             return aqua + liquid;
-        case FLO_GAS:
+        case VFPProdTable::FLO_GAS:
             //Gas = vapor phase
             return vapour;
-        case FLO_INVALID: //Intentional fall-through
+        case VFPProdTable::FLO_INVALID: //Intentional fall-through
         default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << flo_type_ << "'");
+            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
             return ADB::null();
     }
 }
 
-VFPProperties::ADB VFPProperties::getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
-    switch(wfr_type_) {
-        case WFR_WOR:
+VFPProperties::ADB VFPProperties::getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
+                                         const VFPProdTable::WFR_TYPE& type) {
+    switch(type) {
+        case VFPProdTable::WFR_WOR:
             //Water-oil ratio = water / oil
             return aqua / liquid;
-        case WFR_WCT:
+        case VFPProdTable::WFR_WCT:
             //Water cut = water / (water + oil + gas)
             return aqua / (aqua + liquid + vapour);
-        case WFR_WGR:
+        case VFPProdTable::WFR_WGR:
             //Water-gas ratio = water / gas
             return aqua / vapour;
-        case WFR_INVALID: //Intentional fall-through
+        case VFPProdTable::WFR_INVALID: //Intentional fall-through
         default:
-            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << wfr_type_ << "'");
+            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
             return ADB::null();
     }
 }
 
 
-VFPProperties::ADB VFPProperties::getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour) {
-    switch(gfr_type_) {
-        case GFR_GOR:
+VFPProperties::ADB VFPProperties::getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
+                                         const VFPProdTable::GFR_TYPE& type) {
+    switch(type) {
+        case VFPProdTable::GFR_GOR:
             // Gas-oil ratio = gas / oil
             return vapour / liquid;
-        case GFR_GLR:
+        case VFPProdTable::GFR_GLR:
             // Gas-liquid ratio = gas / (oil + water)
             return vapour / (liquid + aqua);
-        case GFR_OGR:
+        case VFPProdTable::GFR_OGR:
             // Oil-gas ratio = oil / gas
             return liquid / vapour;
-        case GFR_INVALID: //Intentional fall-through
+        case VFPProdTable::GFR_INVALID: //Intentional fall-through
         default:
-            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << flo_type_ << "'");
+            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
             return ADB::null();
     }
 }
@@ -483,6 +200,7 @@ double VFPProperties::interpolate(const InterpData& flo_i, const InterpData& thp
     //we copy to (nn) will fit better in cache than the full original table for the
     //interpolation below.
     //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
+    const VFPProdTable::array_type& data = table_->getTable();
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
@@ -496,7 +214,7 @@ double VFPProperties::interpolate(const InterpData& flo_i, const InterpData& thp
                         const int fi = flo_i.ind_[f];
 
                         //Copy element
-                        nn[t][w][g][a][f] = data_[ti][wi][gi][ai][fi];
+                        nn[t][w][g][a][f] = data[ti][wi][gi][ai][fi];
                     }
                 }
             }

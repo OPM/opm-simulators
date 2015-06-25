@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 
 
@@ -78,30 +79,13 @@ struct TrivialFixture {
     /**
      * Fills our interpolation data with zeros
      */
-    void fillZeros() {
+    void fillData(double value) {
         for (int i=0; i<nx; ++i) {
             for (int j=0; j<ny; ++j) {
                 for (int k=0; k<nz; ++k) {
                     for (int l=0; l<nu; ++l) {
                         for (int m=0; m<nv; ++m) {
-                            data[i][j][k][l][m] = 0.0;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Fills our interpolation data with ones
-     */
-    void fillOnes() {
-        for (int i=0; i<nx; ++i) {
-            for (int j=0; j<ny; ++j) {
-                for (int k=0; k<nz; ++k) {
-                    for (int l=0; l<nu; ++l) {
-                        for (int m=0; m<nv; ++m) {
-                            data[i][j][k][l][m] = 1.0;
+                            data[i][j][k][l][m] = value;
                         }
                     }
                 }
@@ -112,7 +96,7 @@ struct TrivialFixture {
     /**
      * Fills our interpolation data with an ND plane
      */
-    void fillPlane() {
+    void fillDataPlane() {
         for (int i=0; i<nx; ++i) {
             double x = i / static_cast<double>(nx-1);
             for (int j=0; j<ny; ++j) {
@@ -132,6 +116,31 @@ struct TrivialFixture {
         }
     }
 
+    void initTable() {
+    }
+
+    void initProperties() {
+        //Initialize table
+        table.init(1,
+                   1000.0,
+                   Opm::VFPProdTable::FLO_OIL,
+                   Opm::VFPProdTable::WFR_WOR,
+                   Opm::VFPProdTable::GFR_GOR,
+                   Opm::VFPProdTable::ALQ_UNDEF,
+                   flo_axis,
+                   thp_axis,
+                   wfr_axis,
+                   gfr_axis,
+                   alq_axis,
+                   data);
+
+        //Initialize properties that use the table
+        properties.reset(new Opm::VFPProperties(&table));
+    }
+
+    std::shared_ptr<Opm::VFPProperties> properties;
+
+private:
     const std::vector<double> thp_axis;
     const std::vector<double> wfr_axis;
     const std::vector<double> gfr_axis;
@@ -142,8 +151,9 @@ struct TrivialFixture {
     int nz;
     int nu;
     int nv;
-    Opm::VFPProperties::extents size;
-    Opm::VFPProperties::array_type data;
+    Opm::VFPProdTable::extents size;
+    Opm::VFPProdTable::array_type data;
+    Opm::VFPProdTable table;
 };
 
 
@@ -159,21 +169,8 @@ BOOST_FIXTURE_TEST_SUITE( TrivialTests, TrivialFixture )
  */
 BOOST_AUTO_TEST_CASE(InterpolateZero)
 {
-    fillZeros();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillData(0.0);
+    initProperties();
 
     //Check interpolation
     double sum = 0.0;
@@ -190,7 +187,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += table.bhp(v, x, y, z, u);
+                        sum += properties->bhp(v, x, y, z, u);
                     }
                 }
             }
@@ -207,21 +204,8 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
  */
 BOOST_AUTO_TEST_CASE(InterpolateOne)
 {
-    fillOnes();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillData(1.0);
+    initProperties();
 
     //Check interpolation
     double sum = 0.0;
@@ -238,7 +222,7 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += table.bhp(v, x, y, z, u);
+                        sum += properties->bhp(v, x, y, z, u);
                     }
                 }
             }
@@ -256,21 +240,8 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
  */
 BOOST_AUTO_TEST_CASE(InterpolatePlane)
 {
-    fillPlane();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillDataPlane();
+    initProperties();
 
     //Check interpolation
     double sum = 0.0;
@@ -292,7 +263,7 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments!
-                        double value = table.bhp(v, x, y, z, u);
+                        double value = properties->bhp(v, x, y, z, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -318,21 +289,8 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
  */
 BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
 {
-    fillPlane();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillDataPlane();
+    initProperties();
 
     //Check linear extrapolation (i.e., using values of x, y, etc. outside our interpolant domain)
     double sum = 0.0;
@@ -354,7 +312,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments!
-                        double value = table.bhp(v, x, y, z, u);
+                        double value = properties->bhp(v, x, y, z, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -381,21 +339,8 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
  */
 BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
 {
-    fillPlane();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillDataPlane();
+    initProperties();
 
     //Temporary variables used to represent independent wells
     const int num_wells = 5;
@@ -435,7 +380,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         ADB gfr = ADB::constant(zz);
                         ADB alq = ADB::constant(uu);
 
-                        ADB bhp_val = table.bhp(flo, thp, wfr, gfr, alq);
+                        ADB bhp_val = properties->bhp(flo, thp, wfr, gfr, alq);
 
                         double value = 0.0;
                         double reference = 0.0;
@@ -470,21 +415,8 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
  */
 BOOST_AUTO_TEST_CASE(Wells_Qs_thp_and_alq_interpolation)
 {
-    fillPlane();
-
-    //Create table
-    Opm::VFPProperties table(1,
-            1000.0,
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::ALQ_UNDEF,
-            flo_axis,
-            thp_axis,
-            wfr_axis,
-            gfr_axis,
-            alq_axis,
-            data);
+    fillDataPlane();
+    initProperties();
 
     //Create wells
     const int nphases = 3;
@@ -528,7 +460,7 @@ BOOST_AUTO_TEST_CASE(Wells_Qs_thp_and_alq_interpolation)
     ADB alq =  ADB::constant(alq_vals);
 
     //Call the bhp function
-    ADB bhp = table.bhp(*wells, qs, thp, alq);
+    ADB bhp = properties->bhp(*wells, qs, thp, alq);
 
     //Calculate reference
     //First, find the three phases
@@ -588,46 +520,43 @@ BOOST_AUTO_TEST_SUITE_END() // Trivial tests
 
 
 
-struct ConversionFixture : public TrivialFixture {
-    ConversionFixture() : TrivialFixture(),
+struct ConversionFixture {
+    typedef Opm::VFPProperties::ADB ADB;
+
+    ConversionFixture() :
             num_wells(5),
-            aqua_v(num_wells),
-            liquid_v(num_wells),
-            vapour_v(num_wells),
+            d_aqua(num_wells),
+            d_liquid(num_wells),
+            d_vapour(num_wells),
             aqua(ADB::null()),
             liquid(ADB::null()),
             vapour(ADB::null())
     {
-        fillPlane();
+
+        for (int i=0; i<num_wells; ++i) {
+            d_aqua[i] = 300+num_wells*15;
+            d_liquid[i] = 500+num_wells*15;
+            d_vapour[i] = 700+num_wells*15;
+        }
+
+        //Copy the double vectors above to ADBs
+        ADB::V v_aqua = Eigen::Map<ADB::V>(&d_aqua[0], num_wells, 1);
+        ADB::V v_liquid = Eigen::Map<ADB::V>(&d_liquid[0], num_wells, 1);
+        ADB::V v_vapour = Eigen::Map<ADB::V>(&d_vapour[0], num_wells, 1);
+        aqua = ADB::constant(v_aqua);
+        liquid = ADB::constant(v_liquid);
+        vapour = ADB::constant(v_vapour);
     }
 
     ~ConversionFixture() {
 
     }
 
-    void fillPhases(double aqua_in, double liquid_in, double vapour_in) {
-        for (int i=0; i<num_wells; ++i) {
-            aqua_v[i] = aqua_in;
-            liquid_v[i] = liquid_in;
-            vapour_v[i] = vapour_in;
-        }
-
-        aqua = ADB::constant(aqua_v);
-        liquid = ADB::constant(liquid_v);
-        vapour = ADB::constant(vapour_v);
-    }
-
-    void checkEqual(const ADB& lhs, double rhs) {
-        const ADB::V& values = lhs.value();
-        for (int i=0; i<values.size(); ++i) {
-            BOOST_CHECK_EQUAL(static_cast<double>(values[i]), rhs);
-        }
-    }
-
     int num_wells;
-    ADB::V aqua_v;
-    ADB::V liquid_v;
-    ADB::V vapour_v;
+
+    std::vector<double> d_aqua;
+    std::vector<double> d_liquid;
+    std::vector<double> d_vapour;
 
     ADB aqua;
     ADB liquid;
@@ -643,57 +572,49 @@ BOOST_FIXTURE_TEST_SUITE( ConversionTests, ConversionFixture )
 
 BOOST_AUTO_TEST_CASE(getFlo)
 {
-    double water = 3.0;
-    double oil = 5.0;
-    double gas = 7.0;
+    //Compute reference solutions
+    std::vector<double> ref_flo_oil;
+    std::vector<double> ref_flo_liq;
+    std::vector<double> ref_flo_gas;
+    for (int i=0; i<num_wells; ++i) {
+        ref_flo_oil[i] = d_liquid[i];
+        ref_flo_liq[i] = d_aqua[i] + d_liquid[i];
+        ref_flo_gas[i] = d_vapour[i];
+    }
 
-    Opm::VFPProperties::FLO_TYPE types[] = {
-            Opm::VFPProperties::FLO_OIL,
-            Opm::VFPProperties::FLO_LIQ,
-            Opm::VFPProperties::FLO_GAS
-    };
-    double reference[] = {
-            oil,
-            water+oil,
-            gas
-    };
-    const int num_types = sizeof(types) / sizeof(types[0]);
 
-    for (int i=0; i<num_types; ++i) {
-        //Create table
-        Opm::VFPProperties vfp_table(1,
-                1000.0,
-                types[i],
-                Opm::VFPProperties::WFR_WOR,
-                Opm::VFPProperties::GFR_GOR,
-                Opm::VFPProperties::ALQ_UNDEF,
-                flo_axis,
-                thp_axis,
-                wfr_axis,
-                gfr_axis,
-                alq_axis,
-                data);
 
-        fillPhases(water, oil, gas);
-        ADB flo = vfp_table.getFlo(aqua, liquid, vapour);
+    {
+        ADB flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_oil.begin(), ref_flo_oil.end(), computed, computed+num_wells);
+    }
 
-        BOOST_TEST_MESSAGE("Using FLO_TYPE=" << types[i]);
-        checkEqual(flo, reference[i]);
+    {
+        ADB flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_LIQ);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_liq.begin(), ref_flo_liq.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_GAS);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_gas.begin(), ref_flo_gas.end(), computed, computed+num_wells);
     }
 }
 
 
-
+/*
 BOOST_AUTO_TEST_CASE(getWFR)
 {
     double water = 3.0;
     double oil = 5.0;
     double gas = 7.0;
 
-    Opm::VFPProperties::WFR_TYPE types[] = {
-            Opm::VFPProperties::WFR_WOR,
-            Opm::VFPProperties::WFR_WCT,
-            Opm::VFPProperties::WFR_WGR
+    Opm::VFPProdTable::WFR_TYPE types[] = {
+        Opm::VFPProdTable::WFR_WOR,
+        Opm::VFPProdTable::WFR_WCT,
+        Opm::VFPProdTable::WFR_WGR
     };
     double reference[] = {
             water / oil,
@@ -703,22 +624,8 @@ BOOST_AUTO_TEST_CASE(getWFR)
     const int num_types = sizeof(types) / sizeof(types[0]);
 
     for (int i=0; i<num_types; ++i) {
-        //Create table
-        Opm::VFPProperties vfp_table(1,
-                1000.0,
-                Opm::VFPProperties::FLO_OIL,
-                types[i],
-                Opm::VFPProperties::GFR_GOR,
-                Opm::VFPProperties::ALQ_UNDEF,
-                flo_axis,
-                thp_axis,
-                wfr_axis,
-                gfr_axis,
-                alq_axis,
-                data);
-
         fillPhases(water, oil, gas);
-        ADB flo = vfp_table.getWFR(aqua, liquid, vapour);
+        ADB flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, types[i]);
 
         BOOST_TEST_MESSAGE("Using WFR_TYPE=" << types[i]);
         checkEqual(flo, reference[i]);
@@ -728,9 +635,6 @@ BOOST_AUTO_TEST_CASE(getWFR)
 
 BOOST_AUTO_TEST_CASE(getGFR)
 {
-    double water = 3.0;
-    double oil = 5.0;
-    double gas = 7.0;
 
     Opm::VFPProperties::GFR_TYPE types[] = {
             Opm::VFPProperties::GFR_GOR,
@@ -745,22 +649,8 @@ BOOST_AUTO_TEST_CASE(getGFR)
     const int num_types = sizeof(types) / sizeof(types[0]);
 
     for (int i=0; i<num_types; ++i) {
-        //Create table
-        Opm::VFPProperties vfp_table(1,
-                1000.0,
-                Opm::VFPProperties::FLO_OIL,
-                Opm::VFPProperties::WFR_WOR,
-                types[i],
-                Opm::VFPProperties::ALQ_UNDEF,
-                flo_axis,
-                thp_axis,
-                wfr_axis,
-                gfr_axis,
-                alq_axis,
-                data);
-
         fillPhases(water, oil, gas);
-        ADB flo = vfp_table.getGFR(aqua, liquid, vapour);
+        ADB flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour);
 
         BOOST_TEST_MESSAGE("Using GFR_TYPE=" << types[i]);
         checkEqual(flo, reference[i]);
@@ -768,9 +658,9 @@ BOOST_AUTO_TEST_CASE(getGFR)
 }
 
 
+*/
 
 BOOST_AUTO_TEST_SUITE_END() // unit tests
-
 
 
 
@@ -800,6 +690,7 @@ extern const double reference[];
 BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
 {
     Opm::DeckConstPtr deck;
+    std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newMETRIC());
 
     Opm::ParserPtr parser(new Opm::Parser());
     boost::filesystem::path file("tests/VFPPROD1");
@@ -808,13 +699,17 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
     Opm::checkDeck(deck);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
+    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 2);
 
-    std::vector<Opm::VFPProperties> tables;
+    std::vector<Opm::VFPProdTable> tables;
+    std::vector<Opm::VFPProperties> properties;
 
     int num_tables = deck->numKeywords("VFPPROD");
     for (int i=0; i<num_tables; ++i) {
-        Opm::DeckKeywordConstPtr table = deck->getKeyword("VFPPROD" , i);
-        tables.push_back(Opm::VFPProperties(table));
+        Opm::DeckKeywordConstPtr keyword = deck->getKeyword("VFPPROD" , i);
+        tables.push_back(Opm::VFPProdTable());
+        tables[i].init(keyword, units);
+        properties.push_back(Opm::VFPProperties(&tables[i]));
     }
 
     //Do some rudimentary testing
@@ -855,7 +750,7 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
 
                         //Value given as BARSA
                         //FIXME: should convert to Pascal when proper conversion in VFPProperties.cpp is in place
-                        double value_i = tables[0].bhp(f_i, t_i, w_i, g_i, a_i);
+                        double value_i = properties[0].bhp(f_i, t_i, w_i, g_i, a_i);
 
                         double abs_diff = std::abs(value_i - reference[i]);
                         sad += abs_diff;
