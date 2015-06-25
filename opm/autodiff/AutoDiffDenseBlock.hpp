@@ -18,8 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_AUTODIFFBLOCK_HEADER_INCLUDED
-#define OPM_AUTODIFFBLOCK_HEADER_INCLUDED
+#ifndef OPM_AUTODIFFDENSEBLOCK_HEADER_INCLUDED
+#define OPM_AUTODIFFDENSEBLOCK_HEADER_INCLUDED
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
@@ -377,4 +377,4 @@ namespace Opm
 
 
 
-#endif // OPM_AUTODIFFBLOCK_HEADER_INCLUDED
+#endif // OPM_AUTODIFFDENSEBLOCK_HEADER_INCLUDED
