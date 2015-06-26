@@ -734,6 +734,46 @@ inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
     return retval;
 }
 
+
+
+
+/// Convert an AutoDiffDenseBlock to an AutoDiffBlock, with a given
+/// block pattern. It is assumed and checked that the first NumDerivs
+/// elements of block_pattern are equal to x.size(). For these blocks
+/// the result contains a diagonal matrix. For any further blocks, a
+/// zero matrix (of the correct size) is generated.
+template <typename Scalar, int NumDerivs>
+AutoDiffBlock<Scalar> convertToAutoDiffBlock(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
+                                             const std::vector<int>& block_pattern)
+{
+    // Checking that the input is consistent.
+    const int bpn = block_pattern.size();
+    if (bpn < NumDerivs) {
+        OPM_THROW(std::logic_error, "Block pattern has "
+                  << bpn << " elements which is smaller than NumDerivs ( = " << NumDerivs << ")");
+    }
+    const int n = x.size();
+    for (int ii = 0; ii < NumDerivs; ++ii) {
+        if (block_pattern[ii] != n) {
+            OPM_THROW(std::logic_error, "First elements of block pattern must be equal to x.size()");
+        }
+    }
+
+    // Build sparse diagonal Jacobians.
+    typedef typename AutoDiffBlock<Scalar>::M M;
+    std::vector<M> jacs;
+    for (int ii = 0; ii < NumDerivs; ++ii) {
+        jacs.emplace_back(spdiag(x.derivative().col(ii)));
+    }
+    for (int ii = NumDerivs; ii < bpn; ++ii) {
+        jacs.emplace_back(n, block_pattern[ii]);
+    }
+
+    // Return using move to avoid copying of Jacobians.
+    typename AutoDiffBlock<Scalar>::V val_copy = x.value();
+    return AutoDiffBlock<Scalar>::function(std::move(val_copy), std::move(jacs));
+}
+
 } // namespace Opm
 
 #endif // OPM_AUTODIFFHELPERS_HEADER_INCLUDED
