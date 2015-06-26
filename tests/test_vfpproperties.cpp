@@ -43,7 +43,8 @@
 
 
 
-
+const double max_d_tol = 1.0e-12;
+const double sad_tol = 1.0e-9;
 
 
 
@@ -277,8 +278,8 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
     }
 
     BOOST_CHECK_CLOSE(sum, reference_sum, 0.0001);
-    BOOST_CHECK_SMALL(max_d, 1.0e-10);
-    BOOST_CHECK_SMALL(sad, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
 }
 
 
@@ -326,8 +327,8 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
     }
 
     BOOST_CHECK_CLOSE(sum, reference_sum, 0.0001);
-    BOOST_CHECK_SMALL(max_d, 1.0e-10);
-    BOOST_CHECK_SMALL(sad, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
 }
 
 
@@ -403,8 +404,8 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
     }
 
     BOOST_CHECK_CLOSE(sum, reference_sum, 0.0001);
-    BOOST_CHECK_SMALL(max_d, 1.0e-10);
-    BOOST_CHECK_SMALL(sad, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
 }
 
 
@@ -413,7 +414,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
  * Test that we can generate some dummy data representing an ND plane,
  * interpolate using well flow rates and ADBs as input, and compare against the analytic solution
  */
-BOOST_AUTO_TEST_CASE(Wells_Qs_thp_and_alq_interpolation)
+BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
 {
     fillDataPlane();
     initProperties();
@@ -495,8 +496,8 @@ BOOST_AUTO_TEST_CASE(Wells_Qs_thp_and_alq_interpolation)
         max_d = std::max(abs_diff, max_d);
     }
 
-    BOOST_CHECK_SMALL(sad, 1.0e-10);
-    BOOST_CHECK_SMALL(max_d, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
 }
 
 
@@ -573,16 +574,14 @@ BOOST_FIXTURE_TEST_SUITE( ConversionTests, ConversionFixture )
 BOOST_AUTO_TEST_CASE(getFlo)
 {
     //Compute reference solutions
-    std::vector<double> ref_flo_oil;
-    std::vector<double> ref_flo_liq;
-    std::vector<double> ref_flo_gas;
+    std::vector<double> ref_flo_oil(num_wells);
+    std::vector<double> ref_flo_liq(num_wells);
+    std::vector<double> ref_flo_gas(num_wells);
     for (int i=0; i<num_wells; ++i) {
         ref_flo_oil[i] = d_liquid[i];
         ref_flo_liq[i] = d_aqua[i] + d_liquid[i];
         ref_flo_gas[i] = d_vapour[i];
     }
-
-
 
     {
         ADB flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
@@ -604,61 +603,70 @@ BOOST_AUTO_TEST_CASE(getFlo)
 }
 
 
-/*
 BOOST_AUTO_TEST_CASE(getWFR)
 {
-    double water = 3.0;
-    double oil = 5.0;
-    double gas = 7.0;
+    //Compute reference solutions
+    std::vector<double> ref_wfr_wor(num_wells);
+    std::vector<double> ref_wfr_wct(num_wells);
+    std::vector<double> ref_wfr_wgr(num_wells);
+    for (int i=0; i<num_wells; ++i) {
+        ref_wfr_wor[i] = d_aqua[i] / d_liquid[i];
+        ref_wfr_wct[i] = d_aqua[i] / (d_aqua[i] + d_liquid[i] + d_vapour[i]);
+        ref_wfr_wgr[i] = d_aqua[i] / d_vapour[i];
+    }
 
-    Opm::VFPProdTable::WFR_TYPE types[] = {
-        Opm::VFPProdTable::WFR_WOR,
-        Opm::VFPProdTable::WFR_WCT,
-        Opm::VFPProdTable::WFR_WGR
-    };
-    double reference[] = {
-            water / oil,
-            water / (water + oil + gas),
-            water / gas
-    };
-    const int num_types = sizeof(types) / sizeof(types[0]);
+    {
+        ADB flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WOR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wor.begin(), ref_wfr_wor.end(), computed, computed+num_wells);
+    }
 
-    for (int i=0; i<num_types; ++i) {
-        fillPhases(water, oil, gas);
-        ADB flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, types[i]);
+    {
+        ADB flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WCT);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wct.begin(), ref_wfr_wct.end(), computed, computed+num_wells);
+    }
 
-        BOOST_TEST_MESSAGE("Using WFR_TYPE=" << types[i]);
-        checkEqual(flo, reference[i]);
+    {
+        ADB flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WGR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wgr.begin(), ref_wfr_wgr.end(), computed, computed+num_wells);
     }
 }
 
 
 BOOST_AUTO_TEST_CASE(getGFR)
 {
+    //Compute reference solutions
+    std::vector<double> ref_gfr_gor(num_wells);
+    std::vector<double> ref_gfr_glr(num_wells);
+    std::vector<double> ref_gfr_ogr(num_wells);
+    for (int i=0; i<num_wells; ++i) {
+        ref_gfr_gor[i] = d_vapour[i] / d_liquid[i];
+        ref_gfr_glr[i] = d_vapour[i] / (d_liquid[i] + d_aqua[i]);
+        ref_gfr_ogr[i] = d_liquid[i] / d_vapour[i];
+    }
 
-    Opm::VFPProperties::GFR_TYPE types[] = {
-            Opm::VFPProperties::GFR_GOR,
-            Opm::VFPProperties::GFR_GLR,
-            Opm::VFPProperties::GFR_OGR
-    };
-    double reference[] = {
-            gas / oil,
-            gas / (oil + water),
-            oil / gas
-    };
-    const int num_types = sizeof(types) / sizeof(types[0]);
+    {
+        ADB flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GOR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_gor.begin(), ref_gfr_gor.end(), computed, computed+num_wells);
+    }
 
-    for (int i=0; i<num_types; ++i) {
-        fillPhases(water, oil, gas);
-        ADB flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour);
+    {
+        ADB flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GLR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_glr.begin(), ref_gfr_glr.end(), computed, computed+num_wells);
+    }
 
-        BOOST_TEST_MESSAGE("Using GFR_TYPE=" << types[i]);
-        checkEqual(flo, reference[i]);
+    {
+        ADB flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_OGR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_ogr.begin(), ref_gfr_ogr.end(), computed, computed+num_wells);
     }
 }
 
 
-*/
 
 BOOST_AUTO_TEST_SUITE_END() // unit tests
 
@@ -687,7 +695,7 @@ extern const double reference[];
 /**
  * Tests that we can actually parse some input data, and interpolate within that space
  */
-BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
+BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 {
     Opm::DeckConstPtr deck;
     std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newMETRIC());
@@ -706,10 +714,13 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
 
     int num_tables = deck->numKeywords("VFPPROD");
     for (int i=0; i<num_tables; ++i) {
-        Opm::DeckKeywordConstPtr keyword = deck->getKeyword("VFPPROD" , i);
+        Opm::DeckKeywordConstPtr keyword = deck->getKeyword("VFPPROD", i);
         tables.push_back(Opm::VFPProdTable());
         tables[i].init(keyword, units);
-        properties.push_back(Opm::VFPProperties(&tables[i]));
+    }
+
+    for (int i=0; i<num_tables; ++i) {
+        properties.push_back(Opm::VFPProperties(&(tables[i])));
     }
 
     //Do some rudimentary testing
@@ -733,24 +744,23 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
                 //for (unsigned int a=0; a<n; ++a) { //n==1, skip this loop
                     for (int f=0; f<n; ++f) {
 
-                        //Liq given as SM3/day
-                        double f_i = liq[f];
+                        //Liq given as SM3/day => convert to SM3/second
+                        double f_i = liq[f]*1.1574074074074073e-05;
 
                         //THP given as BARSA => convert to Pascal
                         double t_i = thp[t]*100000.0;
 
-                        //WCT given as fraction
+                        //WCT given as fraction, SM3/SM3
                         double w_i = wct[w];
 
-                        //GOR given as SM3
+                        //GOR given as SM3 / SM3
                         double g_i = gor[g];
 
                         //ALQ unit not relevant in this case
                         double a_i = 0.0;
 
-                        //Value given as BARSA
-                        //FIXME: should convert to Pascal when proper conversion in VFPProperties.cpp is in place
-                        double value_i = properties[0].bhp(f_i, t_i, w_i, g_i, a_i);
+                        //Value given as pascal, convert to barsa for comparison with reference
+                        double value_i = properties[0].bhp(f_i, t_i, w_i, g_i, a_i) * 10.0e-6;
 
                         double abs_diff = std::abs(value_i - reference[i]);
                         sad += abs_diff;
@@ -771,8 +781,8 @@ BOOST_AUTO_TEST_CASE(ParseVFPProdAndInterpolate)
     std::cout << "];" << std::endl;
 #endif
 
-    BOOST_CHECK_SMALL(max_d, 1.0e-10);
-    BOOST_CHECK_SMALL(sad, 1.0e-10);
+    BOOST_CHECK_SMALL(max_d, 1.0e-12);
+    BOOST_CHECK_SMALL(sad, 1.0e-9);
 }
 
 /**
