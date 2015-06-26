@@ -21,6 +21,8 @@
 #ifndef OPM_AUTODIFFDENSEBLOCK_HEADER_INCLUDED
 #define OPM_AUTODIFFDENSEBLOCK_HEADER_INCLUDED
 
+#include <opm/core/utility/ErrorMacros.hpp>
+
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
@@ -31,6 +33,7 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
 namespace Opm
 {
@@ -111,6 +114,10 @@ namespace Opm
         /// will be all ones.
         static AutoDiffDenseBlock variable(const int index, Value&& val)
         {
+            if (index >= NumDerivs) {
+                OPM_THROW(std::runtime_error, "Cannot create variable with index "
+                          << index << " since NumDerivs = " << NumDerivs);
+            }
             Derivative jac = Derivative::Zero(val.rows(), 3);
             jac.col(index) = Value::Ones(val.rows());
             return AutoDiffDenseBlock(std::move(val), std::move(jac));
