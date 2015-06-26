@@ -25,6 +25,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <boost/multi_array.hpp>
 
+#include <map>
+
 namespace Opm {
 
 class VFPProdTable;
@@ -38,12 +40,25 @@ public:
     typedef AutoDiffBlock<double> ADB;
 
     /**
-     * Constructor, takes *no* ownership of data.
+     * Constructor
      */
-    VFPProperties(VFPProdTable* table);
+    VFPProperties();
+
+    /**
+     * Initialization routine for a single production table, takes *no* ownership of data.
+     * @param table A single VFPPROD table
+     */
+    void init(const VFPProdTable* table);
+
+    /**
+     * Initialization routine, takes *no* ownership of data.
+     * @param tables A vector of different VFPPROD tables. Must have unique table numbers
+     */
+    void init(const std::vector<VFPProdTable>& tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
+     * @param table Table number to use
      * @param wells Wells structure with information about wells in qs
      * @param qs Flow quantities
      * @param thp Tubing head pressure
@@ -52,10 +67,15 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB bhp(const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq);
+    ADB bhp(int table,
+            const Wells& wells,
+            const ADB& qs,
+            const ADB& thp,
+            const ADB& alq);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
+     * @param table Table number to use
      * @param flo Production rate of oil, gas or liquid
      * @param thp Tubing head pressure
      * @param wfr Water-oil ratio, water cut, or water-gas ratio
@@ -65,10 +85,16 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq);
+    double bhp(int table,
+            const double& flo,
+            const double& thp,
+            const double& wfr,
+            const double& gfr,
+            const double& alq);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as ADBs
+     * @param table Table number to use
      * @param flo Production rate of oil, gas or liquid
      * @param thp Tubing head pressure
      * @param wfr Water-oil ratio, water cut, or water-gas ratio
@@ -79,7 +105,12 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB bhp(const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq);
+    ADB bhp(int table,
+            const ADB& flo,
+            const ADB& thp,
+            const ADB& wfr,
+            const ADB& gfr,
+            const ADB& alq);
 
     /**
      * Computes the flo parameter according to the flo_type_
@@ -103,7 +134,8 @@ public:
                       const VFPProdTable::GFR_TYPE& type);
 
 private:
-    VFPProdTable* table_;
+    // Map which connects the table number with the table itself
+    std::map<int, const VFPProdTable*> m_tables;
 
     /**
      * Helper struct for linear interpolation
@@ -122,8 +154,12 @@ private:
     /**
      * Helper function which interpolates data using the indices etc. given in the inputs.
      */
-    double interpolate(const InterpData& flo_i, const InterpData& thp_i,
-            const InterpData& wfr_i, const InterpData& gfr_i, const InterpData& alq_i);
+    static double interpolate(const VFPProdTable::array_type& array,
+            const InterpData& flo_i,
+            const InterpData& thp_i,
+            const InterpData& wfr_i,
+            const InterpData& gfr_i,
+            const InterpData& alq_i);
 
 };
 

@@ -30,26 +30,43 @@
 namespace Opm {
 
 
-VFPProperties::VFPProperties(VFPProdTable* table) : table_(table) {
+VFPProperties::VFPProperties() {
+}
 
+void VFPProperties::init(const VFPProdTable* table) {
+    m_tables[table->getTableNum()] = table;
+}
+
+void VFPProperties::init(const std::vector<VFPProdTable>& tables) {
+    //Loop through all tables, and add to our map
+    for (unsigned int i=0; i<tables.size(); ++i) {
+        int table_number = tables[i].getTableNum();
+        if (m_tables.find(table_number) != m_tables.end()) {
+            OPM_THROW(std::invalid_argument, "Duplicate table numbers found for VFPPROD");
+        }
+        else {
+            m_tables[table_number] = &tables[i];
+        }
+    }
 }
 
 
-
-
-double VFPProperties::bhp(const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
+double VFPProperties::bhp(int table, const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
+    if (m_tables.find(table) == m_tables.end()) {
+        OPM_THROW(std::invalid_argument, "Nonexistant table " << table << " referenced.");
+    }
     //First, find the values to interpolate between
-    auto flo_i = find_interp_data(flo, table_->getFloAxis());
-    auto thp_i = find_interp_data(thp, table_->getTHPAxis());
-    auto wfr_i = find_interp_data(wfr, table_->getWFRAxis());
-    auto gfr_i = find_interp_data(gfr, table_->getGFRAxis());
-    auto alq_i = find_interp_data(alq, table_->getALQAxis());
+    auto flo_i = find_interp_data(flo, m_tables[table]->getFloAxis());
+    auto thp_i = find_interp_data(thp, m_tables[table]->getTHPAxis());
+    auto wfr_i = find_interp_data(wfr, m_tables[table]->getWFRAxis());
+    auto gfr_i = find_interp_data(gfr, m_tables[table]->getGFRAxis());
+    auto alq_i = find_interp_data(alq, m_tables[table]->getALQAxis());
 
     //Then perform the interpolation itself
-    return interpolate(flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    return interpolate(m_tables[table]->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 }
 
-VFPProperties::ADB VFPProperties::bhp(const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
+VFPProperties::ADB VFPProperties::bhp(int table, const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
     const ADB::V& f_v = flo.value();
     const ADB::V& t_v = thp.value();
     const ADB::V& w_v = wfr.value();
@@ -62,7 +79,7 @@ VFPProperties::ADB VFPProperties::bhp(const ADB& flo, const ADB& thp, const ADB&
     ADB::V bhp_vals;
     bhp_vals.resize(nw);
     for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = bhp(f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
+        bhp_vals[i] = bhp(table, f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
     }
     //Create an ADB constant value.
     return ADB::constant(bhp_vals);
@@ -70,7 +87,11 @@ VFPProperties::ADB VFPProperties::bhp(const ADB& flo, const ADB& thp, const ADB&
 
 
 
-VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
+VFPProperties::ADB VFPProperties::bhp(int table, const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
+    if (m_tables.find(table) == m_tables.end()) {
+        OPM_THROW(std::invalid_argument, "Nonexistant table " << table << " referenced.");
+    }
+
     const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
 
@@ -81,13 +102,13 @@ VFPProperties::ADB VFPProperties::bhp(const Wells& wells, const ADB& qs, const A
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    ADB flo = getFlo(w, o, g, table_->getFloType());
-    ADB wfr = getWFR(w, o, g, table_->getWFRType());
-    ADB gfr = getGFR(w, o, g, table_->getGFRType());
+    ADB flo = getFlo(w, o, g, m_tables[table]->getFloType());
+    ADB wfr = getWFR(w, o, g, m_tables[table]->getWFRType());
+    ADB gfr = getGFR(w, o, g, m_tables[table]->getGFRType());
 
     //TODO: Check ALQ type here?
 
-    return bhp(flo, thp, wfr, gfr, alq);
+    return bhp(table, flo, thp, wfr, gfr, alq);
 }
 
 
@@ -191,8 +212,12 @@ VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, c
 #pragma GCC optimize ("unroll-loops")
 #endif
 
-double VFPProperties::interpolate(const InterpData& flo_i, const InterpData& thp_i,
-        const InterpData& wfr_i, const InterpData& gfr_i, const InterpData& alq_i) {
+double VFPProperties::interpolate(const VFPProdTable::array_type& array,
+        const InterpData& flo_i,
+        const InterpData& thp_i,
+        const InterpData& wfr_i,
+        const InterpData& gfr_i,
+        const InterpData& alq_i) {
     double nn[2][2][2][2][2];
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -200,7 +225,6 @@ double VFPProperties::interpolate(const InterpData& flo_i, const InterpData& thp
     //we copy to (nn) will fit better in cache than the full original table for the
     //interpolation below.
     //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
-    const VFPProdTable::array_type& data = table_->getTable();
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
@@ -214,7 +238,7 @@ double VFPProperties::interpolate(const InterpData& flo_i, const InterpData& thp
                         const int fi = flo_i.ind_[f];
 
                         //Copy element
-                        nn[t][w][g][a][f] = data[ti][wi][gi][ai][fi];
+                        nn[t][w][g][a][f] = array[ti][wi][gi][ai][fi];
                     }
                 }
             }

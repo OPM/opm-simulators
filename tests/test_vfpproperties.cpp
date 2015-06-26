@@ -136,7 +136,8 @@ struct TrivialFixture {
                    data);
 
         //Initialize properties that use the table
-        properties.reset(new Opm::VFPProperties(&table));
+        properties.reset(new Opm::VFPProperties());
+        properties->init(&table);
     }
 
     std::shared_ptr<Opm::VFPProperties> properties;
@@ -164,6 +165,18 @@ private:
 //Set F to be our test suite fixture for our "trivial" tests
 BOOST_FIXTURE_TEST_SUITE( TrivialTests, TrivialFixture )
 
+
+BOOST_AUTO_TEST_CASE(GetTable)
+{
+    initProperties();
+
+    //Table 1 has been initialized
+    properties->bhp(1, 0.0, 0.0, 0.0, 0.0, 0.0);
+
+    //Table 2 does not exist.
+    BOOST_CHECK_THROW(properties->bhp(2, 0.0, 0.0, 0.0, 0.0, 0.0), std::invalid_argument);
+}
+
 /**
  * Test that we can generate some dummy zero-data,
  * interpolate using doubles as input, and compare against the analytic solution
@@ -188,7 +201,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u);
                     }
                 }
             }
@@ -223,7 +236,7 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u);
                     }
                 }
             }
@@ -264,7 +277,7 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments!
-                        double value = properties->bhp(v, x, y, z, u);
+                        double value = properties->bhp(1, v, x, y, z, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -313,7 +326,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments!
-                        double value = properties->bhp(v, x, y, z, u);
+                        double value = properties->bhp(1, v, x, y, z, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -381,7 +394,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         ADB gfr = ADB::constant(zz);
                         ADB alq = ADB::constant(uu);
 
-                        ADB bhp_val = properties->bhp(flo, thp, wfr, gfr, alq);
+                        ADB bhp_val = properties->bhp(1, flo, thp, wfr, gfr, alq);
 
                         double value = 0.0;
                         double reference = 0.0;
@@ -461,7 +474,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     ADB alq =  ADB::constant(alq_vals);
 
     //Call the bhp function
-    ADB bhp = properties->bhp(*wells, qs, thp, alq);
+    ADB bhp = properties->bhp(1, *wells, qs, thp, alq);
 
     //Calculate reference
     //First, find the three phases
@@ -701,16 +714,15 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newMETRIC());
 
     Opm::ParserPtr parser(new Opm::Parser());
-    boost::filesystem::path file("tests/VFPPROD1");
+    boost::filesystem::path file("tests/VFPPROD2");
 
     deck = parser->parseFile(file.string());
     Opm::checkDeck(deck);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 2);
+    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
 
     std::vector<Opm::VFPProdTable> tables;
-    std::vector<Opm::VFPProperties> properties;
 
     int num_tables = deck->numKeywords("VFPPROD");
     for (int i=0; i<num_tables; ++i) {
@@ -719,9 +731,8 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
         tables[i].init(keyword, units);
     }
 
-    for (int i=0; i<num_tables; ++i) {
-        properties.push_back(Opm::VFPProperties(&(tables[i])));
-    }
+    Opm::VFPProperties properties;
+    properties.init(tables);
 
     //Do some rudimentary testing
     //Get the BHP as a function of rate, thp, wfr, gfr, alq
@@ -760,7 +771,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         double a_i = 0.0;
 
                         //Value given as pascal, convert to barsa for comparison with reference
-                        double value_i = properties[0].bhp(f_i, t_i, w_i, g_i, a_i) * 10.0e-6;
+                        double value_i = properties.bhp(32, f_i, t_i, w_i, g_i, a_i) * 10.0e-6;
 
                         double abs_diff = std::abs(value_i - reference[i]);
                         sad += abs_diff;
