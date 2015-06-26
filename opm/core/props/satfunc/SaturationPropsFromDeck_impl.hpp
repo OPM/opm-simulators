@@ -41,39 +41,36 @@ namespace Opm
 
 
     /// Default constructor.
-    template <class SatFuncSet>
-    SaturationPropsFromDeck<SatFuncSet>::SaturationPropsFromDeck()
+    inline
+    SaturationPropsFromDeck::SaturationPropsFromDeck()
     {
     }
 
     /// Initialize from deck.
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
+    inline
+    void SaturationPropsFromDeck::init(Opm::DeckConstPtr deck,
                                                    Opm::EclipseStateConstPtr eclipseState,
-                                                   const UnstructuredGrid& grid,
-                                                   const int samples)
+                                                   const UnstructuredGrid& grid)
     {
         this->init(deck, eclipseState, grid.number_of_cells,
                    grid.global_cell, grid.cell_centroids,
-                   grid.dimensions, samples);
+                   grid.dimensions);
     }
 
     /// Initialize from deck.
-    template <class SatFuncSet>
     template<class T>
-    void SaturationPropsFromDeck<SatFuncSet>::init(Opm::DeckConstPtr deck,
+    void SaturationPropsFromDeck::init(Opm::DeckConstPtr deck,
                                                    Opm::EclipseStateConstPtr eclipseState,
                                                    int number_of_cells,
                                                    const int* global_cell,
                                                    const T& begin_cell_centroids,
-                                                   int dimensions,
-                                                   const int samples)
+                                                   int dimensions)
     {
         phase_usage_ = phaseUsageFromDeck(deck);
 
         // Extract input data.
         // Oil phase should be active.
-        if (!phase_usage_.phase_used[Liquid]) {
+        if (!phase_usage_.phase_used[BlackoilPhases::Liquid]) {
             OPM_THROW(std::runtime_error, "SaturationPropsFromDeck::init()   --  oil phase must be active.");
         }
         
@@ -93,11 +90,11 @@ namespace Opm
         // Obtain SATNUM, if it exists, and create cell_to_func_.
         // Otherwise, let the cell_to_func_ mapping be just empty.
         int satfuncs_expected = 1;
+        cell_to_func_.resize(number_of_cells, /*value=*/0);
         if (deck->hasKeyword("SATNUM")) {
             const std::vector<int>& satnum = deck->getKeyword("SATNUM")->getIntData();
             satfuncs_expected = *std::max_element(satnum.begin(), satnum.end());
             const int num_cells = number_of_cells;
-            cell_to_func_.resize(num_cells);
             const int* gc = global_cell;
             for (int cell = 0; cell < num_cells; ++cell) {
                 const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -108,13 +105,13 @@ namespace Opm
         // Find number of tables, check for consistency.
         enum { Uninitialized = -1 };
         int num_tables = Uninitialized;
-        if (phase_usage_.phase_used[Aqua]) {
+        if (phase_usage_.phase_used[BlackoilPhases::Aqua]) {
             num_tables = deck->getKeyword("SWOF")->size();
             if (num_tables < satfuncs_expected) {
                 OPM_THROW(std::runtime_error, "Found " << num_tables << " SWOF tables, SATNUM specifies at least " << satfuncs_expected);
             }
         }
-        if (phase_usage_.phase_used[Vapour]) {
+        if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
             int num_sgof_tables = deck->getKeyword("SGOF")->size();
             if (num_sgof_tables < satfuncs_expected) {
                 OPM_THROW(std::runtime_error, "Found " << num_tables << " SGOF tables, SATNUM specifies at least " << satfuncs_expected);
@@ -129,7 +126,7 @@ namespace Opm
         // Initialize tables.
         satfuncset_.resize(num_tables);
         for (int table = 0; table < num_tables; ++table) {
-            satfuncset_[table].init(eclipseState, table, phase_usage_, samples);
+            satfuncset_[table].init(eclipseState, table, phase_usage_, -1);
         }
         
         // Check EHYSTR status
@@ -249,8 +246,8 @@ namespace Opm
 
 
     /// \return   P, the number of phases.
-    template <class SatFuncSet>
-    int SaturationPropsFromDeck<SatFuncSet>::numPhases() const
+    inline
+    int SaturationPropsFromDeck::numPhases() const
     {
         return phase_usage_.num_phases;
     }
@@ -268,8 +265,8 @@ namespace Opm
     ///                    The P^2 derivative matrix is
     ///                           m_{ij} = \frac{dkr_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::relperm(const int n,
+    inline
+    void SaturationPropsFromDeck::relperm(const int n,
                                           const double* s,
                                           const int* cells,
                                           double* kr,
@@ -316,8 +313,8 @@ namespace Opm
     ///                    The P^2 derivative matrix is
     ///                           m_{ij} = \frac{dpc_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::capPress(const int n,
+    inline
+    void SaturationPropsFromDeck::capPress(const int n,
                                            const double* s,
                                            const int* cells,
                                            double* pc,
@@ -355,8 +352,8 @@ namespace Opm
     /// \param[in]  cells  Array of n cell indices.
     /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
     /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::satRange(const int n,
+    inline
+    void SaturationPropsFromDeck::satRange(const int n,
                                            const int* cells,
                                            double* smin,
                                            double* smax) const
@@ -405,8 +402,8 @@ namespace Opm
     /// Update saturation state for the hysteresis tracking 
     /// \param[in]  n      Number of data points. 
     /// \param[in]  s      Array of nP saturation values.
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::updateSatHyst(const int n,
+    inline
+    void SaturationPropsFromDeck::updateSatHyst(const int n,
                                                             const int* cells,
                                                             const double* s)
     {        
@@ -426,8 +423,8 @@ namespace Opm
     /// \param[in]     cell  Cell index.
     /// \param[in]     pcow  P_oil - P_water.
     /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::swatInitScaling(const int cell,
+    inline
+    void SaturationPropsFromDeck::swatInitScaling(const int cell,
                                                               const double pcow,
                                                               double& swat)
     {
@@ -456,17 +453,15 @@ namespace Opm
 
 
     // Map the cell number to the correct function set.
-    template <class SatFuncSet>
-    const typename SaturationPropsFromDeck<SatFuncSet>::Funcs&
-    SaturationPropsFromDeck<SatFuncSet>::funcForCell(const int cell) const
+    inline const SaturationPropsFromDeck::SatFuncSet&
+    SaturationPropsFromDeck::funcForCell(const int cell) const
     {
         return cell_to_func_.empty() ? satfuncset_[0] : satfuncset_[cell_to_func_[cell]];
     }
 
     // Initialize saturation scaling parameters
-    template <class SatFuncSet>
     template<class T>
-    void SaturationPropsFromDeck<SatFuncSet>::initEPS(Opm::DeckConstPtr deck,
+    void SaturationPropsFromDeck::initEPS(Opm::DeckConstPtr deck,
                                                       Opm::EclipseStateConstPtr eclipseState,
                                                       int number_of_cells,
                                                       const int* global_cell,
@@ -542,9 +537,8 @@ namespace Opm
     }
 
     // Initialize saturation scaling parameter
-    template <class SatFuncSet>
     template<class T>
-    void SaturationPropsFromDeck<SatFuncSet>::initEPSKey(Opm::DeckConstPtr deck,
+    void SaturationPropsFromDeck::initEPSKey(Opm::DeckConstPtr deck,
                                                          Opm::EclipseStateConstPtr eclipseState,
                                                          int number_of_cells,
                                                          const int* global_cell,
@@ -738,8 +732,8 @@ namespace Opm
     }
 
     // Saturation scaling
-    template <class SatFuncSet>
-    void SaturationPropsFromDeck<SatFuncSet>::initEPSParam(const int cell,
+    inline
+    void SaturationPropsFromDeck::initEPSParam(const int cell,
                                                            EPSTransforms::Transform& data,
                                                            const bool oil,          // flag indicating krow/krog calculations
                                                            const double sl_tab,     // minimum saturation (for krow/krog calculations this is normally zero)

@@ -36,33 +36,21 @@ struct UnstructuredGrid;
 
 namespace Opm
 {
-
-
-
     /// Interface to saturation functions from deck.
-    /// Possible values for template argument (for now):
-    ///   SatFuncSetStone2Nonuniform,
-    ///   SatFuncSetStone2Uniform.
-    ///   SatFuncSetSimpleNonuniform,
-    ///   SatFuncSetSimpleUniform.
-    template <class SatFuncSet>
     class SaturationPropsFromDeck : public SaturationPropsInterface
     {
     public:
         /// Default constructor.
-        SaturationPropsFromDeck();
+        inline SaturationPropsFromDeck();
 
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
         /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        /// \param[in]  samples  Number of uniform sample points for saturation tables.
-        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclipseState,
-                  const UnstructuredGrid& grid,
-                  const int samples);
+        inline void init(Opm::DeckConstPtr deck,
+                         Opm::EclipseStateConstPtr eclipseState,
+                         const UnstructuredGrid& grid);
 
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
@@ -75,19 +63,16 @@ namespace Opm
         ///                             global cell indices used in the deck.
         /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
         /// \param[in]  dimensions      The dimensions of the grid. 
-        /// \param[in]  samples  Number of uniform sample points for saturation tables.
-        /// NOTE: samples will only be used with the SatFuncSetUniform template argument.
         template<class T>
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclipseState,
-                  int number_of_cells,
-                  const int* global_cell,
-                  const T& begin_cell_centroids,
-                  int dimensions,
-                  const int samples);
+        inline void init(Opm::DeckConstPtr deck,
+                         Opm::EclipseStateConstPtr eclipseState,
+                         int number_of_cells,
+                         const int* global_cell,
+                         const T& begin_cell_centroids,
+                         int dimensions);
 
         /// \return   P, the number of phases.
-        int numPhases() const;
+        inline int numPhases() const;
 
         /// Relative permeability.
         /// \param[in]  n      Number of data points.
@@ -98,11 +83,11 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dkr_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void relperm(const int n,
-                     const double* s,
-                     const int* cells,
-                     double* kr,
-                     double* dkrds) const;
+        inline void relperm(const int n,
+                            const double* s,
+                            const int* cells,
+                            double* kr,
+                            double* dkrds) const;
 
         /// Capillary pressure.
         /// \param[in]  n      Number of data points.
@@ -113,37 +98,39 @@ namespace Opm
         ///                    The P^2 derivative matrix is
         ///                           m_{ij} = \frac{dpc_i}{ds^j},
         ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-        void capPress(const int n,
-                      const double* s,
-                      const int* cells,
-                      double* pc,
-                      double* dpcds) const;
+        inline void capPress(const int n,
+                             const double* s,
+                             const int* cells,
+                             double* pc,
+                             double* dpcds) const;
 
         /// Obtain the range of allowable saturation values.
         /// \param[in]  n      Number of data points.
         /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
         /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-        void satRange(const int n,
-                      const int* cells,
-                      double* smin,
-                      double* smax) const;
+        inline void satRange(const int n,
+                             const int* cells,
+                             double* smin,
+                             double* smax) const;
 
         /// Update saturation state for the hysteresis tracking 
         /// \param[in]  n      Number of data points. 
         /// \param[in]  s      Array of nP saturation values.             
-        void updateSatHyst(const int n,
-                           const int* cells,
-                           const double* s);
+        inline void updateSatHyst(const int n,
+                                  const int* cells,
+                                  const double* s);
 
         /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]     cell  Cell index. 
         /// \param[in]     pcow  P_oil - P_water.
         /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.        
-        void swatInitScaling(const int cell, 
-                             const double pcow, 
-                             double & swat);
+        inline void swatInitScaling(const int cell, 
+                                    const double pcow, 
+                                    double & swat);
 
     private:
+        typedef SatFuncGwsegNonuniform SatFuncSet;
+
         PhaseUsage phase_usage_;
         std::vector<SatFuncSet> satfuncset_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
@@ -158,7 +145,7 @@ namespace Opm
 
         typedef SatFuncSet Funcs;
 
-        const Funcs& funcForCell(const int cell) const;
+        inline const Funcs& funcForCell(const int cell) const;
         template<class T>
         void initEPS(Opm::DeckConstPtr deck,
                      Opm::EclipseStateConstPtr eclipseState,

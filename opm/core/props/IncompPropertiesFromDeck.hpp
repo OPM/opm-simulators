@@ -138,7 +138,7 @@ namespace Opm
     private:
         RockFromDeck rock_;
         PvtPropertiesIncompFromDeck pvt_;
-        SaturationPropsFromDeck<SatFuncStone2Uniform> satprops_;
+        SaturationPropsFromDeck satprops_;
     };
 
 
