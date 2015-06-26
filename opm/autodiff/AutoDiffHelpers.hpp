@@ -22,6 +22,7 @@
 #define OPM_AUTODIFFHELPERS_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffDenseBlock.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -305,6 +306,28 @@ subset(const AutoDiffBlock<Scalar>& x,
     const typename AutoDiffBlock<Scalar>::M sub
         = constructSupersetSparseMatrix<Scalar>(x.value().size(), indices).transpose();
     return sub * x;
+}
+
+
+/// Returns x(indices).
+template <typename Scalar, int NumDerivs, class IntVec>
+AutoDiffDenseBlock<Scalar, NumDerivs>
+subset(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
+       const IntVec& indices)
+{
+    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADD;
+    typedef typename ADD::Value V;
+    typedef typename ADD::Derivative D;
+    typedef typename V::Index Index;
+    const Index size = indices.size();
+    V val(size);
+    D jac(size, NumDerivs);
+    Eigen::Array<Scalar, Eigen::Dynamic, 1> ret( size );
+    for (Index i = 0; i < size; ++i) {
+        val[i] = x.value()[indices[i]];
+        jac.row(i) = x.derivative().row(indices[i]);
+    }
+    return ADD::function(std::move(val), std::move(jac));
 }
 
 
