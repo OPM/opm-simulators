@@ -126,8 +126,13 @@ namespace Opm
 
         // Initialize saturation function objects.
         satfunc_.resize(num_tables);
+        SatFuncMultiplexer::SatFuncType satFuncType = SatFuncMultiplexer::Gwseg;
+        if (deck->hasKeyword("STONE2")) {
+            satFuncType = SatFuncMultiplexer::Stone2;
+        }
+
         for (int table = 0; table < num_tables; ++table) {
-            satfunc_[table].init(eclipseState, table, phase_usage_, -1);
+            satfunc_[table].initFromDeck(eclipseState, table, satFuncType);
         }
 
         // Check EHYSTR status
@@ -367,8 +372,18 @@ namespace Opm
                                            double* smax) const
     {
         for (int cellIdx = 0; cellIdx < n; ++cellIdx) {
-            const SatFuncGwseg& satFunc = satfunc_[cell_to_func_[cellIdx]];
-            satRange_(satFunc, cellIdx, cells, smin, smax);
+            const SatFuncMultiplexer& multiplexerSatFunc = satfunc_[cell_to_func_[cellIdx]];
+            switch (multiplexerSatFunc.satFuncType()) {
+            case SatFuncMultiplexer::Gwseg:
+                satRange_(multiplexerSatFunc.getGwseg(), cellIdx, cells, smin, smax);
+                break;
+            case SatFuncMultiplexer::Stone2:
+                satRange_(multiplexerSatFunc.getStone2(), cellIdx, cells, smin, smax);
+                break;
+            case SatFuncMultiplexer::Simple:
+                satRange_(multiplexerSatFunc.getSimple(), cellIdx, cells, smin, smax);
+                break;
+            }
         }
     }
 
@@ -431,7 +446,7 @@ namespace Opm
         if (do_hyst_) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
-                satfunc_[cell_to_func_[cells[i]]].updateSatHyst(s + np*i, &(eps_transf_[cells[i]]), &(eps_transf_hyst_[cells[i]]), &(sat_hyst_[cells[i]]));
+                satfunc_[cell_to_func_[cells[i]]].getSatFuncBase().updateSatHyst(s + np*i, &(eps_transf_[cells[i]]), &(eps_transf_hyst_[cells[i]]), &(sat_hyst_[cells[i]]));
             }
         } 
     }
@@ -499,52 +514,52 @@ namespace Opm
         const bool threephase = phase_usage_.phase_used[BlackoilPhases::Aqua] && phase_usage_.phase_used[BlackoilPhases::Liquid] && phase_usage_.phase_used[BlackoilPhases::Vapour];
 
         for (int cell = 0; cell < number_of_cells; ++cell) {
-            auto& satFunc = satfunc_[cell_to_func_[cell]];
+            auto& satFuncBase = satfunc_[cell_to_func_[cell]].getSatFuncBase();
             if (threephase || oilWater) {
                 // ### krw
                 initEPSParam(cell, eps_transf[cell].wat, false,
-                             satFunc.smin_[wpos],
-                             satFunc.swcr_,
-                             satFunc.smax_[wpos],
-                             satFunc.sowcr_,
-                             oilWater ? -1.0 : satFunc.smin_[gpos],
-                             satFunc.krwr_,
-                             satFunc.krwmax_,
-                             satFunc.pcwmax_,
+                             satFuncBase.smin_[wpos],
+                             satFuncBase.swcr_,
+                             satFuncBase.smax_[wpos],
+                             satFuncBase.sowcr_,
+                             oilWater ? -1.0 : satFuncBase.smin_[gpos],
+                             satFuncBase.krwr_,
+                             satFuncBase.krwmax_,
+                             satFuncBase.pcwmax_,
                              eps_vec[0], eps_vec[2], eps_vec[1], eps_vec[6], eps_vec[3], eps_vec[11], eps_vec[8], eps_vec[15]);
                 // ### krow
                 initEPSParam(cell, eps_transf[cell].watoil, true,
                              0.0,
-                             satFunc.sowcr_,
-                             satFunc.smin_[wpos],
-                             satFunc.swcr_,
-                             oilWater ? -1.0 : satFunc.smin_[gpos],
-                             satFunc.krorw_,
-                             satFunc.kromax_,
+                             satFuncBase.sowcr_,
+                             satFuncBase.smin_[wpos],
+                             satFuncBase.swcr_,
+                             oilWater ? -1.0 : satFuncBase.smin_[gpos],
+                             satFuncBase.krorw_,
+                             satFuncBase.kromax_,
                              0.0,
                              eps_vec[0], eps_vec[6], eps_vec[0], eps_vec[2], eps_vec[3], eps_vec[13], eps_vec[10], dummy);
             }
             if (threephase || oilGas) {
                 // ### krg
                 initEPSParam(cell, eps_transf[cell].gas, false,
-                             satFunc.smin_[gpos],
-                             satFunc.sgcr_,
-                             satFunc.smax_[gpos],
-                             satFunc.sogcr_,
-                             oilGas ? -1.0 : satFunc.smin_[wpos],
-                             satFunc.krgr_,
-                             satFunc.krgmax_,
-                             satFunc.pcgmax_,
+                             satFuncBase.smin_[gpos],
+                             satFuncBase.sgcr_,
+                             satFuncBase.smax_[gpos],
+                             satFuncBase.sogcr_,
+                             oilGas ? -1.0 : satFuncBase.smin_[wpos],
+                             satFuncBase.krgr_,
+                             satFuncBase.krgmax_,
+                             satFuncBase.pcgmax_,
                              eps_vec[3], eps_vec[5], eps_vec[4], eps_vec[7], eps_vec[0], eps_vec[12], eps_vec[9], eps_vec[16]);
                 // ### krog
                 initEPSParam(cell, eps_transf[cell].gasoil, true,
                              0.0,
-                             satFunc.sogcr_,
-                             satFunc.smin_[gpos],
-                             satFunc.sgcr_,
-                             oilGas ? -1.0 : satFunc.smin_[wpos],
-                             satFunc.krorg_,
-                             satFunc.kromax_,
+                             satFuncBase.sogcr_,
+                             satFuncBase.smin_[gpos],
+                             satFuncBase.sgcr_,
+                             oilGas ? -1.0 : satFuncBase.smin_[wpos],
+                             satFuncBase.krorg_,
+                             satFuncBase.kromax_,
                              0.0,
                              eps_vec[3], eps_vec[7], eps_vec[3], eps_vec[5], eps_vec[0], eps_vec[14], eps_vec[10], dummy);
             }
@@ -603,49 +618,49 @@ namespace Opm
                     itab = 1;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krwmax_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krwmax_;
                 }
             } else if (keyword == std::string("KRG") || keyword == std::string("IKRG") ) {
                 if (useVapour && (useKeyword || columnIsMasked_(deck, "ENKRVD", 1))) {
                     itab = 2;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krgmax_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krgmax_;
                 }
             } else if (keyword == std::string("KRO") || keyword == std::string("IKRO") ) {
                 if (useLiquid && (useKeyword || columnIsMasked_(deck, "ENKRVD", 2))) {
                     itab = 3;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].kromax_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().kromax_;
                 }
             } else if (keyword == std::string("KRWR") || keyword == std::string("IKRWR") ) {
                 if (useAqua && (useKeyword || columnIsMasked_(deck, "ENKRVD", 3))) {
                     itab = 4;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krwr_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krwr_;
                 }
             } else if (keyword == std::string("KRGR") || keyword == std::string("IKRGR") ) {
                 if (useVapour && (useKeyword || columnIsMasked_(deck, "ENKRVD", 4))) {
                     itab = 5;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krgr_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krgr_;
                 }
             } else if (keyword == std::string("KRORW") || keyword == std::string("IKRORW") ) {
                 if (useAqua && (useKeyword || columnIsMasked_(deck, "ENKRVD", 5))) {
                     itab = 6;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krorw_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krorw_;
                 }
             } else if (keyword == std::string("KRORG") || keyword == std::string("IKRORG") ) {
                 if (useVapour && (useKeyword || columnIsMasked_(deck, "ENKRVD", 6))) {
                     itab = 7;
                     scaleparam.resize(number_of_cells);
                     for (int i=0; i<number_of_cells; ++i)
-                        scaleparam[i] = satfunc_[cell_to_func_[i]].krorg_;
+                        scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().krorg_;
                 }
             } else {
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
@@ -666,11 +681,11 @@ namespace Opm
              if (useAqua && (keyword == std::string("PCW") || keyword == std::string("IPCW")) ) {
                  scaleparam.resize(number_of_cells);
                  for (int i=0; i<number_of_cells; ++i)
-                     scaleparam[i] = satfunc_[cell_to_func_[i]].pcwmax_;
+                     scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().pcwmax_;
              } else if (useVapour && (keyword == std::string("PCG") || keyword == std::string("IPCG")) ) {
                  scaleparam.resize(number_of_cells);
                  for (int i=0; i<number_of_cells; ++i)
-                     scaleparam[i] = satfunc_[cell_to_func_[i]].pcgmax_;
+                     scaleparam[i] = satfunc_[cell_to_func_[i]].getSatFuncBase().pcgmax_;
              }
         }
 

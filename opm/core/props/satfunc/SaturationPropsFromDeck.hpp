@@ -23,7 +23,7 @@
 #include <opm/core/props/satfunc/SaturationPropsInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/satfunc/SatFuncGwseg.hpp>
+#include <opm/core/props/satfunc/SatFuncMultiplexer.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -136,8 +136,8 @@ namespace Opm
                        double* smax) const;
 
         PhaseUsage phase_usage_;
-        typedef Opm::SatFuncGwseg<NonuniformTableLinear<double>> SatFuncGwseg;
-        std::vector<SatFuncGwseg> satfunc_;
+        typedef Opm::SatFuncMultiplexer SatFunc;
+        std::vector<SatFunc> satfunc_;
         std::vector<int> cell_to_func_; // = SATNUM - 1
         std::vector<int> cell_to_func_imb_;
 
