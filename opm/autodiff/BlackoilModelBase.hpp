@@ -274,7 +274,7 @@ namespace Opm {
         std::vector<int>         primalVariable_;
         V pvdt_;
 
-        std::vector<int> block_pattern_;
+        bool use_well_only_blockpattern_;
 
         // ---------  Protected methods  ---------
 
@@ -343,15 +343,15 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        solveWellEq(const std::vector<ADD>& mob_perfcells,
-                    const std::vector<ADD>& b_perfcells,
+        solveWellEq(const std::vector<ADB>& mob_perfcells,
+                    const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
                     WellState& well_state);
 
         void
         computeWellFlux(const SolutionState& state,
-                        const std::vector<ADD>& mob_perfcells,
-                        const std::vector<ADD>& b_perfcells,
+                        const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
                         V& aliveWells,
                         std::vector<ADB>& cq_s);
 

@@ -178,6 +178,7 @@ namespace detail {
                         ADB::null(),
                         ADB::null() } )
         , terminal_output_ (terminal_output)
+        , use_well_only_blockpattern_(false)
     {
 #if HAVE_MPI
         if ( terminal_output_ ) {
@@ -629,13 +630,19 @@ namespace detail {
     std::vector<int>
     BlackoilModelBase<Grid, Implementation>::blockPattern() const
     {
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int np = fluid_.numPhases();
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
-        std::vector<int> bp(np, nc); // p, sw, xvar
-        bp.push_back(nw * np);       // qs
-        bp.push_back(nw);            // bhp
-        return bp;
+        if (use_well_only_blockpattern_) {
+            const int np = fluid_.numPhases();
+            const int nw = wellsActive() ? wells().number_of_wells : 0;
+            return { nw * np, nw };
+        } else {
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+            const int np = fluid_.numPhases();
+            const int nw = wellsActive() ? wells().number_of_wells : 0;
+            std::vector<int> bp(np, nc); // p, sw, xvar
+            bp.push_back(nw * np);       // qs
+            bp.push_back(nw);            // bhp
+            return bp;
+        }
     }
 
 
@@ -855,11 +862,11 @@ namespace detail {
         const int nperf = wells().well_connpos[nw];
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
-        std::vector<ADD> mob_perfcells(np, ADD::null());
-        std::vector<ADD> b_perfcells(np, ADD::null());
+        std::vector<ADB> mob_perfcells(np, ADB::null());
+        std::vector<ADB> b_perfcells(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
+            mob_perfcells[phase] = subset(convertToAutoDiffBlock(rq_[phase].mob, blockPattern()), well_cells);
+            b_perfcells[phase] = subset(convertToAutoDiffBlock(rq_[phase].b, blockPattern()), well_cells);
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
@@ -958,8 +965,8 @@ namespace detail {
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::computeWellFlux(const SolutionState& state,
-                                                             const std::vector<ADD>& mob_perfcells,
-                                                             const std::vector<ADD>& b_perfcells,
+                                                             const std::vector<ADB>& mob_perfcells,
+                                                             const std::vector<ADB>& b_perfcells,
                                                              V& aliveWells,
                                                              std::vector<ADB>& cq_s)
     {
@@ -972,14 +979,16 @@ namespace detail {
         V Tw = Eigen::Map<const V>(wells().WI, nperf);
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
-        auto toADB = [this](const ADD& x){ return convertToAutoDiffBlock(x, blockPattern()); };
+        std::function<ADB(const ADD&)> noderivs = [](const ADD& x){ return ADB::constant(x.value()); };
+        std::function<ADB(const ADD&)> normal = [this](const ADD& x){ return convertToAutoDiffBlock(x, blockPattern()); };
+        auto toADB = use_well_only_blockpattern_ ? noderivs : normal;
 
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = well_perforation_pressure_diffs_;
         // Extract needed quantities for the perforation cells
-        const ADB p_perfcells = toADB(subset(state.pressure, well_cells));
-        const ADB rv_perfcells = toADB(subset(state.rv, well_cells));
-        const ADB rs_perfcells = toADB(subset(state.rs, well_cells));
+        const ADB p_perfcells = subset(toADB(state.pressure), well_cells);
+        const ADB rv_perfcells = subset(toADB(state.rv), well_cells);
+        const ADB rs_perfcells = subset(toADB(state.rs), well_cells);
 
         // Perforation pressure
         const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
@@ -1005,8 +1014,8 @@ namespace detail {
         // compute phase volumetric rates at standard conditions
         std::vector<ADB> cq_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            const ADB cq_p = -(selectProducingPerforations * Tw) * (toADB(mob_perfcells[phase]) * drawdown);
-            cq_ps[phase] = toADB(b_perfcells[phase]) * cq_p;
+            const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
+            cq_ps[phase] = b_perfcells[phase] * cq_p;
         }
         if (active_[Oil] && active_[Gas]) {
             const int oilpos = pu.phase_pos[Oil];
@@ -1019,9 +1028,9 @@ namespace detail {
 
         // HANDLE FLOW OUT FROM WELLBORE
         // Using total mobilities
-        ADB total_mob = toADB(mob_perfcells[0]);
+        ADB total_mob = mob_perfcells[0];
         for (int phase = 1; phase < np; ++phase) {
-            total_mob += toADB(mob_perfcells[phase]);
+            total_mob += mob_perfcells[phase];
         }
         // injection perforations total volume rates
         const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
@@ -1064,7 +1073,7 @@ namespace detail {
                 const int oilpos = pu.phase_pos[Oil];
                 tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
             }
-            volumeRatio += tmp / toADB(b_perfcells[phase]);
+            volumeRatio += tmp / b_perfcells[phase];
         }
 
         // injecting connections total volumerates at standard conditions
@@ -1393,8 +1402,8 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::solveWellEq(const std::vector<ADD>& mob_perfcells,
-                                                              const std::vector<ADD>& b_perfcells,
+    void BlackoilModelBase<Grid, Implementation>::solveWellEq(const std::vector<ADB>& mob_perfcells,
+                                                              const std::vector<ADB>& b_perfcells,
                                                               SolutionState& state,
                                                               WellState& well_state)
     {
@@ -1405,11 +1414,11 @@ namespace detail {
         SolutionState state0 = state;
         asImpl().makeConstantState(state0);
 
-        std::vector<ADD> mob_perfcells_const(np, ADD::null());
-        std::vector<ADD> b_perfcells_const(np, ADD::null());
+        std::vector<ADB> mob_perfcells_const(np, ADB::null());
+        std::vector<ADB> b_perfcells_const(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells_const[phase] = ADD::constant(mob_perfcells[phase].value());
-            b_perfcells_const[phase] = ADD::constant(b_perfcells[phase].value());
+            mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
+            b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
         }
 
         int it  = 0;
@@ -1423,7 +1432,9 @@ namespace detail {
 
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            use_well_only_blockpattern_ = true;
             asImpl().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            use_well_only_blockpattern_ = false;
             asImpl().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().addWellFluxEq(cq_s, wellSolutionState);
             addWellControlEq(wellSolutionState, well_state, aliveWells);
