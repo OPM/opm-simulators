@@ -46,6 +46,8 @@ namespace Opm
     typedef BlackoilPropsAdFromDeck::ADB ADB;
     typedef BlackoilPropsAdFromDeck::V V;
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
+    typedef BlackoilPropsAdInterface::ADD ADD;
+
 
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
@@ -423,6 +425,97 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     }
 
 
+    // ------ Viscosity, dense interface ------
+
+
+    /// Water viscosity.
+    /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    ADD BlackoilPropsAdFromDeck::muWat(const ADD& pw,
+                                       const ADD& T,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Water]) {
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(pw.size() == n);
+        V mu(n);
+        V dmudp(n);
+        V dmudr(n);
+        const double* rs = 0;
+
+        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
+                                                  mu.data(), dmudp.data(), dmudr.data());
+
+        ADD::Derivative jac = pw.derivative().colwise() * dmudp;
+        return ADD::function(std::move(mu), std::move(jac));
+    }
+
+    /// Oil viscosity.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    ADD BlackoilPropsAdFromDeck::muOil(const ADD& po,
+                                       const ADD& T,
+                                       const ADD& rs,
+                                       const std::vector<PhasePresence>& cond,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Oil]) {
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(po.size() == n);
+        V mu(n);
+        V dmudp(n);
+        V dmudr(n);
+
+        props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
+                                                &cond[0], mu.data(), dmudp.data(), dmudr.data());
+
+        ADD::Derivative jac = po.derivative().colwise() * dmudp + rs.derivative().colwise() * dmudr;
+        return ADD::function(std::move(mu), std::move(jac));
+    }
+
+    /// Gas viscosity.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  rv     Array of n vapor oil/gas ratio
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    ADD BlackoilPropsAdFromDeck::muGas(const ADD& pg,
+                                       const ADD& T,
+                                       const ADD& rv,
+                                       const std::vector<PhasePresence>& cond,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(pg.value().size() == n);
+        V mu(n);
+        V dmudp(n);
+        V dmudr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(),&cond[0],
+                                                  mu.data(), dmudp.data(), dmudr.data());
+
+        ADD::Derivative jac = pg.derivative().colwise() * dmudp + rv.derivative().colwise() * dmudr;
+        return ADD::function(std::move(mu), std::move(jac));
+    }
+
+
     // ------ Formation volume factor (b) ------
 
 
@@ -540,6 +633,100 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     }
 
 
+    // ------ Formation volume factor (b) dense interface ------
+
+    /// Water formation volume factor.
+    /// \param[in]  pw     Array of n water pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    ADD BlackoilPropsAdFromDeck::bWat(const ADD& pw,
+                                      const ADD& T,
+                                      const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Water]) {
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(pw.size() == n);
+
+        V b(n);
+        V dbdp(n);
+        V dbdr(n);
+        const double* rs = 0;
+
+        props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
+                                                 b.data(), dbdp.data(), dbdr.data());
+
+        ADD::Derivative jac = pw.derivative().colwise() * dbdp;
+        return ADD::function(std::move(b), std::move(jac));
+    }
+
+    /// Oil formation volume factor.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  rs     Array of n gas solution factor values.
+    /// \param[in]  cond   Array of n taxonomies classifying fluid condition.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    ADD BlackoilPropsAdFromDeck::bOil(const ADD& po,
+                                      const ADD& T,
+                                      const ADD& rs,
+                                      const std::vector<PhasePresence>& cond,
+                                      const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Oil]) {
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(po.size() == n);
+
+        V b(n);
+        V dbdp(n);
+        V dbdr(n);
+
+        props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
+                                               &cond[0], b.data(), dbdp.data(), dbdr.data());
+
+        ADD::Derivative jac = po.derivative().colwise() * dbdp + rs.derivative().colwise() * dbdr;
+        return ADD::function(std::move(b), std::move(jac));
+    }
+
+    /// Gas formation volume factor.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  T      Array of n temperature values.
+    /// \param[in]  rv     Array of n vapor oil/gas ratio
+    /// \param[in]  cond   Array of n objects, each specifying which phases are present with non-zero saturation in a cell.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    ADD BlackoilPropsAdFromDeck::bGas(const ADD& pg,
+                                      const ADD& T,
+                                      const ADD& rv,
+                                      const std::vector<PhasePresence>& cond,
+                                      const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(pg.size() == n);
+
+        V b(n);
+        V dbdp(n);
+        V dbdr(n);
+
+        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(), &cond[0],
+                                               b.data(), dbdp.data(), dbdr.data());
+
+        ADD::Derivative jac = pg.derivative().colwise() * dbdp + rv.derivative().colwise() * dbdr;
+        return ADD::function(std::move(b), std::move(jac));
+    }
+
+
+
 
     // ------ Rs bubble point curve ------
 
@@ -578,6 +765,42 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        const Cells& cells) const
     {
         ADB rs = rsSat(po, cells);
+        applyVap(rs, so, cells, vap2_);
+        return rs;
+    }
+
+    // ------ Rs bubble point curve, dense interface ------
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADD BlackoilPropsAdFromDeck::rsSat(const ADD& po,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Oil]) {
+            OPM_THROW(std::runtime_error, "Cannot call rsMax(): oil phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(po.size() == n);
+        V rbub(n);
+        V drbubdp(n);
+        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.value().data(), rbub.data(), drbubdp.data());
+        ADD::Derivative jac = po.derivative().colwise() * drbubdp;
+        return ADD::function(std::move(rbub), std::move(jac));
+    }
+
+    /// Bubble point curve for Rs as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n bubble point values for Rs.
+    ADD BlackoilPropsAdFromDeck::rsSat(const ADD& po,
+                                       const ADD& so,
+                                       const Cells& cells) const
+    {
+        ADD rs = rsSat(po, cells);
         applyVap(rs, so, cells, vap2_);
         return rs;
     }
@@ -623,7 +846,43 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         return rv;
     }
 
-    // ------ Relative permeability ------
+    // ------ Rv condensation curve, dense interface ------
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n condensation point values for Rv.
+    ADD BlackoilPropsAdFromDeck::rvSat(const ADD& po,
+                                       const Cells& cells) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
+        }
+        const int n = cells.size();
+        mapPvtRegions(cells);
+        assert(po.size() == n);
+        V rv(n);
+        V drvdp(n);
+        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.value().data(), rv.data(), drvdp.data());
+        ADD::Derivative jac = po.derivative().colwise() * drvdp;
+        return ADD::function(std::move(rv), std::move(jac));
+    }
+
+    /// Condensation curve for Rv as function of oil pressure.
+    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n condensation point values for Rv.
+    ADD BlackoilPropsAdFromDeck::rvSat(const ADD& po,
+                                       const ADD& so,
+                                       const Cells& cells) const
+    {
+        ADD rv = rvSat(po, cells);
+        applyVap(rv, so, cells, vap1_);
+        return rv;
+    }
+
+    // ------ Saturation functions ------
 
     /// Relative permeabilities for all phases.
     /// \param[in]  sw     Array of n water saturation values.
@@ -752,7 +1011,145 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         }
         return adbCapPressures;
     }
+
+
+
+    // ------ Saturation functions, dense interface ------
+
+    /// Relative permeabilities for all phases.
+    /// \param[in]  sw     Array of n water saturation values.
+    /// \param[in]  so     Array of n oil saturation values.
+    /// \param[in]  sg     Array of n gas saturation values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the saturation values.
+    /// \return            An std::vector with 3 elements, each an array of n relperm values,
+    ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
+    std::vector<ADD> BlackoilPropsAdFromDeck::relperm(const ADD& sw,
+                                                      const ADD& so,
+                                                      const ADD& sg,
+                                                      const Cells& cells) const
+    {
+        const int n = cells.size();
+        const int np = numPhases();
+        Block s_all(n, np);
+        if (phase_usage_.phase_used[Water]) {
+            assert(sw.value().size() == n);
+            s_all.col(phase_usage_.phase_pos[Water]) = sw.value();
+        }
+        if (phase_usage_.phase_used[Oil]) {
+            assert(so.value().size() == n);
+            s_all.col(phase_usage_.phase_pos[Oil]) = so.value();
+        } else {
+            OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
+        }
+        if (phase_usage_.phase_used[Gas]) {
+            assert(sg.value().size() == n);
+            s_all.col(phase_usage_.phase_pos[Gas]) = sg.value();
+        }
+        Block kr(n, np);
+        Block dkr(n, np*np);
+        satprops_->relperm(n, s_all.data(), cells.data(), kr.data(), dkr.data());
+        std::vector<ADD> relperms;
+        relperms.reserve(3);
+        typedef const ADD* ADDPtr;
+        ADDPtr s[3] = { &sw, &so, &sg };
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+            if (phase_usage_.phase_used[phase1]) {
+                const int phase1_pos = phase_usage_.phase_pos[phase1];
+                // std::vector<ADD::M> jacs(num_blocks);
+                // for (int block = 0; block < num_blocks; ++block) {
+                //     jacs[block] = ADD::M(n, s[phase1]->derivative()[block].cols());
+                // }
+                ADD::Derivative jac = ADD::Derivative::Zero(n, 3);
+                for (int phase2 = 0; phase2 < 3; ++phase2) {
+                    if (!phase_usage_.phase_used[phase2]) {
+                        continue;
+                    }
+                    const int phase2_pos = phase_usage_.phase_pos[phase2];
+                    // Assemble dkr1/ds2.
+                    const int column = phase1_pos + np*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    // ADD::M dkr1_ds2_diag = spdiag(dkr.col(column));
+                    // for (int block = 0; block < num_blocks; ++block) {
+                    //     ADD::M temp;
+                    //     fastSparseProduct(dkr1_ds2_diag, s[phase2]->derivative()[block], temp);
+                    //     jacs[block] += temp;
+                    // }
+                    jac += s[phase2]->derivative().colwise() * dkr.col(column);
+                }
+                V val = kr.col(phase1_pos);
+                relperms.emplace_back(ADD::function(std::move(val), std::move(jac)));
+            } else {
+                relperms.emplace_back(ADD::null());
+            }
+        }
+        return relperms;
+    }
+
+
+
+    std::vector<ADD> BlackoilPropsAdFromDeck::capPress(const ADD& sw,
+                                                       const ADD& so,
+                                                       const ADD& sg,
+                                                       const Cells& cells) const
+    {
+        const int numCells = cells.size();
+        const int numActivePhases = numPhases();
+
+        Block activeSat(numCells, numActivePhases);
+        if (phase_usage_.phase_used[Water]) {
+            assert(sw.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Water]) = sw.value();
+        }
+        if (phase_usage_.phase_used[Oil]) {
+            assert(so.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Oil]) = so.value();
+        } else {
+            OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
+        }
+        if (phase_usage_.phase_used[Gas]) {
+            assert(sg.value().size() == numCells);
+            activeSat.col(phase_usage_.phase_pos[Gas]) = sg.value();
+        }
+
+        Block pc(numCells, numActivePhases);
+        Block dpc(numCells, numActivePhases*numActivePhases);
+        satprops_->capPress(numCells, activeSat.data(), cells.data(), pc.data(), dpc.data());
+
+        std::vector<ADD> adbCapPressures;
+        adbCapPressures.reserve(3);
+        const ADD* s[3] = { &sw, &so, &sg };
+        for (int phase1 = 0; phase1 < 3; ++phase1) {
+            if (phase_usage_.phase_used[phase1]) {
+                const int phase1_pos = phase_usage_.phase_pos[phase1];
+                // std::vector<ADD::M> jacs(numBlocks);
+                // for (int block = 0; block < numBlocks; ++block) {
+                //     jacs[block] = ADD::M(numCells, s[phase1]->derivative()[block].cols());
+                // }
+                ADD::Derivative jac = ADD::Derivative::Zero(numCells, 3);
+                for (int phase2 = 0; phase2 < 3; ++phase2) {
+                    if (!phase_usage_.phase_used[phase2])
+                        continue;
+                    const int phase2_pos = phase_usage_.phase_pos[phase2];
+                    // Assemble dpc1/ds2.
+                    const int column = phase1_pos + numActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    // ADD::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                    // for (int block = 0; block < numBlocks; ++block) {
+                    //     ADD::M temp;
+                    //     fastSparseProduct(dpc1_ds2_diag, s[phase2]->derivative()[block], temp);
+                    //     jacs[block] += temp;
+                    // }
+                    jac += s[phase2]->derivative().colwise() * dpc.col(column);
+                }
+                V val = pc.col(phase1_pos);
+                adbCapPressures.emplace_back(ADD::function(std::move(val), std::move(jac)));
+            } else {
+                adbCapPressures.emplace_back(ADD::null());
+            }
+        }
+        return adbCapPressures;
+    }
                                   
+
+
     /// Saturation update for hysteresis behavior.
     /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
     void BlackoilPropsAdFromDeck::updateSatHyst(const std::vector<double>& saturation,
@@ -804,7 +1201,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                            const std::vector<int>& cells,
                                            const double vap) const
     {
-        if (!satOilMax_.empty() && vap > 0.0) { 
+        if (!satOilMax_.empty() && vap > 0.0) {
             const int n = cells.size();
             V factor = V::Ones(n, 1);
             const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
@@ -829,7 +1226,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                            const std::vector<int>& cells,
                                            const double vap) const
     {
-        if (!satOilMax_.empty() && vap > 0.0) { 
+        if (!satOilMax_.empty() && vap > 0.0) {
             const int n = cells.size();
             V factor = V::Ones(n, 1);
             const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
@@ -849,6 +1246,38 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 jacs[block] = dfactor_dso_diag * so.derivative()[block];
             }
             r = ADB::function(std::move(factor), std::move(jacs))*r;
+        }
+    }
+
+
+
+
+
+    /// Apply correction to rs/rv according to kw VAPPARS
+    /// \param[in/out] r     Array of n rs/rv values.
+    /// \param[in]     so    Array of n oil saturation values.
+    /// \param[in]     cells Array of n cell indices to be associated with the r and so values.
+    /// \param[in]     vap   Correction parameter.
+    void BlackoilPropsAdFromDeck::applyVap(ADD& r,
+                                           const ADD& so,
+                                           const std::vector<int>& cells,
+                                           const double vap) const
+    {
+        if (!satOilMax_.empty() && vap > 0.0) {
+            const int n = cells.size();
+            V factor = V::Ones(n, 1);
+            const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+            V dfactor_dso = V::Zero(n, 1);
+            for (int i=0; i<n; ++i) {
+                if (satOilMax_[cells[i]] > vap_satmax_guard_ && so.value()[i] < satOilMax_[cells[i]]) {
+                    // guard against too small saturation values.
+                    const double so_i= std::max(so.value()[i],eps_sqrt);
+                    factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
+                    dfactor_dso[i] = vap*std::pow(so_i/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
+                }
+            }
+            ADD::Derivative jac = so.derivative().colwise() * dfactor_dso;
+            r = ADD::function(std::move(factor), std::move(jac)) * r;
         }
     }
 
