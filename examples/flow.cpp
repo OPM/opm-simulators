@@ -1,5 +1,7 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,12 +18,40 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+
+#if HAVE_CONFIG_H
 #include "config.h"
+#endif // HAVE_CONFIG_H
+
+
+#include <dune/common/version.hh>
+
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
+#include <dune/common/parallel/mpihelper.hh>
+#else
+#include <dune/common/mpihelper.hh>
+#endif
+
+#if HAVE_DUNE_CORNERPOINT && WANT_DUNE_CORNERPOINTGRID
+#define USE_DUNE_CORNERPOINTGRID 1
+#include <dune/grid/CpGrid.hpp>
+#include <dune/grid/common/GridAdapter.hpp>
+#else
+#undef USE_DUNE_CORNERPOINTGRID
+#endif
+
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 
 #include <opm/core/grid.h>
+#include <opm/core/grid/cornerpoint_grid.h>
 #include <opm/core/grid/GridManager.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
+
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -31,7 +61,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/thresholdPressures.hpp>
+#include <opm/core/utility/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
@@ -47,6 +77,9 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/RedistributeDataHandles.hpp>
+
+#include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
@@ -61,11 +94,11 @@
 
 #include <memory>
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <cstdlib>
-
 
 namespace
 {
@@ -87,20 +120,45 @@ main(int argc, char** argv)
 try
 {
     using namespace Opm;
+#if USE_DUNE_CORNERPOINTGRID
+    // Must ensure an instance of the helper is created to initialise MPI.
+    const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
+    const int mpi_rank = mpi_helper.rank();
+    const int mpi_size = mpi_helper.size();
+#else
+    // default values for serial run
+    const int mpi_rank = 0;
+    const int mpi_size = 1;
+#endif
 
-    std::cout << "**********************************************************************\n";
-    std::cout << "*                                                                    *\n";
-    std::cout << "*                   This is Flow (version 2015.04)                   *\n";
-    std::cout << "*                                                                    *\n";
-    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-    std::cout << "*            and is part of OPM. For more information see:           *\n";
-    std::cout << "*                       http://opm-project.org                       *\n";
-    std::cout << "*                                                                    *\n";
-    std::cout << "**********************************************************************\n\n";
+    // Write parameters used for later reference. (only if rank is zero)
+    const bool output_cout = ( mpi_rank == 0 );
+
+    if(output_cout)
+    {
+        std::cout << "**********************************************************************\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "*                   This is Flow (version 2015.04)                   *\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+        std::cout << "*            and is part of OPM. For more information see:           *\n";
+        std::cout << "*                       http://opm-project.org                       *\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "**********************************************************************\n\n";
+    }
 
     // Read parameters, see if a deck was specified on the command line.
-    std::cout << "---------------    Reading parameters     ---------------" << std::endl;
-    parameter::ParameterGroup param(argc, argv, false);
+    if ( output_cout )
+    {
+        std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+    }
+
+    parameter::ParameterGroup param(argc, argv, false, output_cout);
+    if( !output_cout )
+    {
+        param.disableOutput();
+    }
+
     if (!param.unhandledArguments().empty()) {
         if (param.unhandledArguments().size() != 1) {
             std::cerr << "You can only specify a single input deck on the command line.\n";
@@ -119,18 +177,14 @@ try
             "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
         return EXIT_FAILURE;
     }
-    std::shared_ptr<GridManager> grid;
-    std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
-    std::shared_ptr<RockCompressibility> rock_comp;
-    BlackoilState state;
+
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     std::string deck_filename = param.get<std::string>("deck_filename");
 
-    // Write parameters used for later reference.
-    bool output = param.getDefault("output", true);
+    // Write parameters used for later reference. (only if rank is zero)
+    bool output = ( mpi_rank == 0 ) && param.getDefault("output", true);
     std::string output_dir;
     if (output) {
         // Create output directory if needed.
@@ -158,7 +212,6 @@ try
         Opm::OpmLog::addBackend( "COUNTER" , counterLog );
     }
 
-
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
@@ -172,11 +225,19 @@ try
         return EXIT_FAILURE;
     }
 
-    // Grid init
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-    grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
-    auto &cGrid = *grid->c_grid();
-    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+#if USE_DUNE_CORNERPOINTGRID
+    // Dune::CpGrid as grid manager
+    typedef Dune::CpGrid  Grid;
+    // Grid init
+    Grid grid;
+    grid.processEclipseFormat(deck, false, false, false, porv);
+#else
+    // UnstructuredGrid as grid manager
+    typedef UnstructuredGrid  Grid;
+    GridManager gridManager( eclipseState->getEclipseGrid(), porv );
+    const Grid& grid = *(gridManager.c_grid());
+#endif
 
     // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
     if (param.has("output_interval")) {
@@ -185,57 +246,111 @@ try
         ioConfig->overrideRestartWriteInterval((size_t)output_interval);
     }
 
-    Opm::BlackoilOutputWriter outputWriter(cGrid,
-                                           param,
-                                           eclipseState,
-                                           pu );
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+    Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
+    BlackoilPropertiesFromDeck props( deck, eclipseState,
+                                      Opm::UgGridHelpers::numCells(grid),
+                                      Opm::UgGridHelpers::globalCell(grid),
+                                      Opm::UgGridHelpers::cartDims(grid),
+                                      Opm::UgGridHelpers::beginCellCentroids(grid),
+                                      Opm::UgGridHelpers::dimensions(grid), param);
 
+    BlackoilPropsAdFromDeck new_props( deck, eclipseState, grid );
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(deck, eclipseState));
+
+    RockCompressibility rock_comp(deck, eclipseState);
 
     // Gravity.
     gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
+    BlackoilState state;
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(Opm::UgGridHelpers::numCells(grid),
+                       Opm::UgGridHelpers::globalCell(grid),
+                       Opm::UgGridHelpers::cartDims(grid),
+                       Opm::UgGridHelpers::numFaces(grid),
+                       Opm::UgGridHelpers::faceCells(grid),
+                       Opm::UgGridHelpers::beginFaceCentroids(grid),
+                       Opm::UgGridHelpers::beginCellCentroids(grid),
+                       Opm::UgGridHelpers::dimensions(grid),
+                       props, param, gravity[2], state);
+
+        initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state);
+
         enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
         if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
-            const int np = props->numPhases();
-            const int nc = grid->c_grid()->number_of_cells;
-            for (int c = 0; c < nc; ++c) {
-                state.gasoilratio()[c] = state.surfacevol()[c*np + pu.phase_pos[Gas]]
-                    / state.surfacevol()[c*np + pu.phase_pos[Oil]];
+            const int numPhases = props.numPhases();
+            const int numCells  = Opm::UgGridHelpers::numCells(grid);
+            for (int c = 0; c < numCells; ++c) {
+                state.gasoilratio()[c] = state.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
+                    / state.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
             }
         }
-    } else if (deck->hasKeyword("EQUIL") && props->numPhases() == 3) {
-        state.init(*grid->c_grid(), props->numPhases());
+    } else if (deck->hasKeyword("EQUIL") && props.numPhases() == 3) {
+        state.init(Opm::UgGridHelpers::numCells(grid),
+                   Opm::UgGridHelpers::numFaces(grid),
+                   props.numPhases());
         const double grav = param.getDefault("gravity", unit::gravity);
-        initStateEquil(*grid->c_grid(), *props, deck, eclipseState, grav, state);
-        state.faceflux().resize(grid->c_grid()->number_of_faces, 0.0);
+        initStateEquil(grid, props, deck, eclipseState, grav, state);
+        state.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
     } else {
-        initBlackoilStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
+                                  Opm::UgGridHelpers::globalCell(grid),
+                                  Opm::UgGridHelpers::numFaces(grid),
+                                  Opm::UgGridHelpers::faceCells(grid),
+                                  Opm::UgGridHelpers::beginFaceCentroids(grid),
+                                  Opm::UgGridHelpers::beginCellCentroids(grid),
+                                  Opm::UgGridHelpers::dimensions(grid),
+                                  props, deck, gravity[2], state);
     }
+
 
     // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
     if (deck->hasKeyword("SWATINIT")) {
-        const int nc = grid->c_grid()->number_of_cells;
-        std::vector<int> cells(nc);
-        for (int c = 0; c < nc; ++c) { cells[c] = c; }
+        const int numCells = Opm::UgGridHelpers::numCells(grid);
+        std::vector<int> cells(numCells);
+        for (int c = 0; c < numCells; ++c) { cells[c] = c; }
         std::vector<double> pc = state.saturation();
-        props->capPress(nc, state.saturation().data(), cells.data(), pc.data(),NULL);
-        new_props->setSwatInitScaling(state.saturation(),pc);
+        props.capPress(numCells, state.saturation().data(), cells.data(), pc.data(),NULL);
+        new_props.setSwatInitScaling(state.saturation(),pc);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
+
+#if USE_DUNE_CORNERPOINTGRID
+    if(output_cout)
+    {
+        std::cout << std::endl << "Warning: use of local perm is not yet implemented for CpGrid!" << std::endl << std::endl;
+    }
+    const bool use_local_perm = false;
+#else
+    const bool use_local_perm = param.getDefault("use_local_perm", true);
+#endif
+
+    DerivedGeology geoprops(grid, new_props, eclipseState, use_local_perm, grav);
+    boost::any parallel_information;
+
+    // At this point all properties and state variables are correctly initialized
+    // If there are more than one processors involved, we now repartition the grid
+    // and initilialize new properties and states for it.
+    if( mpi_size > 1 )
+    {
+        if( param.getDefault("output_matlab", false) || param.getDefault("output_ecl", true) )
+        {
+        	std::cerr << "We only support vtk output during parallel runs. \n"
+                      << "Please use \"output_matlab=false output_ecl=false\" to deactivate the \n"
+                      << "other outputs!" << std::endl;
+        	return EXIT_FAILURE;
+        }
+
+        Opm::distributeGridAndData( grid, eclipseState, state, new_props, geoprops, parallel_information, use_local_perm );
+    }
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
@@ -244,7 +359,7 @@ try
     } else if (param.getDefault("use_cpr", true)) {
         fis_solver.reset(new NewtonIterationBlackoilCPR(param));
     } else {
-        fis_solver.reset(new NewtonIterationBlackoilSimple(param));
+        fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
     }
 
     Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
@@ -254,32 +369,35 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    bool use_local_perm = param.getDefault("use_local_perm", true);
-    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
+    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, grid);
 
-    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
-
-    SimulatorFullyImplicitBlackoil<UnstructuredGrid> simulator(param,
-                                             *grid->c_grid(),
-                                             geology,
-                                             *new_props,
-                                             rock_comp->isActive() ? rock_comp.get() : 0,
-                                             *fis_solver,
-                                             grav,
-                                             deck->hasKeyword("DISGAS"),
-                                             deck->hasKeyword("VAPOIL"),
-                                             eclipseState,
-                                             outputWriter,
-                                             threshold_pressures);
+    SimulatorFullyImplicitBlackoil< Grid >  simulator(param,
+                                                      grid,
+                                                      geoprops,
+                                                      new_props,
+                                                      rock_comp.isActive() ? &rock_comp : 0,
+                                                      *fis_solver,
+                                                      grav,
+                                                      deck->hasKeyword("DISGAS"),
+                                                      deck->hasKeyword("VAPOIL"),
+                                                      eclipseState,
+                                                      outputWriter,
+                                                      threshold_pressures);
 
     if (!schedule->initOnly()){
-        std::cout << "\n\n================ Starting main simulation loop ===============\n"
-                  << std::flush;
+        if( output_cout )
+        {
+            std::cout << "\n\n================ Starting main simulation loop ===============\n"
+                      << std::flush;
+        }
 
         SimulatorReport fullReport = simulator.run(simtimer, state);
 
-        std::cout << "\n\n================    End of simulation     ===============\n\n";
-        fullReport.reportFullyImplicit(std::cout);
+        if( output_cout )
+        {
+            std::cout << "\n\n================    End of simulation     ===============\n\n";
+            fullReport.reportFullyImplicit(std::cout);
+        }
 
         if (output) {
             std::string filename = output_dir + "/walltime.txt";
@@ -289,7 +407,10 @@ try
         }
     } else {
         outputWriter.writeInit( simtimer );
-        std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
+        if ( output_cout )
+        {
+            std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
+        }
     }
 }
 catch (const std::exception &e) {

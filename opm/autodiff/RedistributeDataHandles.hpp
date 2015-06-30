@@ -2,6 +2,7 @@
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services.
   Coypright 2015 NTNU
   Copyright 2015 Statoil AS
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,14 +19,31 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef OPM_REDISTRIBUTEDATAHANDLES_HEADER
+#define OPM_REDISTRIBUTEDATAHANDLES_HEADER
 
+#include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
+
+#include<boost/any.hpp>
 
 namespace Opm
 {
 
+template <class Grid>
+inline void distributeGridAndData( Grid& ,
+                                   Opm::EclipseStateConstPtr eclipseState,
+                                   BlackoilState& ,
+                                   BlackoilPropsAdFromDeck& ,
+                                   DerivedGeology&,
+                                   boost::any& ,
+                                   const bool )
+{
+}
+
+#if HAVE_DUNE_CORNERPOINT
 /// \brief a data handle to distribute Derived Geology
 class GeologyDataHandle
 {
@@ -288,4 +306,54 @@ private:
     std::size_t size_;
 };
 
+inline
+void distributeGridAndData( Dune::CpGrid& grid,
+                            Opm::EclipseStateConstPtr eclipseState,
+                            BlackoilState& state,
+                            BlackoilPropsAdFromDeck& properties,
+                            DerivedGeology& geology,
+                            boost::any& parallelInformation,
+                            const bool useLocalPerm)
+{
+    std::shared_ptr<DerivedGeology> distributed_geology;
+    BlackoilState distributed_state;
+    std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props;// = new_props;
+
+    Dune::CpGrid global_grid ( grid );
+    global_grid.switchToGlobalView();
+
+    // distribute the grid and switch to the distributed view
+    grid.loadBalance();
+    grid.switchToDistributedView();
+
+    distributed_props = std::make_shared<BlackoilPropsAdFromDeck>(properties, grid.numCells());
+    distributed_state.init(grid.numCells(), grid.numFaces(), state.numPhases());
+    // init does not resize surfacevol. Do it manually.
+    distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
+                                          std::numeric_limits<double>::max());
+    Opm::BlackoilStateDataHandle state_handle(global_grid, grid,
+                                              state, distributed_state);
+    Opm::BlackoilPropsDataHandle props_handle(properties,
+                                              *distributed_props);
+    grid.scatterData(state_handle);
+    grid.scatterData(props_handle);
+    // Create a distributed Geology. Some values will be updated using communication
+    // below
+    distributed_geology.reset(new Opm::DerivedGeology(grid,
+                                                      *distributed_props, eclipseState,
+                                                      useLocalPerm, geology.gravity()));
+    Opm::GeologyDataHandle geo_handle(global_grid, grid,
+                                      geology, *distributed_geology);
+    grid.scatterData(geo_handle);
+
+    // copy states
+    properties = *distributed_props;
+    geology    = *distributed_geology;
+    state      = distributed_state;
+
+    Opm::extractParallelGridInformationToISTL(grid, parallelInformation);
+}
+#endif
+
 } // end namespace Opm
+#endif
