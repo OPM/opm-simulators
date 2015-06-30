@@ -132,7 +132,7 @@ try
 #endif
 
     // Write parameters used for later reference. (only if rank is zero)
-    bool output_cout = ( mpi_rank == 0 );
+    const bool output_cout = ( mpi_rank == 0 );
 
     if(output_cout)
     {
@@ -323,7 +323,15 @@ try
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
     const double *grav = use_gravity ? &gravity[0] : 0;
 
+#if USE_DUNE_CORNERPOINTGRID
+    if(output_cout)
+    {
+        std::cout << std::endl << "Warning: use of local perm is not yet implemented for CpGrid!" << std::endl << std::endl;
+    }
+    const bool use_local_perm = false;
+#else
     const bool use_local_perm = param.getDefault("use_local_perm", true);
+#endif
 
     DerivedGeology geoprops(grid, new_props, eclipseState, use_local_perm, grav);
     boost::any parallel_information;
