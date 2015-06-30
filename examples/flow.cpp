@@ -70,6 +70,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
@@ -345,8 +346,10 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-    if (param.getDefault("use_cpr", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
+    if (param.getDefault("use_interleaved", false)) {
+        fis_solver.reset(new NewtonIterationBlackoilInterleaved(param));
+    } else if (param.getDefault("use_cpr", true)) {
+        fis_solver.reset(new NewtonIterationBlackoilCPR(param));
     } else {
         fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
     }

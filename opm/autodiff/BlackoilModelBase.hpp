@@ -307,9 +307,6 @@ namespace Opm {
         std::vector<int>
         variableWellStateIndices() const;
 
-        void
-        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s);
-
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,
@@ -331,31 +328,36 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
-
-        void
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
                     WellState& well_state);
 
         void
-        addWellEq(const SolutionState& state,
-                  WellState& xw,
-                  const std::vector<ADB>& mob_perfcells,
-                  const std::vector<ADB>& b_perfcells,
-                  V& aliveWells,
-                  std::vector<ADB>& cq_s);
+        computeWellFlux(const SolutionState& state,
+                        const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
+                        V& aliveWells,
+                        std::vector<ADB>& cq_s);
 
         void
-        extraAddWellEq(const SolutionState& state,
-                       const WellState& xw,
-                       const std::vector<ADB>& cq_ps,
-                       const std::vector<ADB>& cmix_s,
-                       const ADB& cqt_is,
-                       const std::vector<int>& well_cells);
+        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                         const SolutionState& state,
+                                         WellState& xw);
+
+        void
+        addWellFluxEq(const std::vector<ADB>& cq_s,
+                      const SolutionState& state);
+
+        void
+        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                           const SolutionState& state,
+                                           const WellState& xw);
+
+        void
+        addWellControlEq(const SolutionState& state,
+                         const WellState& xw,
+                         const V& aliveWells);
 
         void updateWellControls(WellState& xw) const;
 

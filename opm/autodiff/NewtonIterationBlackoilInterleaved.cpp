@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
   Copyright 2015 Statoil AS
@@ -24,10 +24,9 @@
 
 #include <opm/autodiff/DuneMatrix.hpp>
 
-#include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
@@ -51,10 +50,9 @@ namespace Opm
 
 
     /// Construct a system solver.
-    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
-                                                           const boost::any& parallelInformation)
-      : cpr_param_( param ),
-        iterations_( 0 ),
+    NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
+                                                                           const boost::any& parallelInformation)
+      : iterations_( 0 ),
         parallelInformation_(parallelInformation),
         newton_use_gmres_( param.getDefault("newton_use_gmres", false ) ),
         linear_solver_reduction_( param.getDefault("linear_solver_reduction", 1e-2 ) ),
@@ -73,8 +71,8 @@ namespace Opm
     /// being the residual itself.
     /// \param[in] residual   residual object containing A and b.
     /// \return               the solution x
-    NewtonIterationBlackoilCPR::SolutionVector
-    NewtonIterationBlackoilCPR::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
+    NewtonIterationBlackoilInterleaved::SolutionVector
+    NewtonIterationBlackoilInterleaved::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
         // Build the vector of equations.
         const int np = residual.material_balance_eq.size();
@@ -107,50 +105,46 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Add material balance equations (or other manipulations) to
-        // form pressure equation in top left of full system.
+        // Form modified system.
         Eigen::SparseMatrix<double, Eigen::RowMajor> A;
         V b;
         formEllipticSystem(np, eqs, A, b);
 
-        // Scale pressure equation.
-        const double pscale = 200*unit::barsa;
-        const int nc = residual.material_balance_eq[0].size();
-        A.topRows(nc) *= pscale;
-        b.topRows(nc) *= pscale;
+        // Create ISTL matrix with interleaved rows and columns (block structured).
+        Mat istlA;
+        formInterleavedSystem(eqs, A, istlA);
 
         // Solve reduced system.
         SolutionVector dx(SolutionVector::Zero(b.size()));
 
-        // Create ISTL matrix.
-        DuneMatrix istlA( A );
-
-        // Create ISTL matrix for elliptic part.
-        DuneMatrix istlAe( A.topLeftCorner(nc, nc) );
-
         // Right hand side.
-        Vector istlb(istlA.N());
-        std::copy_n(b.data(), istlb.size(), istlb.begin());
+        const int size = istlA.N();
+        Vector istlb(size);
+        for (int i = 0; i < size; ++i) {
+            istlb[i][0] = b(i);
+            istlb[i][1] = b(size + i);
+            istlb[i][2] = b(2*size + i);
+        }
+
         // System solution
         Vector x(istlA.M());
         x = 0.0;
 
         Dune::InverseOperatorResult result;
+// Parallel version is deactivated until we figure out how to do it properly.
 #if HAVE_MPI
-        if(parallelInformation_.type()==typeid(ParallelISTLInformation))
+        if (parallelInformation_.type() == typeid(ParallelISTLInformation))
         {
             typedef Dune::OwnerOverlapCopyCommunication<int,int> Comm;
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
             Comm istlComm(info.communicator());
-            Comm istlAeComm(info.communicator());
-            info.copyValuesTo(istlAeComm.indexSet(), istlAeComm.remoteIndices());
             info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices(),
-                              istlAe.N(), istlA.N()/istlAe.N());
+                              size, np);
             // Construct operator, scalar product and vectors needed.
             typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
             Operator opA(istlA, istlComm);
-            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, istlAe, x, istlb, istlComm, istlAeComm, result);
+            constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, istlb, istlComm, result);
         }
         else
 #endif
@@ -159,7 +153,7 @@ namespace Opm
             typedef Dune::MatrixAdapter<Mat,Vector,Vector> Operator;
             Operator opA(istlA);
             Dune::Amg::SequentialInformation info;
-            constructPreconditionerAndSolve(opA, istlAe, x, istlb, info, info, result);
+            constructPreconditionerAndSolve(opA, x, istlb, info, result);
         }
 
         // store number of iterations
@@ -171,7 +165,11 @@ namespace Opm
         }
 
         // Copy solver output to dx.
-        std::copy(x.begin(), x.end(), dx.data());
+        for (int i = 0; i < size; ++i) {
+            dx(i)          = x[i][0];
+            dx(size + i)   = x[i][1];
+            dx(2*size + i) = x[i][2];
+        }
 
         if ( hasWells ) {
             // Compute full solution using the eliminated equations.
@@ -186,7 +184,56 @@ namespace Opm
 
 
 
-    const boost::any& NewtonIterationBlackoilCPR::parallelInformation() const
+    void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
+                                                                   const Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
+                                                                   Mat& istlA) const
+    {
+        const int np = eqs.size();
+
+        // Find sparsity structure as union of basic block sparsity structures,
+        // corresponding to the jacobians with respect to pressure.
+        // Use addition to get to the union structure.
+        Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
+        for (int phase = 0; phase < np; ++phase) {
+            structure += eqs[phase].derivative()[0];
+        }
+        Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
+
+        // Create ISTL matrix with interleaved rows and columns (block structured).
+        assert(np == 3);
+        istlA.setSize(s.rows(), s.cols(), s.nonZeros());
+        istlA.setBuildMode(Mat::row_wise);
+        const int* ia = s.outerIndexPtr();
+        const int* ja = s.innerIndexPtr();
+        for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
+            int ri = row.index();
+            for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                row.insert(ja[i]);
+            }
+        }
+        const int size = s.rows();
+        Span span[3] = { Span(size, 1, 0),
+                         Span(size, 1, size),
+                         Span(size, 1, 2*size) };
+        for (int row = 0; row < size; ++row) {
+            for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
+                const int col = ja[col_ix];
+                MatrixBlockType block;
+                for (int p1 = 0; p1 < np; ++p1) {
+                    for (int p2 = 0; p2 < np; ++p2) {
+                        block[p1][p2] = A.coeff(span[p1][row], span[p2][col]);
+                    }
+                }
+                istlA[row][col] = block;
+            }
+        }
+    }
+
+
+
+
+
+    const boost::any& NewtonIterationBlackoilInterleaved::parallelInformation() const
     {
         return parallelInformation_;
     }
