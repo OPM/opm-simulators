@@ -396,8 +396,7 @@ namespace Opm {
                        const ADB&              temp ,
                        const ADB&              rs   ,
                        const ADB&              rv   ,
-                       const std::vector<PhasePresence>& cond,
-                       const std::vector<int>& cells) const;
+                       const std::vector<PhasePresence>& cond) const;
 
         ADB
         fluidReciprocFVF(const int               phase,
@@ -405,17 +404,13 @@ namespace Opm {
                          const ADB&              temp ,
                          const ADB&              rs   ,
                          const ADB&              rv   ,
-                         const std::vector<PhasePresence>& cond,
-                         const std::vector<int>& cells) const;
+                         const std::vector<PhasePresence>& cond) const;
 
         ADB
-        fluidDensity(const int               phase,
-                     const ADB&              p    ,
-                     const ADB&              temp ,
-                     const ADB&              rs   ,
-                     const ADB&              rv   ,
-                     const std::vector<PhasePresence>& cond,
-                     const std::vector<int>& cells) const;
+        fluidDensity(const int  phase,
+                     const ADB& b,
+                     const ADB& rs,
+                     const ADB& rv) const;
 
         V
         fluidRsSat(const V&                p,
