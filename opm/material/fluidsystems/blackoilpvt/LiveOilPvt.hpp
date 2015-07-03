@@ -482,7 +482,8 @@ private:
             const LhsEval& delta = f/fPrime;
             pSat -= delta;
 
-            if (std::abs(Toolbox::value(delta)) < Toolbox::value(pSat) * 1e-10)
+            Scalar absDelta = std::abs(Toolbox::value(delta));
+            if (absDelta < Toolbox::value(pSat) * 1e-10 || absDelta < 1e-4)
                 return pSat;
         }
 
