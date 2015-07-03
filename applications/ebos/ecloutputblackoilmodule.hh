@@ -56,7 +56,7 @@ SET_BOOL_PROP(EclOutputBlackOil, EclOutputWritePressures, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasDissolutionFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteGasFormationVolumeFactor, true);
 SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilFormationVolumeFactor, true);
-SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilSaturationPressure, true);
+SET_BOOL_PROP(EclOutputBlackOil, EclOutputWriteOilSaturationPressure, false);
 } // namespace Properties
 
 // forward declaration
