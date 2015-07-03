@@ -144,6 +144,7 @@ namespace detail {
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
                   const Wells*                    wells,
+                  const VFPProperties*            vfp_properties,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
@@ -154,6 +155,7 @@ namespace detail {
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
+        , vfp_properties_(vfp_properties)
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
@@ -1369,7 +1371,7 @@ namespace detail {
         }
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
-        //ARB: add here const ... thp_residual = state.bhp - vfpprop.bhp(thp_ctrl, state.qs, alq?); //Make bhp function take ADB's as input params.
+        //const ADB thp_residual = state.bhp - vfpprop.bhp(thp_ctrl, state.qs, alq);
         //wells
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);

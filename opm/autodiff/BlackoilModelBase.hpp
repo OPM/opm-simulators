@@ -43,6 +43,7 @@ namespace Opm {
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
+    class VFPProperties;
 
 
     /// Struct for containing iteration variables.
@@ -117,6 +118,7 @@ namespace Opm {
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
+        /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] has_disgas       turn on dissolved gas
@@ -128,6 +130,7 @@ namespace Opm {
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
                           const Wells*                    wells,
+                          const VFPProperties*            vfp_properties,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
@@ -236,6 +239,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells*                    wells_;
+        const VFPProperties*            vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;

@@ -65,12 +65,13 @@ namespace Opm {
                       const DerivedGeology&                   geo,
                       const RockCompressibility*              rock_comp_props,
                       const Wells*                            wells,
+                      const VFPProperties*                    vfp_properties,
                       const NewtonIterationBlackoilInterface& linsolver,
                       Opm::EclipseStateConstPtr               eclState,
                       const bool                              has_disgas,
                       const bool                              has_vapoil,
                       const bool                              terminal_output)
-            : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
+            : Base(param, grid, fluid, geo, rock_comp_props, wells, vfp_properties, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
         {
         }
