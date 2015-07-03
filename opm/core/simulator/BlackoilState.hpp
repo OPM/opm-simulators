@@ -1,5 +1,6 @@
 /*
   Copyright 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 

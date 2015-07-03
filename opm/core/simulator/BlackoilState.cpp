@@ -12,7 +12,7 @@ BlackoilState::init(int number_of_cells, int number_of_phases, int num_phases)
    gorId_ = SimulatorState::registerCellData( "GASOILRATIO", 1 );
    rvId_  = SimulatorState::registerCellData( "RV", 1 );
 
-   // surfvol_ intentionally empty, left to initBlackoilSurfvol
+   // surfvolumes intentionally empty, left to initBlackoilSurfvol
    surfaceVolId_ = SimulatorState::registerCellData( "SURFACEVOL", 0 );
 }
 
