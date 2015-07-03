@@ -32,8 +32,10 @@ namespace Opm
     class BlackoilState : public SimulatorState
     {
     public:
+        using SimulatorState :: cellData ;
+
         virtual void init(const UnstructuredGrid& grid, int num_phases);
-        
+
         virtual void init(int number_of_cells, int number_of_faces, int num_phases);
 
         /// Set the first saturation to either its min or max value in
@@ -47,18 +49,22 @@ namespace Opm
         virtual bool equals(const SimulatorState& other,
                             double epsilon = 1e-8) const;
 
-        std::vector<double>& surfacevol  () { return surfvol_; }
-        std::vector<double>& gasoilratio () { return gor_   ; }
-        std::vector<double>& rv () {return rv_ ; }
+        std::vector<double>& surfacevol  () { return cellData()[ surfaceVolId_ ]; }
+        std::vector<double>& gasoilratio () { return cellData()[ gorId_ ] ; }
+        std::vector<double>& rv () {return cellData()[ rvId_ ] ; }
 
-        const std::vector<double>& surfacevol  () const { return surfvol_; }
-        const std::vector<double>& gasoilratio () const { return gor_   ; }
-        const std::vector<double>& rv () const {return rv_ ; }
+        const std::vector<double>& surfacevol  () const { return cellData()[ surfaceVolId_ ]; }
+        const std::vector<double>& gasoilratio () const { return cellData()[ gorId_ ] ; }
+        const std::vector<double>& rv () const { return cellData()[ rvId_ ] ; }
 
     private:
-        std::vector<double> surfvol_; // no entries = no cells * no phases
-        std::vector<double> gor_   ;  // no entries = no cells
-        std::vector<double> rv_ ;     // no entries = no cells
+        int gorId_ ;   // no entries = no cells (gas oil ratio id)
+        int rvId_ ;    // no entries = no cells ( rv id )
+        int surfaceVolId_ ; // no entries = no cells * no phases (surfaceVol id )
+
+        //std::vector<double> surfvol_; // no entries = no cells * no phases
+        //std::vector<double> gor_   ;  // no entries = no cells
+        //std::vector<double> rv_ ;     // no entries = no cells
     };
 } // namespace Opm
 

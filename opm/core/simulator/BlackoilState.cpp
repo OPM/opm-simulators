@@ -4,11 +4,16 @@
 using namespace Opm;
 
 void
-BlackoilState::init(int number_of_cells, int number_of_phases, int num_phases) {
-    SimulatorState::init(number_of_cells, number_of_phases, num_phases);
-   gor_.resize(number_of_cells, 0.) ;
-   rv_.resize(number_of_cells,0.);
+BlackoilState::init(int number_of_cells, int number_of_phases, int num_phases)
+{
+   SimulatorState::init(number_of_cells, number_of_phases, num_phases);
+
+   // register cell data in base class
+   gorId_ = SimulatorState::registerCellData( "GASOILRATIO", 1 );
+   rvId_  = SimulatorState::registerCellData( "RV", 1 );
+
    // surfvol_ intentionally empty, left to initBlackoilSurfvol
+   surfaceVolId_ = SimulatorState::registerCellData( "SURFACEVOL", 0 );
 }
 
 void
