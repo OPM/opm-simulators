@@ -105,6 +105,7 @@ public:
             // specified by the updateWellCompletions_() method
             well->beginSpec();
             well->setName(wellName);
+            well->setWellStatus(Well::Shut);
             well->endSpec();
         }
     }

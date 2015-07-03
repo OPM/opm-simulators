@@ -872,6 +872,9 @@ public:
      */
     void beginTimeStep()
     {
+        if (wellStatus() == Shut)
+            return;
+
         // calculate the bottom hole pressure to be actually used
         if (controlMode_ == ControlMode::TubingHeadPressure) {
             // assume a density of 650 kg/m^3 for the bottom hole pressure
@@ -918,6 +921,9 @@ public:
     template <class Context>
     void beginIterationAccumulate(Context &context, int timeIdx)
     {
+        if (wellStatus() == Shut)
+            return;
+
         for (int dofIdx = 0; dofIdx < context.numPrimaryDof(timeIdx); ++dofIdx) {
             int globalDofIdx = context.globalSpaceIndex(dofIdx, timeIdx);
             if (!applies(globalDofIdx))
@@ -941,6 +947,9 @@ public:
      */
     void beginIterationPostProcess()
     {
+        if (wellStatus() == Shut)
+            return;
+
         auto &sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
@@ -969,6 +978,9 @@ public:
      */
     void endTimeStep()
     {
+        if (wellStatus() == Shut)
+            return;
+
         // we use a condition that is always false here to prevent the code below from
         // bitrotting. (i.e., at least it stays compileable)
         if (false && simulator_.gridView().comm().rank() == 0) {
