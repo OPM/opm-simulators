@@ -33,40 +33,63 @@ namespace Opm {
 VFPProperties::VFPProperties() {
 }
 
-void VFPProperties::init(const VFPProdTable* table) {
-    m_tables[table->getTableNum()] = table;
+VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table) {
+    if (inj_table != NULL) {
+        m_inj_tables[inj_table->getTableNum()] = inj_table;
+    }
+    if (prod_table != NULL) {
+        m_prod_tables[prod_table->getTableNum()] = prod_table;
+    }
 }
 
-void VFPProperties::init(const std::vector<VFPProdTable>& tables) {
-    //Loop through all tables, and add to our map
-    for (unsigned int i=0; i<tables.size(); ++i) {
-        int table_number = tables[i].getTableNum();
-        if (m_tables.find(table_number) != m_tables.end()) {
-            OPM_THROW(std::invalid_argument, "Duplicate table numbers found for VFPPROD");
-        }
-        else {
-            m_tables[table_number] = &tables[i];
-        }
+VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
+                             const std::map<int, VFPProdTable>& prod_tables) {
+    init(inj_tables);
+    init(prod_tables);
+}
+
+
+VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables) {
+    init(inj_tables);
+}
+
+
+VFPProperties::VFPProperties(const std::map<int, VFPProdTable>& prod_tables) {
+    init(prod_tables);
+}
+
+void VFPProperties::init(const std::map<int, VFPInjTable>& inj_tables) {
+    //Populate injection table pointers.
+    for (const auto& table : inj_tables) {
+        m_inj_tables[table.first] = &table.second;
+    }
+}
+
+void VFPProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
+    //Populate production table pointers
+    for (const auto& table : prod_tables) {
+        m_prod_tables[table.first] = &table.second;
     }
 }
 
 
-double VFPProperties::bhp(int table, const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
-    if (m_tables.find(table) == m_tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistant table " << table << " referenced.");
+double VFPProperties::prod_bhp(int table, const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
+    if (m_prod_tables.find(table) == m_prod_tables.end()) {
+        OPM_THROW(std::invalid_argument, "Nonexistent table " << table << " referenced.");
     }
+    const auto* tab = m_prod_tables[table];
     //First, find the values to interpolate between
-    auto flo_i = find_interp_data(flo, m_tables[table]->getFloAxis());
-    auto thp_i = find_interp_data(thp, m_tables[table]->getTHPAxis());
-    auto wfr_i = find_interp_data(wfr, m_tables[table]->getWFRAxis());
-    auto gfr_i = find_interp_data(gfr, m_tables[table]->getGFRAxis());
-    auto alq_i = find_interp_data(alq, m_tables[table]->getALQAxis());
+    auto flo_i = find_interp_data(flo, tab->getFloAxis());
+    auto thp_i = find_interp_data(thp, tab->getTHPAxis());
+    auto wfr_i = find_interp_data(wfr, tab->getWFRAxis());
+    auto gfr_i = find_interp_data(gfr, tab->getGFRAxis());
+    auto alq_i = find_interp_data(alq, tab->getALQAxis());
 
     //Then perform the interpolation itself
-    return interpolate(m_tables[table]->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    return interpolate(tab->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 }
 
-VFPProperties::ADB VFPProperties::bhp(int table, const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
+VFPProperties::ADB VFPProperties::prod_bhp(int table, const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
     const ADB::V& f_v = flo.value();
     const ADB::V& t_v = thp.value();
     const ADB::V& w_v = wfr.value();
@@ -79,7 +102,7 @@ VFPProperties::ADB VFPProperties::bhp(int table, const ADB& flo, const ADB& thp,
     ADB::V bhp_vals;
     bhp_vals.resize(nw);
     for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = bhp(table, f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
+        bhp_vals[i] = prod_bhp(table, f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
     }
     //Create an ADB constant value.
     return ADB::constant(bhp_vals);
@@ -87,8 +110,8 @@ VFPProperties::ADB VFPProperties::bhp(int table, const ADB& flo, const ADB& thp,
 
 
 
-VFPProperties::ADB VFPProperties::bhp(int table, const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
-    if (m_tables.find(table) == m_tables.end()) {
+VFPProperties::ADB VFPProperties::prod_bhp(int table, const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
+    if (m_prod_tables.find(table) == m_prod_tables.end()) {
         OPM_THROW(std::invalid_argument, "Nonexistant table " << table << " referenced.");
     }
 
@@ -102,13 +125,14 @@ VFPProperties::ADB VFPProperties::bhp(int table, const Wells& wells, const ADB& 
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    ADB flo = getFlo(w, o, g, m_tables[table]->getFloType());
-    ADB wfr = getWFR(w, o, g, m_tables[table]->getWFRType());
-    ADB gfr = getGFR(w, o, g, m_tables[table]->getGFRType());
+    const auto* tab = m_prod_tables[table];
+    ADB flo = getFlo(w, o, g, tab->getFloType());
+    ADB wfr = getWFR(w, o, g, tab->getWFRType());
+    ADB gfr = getGFR(w, o, g, tab->getGFRType());
 
     //TODO: Check ALQ type here?
 
-    return bhp(table, flo, thp, wfr, gfr, alq);
+    return prod_bhp(table, flo, thp, wfr, gfr, alq);
 }
 
 

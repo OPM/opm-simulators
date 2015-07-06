@@ -23,38 +23,57 @@
 #include <opm/core/wells.h>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
 #include <boost/multi_array.hpp>
 
 #include <map>
 
 namespace Opm {
 
-class VFPProdTable;
-
 /**
- * Class which linearly interpolates BHP as a function of rate type, tubing head pressure,
- * water fraction, gas fraction, and artificial lift.
+ * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
+ * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
+ * the BHP as a function of the rate and tubing head pressure.
  */
 class VFPProperties {
 public:
     typedef AutoDiffBlock<double> ADB;
 
     /**
-     * Constructor
+     * Empty constructor
      */
     VFPProperties();
 
     /**
-     * Initialization routine for a single production table, takes *no* ownership of data.
-     * @param table A single VFPPROD table
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param inj_table  A *single* VFPINJ table or NULL (no table)
+     * @param prod_table A *single* VFPPROD table or NULL (no table)
      */
-    void init(const VFPProdTable* table);
+    VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table);
 
     /**
-     * Initialization routine, takes *no* ownership of data.
-     * @param tables A vector of different VFPPROD tables. Must have unique table numbers
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param inj_tables A map of different VFPINJ tables.
+     * @param prod_tables A map of different VFPPROD tables.
      */
-    void init(const std::vector<VFPProdTable>& tables);
+    VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
+                  const std::map<int, VFPProdTable>& prod_tables);
+
+    /**
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param inj_tables A map of different VFPINJ tables.
+     */
+    VFPProperties(const std::map<int, VFPInjTable>& inj_tables);
+
+    /**
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param prod_tables A map of different VFPPROD tables.
+     */
+    VFPProperties(const std::map<int, VFPProdTable>& prod_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
@@ -67,7 +86,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB bhp(int table,
+    ADB prod_bhp(int table,
             const Wells& wells,
             const ADB& qs,
             const ADB& thp,
@@ -85,7 +104,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(int table,
+    double prod_bhp(int table,
             const double& flo,
             const double& thp,
             const double& wfr,
@@ -105,12 +124,14 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB bhp(int table,
+    ADB prod_bhp(int table,
             const ADB& flo,
             const ADB& thp,
             const ADB& wfr,
             const ADB& gfr,
             const ADB& alq);
+
+    //FIXME: ARB: Implement inj_bhp to match the prod_bhp's, but for injection wells.
 
     /**
      * Computes the flo parameter according to the flo_type_
@@ -135,7 +156,8 @@ public:
 
 private:
     // Map which connects the table number with the table itself
-    std::map<int, const VFPProdTable*> m_tables;
+    std::map<int, const VFPProdTable*> m_prod_tables;
+    std::map<int, const VFPInjTable*> m_inj_tables;
 
     /**
      * Helper struct for linear interpolation
@@ -161,6 +183,11 @@ private:
             const InterpData& gfr_i,
             const InterpData& alq_i);
 
+    /**
+     * Initialization routines
+     */
+    void init(const std::map<int, VFPInjTable>& inj_tables);
+    void init(const std::map<int, VFPProdTable>& prod_tables);
 };
 
 }
