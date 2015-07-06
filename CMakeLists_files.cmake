@@ -77,9 +77,10 @@ endif()
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/flow.cpp
+	examples/flow_extended.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
-        examples/opm_init_check.cpp
+	examples/opm_init_check.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -105,6 +106,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
+	opm/autodiff/ExtendedBlackoilModel.hpp
+	opm/autodiff/ExtendedBlackoilModel_impl.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
@@ -124,6 +127,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorBase.hpp
 	opm/autodiff/SimulatorBase_impl.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
+	opm/autodiff/SimulatorFullyImplicitExtendedBlackoil.hpp
+	opm/autodiff/SimulatorFullyImplicitExtendedBlackoil_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
