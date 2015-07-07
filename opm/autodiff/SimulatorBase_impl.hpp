@@ -54,7 +54,7 @@ namespace Opm
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false ),
-          vfpProperties_(eclipse_state->getVFPProdTables())
+          vfpProperties_(eclipse_state->getVFPInjTables(), eclipse_state->getVFPProdTables())
     {
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
@@ -440,14 +440,14 @@ namespace Opm
                             well_controls_assert_number_of_phases(ctrl, int(np));
 
                             const int ok_resv =
-                                well_controls_add_new(RESERVOIR_RATE, target,
+                                well_controls_add_new(RESERVOIR_RATE, target, -1e100, -1e100,
                                                       & distr[0], ctrl);
 
                             // For WCONHIST/RESV the BHP limit is set to 1 atm.
                             // TODO: Make it possible to modify the BHP limit using
                             // the WELTARG keyword
                             const int ok_bhp =
-                                well_controls_add_new(BHP, unit::convert::from(1.0, unit::atm),
+                                well_controls_add_new(BHP, unit::convert::from(1.0, unit::atm), -1e100, -1e100,
                                                       NULL, ctrl);
 
                             if (ok_resv != 0 && ok_bhp != 0) {

@@ -32,6 +32,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
+#include <opm/autodiff/VFPProperties.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -1096,6 +1097,7 @@ namespace detail {
         }
 
         bool constraintBroken(const std::vector<double>& bhp,
+                              const std::vector<double>& thp,
                               const std::vector<double>& well_phase_flow_rate,
                               const int well,
                               const int num_phases,
@@ -1117,6 +1119,11 @@ namespace detail {
                     broken = bhp[well] > target;
                     break;
 
+                case THP:
+                    //FIXME: Not correct
+                    broken = thp[well] > target;
+                    break;
+
                 case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
                     broken = rateToCompare(well_phase_flow_rate,
@@ -1131,6 +1138,11 @@ namespace detail {
                 switch (ctrl_type) {
                 case BHP:
                     broken = bhp[well] < target;
+                    break;
+
+                case THP:
+                    //FIXME: Not correct
+                    broken = thp[well] < target;
                     break;
 
                 case RESERVOIR_RATE: // Intentional fall-through
@@ -1162,7 +1174,7 @@ namespace detail {
     {
         if( ! wellsActive() ) return ;
 
-        std::string modestring[3] = { "BHP", "RESERVOIR_RATE", "SURFACE_RATE" };
+        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
@@ -1185,7 +1197,7 @@ namespace detail {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(xw.bhp(), xw.wellRates(), w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(xw.bhp(), xw.thp(), xw.wellRates(), w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1203,12 +1215,16 @@ namespace detail {
             }
 
             // Updating well state and primary variables.
-            // Target values are used as initial conditions for BHP and SURFACE_RATE
+            // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
             const double target = well_controls_iget_target(wc, current);
             const double* distr = well_controls_iget_distr(wc, current);
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
                 xw.bhp()[w] = target;
+                break;
+
+            case THP:
+                xw.thp()[w] = target;
                 break;
 
             case RESERVOIR_RATE:
@@ -1330,6 +1346,14 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
 
+        const ADB& aqua_adb   = subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+        const ADB& liquid_adb = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+        const ADB& vapour_adb = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+
+        const V& aqua = aqua_adb.value();
+        const V& liquid = liquid_adb.value();
+        const V& vapour = vapour_adb.value();
+
         V bhp_targets  = V::Zero(nw);
         V rate_targets = V::Zero(nw);
         M rate_distr(nw, np*nw);
@@ -1347,7 +1371,17 @@ namespace detail {
                 rate_targets(w) = -1e100;
             }
             break;
-            //ARB: case THP:
+
+            case THP:
+            {
+                const int vfp        = well_controls_iget_vfp(wc, current);
+                const double& thp    = well_controls_iget_target(wc, current);
+                const double& alq    = well_controls_iget_alq(wc, current);
+
+                bhp_targets (w) = vfp_properties_->prod_bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq);
+                rate_targets(w) = -1e100;
+            }
+            break;
 
             case RESERVOIR_RATE: // Intentional fall-through
             case SURFACE_RATE:
@@ -1371,7 +1405,7 @@ namespace detail {
         }
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
-        //const ADB thp_residual = state.bhp - vfpprop.bhp(thp_ctrl, state.qs, alq);
+
         //wells
         // Choose bhp residual for positive bhp targets.
         Selector<double> bhp_selector(bhp_targets);

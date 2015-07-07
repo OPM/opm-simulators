@@ -23,7 +23,6 @@
 
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
 
 #include <algorithm>
 
@@ -72,128 +71,82 @@ void VFPProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
     }
 }
 
-
-double VFPProperties::prod_bhp(int table, const double& flo, const double& thp, const double& wfr, const double& gfr, const double& alq) {
-    if (m_prod_tables.find(table) == m_prod_tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistent table " << table << " referenced.");
-    }
-    const auto* tab = m_prod_tables[table];
-    //First, find the values to interpolate between
-    auto flo_i = find_interp_data(flo, tab->getFloAxis());
-    auto thp_i = find_interp_data(thp, tab->getTHPAxis());
-    auto wfr_i = find_interp_data(wfr, tab->getWFRAxis());
-    auto gfr_i = find_interp_data(gfr, tab->getGFRAxis());
-    auto alq_i = find_interp_data(alq, tab->getALQAxis());
-
-    //Then perform the interpolation itself
-    return interpolate(tab->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
-}
-
-VFPProperties::ADB VFPProperties::prod_bhp(int table, const ADB& flo, const ADB& thp, const ADB& wfr, const ADB& gfr, const ADB& alq) {
-    const ADB::V& f_v = flo.value();
-    const ADB::V& t_v = thp.value();
-    const ADB::V& w_v = wfr.value();
-    const ADB::V& g_v = gfr.value();
-    const ADB::V& a_v = alq.value();
-
-    const int nw = f_v.size();
-
-    //Compute the BHP for each well independently
-    ADB::V bhp_vals;
-    bhp_vals.resize(nw);
-    for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = prod_bhp(table, f_v[i], t_v[i], w_v[i], g_v[i], a_v[i]);
-    }
-    //Create an ADB constant value.
-    return ADB::constant(bhp_vals);
-}
-
-
-
-VFPProperties::ADB VFPProperties::prod_bhp(int table, const Wells& wells, const ADB& qs, const ADB& thp, const ADB& alq) {
-    if (m_prod_tables.find(table) == m_prod_tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistant table " << table << " referenced.");
-    }
-
+VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
+        const Wells& wells,
+        const ADB::V& qs,
+        const ADB::V& thp,
+        const ADB::V& alq) const {
     const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
     //TODO enable support for two-phase.
     assert(np == 3);
-    const ADB& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
-    const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
-    const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+    const ADB::V& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+    const ADB::V& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+    const ADB::V& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    const auto* tab = m_prod_tables[table];
-    ADB flo = getFlo(w, o, g, tab->getFloType());
-    ADB wfr = getWFR(w, o, g, tab->getWFRType());
-    ADB gfr = getGFR(w, o, g, tab->getGFRType());
+    return prod_bhp(table_id, w, o, g, thp, alq);
+}
 
-    //TODO: Check ALQ type here?
+VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
+        const ADB::V& aqua,
+        const ADB::V& liquid,
+        const ADB::V& vapour,
+        const ADB::V& thp,
+        const ADB::V& alq) const {
+    const int nw = thp.size();
 
-    return prod_bhp(table, flo, thp, wfr, gfr, alq);
+    assert(aqua.size()   == nw);
+    assert(liquid.size() == nw);
+    assert(vapour.size() == nw);
+    assert(thp.size()    == nw);
+    assert(alq.size()    == nw);
+
+    //Compute the BHP for each well independently
+    ADB::V bhp_vals;
+    bhp_vals.resize(nw);
+    for (int i=0; i<nw; ++i) {
+        bhp_vals[i] = prod_bhp(table_id, aqua[i], liquid[i], vapour[i], thp[i], alq[i]);
+    }
+    return bhp_vals;
+}
+
+double VFPProperties::prod_bhp(int table_id,
+        const double& aqua,
+        const double& liquid,
+        const double& vapour,
+        const double& thp,
+        const double& alq) const {
+    const VFPProdTable* table = getProdTable(table_id);
+
+    //Find interpolation variables
+    double flo = getFlo(aqua, liquid, vapour, table->getFloType());
+    double wfr = getWFR(aqua, liquid, vapour, table->getWFRType());
+    double gfr = getGFR(aqua, liquid, vapour, table->getGFRType());
+
+    //First, find the values to interpolate between
+    auto flo_i = find_interp_data(flo, table->getFloAxis());
+    auto thp_i = find_interp_data(thp, table->getTHPAxis());
+    auto wfr_i = find_interp_data(wfr, table->getWFRAxis());
+    auto gfr_i = find_interp_data(gfr, table->getGFRAxis());
+    auto alq_i = find_interp_data(alq, table->getALQAxis());
+
+    //Then perform the interpolation itself
+    return interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 }
 
 
-VFPProperties::ADB VFPProperties::getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                                         const VFPProdTable::FLO_TYPE& type) {
-    switch (type) {
-        case VFPProdTable::FLO_OIL:
-            //Oil = liquid phase
-            return liquid;
-        case VFPProdTable::FLO_LIQ:
-            //Liquid = aqua + liquid phases
-            return aqua + liquid;
-        case VFPProdTable::FLO_GAS:
-            //Gas = vapor phase
-            return vapour;
-        case VFPProdTable::FLO_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
-            return ADB::null();
+
+const VFPProdTable* VFPProperties::getProdTable(int table_id) const {
+    auto entry = m_prod_tables.find(table_id);
+    if (entry == m_prod_tables.end()) {
+        OPM_THROW(std::invalid_argument, "Nonexistent table " << table_id << " referenced.");
+    }
+    else {
+        return entry->second;
     }
 }
-
-VFPProperties::ADB VFPProperties::getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                                         const VFPProdTable::WFR_TYPE& type) {
-    switch(type) {
-        case VFPProdTable::WFR_WOR:
-            //Water-oil ratio = water / oil
-            return aqua / liquid;
-        case VFPProdTable::WFR_WCT:
-            //Water cut = water / (water + oil + gas)
-            return aqua / (aqua + liquid + vapour);
-        case VFPProdTable::WFR_WGR:
-            //Water-gas ratio = water / gas
-            return aqua / vapour;
-        case VFPProdTable::WFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
-            return ADB::null();
-    }
-}
-
-
-VFPProperties::ADB VFPProperties::getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                                         const VFPProdTable::GFR_TYPE& type) {
-    switch(type) {
-        case VFPProdTable::GFR_GOR:
-            // Gas-oil ratio = gas / oil
-            return vapour / liquid;
-        case VFPProdTable::GFR_GLR:
-            // Gas-liquid ratio = gas / (oil + water)
-            return vapour / (liquid + aqua);
-        case VFPProdTable::GFR_OGR:
-            // Oil-gas ratio = oil / gas
-            return liquid / vapour;
-        case VFPProdTable::GFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
-            return ADB::null();
-    }
-}
-
 
 VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, const std::vector<double>& values) {
     InterpData retval;

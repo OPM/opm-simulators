@@ -21,6 +21,7 @@
 #define OPM_AUTODIFF_VFPPROPERTIES_HPP_
 
 #include <opm/core/wells.h>
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
@@ -77,7 +78,7 @@ public:
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
-     * @param table Table number to use
+     * @param table_id Table number to use
      * @param wells Wells structure with information about wells in qs
      * @param qs Flow quantities
      * @param thp Tubing head pressure
@@ -86,50 +87,50 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB prod_bhp(int table,
+    ADB::V prod_bhp(int table_id,
             const Wells& wells,
-            const ADB& qs,
-            const ADB& thp,
-            const ADB& alq);
-
-    /**
-     * Linear interpolation of bhp as a function of the input parameters
-     * @param table Table number to use
-     * @param flo Production rate of oil, gas or liquid
-     * @param thp Tubing head pressure
-     * @param wfr Water-oil ratio, water cut, or water-gas ratio
-     * @param gfr Gas-oil ratio, gas-liquid ratio, or oil-gas ratio
-     * @param alq Artificial lift or other parameter
-     *
-     * @return The bottom hole pressure, interpolated/extrapolated linearly using
-     * the above parameters from the values in the input table.
-     */
-    double prod_bhp(int table,
-            const double& flo,
-            const double& thp,
-            const double& wfr,
-            const double& gfr,
-            const double& alq);
+            const ADB::V& qs,
+            const ADB::V& thp,
+            const ADB::V& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as ADBs
      * @param table Table number to use
-     * @param flo Production rate of oil, gas or liquid
+     * @param aqua Water phase
+     * @param liquid Oil phase
+     * @param vapour Gas phase
      * @param thp Tubing head pressure
-     * @param wfr Water-oil ratio, water cut, or water-gas ratio
-     * @param gfr Gas-oil ratio, gas-liquid ratio, or oil-gas ratio
      * @param alq Artificial lift or other parameter
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB prod_bhp(int table,
-            const ADB& flo,
-            const ADB& thp,
-            const ADB& wfr,
-            const ADB& gfr,
-            const ADB& alq);
+    ADB::V prod_bhp(int table_id,
+            const ADB::V& aqua,
+            const ADB::V& liquid,
+            const ADB::V& vapour,
+            const ADB::V& thp,
+            const ADB::V& alq) const;
+
+    /**
+     * Linear interpolation of bhp as a function of the input parameters
+     * @param table_id Table number to use
+     * @param aqua Water phase
+     * @param liquid Oil phase
+     * @param vapour Gas phase
+     * @param thp Tubing head pressure
+     * @param alq Artificial lift or other parameter
+     *
+     * @return The bottom hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table.
+     */
+    double prod_bhp(int table_id,
+            const double& aqua,
+            const double& liquid,
+            const double& vapour,
+            const double& thp,
+            const double& alq) const;
 
     //FIXME: ARB: Implement inj_bhp to match the prod_bhp's, but for injection wells.
 
@@ -137,22 +138,71 @@ public:
      * Computes the flo parameter according to the flo_type_
      * @return Production rate of oil, gas or liquid.
      */
-    static ADB getFlo(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                      const VFPProdTable::FLO_TYPE& type);
+    template <typename T>
+    static T getFlo(const T& aqua, const T& liquid, const T& vapour,
+                      const VFPProdTable::FLO_TYPE& type) {
+        switch (type) {
+            case VFPProdTable::FLO_OIL:
+                //Oil = liquid phase
+                return liquid;
+            case VFPProdTable::FLO_LIQ:
+                //Liquid = aqua + liquid phases
+                return aqua + liquid;
+            case VFPProdTable::FLO_GAS:
+                //Gas = vapor phase
+                return vapour;
+            case VFPProdTable::FLO_INVALID: //Intentional fall-through
+            default:
+                OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+        }
+    }
 
     /**
      * Computes the wfr parameter according to the wfr_type_
      * @return Production rate of oil, gas or liquid.
      */
-    static ADB getWFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                      const VFPProdTable::WFR_TYPE& type);
+    template <typename T>
+    static T getWFR(const T& aqua, const T& liquid, const T& vapour,
+                      const VFPProdTable::WFR_TYPE& type) {
+        switch(type) {
+            case VFPProdTable::WFR_WOR:
+                //Water-oil ratio = water / oil
+                return aqua / liquid;
+            case VFPProdTable::WFR_WCT:
+                //Water cut = water / (water + oil + gas)
+                return aqua / (aqua + liquid + vapour);
+            case VFPProdTable::WFR_WGR:
+                //Water-gas ratio = water / gas
+                return aqua / vapour;
+            case VFPProdTable::WFR_INVALID: //Intentional fall-through
+            default:
+                OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
+        }
+    }
 
     /**
      * Computes the gfr parameter according to the gfr_type_
      * @return Production rate of oil, gas or liquid.
      */
-    static ADB getGFR(const ADB& aqua, const ADB& liquid, const ADB& vapour,
-                      const VFPProdTable::GFR_TYPE& type);
+    template <typename T>
+    static T getGFR(const T& aqua, const T& liquid, const T& vapour,
+                      const VFPProdTable::GFR_TYPE& type) {
+        switch(type) {
+            case VFPProdTable::GFR_GOR:
+                // Gas-oil ratio = gas / oil
+                return vapour / liquid;
+            case VFPProdTable::GFR_GLR:
+                // Gas-liquid ratio = gas / (oil + water)
+                return vapour / (liquid + aqua);
+            case VFPProdTable::GFR_OGR:
+                // Oil-gas ratio = oil / gas
+                return liquid / vapour;
+            case VFPProdTable::GFR_INVALID: //Intentional fall-through
+            default:
+                OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
+        }
+    }
+
 
 private:
     // Map which connects the table number with the table itself
@@ -188,6 +238,11 @@ private:
      */
     void init(const std::map<int, VFPInjTable>& inj_tables);
     void init(const std::map<int, VFPProdTable>& prod_tables);
+
+    /**
+     * Misc helper functions
+     */
+    const VFPProdTable* getProdTable(int table_id) const;
 };
 
 }
