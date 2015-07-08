@@ -376,7 +376,7 @@ namespace Opm
                 const double* faceNormal = Opm::UgGridHelpers::faceNormal(grid, faceIdx);
 #if HAVE_DUNE_CORNERPOINT
                 assert( dim <= 3 );
-                Dune::FieldVector< double, 3 > scaledFaceNormal;
+                Dune::FieldVector< double, 3 > scaledFaceNormal( 0 );
                 for (int indx = 0; indx < dim; ++indx) {
                     scaledFaceNormal[ indx ] = faceNormal[ indx ];
                 }
