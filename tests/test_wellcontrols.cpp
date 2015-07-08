@@ -52,15 +52,21 @@ BOOST_AUTO_TEST_CASE(Construction)
         double dist1[3] = {0 , 1  ,  2};
         double dist2[3] = {10, 11 , 12};
         double target = 77;
+        double alq = 88;
+        int vfp = 42;
 
         well_controls_assert_number_of_phases( ctrls , num_phases );
-        well_controls_add_new( type1 ,   target , dist1 , ctrls );
-        well_controls_add_new( type2 , 2*target , dist2 , ctrls );
+        well_controls_add_new( type1 ,   target ,   alq ,   vfp , dist1 , ctrls );
+        well_controls_add_new( type2 , 2*target , 2*alq , 2*vfp , dist2 , ctrls );
 
         BOOST_CHECK_EQUAL( target , well_controls_iget_target(ctrls , 0 ));
+        BOOST_CHECK_EQUAL( alq , well_controls_iget_alq(ctrls , 0 ));
+        BOOST_CHECK_EQUAL( vfp , well_controls_iget_vfp(ctrls , 0 ));
         BOOST_CHECK_EQUAL( type1 , well_controls_iget_type(ctrls , 0 ));
 
         BOOST_CHECK_EQUAL( 2*target , well_controls_iget_target(ctrls , 1 ));
+        BOOST_CHECK_EQUAL( 2*alq , well_controls_iget_alq(ctrls , 1 ));
+        BOOST_CHECK_EQUAL( 2*vfp , well_controls_iget_vfp(ctrls , 1 ));
         BOOST_CHECK_EQUAL( type2 , well_controls_iget_type(ctrls , 1 ));
         well_controls_set_current( ctrls , 1 );
         BOOST_CHECK_EQUAL( type2 , well_controls_get_current_type( ctrls ));
@@ -78,6 +84,16 @@ BOOST_AUTO_TEST_CASE(Construction)
     BOOST_CHECK_EQUAL( 123 , well_controls_iget_target( ctrls , 0 ));
     well_controls_iset_target( ctrls , 1 , 456);
     BOOST_CHECK_EQUAL( 456 , well_controls_iget_target( ctrls , 1 ));
+
+    well_controls_iset_alq( ctrls , 0 , 789);
+    BOOST_CHECK_EQUAL( 789 , well_controls_iget_alq( ctrls , 0 ));
+    well_controls_iset_alq( ctrls , 1 , 234);
+    BOOST_CHECK_EQUAL( 234 , well_controls_iget_alq( ctrls , 1 ));
+
+    well_controls_iset_alq( ctrls , 0 , 567);
+    BOOST_CHECK_EQUAL( 567 , well_controls_iget_vfp( ctrls , 0 ));
+    well_controls_iset_alq( ctrls , 1 , 890);
+    BOOST_CHECK_EQUAL( 890 , well_controls_iget_vfp( ctrls , 1 ));
 
     well_controls_iset_type( ctrls , 0 , SURFACE_RATE);
     BOOST_CHECK_EQUAL( SURFACE_RATE , well_controls_iget_type( ctrls , 0 ));
@@ -130,10 +146,12 @@ BOOST_AUTO_TEST_CASE(Clone)
     const double dist1[] = { 0,  1,  2};
     const double dist2[] = {10, 11, 12};
     const double target  = 77;
+    const double alq     = 88;
+    const int vfp        = 42;
 
     well_controls_assert_number_of_phases(ctrls.get(), num_phases);
-    well_controls_add_new(type1,   target, dist1, ctrls.get());
-    well_controls_add_new(type2, 2*target, dist2, ctrls.get());
+    well_controls_add_new(type1,   target,   alq,   vfp, dist1, ctrls.get());
+    well_controls_add_new(type2, 2*target, 2*alq, 2*vfp, dist2, ctrls.get());
 
     std::shared_ptr<WellControls>
         c(well_controls_clone(ctrls.get()),

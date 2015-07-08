@@ -48,7 +48,8 @@
  * one control can be active at a time, indicated by current. The
  * meaning of each control's target value depends on the control type:
  *
- *  - BHP            -> target pressure in Pascal.
+ *  - BHP            -> target bottom hole pressure in Pascal.
+ *  - THP            -> target tubing head pressure in Pascal.
  *  - RESERVOIR_RATE -> target reservoir volume rate in cubic(meter)/second
  *  - SURFACE_RATE   -> target surface volume rate in cubic(meter)/second
  *
@@ -86,6 +87,16 @@ struct WellControls
      * Array of control targets.
      */
     double *target;
+
+    /**
+     * Array of artificial lift quantities.
+     */
+    double *alq;
+
+    /**
+     * Array of VFP table numbers
+     */
+    int *vfp;
 
     /**
      * Array of rate control distributions,
@@ -137,6 +148,8 @@ well_controls_create(void)
         ctrl->number_of_phases  = 0;
         ctrl->type              = NULL;
         ctrl->target            = NULL;
+        ctrl->alq               = NULL;
+        ctrl->vfp               = NULL;
         ctrl->distr             = NULL;
         ctrl->current           = -1;
         ctrl->cpty              = 0;         
@@ -153,18 +166,22 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
 /* ---------------------------------------------------------------------- */
 {
     int   c, p, ok;
-    void *type, *target, *distr;
+    void *type, *target, *alq, *vfp, *distr;
 
     type   = realloc(ctrl->type  , nctrl * 1                      * sizeof *ctrl->type  );
     target = realloc(ctrl->target, nctrl * 1                      * sizeof *ctrl->target);
+    alq    = realloc(ctrl->alq   , nctrl * 1                      * sizeof *ctrl->alq   );
+    vfp    = realloc(ctrl->vfp   , nctrl * 1                      * sizeof *ctrl->vfp   );
     distr  = realloc(ctrl->distr , nctrl * ctrl->number_of_phases * sizeof *ctrl->distr );
 
     ok = 0;
     if (type   != NULL) { ctrl->type   = type  ; ok++; }
     if (target != NULL) { ctrl->target = target; ok++; }
+    if (alq    != NULL) { ctrl->alq    = alq;    ok++; }
+    if (vfp    != NULL) { ctrl->vfp    = vfp;    ok++; }
     if (distr  != NULL) { ctrl->distr  = distr ; ok++; }
 
-    if (ok == 3) {
+    if (ok == 5) {
         for (c = ctrl->cpty; c < nctrl; c++) {
             ctrl->type  [c] =  BHP;
             ctrl->target[c] = -1.0;
@@ -177,7 +194,7 @@ well_controls_reserve(int nctrl, struct WellControls *ctrl)
         ctrl->cpty = nctrl;
     }
 
-    return ok == 3;
+    return ok == 5;
 }
 
 
@@ -188,6 +205,8 @@ well_controls_clone(const struct WellControls *ctrl)
 {
     int                   ok, i, n;
     double                target;
+    double                alq;
+    int                   vfp;
     const double         *distr;
     struct WellControls  *new;
     enum WellControlType  type;
@@ -210,8 +229,10 @@ well_controls_clone(const struct WellControls *ctrl)
                 type   = well_controls_iget_type  (ctrl, i);
                 distr  = well_controls_iget_distr (ctrl, i);
                 target = well_controls_iget_target(ctrl, i);
+                alq    = well_controls_iget_alq   (ctrl, i);
+                vfp    = well_controls_iget_vfp   (ctrl, i);
 
-                ok = well_controls_add_new(type, target, distr, new);
+                ok = well_controls_add_new(type, target, alq, vfp, distr, new);
             }
 
             if (i < n) {
@@ -305,6 +326,26 @@ well_controls_iset_target(struct WellControls * ctrl, int control_index , double
     ctrl->target[control_index] = target;
 }
 
+double
+well_controls_iget_alq(const struct WellControls * ctrl, int control_index) {
+    return ctrl->alq[control_index];
+}
+
+void
+well_controls_iset_alq(struct WellControls * ctrl, int control_index , double alq) {
+    ctrl->alq[control_index] = alq;
+}
+
+int
+well_controls_iget_vfp(const struct WellControls * ctrl, int control_index) {
+    return ctrl->vfp[control_index];
+}
+
+void
+well_controls_iset_vfp(struct WellControls * ctrl, int control_index , int vfp) {
+    ctrl->vfp[control_index] = vfp;
+}
+
 
 const double *
 well_controls_iget_distr(const struct WellControls * ctrl, int control_index) {
@@ -345,7 +386,7 @@ well_controls_clear(struct WellControls * ctrl) {
 
 
 int
-well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl) { 
+well_controls_add_new(enum WellControlType type , double target , double alq , int vfp , const double * distr , struct WellControls * ctrl) {
     if (ctrl->num == ctrl->cpty) {
         int new_cpty = 2*ctrl->cpty;
         if (new_cpty == ctrl->num)
@@ -357,6 +398,8 @@ well_controls_add_new(enum WellControlType type , double target , const double *
 
     well_controls_iset_type( ctrl , ctrl->num , type);
     well_controls_iset_target( ctrl , ctrl->num , target);
+    well_controls_iset_alq(ctrl , ctrl->num , alq);
+    well_controls_iset_vfp(ctrl , ctrl->num , vfp);
     
     if (distr != NULL) 
         well_controls_iset_distr( ctrl , ctrl->num , distr);

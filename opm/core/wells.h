@@ -212,6 +212,8 @@ add_well(enum WellType  type     ,
  *
  * \param[in] type       Control type.
  * \param[in] target     Target value for the control.
+ * \param[in] alq        Artificial lift quantity for control (for THP type only)
+ * \param[in] vfp        VFP table number for control (for THP type only)
  * \param[in] distr      Array of size W->number_of_phases or NULL.
  * \param[in] well_index Index of well to receive additional control.
  * \param[in,out] W  Existing set of well controls.
@@ -222,6 +224,8 @@ add_well(enum WellType  type     ,
 int
 append_well_controls(enum WellControlType type  ,
                      double               target,
+                     double               alq,
+                     int                  vfp,
                      const double        *distr,
                      int                  well_index,
                      struct Wells        *W);

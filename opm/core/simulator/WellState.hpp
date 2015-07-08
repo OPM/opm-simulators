@@ -45,6 +45,7 @@ namespace Opm
                 const int nw = wells->number_of_wells;
                 const int np = wells->number_of_phases;
                 bhp_.resize(nw);
+                thp_.resize(nw);
                 temperature_.resize(nw, 273.15 + 20); // standard temperature for now
                 wellrates_.resize(nw * np, 0.0);
                 for (int w = 0; w < nw; ++w) {
@@ -59,11 +60,19 @@ namespace Opm
                         // 2. Assign bhp equal to bhp control, if
                         //    applicable, otherwise assign equal to
                         //    first perforation cell pressure.
-                        if (well_controls_get_current_type(ctrl) == BHP) {
-                            bhp_[w] = well_controls_get_current_target( ctrl );
-                        } else {
-                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                            bhp_[w] = state.pressure()[first_cell];
+                        //    thp set to thp control
+                        switch (well_controls_get_current_type(ctrl)) {
+                            case BHP:
+                                bhp_[w] = well_controls_get_current_target( ctrl );
+                                break;
+                            case THP:
+                                thp_[w] = well_controls_get_current_target( ctrl );
+                                break;
+                            default:
+                            {
+                                const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                                bhp_[w] = state.pressure()[first_cell];
+                            }
                         }
                     } else {
                         // Open well:
@@ -112,6 +121,10 @@ namespace Opm
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
 
+        /// One thp pressure per well.
+        std::vector<double>& thp() { return thp_; }
+        const std::vector<double>& thp() const { return thp_; }
+
         /// One temperature per well.
         std::vector<double>& temperature() { return temperature_; }
         const std::vector<double>& temperature() const { return temperature_; }
@@ -150,6 +163,7 @@ namespace Opm
 
     private:
         std::vector<double> bhp_;
+        std::vector<double> thp_;
         std::vector<double> temperature_;
         std::vector<double> wellrates_;
         std::vector<double> perfrates_;

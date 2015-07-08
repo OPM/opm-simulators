@@ -97,10 +97,14 @@ BOOST_AUTO_TEST_CASE(Controls)
 
         if (ok) {
             const double distr[] = { 1.0, 0.0 };
-            const bool   ok1     = append_well_controls(BHP, 1, &distr[0],
+            const bool   ok1     = append_well_controls(BHP, 1,
+                                                        -1e100, -1e100,
+                                                        &distr[0],
                                                         0, W.get());
             const bool   ok2     = append_well_controls(SURFACE_RATE, 1,
-                                                        &distr[0], 0, W.get());
+                                                        -1e100, -1e100,
+                                                        &distr[0],
+                                                        0, W.get());
 
             if (ok1 && ok2) {
                 WellControls* ctrls = W->ctrls[0];
@@ -150,9 +154,12 @@ BOOST_AUTO_TEST_CASE(Copy)
         bool ok = ok0 && ok1;
         for (int w = 0; ok && (w < W1->number_of_wells); ++w) {
             const double distr[] = { 1.0, 0.0 };
-            const bool   okc1     = append_well_controls(BHP, 1, &distr[0],
-                                                         w, W1.get());
+            const bool   okc1     = append_well_controls(BHP, 1,
+                                                         -1e100, -1e100,
+                                                         &distr[0], w,
+                                                         W1.get());
             const bool   okc2     = append_well_controls(SURFACE_RATE, 1,
+                                                         -1e100, -1e100,
                                                          &distr[0], w,
                                                          W1.get());
 

@@ -422,6 +422,8 @@ add_well(enum WellType  type     ,
 int
 append_well_controls(enum WellControlType type,
                      double               target,
+                     double               alq,
+                     int                  vfp,
                      const double        *distr,
                      int                  well_index,
                      struct Wells        *W)
@@ -436,7 +438,7 @@ append_well_controls(enum WellControlType type,
     assert (ctrl != NULL);
     
     well_controls_assert_number_of_phases( ctrl , W->number_of_phases);
-    return well_controls_add_new(type , target , distr , ctrl);
+    return well_controls_add_new(type , target , alq , vfp , distr , ctrl);
 }
 
 

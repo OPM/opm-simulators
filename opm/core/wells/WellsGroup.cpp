@@ -751,11 +751,12 @@ namespace Opm
         }
         else {
             const double target = 0.0;
+            const double alq = 0.0;
             const double distr[3] = {1.0, 1.0, 1.0};
 
             if (group_control_index_ < 0) {
                 // The well only had its own controls, no group controls.
-                append_well_controls(SURFACE_RATE, target, distr, self_index_, wells_);
+                append_well_controls(SURFACE_RATE, target, -1e100, -1e100, distr, self_index_, wells_);
                 group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             } else {
                 // We will now modify the last control, that
@@ -763,6 +764,7 @@ namespace Opm
                 
                 well_controls_iset_type( wells_->ctrls[self_index_] , group_control_index_ , SURFACE_RATE);
                 well_controls_iset_target( wells_->ctrls[self_index_] , group_control_index_ , target);
+                well_controls_iset_alq( wells_->ctrls[self_index_] , group_control_index_ , alq);
                 well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
             }
             well_controls_open_well( wells_->ctrls[self_index_]);
@@ -810,13 +812,14 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, target, distr, self_index_, wells_);
+            append_well_controls(wct, target, -1e100, -1e100, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
             well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ ,target);
+            well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);
@@ -921,13 +924,14 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, ntarget, distr, self_index_, wells_);
+            append_well_controls(wct, ntarget, -1e100, -1e100, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
             well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
+            well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);

@@ -33,6 +33,7 @@ extern "C" {
 
 enum WellControlType  {
     BHP,              /**< Well constrained by BHP target */
+    THP,              /**< Well constrained by THP target */
     RESERVOIR_RATE,   /**< Well constrained by reservoir volume flow rate */
     SURFACE_RATE      /**< Well constrained by surface volume flow rate */
 };
@@ -82,7 +83,7 @@ void
 well_controls_stop_well( struct WellControls * ctrl);
 
 int
-well_controls_add_new(enum WellControlType type , double target , const double * distr , struct WellControls * ctrl);
+well_controls_add_new(enum WellControlType type , double target , double alq , int vfp , const double * distr , struct WellControls * ctrl);
 
 enum WellControlType 
 well_controls_iget_type(const struct WellControls * ctrl, int control_index);
@@ -98,6 +99,18 @@ well_controls_iset_target(struct WellControls * ctrl, int control_index , double
 
 double
 well_controls_iget_target(const struct WellControls * ctrl, int control_index);
+
+void
+well_controls_iset_alq(struct WellControls * ctrl, int control_index , double alq);
+
+double
+well_controls_iget_alq(const struct WellControls * ctrl, int control_index );
+
+void
+well_controls_iset_vfp(struct WellControls * ctrl, int control_index , int vfp);
+
+int
+well_controls_iget_vfp(const struct WellControls * ctrl, int control_index );
 
 double
 well_controls_get_current_target(const struct WellControls * ctrl);
