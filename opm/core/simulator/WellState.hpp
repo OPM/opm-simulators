@@ -67,14 +67,12 @@ namespace Opm
                                 bhp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             case THP:
-                                assert(false && "Not properly implemented");
                                 thp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             default:
                             {
                                 const int first_cell = wells->well_cells[wells->well_connpos[w]];
                                 bhp_[w] = state.pressure()[first_cell];
-                                thp_[w] = -1e100;
                             }
                         }
                     } else {
