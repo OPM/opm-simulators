@@ -73,6 +73,7 @@ namespace Opm
                             {
                                 const int first_cell = wells->well_cells[wells->well_connpos[w]];
                                 bhp_[w] = state.pressure()[first_cell];
+                                thp_[w] = -1e100;
                             }
                         }
                     } else {
@@ -122,10 +123,13 @@ namespace Opm
                         //    pressure in first perforation cell.
                         switch (well_controls_get_current_type(ctrl)) {
                             case BHP:
+                                bhp_[w] = well_controls_get_current_target( ctrl );
+                                thp_[w] = -1e100;
                                 break;
+
                             case THP:
-                                //bhp_[w] = thp_[w]; //< TODO: ARB Adding this produces identical results as without THP control for artificial test case
-                                //Already taken care of above in 2.
+                                bhp_[w] = -1e100;
+                                thp_[w] = well_controls_get_current_target( ctrl );
                                 break;
 
                             default:
@@ -133,7 +137,7 @@ namespace Opm
                                 const int first_cell = wells->well_cells[wells->well_connpos[w]];
                                 const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
                                 bhp_[w] = safety_factor*state.pressure()[first_cell];
-                                // thp_[w] = -1e100;
+                                thp_[w] = -1e100;
                             }
                         }
                     }
