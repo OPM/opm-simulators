@@ -678,6 +678,11 @@ namespace Opm
                 break;
             }
 
+            case THP: {
+                //TODO: Implement support
+                OPM_THROW(std::invalid_argument, "THP not implemented in WellNode::conditionsMet.");
+            }
+
             case RESERVOIR_RATE: {
                 double my_rate = 0.0;
                 const double * ctrls_distr = well_controls_iget_distr( ctrls , ctrl_index );
