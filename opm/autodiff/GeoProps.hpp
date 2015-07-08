@@ -366,26 +366,15 @@ namespace Opm
 
                 // d = 0: XPERM d = 4: YPERM d = 8: ZPERM ignores off-diagonal permeability values.
                 const int d = std::floor(faceTag/2) * 4;
-                //std::cout << d << " d value | faceTag " << faceTag  << std::endl;
 
                 // compute the half transmissibility
                 double dist = 0.0;
                 double cn = 0.0;
                 double sgn = 2.0 * (faceCells(faceIdx, 0) == cellIdx) - 1;
                 const int dim = Opm::UgGridHelpers::dimensions(grid);
-                /*
-                std::cout << "faceNormal ";
-                Dune::DynamicVector< double > normal( dim );
-                for (int indx = 0; indx < dim; ++indx) {
-                    normal[ indx ] = Opm::UgGridHelpers::faceNormal(grid,faceIdx)[indx];
-                }
 
-                if( ! ( std::abs( normal.two_norm() - Opm::UgGridHelpers::faceArea(grid, faceIdx) ) < 1e-12  ) )
-                    normal *=
-                    std::abort();
-                std::cout    << std::endl;
-                */
                 const double* faceNormal = Opm::UgGridHelpers::faceNormal(grid, faceIdx);
+#if HAVE_DUNE_CORNERPOINT
                 assert( dim <= 3 );
                 Dune::FieldVector< double, 3 > scaledFaceNormal;
                 for (int indx = 0; indx < dim; ++indx) {
@@ -395,6 +384,9 @@ namespace Opm
                 scaledFaceNormal /= scaledFaceNormal.two_norm();
                 // compute proper normal scaled with face area
                 scaledFaceNormal *= Opm::UgGridHelpers::faceArea(grid, faceIdx);
+#else
+                const double* scaledFaceNormal = faceNormal;
+#endif
 
                 for (int indx = 0; indx < dim; ++indx) {
                     const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] -
