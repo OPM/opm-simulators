@@ -91,7 +91,7 @@ namespace Opm
             }
 
             // get grid from parser.
-            
+
             // Get original grid cell volume.
             EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
             // Pore volume.
@@ -107,7 +107,7 @@ namespace Opm
                     pvol_[cellIdx] *= AutoDiffGrid::cellVolume(grid, cellIdx);
                 } else {
                     pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
-                }                
+                }
             }
             // Use volume weighted arithmetic average of the NTG values for
             // the cells effected by the current OPM cpgrid process algorithm
@@ -372,11 +372,27 @@ namespace Opm
                 double cn = 0.0;
                 double sgn = 2.0 * (faceCells(faceIdx, 0) == cellIdx) - 1;
                 const int dim = Opm::UgGridHelpers::dimensions(grid);
+
+                const double* faceNormal = Opm::UgGridHelpers::faceNormal(grid, faceIdx);
+#if HAVE_DUNE_CORNERPOINT
+                assert( dim <= 3 );
+                Dune::FieldVector< double, 3 > scaledFaceNormal( 0 );
                 for (int indx = 0; indx < dim; ++indx) {
-                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] - 
+                    scaledFaceNormal[ indx ] = faceNormal[ indx ];
+                }
+                // compute unit normal incase the normal is already scaled
+                scaledFaceNormal /= scaledFaceNormal.two_norm();
+                // compute proper normal scaled with face area
+                scaledFaceNormal *= Opm::UgGridHelpers::faceArea(grid, faceIdx);
+#else
+                const double* scaledFaceNormal = faceNormal;
+#endif
+
+                for (int indx = 0; indx < dim; ++indx) {
+                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] -
                         Opm::UgGridHelpers::cellCentroidCoordinate(grid, cellIdx, indx);
                     dist += Ci*Ci;
-                    cn += sgn * Ci * Opm::UgGridHelpers::faceNormal(grid, faceIdx)[indx];
+                    cn += sgn * Ci * scaledFaceNormal[ indx ]; //Opm::UgGridHelpers::faceNormal(grid, faceIdx)[indx];
                 }
 
                 if (cn < 0){
