@@ -137,6 +137,147 @@ double VFPProperties::prod_bhp(int table_id,
 }
 
 
+double VFPProperties::prod_thp(int table_id,
+        const double& aqua,
+        const double& liquid,
+        const double& vapour,
+        const double& bhp,
+        const double& alq) const {
+    const VFPProdTable* table = getProdTable(table_id);
+    const VFPProdTable::array_type& data = table->getTable();
+
+    double thp = -1e100;
+
+    //Find interpolation variables
+    double flo = getFlo(aqua, liquid, vapour, table->getFloType());
+    double wfr = getWFR(aqua, liquid, vapour, table->getWFRType());
+    double gfr = getGFR(aqua, liquid, vapour, table->getGFRType());
+
+    /**
+     * Get THP axis, assume that it is sorted
+     */
+    const std::vector<double> thp_array = table->getTHPAxis();
+    int nthp = thp_array.size();
+    assert(std::is_sorted(thp_array.begin(), thp_array.end()));
+
+    /**
+     * Find the function bhp_array(thp) by creating a 1D view of the data
+     * by interpolating for every value of thp. This might be somewhat
+     * expensive, but let us assome that nthp is small
+     */
+    auto flo_i = find_interp_data(flo, table->getFloAxis());
+    auto wfr_i = find_interp_data(wfr, table->getWFRAxis());
+    auto gfr_i = find_interp_data(gfr, table->getGFRAxis());
+    auto alq_i = find_interp_data(alq, table->getALQAxis());
+    std::vector<double> bhp_array(nthp);
+    for (int i=0; i<nthp; ++i) {
+        auto thp_i = find_interp_data(thp_array[i], thp_array);
+        bhp_array[i] = interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    }
+
+    /**
+     * Our *interpolated* bhp_array will be montoic increasing for increasing
+     * THP if our input BHP values are monotonic increasing for increasing
+     * THP values. However, if we have to *extrapolate* along any of the other
+     * axes, this guarantee holds no more, and bhp_array may be "random"
+     */
+    if (std::is_sorted(bhp_array.begin(), bhp_array.end())) {
+        //Target bhp less than all values in array, extrapolate
+        if (bhp <= bhp_array[0]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[0];
+            const double& x1 = thp_array[1];
+            const double& y0 = bhp_array[0];
+            const double& y1 = bhp_array[1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp greater than all values in array, extrapolate
+        else if (bhp > bhp_array[nthp-1]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[nthp-2];
+            const double& x1 = thp_array[nthp-1];
+            const double& y0 = bhp_array[nthp-2];
+            const double& y1 = bhp_array[nthp-1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp within table ranges, interpolate
+        else {
+            //Loop over the values and find min(bhp_array(thp)) == bhp
+            //so that we maximize the rate.
+
+            //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
+            //Assuming a small number of values in bhp_array, this should be quite
+            //efficient. Other strategies might be bisection, etc.
+            int i=0;
+            bool found = false;
+            for (; i<nthp-1; ++i) {
+                const double& y0 = bhp_array[i  ];
+                const double& y1 = bhp_array[i+1];
+
+                if (y0 < bhp && bhp <= y1) {
+                    found = true;
+                    break;
+                }
+            }
+            //Canary in a coal mine: shouldn't really be required
+            assert(found == true);
+
+            const double& x0 = thp_array[i  ];
+            const double& x1 = thp_array[i+1];
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+    }
+    //bhp_array not sorted, raw search.
+    else {
+        //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
+        //Since the BHP values might not be sorted, first search within
+        //our interpolation values, and then try to extrapolate.
+        int i=0;
+        bool found = false;
+        for (; i<nthp-1; ++i) {
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+
+            if (y0 < bhp && bhp <= y1) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            const double& x0 = thp_array[i  ];
+            const double& x1 = thp_array[i+1];
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+        else if (bhp <= bhp_array[0]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[0];
+            const double& x1 = thp_array[1];
+            const double& y0 = bhp_array[0];
+            const double& y1 = bhp_array[1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp greater than all values in array, extrapolate
+        else if (bhp > bhp_array[nthp-1]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[nthp-2];
+            const double& x1 = thp_array[nthp-1];
+            const double& y0 = bhp_array[nthp-2];
+            const double& y1 = bhp_array[nthp-1];
+            thp = find_x(x0, x1, y0, y1, bhp);
+        }
+        else {
+            OPM_THROW(std::logic_error, "Programmer error: Unable to find THP in THP array");
+        }
+    }
+
+    return thp;
+}
+
+
 
 const VFPProdTable* VFPProperties::getProdTable(int table_id) const {
     auto entry = m_prod_tables.find(table_id);
@@ -266,5 +407,32 @@ double VFPProperties::interpolate(const VFPProdTable::array_type& array,
 #pragma GCC pop_options //unroll loops
 #endif
 
+
+double VFPProperties::find_x(const double& x0,
+        const double& x1,
+        const double& y0,
+        const double& y1,
+        const double& y) {
+    const double dx = x1 - x0;
+    const double dy = y1 - y0;
+
+    /**
+     *       y = y0 + (dy / dx) * (x - x0)
+     *   =>  x = x0 + (y - y0) * (dx / dy)
+     *
+     * If dy is zero, use x1 as the value.
+     */
+
+    double x = 0.0;
+
+    if (dy != 0.0) {
+        x = x0 + (y-y0) * (dx/dy);
+    }
+    else {
+        x = x1;
+    }
+
+    return x;
+}
 
 } //Namespace

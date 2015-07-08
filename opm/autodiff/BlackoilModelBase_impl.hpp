@@ -133,7 +133,6 @@ namespace detail {
         return act2can;
     }
 
-
 } // namespace detail
 
 
@@ -1197,7 +1196,9 @@ namespace detail {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(xw.bhp(), xw.thp(), xw.wellRates(), w, np, wells().type[w], wc, ctrl_index)) {
+                if (detail::constraintBroken(
+                        xw.bhp(), xw.thp(), xw.wellRates(),
+                        w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1756,6 +1757,43 @@ namespace detail {
             const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
             const V bhp = bhp_old - dbhp_limited;
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
+
+            // Thp update
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            //Loop over all wells
+            for (int w=0; w<nw; ++w) {
+                const WellControls* wc = wells().ctrls[w];
+                const int nwc = well_controls_get_num(wc);
+                //Loop over all controls until we find a THP control
+                //that specifies what we need...
+                //Will only update THP for wells with THP control
+                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
+                    if (well_controls_iget_type(wc, ctrl_index) == THP) {
+                        double aqua = 0.0;
+                        double liquid = 0.0;
+                        double vapour = 0.0;
+
+                        if (active_[ Water ]) {
+                            aqua = wr[w*np + pu.phase_pos[ Water ] ];
+                        }
+                        if (active_[ Oil ]) {
+                            liquid = wr[w*np + pu.phase_pos[ Oil ] ];
+                        }
+                        if (active_[ Gas ]) {
+                            vapour = wr[w*np + pu.phase_pos[ Gas ] ];
+                        }
+
+                        auto wc = wells().ctrls[w];
+                        double alq = well_controls_iget_alq(wc, ctrl_index);
+                        int table_id = well_controls_iget_vfp(wc, ctrl_index);
+
+                        well_state.thp()[w] = vfp_properties_->prod_thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+
+                        //Assume only one THP control specified for each well
+                        break;
+                    }
+                }
+            }
         }
     }
 

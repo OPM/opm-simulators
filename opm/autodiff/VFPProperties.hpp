@@ -132,6 +132,25 @@ public:
             const double& thp,
             const double& alq) const;
 
+    /**
+     * Linear interpolation of thp as a function of the input parameters
+     * @param table_id Table number to use
+     * @param aqua Water phase
+     * @param liquid Oil phase
+     * @param vapour Gas phase
+     * @param bhp Bottom hole pressure
+     * @param alq Artificial lift or other parameter
+     *
+     * @return The tubing hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table.
+     */
+    double prod_thp(int table_id,
+            const double& aqua,
+            const double& liquid,
+            const double& vapour,
+            const double& bhp,
+            const double& alq) const;
+
     //FIXME: ARB: Implement inj_bhp to match the prod_bhp's, but for injection wells.
 
     /**
@@ -232,6 +251,17 @@ private:
             const InterpData& wfr_i,
             const InterpData& gfr_i,
             const InterpData& alq_i);
+
+    /**
+     * Helper function that finds x for a given value of y for a line
+     * *NOTE ORDER OF ARGUMENTS*
+     */
+    static double find_x(const double& x0,
+            const double& x1,
+            const double& y0,
+            const double& y1,
+            const double& y);
+
 
     /**
      * Initialization routines
