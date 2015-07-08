@@ -51,8 +51,9 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     double target_surfacerate_inj;
     double target_surfacerate_prod;
 
-    BlackoilState state;
     const std::vector<double> pressure = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    BlackoilState state;
+    state.init(pressure.size(), 0, 3);
     state.pressure() = pressure;
 
     // Both wells are open in the first schedule step
