@@ -80,7 +80,7 @@ public:
     /*!
      * \brief Returns the temperature [K] of a phase for the current cell index.
      */
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(int /* phaseIdx */) const
     { return temperature_[arrayIdx_]; }
 
     // TODO (?) pressure, composition, etc
