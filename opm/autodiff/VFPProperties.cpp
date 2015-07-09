@@ -34,44 +34,72 @@ VFPProperties::VFPProperties() {
 
 VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table) {
     if (inj_table != NULL) {
-        m_inj_tables[inj_table->getTableNum()] = inj_table;
+        //FIXME: Implement VFPInjProperties
+        OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
     }
     if (prod_table != NULL) {
-        m_prod_tables[prod_table->getTableNum()] = prod_table;
+        m_prod.reset(new VFPProdProperties(prod_table));
     }
 }
 
 VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
                              const std::map<int, VFPProdTable>& prod_tables) {
-    init(inj_tables);
-    init(prod_tables);
+    //FIXME: Implement VFPInjProperties
+    OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
+    m_prod.reset(new VFPProdProperties(prod_tables));
 }
 
 
 VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables) {
-    init(inj_tables);
+    //FIXME: Implement VFPInjProperties
+    OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
 }
 
 
 VFPProperties::VFPProperties(const std::map<int, VFPProdTable>& prod_tables) {
-    init(prod_tables);
+    m_prod.reset(new VFPProdProperties(prod_tables));
 }
 
-void VFPProperties::init(const std::map<int, VFPInjTable>& inj_tables) {
-    //Populate injection table pointers.
-    for (const auto& table : inj_tables) {
-        m_inj_tables[table.first] = &table.second;
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VFPProdProperties::VFPProdProperties() {
+
 }
 
-void VFPProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
+VFPProdProperties::VFPProdProperties(const VFPProdTable* table){
+    m_tables[table->getTableNum()] = table;
+}
+
+
+VFPProdProperties::VFPProdProperties(const std::map<int, VFPProdTable>& tables) {
+    init(tables);
+}
+
+
+
+
+
+void VFPProdProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
     //Populate production table pointers
     for (const auto& table : prod_tables) {
-        m_prod_tables[table.first] = &table.second;
+        m_tables[table.first] = &table.second;
     }
 }
 
-VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
+VFPProdProperties::ADB::V VFPProdProperties::bhp(int table_id,
         const Wells& wells,
         const ADB::V& qs,
         const ADB::V& thp,
@@ -86,10 +114,10 @@ VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
     const ADB::V& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB::V& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    return prod_bhp(table_id, w, o, g, thp, alq);
+    return bhp(table_id, w, o, g, thp, alq);
 }
 
-VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
+VFPProdProperties::ADB::V VFPProdProperties::bhp(int table_id,
         const ADB::V& aqua,
         const ADB::V& liquid,
         const ADB::V& vapour,
@@ -107,12 +135,12 @@ VFPProperties::ADB::V VFPProperties::prod_bhp(int table_id,
     ADB::V bhp_vals;
     bhp_vals.resize(nw);
     for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = prod_bhp(table_id, aqua[i], liquid[i], vapour[i], thp[i], alq[i]);
+        bhp_vals[i] = bhp(table_id, aqua[i], liquid[i], vapour[i], thp[i], alq[i]);
     }
     return bhp_vals;
 }
 
-double VFPProperties::prod_bhp(int table_id,
+double VFPProdProperties::bhp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -137,7 +165,7 @@ double VFPProperties::prod_bhp(int table_id,
 }
 
 
-double VFPProperties::prod_thp(int table_id,
+double VFPProdProperties::thp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -279,9 +307,9 @@ double VFPProperties::prod_thp(int table_id,
 
 
 
-const VFPProdTable* VFPProperties::getProdTable(int table_id) const {
-    auto entry = m_prod_tables.find(table_id);
-    if (entry == m_prod_tables.end()) {
+const VFPProdTable* VFPProdProperties::getProdTable(int table_id) const {
+    auto entry = m_tables.find(table_id);
+    if (entry == m_tables.end()) {
         OPM_THROW(std::invalid_argument, "Nonexistent table " << table_id << " referenced.");
     }
     else {
@@ -289,7 +317,7 @@ const VFPProdTable* VFPProperties::getProdTable(int table_id) const {
     }
 }
 
-VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, const std::vector<double>& values) {
+VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
     //First element greater than or equal to value
@@ -330,7 +358,7 @@ VFPProperties::InterpData VFPProperties::find_interp_data(const double& value, c
 #pragma GCC optimize ("unroll-loops")
 #endif
 
-double VFPProperties::interpolate(const VFPProdTable::array_type& array,
+double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
         const InterpData& wfr_i,
@@ -408,7 +436,7 @@ double VFPProperties::interpolate(const VFPProdTable::array_type& array,
 #endif
 
 
-double VFPProperties::find_x(const double& x0,
+double VFPProdProperties::find_x(const double& x0,
         const double& x1,
         const double& y0,
         const double& y1,

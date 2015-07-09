@@ -31,18 +31,15 @@
 
 namespace Opm {
 
+class VFPProdProperties;
+class VFPInjProperties;
+
 /**
- * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
- * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
- * the BHP as a function of the rate and tubing head pressure.
+ * A thin wrapper class that holds one VFPProdProperties and one
+ * VFPInjProperties object.
  */
 class VFPProperties {
 public:
-    typedef AutoDiffBlock<double> ADB;
-
-    /**
-     * Empty constructor
-     */
     VFPProperties();
 
     /**
@@ -76,6 +73,47 @@ public:
      */
     VFPProperties(const std::map<int, VFPProdTable>& prod_tables);
 
+    const VFPInjProperties* getInj() const {
+        return m_inj.get();
+    }
+
+    const VFPProdProperties* getProd() const {
+        return m_prod.get();
+    }
+
+private:
+    std::shared_ptr<VFPInjProperties> m_inj;
+    std::shared_ptr<VFPProdProperties> m_prod;
+};
+
+/**
+ * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
+ * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
+ * the BHP as a function of the rate and tubing head pressure.
+ */
+class VFPProdProperties {
+public:
+    typedef AutoDiffBlock<double> ADB;
+
+    /**
+     * Empty constructor
+     */
+    VFPProdProperties();
+
+    /**
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param prod_table A *single* VFPPROD table
+     */
+    VFPProdProperties(const VFPProdTable* prod_table);
+
+    /**
+     * Constructor
+     * Takes *no* ownership of data.
+     * @param prod_tables A map of different VFPPROD tables.
+     */
+    VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
+
     /**
      * Linear interpolation of bhp as function of the input parameters.
      * @param table_id Table number to use
@@ -87,7 +125,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB::V prod_bhp(int table_id,
+    ADB::V bhp(int table_id,
             const Wells& wells,
             const ADB::V& qs,
             const ADB::V& thp,
@@ -106,7 +144,7 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB::V prod_bhp(int table_id,
+    ADB::V bhp(int table_id,
             const ADB::V& aqua,
             const ADB::V& liquid,
             const ADB::V& vapour,
@@ -125,7 +163,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double prod_bhp(int table_id,
+    double bhp(int table_id,
             const double& aqua,
             const double& liquid,
             const double& vapour,
@@ -144,7 +182,7 @@ public:
      * @return The tubing hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double prod_thp(int table_id,
+    double thp(int table_id,
             const double& aqua,
             const double& liquid,
             const double& vapour,
@@ -188,8 +226,8 @@ public:
                 //Water-oil ratio = water / oil
                 return aqua / liquid;
             case VFPProdTable::WFR_WCT:
-                //Water cut = water / (water + oil + gas)
-                return aqua / (aqua + liquid + vapour);
+                //Water cut = water / (water + oil)
+                return aqua / (aqua + liquid);
             case VFPProdTable::WFR_WGR:
                 //Water-gas ratio = water / gas
                 return aqua / vapour;
@@ -225,8 +263,7 @@ public:
 
 private:
     // Map which connects the table number with the table itself
-    std::map<int, const VFPProdTable*> m_prod_tables;
-    std::map<int, const VFPInjTable*> m_inj_tables;
+    std::map<int, const VFPProdTable*> m_tables;
 
     /**
      * Helper struct for linear interpolation
@@ -264,9 +301,8 @@ private:
 
 
     /**
-     * Initialization routines
+     * Initialization routine
      */
-    void init(const std::map<int, VFPInjTable>& inj_tables);
     void init(const std::map<int, VFPProdTable>& prod_tables);
 
     /**

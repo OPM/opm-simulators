@@ -1379,7 +1379,7 @@ namespace detail {
                 const double& thp    = well_controls_iget_target(wc, current);
                 const double& alq    = well_controls_iget_alq(wc, current);
 
-                bhp_targets (w) = vfp_properties_->prod_bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq);
+                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq);
                 rate_targets(w) = -1e100;
             }
             break;
@@ -1787,7 +1787,7 @@ namespace detail {
                         double alq = well_controls_iget_alq(wc, ctrl_index);
                         int table_id = well_controls_iget_vfp(wc, ctrl_index);
 
-                        well_state.thp()[w] = vfp_properties_->prod_thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+                        well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
 
                         //Assume only one THP control specified for each well
                         break;

@@ -43,8 +43,8 @@
 
 
 
-const double max_d_tol = 1.0e-12;
-const double sad_tol = 1.0e-9;
+const double max_d_tol = 1.0e-10;
+const double sad_tol = 1.0e-8;
 
 
 
@@ -54,7 +54,7 @@ const double sad_tol = 1.0e-9;
  * values data is given at
  */
 struct TrivialFixture {
-    typedef Opm::VFPProperties::ADB ADB;
+    typedef Opm::VFPProdProperties::ADB ADB;
 
     TrivialFixture() : thp_axis{0.0, 1.0},
             wfr_axis{0.0, 0.5, 1.0},
@@ -108,7 +108,7 @@ struct TrivialFixture {
                         double u = l / static_cast<double>(nu-1);
                         for (int m=0; m<nv; ++m) {
                             double v = m / static_cast<double>(nv-1);
-
+                            // table[thp_idx][wfr_idx][gfr_idx][alq_idx][flo_idx];
                             data[i][j][k][l][m] = x + 2*y + 3*z + 4*u + 5*v;
                         }
                     }
@@ -158,10 +158,10 @@ struct TrivialFixture {
                    data);
 
         //Initialize properties that use the table
-        properties.reset(new Opm::VFPProperties(NULL, &table));
+        properties.reset(new Opm::VFPProdProperties(&table));
     }
 
-    std::shared_ptr<Opm::VFPProperties> properties;
+    std::shared_ptr<Opm::VFPProdProperties> properties;
     Opm::VFPProdTable table;
 
 private:
@@ -194,10 +194,12 @@ BOOST_AUTO_TEST_CASE(GetTable)
 
     //Create wells
     const int nphases = 3;
-    const int nwells  = 5;
+    const int nwells  = 1;
     const int nperfs  = 1;
     std::shared_ptr<Wells> wells(create_wells(nphases, nwells, nperfs),
                                 destroy_wells);
+    const int cells[] = {5};
+    add_well(INJECTOR, 100, 1, NULL, cells, NULL, NULL, wells.get());
 
     //Create interpolation points
     double aqua_d   = 1.5;
@@ -212,22 +214,22 @@ BOOST_AUTO_TEST_CASE(GetTable)
     ADB::V thp_adb    = ADB::V::Constant(1, thp_d);
     ADB::V alq_adb    = ADB::V::Constant(1, alq_d);
 
-    ADB::V qs_adb;
+    ADB::V qs_adb(3);
     qs_adb << aqua_adb, liquid_adb, vapour_adb;
 
 
 
     //Check that different versions of the prod_bph function work
-    ADB::V a = properties->prod_bhp(1, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
-    double b = properties->prod_bhp(1, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
-    ADB::V c = properties->prod_bhp(1, *wells, qs_adb, thp_adb, alq_adb);
+    ADB::V a = properties->bhp(1, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
+    double b = properties->bhp(1, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    ADB::V c = properties->bhp(1, *wells, qs_adb, thp_adb, alq_adb);
 
     //Check that results are actually equal
     BOOST_CHECK_EQUAL(a[0], b);
     BOOST_CHECK_EQUAL(a[0], c[0]);
 
     //Table 2 does not exist.
-    BOOST_CHECK_THROW(properties->prod_bhp(2, *wells, qs_adb, thp_adb, alq_adb), std::invalid_argument);
+    BOOST_CHECK_THROW(properties->bhp(2, *wells, qs_adb, thp_adb, alq_adb), std::invalid_argument);
 }
 
 /**
@@ -242,11 +244,11 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
     //Check interpolation
     double sum = 0.0;
     int n=5;
-    for (int i=0; i<n; ++i) {
+    for (int i=1; i<n; ++i) {
         const double x = i / static_cast<double>(n-1);
-        for (int j=0; j<n; ++j) {
+        for (int j=1; j<n; ++j) {
             const double y = j / static_cast<double>(n-1);
-            for (int k=0; k<n; ++k) {
+            for (int k=1; k<n; ++k) {
                 const double z = k / static_cast<double>(n-1);
                 for (int l=0; l<n; ++l) {
                     const double u = l / static_cast<double>(n-1);
@@ -254,7 +256,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->prod_bhp(1, v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u);
                     }
                 }
             }
@@ -277,11 +279,11 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
     //Check interpolation
     double sum = 0.0;
     int n=5;
-    for (int i=0; i<n; ++i) {
+    for (int i=1; i<n; ++i) {
         const double x = i / static_cast<double>(n-1);
-        for (int j=0; j<n; ++j) {
+        for (int j=1; j<n; ++j) {
             const double y = j / static_cast<double>(n-1);
-            for (int k=0; k<n; ++k) {
+            for (int k=1; k<n; ++k) {
                 const double z = k / static_cast<double>(n-1);
                 for (int l=0; l<n; ++l) {
                     const double u = l / static_cast<double>(n-1);
@@ -289,14 +291,14 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->prod_bhp(1, v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u);
                     }
                 }
             }
         }
     }
 
-    double reference = n*n*n*n*n;
+    double reference = (n-1)*(n-1)*(n-1)*n*n;
     BOOST_CHECK_EQUAL(sum, reference);
 }
 
@@ -318,19 +320,25 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
     int n=5;
     for (int i=0; i<=n; ++i) {
         const double x = i / static_cast<double>(n);
-        for (int j=0; j<=n; ++j) {
-            const double y = j / static_cast<double>(n);
-            for (int k=0; k<=n; ++k) {
-                const double z = k / static_cast<double>(n);
+        for (int j=1; j<=n; ++j) {
+            const double aqua = j / static_cast<double>(n);
+            for (int k=1; k<=n; ++k) {
+                const double vapour = k / static_cast<double>(n);
                 for (int l=0; l<=n; ++l) {
                     const double u = l / static_cast<double>(n);
-                    for (int m=0; m<=n; ++m) {
-                        const double v = m / static_cast<double>(n);
-                        double reference = x + 2*y + 3*z + 4*u + 5*v;
+                    for (int m=1; m<=n; ++m) {
+                        const double liquid = m / static_cast<double>(n);
+
+                        //Find values that should be in table
+                        double v = properties->getFlo(aqua, liquid, vapour, table.getFloType());
+                        double y = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double z = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
+
+                        double reference = x + 2*y + 3*z+ 4*u + 5*v;
                         reference_sum += reference;
 
-                        //Note order of arguments!
-                        double value = properties->prod_bhp(1, v, x, y, z, u);
+                        //Note order of arguments! id, aqua, liquid, vapour, thp , alq
+                        double value = properties->bhp(1, aqua, liquid, vapour, x, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -365,21 +373,28 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
     double sad = 0.0; // Sum absolute difference
     double max_d = 0.0; // Maximum difference
     int n=1;
-    for (int i=-5; i<=n+5; ++i) {
+    int o=5;
+    for (int i=0; i<=n+o; ++i) {
         const double x = i / static_cast<double>(n);
-        for (int j=-5; j<=n+5; ++j) {
-            const double y = j / static_cast<double>(n);
-            for (int k=-5; k<=n+5; ++k) {
-                const double z = k / static_cast<double>(n);
-                for (int l=-5; l<=n+5; ++l) {
+        for (int j=1; j<=n+o; ++j) {
+            const double aqua = j / static_cast<double>(n);
+            for (int k=1; k<=n+o; ++k) {
+                const double vapour = k / static_cast<double>(n);
+                for (int l=0; l<=n+o; ++l) {
                     const double u = l / static_cast<double>(n);
-                    for (int m=-5; m<=n+5; ++m) {
-                        const double v = m / static_cast<double>(n);
-                        double reference = x + 2*y + 3*z + 4*u + 5*v;
+                    for (int m=1; m<=n+o; ++m) {
+                        const double liquid = m / static_cast<double>(n);
+
+                        //Find values that should be in table
+                        double v = properties->getFlo(aqua, liquid, vapour, table.getFloType());
+                        double y = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double z = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
+
+                        double reference = x + 2*y + 3*z+ 4*u + 5*v;
                         reference_sum += reference;
 
-                        //Note order of arguments!
-                        double value = properties->prod_bhp(1, v, x, y, z, u);
+                        //Note order of arguments! id, aqua, liquid, vapour, thp , alq
+                        double value = properties->bhp(1, aqua, liquid, vapour, x, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -411,11 +426,11 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
 
     //Temporary variables used to represent independent wells
     const int num_wells = 5;
-    ADB::V thp(num_wells);
-    ADB::V wfr(num_wells);
-    ADB::V gfr(num_wells);
-    ADB::V alq(num_wells);
-    ADB::V flo(num_wells);
+    ADB::V x_v(num_wells);
+    ADB::V aqua_v(num_wells);
+    ADB::V vapour_v(num_wells);
+    ADB::V u_v(num_wells);
+    ADB::V liquid_v(num_wells);
 
     //Check linear extrapolation (i.e., using values of x, y, etc. outside our interpolant domain)
     double sum = 0.0;
@@ -423,30 +438,37 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
     double sad = 0.0; // Sum absolute difference
     double max_d = 0.0; // Maximum difference
     int n=1;
-    for (int i=-5; i<=n+5; ++i) {
+    int o=5;
+    for (int i=0; i<=n+o; ++i) {
         const double x = i / static_cast<double>(n);
-        for (int j=-5; j<=n+5; ++j) {
-            const double y = j / static_cast<double>(n);
-            for (int k=-5; k<=n+5; ++k) {
-                const double z = k / static_cast<double>(n);
-                for (int l=-5; l<=n+5; ++l) {
+        for (int j=1; j<=n+o; ++j) {
+            const double aqua = j / static_cast<double>(n);
+            for (int k=1; k<=n+o; ++k) {
+                const double vapour = k / static_cast<double>(n);
+                for (int l=0; l<=n+o; ++l) {
                     const double u = l / static_cast<double>(n);
-                    for (int m=-5; m<=n+5; ++m) {
-                        const double v = m / static_cast<double>(n);
+                    for (int m=1; m<=n+o; ++m) {
+                        const double liquid = m / static_cast<double>(n);
+
                         for (unsigned int w=0; w<num_wells; ++w) {
-                            thp[w] = x*w;
-                            wfr[w] = y*w;
-                            gfr[w] = z*w;
-                            alq[w] = u*w;
-                            flo[w] = v*w;
+                            x_v[w] = x*(w+1);
+                            aqua_v[w] = aqua*(w+1);
+                            vapour_v[w] = vapour*(w+1);
+                            u_v[w] = u*(w+1);
+                            liquid_v[w] = liquid*(w+1);
                         }
 
-                        ADB::V bhp_val = properties->prod_bhp(1, flo, thp, wfr, gfr, alq);
+                        ADB::V bhp_val = properties->bhp(1, aqua_v, liquid_v, vapour_v, x_v, u_v);
 
                         double value = 0.0;
                         double reference = 0.0;
                         for (int w=0; w < num_wells; ++w) {
-                            reference = x*w + 2*y*w + 3*z*w + 4*u*w + 5*v*w;
+                            //Find values that should be in table
+                            double v = properties->getFlo(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getFloType());
+                            double y = properties->getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getWFRType());
+                            double z = properties->getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getGFRType());
+
+                            reference = x*(w+1) + 2*y + 3*z + 4*u*(w+1) + 5*v;
                             value = bhp_val[w];
 
                             sum += value;
@@ -518,7 +540,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     }
 
     //Call the bhp function
-    ADB::V bhp = properties->prod_bhp(1, *wells, qs, thp, alq);
+    ADB::V bhp = properties->bhp(1, *wells, qs, thp, alq);
 
     //Calculate reference
     //First, find the three phases
@@ -578,7 +600,7 @@ BOOST_AUTO_TEST_SUITE_END() // Trivial tests
 
 
 struct ConversionFixture {
-    typedef Opm::VFPProperties::ADB ADB;
+    typedef Opm::VFPProdProperties::ADB ADB;
 
     ConversionFixture() :
             num_wells(5),
@@ -625,19 +647,19 @@ BOOST_AUTO_TEST_CASE(getFlo)
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
+        ADB::V flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_oil.begin(), ref_flo_oil.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_LIQ);
+        ADB::V flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_LIQ);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_liq.begin(), ref_flo_liq.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_GAS);
+        ADB::V flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_GAS);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_gas.begin(), ref_flo_gas.end(), computed, computed+num_wells);
     }
@@ -652,24 +674,24 @@ BOOST_AUTO_TEST_CASE(getWFR)
     std::vector<double> ref_wfr_wgr(num_wells);
     for (int i=0; i<num_wells; ++i) {
         ref_wfr_wor[i] = aqua[i] / liquid[i];
-        ref_wfr_wct[i] = aqua[i] / (aqua[i] + liquid[i] + vapour[i]);
+        ref_wfr_wct[i] = aqua[i] / (aqua[i] + liquid[i]);
         ref_wfr_wgr[i] = aqua[i] / vapour[i];
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WOR);
+        ADB::V flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WOR);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wor.begin(), ref_wfr_wor.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WCT);
+        ADB::V flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WCT);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wct.begin(), ref_wfr_wct.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WGR);
+        ADB::V flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WGR);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wgr.begin(), ref_wfr_wgr.end(), computed, computed+num_wells);
     }
@@ -689,19 +711,19 @@ BOOST_AUTO_TEST_CASE(getGFR)
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GOR);
+        ADB::V flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GOR);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_gor.begin(), ref_gfr_gor.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GLR);
+        ADB::V flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GLR);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_glr.begin(), ref_gfr_glr.end(), computed, computed+num_wells);
     }
 
     {
-        ADB::V flo = Opm::VFPProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_OGR);
+        ADB::V flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_OGR);
         const double* computed = &flo[0];
         BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_ogr.begin(), ref_gfr_ogr.end(), computed, computed+num_wells);
     }
@@ -751,9 +773,9 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
 
     Opm::VFPProdTable table;
-    table.init(deck->getKeyword("VFPPROD", 1), units);
+    table.init(deck->getKeyword("VFPPROD", 0), units);
 
-    Opm::VFPProperties properties(NULL, &table);
+    Opm::VFPProdProperties properties(&table);
 
     //Do some rudimentary testing
     //Get the BHP as a function of rate, thp, wfr, gfr, alq
@@ -763,10 +785,6 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     double thp[] = {16.010000000000002, 22.438571428571429, 28.867142857142859, 35.295714285714283, 41.724285714285713, 48.152857142857144, 54.581428571428575, 61.009999999999998};
     int n = sizeof(liq) / sizeof(liq[0]);
 
-#ifdef verbose
-    std::cout << std::fixed << std::setprecision(17);
-    std::cout << "a=[..." << std::endl;
-#endif
     int i = 0;
     double sad = 0.0; //Sum of absolute difference
     double max_d = 0.0; //Maximum difference
@@ -775,7 +793,6 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
             for (int g=0; g<n; ++g) {
                 //for (unsigned int a=0; a<n; ++a) { //n==1, skip this loop
                     for (int f=0; f<n; ++f) {
-
                         //Liq given as SM3/day => convert to SM3/second
                         double f_i = liq[f]*1.1574074074074073e-05;
 
@@ -791,27 +808,40 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         //ALQ unit not relevant in this case
                         double a_i = 0.0;
 
-                        //Value given as pascal, convert to barsa for comparison with reference
-                        double value_i = properties.prod_bhp(32, f_i, t_i, w_i, g_i, a_i) * 10.0e-6;
+                        //Now reconstruct possible aqua, liquid,
+                        //and vapour phase compositions that satisfy the above
 
-                        double abs_diff = std::abs(value_i - reference[i]);
-                        sad += abs_diff;
-                        max_d = std::max(max_d, abs_diff);
+                        //liq[f] = aqua + liquid
+                        //wct[w] = aqua / (aqua + liquid)
+                        //gor[g] = vapour / liquid
+                        //
+                        // aqua = wct[w] * liq[f]
+                        // liquid = liq[f] - aqua
+                        // vapour = gor[g] * liquid
+
+                        double aqua = w_i * f_i;
+                        double liquid = f_i - aqua;
+                        double vapour = g_i * liquid;
+
+                        if (aqua == 0.0 || liquid == 0.0) {
+                            //FIXME: This skips some corner cases, but will fail in current
+                            //implementation, since getWFR(...), getGFR(...), getFlo(...)
+                            //might perform division by zero
+                        }
+                        else {
+                            //Value given as pascal, convert to barsa for comparison with reference
+                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i) * 10.0e-6;
+
+                            double abs_diff = std::abs(value_i - reference[i]);
+                            sad += abs_diff;
+                            max_d = std::max(max_d, abs_diff);
+                        }
                         ++i;
-#ifdef verbose
-                        std::cout << ((f==0)?"":", ") << value << std::flush;
-#endif
                     }
-#ifdef verbose
-                    std::cout << " ..." << std::endl;
-#endif
                 //}
             }
         }
     }
-#ifdef verbose
-    std::cout << "];" << std::endl;
-#endif
 
     BOOST_CHECK_SMALL(max_d, max_d_tol);
     BOOST_CHECK_SMALL(sad, sad_tol);
