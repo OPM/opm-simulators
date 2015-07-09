@@ -61,6 +61,8 @@ list (APPEND TEST_SOURCE_FILES
 
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
+	tests/VFPPROD1
+	tests/VFPPROD2
 	)
 
 # Note, these two files are not included in the repo.
@@ -131,5 +133,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/WellDensitySegmented.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
+	opm/autodiff/VFPProperties.hpp
 	)
 
