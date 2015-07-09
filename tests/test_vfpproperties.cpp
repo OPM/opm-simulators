@@ -823,10 +823,9 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         double liquid = f_i - aqua;
                         double vapour = g_i * liquid;
 
-                        if (aqua == 0.0 || liquid == 0.0) {
-                            //FIXME: This skips some corner cases, but will fail in current
-                            //implementation, since getWFR(...), getGFR(...), getFlo(...)
-                            //might perform division by zero
+                        if ((aqua + liquid) == 0.0 || liquid == 0.0) {
+                            //FIXME: This skips some corner cases, when
+                            //getWFR(...) and getGFR(...) are infinite
                         }
                         else {
                             //Value given as pascal, convert to barsa for comparison with reference
