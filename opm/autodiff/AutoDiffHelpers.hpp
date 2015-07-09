@@ -95,7 +95,7 @@ struct HelperOps
             size_t cartesianSize = eclState->getEclipseGrid()->getCartesianSize();
             std::vector<int> global2localIdx(cartesianSize,0);
             for (int i = 0; i< nc; ++i) {
-                global2localIdx[grid.global_cell[i]] = i;
+                global2localIdx[ globalCell( grid )[i] ] = i;
             }
             const std::vector<size_t>& NNC1 = nnc->nnc1();
             const std::vector<size_t>& NNC2 = nnc->nnc2();
