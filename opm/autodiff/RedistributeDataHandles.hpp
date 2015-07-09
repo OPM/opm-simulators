@@ -34,7 +34,7 @@ namespace Opm
 
 template <class Grid>
 inline void distributeGridAndData( Grid& ,
-                                   Opm::EclipseStateConstPtr eclipseState,
+                                   Opm::EclipseStateConstPtr ,
                                    BlackoilState& ,
                                    BlackoilPropsAdFromDeck& ,
                                    DerivedGeology&,
