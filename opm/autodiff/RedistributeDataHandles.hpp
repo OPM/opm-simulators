@@ -34,7 +34,7 @@ namespace Opm
 
 template <class Grid>
 inline void distributeGridAndData( Grid& ,
-                                   Opm::EclipseStateConstPtr ,
+                                   EclipseStateConstPtr ,
                                    BlackoilState& ,
                                    BlackoilPropsAdFromDeck& ,
                                    DerivedGeology&,
@@ -308,7 +308,7 @@ private:
 
 inline
 void distributeGridAndData( Dune::CpGrid& grid,
-                            Opm::EclipseStateConstPtr eclipseState,
+                            EclipseStateConstPtr eclipseState,
                             BlackoilState& state,
                             BlackoilPropsAdFromDeck& properties,
                             DerivedGeology& geology,
@@ -317,7 +317,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
 {
     std::shared_ptr<DerivedGeology> distributed_geology;
     BlackoilState distributed_state;
-    std::shared_ptr<Opm::BlackoilPropsAdFromDeck> distributed_props;// = new_props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> distributed_props;// = new_props;
 
     Dune::CpGrid global_grid ( grid );
     global_grid.switchToGlobalView();
@@ -331,19 +331,19 @@ void distributeGridAndData( Dune::CpGrid& grid,
     // init does not resize surfacevol. Do it manually.
     distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
                                           std::numeric_limits<double>::max());
-    Opm::BlackoilStateDataHandle state_handle(global_grid, grid,
-                                              state, distributed_state);
-    Opm::BlackoilPropsDataHandle props_handle(properties,
-                                              *distributed_props);
+    BlackoilStateDataHandle state_handle(global_grid, grid,
+                                         state, distributed_state);
+    BlackoilPropsDataHandle props_handle(properties,
+                                         *distributed_props);
     grid.scatterData(state_handle);
     grid.scatterData(props_handle);
     // Create a distributed Geology. Some values will be updated using communication
     // below
-    distributed_geology.reset(new Opm::DerivedGeology(grid,
-                                                      *distributed_props, eclipseState,
-                                                      useLocalPerm, geology.gravity()));
-    Opm::GeologyDataHandle geo_handle(global_grid, grid,
-                                      geology, *distributed_geology);
+    distributed_geology.reset(new DerivedGeology(grid,
+                                                 *distributed_props, eclipseState,
+                                                 useLocalPerm, geology.gravity()));
+    GeologyDataHandle geo_handle(global_grid, grid,
+                                 geology, *distributed_geology);
     grid.scatterData(geo_handle);
 
     // copy states
@@ -351,7 +351,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     geology    = *distributed_geology;
     state      = distributed_state;
 
-    Opm::extractParallelGridInformationToISTL(grid, parallelInformation);
+    extractParallelGridInformationToISTL(grid, parallelInformation);
 }
 #endif
 
