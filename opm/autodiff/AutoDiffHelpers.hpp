@@ -78,7 +78,7 @@ struct HelperOps
 
         TwoColInt nbi;
         extractInternalFaces(grid, internal_faces, nbi);
-        int num_internal=internal_faces.size();
+        int num_internal = internal_faces.size();
         // num_connections may also include non-neighboring connections
         int num_connections = num_internal;
         int numNNC = 0;
@@ -143,7 +143,7 @@ struct HelperOps
 
         std::vector<Tri> fullngrad_tri;
         fullngrad_tri.reserve(2*(nf+numNNC));
-        typename ADFaceCellTraits<Grid>::Type nb=faceCellsToEigen(grid);
+        typename ADFaceCellTraits<Grid>::Type nb = faceCellsToEigen(grid);
         for (int i = 0; i < nf; ++i) {
             if (nb(i,0) >= 0) {
                 fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
@@ -234,8 +234,8 @@ struct HelperOps
                 face_cells = faceCellsToEigen(g);
 
             // num connections may possibly include NNCs
-            size_t num_nnc = h.nnc_trans.size();
-            size_t num_connections= nif + num_nnc;
+            int num_nnc = h.nnc_trans.size();
+            int num_connections = nif + num_nnc;
             assert(num_connections == ifaceflux.size());
 
             // Define selector structure.
@@ -253,8 +253,8 @@ struct HelperOps
 
                 s.push_back(Triplet(iface, c, Scalar(1)));
             }
-            if (num_nnc>0) {
-                for (int i = 0; i<num_nnc; ++i) {
+            if (num_nnc > 0) {
+                for (int i = 0; i < num_nnc; ++i) {
                     const int c = (ifaceflux[i+nif] >= 0) ? h.nnc_cells(i,0) : h.nnc_cells(i,1);
                     s.push_back(Triplet(i+nif,c,Scalar(1)));
                 }
