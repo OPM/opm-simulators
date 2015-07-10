@@ -82,6 +82,7 @@ namespace Opm {
                                                      const PolymerPropsAd&                   polymer_props_ad,
                                                      const Wells*                            wells,
                                                      const NewtonIterationBlackoilInterface& linsolver,
+                                                     EclipseStateConstPtr                    eclipse_state,
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
@@ -91,7 +92,7 @@ namespace Opm {
                                                      const std::vector<double>&              wells_perf_length,
                                                      const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
+        : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver, eclipse_state,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
@@ -806,7 +807,7 @@ namespace Opm {
         std::vector<double> internal_face_areas;
         internal_face_areas.resize(internal_faces.size());
 
-        for (size_t i = 0; i < internal_faces.size(); ++i) {
+        for (int i = 0; i < internal_faces.size(); ++i) {
             internal_face_areas[i] = grid_.face_areas[internal_faces[i]];
         }
 
@@ -835,7 +836,7 @@ namespace Opm {
             std::vector<double> perm;
             perm.resize(transi.size());
 
-            for (size_t i = 0; i < transi.size(); ++i) {
+            for (int i = 0; i < transi.size(); ++i) {
                 perm[i] = transi[i] / internal_faces[i];
             }
 

@@ -76,6 +76,7 @@ namespace Opm
                                                       polymer_props_,
                                                       wells,
                                                       BaseType::solver_,
+                                                      BaseType::eclipse_state_,
                                                       BaseType::has_disgas_,
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
