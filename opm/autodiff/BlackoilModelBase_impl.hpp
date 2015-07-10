@@ -42,6 +42,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -144,6 +145,7 @@ namespace detail {
                   const RockCompressibility*      rock_comp_props,
                   const Wells*                    wells,
                   const NewtonIterationBlackoilInterface&    linsolver,
+                  Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
                   const bool has_vapoil,
                   const bool terminal_output)
@@ -156,7 +158,7 @@ namespace detail {
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid)
+        , ops_   (grid, eclState)
         , wops_  (wells_)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
@@ -837,9 +839,13 @@ namespace detail {
         // Set up the common parts of the mass balance equations
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
+        const V trans_nnc = ops_.nnc_trans;
+        V trans_all(transi.size() + trans_nnc.size());
+        trans_all << transi, trans_nnc;
+
         const std::vector<ADB> kr = computeRelPerm(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            asImpl().computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
