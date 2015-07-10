@@ -69,7 +69,7 @@ struct HelperOps
 
     /// Constructs all helper vectors and matrices.
     template<class Grid>
-    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState)
+    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState = EclipseStateConstPtr (nullptr) )
     {
         using namespace AutoDiffGrid;
         const int nc = numCells(grid);
@@ -84,8 +84,9 @@ struct HelperOps
         int numNNC = 0;
 
         // handle non-neighboring connections
-        std::shared_ptr<const NNC> nnc = eclState->getNNC();
-        if (nnc->hasNNC()) {
+        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : std::make_shared<const NNC> (nullptr, nullptr);
+        const bool has_nnc = nnc && nnc->hasNNC();
+        if (has_nnc) {
             numNNC = nnc->numNNC();
             num_connections += numNNC;
             //std::cout << "Added " << numNNC << " NNC" <<std::endl;
@@ -128,7 +129,7 @@ struct HelperOps
             caver_tri.emplace_back(i, nbi(i,1), 0.5);
         }
         // add contribution from NNC
-        if (nnc->hasNNC()) {
+        if (has_nnc) {
             for (int i = 0; i < numNNC; ++i) {
                 ngrad_tri.emplace_back(i+num_internal, nnc_cells(i,0), 1.0);
                 ngrad_tri.emplace_back(i+num_internal, nnc_cells(i,1), -1.0);
@@ -160,53 +161,6 @@ struct HelperOps
             }
         }
         fullngrad.resize(nf+numNNC, nc);
-        fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
-        fulldiv = fullngrad.transpose();
-    }
-    /// Constructs all helper vectors and matrices.
-    template<class Grid>
-    HelperOps(const Grid& grid)
-    {
-        using namespace AutoDiffGrid;
-        const int nc = numCells(grid);
-        const int nf = numFaces(grid);
-        // Define some neighbourhood-derived helper arrays.
-        //typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> TwoColInt;
-        TwoColInt nbi;
-        extractInternalFaces(grid, internal_faces, nbi);
-        int num_internal=internal_faces.size();
-
-        // std::cout << "nbi = \n" << nbi << std::endl;
-        // Create matrices.
-        ngrad.resize(num_internal, nc);
-        caver.resize(num_internal, nc);
-        typedef Eigen::Triplet<double> Tri;
-        std::vector<Tri> ngrad_tri;
-        std::vector<Tri> caver_tri;
-        ngrad_tri.reserve(2*num_internal);
-        caver_tri.reserve(2*num_internal);
-        for (int i = 0; i < num_internal; ++i) {
-            ngrad_tri.emplace_back(i, nbi(i,0), 1.0);
-            ngrad_tri.emplace_back(i, nbi(i,1), -1.0);
-            caver_tri.emplace_back(i, nbi(i,0), 0.5);
-            caver_tri.emplace_back(i, nbi(i,1), 0.5);
-        }
-        ngrad.setFromTriplets(ngrad_tri.begin(), ngrad_tri.end());
-        caver.setFromTriplets(caver_tri.begin(), caver_tri.end());
-        grad = -ngrad;
-        div = ngrad.transpose();
-        std::vector<Tri> fullngrad_tri;
-        fullngrad_tri.reserve(2*nf);
-        typename ADFaceCellTraits<Grid>::Type nb=faceCellsToEigen(grid);
-        for (int i = 0; i < nf; ++i) {
-            if (nb(i,0) >= 0) {
-                fullngrad_tri.emplace_back(i, nb(i,0), 1.0);
-            }
-            if (nb(i,1) >= 0) {
-                fullngrad_tri.emplace_back(i, nb(i,1), -1.0);
-            }
-        }
-        fullngrad.resize(nf, nc);
         fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
         fulldiv = fullngrad.transpose();
     }
