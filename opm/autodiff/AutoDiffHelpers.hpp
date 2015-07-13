@@ -84,7 +84,7 @@ struct HelperOps
         int numNNC = 0;
 
         // handle non-neighboring connections
-        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : std::make_shared<const NNC> (nullptr, nullptr);
+        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : nullptr;
         const bool has_nnc = nnc && nnc->hasNNC();
         if (has_nnc) {
             numNNC = nnc->numNNC();
@@ -154,7 +154,7 @@ struct HelperOps
             }
         }
         // add contribution from NNC
-        if (nnc->hasNNC()) {
+        if (has_nnc) {
             for (int i = 0; i < numNNC; ++i) {
                 fullngrad_tri.emplace_back(i+nf, nnc_cells(i,0), 1.0);
                 fullngrad_tri.emplace_back(i+nf, nnc_cells(i,1), -1.0);
