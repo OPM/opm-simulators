@@ -107,11 +107,7 @@ struct HelperOps
             }
             // store the nnc transmissibilities for later usage.
             nnc_trans = Eigen::Map<const V>(nnc->trans().data(), numNNC);
-        } else {
-            nnc_trans.resize(0);
-            nnc_cells.resize(0,0);
         }
-
 
         // std::cout << "nbi = \n" << nbi << std::endl;
         // Create matrices.
