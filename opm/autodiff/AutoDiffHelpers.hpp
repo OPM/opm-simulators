@@ -154,7 +154,7 @@ struct HelperOps
             }
         }
         // add contribution from NNC
-        if (nnc->hasNNC()) {
+        if (has_nnc) {
             for (int i = 0; i < numNNC; ++i) {
                 fullngrad_tri.emplace_back(i+nf, nnc_cells(i,0), 1.0);
                 fullngrad_tri.emplace_back(i+nf, nnc_cells(i,1), -1.0);
