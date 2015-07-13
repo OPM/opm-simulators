@@ -84,7 +84,7 @@ struct HelperOps
         int numNNC = 0;
 
         // handle non-neighboring connections
-        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : std::make_shared<const NNC> (nullptr, nullptr);
+        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : nullptr;
         const bool has_nnc = nnc && nnc->hasNNC();
         if (has_nnc) {
             numNNC = nnc->numNNC();
