@@ -922,19 +922,19 @@ namespace detail {
             const int po = fluid_.phaseUsage().phase_pos[ Oil ];
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
 
-            const UpwindSelector<double> upwindOil(grid_, ops_,
-                                                rq_[po].dh.value());
-            const ADB rs_face = upwindOil.select(convertToAutoDiffBlock(state.rs, blockPattern()));
+            if (has_disgas_) {
+                const UpwindSelector<double> upwindOil(grid_, ops_,
+                                                       rq_[po].dh.value());
+                const ADB rs_face = upwindOil.select(convertToAutoDiffBlock(state.rs, blockPattern()));
+                residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
+            }
 
-            const UpwindSelector<double> upwindGas(grid_, ops_,
-                                                rq_[pg].dh.value());
-            const ADB rv_face = upwindGas.select(convertToAutoDiffBlock(state.rv, blockPattern()));
-
-            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
-            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
-
-            // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
-
+            if (has_vapoil_) {
+                const UpwindSelector<double> upwindGas(grid_, ops_,
+                                                       rq_[pg].dh.value());
+                const ADB rv_face = upwindGas.select(convertToAutoDiffBlock(state.rv, blockPattern()));
+                residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
+            }
         }
     }
 
