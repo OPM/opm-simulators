@@ -35,6 +35,7 @@
 #ifdef HAVE_DUNE_CORNERPOINT
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/cpgrid/GridHelpers.hpp>
+#include <dune/grid/polyhedralgrid.hh>
 #endif
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
@@ -68,7 +69,7 @@ struct ADCell2FacesTraits
 /// \brief extracts the internal faces of a grid.
 /// \param[in] The grid whose internal faces we query.
 /// \param[out] internal_faces The internal faces.
-/// \param[out] nbi 
+/// \param[out] nbi
 void extractInternalFaces(const UnstructuredGrid& grid,
                           Eigen::Array<int, Eigen::Dynamic, 1>& internal_faces,
                           Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>& nbi);
@@ -97,7 +98,7 @@ struct ADCell2FacesTraits<Dune::CpGrid>
 /// \brief extracts the internal faces of a grid.
 /// \param[in] The grid whose internal faces we query.
 /// \param[out] internal_faces The internal faces.
-/// \param[out] nbi 
+/// \param[out] nbi
 void extractInternalFaces(const Dune::CpGrid& grid,
                           Eigen::Array<int, Eigen::Dynamic, 1>& internal_faces,
                           Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor>& nbi);
@@ -141,6 +142,16 @@ struct ADFaceCellTraits<UnstructuredGrid>
 {
     typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> Type;
 };
+
+#ifdef HAVE_DUNE_CORNERPOINT
+// specialization for PolyhedralGrid as a fallback to UnstructuredGrid
+template< int dim, int dimworld >
+struct ADFaceCellTraits< Dune::PolyhedralGrid< dim, dimworld > >
+ : public ADFaceCellTraits<UnstructuredGrid>
+{
+};
+#endif
+
 
 /// \brief Get the face to cell mapping of a grid.
 ADFaceCellTraits<UnstructuredGrid>::Type
