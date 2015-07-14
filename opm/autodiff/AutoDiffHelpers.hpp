@@ -759,19 +759,27 @@ AutoDiffBlock<Scalar> convertToAutoDiffBlock(const AutoDiffDenseBlock<Scalar, Nu
         }
     }
 
-    // Build sparse diagonal Jacobians.
-    typedef typename AutoDiffBlock<Scalar>::M M;
-    std::vector<M> jacs;
-    for (int ii = 0; ii < NumDerivs; ++ii) {
-        jacs.emplace_back(spdiag(x.derivative().col(ii)));
-    }
-    for (int ii = NumDerivs; ii < bpn; ++ii) {
-        jacs.emplace_back(n, block_pattern[ii]);
-    }
+    if (x.isConstant()) {
+        return AutoDiffBlock<Scalar>::constant(x.value());
+    } else {
+        // Build sparse diagonal Jacobians.
+        typedef typename AutoDiffBlock<Scalar>::M M;
+        std::vector<M> jacs;
+        for (int ii = 0; ii < NumDerivs; ++ii) {
+            if (x.hasZeroDerivative(ii)) {
+                jacs.emplace_back(n, n);
+            } else {
+                jacs.emplace_back(spdiag(x.derivative().col(ii)));
+            }
+        }
+        for (int ii = NumDerivs; ii < bpn; ++ii) {
+            jacs.emplace_back(n, block_pattern[ii]);
+        }
 
-    // Return using move to avoid copying of Jacobians.
-    typename AutoDiffBlock<Scalar>::V val_copy = x.value();
-    return AutoDiffBlock<Scalar>::function(std::move(val_copy), std::move(jacs));
+        // Return using move to avoid copying of Jacobians.
+        typename AutoDiffBlock<Scalar>::V val_copy = x.value();
+        return AutoDiffBlock<Scalar>::function(std::move(val_copy), std::move(jacs));
+    }
 }
 
 } // namespace Opm

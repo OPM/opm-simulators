@@ -34,6 +34,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
+#include <array>
 
 namespace Opm
 {
@@ -89,7 +90,7 @@ namespace Opm
         /// Construct an empty AutoDiffDenseBlock.
         static AutoDiffDenseBlock null()
         {
-            return AutoDiffDenseBlock(Value(), Derivative());
+            return AutoDiffDenseBlock(Value());
         }
 
         /// Create an AutoDiffDenseBlock representing a constant.
@@ -120,7 +121,10 @@ namespace Opm
             }
             Derivative jac = Derivative::Zero(val.rows(), 3);
             jac.col(index) = Value::Ones(val.rows());
-            return AutoDiffDenseBlock(std::move(val), std::move(jac));
+            AutoDiffDenseBlock retval(std::move(val), std::move(jac));
+            retval.zero_jac_.fill(true);
+            retval.zero_jac_[index] = false;
+            return std::move(retval);
         }
 
         /// Create an AutoDiffDenseBlock representing a single variable block.
@@ -174,6 +178,7 @@ namespace Opm
         {
             val_ += rhs.val_;
             jac_ += rhs.jac_;
+            zeroDerivIfBothZero(rhs);
             return *this;
         }
 
@@ -182,6 +187,7 @@ namespace Opm
         {
             val_ -= rhs.val_;
             jac_ -= rhs.jac_;
+            zeroDerivIfBothZero(rhs);
             return *this;
         }
 
@@ -225,6 +231,7 @@ namespace Opm
         {
             val_.swap(other.val_);
             jac_.swap(other.jac_);
+            zero_jac_.swap(other.zero_jac_);
         }
 
         /// Number of elements
@@ -245,25 +252,51 @@ namespace Opm
             return jac_;
         }
 
+        bool hasZeroDerivative(int variable) const
+        {
+            return zero_jac_[variable];
+        }
+
+        bool isConstant() const
+        {
+            for (int i = 0; i < NumDerivs; ++i) {
+                if (!zero_jac_[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
     private:
         AutoDiffDenseBlock(const Value& val)
         : val_(val), jac_(Derivative::Zero(val.rows(), NumDerivs))
         {
+            zero_jac_.fill(true);
         }
 
         AutoDiffDenseBlock(Value&& val)
         : val_(std::move(val)), jac_(Derivative::Zero(val.rows(), NumDerivs))
         {
+            zero_jac_.fill(true);
         }
 
         AutoDiffDenseBlock(Value&& val, Derivative&& jac)
             : val_(std::move(val)), jac_(std::move(jac))
         {
+            zero_jac_.fill(false);
             assert(val_.rows() == jac_.rows());
+        }
+
+        void zeroDerivIfBothZero(const AutoDiffDenseBlock& other)
+        {
+            for (int i = 0; i < NumDerivs; ++i) {
+                zero_jac_[i] &= other.zero_jac_[i];
+            }
         }
 
         Value val_;
         Derivative jac_;
+        std::array<bool, NumDerivs> zero_jac_;
     };
 
 
