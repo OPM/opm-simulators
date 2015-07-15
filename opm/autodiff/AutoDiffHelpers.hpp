@@ -109,7 +109,7 @@ struct HelperOps
             nnc_trans = Eigen::Map<const V>(nnc->trans().data(), numNNC);
         } else {
             nnc_trans.resize(0);
-            nnc_cells.resize(0,0);
+            nnc_cells.resize(0, 2); // Required to have two columns.
         }
 
 
