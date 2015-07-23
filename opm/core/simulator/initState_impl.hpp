@@ -470,7 +470,7 @@ namespace Opm
                         State& state)
     {
         initStateBasic(grid.number_of_cells, grid.global_cell, grid.cartdims,
-                       grid.number_of_faces, UgGridHelpers::faceCells(grid), 
+                       grid.number_of_faces, UgGridHelpers::faceCells(grid),
                        grid.face_centroids, grid.cell_centroids, grid.dimensions,
                        props, param, gravity, state);
     }
@@ -716,7 +716,7 @@ namespace Opm
                 }
             }
         }
-    }   
+    }
     /// Initialize surface volume from pressure and saturation by z = As.
     /// Here the solution gas/oil ratio or vapor oil/gas ratio is used to
     /// compute an intial z for the computation of A.
@@ -733,7 +733,7 @@ namespace Opm
                                         const Props& props,
                                         State& state)
     {
-        
+
         if (props.numPhases() != 3) {
             OPM_THROW(std::runtime_error, "initBlackoilSurfvol() is only supported in three-phase simulations.");
         }

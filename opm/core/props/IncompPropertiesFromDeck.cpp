@@ -35,7 +35,7 @@ namespace Opm
         auto materialLawManager = std::make_shared<typename SaturationPropsFromDeck::MaterialLawManager>();
 
         std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
             if (grid.global_cell) {
                 compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
             }
