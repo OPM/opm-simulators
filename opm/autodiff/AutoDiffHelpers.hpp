@@ -69,7 +69,7 @@ struct HelperOps
 
     /// Constructs all helper vectors and matrices.
     template<class Grid>
-    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState = EclipseStateConstPtr (nullptr) )
+    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState = EclipseStateConstPtr () )
     {
         using namespace AutoDiffGrid;
         const int nc = numCells(grid);
@@ -84,7 +84,8 @@ struct HelperOps
         int numNNC = 0;
 
         // handle non-neighboring connections
-        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC() : nullptr;
+        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC()
+            : std::shared_ptr<const Opm::NNC>();
         const bool has_nnc = nnc && nnc->hasNNC();
         if (has_nnc) {
             numNNC = nnc->numNNC();
