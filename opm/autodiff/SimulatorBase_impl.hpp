@@ -52,7 +52,8 @@ namespace Opm
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
-          threshold_pressures_by_face_(threshold_pressures_by_face)
+          threshold_pressures_by_face_(threshold_pressures_by_face),
+          is_parallel_run_( false )
     {
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
@@ -61,15 +62,13 @@ namespace Opm
             allcells_[cell] = cell;
         }
 #if HAVE_MPI
-        if ( terminal_output_ ) {
-            if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
-                // Only rank 0 does print to std::cout
-                terminal_output_ = ( info.communicator().rank() == 0 );
-                is_parallel_run_ = ( info.communicator().size() > 1 );
-            }
+        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            // Only rank 0 does print to std::cout
+            terminal_output_ &= ( info.communicator().rank() == 0 );
+            is_parallel_run_  = ( info.communicator().size() > 1 );
         }
 #endif
     }
