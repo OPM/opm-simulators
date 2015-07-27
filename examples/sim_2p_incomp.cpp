@@ -110,10 +110,11 @@ try
     double gravity[3] = { 0.0 };
     if (use_deck) {
         ParserPtr parser(new Opm::Parser());
+        ParseMode parseMode;
 
         std::string deck_filename = param.get<std::string>("deck_filename");
-        deck = parser->parseFile(deck_filename);
-        eclipseState.reset( new EclipseState(deck));
+        deck = parser->parseFile(deck_filename , parseMode);
+        eclipseState.reset( new EclipseState(deck, parseMode));
         // Grid init
         grid.reset(new GridManager(deck));
         // Rock and fluid init
