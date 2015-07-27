@@ -112,6 +112,8 @@ namespace Opm
 
     double AdaptiveSimulatorTimer::simulationTimeElapsed() const { return current_time_; }
 
+    double AdaptiveSimulatorTimer::simulationStartTimeForCurrentReportStep() const { return start_time_; }
+
     bool AdaptiveSimulatorTimer::done () const { return (current_time_ >= total_time_) ; }
 
     double AdaptiveSimulatorTimer::averageStepLength() const

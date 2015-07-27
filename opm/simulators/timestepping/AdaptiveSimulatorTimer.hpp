@@ -71,6 +71,10 @@ namespace Opm
         /// \brief \copydoc SimulationTimer::simulationTimeElapsed
         double simulationTimeElapsed() const;
 
+        /// \brief \copydoc SimulationTimer::simulationStartTimeForCurrentReportStep
+        double simulationStartTimeForCurrentReportStep() const;
+
+
         /// \brief \copydoc SimulationTimer::done
         bool done () const;
 
