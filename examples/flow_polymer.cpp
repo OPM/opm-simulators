@@ -57,6 +57,7 @@
 #include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -163,10 +164,11 @@ try
 
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
+    Opm::ParseMode parseMode;
     try {
-        deck = parser->parseFile(deck_filename);
+        deck = parser->parseFile(deck_filename , parseMode);
         Opm::checkDeck(deck);
-        eclipseState.reset(new Opm::EclipseState(deck));
+        eclipseState.reset(new Opm::EclipseState(deck , parseMode));
     }
     catch (const std::invalid_argument& e) {
         std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;

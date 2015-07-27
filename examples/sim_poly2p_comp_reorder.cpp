@@ -48,6 +48,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -99,8 +100,9 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         ParserPtr parser(new Opm::Parser());
-        deck = parser->parseFile(deck_filename);
-        eclipseState.reset(new Opm::EclipseState(deck));
+        ParseMode parseMode;
+        deck = parser->parseFile(deck_filename , parseMode);
+        eclipseState.reset(new Opm::EclipseState(deck , parseMode));
 
         // Grid init
         grid.reset(new GridManager(deck));
