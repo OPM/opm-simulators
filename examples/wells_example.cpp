@@ -18,6 +18,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -34,9 +35,10 @@ try
     simtimer.init(parameters);
 
     // Read input file
+    ParseMode parseMode;
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck = parser->parseFile(file_name);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::DeckConstPtr deck = parser->parseFile(file_name , parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     std::cout << "Done!" << std::endl;
 
     // Setup grid
