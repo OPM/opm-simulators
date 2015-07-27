@@ -75,6 +75,11 @@ namespace Opm
         /// beginning of the current time step [s].
         virtual double simulationTimeElapsed() const = 0;
 
+
+        /// Time elapsed since the start of the simulation until the
+        /// beginning of the current time step [s].
+        virtual double simulationStartTimeForCurrentReportStep() const { return simulationTimeElapsed(); }
+
         /// advance time by currentStepLength
         virtual void advance() = 0 ;
 
@@ -91,6 +96,12 @@ namespace Opm
                //boost::posix_time::ptime(startDate()) +  boost::posix_time::seconds( (int) simulationTimeElapsed());
         }
 
+        /// Return start time for current report step as a posix time object.
+        virtual boost::posix_time::ptime currentStepStartTime() const
+        {
+            return startDateTime() + boost::posix_time::seconds( (int) simulationStartTimeForCurrentReportStep());
+        }
+
         /// Time elapsed since the start of the POSIX epoch (Jan 1st,
         /// 1970) until the current time step begins [s].
         virtual time_t currentPosixTime() const
@@ -98,6 +109,20 @@ namespace Opm
             tm t = boost::posix_time::to_tm(currentDateTime());
             return std::mktime(&t);
         }
+
+        /// Time elapsed since the start of the POSIX epoch (Jan 1st,
+        /// 1970) until the current time step begins [s].
+        /// This method might give different results from currentPosixTime()
+        /// if timer contains supstepping.
+        /// Override method simulationStartTimeForCurrentReportStep() if timer
+        /// contains substeps and currentPosixTime() and startOfCurrentStepPosixTime()
+        /// can differ due to substepping
+        virtual time_t startOfCurrentStepPosixTime() const
+        {
+            tm t = boost::posix_time::to_tm(currentStepStartTime());
+            return std::mktime(&t);
+        }
+
     };
 
 
