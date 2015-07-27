@@ -29,6 +29,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
@@ -40,8 +41,9 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     ParserPtr parser(new Parser());
     boost::filesystem::path scheduleFile("wells_group.data");
-    DeckConstPtr deck =  parser->parseFile(scheduleFile.string());
-    EclipseStateConstPtr eclipseState(new EclipseState(deck));
+    ParseMode parseMode;
+    DeckConstPtr deck =  parser->parseFile(scheduleFile.string() , parseMode);
+    EclipseStateConstPtr eclipseState(new EclipseState(deck, parseMode));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     GroupTreeNodePtr field=eclipseState->getSchedule()->getGroupTree(2)->getNode("FIELD");

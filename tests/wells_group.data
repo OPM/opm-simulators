@@ -36,7 +36,7 @@ WELSPECS
 
 TSTEP
   14.0 /
-/
+
 
 WELSPECS
     'INJ2' 'G1'    1  1    8335 'GAS'  /
@@ -63,7 +63,7 @@ WCONPROD
 
 TSTEP
   3 /
-/
+
 
 
 END

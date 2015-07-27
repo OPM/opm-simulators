@@ -37,6 +37,7 @@
 #include <opm/core/wells/WellsGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTreeNode.hpp>
 
@@ -48,8 +49,9 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     ParserPtr parser(new Parser());
     boost::filesystem::path scheduleFile("wells_group.data");
-    DeckConstPtr deck =  parser->parseFile(scheduleFile.string());
-    EclipseStateConstPtr eclipseState(new EclipseState(deck));
+    ParseMode parseMode;
+    DeckConstPtr deck =  parser->parseFile(scheduleFile.string() , parseMode);
+    EclipseStateConstPtr eclipseState(new EclipseState(deck , parseMode));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     std::vector<WellConstPtr> wells = eclipseState->getSchedule()->getWells();
@@ -79,9 +81,10 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
 BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     ParserPtr parser(new Parser());
+    ParseMode parseMode;
     boost::filesystem::path scheduleFile("wells_group.data");
-    DeckConstPtr deck =  parser->parseFile(scheduleFile.string());
-    EclipseStateConstPtr eclipseState(new EclipseState(deck));
+    DeckConstPtr deck =  parser->parseFile(scheduleFile.string() , parseMode);
+    EclipseStateConstPtr eclipseState(new EclipseState(deck , parseMode));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     std::vector<GroupTreeNodeConstPtr> nodes = eclipseState->getSchedule()->getGroupTree(2)->getNodes();

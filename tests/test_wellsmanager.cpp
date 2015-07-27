@@ -29,6 +29,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
@@ -187,9 +188,10 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     const std::string filename = "wells_manager_data.data";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::GridManager gridManager(deck);
 
     {
@@ -226,9 +228,10 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 BOOST_AUTO_TEST_CASE(WellsEqual) {
     const std::string filename = "wells_manager_data.data";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::GridManager gridManager(deck);
 
     Opm::WellsManager wellsManager0(eclipseState , 0 , *gridManager.c_grid(), NULL);
@@ -241,10 +244,11 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
 
 BOOST_AUTO_TEST_CASE(ControlsEqual) {
     const std::string filename = "wells_manager_data.data";
+    Opm::ParseMode parseMode;
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename));
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::GridManager gridManager(deck);
 
     Opm::WellsManager wellsManager0(eclipseState , 0 , *gridManager.c_grid(), NULL);
@@ -266,9 +270,10 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
 BOOST_AUTO_TEST_CASE(WellShutOK) {
     const std::string filename = "wells_manager_data.data";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::GridManager gridManager(deck);
 
     Opm::WellsManager wellsManager2(eclipseState , 2 , *gridManager.c_grid(), NULL);
@@ -284,9 +289,10 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
 BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const std::string filename = "wells_manager_data_wellSTOP.data";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::GridManager gridManager(deck);
 
     Opm::WellsManager wellsManager(eclipseState , 0 , *gridManager.c_grid(), NULL);

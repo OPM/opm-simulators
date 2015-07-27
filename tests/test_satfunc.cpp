@@ -28,6 +28,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <opm/core/pressure/msmfem/partition.h>
@@ -66,8 +67,9 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncStandard.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncStandard.DATA", parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -151,8 +153,9 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPSBase.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPSBase.DATA" , parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -235,9 +238,10 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
+    Opm::ParseMode parseMode;
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_A.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_A.DATA" , parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -482,8 +486,9 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_C.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_C.DATA", parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -580,8 +585,9 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_D.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    Opm::ParseMode parseMode;
+    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_D.DATA" , parseMode);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
