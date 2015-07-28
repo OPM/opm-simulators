@@ -61,30 +61,13 @@
 
 #include <opm/material/common/Unused.hpp>
 
-// include the MPI header if available
-#if HAVE_MPI
-#include <mpi.h>
-#endif // HAVE_MPI
-
-// class to call MPI_Init() on construction and MPI_Finalize() in the
-// destructor
-class MyMpiHelper
-{
-public:
-    MyMpiHelper(int &argc, char **&argv)
-    {
-#if HAVE_MPI
-        MPI_Init(&argc, &argv);
-#endif // HAVE_MPI
-    };
-
-    ~MyMpiHelper()
-    {
-#if HAVE_MPI
-        MPI_Finalize();
-#endif // HAVE_MPI
-    };
-};
+// include dune's MPI helper header
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#include <dune/common/parallel/mpihelper.hh>
+#else
+#include <dune/common/mpihelper.hh>
+#endif
 
 // this function makes sure that a capillary pressure law adheres to
 // the generic programming interface for such laws. This API _must_ be
@@ -299,7 +282,7 @@ int main(int argc, char **argv)
     typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
 
-    MyMpiHelper mpiHelper(argc, argv);
+    Dune::MPIHelper::instance(argc, argv);
 
     // test conformance to the capillary pressure APIs
     {
