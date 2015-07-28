@@ -290,27 +290,55 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar Swco = params.connateWaterSaturation();
+        Scalar Swco = params.Swl();
 
         Evaluation Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
-//        Evaluation So = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+
         Sw = Toolbox::min(1.0, Toolbox::max(Swco, Sw));
-        //So = Ewoms::Ad::min(1.0, Toolbox::max(0.0, So));
         Sg = Toolbox::min(1.0, Toolbox::max(0.0, Sg));
 
-        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-50)
-            return Toolbox::createConstant(1.0); // avoid division by zero
-        else {
-            const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sg + Sw);
-            const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Sw + Swco);
+        Evaluation Sw_ow = Sg + Sw;
+        Evaluation So_go = 1 - Sw_ow + Swco;
+        const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
+        const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
+        Evaluation kro;
+        if (std::abs(Toolbox::value(Sg) + Toolbox::value(Sw) - Swco) < 1e-50)
+            kro = kro_ow; // avoid division by zero
+        else {
             const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
             const auto& weightGasOil = 1 - weightOilWater;
-
-            Evaluation kro = weightOilWater*kro_ow + weightGasOil*kro_go;
-            return Toolbox::min(1.0, Toolbox::max(0.0, kro));
+            kro = weightOilWater*kro_ow + weightGasOil*kro_go;
         }
+
+        return Toolbox::min(1.0, Toolbox::max(0.0, kro));
+    }
+
+    /*!
+     * \brief Update the hysteresis parameters after a time step.
+     *
+     * This assumes that the nested two-phase material laws are parameters for
+     * EclHysteresisLaw. If they are not, calling this methid will cause a compiler
+     * error. (But not calling it will still work.)
+     */
+    template <class FluidState>
+    static void updateHysteresis(Params &params, const FluidState &fluidState)
+    {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        Scalar Swco = params.Swl();
+
+        Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
+        Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
+        Sw = std::min(1.0, std::max(Swco, Sw));
+        Sg = std::min(1.0, std::max(0.0, Sg));
+
+        Scalar Sw_ow = Sg + Sw;
+        Scalar So_go = 1 - Sw_ow + Swco;
+
+        params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/1 - Sg, /*krnSw=*/Sw_ow);
+        params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/So_go, /*krnSw=*/1 - Sg);
     }
 };
 } // namespace Opm

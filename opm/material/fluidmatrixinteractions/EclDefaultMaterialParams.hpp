@@ -26,8 +26,8 @@
 #define OPM_ECL_DEFAULT_MATERIAL_PARAMS_HPP
 
 #include <type_traits>
-
 #include <cassert>
+#include <memory>
 
 namespace Opm {
 
@@ -72,24 +72,36 @@ public:
      * \brief The parameter object for the gas-oil twophase law.
      */
     const GasOilParams& gasOilParams() const
-    { assertFinalized_(); return gasOilParams_; }
+    { assertFinalized_(); return *gasOilParams_; }
+
+    /*!
+     * \brief The parameter object for the gas-oil twophase law.
+     */
+    GasOilParams& gasOilParams()
+    { assertFinalized_(); return *gasOilParams_; }
 
     /*!
      * \brief Set the parameter object for the gas-oil twophase law.
      */
-    void setGasOilParams(const GasOilParams& val)
+    void setGasOilParams(std::shared_ptr<GasOilParams> val)
     { gasOilParams_ = val; }
 
     /*!
      * \brief The parameter object for the oil-water twophase law.
      */
     const OilWaterParams& oilWaterParams() const
-    { assertFinalized_(); return oilWaterParams_; }
+    { assertFinalized_(); return *oilWaterParams_; }
+
+    /*!
+     * \brief The parameter object for the oil-water twophase law.
+     */
+    OilWaterParams& oilWaterParams()
+    { assertFinalized_(); return *oilWaterParams_; }
 
     /*!
      * \brief Set the parameter object for the oil-water twophase law.
      */
-    void setOilWaterParams(const OilWaterParams& val)
+    void setOilWaterParams(std::shared_ptr<OilWaterParams> val)
     { oilWaterParams_ = val; }
 
     /*!
@@ -103,14 +115,14 @@ public:
      * the rock's formation. For our application, this is basically a reduction of the
      * rock's porosity...
      */
-    void setConnateWaterSaturation(Scalar val)
-    { connateWaterSaturation_ = val; }
+    void setSwl(Scalar val)
+    { Swl_ = val; }
 
     /*!
      * \brief Return the saturation of "connate" water.
      */
-    Scalar connateWaterSaturation() const
-    { assertFinalized_(); return connateWaterSaturation_; }
+    Scalar Swl() const
+    { assertFinalized_(); return Swl_; }
 
 private:
 #ifndef NDEBUG
@@ -123,10 +135,10 @@ private:
     { }
 #endif
 
-    GasOilParams gasOilParams_;
-    OilWaterParams oilWaterParams_;
+    std::shared_ptr<GasOilParams> gasOilParams_;
+    std::shared_ptr<OilWaterParams> oilWaterParams_;
 
-    Scalar connateWaterSaturation_;
+    Scalar Swl_;
 };
 } // namespace Opm
 
