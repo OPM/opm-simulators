@@ -43,12 +43,10 @@ namespace Opm {
  *       temperatures explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitTemperatureModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitTemperatureModule()
     { Valgrind::SetUndefined(temperature_); }
@@ -99,12 +97,10 @@ protected:
  *        temperatures explicitly and assumes thermal equilibrium.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateEquilibriumTemperatureModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateEquilibriumTemperatureModule()
     { Valgrind::SetUndefined(temperature_); }
@@ -162,9 +158,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        temperatures but throws std::logic_error instead.
  */
-template <class Scalar,
-          class FluidSystem,
-          class Implementation>
+template <class Scalar>
 class FluidStateNullTemperatureModule
 {
 public:

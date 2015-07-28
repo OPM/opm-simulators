@@ -48,7 +48,8 @@ namespace Opm {
  * set of requested thermodynamic quantities.
  */
 template <class ScalarT,
-          class FluidSystem,
+          int numPhasesV,
+          int numComponentsV,
           class PressureModule,
           class TemperatureModule,
           class CompositionModule,
@@ -69,8 +70,8 @@ class ModularFluidState
 {
 public:
     typedef ScalarT Scalar;
-    enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
+    enum { numPhases = numPhasesV };
+    enum { numComponents = numComponentsV };
 
     /*!
      * \brief Make sure that all attributes are defined.

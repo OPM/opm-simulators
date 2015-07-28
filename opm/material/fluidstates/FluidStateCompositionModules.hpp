@@ -180,11 +180,12 @@ template <class Scalar,
 class FluidStateImmiscibleCompositionModule
 {
     enum { numPhases = FluidSystem::numPhases };
+
+public:
     enum { numComponents = FluidSystem::numComponents };
     static_assert((int) numPhases == (int) numComponents,
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
-public:
     FluidStateImmiscibleCompositionModule()
     { }
 
@@ -251,12 +252,12 @@ protected:
  * \brief Module for the modular fluid state which does not store the
  *        compositions but throws std::logic_error instead.
  */
-template <class Scalar,
-          class FluidSystem,
-          class Implementation>
+template <class Scalar>
 class FluidStateNullCompositionModule
 {
 public:
+    enum { numComponents = 0 };
+
     FluidStateNullCompositionModule()
     { }
 

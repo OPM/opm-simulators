@@ -41,13 +41,11 @@ namespace Opm {
  *        phase fugacity coefficients explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
+          int numComponents,
           class Implementation>
 class FluidStateExplicitFugacityModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
-
 public:
     FluidStateExplicitFugacityModule()
     {
@@ -111,12 +109,11 @@ protected:
  *        fugacity coefficients explicitly assuming immiscibility.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
+          int numComponents,
           class Implementation>
 class FluidStateImmiscibleFugacityModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-    enum { numComponents = FluidSystem::numComponents };
     static_assert((int) numPhases == (int) numComponents,
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
@@ -178,9 +175,7 @@ protected:
  * \brief Module for the modular fluid state which does not store the
  *        fugacities but throws std::logic_error instead.
  */
-template <class Scalar,
-          class FluidSystem,
-          class Implementation>
+template <class Scalar>
 class FluidStateNullFugacityModule
 {
 public:

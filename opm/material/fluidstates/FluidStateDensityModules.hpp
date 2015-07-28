@@ -41,12 +41,10 @@ namespace Opm {
  *       densities explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitDensityModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitDensityModule()
     { Valgrind::SetUndefined(density_); }
@@ -114,7 +112,7 @@ protected:
  *        densities but throws std::logic_error instead.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateNullDensityModule
 {
@@ -128,6 +126,17 @@ public:
     const Scalar& density(int phaseIdx) const
     { OPM_THROW(std::logic_error, "Density is not provided by this fluid state"); }
 
+    /*!
+     * \brief The molar density of a fluid phase [mol/m^3]
+     */
+    Scalar molarDensity(int phaseIdx) const
+    { OPM_THROW(std::logic_error, "Molar density is not provided by this fluid state"); }
+
+    /*!
+     * \brief The molar volume of a fluid phase [m^3/mol]
+     */
+    Scalar molarVolume(int phaseIdx) const
+    { OPM_THROW(std::logic_error, "Molar volume is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

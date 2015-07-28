@@ -41,12 +41,10 @@ namespace Opm {
  *       saturations explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitSaturationModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitSaturationModule()
     { Valgrind::SetUndefined(saturation_); }
@@ -98,9 +96,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        saturations but throws std::logic_error instead.
  */
-template <class Scalar,
-          class FluidSystem,
-          class Implementation>
+template <class Scalar>
 class FluidStateNullSaturationModule
 {
 public:

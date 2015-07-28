@@ -40,12 +40,10 @@ namespace Opm {
  *       enthalpies explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitEnthalpyModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitEnthalpyModule()
     { Valgrind::SetUndefined(enthalpy_); }
@@ -108,7 +106,7 @@ protected:
  *
  * Also, the returned values are marked as undefined in Valgrind... */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateNullEnthalpyModule
 {

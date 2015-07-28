@@ -40,12 +40,10 @@ namespace Opm {
  *       pressures explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitPressureModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitPressureModule()
     { Valgrind::SetUndefined(pressure_); }
@@ -98,9 +96,7 @@ protected:
  * \brief Module for the modular fluid state which does not  the
  *        pressures but throws std::logic_error instead.
  */
-template <class Scalar,
-          class FluidSystem,
-          class Implementation>
+template <class Scalar>
 class FluidStateNullPressureModule
 {
 public:

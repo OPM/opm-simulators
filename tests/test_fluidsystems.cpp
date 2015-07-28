@@ -49,6 +49,7 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidstates/NonEquilibriumFluidState.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
+#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
 // include the tables for CO2 which are delivered with opm-material by default
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
@@ -86,6 +87,37 @@ template <class Scalar>
 void testAllFluidStates()
 {
     typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
+
+    // SimpleModularFluidState
+    {   Opm::SimpleModularFluidState<Scalar,
+                                     /*numPhases=*/2,
+                                     /*numComponents=*/0,
+                                     /*FluidSystem=*/void,
+                                     /*storePressure=*/false,
+                                     /*storeTemperature=*/false,
+                                     /*storeComposition=*/false,
+                                     /*storeFugacity=*/false,
+                                     /*storeSaturation=*/false,
+                                     /*storeDensity=*/false,
+                                     /*storeViscosity=*/false,
+                                     /*storeEnthalpy=*/false> fs;
+
+        checkFluidState<Scalar>(fs); }
+
+    {   Opm::SimpleModularFluidState<Scalar,
+                                     /*numPhases=*/2,
+                                     /*numComponents=*/2,
+                                     FluidSystem,
+                                     /*storePressure=*/true,
+                                     /*storeTemperature=*/true,
+                                     /*storeComposition=*/true,
+                                     /*storeFugacity=*/true,
+                                     /*storeSaturation=*/true,
+                                     /*storeDensity=*/true,
+                                     /*storeViscosity=*/true,
+                                     /*storeEnthalpy=*/true> fs;
+
+        checkFluidState<Scalar>(fs); }
 
     // CompositionalFluidState
     {   Opm::CompositionalFluidState<Scalar, FluidSystem> fs;

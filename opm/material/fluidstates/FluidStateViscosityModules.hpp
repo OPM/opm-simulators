@@ -41,12 +41,10 @@ namespace Opm {
  *       viscosities explicitly.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateExplicitViscosityModule
 {
-    enum { numPhases = FluidSystem::numPhases };
-
 public:
     FluidStateExplicitViscosityModule()
     { Valgrind::SetUndefined(viscosity_); }
@@ -99,7 +97,7 @@ protected:
  *        viscosities but throws std::logic_error instead.
  */
 template <class Scalar,
-          class FluidSystem,
+          int numPhases,
           class Implementation>
 class FluidStateNullViscosityModule
 {
