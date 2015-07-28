@@ -23,7 +23,6 @@
 #include <opm/core/props/satfunc/SaturationPropsInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/satfunc/SatFuncMultiplexer.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
