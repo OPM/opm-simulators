@@ -156,25 +156,15 @@ public:
     }
 
     /*!
-     * \brief A regularized Brooks-Corey capillary pressure-saturation
-     *        curve.
+     * \brief A regularized Brooks-Corey capillary pressure-saturation curve.
      *
-     * This is a regularized variant of the Brooks-Corey curve. For
-     * wetting phase saturations between a lower threshold saturation
-     * and \f$S_w=1\f$, for other wetting phase saturations it is
-     * regularized in a way which removes the singularity at
-     * \f$S_w=0\f$, avoids kinks and allows the capillary pressure to
-     * reach arbitrary values. (Albeit, to reach a given capillary
-     * pressure, the saturations can become unphysical). The
-     * regularization is done in the following way:
+     * This is a regularized variant of the Brooks-Corey curve:
      *
-     * - For wetting phase saturations lower than the threshold
-     *   saturation, the \f$p_c(S_w)\f$ curve is extrapolated using a
-     *   straight line exhibiting the slope unregularized capillary
-     *   pressure curve at the threshold saturation.
-     * - For wetting phase saturations larger than 1, the Brooks-Corey
-     *   curve is extrapolated using a straight line that exhibits the
-     *   slope of the unregularized Brooks-Corey curve at \f$S_w =
+     * - For wetting phase saturations lower than the threshold saturation, the
+     *   \f$p_c(S_w)\f$ curve is extrapolated using a straight line exhibiting the slope
+     *   unregularized capillary pressure curve at the threshold saturation.
+     * - For wetting phase saturations larger than 1, the curve is extrapolated using a
+     *   straight line that exhibits the slope of the unregularized curve at \f$S_w =
      *   1\f$
      *
      * \sa BrooksCorey::pcnw
@@ -193,12 +183,6 @@ public:
     {
         const Scalar Sthres = params.pcnwLowSw();
 
-        // make sure that the capilary pressure observes a
-        // derivative != 0 for 'illegal' saturations. This is
-        // required for example by newton solvers (if the
-        // derivative is calculated numerically) in order to get the
-        // saturation moving to the right direction if it
-        // temporarily is in an 'illegal' range.
         if (Sw <= Sthres) {
             Scalar m = params.pcnwSlopeLow();
             Scalar pcnw_SwLow = params.pcnwLow();
