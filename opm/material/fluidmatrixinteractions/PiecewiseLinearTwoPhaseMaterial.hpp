@@ -143,6 +143,14 @@ public:
     static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     { return eval_(params.SwSamples(), params.pcnwSamples(), Sw); }
 
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    {
+        return eval_(params.pcnwSamples(),
+                     params.SwSamples(),
+                     pcnw);
+    }
+
     /*!
      * \brief The saturation-capillary pressure curve
      */
@@ -181,12 +189,20 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation Sw)
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
         const auto& res = eval_(params.SwSamples(), params.krwSamples(), Sw);
         return Toolbox::max(0.0, Toolbox::min(1.0, res));
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    {
+        return eval_(params.krwSamples(),
+                     params.SwSamples(),
+                     krw);
     }
 
     /*!
@@ -213,20 +229,63 @@ public:
                                                          Sw)));
     }
 
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    {
+        return eval_(params.krnSamples(),
+                     params.SwSamples(),
+                     krn);
+    }
+
 private:
     template <class Evaluation>
     static Evaluation eval_(const ValueVector &xValues,
                             const ValueVector &yValues,
                             const Evaluation& x)
     {
+        if (xValues.front() < xValues.back())
+            return evalAscending_(xValues, yValues, x);
+        return evalDescending_(xValues, yValues, x);
+    }
+
+    template <class Evaluation>
+    static Evaluation evalAscending_(const ValueVector &xValues,
+                                     const ValueVector &yValues,
+                                     const Evaluation& x)
+    {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        if (Toolbox::value(x) < xValues.front())
-            return Toolbox::createConstant(yValues.front());
-        if (Toolbox::value(x) > xValues.back())
-            return Toolbox::createConstant(yValues.back());
+        if (x <= xValues.front())
+            return yValues.front();
+        if (x >= xValues.back())
+            return yValues.back();
 
         int segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
+
+        Scalar x0 = xValues[segIdx];
+        Scalar x1 = xValues[segIdx + 1];
+
+        Scalar y0 = yValues[segIdx];
+        Scalar y1 = yValues[segIdx + 1];
+
+        Scalar m = (y1 - y0)/(x1 - x0);
+
+        return y0 + (x - x0)*m;
+    }
+
+    template <class Evaluation>
+    static Evaluation evalDescending_(const ValueVector &xValues,
+                                      const ValueVector &yValues,
+                                      const Evaluation& x)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        if (x >= xValues.front())
+            return yValues.front();
+        if (x <= xValues.back())
+            return yValues.back();
+
+        int segIdx = findSegmentIndexDescending_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -276,6 +335,28 @@ private:
         while (lowIdx + 1 < highIdx) {
             int curIdx = (lowIdx + highIdx)/2;
             if (xValues[curIdx] < x)
+                lowIdx = curIdx;
+            else
+                highIdx = curIdx;
+        }
+
+        return lowIdx;
+    }
+
+    static int findSegmentIndexDescending_(const ValueVector &xValues, Scalar x)
+    {
+        int n = xValues.size() - 1;
+        assert(n >= 1); // we need at least two sampling points!
+        if (xValues[n] >= x)
+            return n - 1;
+        else if (xValues[0] <= x)
+            return 0;
+
+        // bisection
+        int lowIdx = 0, highIdx = n;
+        while (lowIdx + 1 < highIdx) {
+            int curIdx = (lowIdx + highIdx)/2;
+            if (xValues[curIdx] >= x)
                 lowIdx = curIdx;
             else
                 highIdx = curIdx;

@@ -30,6 +30,8 @@
 #include "BrooksCoreyParams.hpp"
 
 #include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -167,7 +169,17 @@ public:
 
         assert(0 <= Sw && Sw <= 1);
 
-        return params.entryPressure()*Toolbox::pow(Sw, -1.0/params.lambda());
+        return params.entryPressure()*Toolbox::pow(Sw, -1/params.lambda());
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        assert(pcnw > 0.0);
+
+        return Toolbox::pow(params.entryPressure()/pcnw, -params.lambda());
     }
 
     /*!
@@ -243,6 +255,14 @@ public:
         return Toolbox::pow(Sw, 2.0/params.lambda() + 3);
     }
 
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        return Toolbox::pow(krw, 1.0/(2.0/params.lambda() + 3));
+    }
+
     /*!
      * \brief The relative permeability for the non-wetting phase of
      *        the medium as implied by the Brooks-Corey
@@ -272,6 +292,33 @@ public:
         Scalar exponent = 2.0/params.lambda() + 1;
         const Evaluation Sn = 1. - Sw;
         return Sn*Sn*(1. - Toolbox::pow(Sw, exponent));
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        // since inverting the formula for krn is hard to do analytically, we use the
+        // Newton-Raphson method
+        Evaluation Sw = Toolbox::createConstant(0.5);
+        Scalar eps = 1e-10;
+        for (int i = 0; i < 20; ++i) {
+            Evaluation f = krn - twoPhaseSatKrn(params, Sw);
+            Evaluation fStar = krn - twoPhaseSatKrn(params, Sw + eps);
+            Evaluation fPrime = (fStar - f)/eps;
+
+            Evaluation delta = f/fPrime;
+            Sw -= delta;
+            if (Sw < 0)
+                Sw = Toolbox::createConstant(0.0);
+            if (Toolbox::abs(delta) < 1e-10)
+                return Sw;
+        }
+
+        OPM_THROW(NumericalIssue,
+                  "Couldn't invert the Brooks-Corey non-wetting phase"
+                  " relperm within 20 iterations");
     }
 };
 } // namespace Opm

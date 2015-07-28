@@ -299,6 +299,19 @@ public:
         return BrooksCorey::twoPhaseSatKrw(params, Sw);
     }
 
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        if (krw <= 0.0)
+            return Toolbox::createConstant(0.0);
+        else if (krw >= 1.0)
+            return Toolbox::createConstant(1.0);
+
+        return BrooksCorey::twoPhaseSatKrwInv(params, krw);
+    }
+
     /*!
      * \brief Regularized version of the relative permeability of the
      *        non-wetting phase of the Brooks-Corey curves.
@@ -334,6 +347,19 @@ public:
             return Toolbox::createConstant(1.0);
 
         return BrooksCorey::twoPhaseSatKrn(params, Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        if (krn <= 0.0)
+            return Toolbox::createConstant(1.0);
+        else if (krn >= 1.0)
+            return Toolbox::createConstant(0.0);
+
+        return BrooksCorey::twoPhaseSatKrnInv(params, krn);
     }
 };
 } // namespace Opm
