@@ -28,7 +28,20 @@ namespace Opm
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
-        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims,
+        std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
+        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+            if (grid.global_cell) {
+                compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
+            }
+            else {
+                compressedToCartesianIdx[cellIdx] = cellIdx;
+            }
+        }
+
+        auto materialLawManager = std::make_shared<MaterialLawManager>();
+        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
+
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims,
              grid.cell_centroids, grid.dimensions, init_rock);
     }
 
@@ -38,7 +51,20 @@ namespace Opm
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
     {
-        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
+        std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
+        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+            if (grid.global_cell) {
+                compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
+            }
+            else {
+                compressedToCartesianIdx[cellIdx] = cellIdx;
+            }
+        }
+
+        auto materialLawManager = std::make_shared<MaterialLawManager>();
+        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
+
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
              grid.dimensions, param, init_rock);
     }
 

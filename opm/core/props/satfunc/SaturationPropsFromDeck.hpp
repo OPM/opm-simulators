@@ -28,6 +28,10 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/core/simulator/ExplicitArraysFluidState.hpp>
+#include <opm/core/simulator/ExplicitArraysSatDerivativesFluidState.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
 #include <vector>
 
 struct UnstructuredGrid;
@@ -38,8 +42,22 @@ namespace Opm
     class SaturationPropsFromDeck : public SaturationPropsInterface
     {
     public:
+        typedef Opm::ThreePhaseMaterialTraits<double,
+                                              /*wettingPhaseIdx=*/BlackoilPhases::Aqua,
+                                              /*nonWettingPhaseIdx=*/BlackoilPhases::Liquid,
+                                              /*gasPhaseIdx=*/BlackoilPhases::Vapour> MaterialTraits;
+        typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
+        typedef MaterialLawManager::MaterialLaw MaterialLaw;
+        typedef MaterialLawManager::MaterialLawParams MaterialLawParams;
+
         /// Default constructor.
         inline SaturationPropsFromDeck();
+
+        /// Initialize from a MaterialLawManager object and a compressed to cartesian cell index map.
+        /// \param[in]  materialLawManager  An initialized MaterialLawManager object
+        inline void init(const PhaseUsage &phaseUsage,
+                         std::shared_ptr<MaterialLawManager> materialLawManager);
+
 
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
@@ -48,6 +66,7 @@ namespace Opm
         ///                      to logical cartesian indices consistent with the deck.
         inline void init(Opm::DeckConstPtr deck,
                          Opm::EclipseStateConstPtr eclipseState,
+                         std::shared_ptr<MaterialLawManager> materialLawManager,
                          const UnstructuredGrid& grid);
 
         /// Initialize from deck and grid.
@@ -64,6 +83,7 @@ namespace Opm
         template<class T>
         inline void init(Opm::DeckConstPtr deck,
                          Opm::EclipseStateConstPtr eclipseState,
+                         std::shared_ptr<MaterialLawManager> materialLawManager,
                          int number_of_cells,
                          const int* global_cell,
                          const T& begin_cell_centroids,
@@ -127,69 +147,8 @@ namespace Opm
                                     double & swat);
 
     private:
-        // internal helper method for satRange()
-        template <class SaturationFunction>
-        void satRange_(const SaturationFunction& satFunc,
-                       const int cellIdx,
-                       const int* cells,
-                       double* smin,
-                       double* smax) const;
-
-        PhaseUsage phase_usage_;
-        typedef Opm::SatFuncMultiplexer SatFunc;
-        std::vector<SatFunc> satfunc_;
-        std::vector<int> cell_to_func_; // = SATNUM - 1
-        std::vector<int> cell_to_func_imb_;
-
-        bool do_eps_;  // ENDSCALE is active
-        bool do_3pt_;  // SCALECRS: YES~true  NO~false
-        bool do_hyst_;  // Keywords ISWL etc detected     
-        std::vector<EPSTransforms> eps_transf_;
-        std::vector<EPSTransforms> eps_transf_hyst_;
-        std::vector<SatHyst> sat_hyst_;
-
-        template<class T>
-        void initEPS(Opm::DeckConstPtr deck,
-                     Opm::EclipseStateConstPtr eclipseState,
-                     int number_of_cells,
-                     const int* global_cell,
-                     const T& begin_cell_centroids,
-                     int dimensions,
-                     const std::vector<std::string>& eps_kw,
-                     std::vector<EPSTransforms>& eps_transf);
-        template<class T>
-        void initEPSKey(Opm::DeckConstPtr deck,
-                        Opm::EclipseStateConstPtr eclipseState,
-                        int number_of_cells,
-                        const int* global_cell,
-                        const T& begin_cell_centroids,
-                        int dimensions,
-                        const std::string& keyword,
-                        std::vector<double>& scaleparam);
-        void initEPSParam(const int cell, 
-                          EPSTransforms::Transform& data,
-                          const bool oil,
-                          const double sl_tab,
-                          const double scr_tab,
-                          const double su_tab,
-                          const double sxcr_tab,
-                          const double s0_tab,
-                          const double krsr_tab,
-                          const double krmax_tab,
-                          const double pcmax_tab,
-                          const std::vector<double>& sl,
-                          const std::vector<double>& scr,
-                          const std::vector<double>& su,
-                          const std::vector<double>& sxcr,
-                          const std::vector<double>& s0,
-                          const std::vector<double>& krsr,
-                          const std::vector<double>& krmax,
-                          const std::vector<double>& pcmax);
-
-        bool columnIsMasked_(Opm::DeckConstPtr deck,
-                             const std::string& keywordName,
-                             int columnIdx)
-        { return deck->getKeyword(keywordName)->getRecord(columnIdx)->getItem(0)->getSIDouble(0) != -1.0; }
+        std::shared_ptr<MaterialLawManager> materialLawManager_;
+        PhaseUsage phaseUsage_;
     };
 
 

@@ -27,6 +27,8 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <memory>
@@ -41,6 +43,8 @@ namespace Opm
     class BlackoilPropertiesFromDeck : public BlackoilPropertiesInterface
     {
     public:
+        typedef typename SaturationPropsFromDeck::MaterialLawManager MaterialLawManager;
+
         /// Initialize from deck and grid.
         /// \param[in]  deck     Deck input parser
         /// \param[in]  grid     Grid to which property object applies, needed for the
@@ -67,7 +71,6 @@ namespace Opm
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
-
         template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
                                    Opm::EclipseStateConstPtr eclState,
@@ -81,6 +84,18 @@ namespace Opm
         template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
                                    Opm::EclipseStateConstPtr eclState,
+                                   int number_of_cells,
+                                   const int* global_cell,
+                                   const int* cart_dims,
+                                   const CentroidIterator& begin_cell_centroids,
+                                   int dimension,
+                                   const parameter::ParameterGroup& param,
+                                   bool init_rock=true);
+
+        template<class CentroidIterator>
+        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
+                                   Opm::EclipseStateConstPtr eclState,
+                                   std::shared_ptr<MaterialLawManager> materialLawManager,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
@@ -240,6 +255,7 @@ namespace Opm
         template<class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
+                  std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
@@ -249,6 +265,7 @@ namespace Opm
         template<class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
+                  std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
@@ -256,9 +273,11 @@ namespace Opm
                   int dimension,
                   const parameter::ParameterGroup& param,
                   bool init_rock);
+
         RockFromDeck rock_;
         std::vector<int> cellPvtRegionIdx_;
         BlackoilPvtProperties pvt_;
+        std::shared_ptr<MaterialLawManager> materialLawManager_;
         std::shared_ptr<SaturationPropsInterface> satprops_;
         mutable std::vector<double> B_;
         mutable std::vector<double> dB_;
