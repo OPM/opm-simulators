@@ -176,8 +176,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 {
     typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // Grid and world dimension
@@ -199,6 +199,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager EclMaterialLawManager;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
@@ -355,6 +357,7 @@ public:
      */
     void beginTimeStep()
     { wellManager_.beginTimeStep(); }
+
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
@@ -376,6 +379,8 @@ public:
 
         // write the summary information after each time step
         summaryWriter_.write(wellManager_);
+
+        updateHysteresis_();
 
 #ifndef NDEBUG
         // in debug mode, we don't care about performance, so we check if the model does
@@ -575,11 +580,6 @@ public:
     }
 
     /*!
-     * \name Problem parameters
-     */
-    //! \{
-
-    /*!
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
@@ -597,13 +597,6 @@ public:
         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
     }
 
-    // \}
-
-    /*!
-     * \name Boundary conditions
-     */
-    //! \{
-
     /*!
      * \copydoc FvBaseProblem::boundary
      *
@@ -615,13 +608,6 @@ public:
                   int spaceIdx,
                   int timeIdx) const
     { values.setNoFlow(); }
-
-    //! \}
-
-    /*!
-     * \name Volumetric terms
-     */
-    //! \{
 
     /*!
      * \copydoc FvBaseProblem::initial
@@ -638,6 +624,11 @@ public:
 
         const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
+    }
+
+    void initialSolutionApplied()
+    {
+        updateHysteresis_();
     }
 
     /*!
@@ -664,8 +655,6 @@ public:
         for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
     }
-
-    //! \}
 
 private:
     static bool enableEclOutput_()
@@ -1138,6 +1127,31 @@ private:
         int cartesianCellIdx = this->simulator().gridManager().cartesianCellId(globalDofIdx);
 
         return materialLawManager_.materialLawParams(cartesianCellIdx);
+    }
+
+    // update the hysteresis parameters of the material laws for the whole grid
+    void updateHysteresis_()
+    {
+        if (!materialLawManager_.enableHysteresis())
+            return;
+
+        ElementContext elemCtx(this->simulator());
+        const auto& gridManager = this->simulator().gridManager();
+        auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
+        const auto &elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+                continue;
+
+            elemCtx.updateStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            int compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            int cartesianDofIdx = gridManager.cartesianCellId(compressedDofIdx);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            materialLawManager_.updateHysteresis(intQuants.fluidState(), cartesianDofIdx);
+        }
     }
 
     std::vector<Scalar> porosity_;
