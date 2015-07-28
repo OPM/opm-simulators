@@ -46,6 +46,7 @@
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EclStone1Material.hpp>
+#include <opm/material/fluidmatrixinteractions/EclStone2Material.hpp>
 
 // include the helper classes to construct traits
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -327,6 +328,15 @@ int main(int argc, char **argv)
     {
         typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
         typedef Opm::EclStone1Material<ThreePhaseTraits,
+                                       /*GasOilMaterial=*/TwoPhaseMaterial,
+                                       /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+        testGenericApi<MaterialLaw, ThreePhaseFluidState>();
+        testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
+        //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
+    }
+    {
+        typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
+        typedef Opm::EclStone2Material<ThreePhaseTraits,
                                        /*GasOilMaterial=*/TwoPhaseMaterial,
                                        /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
         testGenericApi<MaterialLaw, ThreePhaseFluidState>();
