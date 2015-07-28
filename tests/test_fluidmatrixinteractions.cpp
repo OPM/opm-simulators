@@ -43,6 +43,7 @@
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/SplineTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
 
 // include the helper classes to construct traits
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -370,6 +371,14 @@ int main(int argc, char **argv)
     }
     {
         typedef Opm::RegularizedVanGenuchten<TwoPhaseTraits> MaterialLaw;
+        testGenericApi<MaterialLaw, TwoPhaseFluidState>();
+        testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
+        testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
+    }
+
+    {
+        typedef Opm::BrooksCorey<TwoPhaseTraits> RawMaterialLaw;
+        typedef Opm::EclEpsTwoPhaseLaw<RawMaterialLaw> MaterialLaw;
         testGenericApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
