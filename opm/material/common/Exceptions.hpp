@@ -33,7 +33,7 @@ namespace Opm {
 /*!
  * \brief Exception that indicates that a functionality has not been implemented yet.
  *
- * A better name for this class would be 'NotAvailable', but this would conflict with
+ * A better name for this class would be 'NotImplemented', but this would conflict with
  * opm-core's exception class of the same name.
  */
 class NotAvailable : public std::logic_error
