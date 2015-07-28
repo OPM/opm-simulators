@@ -39,12 +39,13 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/SplineTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclStone1Material.hpp>
 
 // include the helper classes to construct traits
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -324,6 +325,15 @@ int main(int argc, char **argv)
         //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
     }
     {
+        typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
+        typedef Opm::EclStone1Material<ThreePhaseTraits,
+                                       /*GasOilMaterial=*/TwoPhaseMaterial,
+                                       /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+        testGenericApi<MaterialLaw, ThreePhaseFluidState>();
+        testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
+        //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
+    }
+    {
         typedef Opm::ThreePhaseParkerVanGenuchten<ThreePhaseTraits> MaterialLaw;
         testGenericApi<MaterialLaw, ThreePhaseFluidState>();
         testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
@@ -334,7 +344,8 @@ int main(int argc, char **argv)
         testGenericApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
-
+    }
+    {
         typedef Opm::NullMaterial<ThreePhaseTraits> ThreePMaterialLaw;
         testGenericApi<ThreePMaterialLaw, ThreePhaseFluidState>();
         testThreePhaseApi<ThreePMaterialLaw, ThreePhaseFluidState>();
@@ -391,7 +402,6 @@ int main(int argc, char **argv)
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
     }
-
 
     return 0;
 }
