@@ -664,6 +664,7 @@ private:
     {
         auto deck = this->simulator().gridManager().deck();
         auto eclState = this->simulator().gridManager().eclState();
+        const auto& gridManager = this->simulator().gridManager();
 
         // the ROCK keyword has not been specified, so we don't need
         // to read rock parameters
@@ -680,16 +681,20 @@ private:
                 rockRecord->getItem("COMPRESSIBILITY")->getSIDouble(0);
         }
 
-        // ROCKTAB has not been specified, so everything is in the
-        // first region and we don't need to care...
-        if (!eclState->hasIntGridProperty("ROCKTAB"))
+        // PVTNUM has not been specified, so everything is in the first region and we
+        // don't need to care...
+        if (!eclState->hasIntGridProperty("PVTNUM"))
             return;
 
-        const std::vector<int>& rocktabData =
-            eclState->getIntGridProperty("ROCKTAB")->getData();
-        for (size_t elemIdx = 0; elemIdx < rocktabData.size(); ++ elemIdx)
-            // reminder: Eclipse uses FORTRAN indices
-            rockTableIdx_[elemIdx] = rocktabData[elemIdx] - 1;
+        const std::vector<int>& pvtnumData =
+            eclState->getIntGridProperty("PVTNUM")->getData();
+        rockTableIdx_.resize(gridManager.gridView().size(/*codim=*/0));
+        for (size_t elemIdx = 0; elemIdx < rockTableIdx_.size(); ++ elemIdx) {
+            int cartElemIdx = gridManager.cartesianCellId(elemIdx);
+
+            // reminder: Eclipse uses FORTRAN-style indices
+            rockTableIdx_[elemIdx] = pvtnumData[cartElemIdx] - 1;
+        }
     }
 
     void readMaterialParameters_()
