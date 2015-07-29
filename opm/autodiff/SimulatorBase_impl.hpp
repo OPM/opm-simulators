@@ -67,8 +67,8 @@ namespace Opm
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
             // Only rank 0 does print to std::cout
-            terminal_output_ &= ( info.communicator().rank() == 0 );
-            is_parallel_run_  = ( info.communicator().size() > 1 );
+            terminal_output_ = terminal_output_ && ( info.communicator().rank() == 0 );
+            is_parallel_run_ = ( info.communicator().size() > 1 );
         }
 #endif
     }
