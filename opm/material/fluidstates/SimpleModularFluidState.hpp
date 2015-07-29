@@ -35,29 +35,9 @@
 #include "FluidStateEnthalpyModules.hpp"
 #include "ModularFluidState.hpp"
 
+#include <type_traits>
+
 namespace Opm {
-/*!
- * \brief This is a helper class to select a type depending on a condition.
- *
- * This is required for the template-meta-programming-foo of SimpleModularFluidState.
- */
-template <bool yesno, class TrueType, class FalseType>
-class IfThenElseType;
-
-template <class TrueType, class FalseType>
-class IfThenElseType<true, TrueType, FalseType>
-{
-public:
-    typedef TrueType type;
-};
-
-template <class TrueType, class FalseType>
-class IfThenElseType<false, TrueType, FalseType>
-{
-public:
-    typedef FalseType type;
-};
-
 // this macro is a small hack to prevent death-through verbosity
 #define OPM_SMFS SimpleModularFluidState<ScalarT, \
                                          numPhasesV, \
@@ -94,30 +74,30 @@ template <class ScalarT,
           bool storeEnthalpy>
 class SimpleModularFluidState
     : public ModularFluidState<ScalarT, numPhasesV, numComponentsV,
-                               typename IfThenElseType<storePressure,
-                                                       FluidStateExplicitPressureModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullPressureModule<ScalarT> >::type,
-                               typename IfThenElseType<storeTemperature,
-                                                       FluidStateExplicitTemperatureModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullTemperatureModule<ScalarT> >::type,
-                               typename IfThenElseType<storeComposition,
-                                                       FluidStateExplicitCompositionModule<ScalarT, FluidSystem, OPM_SMFS>,
-                                                       FluidStateNullCompositionModule<ScalarT> >::type,
-                               typename IfThenElseType<storeFugacity,
-                                                       FluidStateExplicitFugacityModule<ScalarT, numPhasesV, numComponentsV, OPM_SMFS>,
-                                                       FluidStateNullFugacityModule<ScalarT> >::type,
-                               typename IfThenElseType<storeSaturation,
-                                                       FluidStateExplicitSaturationModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullSaturationModule<ScalarT> >::type,
-                               typename IfThenElseType<storeDensity,
-                                                       FluidStateExplicitDensityModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullDensityModule<ScalarT, numPhasesV, OPM_SMFS> >::type,
-                               typename IfThenElseType<storeViscosity,
-                                                       FluidStateExplicitViscosityModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullViscosityModule<ScalarT, numPhasesV, OPM_SMFS> >::type,
-                               typename IfThenElseType<storeEnthalpy,
-                                                       FluidStateExplicitEnthalpyModule<ScalarT, numPhasesV, OPM_SMFS>,
-                                                       FluidStateNullEnthalpyModule<ScalarT, numPhasesV, OPM_SMFS> >::type
+                               typename std::conditional<storePressure,
+                                                         FluidStateExplicitPressureModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullPressureModule<ScalarT> >::type,
+                               typename std::conditional<storeTemperature,
+                                                         FluidStateExplicitTemperatureModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullTemperatureModule<ScalarT> >::type,
+                               typename std::conditional<storeComposition,
+                                                         FluidStateExplicitCompositionModule<ScalarT, FluidSystem, OPM_SMFS>,
+                                                         FluidStateNullCompositionModule<ScalarT> >::type,
+                               typename std::conditional<storeFugacity,
+                                                         FluidStateExplicitFugacityModule<ScalarT, numPhasesV, numComponentsV, OPM_SMFS>,
+                                                         FluidStateNullFugacityModule<ScalarT> >::type,
+                               typename std::conditional<storeSaturation,
+                                                         FluidStateExplicitSaturationModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullSaturationModule<ScalarT> >::type,
+                               typename std::conditional<storeDensity,
+                                                         FluidStateExplicitDensityModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullDensityModule<ScalarT, numPhasesV, OPM_SMFS> >::type,
+                               typename std::conditional<storeViscosity,
+                                                         FluidStateExplicitViscosityModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullViscosityModule<ScalarT, numPhasesV, OPM_SMFS> >::type,
+                               typename std::conditional<storeEnthalpy,
+                                                         FluidStateExplicitEnthalpyModule<ScalarT, numPhasesV, OPM_SMFS>,
+                                                         FluidStateNullEnthalpyModule<ScalarT, numPhasesV, OPM_SMFS> >::type
                                >
 {};
 
