@@ -46,6 +46,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProperties.cpp
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
+	opm/autodiff/WellMultiSegment.cpp
 	)
 
 
@@ -147,5 +148,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/VFPHelpers.hpp
 	opm/autodiff/VFPProdProperties.hpp
 	opm/autodiff/VFPInjProperties.hpp
+	opm/autodiff/WellStateMultiSegment.hpp
+	opm/autodiff/WellMultiSegment.hpp
 	)
 
