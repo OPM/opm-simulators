@@ -247,15 +247,31 @@ try
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
+    int numCells = Opm::UgGridHelpers::numCells(grid);
+    const auto& globalCell = Opm::UgGridHelpers::globalCell(grid);
+    std::vector<int> compressedToCartesianIdx(numCells);
+    for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+        if (globalCell) {
+            compressedToCartesianIdx[cellIdx] = globalCell[cellIdx];
+        }
+        else {
+            compressedToCartesianIdx[cellIdx] = cellIdx;
+        }
+    }
+
+    typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
     // Rock and fluid init
-    BlackoilPropertiesFromDeck props( deck, eclipseState,
+    BlackoilPropertiesFromDeck props( deck, eclipseState, materialLawManager,
                                       Opm::UgGridHelpers::numCells(grid),
                                       Opm::UgGridHelpers::globalCell(grid),
                                       Opm::UgGridHelpers::cartDims(grid),
                                       Opm::UgGridHelpers::beginCellCentroids(grid),
                                       Opm::UgGridHelpers::dimensions(grid), param);
 
-    BlackoilPropsAdFromDeck new_props( deck, eclipseState, grid );
+    BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
 
     SolventPropsAdFromDeck solvent_props( deck, eclipseState, Opm::UgGridHelpers::numCells(grid), Opm::UgGridHelpers::globalCell(grid));
 

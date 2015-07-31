@@ -251,15 +251,19 @@ try
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
+    typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState);
+
     // Rock and fluid init
-    BlackoilPropertiesFromDeck props( deck, eclipseState,
+    BlackoilPropertiesFromDeck props( deck, eclipseState, materialLawManager,
                                       Opm::UgGridHelpers::numCells(grid),
                                       Opm::UgGridHelpers::globalCell(grid),
                                       Opm::UgGridHelpers::cartDims(grid),
                                       Opm::UgGridHelpers::beginCellCentroids(grid),
                                       Opm::UgGridHelpers::dimensions(grid), param);
 
-    BlackoilPropsAdFromDeck new_props( deck, eclipseState, grid );
+    BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.

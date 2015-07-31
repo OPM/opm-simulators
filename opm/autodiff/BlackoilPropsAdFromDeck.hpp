@@ -59,9 +59,12 @@ namespace Opm
     {
         friend class BlackoilPropsDataHandle;
     public:
+        typedef typename SaturationPropsFromDeck::MaterialLawManager MaterialLawManager;
+
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
+                                std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
@@ -69,6 +72,7 @@ namespace Opm
         /// Constructor wrapping an opm-core black oil interface.
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
+                                std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
 #endif
@@ -305,6 +309,7 @@ namespace Opm
         template <class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
+                  std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
@@ -327,9 +332,11 @@ namespace Opm
         void mapPvtRegions(const std::vector<int>& cells) const;
 
         RockFromDeck rock_;
+
         // This has to be a shared pointer as we must
         // be able to make a copy of *this in the parallel case.
-        std::shared_ptr<SaturationPropsInterface> satprops_;
+        std::shared_ptr<MaterialLawManager> materialLawManager_;
+        std::shared_ptr<SaturationPropsFromDeck> satprops_;
 
         PhaseUsage phase_usage_;
         // bool has_vapoil_;
