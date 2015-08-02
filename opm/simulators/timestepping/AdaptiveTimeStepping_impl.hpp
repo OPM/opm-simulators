@@ -180,7 +180,8 @@ namespace Opm {
 
                 // write data if outputWriter was provided
                 if( outputWriter ) {
-                    outputWriter->writeTimeStep( substepTimer, state, well_state );
+                    bool substep = true;
+                    outputWriter->writeTimeStep( substepTimer, state, well_state, substep);
                 }
 
                 // set new time step length
