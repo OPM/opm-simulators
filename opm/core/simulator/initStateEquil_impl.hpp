@@ -693,7 +693,9 @@ namespace Opm
                     // Adjust oil pressure according to gas saturation and cap pressure
                     double pc[BlackoilPhases::MaxNumPhases];
                     double sat[BlackoilPhases::MaxNumPhases];
+                    sat[waterpos] = sw;
                     sat[gaspos] = sg;
+                    sat[oilpos] = 1.0 - sat[waterpos] - sat[gaspos];
                     props.capPress(1, sat, &cell, pc, 0);                   
                     phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
                 }
@@ -704,6 +706,9 @@ namespace Opm
                 double sat[BlackoilPhases::MaxNumPhases];
                 double threshold_sat = 1.0e-6;
 
+                sat[waterpos] = smax[waterpos];
+                sat[gaspos] = smax[gaspos];
+                sat[oilpos] = 1.0 - sat[waterpos] - sat[gaspos];
                 if (sw > smax[waterpos]-threshold_sat ) {
                     sat[waterpos] = smax[waterpos];
                     props.capPress(1, sat, &cell, pc, 0);                   
