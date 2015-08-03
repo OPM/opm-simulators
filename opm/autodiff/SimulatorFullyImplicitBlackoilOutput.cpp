@@ -236,7 +236,8 @@ namespace Opm
     BlackoilOutputWriter::
     writeTimeStep(const SimulatorTimerInterface& timer,
                   const SimulatorState& state,
-                  const WellState& wellState)
+                  const WellState& wellState,
+                  bool substep)
     {
         // VTK output
         if( vtkWriter_ ) {
@@ -248,7 +249,7 @@ namespace Opm
         }
         // ECL output
         if ( eclWriter_ ) {
-            eclWriter_->writeTimeStep(timer, state, wellState);
+            eclWriter_->writeTimeStep(timer, state, wellState, substep);
         }
         // write backup file
         if( backupfile_ )
