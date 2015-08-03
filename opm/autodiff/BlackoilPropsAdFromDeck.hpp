@@ -77,6 +77,20 @@ namespace Opm
                                 const bool init_rock = true );
 #endif
 
+        /// Constructor wrapping an opm-core black oil interface.
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
+
+#ifdef HAVE_DUNE_CORNERPOINT
+        /// Constructor wrapping an opm-core black oil interface.
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
+                                const Dune::CpGrid& grid,
+                                const bool init_rock = true );
+#endif
+
         /// \brief Constructor to create properties for a subgrid
         ///
         /// This copies all properties that are not dependant on the
