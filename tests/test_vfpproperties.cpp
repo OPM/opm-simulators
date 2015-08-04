@@ -755,6 +755,78 @@ BOOST_AUTO_TEST_SUITE(IntegrationTests)
 
 extern const double reference[];
 
+
+/**
+ * Uses a VFP table that should be linear in THP vs BHP,
+ * so that
+ *   bhp(aqua, liquid, vapour, thp, alq) == 0.0 for thp == 0.0,
+ * and
+ *   bhp(aqua, liquid, vapour, thp, alq) == 1.0 for thp == 1.0,
+ */
+BOOST_AUTO_TEST_CASE(ParseInterpolateLine)
+{
+    std::string table_str = "\
+-- VFP table that is basically the identity: BHP == THP   \n\
+-- In our case, we simply degenerate all axes except the THP axis \n\
+-- and set that bhp(flo, thp, wfr, gfr, alq) = 0 for thp = 0, and 1 for thp = 1. \n\
+-- The value of flo, wfr, gfr, alq, should all be irrelevant. \n\
+VFPPROD \n\
+-- table_num, datum_depth, flo, wfr, gfr, pressure, alq, unit, table_vals \n\
+42 7.0E+03 LIQ WCT GOR THP ' ' FIELD BHP / \n\
+1.0 / flo axis \n\
+0.0 1.0 / THP axis \n\
+0.0 / WFR axis \n\
+0.0 / GFR axis \n\
+0.0 / ALQ axis \n\
+-- Table itself: thp_idx wfr_idx gfr_idx alq_idx <vals> \n\
+1 1 1 1 0.0 / \n\
+2 1 1 1 1.0 / \n\
+";
+
+    Opm::DeckConstPtr deck;
+    std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newFIELD());
+
+    Opm::ParserPtr parser(new Opm::Parser());
+    deck = parser->parseString(table_str);
+
+    BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
+    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
+
+    Opm::VFPProdTable table;
+    table.init(deck->getKeyword("VFPPROD", 0), units);
+
+    Opm::VFPProdProperties properties(&table);
+
+    const int n = 5; //Number of points to check per axis
+    double sad = 0.0; //Sum of absolute difference
+    double max_d = 0.0; //Maximum difference
+    for (int w=0; w<n; ++w) { //water
+        for (int o=0; o<n; ++o) { //oil
+            for (int g=0; g<n; ++g) { //gas
+                for (int t=0; t<n; ++t) { //thp
+                    for (int a=0; a<n; ++a) { //alq
+                        double aqua = w * 52.3;
+                        double liquid = o * 9.9;
+                        double vapour = g * 0.1;
+                        double thp = t * 456.78;
+                        double alq = a * 42.24;
+
+                        double bhp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
+                        double ref_bhp = thp;
+
+                        double diff = std::abs(bhp - ref_bhp);
+                        sad += diff;
+                        max_d = std::max(diff, max_d);
+                    }
+                }
+            }
+        }
+    }
+
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
+}
+
 /**
  * Tests that we can actually parse some input data, and interpolate within that space
  */

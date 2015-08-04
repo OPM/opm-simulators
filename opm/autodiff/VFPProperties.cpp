@@ -339,7 +339,6 @@ VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& 
 
     //Find interpolation ratio
     double dist = (*ceil_iter - *floor_iter);
-    assert(dist >= 0.0);
     if (dist > 0.0) {
         //Possible source for floating point error here if value and floor are large,
         //but very close to each other
