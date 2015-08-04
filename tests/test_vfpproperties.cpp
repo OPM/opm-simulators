@@ -798,8 +798,10 @@ VFPPROD \n\
     Opm::VFPProdProperties properties(&table);
 
     const int n = 5; //Number of points to check per axis
-    double sad = 0.0; //Sum of absolute difference
-    double max_d = 0.0; //Maximum difference
+    double bhp_sad = 0.0; //Sum of absolute difference
+    double bhp_max_d = 0.0; //Maximum difference
+    double thp_sad = 0.0;
+    double thp_max_d = 0.0;
     for (int w=0; w<n; ++w) { //water
         for (int o=0; o<n; ++o) { //oil
             for (int g=0; g<n; ++g) { //gas
@@ -811,20 +813,29 @@ VFPPROD \n\
                         double thp = t * 456.78;
                         double alq = a * 42.24;
 
-                        double bhp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
-                        double ref_bhp = thp;
+                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
+                        double bhp_ref = thp;
+                        double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq);
+                        double thp_ref = thp;
 
-                        double diff = std::abs(bhp - ref_bhp);
-                        sad += diff;
-                        max_d = std::max(diff, max_d);
+                        double bhp_diff = std::abs(bhp_interp - bhp_ref);
+                        bhp_sad += bhp_diff;
+                        bhp_max_d = std::max(bhp_diff, bhp_max_d);
+
+                        double thp_diff = std::abs(thp_interp - thp_ref);
+                        thp_sad += thp_diff;
+                        thp_max_d = std::max(thp_diff, thp_max_d);
                     }
                 }
             }
         }
     }
 
-    BOOST_CHECK_SMALL(max_d, max_d_tol);
-    BOOST_CHECK_SMALL(sad, sad_tol);
+    BOOST_CHECK_SMALL(bhp_max_d, max_d_tol);
+    BOOST_CHECK_SMALL(bhp_sad, sad_tol);
+
+    BOOST_CHECK_SMALL(thp_max_d, max_d_tol);
+    BOOST_CHECK_SMALL(thp_sad, sad_tol);
 }
 
 /**

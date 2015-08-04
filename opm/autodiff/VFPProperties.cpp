@@ -320,32 +320,36 @@ const VFPProdTable* VFPProdProperties::getProdTable(int table_id) const {
 VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
-    //First element greater than or equal to value
-    //Start with the second element, so that floor_iter does not go out of range
-    //Don't access out-of-range, therefore values.end()-1
-    auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, value);
-
-    //Find last element smaller than range
-    auto floor_iter = ceil_iter-1;
-
-    //Find the indices
-    const int a = floor_iter - values.begin();
-    const int b = ceil_iter - values.begin();
-    const int max_size = std::max(static_cast<int>(values.size()) - 1, 0);
-
-    //Clamp indices to range of vector
-    retval.ind_[0] = a;
-    retval.ind_[1] = std::min(b, max_size);
-
-    //Find interpolation ratio
-    double dist = (*ceil_iter - *floor_iter);
-    if (dist > 0.0) {
-        //Possible source for floating point error here if value and floor are large,
-        //but very close to each other
-        retval.factor_ = (value-*floor_iter) / dist;
+    //If we only have one value in our vector, return that
+    if (values.size() == 1) {
+        retval.ind_[0] = 0;
+        retval.ind_[1] = 0;
+        retval.factor_ = 0.0;
     }
+    // Else search in the vector
     else {
-        retval.factor_ = 1.0;
+        //First element greater than or equal to value
+        //Start with the second element, so that floor_iter does not go out of range
+        //Don't access out-of-range, therefore values.end()-1
+        auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, value);
+
+        //Find last element smaller than range
+        auto floor_iter = ceil_iter-1;
+
+        //Find the indices
+        retval.ind_[0] = floor_iter - values.begin();
+        retval.ind_[1] = ceil_iter - values.begin();
+
+        //Find interpolation ratio
+        double dist = (*ceil_iter - *floor_iter);
+        if (std::abs(dist) > 0.0) {
+            //Possible source for floating point error here if value and floor are large,
+            //but very close to each other
+            retval.factor_ = (value-*floor_iter) / dist;
+        }
+        else {
+            retval.factor_ = 0.0;
+        }
     }
 
     return retval;
@@ -363,7 +367,15 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         const InterpData& wfr_i,
         const InterpData& gfr_i,
         const InterpData& alq_i) {
+    //Values in our hypercube
     double nn[2][2][2][2][2];
+
+    //Derivatives in our hypercube
+    double dthp[2][2][2][2][2];
+    double dwfr[2][2][2][2][2];
+    double dgfr[2][2][2][2][2];
+    double dalq[2][2][2][2][2];
+    double dflo[2][2][2][2][2];
 
     //Pick out nearest neighbors (nn) to our evaluation point
     //This is not really required, but performance-wise it may pay off, since the 32-elements
@@ -390,44 +402,98 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         }
     }
 
-    //Remove dimensions one by one
-    // Example: going from 3D to 2D to 1D, we start by interpolating along
-    // the z axis first, leaving a 2D problem. Then interpolating along the y
-    // axis, leaving a 1D, problem, etc.
-    double tf = flo_i.factor_;
-    for (int t=0; t<=1; ++t) {
-        for (int w=0; w<=1; ++w) {
-            for (int g=0; g<=1; ++g) {
-                for (int a=0; a<=1; ++a) {
-                    nn[t][w][g][a][0] = (1.0-tf)*nn[t][w][g][a][0] + tf*nn[t][w][g][a][1];
+    //Calculate derivatives
+    for (int i=0; i<=1; ++i) {
+        for (int j=0; j<=1; ++j) {
+            for (int k=0; k<=1; ++k) {
+                for (int l=0; l<=1; ++l) {
+                    dthp[0][i][j][k][l] = nn[1][i][j][k][l] - nn[0][i][j][k][l];
+                    dwfr[i][0][j][k][l] = nn[i][1][j][k][l] - nn[i][0][j][k][l];
+                    dgfr[i][j][0][k][l] = nn[i][j][1][k][l] - nn[i][j][0][k][l];
+                    dalq[i][j][k][0][l] = nn[i][j][k][1][l] - nn[i][j][k][0][l];
+                    dflo[i][j][k][l][0] = nn[i][j][k][l][1] - nn[i][j][k][l][0];
+
+                    //For simplicity of the rest of the interpolation code,
+                    //we copy the derivatives in the full hypercube
+                    dthp[1][i][j][k][l] = dthp[0][i][j][k][l];
+                    dwfr[i][1][j][k][l] = dwfr[i][0][j][k][l];
+                    dgfr[i][j][1][k][l] = dgfr[i][j][0][k][l];
+                    dalq[i][j][k][1][l] = dalq[i][j][k][0][l];
+                    dflo[i][j][k][l][1] = dflo[i][j][k][l][0];
                 }
             }
         }
     }
 
-    tf = alq_i.factor_;
+    double a, b; //interpolation variables, so that a = (1-t) and b = t.
+
+    //Remove dimensions one by one
+    // Example: going from 3D to 2D to 1D, we start by interpolating along
+    // the z axis first, leaving a 2D problem. Then interpolating along the y
+    // axis, leaving a 1D, problem, etc.
+    b = flo_i.factor_;
+    a = (1.0-b);
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
-                nn[t][w][g][0][0] = (1.0-tf)*nn[t][w][g][0][0] + tf*nn[t][w][g][1][0];
+                for (int a=0; a<=1; ++a) {
+                    nn[t][w][g][a][0] = a*nn[t][w][g][a][0] + b*nn[t][w][g][a][1];
+
+                    dthp[t][w][g][a][0] = a*dthp[t][w][g][a][0] + b*dthp[t][w][g][a][1];
+                    dwfr[t][w][g][a][0] = a*dwfr[t][w][g][a][0] + b*dwfr[t][w][g][a][1];
+                    dgfr[t][w][g][a][0] = a*dgfr[t][w][g][a][0] + b*dgfr[t][w][g][a][1];
+                    dalq[t][w][g][a][0] = a*dalq[t][w][g][a][0] + b*dalq[t][w][g][a][1];
+                    dflo[t][w][g][a][0] = a*dflo[t][w][g][a][0] + b*dflo[t][w][g][a][1];
+                }
             }
         }
     }
 
-    tf = gfr_i.factor_;
+    b = alq_i.factor_;
+    a = (1.0-b);
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
-            nn[t][w][0][0][0] = (1.0-tf)*nn[t][w][0][0][0] + tf*nn[t][w][1][0][0];
+            for (int g=0; g<=1; ++g) {
+                nn[t][w][g][0][0] = a*nn[t][w][g][0][0] + b*nn[t][w][g][1][0];
+
+                dthp[t][w][g][0][0] = a*dthp[t][w][g][0][0] + b*dthp[t][w][g][1][0];
+                dwfr[t][w][g][0][0] = a*dwfr[t][w][g][0][0] + b*dwfr[t][w][g][1][0];
+                dgfr[t][w][g][0][0] = a*dgfr[t][w][g][0][0] + b*dgfr[t][w][g][1][0];
+                dalq[t][w][g][0][0] = a*dalq[t][w][g][0][0] + b*dalq[t][w][g][1][0];
+                dflo[t][w][g][0][0] = a*dflo[t][w][g][0][0] + b*dflo[t][w][g][1][0];
+            }
         }
     }
 
-    tf = wfr_i.factor_;
+    b = gfr_i.factor_;
+    a = (1.0-b);
     for (int t=0; t<=1; ++t) {
-        nn[t][0][0][0][0] = (1.0-tf)*nn[t][0][0][0][0] + tf*nn[t][1][0][0][0];
+        for (int w=0; w<=1; ++w) {
+            nn[t][w][0][0][0] = a*nn[t][w][0][0][0] + b*nn[t][w][1][0][0];
+
+            dthp[t][w][0][0][0] = a*dthp[t][w][0][0][0] + b*dthp[t][w][1][0][0];
+            dwfr[t][w][0][0][0] = a*dwfr[t][w][0][0][0] + b*dwfr[t][w][1][0][0];
+            dgfr[t][w][0][0][0] = a*dgfr[t][w][0][0][0] + b*dgfr[t][w][1][0][0];
+            dalq[t][w][0][0][0] = a*dalq[t][w][0][0][0] + b*dalq[t][w][1][0][0];
+            dflo[t][w][0][0][0] = a*dflo[t][w][0][0][0] + b*dflo[t][w][1][0][0];
+        }
     }
 
-    tf = thp_i.factor_;
-    return (1.0-tf)*nn[0][0][0][0][0] + tf*nn[1][0][0][0][0];
+    b = wfr_i.factor_;
+    a = (1.0-b);
+    for (int t=0; t<=1; ++t) {
+        nn[t][0][0][0][0] = a*nn[t][0][0][0][0] + b*nn[t][1][0][0][0];
+
+        dthp[t][0][0][0][0] = a*dthp[t][0][0][0][0] + b*dthp[t][1][0][0][0];
+        dwfr[t][0][0][0][0] = a*dwfr[t][0][0][0][0] + b*dwfr[t][1][0][0][0];
+        dgfr[t][0][0][0][0] = a*dgfr[t][0][0][0][0] + b*dgfr[t][1][0][0][0];
+        dalq[t][0][0][0][0] = a*dalq[t][0][0][0][0] + b*dalq[t][1][0][0][0];
+        dflo[t][0][0][0][0] = a*dflo[t][0][0][0][0] + b*dflo[t][1][0][0][0];
+    }
+
+    b = thp_i.factor_;
+    a = (1.0-b);
+    return a*nn[0][0][0][0][0] + b*nn[1][0][0][0][0];
 }
 
 #ifdef __GNUC__
