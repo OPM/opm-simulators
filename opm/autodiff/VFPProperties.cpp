@@ -361,21 +361,53 @@ VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& 
 #pragma GCC optimize ("unroll-loops")
 #endif
 
+namespace detail {
+
+    //An "ADB-like" structure with a value and a set of derivatives
+    //Just defined to make sure that operator+ and operator* do the
+    //correct thing for the use in this function
+    //Wastes some space (AoS versus SoA), but resulting code is easier to read and maintain
+    struct adb_like {
+        adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+        double value;
+        double dthp;
+        double dwfr;
+        double dgfr;
+        double dalq;
+        double dflo;
+    };
+
+    adb_like operator+(adb_like lhs, const adb_like& rhs) {
+        lhs.value += rhs.value;
+        lhs.dthp += rhs.dthp;
+        lhs.dwfr += rhs.dwfr;
+        lhs.dgfr += rhs.dgfr;
+        lhs.dalq += rhs.dalq;
+        lhs.dflo += rhs.dflo;
+        return lhs;
+    }
+
+    adb_like operator*(double lhs, adb_like rhs) {
+        rhs.value *= lhs;
+        rhs.dthp *= lhs;
+        rhs.dwfr *= lhs;
+        rhs.dgfr *= lhs;
+        rhs.dalq *= lhs;
+        rhs.dflo *= lhs;
+        return rhs;
+    }
+}
+
 double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
         const InterpData& wfr_i,
         const InterpData& gfr_i,
         const InterpData& alq_i) {
-    //Values in our hypercube
-    double nn[2][2][2][2][2];
 
-    //Derivatives in our hypercube
-    double dthp[2][2][2][2][2];
-    double dwfr[2][2][2][2][2];
-    double dgfr[2][2][2][2][2];
-    double dalq[2][2][2][2][2];
-    double dflo[2][2][2][2][2];
+    //Values and derivatives in a 5D hypercube
+    detail::adb_like nn[2][2][2][2][2];
+
 
     //Pick out nearest neighbors (nn) to our evaluation point
     //This is not really required, but performance-wise it may pay off, since the 32-elements
@@ -395,7 +427,7 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
                         const int fi = flo_i.ind_[f];
 
                         //Copy element
-                        nn[t][w][g][a][f] = array[ti][wi][gi][ai][fi];
+                        nn[t][w][g][a][f].value = array[ti][wi][gi][ai][fi];
                     }
                 }
             }
@@ -403,23 +435,23 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
     }
 
     //Calculate derivatives
+    //Note that the derivative of the two end points of a line aligned with the
+    //"axis of the derivative" are equal
     for (int i=0; i<=1; ++i) {
         for (int j=0; j<=1; ++j) {
             for (int k=0; k<=1; ++k) {
                 for (int l=0; l<=1; ++l) {
-                    dthp[0][i][j][k][l] = nn[1][i][j][k][l] - nn[0][i][j][k][l];
-                    dwfr[i][0][j][k][l] = nn[i][1][j][k][l] - nn[i][0][j][k][l];
-                    dgfr[i][j][0][k][l] = nn[i][j][1][k][l] - nn[i][j][0][k][l];
-                    dalq[i][j][k][0][l] = nn[i][j][k][1][l] - nn[i][j][k][0][l];
-                    dflo[i][j][k][l][0] = nn[i][j][k][l][1] - nn[i][j][k][l][0];
+                    nn[0][i][j][k][l].dthp = nn[1][i][j][k][l].value - nn[0][i][j][k][l].value;
+                    nn[i][0][j][k][l].dwfr = nn[i][1][j][k][l].value - nn[i][0][j][k][l].value;
+                    nn[i][j][0][k][l].dgfr = nn[i][j][1][k][l].value - nn[i][j][0][k][l].value;
+                    nn[i][j][k][0][l].dalq = nn[i][j][k][1][l].value - nn[i][j][k][0][l].value;
+                    nn[i][j][k][l][0].dflo = nn[i][j][k][l][1].value - nn[i][j][k][l][0].value;
 
-                    //For simplicity of the rest of the interpolation code,
-                    //we copy the derivatives in the full hypercube
-                    dthp[1][i][j][k][l] = dthp[0][i][j][k][l];
-                    dwfr[i][1][j][k][l] = dwfr[i][0][j][k][l];
-                    dgfr[i][j][1][k][l] = dgfr[i][j][0][k][l];
-                    dalq[i][j][k][1][l] = dalq[i][j][k][0][l];
-                    dflo[i][j][k][l][1] = dflo[i][j][k][l][0];
+                    nn[1][i][j][k][l].dthp = nn[0][i][j][k][l].dthp;
+                    nn[i][1][j][k][l].dwfr = nn[i][0][j][k][l].dwfr;
+                    nn[i][j][1][k][l].dgfr = nn[i][j][0][k][l].dgfr;
+                    nn[i][j][k][1][l].dalq = nn[i][j][k][0][l].dalq;
+                    nn[i][j][k][l][1].dflo = nn[i][j][k][l][0].dflo;
                 }
             }
         }
@@ -438,12 +470,6 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
             for (int g=0; g<=1; ++g) {
                 for (int a=0; a<=1; ++a) {
                     nn[t][w][g][a][0] = a*nn[t][w][g][a][0] + b*nn[t][w][g][a][1];
-
-                    dthp[t][w][g][a][0] = a*dthp[t][w][g][a][0] + b*dthp[t][w][g][a][1];
-                    dwfr[t][w][g][a][0] = a*dwfr[t][w][g][a][0] + b*dwfr[t][w][g][a][1];
-                    dgfr[t][w][g][a][0] = a*dgfr[t][w][g][a][0] + b*dgfr[t][w][g][a][1];
-                    dalq[t][w][g][a][0] = a*dalq[t][w][g][a][0] + b*dalq[t][w][g][a][1];
-                    dflo[t][w][g][a][0] = a*dflo[t][w][g][a][0] + b*dflo[t][w][g][a][1];
                 }
             }
         }
@@ -455,12 +481,6 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
                 nn[t][w][g][0][0] = a*nn[t][w][g][0][0] + b*nn[t][w][g][1][0];
-
-                dthp[t][w][g][0][0] = a*dthp[t][w][g][0][0] + b*dthp[t][w][g][1][0];
-                dwfr[t][w][g][0][0] = a*dwfr[t][w][g][0][0] + b*dwfr[t][w][g][1][0];
-                dgfr[t][w][g][0][0] = a*dgfr[t][w][g][0][0] + b*dgfr[t][w][g][1][0];
-                dalq[t][w][g][0][0] = a*dalq[t][w][g][0][0] + b*dalq[t][w][g][1][0];
-                dflo[t][w][g][0][0] = a*dflo[t][w][g][0][0] + b*dflo[t][w][g][1][0];
             }
         }
     }
@@ -470,12 +490,6 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             nn[t][w][0][0][0] = a*nn[t][w][0][0][0] + b*nn[t][w][1][0][0];
-
-            dthp[t][w][0][0][0] = a*dthp[t][w][0][0][0] + b*dthp[t][w][1][0][0];
-            dwfr[t][w][0][0][0] = a*dwfr[t][w][0][0][0] + b*dwfr[t][w][1][0][0];
-            dgfr[t][w][0][0][0] = a*dgfr[t][w][0][0][0] + b*dgfr[t][w][1][0][0];
-            dalq[t][w][0][0][0] = a*dalq[t][w][0][0][0] + b*dalq[t][w][1][0][0];
-            dflo[t][w][0][0][0] = a*dflo[t][w][0][0][0] + b*dflo[t][w][1][0][0];
         }
     }
 
@@ -483,17 +497,11 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
     a = (1.0-b);
     for (int t=0; t<=1; ++t) {
         nn[t][0][0][0][0] = a*nn[t][0][0][0][0] + b*nn[t][1][0][0][0];
-
-        dthp[t][0][0][0][0] = a*dthp[t][0][0][0][0] + b*dthp[t][1][0][0][0];
-        dwfr[t][0][0][0][0] = a*dwfr[t][0][0][0][0] + b*dwfr[t][1][0][0][0];
-        dgfr[t][0][0][0][0] = a*dgfr[t][0][0][0][0] + b*dgfr[t][1][0][0][0];
-        dalq[t][0][0][0][0] = a*dalq[t][0][0][0][0] + b*dalq[t][1][0][0][0];
-        dflo[t][0][0][0][0] = a*dflo[t][0][0][0][0] + b*dflo[t][1][0][0][0];
     }
 
     b = thp_i.factor_;
     a = (1.0-b);
-    return a*nn[0][0][0][0][0] + b*nn[1][0][0][0][0];
+    return a*nn[0][0][0][0][0].value + b*nn[1][0][0][0][0].value;
 }
 
 #ifdef __GNUC__
