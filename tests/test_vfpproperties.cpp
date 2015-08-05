@@ -291,7 +291,9 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(1, v, x, y, z, u);
+                        const double value = properties->bhp(1, v, x, y, z, u);
+
+                        sum += value;
                     }
                 }
             }

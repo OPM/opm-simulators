@@ -387,14 +387,15 @@ namespace detail {
         return lhs;
     }
 
-    adb_like operator*(double lhs, adb_like rhs) {
-        rhs.value *= lhs;
-        rhs.dthp *= lhs;
-        rhs.dwfr *= lhs;
-        rhs.dgfr *= lhs;
-        rhs.dalq *= lhs;
-        rhs.dflo *= lhs;
-        return rhs;
+    adb_like operator*(double lhs, const adb_like& rhs) {
+        adb_like retval;
+        retval.value = rhs.value * lhs;
+        retval.dthp = rhs.dthp * lhs;
+        retval.dwfr = rhs.dwfr * lhs;
+        retval.dgfr = rhs.dgfr * lhs;
+        retval.dalq = rhs.dalq * lhs;
+        retval.dflo = rhs.dflo * lhs;
+        return retval;
     }
 }
 
@@ -457,51 +458,51 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         }
     }
 
-    double a, b; //interpolation variables, so that a = (1-t) and b = t.
+    double t1, t2; //interpolation variables, so that a = (1-t) and b = t.
 
     //Remove dimensions one by one
     // Example: going from 3D to 2D to 1D, we start by interpolating along
     // the z axis first, leaving a 2D problem. Then interpolating along the y
     // axis, leaving a 1D, problem, etc.
-    b = flo_i.factor_;
-    a = (1.0-b);
+    t2 = flo_i.factor_;
+    t1 = (1.0-t2);
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
                 for (int a=0; a<=1; ++a) {
-                    nn[t][w][g][a][0] = a*nn[t][w][g][a][0] + b*nn[t][w][g][a][1];
+                    nn[t][w][g][a][0] = t1*nn[t][w][g][a][0] + t2*nn[t][w][g][a][1];
                 }
             }
         }
     }
 
-    b = alq_i.factor_;
-    a = (1.0-b);
+    t2 = alq_i.factor_;
+    t1 = (1.0-t2);
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
             for (int g=0; g<=1; ++g) {
-                nn[t][w][g][0][0] = a*nn[t][w][g][0][0] + b*nn[t][w][g][1][0];
+                nn[t][w][g][0][0] = t1*nn[t][w][g][0][0] + t2*nn[t][w][g][1][0];
             }
         }
     }
 
-    b = gfr_i.factor_;
-    a = (1.0-b);
+    t2 = gfr_i.factor_;
+    t1 = (1.0-t2);
     for (int t=0; t<=1; ++t) {
         for (int w=0; w<=1; ++w) {
-            nn[t][w][0][0][0] = a*nn[t][w][0][0][0] + b*nn[t][w][1][0][0];
+            nn[t][w][0][0][0] = t1*nn[t][w][0][0][0] + t2*nn[t][w][1][0][0];
         }
     }
 
-    b = wfr_i.factor_;
-    a = (1.0-b);
+    t2 = wfr_i.factor_;
+    t1 = (1.0-t2);
     for (int t=0; t<=1; ++t) {
-        nn[t][0][0][0][0] = a*nn[t][0][0][0][0] + b*nn[t][1][0][0][0];
+        nn[t][0][0][0][0] = t1*nn[t][0][0][0][0] + t2*nn[t][1][0][0][0];
     }
 
-    b = thp_i.factor_;
-    a = (1.0-b);
-    return a*nn[0][0][0][0][0].value + b*nn[1][0][0][0][0].value;
+    t2 = thp_i.factor_;
+    t1 = (1.0-t2);
+    return t1*nn[0][0][0][0][0].value + t2*nn[1][0][0][0][0].value;
 }
 
 #ifdef __GNUC__
