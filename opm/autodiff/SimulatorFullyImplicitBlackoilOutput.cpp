@@ -241,11 +241,11 @@ namespace Opm
     {
         // VTK output
         if( vtkWriter_ ) {
-            vtkWriter_->writeTimeStep( timer, state, wellState );
+            vtkWriter_->writeTimeStep( timer, state, wellState , false );
         }
         // Matlab output
         if( matlabWriter_ ) {
-            matlabWriter_->writeTimeStep( timer, state, wellState );
+            matlabWriter_->writeTimeStep( timer, state, wellState , false );
         }
         // ECL output
         if ( eclWriter_ ) {
