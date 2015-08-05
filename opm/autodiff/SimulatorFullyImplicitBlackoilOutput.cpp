@@ -236,19 +236,20 @@ namespace Opm
     BlackoilOutputWriter::
     writeTimeStep(const SimulatorTimerInterface& timer,
                   const SimulatorState& state,
-                  const WellState& wellState)
+                  const WellState& wellState,
+                  bool substep)
     {
         // VTK output
         if( vtkWriter_ ) {
-            vtkWriter_->writeTimeStep( timer, state, wellState );
+            vtkWriter_->writeTimeStep( timer, state, wellState , false );
         }
         // Matlab output
         if( matlabWriter_ ) {
-            matlabWriter_->writeTimeStep( timer, state, wellState );
+            matlabWriter_->writeTimeStep( timer, state, wellState , false );
         }
         // ECL output
         if ( eclWriter_ ) {
-            eclWriter_->writeTimeStep(timer, state, wellState);
+            eclWriter_->writeTimeStep(timer, state, wellState, substep);
         }
         // write backup file
         if( backupfile_ )
