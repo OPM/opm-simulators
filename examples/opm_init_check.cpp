@@ -31,6 +31,7 @@
 #include <ert/ecl/ecl_nnc_export.h>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
@@ -344,9 +345,10 @@ int main(int argc, char** argv) {
     
     ParserPtr parser(new Parser());
 
+    ParseMode parseMode;
     std::cout << "Parsing input file ............: " << input_file << std::endl;
-    DeckConstPtr deck = parser->parseFile(input_file);
-    std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( deck );
+    DeckConstPtr deck = parser->parseFile(input_file, parseMode);
+    std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( deck , parseMode );
     
     std::cout << "Loading eclipse INIT file .....: " << init_file << std::endl;
     ecl_file_type * ecl_init = ecl_file_open( init_file.c_str() , 0 );
