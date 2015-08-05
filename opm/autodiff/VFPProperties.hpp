@@ -280,9 +280,10 @@ private:
      * Helper struct for linear interpolation
      */
     struct InterpData {
-        InterpData() : ind_{0, 0}, factor_(0.0) {}
+        InterpData() : ind_{0, 0}, inv_dist_(0.0), factor_(0.0) {}
         int ind_[2]; //[First element greater than or equal to value, Last element smaller than or equal to value]
-        double factor_; //Interpolation factor
+        double inv_dist_; // 1 / distance between the two end points of the segment. Used to calculate derivatives and uses 1.0 / 0.0 = 0.0 as a convention
+        double factor_; // Interpolation factor
     };
 
     /**

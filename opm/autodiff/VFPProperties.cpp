@@ -324,6 +324,7 @@ VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& 
     if (values.size() == 1) {
         retval.ind_[0] = 0;
         retval.ind_[1] = 0;
+        retval.inv_dist_ = 0.0;
         retval.factor_ = 0.0;
     }
     // Else search in the vector
@@ -345,9 +346,11 @@ VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& 
         if (std::abs(dist) > 0.0) {
             //Possible source for floating point error here if value and floor are large,
             //but very close to each other
-            retval.factor_ = (value-*floor_iter) / dist;
+            retval.inv_dist_ = 1.0 / dist;
+            retval.factor_ = (value-*floor_iter) * retval.inv_dist_;
         }
         else {
+            retval.inv_dist_ = 0.0;
             retval.factor_ = 0.0;
         }
     }
@@ -442,11 +445,11 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         for (int j=0; j<=1; ++j) {
             for (int k=0; k<=1; ++k) {
                 for (int l=0; l<=1; ++l) {
-                    nn[0][i][j][k][l].dthp = nn[1][i][j][k][l].value - nn[0][i][j][k][l].value;
-                    nn[i][0][j][k][l].dwfr = nn[i][1][j][k][l].value - nn[i][0][j][k][l].value;
-                    nn[i][j][0][k][l].dgfr = nn[i][j][1][k][l].value - nn[i][j][0][k][l].value;
-                    nn[i][j][k][0][l].dalq = nn[i][j][k][1][l].value - nn[i][j][k][0][l].value;
-                    nn[i][j][k][l][0].dflo = nn[i][j][k][l][1].value - nn[i][j][k][l][0].value;
+                    nn[0][i][j][k][l].dthp = (nn[1][i][j][k][l].value - nn[0][i][j][k][l].value) * thp_i.inv_dist_;
+                    nn[i][0][j][k][l].dwfr = (nn[i][1][j][k][l].value - nn[i][0][j][k][l].value) * wfr_i.inv_dist_;
+                    nn[i][j][0][k][l].dgfr = (nn[i][j][1][k][l].value - nn[i][j][0][k][l].value) * gfr_i.inv_dist_;
+                    nn[i][j][k][0][l].dalq = (nn[i][j][k][1][l].value - nn[i][j][k][0][l].value) * alq_i.inv_dist_;
+                    nn[i][j][k][l][0].dflo = (nn[i][j][k][l][1].value - nn[i][j][k][l][0].value) * flo_i.inv_dist_;
 
                     nn[1][i][j][k][l].dthp = nn[0][i][j][k][l].dthp;
                     nn[i][1][j][k][l].dwfr = nn[i][0][j][k][l].dwfr;
