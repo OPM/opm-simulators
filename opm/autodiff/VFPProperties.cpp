@@ -123,6 +123,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
         const ADB& vapour,
         const ADB& thp,
         const ADB& alq) const {
+    const VFPProdTable* table = getProdTable(table_id);
     const int nw = thp.size();
 
     assert(aqua.size()   == nw);
@@ -140,14 +141,22 @@ VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
     dalq.resize(nw);
     dflo.resize(nw);
 
+    //Find interpolation variables
+    ADB flo = getFlo(aqua, liquid, vapour, table->getFloType());
+    ADB wfr = getWFR(aqua, liquid, vapour, table->getWFRType());
+    ADB gfr = getGFR(aqua, liquid, vapour, table->getGFRType());
+
     //Compute the BHP for each well independently
     for (int i=0; i<nw; ++i) {
-        adb_like bhp_val = bhp(table_id,
-                aqua.value()[i],
-                liquid.value()[i],
-                vapour.value()[i],
-                thp.value()[i],
-                alq.value()[i]);
+        //First, find the values to interpolate between
+        auto flo_i = find_interp_data(flo.value()[i], table->getFloAxis());
+        auto thp_i = find_interp_data(thp.value()[i], table->getTHPAxis());
+        auto wfr_i = find_interp_data(wfr.value()[i], table->getWFRAxis());
+        auto gfr_i = find_interp_data(gfr.value()[i], table->getGFRAxis());
+        auto alq_i = find_interp_data(alq.value()[i], table->getALQAxis());
+
+        adb_like bhp_val = interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+
         value[i] = bhp_val.value;
         dthp[i] = bhp_val.dthp;
         dwfr[i] = bhp_val.dwfr;
@@ -167,10 +176,13 @@ VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
     const int num_blocks = aqua.numBlocks();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
-        fastSparseProduct(dthp_diag, aqua.derivative()[block], jacs[block]);
-        ADB::M temp;
-        fastSparseProduct(dwfr_diag, liquid.derivative()[block], temp);
-        jacs[block] += temp;
+        //Could have used fastSparseProduct and temporary variables
+        //but may not save too much on that.
+        jacs[block] = dthp_diag * thp.derivative()[block] +
+                dwfr_diag * wfr.derivative()[block] +
+                dgfr_diag * gfr.derivative()[block] +
+                dalq_diag * alq.derivative()[block] +
+                dflo_diag * flo.derivative()[block];
     }
 
     ADB retval = ADB::function(std::move(value), std::move(jacs));

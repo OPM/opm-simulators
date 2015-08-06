@@ -1347,13 +1347,9 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
 
-        const ADB& aqua_adb   = subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
-        const ADB& liquid_adb = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
-        const ADB& vapour_adb = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
-
-        const V& aqua = aqua_adb.value();
-        const V& liquid = liquid_adb.value();
-        const V& vapour = vapour_adb.value();
+        const ADB& aqua   = subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+        const ADB& liquid = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+        const ADB& vapour = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
         V bhp_targets  = V::Zero(nw);
         V rate_targets = V::Zero(nw);
@@ -1379,7 +1375,7 @@ namespace detail {
                 const double& thp    = well_controls_iget_target(wc, current);
                 const double& alq    = well_controls_iget_alq(wc, current);
 
-                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq).value;
+                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua.value()[w], liquid.value()[w], vapour.value()[w], thp, alq).value;
                 rate_targets(w) = -1e100;
             }
             break;

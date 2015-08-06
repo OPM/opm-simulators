@@ -23,6 +23,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
 #include <boost/multi_array.hpp>
@@ -235,25 +236,22 @@ public:
     template <typename T>
     static T getWFR(const T& aqua, const T& liquid, const T& vapour,
                       const VFPProdTable::WFR_TYPE& type) {
-        T retval;
         switch(type) {
-            case VFPProdTable::WFR_WOR:
+            case VFPProdTable::WFR_WOR: {
                 //Water-oil ratio = water / oil
-                retval = aqua / liquid;
-                break;
+                T wor = aqua / liquid;
+                return zeroIfNan(wor);
+            }
             case VFPProdTable::WFR_WCT:
                 //Water cut = water / (water + oil)
-                retval = aqua / (aqua + liquid);
-                break;
+                return zeroIfNan(aqua / (aqua + liquid));
             case VFPProdTable::WFR_WGR:
                 //Water-gas ratio = water / gas
-                retval = aqua / vapour;
-                break;
+                return zeroIfNan(aqua / vapour);
             case VFPProdTable::WFR_INVALID: //Intentional fall-through
             default:
                 OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
         }
-        return zeroIfNan(retval);
     }
 
     /**
@@ -263,25 +261,20 @@ public:
     template <typename T>
     static T getGFR(const T& aqua, const T& liquid, const T& vapour,
                       const VFPProdTable::GFR_TYPE& type) {
-        T retval;
         switch(type) {
             case VFPProdTable::GFR_GOR:
                 // Gas-oil ratio = gas / oil
-                retval = vapour / liquid;
-                break;
+                return zeroIfNan(vapour / liquid);
             case VFPProdTable::GFR_GLR:
                 // Gas-liquid ratio = gas / (oil + water)
-                retval = vapour / (liquid + aqua);
-                break;
+                return zeroIfNan(vapour / (liquid + aqua));
             case VFPProdTable::GFR_OGR:
                 // Oil-gas ratio = oil / gas
-                retval = liquid / vapour;
-                break;
+                return zeroIfNan(liquid / vapour);
             case VFPProdTable::GFR_INVALID: //Intentional fall-through
             default:
                 OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
         }
-        return zeroIfNan(retval);
     }
 
 
@@ -339,11 +332,13 @@ private:
         return (std::isnan(value)) ? 0.0 : value;
     }
 
-    static inline ADB::V zeroIfNan(const ADB::V& value) {
-        ADB::V retval(value.size());
-        for (int i=0; i<value.size(); ++i) {
-            retval[i] = zeroIfNan(value[i]);
-        }
+    static inline ADB zeroIfNan(const ADB& values) {
+        Selector<ADB::V::Scalar> not_nan_selector(values.value(), Selector<ADB::V::Scalar>::NotNaN);
+
+        const ADB::V z = ADB::V::Zero(values.size());
+        const ADB zero = ADB::constant(z, values.blockPattern());
+
+        ADB retval = not_nan_selector.select(values, zero);
         return retval;
     }
 };
@@ -387,6 +382,6 @@ inline VFPProdProperties::adb_like operator*(
     return retval;
 }
 
-}
+} //Namespace
 
 #endif /* OPM_AUTODIFF_VFPPROPERTIES_HPP_ */
