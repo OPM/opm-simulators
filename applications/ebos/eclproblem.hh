@@ -1018,7 +1018,8 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Scalar pc[numPhases];
+            Scalar pc[numPhases] = { 0 };
+
             const auto& matParams = materialLawParams_(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(oilPressure);
