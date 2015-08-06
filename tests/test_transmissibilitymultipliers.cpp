@@ -104,8 +104,7 @@ std::string deckPostMult =
     "8*1 /\n"
     "SCHEDULE\n"
     "TSTEP\n"
-    "1.0 2.0 3.0 4.0 /\n"
-    "/\n";
+    "1.0 2.0 3.0 4.0 /\n";
 
 std::string origDeckString = deckPreMult + deckPostMult;
 std::string multDeckString =
