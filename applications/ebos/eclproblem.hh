@@ -1130,9 +1130,7 @@ private:
 
     const MaterialLawParams& materialLawParams_(int globalDofIdx) const
     {
-        int cartesianCellIdx = this->simulator().gridManager().cartesianCellId(globalDofIdx);
-
-        return materialLawManager_.materialLawParams(cartesianCellIdx);
+        return materialLawManager_.materialLawParams(globalDofIdx);
     }
 
     // update the hysteresis parameters of the material laws for the whole grid
