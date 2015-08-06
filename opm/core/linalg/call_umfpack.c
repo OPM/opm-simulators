@@ -42,6 +42,11 @@
 #include <opm/core/linalg/sparse_sys.h>
 #include <opm/core/linalg/call_umfpack.h>
 
+/* To handle new versions of SuiteSparse. */
+#ifndef UF_long
+#define UF_long SuiteSparse_long
+#endif
+
 struct CSCMatrix {
     UF_long  n;
     UF_long  nnz;
