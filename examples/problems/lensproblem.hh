@@ -372,6 +372,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
+        /*
         this->model().checkConservativeness();
 
         // Calculate storage terms
@@ -382,6 +383,7 @@ public:
         if (this->gridView().comm().rank() == 0) {
             std::cout << "Storage: " << storage << std::endl << std::flush;
         }
+        */
 #endif // NDEBUG
     }
 
