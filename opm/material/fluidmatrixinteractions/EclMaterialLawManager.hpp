@@ -109,32 +109,39 @@ public:
     {}
 
     void initFromDeck(Opm::DeckConstPtr deck,
-                      Opm::EclipseStateConstPtr eclState)
+                      Opm::EclipseStateConstPtr eclState,
+                      const std::vector<int>& compressedToCartesianElemIdx)
     {
+        compressedToCartesianElemIdx_ = compressedToCartesianElemIdx;
         // get the number of saturation regions and the number of cells in the deck
         int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        int numCartesianElements = eclState->getEclipseGrid()->getCartesianSize();
+        unsigned numCompressedElems = compressedToCartesianElemIdx.size();;
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
-        if (eclState->hasIntGridProperty("SATNUM"))
-            satnumData_ = eclState->getIntGridProperty("SATNUM")->getData();
+        satnumRegionIdx_.resize(numCompressedElems);
+        if (eclState->hasIntGridProperty("SATNUM")) {
+            const auto& satnumRawData = eclState->getIntGridProperty("SATNUM")->getData();
+            for (int elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                int cartesianElemIdx = compressedToCartesianElemIdx_[elemIdx];
+                satnumRegionIdx_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
+            }
+        }
         else
-            satnumData_.resize(numCartesianElements, 1);
+            std::fill(satnumRegionIdx_.begin(), satnumRegionIdx_.end(), 0);
 
         readGlobalEpsOptions_(deck, eclState);
         readGlobalHysteresisOptions_(deck);
         readGlobalThreePhaseOptions_(deck);
 
         unscaledEpsInfo_.resize(numSatRegions);
-        for (int satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
-        }
+        for (int satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx)
+            unscaledEpsInfo_[satnumRegionIdx].extractUnscaled(deck, eclState, satnumRegionIdx);
 
         if (!hasElementSpecificParameters())
-            initNonCellSpecific_(deck, eclState);
+            initNonElemSpecific_(deck, eclState);
         else
-            initCellSpecific_(deck, eclState);
+            initElemSpecific_(deck, eclState);
     }
 
     /*!
@@ -145,17 +152,17 @@ public:
      * that the capillary pressure given depends on the particuars of how the simulator
      * calculates its initial condition.
      */
-    Scalar applySwatinit(int cartesianCellIdx,
+    Scalar applySwatinit(int elemIdx,
                          Scalar pcow,
                          Scalar Sw)
     {
-        auto& cellScaledEpsInfo = *oilWaterScaledEpsInfoDrainage_[cartesianCellIdx];
+        auto& elemScaledEpsInfo = *oilWaterScaledEpsInfoDrainage_[elemIdx];
 
         // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
-        if (Sw <= cellScaledEpsInfo.Swl)
-            Sw = cellScaledEpsInfo.Swl;
+        if (Sw <= elemScaledEpsInfo.Swl)
+            Sw = elemScaledEpsInfo.Swl;
         else if (pcow < 0.0)
-            Sw = cellScaledEpsInfo.Swu;
+            Sw = elemScaledEpsInfo.Swu;
         else {
             // specify a fluid state which only stores the saturations
             typedef Opm::SimpleModularFluidState<Scalar,
@@ -175,13 +182,13 @@ public:
             fs.setSaturation(gasPhaseIdx, 0);
             fs.setSaturation(oilPhaseIdx, 0);
             Scalar pc[numPhases];
-            MaterialLaw::capillaryPressures(pc, materialLawParams(cartesianCellIdx), fs);
+            MaterialLaw::capillaryPressures(pc, materialLawParams(elemIdx), fs);
 
             Scalar pcowAtSw = pc[oilPhaseIdx] - pc[waterPhaseIdx];
             if (pcowAtSw > 0.0) {
-                cellScaledEpsInfo.maxPcow *= pcow/pcowAtSw;
-                auto& cellEclEpsScalingPoints = *oilWaterScaledEpsPointsDrainage_[cartesianCellIdx];
-                cellEclEpsScalingPoints.init(cellScaledEpsInfo, *oilWaterEclEpsConfig_, Opm::EclOilWaterSystem);
+                elemScaledEpsInfo.maxPcow *= pcow/pcowAtSw;
+                auto& elemEclEpsScalingPoints = *oilWaterScaledEpsPointsDrainage_[elemIdx];
+                elemEclEpsScalingPoints.init(elemScaledEpsInfo, *oilWaterEclEpsConfig_, Opm::EclOilWaterSystem);
             }
         }
 
@@ -197,49 +204,48 @@ public:
     bool hasElementSpecificParameters() const
     { return enableEndPointScaling() || enableHysteresis(); }
 
-    MaterialLawParams& materialLawParams(int cartesianCellIdx)
+    MaterialLawParams& materialLawParams(int elemIdx)
     {
-        assert(0 <= cartesianCellIdx && cartesianCellIdx < (int) materialLawParams_.size());
+        assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
 
         int paramIdx;
         if (hasElementSpecificParameters())
-            paramIdx = cartesianCellIdx;
+            paramIdx = elemIdx;
         else
-            paramIdx = satnumData_[cartesianCellIdx] - 1;
+            paramIdx = satnumRegionIdx_[elemIdx];
 
         return *materialLawParams_[paramIdx];
     }
 
-    const MaterialLawParams& materialLawParams(int cartesianCellIdx) const
+    const MaterialLawParams& materialLawParams(int elemIdx) const
     {
-        assert(0 <= cartesianCellIdx && cartesianCellIdx < materialLawParams_.size());
+        assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
 
         int paramIdx;
         if (hasElementSpecificParameters())
-            paramIdx = cartesianCellIdx;
+            paramIdx = elemIdx;
         else
-            paramIdx = satnumData_[cartesianCellIdx] - 1;
+            paramIdx = satnumRegionIdx_[elemIdx];
 
         return *materialLawParams_[paramIdx];
     }
 
     template <class FluidState>
-    void updateHysteresis(const FluidState& fluidState, int cartesianCellIdx)
+    void updateHysteresis(const FluidState& fluidState, int elemIdx)
     {
         if (!enableHysteresis())
             return;
 
-        auto threePhaseParams = materialLawParams_[cartesianCellIdx];
+        auto threePhaseParams = materialLawParams_[elemIdx];
         MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
     }
 
-    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(int cartesianCellIdx) const
+    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(int elemIdx) const
     {
         if (hasElementSpecificParameters())
-            return *oilWaterScaledEpsInfoDrainage_[cartesianCellIdx];
+            return *oilWaterScaledEpsInfoDrainage_[elemIdx];
 
-        int satRegionIdx = satnumData_[cartesianCellIdx] - 1;
-        return unscaledEpsInfo_[satRegionIdx];
+        return unscaledEpsInfo_[satnumRegionIdx_[elemIdx]];
     }
 
 private:
@@ -292,10 +298,10 @@ private:
             threePhaseApproach_ = Opm::EclStone1Approach;
     }
 
-    void initNonCellSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initNonElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        int numCartesianElements = eclState->getEclipseGrid()->getCartesianSize();
+        unsigned numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
+        unsigned numCompressedElems = compressedToCartesianElemIdx_.size();;
 
         GasOilEffectiveParamVector gasOilEffectiveParamVector(numSatRegions);
         OilWaterEffectiveParamVector oilWaterEffectiveParamVector(numSatRegions);
@@ -303,64 +309,64 @@ private:
         OilWaterParamVector oilWaterParams(numSatRegions);
         MaterialLawParamsVector satRegionParams(numSatRegions);
         EclEpsScalingPointsInfo<Scalar> dummyInfo;
-        for (int satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+        for (int satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satRegionIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satRegionIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satnumRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satnumRegionIdx);
 
             auto gasOilDrainParams = std::make_shared<GasOilEpsTwoPhaseParams>();
             gasOilDrainParams->setConfig(oilWaterEclEpsConfig_);
-            gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satRegionIdx]);
+            gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satnumRegionIdx]);
             gasOilDrainParams->finalize();
 
-            gasOilParams[satRegionIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
-            gasOilParams[satRegionIdx]->setConfig(hysteresisConfig_);
-            gasOilParams[satRegionIdx]->setDrainageParams(gasOilDrainParams, dummyInfo, Opm::EclGasOilSystem);
-            gasOilParams[satRegionIdx]->finalize();
+            gasOilParams[satnumRegionIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
+            gasOilParams[satnumRegionIdx]->setConfig(hysteresisConfig_);
+            gasOilParams[satnumRegionIdx]->setDrainageParams(gasOilDrainParams, dummyInfo, Opm::EclGasOilSystem);
+            gasOilParams[satnumRegionIdx]->finalize();
 
             auto oilWaterDrainParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
             oilWaterDrainParams->setConfig(oilWaterEclEpsConfig_);
-            oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satRegionIdx]);
+            oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satnumRegionIdx]);
             oilWaterDrainParams->finalize();
 
-            oilWaterParams[satRegionIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
-            oilWaterParams[satRegionIdx]->setConfig(hysteresisConfig_);
-            oilWaterParams[satRegionIdx]->setDrainageParams(oilWaterDrainParams, dummyInfo, Opm::EclOilWaterSystem);
-            oilWaterParams[satRegionIdx]->finalize();
+            oilWaterParams[satnumRegionIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
+            oilWaterParams[satnumRegionIdx]->setConfig(hysteresisConfig_);
+            oilWaterParams[satnumRegionIdx]->setDrainageParams(oilWaterDrainParams, dummyInfo, Opm::EclOilWaterSystem);
+            oilWaterParams[satnumRegionIdx]->finalize();
 
             // create the parameter objects for the three-phase law. since we don't have
-            // cell specific data here, create one object per PVT region and let the
-            // material law parameters for a cell point to its corresponding PVT region object.
-            satRegionParams[satRegionIdx] = std::make_shared<MaterialLawParams>();
+            // elem specific data here, create one object per PVT region and let the
+            // material law parameters for a elem point to its corresponding PVT region object.
+            satRegionParams[satnumRegionIdx] = std::make_shared<MaterialLawParams>();
 
             // find the connate water saturation. this is pretty slow because it does a
             // lot of stuff which not needed, but for the moment it is fast enough
             // because the initialization is not performance critical
             EclEpsScalingPointsInfo<Scalar> epsInfo;
-            epsInfo.extractUnscaled(deck, eclState, satRegionIdx);
+            epsInfo.extractUnscaled(deck, eclState, satnumRegionIdx);
 
             initThreePhaseParams_(deck,
                                   eclState,
-                                  *satRegionParams[satRegionIdx],
-                                  satRegionIdx,
+                                  *satRegionParams[satnumRegionIdx],
+                                  satnumRegionIdx,
                                   epsInfo,
-                                  oilWaterParams[satRegionIdx],
-                                  gasOilParams[satRegionIdx]);
+                                  oilWaterParams[satnumRegionIdx],
+                                  gasOilParams[satnumRegionIdx]);
 
-            satRegionParams[satRegionIdx]->finalize();
+            satRegionParams[satnumRegionIdx]->finalize();
         }
 
-        materialLawParams_.resize(numCartesianElements);
-        for (int cartElemIdx = 0; cartElemIdx < numCartesianElements; ++cartElemIdx) {
-            int satRegionIdx = satnumData_[cartElemIdx] - 1;
-            materialLawParams_[cartElemIdx] = satRegionParams[satRegionIdx];
+        materialLawParams_.resize(numCompressedElems);
+        for (int elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
+            materialLawParams_[elemIdx] = satRegionParams[satnumRegionIdx];
         }
     }
 
-    void initCellSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
         unsigned numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        unsigned numCartesianElements = eclState->getEclipseGrid()->getCartesianSize();
+        unsigned numCompressedElems = compressedToCartesianElemIdx_.size();;
 
         // read the end point scaling configuration. this needs to be done only once per
         // deck.
@@ -374,168 +380,168 @@ private:
         OilWaterScalingPointsVector oilWaterUnscaledPointsVector(numSatRegions);
         GasOilEffectiveParamVector gasOilEffectiveParamVector(numSatRegions);
         OilWaterEffectiveParamVector oilWaterEffectiveParamVector(numSatRegions);
-        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+        for (unsigned satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
             // unscaled points for end-point scaling
-            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector, gasOilConfig, deck, eclState, satRegionIdx);
-            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector, oilWaterConfig, deck, eclState, satRegionIdx);
+            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector, gasOilConfig, deck, eclState, satnumRegionIdx);
+            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector, oilWaterConfig, deck, eclState, satnumRegionIdx);
 
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satRegionIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satRegionIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satnumRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satnumRegionIdx);
 
             // read the end point scaling info for the saturation region
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
+            unscaledEpsInfo_[satnumRegionIdx].extractUnscaled(deck, eclState, satnumRegionIdx);
 
         }
 
         // read the scaled end point scaling parameters which are specific for each
-        // logically Cartesian cell
-        GasOilScalingInfoVector gasOilScaledInfoVector(numCartesianElements);
-        oilWaterScaledEpsInfoDrainage_.resize(numCartesianElements);
+        // element
+        GasOilScalingInfoVector gasOilScaledInfoVector(numCompressedElems);
+        oilWaterScaledEpsInfoDrainage_.resize(numCompressedElems);
         GasOilScalingInfoVector gasOilScaledImbInfoVector;
         OilWaterScalingInfoVector oilWaterScaledImbInfoVector;
 
-        GasOilScalingPointsVector gasOilScaledPointsVector(numCartesianElements);
-        oilWaterScaledEpsPointsDrainage_.resize(numCartesianElements);
+        GasOilScalingPointsVector gasOilScaledPointsVector(numCompressedElems);
+        oilWaterScaledEpsPointsDrainage_.resize(numCompressedElems);
         GasOilScalingPointsVector gasOilScaledImbPointsVector;
         OilWaterScalingPointsVector oilWaterScaledImbPointsVector;
 
         if (enableHysteresis()) {
-            gasOilScaledImbInfoVector.resize(numCartesianElements);
-            gasOilScaledImbPointsVector.resize(numCartesianElements);
-            oilWaterScaledImbInfoVector.resize(numCartesianElements);
-            oilWaterScaledImbPointsVector.resize(numCartesianElements);
+            gasOilScaledImbInfoVector.resize(numCompressedElems);
+            gasOilScaledImbPointsVector.resize(numCompressedElems);
+            oilWaterScaledImbInfoVector.resize(numCompressedElems);
+            oilWaterScaledImbPointsVector.resize(numCompressedElems);
         }
 
         EclEpsGridProperties epsGridProperties, epsImbGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);
         if (enableHysteresis())
             epsImbGridProperties.initFromDeck(deck, eclState, /*imbibition=*/true);
-        for (unsigned cartElemIdx = 0; cartElemIdx < numCartesianElements; ++cartElemIdx) {
+        for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             readGasOilScaledPoints_(gasOilScaledInfoVector,
                                     gasOilScaledPointsVector,
                                     gasOilConfig,
                                     epsGridProperties,
-                                    cartElemIdx);
+                                    elemIdx);
             readOilWaterScaledPoints_(oilWaterScaledEpsInfoDrainage_,
                                       oilWaterScaledEpsPointsDrainage_,
                                       oilWaterConfig,
                                       epsGridProperties,
-                                      cartElemIdx);
+                                      elemIdx);
 
             if (enableHysteresis()) {
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
                                         epsImbGridProperties,
-                                        cartElemIdx);
+                                        elemIdx);
                 readOilWaterScaledPoints_(oilWaterScaledImbInfoVector,
                                           oilWaterScaledImbPointsVector,
                                           oilWaterConfig,
                                           epsImbGridProperties,
-                                          cartElemIdx);
+                                          elemIdx);
             }
         }
 
         // create the parameter objects for the two-phase laws
-        GasOilParamVector gasOilParams(numCartesianElements);
-        OilWaterParamVector oilWaterParams(numCartesianElements);
+        GasOilParamVector gasOilParams(numCompressedElems);
+        OilWaterParamVector oilWaterParams(numCompressedElems);
         GasOilParamVector gasOilImbParams;
         OilWaterParamVector oilWaterImbParams;
 
         if (enableHysteresis()) {
-            gasOilImbParams.resize(numCartesianElements);
-            oilWaterImbParams.resize(numCartesianElements);
+            gasOilImbParams.resize(numCompressedElems);
+            oilWaterImbParams.resize(numCompressedElems);
         }
 
         const auto& imbnumData = eclState->getIntGridProperty("IMBNUM")->getData();
-        assert(numCartesianElements == satnumData_.size());
-        for (unsigned cartElemIdx = 0; cartElemIdx < numCartesianElements; ++cartElemIdx) {
-            int satRegionIdx = satnumData_[cartElemIdx] - 1;
+        assert(numCompressedElems == satnumRegionIdx_.size());
+        for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
 
-            gasOilParams[cartElemIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
-            oilWaterParams[cartElemIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
+            gasOilParams[elemIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
+            oilWaterParams[elemIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
 
-            gasOilParams[cartElemIdx]->setConfig(hysteresisConfig_);
-            oilWaterParams[cartElemIdx]->setConfig(hysteresisConfig_);
+            gasOilParams[elemIdx]->setConfig(hysteresisConfig_);
+            oilWaterParams[elemIdx]->setConfig(hysteresisConfig_);
 
             auto gasOilDrainParams = std::make_shared<GasOilEpsTwoPhaseParams>();
             gasOilDrainParams->setConfig(gasOilConfig);
-            gasOilDrainParams->setUnscaledPoints(gasOilUnscaledPointsVector[satRegionIdx]);
-            gasOilDrainParams->setScaledPoints(gasOilScaledPointsVector[cartElemIdx]);
-            gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satRegionIdx]);
+            gasOilDrainParams->setUnscaledPoints(gasOilUnscaledPointsVector[satnumRegionIdx]);
+            gasOilDrainParams->setScaledPoints(gasOilScaledPointsVector[elemIdx]);
+            gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satnumRegionIdx]);
             gasOilDrainParams->finalize();
 
             auto oilWaterDrainParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
             oilWaterDrainParams->setConfig(oilWaterConfig);
-            oilWaterDrainParams->setUnscaledPoints(oilWaterUnscaledPointsVector[satRegionIdx]);
-            oilWaterDrainParams->setScaledPoints(oilWaterScaledEpsPointsDrainage_[cartElemIdx]);
-            oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satRegionIdx]);
+            oilWaterDrainParams->setUnscaledPoints(oilWaterUnscaledPointsVector[satnumRegionIdx]);
+            oilWaterDrainParams->setScaledPoints(oilWaterScaledEpsPointsDrainage_[elemIdx]);
+            oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satnumRegionIdx]);
             oilWaterDrainParams->finalize();
 
-            gasOilParams[cartElemIdx]->setDrainageParams(gasOilDrainParams,
-                                                         *gasOilScaledInfoVector[cartElemIdx],
+            gasOilParams[elemIdx]->setDrainageParams(gasOilDrainParams,
+                                                         *gasOilScaledInfoVector[elemIdx],
                                                          EclGasOilSystem);
-            oilWaterParams[cartElemIdx]->setDrainageParams(oilWaterDrainParams,
-                                                           *oilWaterScaledEpsInfoDrainage_[cartElemIdx],
+            oilWaterParams[elemIdx]->setDrainageParams(oilWaterDrainParams,
+                                                           *oilWaterScaledEpsInfoDrainage_[elemIdx],
                                                            EclOilWaterSystem);
 
             if (enableHysteresis()) {
-                int imbRegionIdx = imbnumData[cartElemIdx] - 1;
+                int imbRegionIdx = imbnumData[elemIdx] - 1;
 
                 auto gasOilImbParams = std::make_shared<GasOilEpsTwoPhaseParams>();
                 gasOilImbParams->setConfig(gasOilConfig);
                 gasOilImbParams->setUnscaledPoints(gasOilUnscaledPointsVector[imbRegionIdx]);
-                gasOilImbParams->setScaledPoints(gasOilScaledImbPointsVector[cartElemIdx]);
+                gasOilImbParams->setScaledPoints(gasOilScaledImbPointsVector[elemIdx]);
                 gasOilImbParams->setEffectiveLawParams(gasOilEffectiveParamVector[imbRegionIdx]);
                 gasOilImbParams->finalize();
 
                 auto oilWaterImbParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
                 oilWaterImbParams->setConfig(oilWaterConfig);
                 oilWaterImbParams->setUnscaledPoints(oilWaterUnscaledPointsVector[imbRegionIdx]);
-                oilWaterImbParams->setScaledPoints(oilWaterScaledImbPointsVector[cartElemIdx]);
+                oilWaterImbParams->setScaledPoints(oilWaterScaledImbPointsVector[elemIdx]);
                 oilWaterImbParams->setEffectiveLawParams(oilWaterEffectiveParamVector[imbRegionIdx]);
                 oilWaterImbParams->finalize();
 
-                gasOilParams[cartElemIdx]->setImbibitionParams(gasOilImbParams,
-                                                               *gasOilScaledImbInfoVector[cartElemIdx],
+                gasOilParams[elemIdx]->setImbibitionParams(gasOilImbParams,
+                                                               *gasOilScaledImbInfoVector[elemIdx],
                                                                EclGasOilSystem);
-                oilWaterParams[cartElemIdx]->setImbibitionParams(oilWaterImbParams,
-                                                                 *gasOilScaledImbInfoVector[cartElemIdx],
+                oilWaterParams[elemIdx]->setImbibitionParams(oilWaterImbParams,
+                                                                 *gasOilScaledImbInfoVector[elemIdx],
                                                                  EclGasOilSystem);
             }
 
-            gasOilParams[cartElemIdx]->finalize();
-            oilWaterParams[cartElemIdx]->finalize();
+            gasOilParams[elemIdx]->finalize();
+            oilWaterParams[elemIdx]->finalize();
         }
 
         // create the parameter objects for the three-phase law
-        materialLawParams_.resize(numCartesianElements);
-        for (unsigned cartElemIdx = 0; cartElemIdx < numCartesianElements; ++cartElemIdx) {
-            materialLawParams_[cartElemIdx] = std::make_shared<MaterialLawParams>();
-            int satRegionIdx = satnumData_[cartElemIdx] - 1;
+        materialLawParams_.resize(numCompressedElems);
+        for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+            materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
+            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
 
             initThreePhaseParams_(deck,
                                   eclState,
-                                  *materialLawParams_[cartElemIdx],
-                                  satRegionIdx,
-                                  *oilWaterScaledEpsInfoDrainage_[cartElemIdx],
-                                  oilWaterParams[cartElemIdx],
-                                  gasOilParams[cartElemIdx]);
+                                  *materialLawParams_[elemIdx],
+                                  satnumRegionIdx,
+                                  *oilWaterScaledEpsInfoDrainage_[elemIdx],
+                                  oilWaterParams[elemIdx],
+                                  gasOilParams[elemIdx]);
 
-            materialLawParams_[cartElemIdx]->finalize();
+            materialLawParams_[elemIdx]->finalize();
         }
     }
 
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
                                         Opm::EclipseStateConstPtr eclState,
-                                        int satRegionIdx)
+                                        int satnumRegionIdx)
     {
-        dest[satRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
+        dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
-        auto& effParams = *dest[satRegionIdx];
-        const auto& sgofTable = eclState->getSgofTables()[satRegionIdx];
+        auto& effParams = *dest[satnumRegionIdx];
+        const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
 
         // convert the saturations of the SGOF keyword from gas to oil saturations
         std::vector<double> SoSamples(sgofTable.numRows());
@@ -552,12 +558,12 @@ private:
     template <class Container>
     void readOilWaterEffectiveParameters_(Container& dest,
                                           Opm::EclipseStateConstPtr eclState,
-                                          int satRegionIdx)
+                                          int satnumRegionIdx)
     {
-        dest[satRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
+        dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
-        auto& effParams = *dest[satRegionIdx];
-        const auto& swofTable = eclState->getSwofTables()[satRegionIdx];
+        auto& effParams = *dest[satnumRegionIdx];
+        const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
 
         const auto &SwColumn = swofTable.getSwColumn();
 
@@ -572,10 +578,10 @@ private:
                                    std::shared_ptr<EclEpsConfig> config,
                                    Opm::DeckConstPtr deck,
                                    Opm::EclipseStateConstPtr eclState,
-                                   int satRegionIdx)
+                                   int satnumRegionIdx)
     {
-        dest[satRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        dest[satRegionIdx]->init(unscaledEpsInfo_[satRegionIdx], *config, EclGasOilSystem);
+        dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        dest[satnumRegionIdx]->init(unscaledEpsInfo_[satnumRegionIdx], *config, EclGasOilSystem);
     }
 
     template <class Container>
@@ -583,10 +589,10 @@ private:
                                      std::shared_ptr<EclEpsConfig> config,
                                      Opm::DeckConstPtr deck,
                                      Opm::EclipseStateConstPtr eclState,
-                                     int satRegionIdx)
+                                     int satnumRegionIdx)
     {
-        dest[satRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        dest[satRegionIdx]->init(unscaledEpsInfo_[satRegionIdx], *config, EclOilWaterSystem);
+        dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        dest[satnumRegionIdx]->init(unscaledEpsInfo_[satnumRegionIdx], *config, EclOilWaterSystem);
     }
 
     template <class InfoContainer, class PointsContainer>
@@ -594,15 +600,16 @@ private:
                                  PointsContainer& destPoints,
                                  std::shared_ptr<EclEpsConfig> config,
                                  const EclEpsGridProperties& epsGridProperties,
-                                 int cartElemIdx)
+                                 int elemIdx)
     {
-        int satRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1;
+        int satnumRegionIdx = (*epsGridProperties.satnum)[elemIdx] - 1; // ECL uses Fortran indices!
+        int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
 
-        destInfo[cartElemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
-        destInfo[cartElemIdx]->extractScaled(epsGridProperties, cartElemIdx);
+        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);
+        destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
 
-        destPoints[cartElemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        destPoints[cartElemIdx]->init(*destInfo[cartElemIdx], *config, EclGasOilSystem);
+        destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclGasOilSystem);
     }
 
     template <class InfoContainer, class PointsContainer>
@@ -610,15 +617,16 @@ private:
                                    PointsContainer& destPoints,
                                    std::shared_ptr<EclEpsConfig> config,
                                    const EclEpsGridProperties& epsGridProperties,
-                                   int cartElemIdx)
+                                   int elemIdx)
     {
-        int satRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1;
+        int satnumRegionIdx = (*epsGridProperties.satnum)[elemIdx] - 1; // ECL uses Fortran indices!
+        int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
 
-        destInfo[cartElemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);;
-        destInfo[cartElemIdx]->extractScaled(epsGridProperties, cartElemIdx);
+        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);;
+        destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
 
-        destPoints[cartElemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        destPoints[cartElemIdx]->init(*destInfo[cartElemIdx], *config, EclOilWaterSystem);
+        destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclOilWaterSystem);
     }
 
     void initThreePhaseParams_(Opm::DeckConstPtr deck,
@@ -681,7 +689,8 @@ private:
     EclMultiplexerApproach threePhaseApproach_;
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 
-    std::vector<int> satnumData_;
+    std::vector<int> compressedToCartesianElemIdx_;
+    std::vector<int> satnumRegionIdx_;
 };
 } // namespace Opm
 
