@@ -1379,7 +1379,7 @@ namespace detail {
                 const double& thp    = well_controls_iget_target(wc, current);
                 const double& alq    = well_controls_iget_alq(wc, current);
 
-                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq);
+                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua[w], liquid[w], vapour[w], thp, alq).value;
                 rate_targets(w) = -1e100;
             }
             break;

@@ -96,6 +96,19 @@ public:
     typedef AutoDiffBlock<double> ADB;
 
     /**
+     * An "ADB-like" structure with a single value and a set of derivatives
+     */
+    struct adb_like {
+        adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+        double value;
+        double dthp;
+        double dwfr;
+        double dgfr;
+        double dalq;
+        double dflo;
+    };
+
+    /**
      * Empty constructor
      */
     VFPProdProperties();
@@ -125,11 +138,11 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB::V bhp(int table_id,
+    ADB bhp(int table_id,
             const Wells& wells,
-            const ADB::V& qs,
-            const ADB::V& thp,
-            const ADB::V& alq) const;
+            const ADB& qs,
+            const ADB& thp,
+            const ADB& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as ADBs
@@ -144,12 +157,12 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB::V bhp(int table_id,
-            const ADB::V& aqua,
-            const ADB::V& liquid,
-            const ADB::V& vapour,
-            const ADB::V& thp,
-            const ADB::V& alq) const;
+    ADB bhp(int table_id,
+            const ADB& aqua,
+            const ADB& liquid,
+            const ADB& vapour,
+            const ADB& thp,
+            const ADB& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -163,7 +176,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(int table_id,
+    adb_like bhp(int table_id,
             const double& aqua,
             const double& liquid,
             const double& vapour,
@@ -294,7 +307,7 @@ private:
     /**
      * Helper function which interpolates data using the indices etc. given in the inputs.
      */
-    static double interpolate(const VFPProdTable::array_type& array,
+    static adb_like interpolate(const VFPProdTable::array_type& array,
             const InterpData& flo_i,
             const InterpData& thp_i,
             const InterpData& wfr_i,

@@ -99,30 +99,30 @@ void VFPProdProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
     }
 }
 
-VFPProdProperties::ADB::V VFPProdProperties::bhp(int table_id,
+VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
         const Wells& wells,
-        const ADB::V& qs,
-        const ADB::V& thp,
-        const ADB::V& alq) const {
+        const ADB& qs,
+        const ADB& thp,
+        const ADB& alq) const {
     const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
     //TODO enable support for two-phase.
     assert(np == 3);
-    const ADB::V& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
-    const ADB::V& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
-    const ADB::V& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+    const ADB& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+    const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+    const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
     return bhp(table_id, w, o, g, thp, alq);
 }
 
-VFPProdProperties::ADB::V VFPProdProperties::bhp(int table_id,
-        const ADB::V& aqua,
-        const ADB::V& liquid,
-        const ADB::V& vapour,
-        const ADB::V& thp,
-        const ADB::V& alq) const {
+VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        const ADB& thp,
+        const ADB& alq) const {
     const int nw = thp.size();
 
     assert(aqua.size()   == nw);
@@ -131,16 +131,53 @@ VFPProdProperties::ADB::V VFPProdProperties::bhp(int table_id,
     assert(thp.size()    == nw);
     assert(alq.size()    == nw);
 
+    //Allocate data for bhp's and partial derivatives
+    ADB::V value, dthp, dwfr, dgfr, dalq, dflo;
+    value.resize(nw);
+    dthp.resize(nw);
+    dwfr.resize(nw);
+    dgfr.resize(nw);
+    dalq.resize(nw);
+    dflo.resize(nw);
+
     //Compute the BHP for each well independently
-    ADB::V bhp_vals;
-    bhp_vals.resize(nw);
     for (int i=0; i<nw; ++i) {
-        bhp_vals[i] = bhp(table_id, aqua[i], liquid[i], vapour[i], thp[i], alq[i]);
+        adb_like bhp_val = bhp(table_id,
+                aqua.value()[i],
+                liquid.value()[i],
+                vapour.value()[i],
+                thp.value()[i],
+                alq.value()[i]);
+        value[i] = bhp_val.value;
+        dthp[i] = bhp_val.dthp;
+        dwfr[i] = bhp_val.dwfr;
+        dgfr[i] = bhp_val.dgfr;
+        dalq[i] = bhp_val.dalq;
+        dflo[i] = bhp_val.dflo;
     }
-    return bhp_vals;
+
+    //Create diagonal matrices from ADB::Vs
+    ADB::M dthp_diag = spdiag(dthp);
+    ADB::M dwfr_diag = spdiag(dwfr);
+    ADB::M dgfr_diag = spdiag(dgfr);
+    ADB::M dalq_diag = spdiag(dalq);
+    ADB::M dflo_diag = spdiag(dflo);
+
+    //Calculate the jacobians
+    const int num_blocks = aqua.numBlocks();
+    std::vector<ADB::M> jacs(num_blocks);
+    for (int block = 0; block < num_blocks; ++block) {
+        fastSparseProduct(dthp_diag, aqua.derivative()[block], jacs[block]);
+        ADB::M temp;
+        fastSparseProduct(dwfr_diag, liquid.derivative()[block], temp);
+        jacs[block] += temp;
+    }
+
+    ADB retval = ADB::function(std::move(value), std::move(jacs));
+    return retval;
 }
 
-double VFPProdProperties::bhp(int table_id,
+VFPProdProperties::adb_like VFPProdProperties::bhp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -161,7 +198,8 @@ double VFPProdProperties::bhp(int table_id,
     auto alq_i = find_interp_data(alq, table->getALQAxis());
 
     //Then perform the interpolation itself
-    return interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    adb_like retval = interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    return retval;
 }
 
 
@@ -200,7 +238,7 @@ double VFPProdProperties::thp(int table_id,
     std::vector<double> bhp_array(nthp);
     for (int i=0; i<nthp; ++i) {
         auto thp_i = find_interp_data(thp_array[i], thp_array);
-        bhp_array[i] = interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        bhp_array[i] = interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
     /**
@@ -359,50 +397,38 @@ VFPProdProperties::InterpData VFPProdProperties::find_interp_data(const double& 
 }
 
 
+inline VFPProdProperties::adb_like operator+(
+        VFPProdProperties::adb_like lhs,
+        const VFPProdProperties::adb_like& rhs) {
+    lhs.value += rhs.value;
+    lhs.dthp += rhs.dthp;
+    lhs.dwfr += rhs.dwfr;
+    lhs.dgfr += rhs.dgfr;
+    lhs.dalq += rhs.dalq;
+    lhs.dflo += rhs.dflo;
+    return lhs;
+}
+
+inline VFPProdProperties::adb_like operator*(
+        double lhs,
+        const VFPProdProperties::adb_like& rhs) {
+    VFPProdProperties::adb_like retval;
+    retval.value = rhs.value * lhs;
+    retval.dthp = rhs.dthp * lhs;
+    retval.dwfr = rhs.dwfr * lhs;
+    retval.dgfr = rhs.dgfr * lhs;
+    retval.dalq = rhs.dalq * lhs;
+    retval.dflo = rhs.dflo * lhs;
+    return retval;
+}
+
 #ifdef __GNUC__
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
 #endif
 
-namespace detail {
-
-    //An "ADB-like" structure with a value and a set of derivatives
-    //Just defined to make sure that operator+ and operator* do the
-    //correct thing for the use in this function
-    //Wastes some space (AoS versus SoA), but resulting code is easier to read and maintain
-    struct adb_like {
-        adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
-        double value;
-        double dthp;
-        double dwfr;
-        double dgfr;
-        double dalq;
-        double dflo;
-    };
-
-    adb_like operator+(adb_like lhs, const adb_like& rhs) {
-        lhs.value += rhs.value;
-        lhs.dthp += rhs.dthp;
-        lhs.dwfr += rhs.dwfr;
-        lhs.dgfr += rhs.dgfr;
-        lhs.dalq += rhs.dalq;
-        lhs.dflo += rhs.dflo;
-        return lhs;
-    }
-
-    adb_like operator*(double lhs, const adb_like& rhs) {
-        adb_like retval;
-        retval.value = rhs.value * lhs;
-        retval.dthp = rhs.dthp * lhs;
-        retval.dwfr = rhs.dwfr * lhs;
-        retval.dgfr = rhs.dgfr * lhs;
-        retval.dalq = rhs.dalq * lhs;
-        retval.dflo = rhs.dflo * lhs;
-        return retval;
-    }
-}
-
-double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
+VFPProdProperties::adb_like VFPProdProperties::interpolate(
+        const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
         const InterpData& wfr_i,
@@ -410,7 +436,7 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         const InterpData& alq_i) {
 
     //Values and derivatives in a 5D hypercube
-    detail::adb_like nn[2][2][2][2][2];
+    adb_like nn[2][2][2][2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -461,9 +487,9 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
         }
     }
 
-    double t1, t2; //interpolation variables, so that a = (1-t) and b = t.
+    double t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
 
-    //Remove dimensions one by one
+    // Remove dimensions one by one
     // Example: going from 3D to 2D to 1D, we start by interpolating along
     // the z axis first, leaving a 2D problem. Then interpolating along the y
     // axis, leaving a 1D, problem, etc.
@@ -505,7 +531,9 @@ double VFPProdProperties::interpolate(const VFPProdTable::array_type& array,
 
     t2 = thp_i.factor_;
     t1 = (1.0-t2);
-    return t1*nn[0][0][0][0][0].value + t2*nn[1][0][0][0][0].value;
+    nn[0][0][0][0][0] = t1*nn[0][0][0][0][0] + t2*nn[1][0][0][0][0];
+
+    return nn[0][0][0][0][0];
 }
 
 #ifdef __GNUC__

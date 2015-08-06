@@ -55,6 +55,7 @@ const double sad_tol = 1.0e-8;
  */
 struct TrivialFixture {
     typedef Opm::VFPProdProperties::ADB ADB;
+    typedef Opm::VFPProdProperties::adb_like adb_like;
 
     TrivialFixture() : thp_axis{0.0, 1.0},
             wfr_axis{0.0, 0.5, 1.0},
@@ -80,7 +81,7 @@ struct TrivialFixture {
     /**
      * Fills our interpolation data with zeros
      */
-    void fillData(double value) {
+    inline void fillData(double value) {
         for (int i=0; i<nx; ++i) {
             for (int j=0; j<ny; ++j) {
                 for (int k=0; k<nz; ++k) {
@@ -97,7 +98,7 @@ struct TrivialFixture {
     /**
      * Fills our interpolation data with an ND plane
      */
-    void fillDataPlane() {
+    inline void fillDataPlane() {
         for (int i=0; i<nx; ++i) {
             double x = i / static_cast<double>(nx-1);
             for (int j=0; j<ny; ++j) {
@@ -122,7 +123,7 @@ struct TrivialFixture {
     /**
      * Fills our interpolation data with "random" values
      */
-    void fillDataRandom() {
+    inline void fillDataRandom() {
         unsigned long randx = 42;
         for (int i=0; i<nx; ++i) {
             for (int j=0; j<ny; ++j) {
@@ -139,10 +140,10 @@ struct TrivialFixture {
     }
 
 
-    void initTable() {
+    inline void initTable() {
     }
 
-    void initProperties() {
+    inline void initProperties() {
         //Initialize table
         table.init(1,
                    1000.0,
@@ -159,6 +160,17 @@ struct TrivialFixture {
 
         //Initialize properties that use the table
         properties.reset(new Opm::VFPProdProperties(&table));
+    }
+
+
+
+    /**
+     * Helper function to simplify creating minimal ADB objects
+     */
+    inline ADB createConstantScalarADB(double value) {
+        ADB::V v = ADB::V::Constant(1, value);
+        ADB adb = ADB::constant(std::move(v));
+        return adb;
     }
 
     std::shared_ptr<Opm::VFPProdProperties> properties;
@@ -208,25 +220,28 @@ BOOST_AUTO_TEST_CASE(GetTable)
     double thp_d    = 4.5;
     double alq_d    = 5.5;
 
-    ADB::V aqua_adb   = ADB::V::Constant(1, aqua_d);
-    ADB::V liquid_adb = ADB::V::Constant(1, liquid_d);
-    ADB::V vapour_adb = ADB::V::Constant(1, vapour_d);
-    ADB::V thp_adb    = ADB::V::Constant(1, thp_d);
-    ADB::V alq_adb    = ADB::V::Constant(1, alq_d);
+    ADB aqua_adb   = createConstantScalarADB(aqua_d);
+    ADB liquid_adb = createConstantScalarADB(liquid_d);
+    ADB vapour_adb = createConstantScalarADB(vapour_d);
+    ADB thp_adb    = createConstantScalarADB(thp_d);
+    ADB alq_adb    = createConstantScalarADB(alq_d);
 
-    ADB::V qs_adb(3);
-    qs_adb << aqua_adb, liquid_adb, vapour_adb;
-
+    ADB::V qs_adb_v(3);
+    qs_adb_v << aqua_adb.value(), liquid_adb.value(), vapour_adb.value();
+    ADB qs_adb = ADB::constant(qs_adb_v);
 
 
     //Check that different versions of the prod_bph function work
-    ADB::V a = properties->bhp(1, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
-    double b = properties->bhp(1, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
-    ADB::V c = properties->bhp(1, *wells, qs_adb, thp_adb, alq_adb);
+    ADB a = properties->bhp(1, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
+    adb_like b = properties->bhp(1, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    ADB c = properties->bhp(1, *wells, qs_adb, thp_adb, alq_adb);
 
     //Check that results are actually equal
-    BOOST_CHECK_EQUAL(a[0], b);
-    BOOST_CHECK_EQUAL(a[0], c[0]);
+    double d = a.value()[0];
+    double e = b.value;
+    double f = c.value()[0];
+    BOOST_CHECK_EQUAL(d, e);
+    BOOST_CHECK_EQUAL(d, f);
 
     //Table 2 does not exist.
     BOOST_CHECK_THROW(properties->bhp(2, *wells, qs_adb, thp_adb, alq_adb), std::invalid_argument);
@@ -256,7 +271,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(1, v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u).value;
                     }
                 }
             }
@@ -291,7 +306,7 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        const double value = properties->bhp(1, v, x, y, z, u);
+                        const double value = properties->bhp(1, v, x, y, z, u).value;
 
                         sum += value;
                     }
@@ -340,7 +355,7 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments! id, aqua, liquid, vapour, thp , alq
-                        double value = properties->bhp(1, aqua, liquid, vapour, x, u);
+                        double value = properties->bhp(1, aqua, liquid, vapour, x, u).value;
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -396,7 +411,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments! id, aqua, liquid, vapour, thp , alq
-                        double value = properties->bhp(1, aqua, liquid, vapour, x, u);
+                        double value = properties->bhp(1, aqua, liquid, vapour, x, u).value;
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -426,14 +441,6 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
     fillDataPlane();
     initProperties();
 
-    //Temporary variables used to represent independent wells
-    const int num_wells = 5;
-    ADB::V x_v(num_wells);
-    ADB::V aqua_v(num_wells);
-    ADB::V vapour_v(num_wells);
-    ADB::V u_v(num_wells);
-    ADB::V liquid_v(num_wells);
-
     //Check linear extrapolation (i.e., using values of x, y, etc. outside our interpolant domain)
     double sum = 0.0;
     double reference_sum = 0.0;
@@ -452,15 +459,30 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                     for (int m=1; m<=n+o; ++m) {
                         const double liquid = m / static_cast<double>(n);
 
+                        //Temporary variables used to represent independent wells
+                        const int num_wells = 5;
+                        ADB::V adb_v_x(num_wells);
+                        ADB::V adb_v_aqua(num_wells);
+                        ADB::V adb_v_vapour(num_wells);
+                        ADB::V adb_v_u(num_wells);
+                        ADB::V adb_v_liquid(num_wells);
+
                         for (unsigned int w=0; w<num_wells; ++w) {
-                            x_v[w] = x*(w+1);
-                            aqua_v[w] = aqua*(w+1);
-                            vapour_v[w] = vapour*(w+1);
-                            u_v[w] = u*(w+1);
-                            liquid_v[w] = liquid*(w+1);
+                            adb_v_x[w] = x*(w+1);
+                            adb_v_aqua[w] = aqua*(w+1);
+                            adb_v_vapour[w] = vapour*(w+1);
+                            adb_v_u[w] = u*(w+1);
+                            adb_v_liquid[w] = liquid*(w+1);
                         }
 
-                        ADB::V bhp_val = properties->bhp(1, aqua_v, liquid_v, vapour_v, x_v, u_v);
+                        ADB adb_x = ADB::constant(adb_v_x);
+                        ADB adb_aqua = ADB::constant(adb_v_aqua);
+                        ADB adb_vapour = ADB::constant(adb_v_vapour);
+                        ADB adb_u = ADB::constant(adb_v_u);
+                        ADB adb_liquid = ADB::constant(adb_v_liquid);
+
+                        ADB bhp = properties->bhp(1, adb_aqua, adb_liquid, adb_vapour, adb_x, adb_u);
+                        ADB::V bhp_val = bhp.value();
 
                         double value = 0.0;
                         double reference = 0.0;
@@ -522,27 +544,30 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     }
 
     //Create some artificial flow values for our wells between 0 and 1
-    ADB::V qs(nphases*nwells);
+    ADB::V qs_v(nphases*nwells);
     for (int j=0; j<nphases; ++j) {
         for (int i=0; i<nwells; ++i) {
-            qs[j*nwells+i] = (j*nwells+i) / static_cast<double>(nwells*nphases-1.0);
+            qs_v[j*nwells+i] = (j*nwells+i) / static_cast<double>(nwells*nphases-1.0);
         }
     }
+    ADB qs = ADB::constant(qs_v);
 
     //Create the THP for each well
-    ADB::V thp(nwells);
+    ADB::V thp_v(nwells);
     for (int i=0; i<nwells; ++i) {
-        thp[i] = (i) / static_cast<double>(nwells-1.0);
+        thp_v[i] = (i) / static_cast<double>(nwells-1.0);
     }
+    ADB thp = ADB::constant(thp_v);
 
     //Create the ALQ for each well
-    ADB::V alq(nwells);
+    ADB::V alq_v(nwells);
     for (int i=0; i<nwells; ++i) {
-        alq[i] = 0.0;
+        alq_v[i] = 0.0;
     }
+    ADB alq = ADB::constant(alq_v);
 
     //Call the bhp function
-    ADB::V bhp = properties->bhp(1, *wells, qs, thp, alq);
+    ADB::V bhp = properties->bhp(1, *wells, qs, thp, alq).value();
 
     //Calculate reference
     //First, find the three phases
@@ -550,9 +575,9 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     std::vector<double> oil(nwells);
     std::vector<double> gas(nwells);
     for (int i=0; i<nwells; ++i) {
-        water[i] = qs[i];
-        oil[i] = qs[nwells+i];
-        gas[i] = qs[2*nwells+i];
+        water[i] = qs_v[i];
+        oil[i] = qs_v[nwells+i];
+        gas[i] = qs_v[2*nwells+i];
     }
 
     //Compute reference value
@@ -561,7 +586,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
         double flo = oil[i];
         double wor = water[i]/oil[i];
         double gor = gas[i]/oil[i];
-        reference[i] = thp[i] + 2*wor + 3*gor + 4*alq[i] + 5*flo;
+        reference[i] = thp_v[i] + 2*wor + 3*gor + 4*alq_v[i] + 5*flo;
     }
 
     //Check that interpolation matches
@@ -815,7 +840,7 @@ VFPPROD \n\
                         double thp = t * 456.78;
                         double alq = a * 42.24;
 
-                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
+                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq).value;
                         double bhp_ref = thp;
                         double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq);
                         double thp_ref = thp;
@@ -914,7 +939,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         }
                         else {
                             //Value given as pascal, convert to barsa for comparison with reference
-                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i) * 10.0e-6;
+                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i).value * 10.0e-6;
 
                             double abs_diff = std::abs(value_i - reference[i]);
                             sad += abs_diff;
