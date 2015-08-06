@@ -4,6 +4,7 @@
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/common/gridpart.hh>
 #include <dune/fem/misc/compatibility.hh>
+#include <dune/fem/io/streams/streams.hh>
 
 namespace Dune
 {
@@ -22,6 +23,11 @@ namespace Dune
   namespace Fem
   {
 
+    ////////////////////////////////////////////////////////////
+    //
+    //  make_entity for CpGrid entities
+    //
+    ////////////////////////////////////////////////////////////
     template <int codim>
     inline Dune::cpgrid::Entity< codim > make_entity ( const Dune::cpgrid::EntityPointer< codim >& entityPointer )
     {
@@ -34,6 +40,11 @@ namespace Dune
       return std::move( entity );
     }
 
+    ////////////////////////////////////////////////////////////
+    //
+    //  GridEntityAccess for CpGrid entities
+    //
+    ////////////////////////////////////////////////////////////
     template< int codim >
     struct GridEntityAccess< Dune::cpgrid::Entity< codim > >
     {
@@ -46,6 +57,34 @@ namespace Dune
         return entity;
       }
     };
+
+    ////////////////////////////////////////////////////////////
+    //
+    //  operator << and operator >> for __float128
+    //
+    ////////////////////////////////////////////////////////////
+#if HAVE_QUAD
+    template< class Traits >
+    inline OutStreamInterface< Traits > &
+      operator<< ( OutStreamInterface< Traits > &out,
+                   const __float128 value )
+    {
+      double val = double( value );
+      out.writeDouble( val );
+      return out;
+    }
+
+    template< class Traits >
+    inline InStreamInterface< Traits > &
+      operator>> ( InStreamInterface< Traits > &in,
+                   __float128& value )
+    {
+      double val;
+      in.readDouble( val );
+      value = val;
+      return in;
+    }
+#endif
 
   } // namespace Fem
 
