@@ -792,7 +792,11 @@ private:
         }
 
         // the fluid-matrix interactions for ECL problems are dealt with by a separate class
-        materialLawManager_.initFromDeck(deck, eclState);
+        std::vector<int> compressedToCartesianElemIdx(numDof);
+        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
+            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianCellId(elemIdx);
+
+        materialLawManager_.initFromDeck(deck, eclState, compressedToCartesianElemIdx);
     }
 
     void initFluidSystem_()
@@ -1129,9 +1133,7 @@ private:
 
     const MaterialLawParams& materialLawParams_(int globalDofIdx) const
     {
-        int cartesianCellIdx = this->simulator().gridManager().cartesianCellId(globalDofIdx);
-
-        return materialLawManager_.materialLawParams(cartesianCellIdx);
+        return materialLawManager_.materialLawParams(globalDofIdx);
     }
 
     // update the hysteresis parameters of the material laws for the whole grid
