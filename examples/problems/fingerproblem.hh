@@ -114,12 +114,12 @@ SET_SCALAR_PROP(FingerBaseProblem, DomainSizeZ, 0.1);
 
 SET_SCALAR_PROP(FingerBaseProblem, InitialWaterSaturation, 0.01);
 
-SET_INT_PROP(FingerBaseProblem, CellsX, 20);
-SET_INT_PROP(FingerBaseProblem, CellsY, 70);
+SET_INT_PROP(FingerBaseProblem, CellsX, 10);
+SET_INT_PROP(FingerBaseProblem, CellsY, 35);
 SET_INT_PROP(FingerBaseProblem, CellsZ, 1);
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
+SET_SCALAR_PROP(FingerBaseProblem, EndTime, 10e3);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
@@ -203,7 +203,12 @@ public:
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return std::string("finger_") + Model::name(); }
+    { return
+            std::string("finger") +
+            "_" + Model::name() +
+            "_" + Model::discretizationName() +
+            (this->model().enableGridAdaptation()?"_adaptive":"");
+    }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::registerParameters
@@ -347,12 +352,10 @@ public:
     void boundary(BoundaryRateVector &values, const Context &context,
                   int spaceIdx, int timeIdx) const
     {
-        const GlobalPosition &pos = context.cvCenter(spaceIdx, timeIdx);
+        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
-        if (onLeftBoundary_(pos) || onRightBoundary_(pos)
-            || onLowerBoundary_(pos)) {
+        if (onLeftBoundary_(pos) || onRightBoundary_(pos) || onLowerBoundary_(pos))
             values.setNoFlow();
-        }
         else {
             assert(onUpperBoundary_(pos));
 

@@ -43,8 +43,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <dune/alugrid/dgf.hh>
-
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -54,7 +52,7 @@ template <class TypeTag>
 class LensProblem;
 
 namespace Properties {
-NEW_TYPE_TAG(LensBaseProblem);
+NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridManager));
 
 // declare the properties specific for the lens problem
 NEW_PROP_TAG(LensLowerLeftX);
@@ -66,7 +64,6 @@ NEW_PROP_TAG(LensUpperRightZ);
 
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Ewoms::LensProblem<TypeTag>);
-SET_TYPE_PROP(LensBaseProblem, Grid, Dune::ALUGrid<2,2,Dune::cube, Dune::nonconforming > );
 
 // Set the wetting phase
 SET_PROP(LensBaseProblem, WettingPhase)
