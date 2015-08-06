@@ -1,3 +1,5 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2008-2013 by Andreas Lauser
 
@@ -52,15 +54,15 @@
 #include <string>
 
 namespace Ewoms {
+//! \cond SKIP_THIS
 template <class TypeTag>
 class Co2InjectionProblem;
 
 namespace Co2Injection {
 #include <opm/material/components/co2tables.inc>
 }
-} // namespace Ewoms
+//! \endcond
 
-namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
