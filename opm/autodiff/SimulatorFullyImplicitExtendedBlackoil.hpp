@@ -30,6 +30,7 @@
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/NewtonSolver.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
@@ -107,6 +108,7 @@ namespace Opm
                                               const GridT& grid,
                                               const DerivedGeology& geo,
                                               BlackoilPropsAdInterface& props,
+                                              const SolventPropsAdFromDeck& solvent_props,
                                               const RockCompressibility* rock_comp_props,
                                               NewtonIterationBlackoilInterface& linsolver,
                                               const double* gravity,
@@ -128,6 +130,7 @@ namespace Opm
     private:
         bool has_solvent_;
         DeckConstPtr deck_;
+        SolventPropsAdFromDeck solvent_props_;
 
     };
 

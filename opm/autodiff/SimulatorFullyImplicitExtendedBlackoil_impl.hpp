@@ -28,6 +28,7 @@ namespace Opm
                                           const GridT& grid,
                                           const DerivedGeology& geo,
                                           BlackoilPropsAdInterface& props,
+                                          const SolventPropsAdFromDeck& solvent_props,
                                           const RockCompressibility* rock_comp_props,
                                           NewtonIterationBlackoilInterface& linsolver,
                                           const double* gravity,
@@ -52,6 +53,7 @@ namespace Opm
                threshold_pressures_by_face)
     , has_solvent_(has_solvent)
     , deck_(deck)
+    , solvent_props_(solvent_props)
     {
         if(deck->hasKeyword("MISCIBLE")) {
             std::cerr << "MISICIBLE keyword is present. Mixing is not currently supported" << std::endl;
@@ -71,6 +73,7 @@ namespace Opm
                                                       BaseType::props_,
                                                       BaseType::geo_,
                                                       BaseType::rock_comp_props_,
+                                                      solvent_props_,
                                                       wells,
                                                       BaseType::solver_,
                                                       BaseType::eclipse_state_,

@@ -77,6 +77,7 @@
 
 #include <opm/autodiff/SimulatorFullyImplicitExtendedBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
@@ -259,6 +260,9 @@ try
                                       Opm::UgGridHelpers::dimensions(grid), param);
 
     BlackoilPropsAdFromDeck new_props( deck, eclipseState, grid );
+
+    SolventPropsAdFromDeck solvent_props( deck, eclipseState, Opm::UgGridHelpers::numCells(grid), Opm::UgGridHelpers::globalCell(grid));
+
     // check_well_controls = param.getDefault("check_well_controls", false);
     // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
     // Rock compressibility.
@@ -379,6 +383,7 @@ try
                                                       grid,
                                                       geoprops,
                                                       new_props,
+                                                      solvent_props,
                                                       rock_comp.isActive() ? &rock_comp : 0,
                                                       *fis_solver,
                                                       grav,

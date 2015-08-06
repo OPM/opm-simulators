@@ -75,6 +75,7 @@ namespace Opm {
                                                      const BlackoilPropsAdInterface&         fluid,
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
+                                                     const SolventPropsAdFromDeck&           solvent_props,
                                                      const Wells*                            wells,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      const EclipseStateConstPtr              eclState,
@@ -85,7 +86,8 @@ namespace Opm {
         : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output),
           has_solvent_(has_solvent),
-          solvent_pos_(detail::solventPos(fluid.phaseUsage()))
+          solvent_pos_(detail::solventPos(fluid.phaseUsage())),
+          solvent_props_(solvent_props)
     {
         if (has_solvent_) {
 
@@ -222,11 +224,9 @@ namespace Opm {
             const ADB pv_mult = poroMult(press); // also computed in Base::computeAccum, could be optimized.
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
-            // Compute solvent accumulation term.
-            // WARNING: Currently the solvent uses the same pvt as gas
-            // TODO: Add support for PVDS, SDENSITY
-            rq_[solvent_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Gas]].b * ss;
-
+            const ADB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
+            rq_[solvent_pos_].b = solvent_props_.bSolvent(pg,cells_);
+            rq_[solvent_pos_].accum[aix] = pv_mult * rq_[solvent_pos_].b * ss;
         }
     }
 
@@ -379,14 +379,16 @@ namespace Opm {
                 ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
                 V ones = V::Constant(nc, 1.0);
 
-                // WARNING: The solvent mobility is simply given as a fraction of the gas mobility
-                // TODO: Add support for gas/solvent relative permeability functions (SSFN)
-                rq_[solvent_pos_].mob = F_solvent * rq_[actph].mob; //tr_mult * F_solvent * kr / mu;
+                // TODO: Add support for gas/solvent function (SSFN)
+                const ADB tr_mult = transMult(state.pressure);
+                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);
+                rq_[solvent_pos_].mob = F_solvent * tr_mult * kr / mu;
                 rq_[actph].mob = (ones - F_solvent) * rq_[actph].mob;
 
-                // WARNING: use gas values for the solvent
-                rq_[solvent_pos_].b = rq_[actph].b;
-                rq_[solvent_pos_].dh = rq_[actph].dh;
+                const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
+                const ADB rhoavg_solvent = ops_.caver * rho_solvent;
+                rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
+
                 UpwindSelector<double> upwind(grid_, ops_, rq_[solvent_pos_].dh.value());
                 // Compute solvent flux.
                 rq_[solvent_pos_].mflux = upwind.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
