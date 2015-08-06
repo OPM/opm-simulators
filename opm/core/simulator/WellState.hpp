@@ -67,6 +67,7 @@ namespace Opm
                                 bhp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             case THP:
+                                assert(false && "Not properly implemented");
                                 thp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             default:
@@ -97,20 +98,34 @@ namespace Opm
                                 wellrates_[np*w + p] = small_rate * sign;
                             }
                         }
-                        // 2. Initialize bhp to be target pressure if
-                        //    bhp-controlled well, otherwise set to a
+
+                        // 2. if we have a thp/bhp control,
+                        //    set target (may be overridden later)
+                        // Assumes only one THP / BHP control.
+                        thp_[w] = -1e100;
+                        bhp_[w] = -1e100;
+                        int num_controls = well_controls_get_num( ctrl );
+                        for (int i=0; i<num_controls; ++i) {
+                            switch (well_controls_iget_type( ctrl , i )) {
+                                case BHP:
+                                    bhp_[w] = well_controls_iget_target( ctrl , i );
+                                    break;
+                                case THP:
+                                    thp_[w] = well_controls_iget_target( ctrl , i );
+                                    break;
+                            }
+                        }
+
+                        // 3. Set BHP to a
                         //    little above or below (depending on if
                         //    the well is an injector or producer)
                         //    pressure in first perforation cell.
                         switch (well_controls_get_current_type(ctrl)) {
                             case BHP:
-                                bhp_[w] = well_controls_get_current_target( ctrl );
-                                thp_[w] = -1e100;
                                 break;
-
                             case THP:
-                                bhp_[w] = -1e100;
-                                thp_[w] = well_controls_get_current_target( ctrl );
+                                //bhp_[w] = thp_[w]; //< TODO: ARB Adding this produces identical results as without THP control for artificial test case
+                                //Already taken care of above in 2.
                                 break;
 
                             default:
@@ -118,7 +133,7 @@ namespace Opm
                                 const int first_cell = wells->well_cells[wells->well_connpos[w]];
                                 const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
                                 bhp_[w] = safety_factor*state.pressure()[first_cell];
-                                thp_[w] = -1e100;
+                                // thp_[w] = -1e100;
                             }
                         }
                     }
