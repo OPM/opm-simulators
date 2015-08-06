@@ -31,6 +31,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -158,11 +159,12 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
 {
     Opm::parameter::ParameterGroup param;
     Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::ParseMode parseMode;
 
     /////
     // create a DerivedGeology object without any multipliers involved
-    Opm::DeckConstPtr origDeck = parser->parseString(origDeckString);
-    Opm::EclipseStateConstPtr origEclipseState(new Opm::EclipseState(origDeck));
+    Opm::DeckConstPtr origDeck = parser->parseString(origDeckString, parseMode);
+    Opm::EclipseStateConstPtr origEclipseState(new Opm::EclipseState(origDeck , parseMode));
 
     auto origGridManager = std::make_shared<Opm::GridManager>(origEclipseState->getEclipseGrid());
     auto origProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(origDeck, origEclipseState, *(origGridManager->c_grid()));
@@ -172,8 +174,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
 
     /////
     // create a DerivedGeology object _with_ transmissibility multipliers involved
-    Opm::DeckConstPtr multDeck = parser->parseString(multDeckString);
-    Opm::EclipseStateConstPtr multEclipseState(new Opm::EclipseState(multDeck));
+    Opm::DeckConstPtr multDeck = parser->parseString(multDeckString, parseMode);
+    Opm::EclipseStateConstPtr multEclipseState(new Opm::EclipseState(multDeck, parseMode));
 
     auto multGridManager = std::make_shared<Opm::GridManager>(multEclipseState->getEclipseGrid());
     auto multProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multDeck, multEclipseState, *(multGridManager->c_grid()));
@@ -184,8 +186,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
     /////
     // create a DerivedGeology object _with_ transmissibility multipliers involved for
     // the negative faces
-    Opm::DeckConstPtr multMinusDeck = parser->parseString(multMinusDeckString);
-    Opm::EclipseStateConstPtr multMinusEclipseState(new Opm::EclipseState(multMinusDeck));
+    Opm::DeckConstPtr multMinusDeck = parser->parseString(multMinusDeckString, parseMode);
+    Opm::EclipseStateConstPtr multMinusEclipseState(new Opm::EclipseState(multMinusDeck , parseMode));
 
     auto multMinusGridManager = std::make_shared<Opm::GridManager>(multMinusEclipseState->getEclipseGrid());
     auto multMinusProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(multMinusDeck, multMinusEclipseState, *(multMinusGridManager->c_grid()));
@@ -195,8 +197,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
 
     /////
     // create a DerivedGeology object with the NTG keyword involved
-    Opm::DeckConstPtr ntgDeck = parser->parseString(ntgDeckString);
-    Opm::EclipseStateConstPtr ntgEclipseState(new Opm::EclipseState(ntgDeck));
+    Opm::DeckConstPtr ntgDeck = parser->parseString(ntgDeckString, parseMode);
+    Opm::EclipseStateConstPtr ntgEclipseState(new Opm::EclipseState(ntgDeck, parseMode));
 
     auto ntgGridManager = std::make_shared<Opm::GridManager>(ntgEclipseState->getEclipseGrid());
     auto ntgProps = std::make_shared<Opm::BlackoilPropsAdFromDeck>(ntgDeck, ntgEclipseState, *(ntgGridManager->c_grid()));
@@ -272,11 +274,12 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     Opm::parameter::ParameterGroup param;
     Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::ParseMode parseMode;
 
     /////
     // create a DerivedGeology object without any multipliers involved
-    Opm::DeckConstPtr origDeck = parser->parseString(origDeckString);
-    Opm::EclipseStateConstPtr origEclipseState(new Opm::EclipseState(origDeck));
+    Opm::DeckConstPtr origDeck = parser->parseString(origDeckString , parseMode);
+    Opm::EclipseStateConstPtr origEclipseState(new Opm::EclipseState(origDeck , parseMode));
 
     auto origGrid = std::make_shared<Dune::CpGrid>();
     origGrid->processEclipseFormat(origEclipseState->getEclipseGrid(), 0.0, false);
@@ -290,8 +293,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     /////
     // create a DerivedGeology object _with_ transmissibility multipliers involved
-    Opm::DeckConstPtr multDeck = parser->parseString(multDeckString);
-    Opm::EclipseStateConstPtr multEclipseState(new Opm::EclipseState(multDeck));
+    Opm::DeckConstPtr multDeck = parser->parseString(multDeckString,parseMode);
+    Opm::EclipseStateConstPtr multEclipseState(new Opm::EclipseState(multDeck, parseMode));
 
     auto multGrid = std::make_shared<Dune::CpGrid>();
     multGrid->processEclipseFormat(multEclipseState->getEclipseGrid(), 0.0, false);
@@ -304,8 +307,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
     /////
     // create a DerivedGeology object _with_ transmissibility multipliers involved for
     // the negative faces
-    Opm::DeckConstPtr multMinusDeck = parser->parseString(multMinusDeckString);
-    Opm::EclipseStateConstPtr multMinusEclipseState(new Opm::EclipseState(multMinusDeck));
+    Opm::DeckConstPtr multMinusDeck = parser->parseString(multMinusDeckString , parseMode);
+    Opm::EclipseStateConstPtr multMinusEclipseState(new Opm::EclipseState(multMinusDeck, parseMode));
 
     auto multMinusGrid = std::make_shared<Dune::CpGrid>();
     multMinusGrid->processEclipseFormat(multMinusEclipseState->getEclipseGrid(), 0.0, false);
@@ -318,8 +321,8 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     /////
     // create a DerivedGeology object with the NTG keyword involved
-    Opm::DeckConstPtr ntgDeck = parser->parseString(ntgDeckString);
-    Opm::EclipseStateConstPtr ntgEclipseState(new Opm::EclipseState(ntgDeck));
+    Opm::DeckConstPtr ntgDeck = parser->parseString(ntgDeckString, parseMode);
+    Opm::EclipseStateConstPtr ntgEclipseState(new Opm::EclipseState(ntgDeck, parseMode));
 
     auto ntgGrid = std::make_shared<Dune::CpGrid>();
     ntgGrid->processEclipseFormat(ntgEclipseState->getEclipseGrid(), 0.0, false);
