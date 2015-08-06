@@ -27,15 +27,17 @@
 
 #include <ewoms/common/start.hh>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/fingerproblem.hh"
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(FingerProblem, INHERITS_FROM(ImmiscibleTwoPhaseModel, FingerBaseProblem));
+NEW_TYPE_TAG(FingerProblemVcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, FingerBaseProblem));
+SET_TAG_PROP(FingerProblemVcfv, SpatialDiscretizationSplice, VcfvDiscretization);
 }}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(FingerProblem) ProblemTypeTag;
+    typedef TTAG(FingerProblemVcfv) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
