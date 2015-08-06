@@ -348,6 +348,45 @@ private:
     }
 };
 
+
+
+inline VFPProdProperties::adb_like operator+(
+        VFPProdProperties::adb_like lhs,
+        const VFPProdProperties::adb_like& rhs) {
+    lhs.value += rhs.value;
+    lhs.dthp += rhs.dthp;
+    lhs.dwfr += rhs.dwfr;
+    lhs.dgfr += rhs.dgfr;
+    lhs.dalq += rhs.dalq;
+    lhs.dflo += rhs.dflo;
+    return lhs;
+}
+
+inline VFPProdProperties::adb_like operator-(
+        VFPProdProperties::adb_like lhs,
+        const VFPProdProperties::adb_like& rhs) {
+    lhs.value -= rhs.value;
+    lhs.dthp -= rhs.dthp;
+    lhs.dwfr -= rhs.dwfr;
+    lhs.dgfr -= rhs.dgfr;
+    lhs.dalq -= rhs.dalq;
+    lhs.dflo -= rhs.dflo;
+    return lhs;
+}
+
+inline VFPProdProperties::adb_like operator*(
+        double lhs,
+        const VFPProdProperties::adb_like& rhs) {
+    VFPProdProperties::adb_like retval;
+    retval.value = rhs.value * lhs;
+    retval.dthp = rhs.dthp * lhs;
+    retval.dwfr = rhs.dwfr * lhs;
+    retval.dgfr = rhs.dgfr * lhs;
+    retval.dalq = rhs.dalq * lhs;
+    retval.dflo = rhs.dflo * lhs;
+    return retval;
+}
+
 }
 
 #endif /* OPM_AUTODIFF_VFPPROPERTIES_HPP_ */

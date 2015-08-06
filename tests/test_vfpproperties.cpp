@@ -326,51 +326,81 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
  */
 BOOST_AUTO_TEST_CASE(InterpolatePlane)
 {
+    const int n=5;
+
     fillDataPlane();
     initProperties();
 
+    //Temps used to store reference and actual variables
+    adb_like sad;
+    adb_like max_d;
+
     //Check interpolation
-    double sum = 0.0;
-    double reference_sum = 0.0;
-    double sad = 0.0; // Sum absolute difference
-    double max_d = 0.0; // Maximum difference
-    int n=5;
+    int ii=0;
     for (int i=0; i<=n; ++i) {
-        const double x = i / static_cast<double>(n);
+        const double thp = i / static_cast<double>(n);
         for (int j=1; j<=n; ++j) {
             const double aqua = j / static_cast<double>(n);
             for (int k=1; k<=n; ++k) {
                 const double vapour = k / static_cast<double>(n);
                 for (int l=0; l<=n; ++l) {
-                    const double u = l / static_cast<double>(n);
+                    const double alq = l / static_cast<double>(n);
                     for (int m=1; m<=n; ++m) {
                         const double liquid = m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double v = properties->getFlo(aqua, liquid, vapour, table.getFloType());
-                        double y = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double z = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double flo = properties->getFlo(aqua, liquid, vapour, table.getFloType());
+                        double wfr = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double gfr = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
 
-                        double reference = x + 2*y + 3*z+ 4*u + 5*v;
-                        reference_sum += reference;
+                        //Calculate reference
+                        adb_like reference;
+                        reference.value = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
+                        reference.dthp = 1;
+                        reference.dwfr = 2;
+                        reference.dgfr = 3;
+                        reference.dalq = 4;
+                        reference.dflo = 5;
 
-                        //Note order of arguments! id, aqua, liquid, vapour, thp , alq
-                        double value = properties->bhp(1, aqua, liquid, vapour, x, u).value;
-                        sum += value;
+                        //Calculate actual
+                        //Note order of arguments: id, aqua, liquid, vapour, thp, alq
+                        adb_like actual = properties->bhp(1, aqua, liquid, vapour, thp, alq);
 
-                        double abs_diff = std::abs(value - reference);
+                        adb_like abs_diff = actual - reference;
+                        abs_diff.value = std::abs(abs_diff.value);
+                        abs_diff.dthp = std::abs(abs_diff.dthp);
+                        abs_diff.dwfr = std::abs(abs_diff.dwfr);
+                        abs_diff.dgfr = std::abs(abs_diff.dgfr);
+                        abs_diff.dalq = std::abs(abs_diff.dalq);
+                        abs_diff.dflo = std::abs(abs_diff.dflo);
 
-                        sad += std::abs(abs_diff);
-                        max_d = std::max(max_d, abs_diff);
+                        max_d.value = std::max(max_d.value, abs_diff.value);
+                        max_d.dthp = std::max(max_d.dthp, abs_diff.dthp);
+                        max_d.dwfr = std::max(max_d.dwfr, abs_diff.dwfr);
+                        max_d.dgfr = std::max(max_d.dgfr, abs_diff.dgfr);
+                        max_d.dalq = std::max(max_d.dalq, abs_diff.dalq);
+                        max_d.dflo = std::max(max_d.dflo, abs_diff.dflo);
+
+                        sad = sad + abs_diff;
                     }
                 }
             }
         }
     }
 
-    BOOST_CHECK_CLOSE(sum, reference_sum, 0.0001);
-    BOOST_CHECK_SMALL(max_d, max_d_tol);
-    BOOST_CHECK_SMALL(sad, sad_tol);
+    BOOST_CHECK_SMALL(max_d.value, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dthp, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dwfr, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dgfr, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dalq, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dflo, max_d_tol);
+
+    BOOST_CHECK_SMALL(sad.value, sad_tol);
+    BOOST_CHECK_SMALL(sad.dthp, sad_tol);
+    BOOST_CHECK_SMALL(sad.dwfr, sad_tol);
+    BOOST_CHECK_SMALL(sad.dgfr, sad_tol);
+    BOOST_CHECK_SMALL(sad.dalq, sad_tol);
+    BOOST_CHECK_SMALL(sad.dflo, sad_tol);
 }
 
 
