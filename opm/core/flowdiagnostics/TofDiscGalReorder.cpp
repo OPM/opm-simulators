@@ -217,7 +217,8 @@ namespace Opm
             tracerhead_by_cell_.resize(grid_.number_of_cells, NoTracerHead);
         }
         for (int tr = 0; tr < num_tracers_; ++tr) {
-            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+            const unsigned int tracerheadsSize = tracerheads[tr].size();
+            for (unsigned int i = 0; i < tracerheadsSize; ++i) {
                 const int cell = tracerheads[tr][i];
                 basis_func_->addConstant(1.0, &tracer_coeff[cell*num_tracers_*num_basis + tr*num_basis]);
                 tracer_coeff[cell*num_tracers_ + tr] = 1.0;

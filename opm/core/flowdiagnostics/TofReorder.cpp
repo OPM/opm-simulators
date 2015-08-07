@@ -142,7 +142,8 @@ namespace Opm
             tracerhead_by_cell_.resize(num_cells, NoTracerHead);
         }
         for (int tr = 0; tr < num_tracers; ++tr) {
-            for (int i = 0; i < tracerheads[tr].size(); ++i) {
+            const unsigned int tracerheadsSize = tracerheads[tr].size();
+            for (unsigned int i = 0; i < tracerheadsSize; ++i) {
                 const int cell = tracerheads[tr][i];
                 tracer[num_cells * tr + cell] = 1.0;
                 tracerhead_by_cell_[cell] = tr;
