@@ -44,6 +44,7 @@
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/grid/utility/persistentcontainer.hh>
 
 #include <vector>
 #include <string>
@@ -173,6 +174,8 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
 
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef typename GET_PROP_TYPE(TypeTag, Stencil)  Stencil;
+    enum { codim = Stencil::Entity::codimension };
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
@@ -184,6 +187,8 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+
+    typedef Dune::PersistentContainer< typename GridView::Grid, MaterialLawParams >   MaterialLawParamsContainer;
     //!\endcond
 
 public:
@@ -191,7 +196,8 @@ public:
      * \copydoc Doxygen::defaultProblemConstructor
      */
     FingerProblem(Simulator &simulator)
-        : ParentType(simulator)
+        : ParentType(simulator),
+          materialParams_( simulator.gridManager().grid(), codim )
     { }
 
     /*!
@@ -246,16 +252,18 @@ public:
         mdcParams_.finalize();
 
         // initialize the material parameter objects of the individual
-        // finite volumes
-        int n = this->model().numGridDof();
-        materialParams_.resize(n);
-        for (int i = 0; i < n; ++i) {
-            materialParams_[i].setMicParams(&micParams_);
-            materialParams_[i].setMdcParams(&mdcParams_);
-            materialParams_[i].setSwr(0.0);
-            materialParams_[i].setSnr(0.1);
-            materialParams_[i].finalize();
-            ParkerLenhard::reset(materialParams_[i]);
+        // finite volumes, resize will resize the container to the number of elements
+        materialParams_.resize();
+
+        for (auto it = materialParams_.begin(),
+                 end = materialParams_.end(); it != end; ++it ) {
+            MaterialLawParams& materialParams = *it ;
+            materialParams.setMicParams(&micParams_);
+            materialParams.setMdcParams(&mdcParams_);
+            materialParams.setSwr(0.0);
+            materialParams.setSnr(0.1);
+            materialParams.finalize();
+            ParkerLenhard::reset(materialParams);
         }
 
         K_ = this->toDimMatrix_(4.6e-10);
@@ -289,11 +297,13 @@ public:
         auto elemIt = this->gridView().template begin<0>();
         const auto &elemEndIt = this->gridView().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            elemCtx.updateAll(*elemIt);
-            for (int scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx) {
-                int globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
+            const auto& elem = *elemIt;
+            elemCtx.updateAll( elem );
+            for (int scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx)
+            {
+                MaterialLawParams& materialParam = materialLawParams( elemCtx, scvIdx, /*timeIdx=*/0 );
                 const auto &fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
-                ParkerLenhard::update(materialParams_[globalIdx], fs);
+                ParkerLenhard::update(materialParam, fs);
             }
         }
     }
@@ -331,11 +341,22 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
+    MaterialLawParams &materialLawParams(const Context &context,
+                                         int spaceIdx, int timeIdx)
+    {
+        const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
+        return materialParams_[ entity ];
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::materialLawParams
+     */
+    template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
                                                int spaceIdx, int timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return materialParams_[globalSpaceIdx];
+        const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
+        return materialParams_[ entity ];
     }
 
     //! \}
@@ -471,7 +492,7 @@ private:
     typename MaterialLawParams::VanGenuchtenParams micParams_;
     typename MaterialLawParams::VanGenuchtenParams mdcParams_;
 
-    std::vector<MaterialLawParams> materialParams_;
+    MaterialLawParamsContainer materialParams_;
 
     Opm::ImmiscibleFluidState<Scalar, FluidSystem> initialFluidState_;
 
