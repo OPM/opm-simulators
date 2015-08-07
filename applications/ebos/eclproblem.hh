@@ -790,9 +790,12 @@ private:
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
                 porosity_[dofIdx] *= multpvData[gridManager.cartesianCellId(dofIdx)];
         }
+        std::vector<int> compressedToCartesianElemIdx(numDof);
+        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
+            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianCellId(elemIdx);
 
         // the fluid-matrix interactions for ECL problems are dealt with by a separate class
-        materialLawManager_.initFromDeck(deck, eclState);
+        materialLawManager_.initFromDeck(deck, eclState, compressedToCartesianElemIdx);
     }
 
     void initFluidSystem_()
