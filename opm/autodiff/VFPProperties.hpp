@@ -139,7 +139,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    ADB bhp(int table_id,
+    ADB bhp(const std::vector<int>& table_id,
             const Wells& wells,
             const ADB& qs,
             const ADB& thp,
@@ -147,7 +147,10 @@ public:
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as ADBs
-     * @param table Table number to use
+     * Each entry corresponds typically to one well.
+     * @param table_id Table number to use. A negative entry (e.g., -1)
+     *                 will indicate that no table is used, and the corresponding
+     *                 BHP will be calculated as a constant -1e100.
      * @param aqua Water phase
      * @param liquid Oil phase
      * @param vapour Gas phase
@@ -158,7 +161,7 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    ADB bhp(int table_id,
+    ADB bhp(const std::vector<int>& table_id,
             const ADB& aqua,
             const ADB& liquid,
             const ADB& vapour,
@@ -202,8 +205,6 @@ public:
             const double& vapour,
             const double& bhp,
             const double& alq) const;
-
-    //FIXME: ARB: Implement inj_bhp to match the prod_bhp's, but for injection wells.
 
     /**
      * Computes the flo parameter according to the flo_type_

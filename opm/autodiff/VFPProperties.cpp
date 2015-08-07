@@ -25,6 +25,8 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <algorithm>
+#include <map>
+#include <vector>
 
 namespace Opm {
 
@@ -99,7 +101,7 @@ void VFPProdProperties::init(const std::map<int, VFPProdTable>& prod_tables) {
     }
 }
 
-VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
+VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         const Wells& wells,
         const ADB& qs,
         const ADB& thp,
@@ -117,52 +119,231 @@ VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
     return bhp(table_id, w, o, g, thp, alq);
 }
 
-VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
+namespace detail {
+    /**
+     * Returns the type variable for FLO/GFR/WFR
+     */
+    template <typename TYPE>
+    TYPE getType(const VFPProdTable* table);
+
+    template <>
+    VFPProdTable::FLO_TYPE getType(const VFPProdTable* table) {
+        return table->getFloType();
+    }
+
+    template <>
+    VFPProdTable::WFR_TYPE getType(const VFPProdTable* table) {
+        return table->getWFRType();
+    }
+
+    template <>
+    VFPProdTable::GFR_TYPE getType(const VFPProdTable* table) {
+        return table->getGFRType();
+    }
+
+    /**
+     * Returns the actual ADB for the type of FLO/GFR/WFR type
+     */
+    template <typename TYPE>
+    VFPProdProperties::ADB getValue(
+            const VFPProdProperties::ADB& aqua,
+            const VFPProdProperties::ADB& liquid,
+            const VFPProdProperties::ADB& vapour, TYPE type);
+
+    template <>
+    VFPProdProperties::ADB getValue(
+            const VFPProdProperties::ADB& aqua,
+            const VFPProdProperties::ADB& liquid,
+            const VFPProdProperties::ADB& vapour,
+            VFPProdTable::FLO_TYPE type) {
+        return VFPProdProperties::getFlo(aqua, liquid, vapour, type);
+    }
+
+    template <>
+    VFPProdProperties::ADB getValue(
+            const VFPProdProperties::ADB& aqua,
+            const VFPProdProperties::ADB& liquid,
+            const VFPProdProperties::ADB& vapour,
+            VFPProdTable::WFR_TYPE type) {
+        return VFPProdProperties::getWFR(aqua, liquid, vapour, type);
+    }
+
+    template <>
+    VFPProdProperties::ADB getValue(
+            const VFPProdProperties::ADB& aqua,
+            const VFPProdProperties::ADB& liquid,
+            const VFPProdProperties::ADB& vapour,
+            VFPProdTable::GFR_TYPE type) {
+        return VFPProdProperties::getGFR(aqua, liquid, vapour, type);
+    }
+
+    /**
+     * Given m wells and n types of VFP variables (e.g., FLO = {FLO_OIL, FLO_LIQ}
+     * this function combines the n types of ADB objects, so that each of the
+     * m wells gets the right ADB.
+     */
+    template <typename TYPE>
+    VFPProdProperties::ADB gather_vars(const std::vector<const VFPProdTable*>& well_tables,
+            const VFPProdProperties::ADB& aqua,
+            const VFPProdProperties::ADB& liquid,
+            const VFPProdProperties::ADB& vapour) {
+
+        typedef VFPProdProperties::ADB ADB;
+
+        const int num_wells = static_cast<int>(well_tables.size());
+        assert(aqua.size() == num_wells);
+        assert(liquid.size() == num_wells);
+        assert(vapour.size() == num_wells);
+
+        //Caching variable for flo/wfr/gfr
+        std::map<TYPE, ADB> map;
+
+        //Indexing variable used when combining the different ADB types
+        std::map<TYPE, std::vector<int> > elems;
+
+        //Compute all of the different ADB types,
+        //and record which wells use which types
+        for (int i=0; i<num_wells; ++i) {
+            const VFPProdTable* table = well_tables[i];
+
+            //Only do something if this well is under THP control
+            if (table != NULL) {
+                TYPE type = getType<TYPE>(table);
+
+                //"Caching" of flo_type etc: Only calculate used types
+                //Create type if it does not exist
+                if (map.find(type) == map.end()) {
+                    map.insert(std::pair<TYPE, ADB>(
+                            type,
+                            detail::getValue<TYPE>(aqua, liquid, vapour, type)
+                            ));
+                }
+
+                //Add the index for assembly later in gather_vars
+                elems[type].push_back(i);
+            }
+        }
+
+        //Loop over all types of ADB variables, and combine them
+        //so that each well gets the proper variable
+        ADB retval = ADB::constant(ADB::V::Zero(num_wells));
+        for (const auto& entry : elems) {
+            const auto& key = entry.first;
+            const auto& value = entry.second;
+
+            //Get the ADB for this type of variable
+            assert(map.find(key) != map.end());
+            const ADB& values = map.find(key)->second;
+
+            //Get indices to all elements that should use this ADB
+            const std::vector<int>& elems = value;
+
+            //Add these elements to retval
+            retval = retval + superset(subset(values, elems), elems, values.size());
+        }
+
+        return retval;
+    }
+
+    void extendBlockPattern(const VFPProdProperties::ADB& x, std::vector<int>& block_pattern) {
+        std::vector<int> x_block_pattern = x.blockPattern();
+
+        if (x_block_pattern.empty()) {
+            return;
+        }
+        else {
+            if (block_pattern.empty()) {
+                block_pattern = x_block_pattern;
+                return;
+            }
+            else {
+                if (x_block_pattern != block_pattern) {
+                    OPM_THROW(std::logic_error, "Block patterns do not match");
+                }
+            }
+        }
+    }
+
+    std::vector<int> commonBlockPattern(
+            const VFPProdProperties::ADB& x1,
+            const VFPProdProperties::ADB& x2,
+            const VFPProdProperties::ADB& x3,
+            const VFPProdProperties::ADB& x4,
+            const VFPProdProperties::ADB& x5) {
+        std::vector<int> block_pattern;
+
+        extendBlockPattern(x1, block_pattern);
+        extendBlockPattern(x2, block_pattern);
+        extendBlockPattern(x3, block_pattern);
+        extendBlockPattern(x4, block_pattern);
+        extendBlockPattern(x5, block_pattern);
+
+        return block_pattern;
+    }
+
+} //Namespace
+
+VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         const ADB& aqua,
         const ADB& liquid,
         const ADB& vapour,
         const ADB& thp,
         const ADB& alq) const {
-    const VFPProdTable* table = getProdTable(table_id);
     const int nw = thp.size();
 
-    assert(aqua.size()   == nw);
-    assert(liquid.size() == nw);
-    assert(vapour.size() == nw);
-    assert(thp.size()    == nw);
-    assert(alq.size()    == nw);
+    std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp, alq);
+
+    assert(static_cast<int>(table_id.size()) == nw);
+    assert(aqua.size()     == nw);
+    assert(liquid.size()   == nw);
+    assert(vapour.size()   == nw);
+    assert(thp.size()      == nw);
+    assert(alq.size()      == nw);
 
     //Allocate data for bhp's and partial derivatives
-    ADB::V value, dthp, dwfr, dgfr, dalq, dflo;
-    value.resize(nw);
-    dthp.resize(nw);
-    dwfr.resize(nw);
-    dgfr.resize(nw);
-    dalq.resize(nw);
-    dflo.resize(nw);
+    ADB::V value = ADB::V::Zero(nw);
+    ADB::V dthp = ADB::V::Zero(nw);
+    ADB::V dwfr = ADB::V::Zero(nw);
+    ADB::V dgfr = ADB::V::Zero(nw);
+    ADB::V dalq = ADB::V::Zero(nw);
+    ADB::V dflo = ADB::V::Zero(nw);
 
-    //Find interpolation variables
-    ADB flo = getFlo(aqua, liquid, vapour, table->getFloType());
-    ADB wfr = getWFR(aqua, liquid, vapour, table->getWFRType());
-    ADB gfr = getGFR(aqua, liquid, vapour, table->getGFRType());
+    //Get the table for each well
+    std::vector<const VFPProdTable*> well_tables(nw, NULL);
+    for (int i=0; i<nw; ++i) {
+        if (table_id[i] >= 0) {
+            well_tables[i] = getProdTable(table_id[i]);
+        }
+    }
+
+    //Get the right FLO/GFR/WFR variable for each well as a single ADB
+    const ADB flo = detail::gather_vars<VFPProdTable::FLO_TYPE>(well_tables, aqua, liquid, vapour);
+    const ADB wfr = detail::gather_vars<VFPProdTable::WFR_TYPE>(well_tables, aqua, liquid, vapour);
+    const ADB gfr = detail::gather_vars<VFPProdTable::GFR_TYPE>(well_tables, aqua, liquid, vapour);
 
     //Compute the BHP for each well independently
     for (int i=0; i<nw; ++i) {
-        //First, find the values to interpolate between
-        auto flo_i = find_interp_data(flo.value()[i], table->getFloAxis());
-        auto thp_i = find_interp_data(thp.value()[i], table->getTHPAxis());
-        auto wfr_i = find_interp_data(wfr.value()[i], table->getWFRAxis());
-        auto gfr_i = find_interp_data(gfr.value()[i], table->getGFRAxis());
-        auto alq_i = find_interp_data(alq.value()[i], table->getALQAxis());
+        const VFPProdTable* table = well_tables[i];
+        if (table != NULL) {
+            //First, find the values to interpolate between
+            auto flo_i = find_interp_data(flo.value()[i], table->getFloAxis());
+            auto thp_i = find_interp_data(thp.value()[i], table->getTHPAxis());
+            auto wfr_i = find_interp_data(wfr.value()[i], table->getWFRAxis());
+            auto gfr_i = find_interp_data(gfr.value()[i], table->getGFRAxis());
+            auto alq_i = find_interp_data(alq.value()[i], table->getALQAxis());
 
-        adb_like bhp_val = interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+            adb_like bhp_val = interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-        value[i] = bhp_val.value;
-        dthp[i] = bhp_val.dthp;
-        dwfr[i] = bhp_val.dwfr;
-        dgfr[i] = bhp_val.dgfr;
-        dalq[i] = bhp_val.dalq;
-        dflo[i] = bhp_val.dflo;
+            value[i] = bhp_val.value;
+            dthp[i] = bhp_val.dthp;
+            dwfr[i] = bhp_val.dwfr;
+            dgfr[i] = bhp_val.dgfr;
+            dalq[i] = bhp_val.dalq;
+            dflo[i] = bhp_val.dflo;
+        }
+        else {
+            value[i] = -1e100; //Signal that this value has not been calculated properly, due to "missing" table
+        }
     }
 
     //Create diagonal matrices from ADB::Vs
@@ -172,17 +353,29 @@ VFPProdProperties::ADB VFPProdProperties::bhp(int table_id,
     ADB::M dalq_diag = spdiag(dalq);
     ADB::M dflo_diag = spdiag(dflo);
 
-    //Calculate the jacobians
-    const int num_blocks = aqua.numBlocks();
+    //Calculate the Jacobians
+    const int num_blocks = block_pattern.size();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
         //Could have used fastSparseProduct and temporary variables
         //but may not save too much on that.
-        jacs[block] = dthp_diag * thp.derivative()[block] +
-                dwfr_diag * wfr.derivative()[block] +
-                dgfr_diag * gfr.derivative()[block] +
-                dalq_diag * alq.derivative()[block] +
-                dflo_diag * flo.derivative()[block];
+        jacs[block] = ADB::M(nw, block_pattern[block]);
+
+        if (!thp.derivative().empty()) {
+            jacs[block] += dthp_diag * thp.derivative()[block];
+        }
+        if (!wfr.derivative().empty()) {
+            jacs[block] += dwfr_diag * wfr.derivative()[block];
+        }
+        if (!gfr.derivative().empty()) {
+            jacs[block] += dgfr_diag * gfr.derivative()[block];
+        }
+        if (!alq.derivative().empty()) {
+            jacs[block] += dalq_diag * alq.derivative()[block];
+        }
+        if (!flo.derivative().empty()) {
+            jacs[block] += dflo_diag * flo.derivative()[block];
+        }
     }
 
     ADB retval = ADB::function(std::move(value), std::move(jacs));

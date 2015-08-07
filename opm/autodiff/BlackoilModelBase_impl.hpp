@@ -50,6 +50,7 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <vector>
 //#include <fstream>
 
 // A debugging utility.
@@ -1373,11 +1374,26 @@ namespace detail {
         const ADB& liquid = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
         const ADB& vapour = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-        V bhp_targets  = V::Zero(nw);
-        V rate_targets = V::Zero(nw);
-        M rate_distr(nw, np*nw);
+        //1. Calculate THP targets
+        std::vector<int> table_id(nw, -1);
+        ADB::V thp_v = ADB::V::Zero(nw);
+        ADB::V alq_v = ADB::V::Zero(nw);
+
+        //Target vars
+        ADB::V bhp_targets  = ADB::V::Zero(nw);
+        ADB::V rate_targets = ADB::V::Zero(nw);
+        ADB::M rate_distr(nw, np*nw);
+
+        //Selection variables
+        std::vector<int> bhp_elems;
+        std::vector<int> thp_elems;
+        std::vector<int> rate_elems;
+
+        //Run through all wells to calculate BHP/RATE targets
+        //and gather info about current control
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells().ctrls[w];
+            auto wc = wells().ctrls[w];
+
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
@@ -1386,18 +1402,20 @@ namespace detail {
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
             {
-                bhp_targets (w) = well_controls_iget_target(wc, current);
+                bhp_elems.push_back(w);
+                bhp_targets(w)  = well_controls_iget_target(wc, current);
                 rate_targets(w) = -1e100;
             }
             break;
 
             case THP:
             {
-                const int vfp        = well_controls_iget_vfp(wc, current);
-                const double& thp    = well_controls_iget_target(wc, current);
-                const double& alq    = well_controls_iget_alq(wc, current);
+                table_id[w] = well_controls_iget_vfp(wc, current);
+                thp_v[w]    = well_controls_iget_target(wc, current);
+                alq_v[w]    = well_controls_iget_alq(wc, current);
 
-                bhp_targets (w) = vfp_properties_->getProd()->bhp(vfp, aqua.value()[w], liquid.value()[w], vapour.value()[w], thp, alq).value;
+                thp_elems.push_back(w);
+                bhp_targets(w)  = -1e100;
                 rate_targets(w) = -1e100;
             }
             break;
@@ -1405,6 +1423,7 @@ namespace detail {
             case RESERVOIR_RATE: // Intentional fall-through
             case SURFACE_RATE:
             {
+                rate_elems.push_back(w);
                 // RESERVOIR and SURFACE rates look the same, from a
                 // high-level point of view, in the system of
                 // simultaneous linear equations.
@@ -1416,19 +1435,28 @@ namespace detail {
                     rate_distr.insert(w, p*nw + w) = distr[p];
                 }
 
-                bhp_targets (w) = -1.0e100;
+                bhp_targets(w)  = -1.0e100;
                 rate_targets(w) = well_controls_iget_target(wc, current);
             }
             break;
             }
         }
+
+        //Calculate BHP target from THP
+        const ADB thp = ADB::constant(thp_v);
+        const ADB alq = ADB::constant(alq_v);
+        const ADB thp_targets = vfp_properties_->getProd()->bhp(table_id, aqua, liquid, vapour, thp, alq);
+
+        //Calculate residuals
+        const ADB thp_residual = state.bhp - thp_targets;
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
 
-        //wells
-        // Choose bhp residual for positive bhp targets.
-        Selector<double> bhp_selector(bhp_targets);
-        residual_.well_eq = bhp_selector.select(bhp_residual, rate_residual);
+        //Select the right residual for each well
+        residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, bhp_residual.size()) +
+                superset(subset(thp_residual, thp_elems), thp_elems, thp_residual.size()) +
+                superset(subset(rate_residual, rate_elems), rate_elems, rate_residual.size());
+
         // For wells that are dead (not flowing), and therefore not communicating
         // with the reservoir, we set the equation to be equal to the well's total
         // flow. This will be a solution only if the target rate is also zero.

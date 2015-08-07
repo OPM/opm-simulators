@@ -57,7 +57,8 @@ struct TrivialFixture {
     typedef Opm::VFPProdProperties::ADB ADB;
     typedef Opm::VFPProdProperties::adb_like adb_like;
 
-    TrivialFixture() : thp_axis{0.0, 1.0},
+    TrivialFixture() : table_ids(1, 1),
+            thp_axis{0.0, 1.0},
             wfr_axis{0.0, 0.5, 1.0},
             gfr_axis{0.0, 0.25, 0.5, 0.75, 1},
             alq_axis{0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1},
@@ -145,7 +146,7 @@ struct TrivialFixture {
 
     inline void initProperties() {
         //Initialize table
-        table.init(1,
+        table.init(table_ids[0],
                    1000.0,
                    Opm::VFPProdTable::FLO_OIL,
                    Opm::VFPProdTable::WFR_WOR,
@@ -175,6 +176,7 @@ struct TrivialFixture {
 
     std::shared_ptr<Opm::VFPProdProperties> properties;
     Opm::VFPProdTable table;
+    std::vector<int> table_ids;
 
 private:
     const std::vector<double> thp_axis;
@@ -232,9 +234,9 @@ BOOST_AUTO_TEST_CASE(GetTable)
 
 
     //Check that different versions of the prod_bph function work
-    ADB a = properties->bhp(1, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
-    adb_like b = properties->bhp(1, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
-    ADB c = properties->bhp(1, *wells, qs_adb, thp_adb, alq_adb);
+    ADB a = properties->bhp(table_ids, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
+    adb_like b = properties->bhp(table_ids[0], aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    ADB c = properties->bhp(table_ids, *wells, qs_adb, thp_adb, alq_adb);
 
     //Check that results are actually equal
     double d = a.value()[0];
@@ -244,7 +246,8 @@ BOOST_AUTO_TEST_CASE(GetTable)
     BOOST_CHECK_EQUAL(d, f);
 
     //Table 2 does not exist.
-    BOOST_CHECK_THROW(properties->bhp(2, *wells, qs_adb, thp_adb, alq_adb), std::invalid_argument);
+    std::vector<int> table_ids_wrong(1, 2);
+    BOOST_CHECK_THROW(properties->bhp(table_ids_wrong, *wells, qs_adb, thp_adb, alq_adb), std::invalid_argument);
 }
 
 /**
@@ -510,7 +513,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         ADB adb_u = ADB::constant(adb_v_u);
                         ADB adb_liquid = ADB::constant(adb_v_liquid);
 
-                        ADB bhp = properties->bhp(1, adb_aqua, adb_liquid, adb_vapour, adb_x, adb_u);
+                        ADB bhp = properties->bhp(table_ids, adb_aqua, adb_liquid, adb_vapour, adb_x, adb_u);
                         ADB::V bhp_val = bhp.value();
 
                         double value = 0.0;
@@ -596,7 +599,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     ADB alq = ADB::constant(alq_v);
 
     //Call the bhp function
-    ADB::V bhp = properties->bhp(1, *wells, qs, thp, alq).value();
+    ADB::V bhp = properties->bhp(table_ids, *wells, qs, thp, alq).value();
 
     //Calculate reference
     //First, find the three phases
