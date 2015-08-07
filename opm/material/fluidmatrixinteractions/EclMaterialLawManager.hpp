@@ -206,28 +206,22 @@ public:
 
     MaterialLawParams& materialLawParams(int elemIdx)
     {
-        assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
-
-        int paramIdx;
-        if (hasElementSpecificParameters())
-            paramIdx = elemIdx;
+        if (hasElementSpecificParameters()) {
+            assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
+            return *materialLawParams_[elemIdx];
+        }
         else
-            paramIdx = satnumRegionIdx_[elemIdx];
-
-        return *materialLawParams_[paramIdx];
+            return *materialLawParams_[satnumRegionIdx_[elemIdx]];
     }
 
     const MaterialLawParams& materialLawParams(int elemIdx) const
     {
-        assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
-
-        int paramIdx;
-        if (hasElementSpecificParameters())
-            paramIdx = elemIdx;
+        if (hasElementSpecificParameters()) {
+            assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
+            return *materialLawParams_[elemIdx];
+        }
         else
-            paramIdx = satnumRegionIdx_[elemIdx];
-
-        return *materialLawParams_[paramIdx];
+            return *materialLawParams_[satnumRegionIdx_[elemIdx]];
     }
 
     template <class FluidState>
