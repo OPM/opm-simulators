@@ -263,6 +263,12 @@ namespace {
     constructSupersetSparseMatrix(const int full_size, const IntVec& indices)
     {
         const int subset_size = indices.size();
+
+        if (subset_size == 0) {
+            typename AutoDiffBlock<Scalar>::M mat(full_size, 0);
+            return mat;
+        }
+
         typename AutoDiffBlock<Scalar>::M mat(full_size, subset_size);
         mat.reserve(Eigen::VectorXi::Constant(subset_size, 1));
         for (int i = 0; i < subset_size; ++i) {

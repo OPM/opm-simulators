@@ -144,3 +144,75 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
     BOOST_CHECK((x.value() == expected_val).all());
     BOOST_CHECK(x.derivative()[0] == expected_jac);
 }
+
+
+BOOST_AUTO_TEST_CASE(supersetTest)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    {
+        ADB subset = ADB::constant(ADB::V::Ones(3));
+        const int full_size = 32;
+        std::vector<int> indices = {1, 3, 5};
+
+        AutoDiffBlock<double> n_vals = superset(subset, indices, full_size);
+        BOOST_CHECK_EQUAL(n_vals.size(), full_size);
+        for (int i=0; i<n_vals.size(); ++i) {
+            if (find(indices.begin(), indices.end(), i) != indices.end()) {
+                BOOST_CHECK_EQUAL(n_vals.value()[i], 1);
+            }
+            else {
+                BOOST_CHECK_EQUAL(n_vals.value()[i], 0);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(supersetEmptyTest)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    {
+        ADB subset = ADB::constant(ADB::V::Ones(0));
+        const int full_size = 32;
+        std::vector<int> indices = {};
+
+        AutoDiffBlock<double> n_vals = superset(subset, indices, full_size);
+        BOOST_CHECK_EQUAL(n_vals.size(), full_size);
+        for (int i=0; i<n_vals.size(); ++i) {
+            BOOST_CHECK_EQUAL(n_vals.value()[i], 0);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(subsetTest)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    {
+        ADB superset = ADB::constant(ADB::V::Ones(32));
+        std::vector<int> indices = {1, 3, 5};
+
+        AutoDiffBlock<double> n_vals = subset(superset, indices);
+        BOOST_CHECK_EQUAL(n_vals.size(), 3);
+        for (int i=0; i<n_vals.size(); ++i) {
+            if (find(indices.begin(), indices.end(), i) != indices.end()) {
+                BOOST_CHECK_EQUAL(n_vals.value()[i], 1);
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(subsetEmptyTest)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    {
+        ADB superset = ADB::constant(ADB::V::Ones(32));
+        std::vector<int> indices = {};
+
+        AutoDiffBlock<double> n_vals = subset(superset, indices);
+        BOOST_CHECK_EQUAL(n_vals.size(), 0);
+    }
+}
+
