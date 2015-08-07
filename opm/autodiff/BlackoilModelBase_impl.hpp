@@ -1178,6 +1178,8 @@ namespace detail {
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const std::vector<double> wr = xw.wellRates();
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
@@ -1224,9 +1226,29 @@ namespace detail {
                 xw.bhp()[w] = target;
                 break;
 
-            case THP:
-                xw.thp()[w] = target;
+            case THP: {
+                double aqua = 0.0;
+                double liquid = 0.0;
+                double vapour = 0.0;
+
+                if (active_[ Water ]) {
+                    aqua = wr[w*np + pu.phase_pos[ Water ] ];
+                }
+                if (active_[ Oil ]) {
+                    liquid = wr[w*np + pu.phase_pos[ Oil ] ];
+                }
+                if (active_[ Gas ]) {
+                    vapour = wr[w*np + pu.phase_pos[ Gas ] ];
+                }
+
+                const int vfp        = well_controls_iget_vfp(wc, current);
+                const double& thp    = well_controls_iget_target(wc, current);
+                const double& alq    = well_controls_iget_alq(wc, current);
+
+                //Set *BHP* target by calculating bhp from THP
+                xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq).value;
                 break;
+            }
 
             case RESERVOIR_RATE:
                 // No direct change to any observable quantity at
