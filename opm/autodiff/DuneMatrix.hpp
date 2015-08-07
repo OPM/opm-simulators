@@ -33,10 +33,14 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL,2,4)
+#include <dune/istl/bcrsmatrix.hh>
+#else
 // Include matrix header with hackery to make it possible to inherit.
 #define private protected
 #include <dune/istl/bcrsmatrix.hh>
 #undef private
+#endif
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
@@ -82,7 +86,7 @@ namespace Opm
             this->overflowsize = -1.0;
 #endif
 
-            // make sure to use the allocators of this matrix 
+            // make sure to use the allocators of this matrix
             // because the same allocators are used to deallocate the data
             this->a = this->allocator_.allocate(this->nnz);
             static_assert(sizeof(block_type) == sizeof(double), "This constructor requires a block type that is the same as a double.");
