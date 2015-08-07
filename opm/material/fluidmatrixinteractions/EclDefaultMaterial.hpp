@@ -140,6 +140,7 @@ public:
         values[gasPhaseIdx] = pcgn<FluidState, Evaluation>(params, state);
         values[oilPhaseIdx] = 0;
         values[waterPhaseIdx] = - pcnw<FluidState, Evaluation>(params, state);
+
         Valgrind::CheckDefined(values[gasPhaseIdx]);
         Valgrind::CheckDefined(values[oilPhaseIdx]);
         Valgrind::CheckDefined(values[waterPhaseIdx]);

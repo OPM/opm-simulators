@@ -102,7 +102,7 @@ public:
                            EclTwoPhaseSystemType twoPhaseSystem)
 
     {
-        drainageParams_ = value;
+        drainageParams_ = *value;
 
 #if 0
         if (twoPhaseSystem == EclGasOilSystem) {
@@ -118,10 +118,13 @@ public:
     }
 
     /*!
-     * \brief Sets the parameters used for the drainage curve
+     * \brief Returns the parameters used for the drainage curve
      */
     const EffLawParams& drainageParams() const
-    { return *drainageParams_; }
+    { return drainageParams_; }
+
+    EffLawParams& drainageParams()
+    { return drainageParams_; }
 
     /*!
      * \brief Sets the parameters used for the imbibition curve
@@ -130,7 +133,7 @@ public:
                              const EclEpsScalingPointsInfo<Scalar>& info,
                              EclTwoPhaseSystemType twoPhaseSystem)
     {
-        imbibitionParams_ = value;
+        imbibitionParams_ = *value;
 
 /*
         if (twoPhaseSystem == EclGasOilSystem) {
@@ -144,10 +147,13 @@ public:
     }
 
     /*!
-     * \brief Sets the parameters used for the imbibition curve
+     * \brief Returns the parameters used for the imbibition curve
      */
     const EffLawParams& imbibitionParams() const
-    { return *imbibitionParams_; }
+    { return imbibitionParams_; }
+
+    EffLawParams& imbibitionParams()
+    { return imbibitionParams_; }
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
@@ -324,11 +330,9 @@ private:
 #endif
     }
 
-    std::shared_ptr<EffLawParams> effectiveLawParams_;
-
     std::shared_ptr<EclHysteresisConfig> config_;
-    std::shared_ptr<EffLawParams> imbibitionParams_;
-    std::shared_ptr<EffLawParams> drainageParams_;
+    EffLawParams imbibitionParams_;
+    EffLawParams drainageParams_;
 
     // largest wettinging phase saturation which is on the main-drainage curve. These are
     // three different values because the sourounding code can choose to use different
