@@ -40,6 +40,7 @@
 #include <opm/material/components/Air.hpp>
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
+#include <ewoms/disc/common/restrictprolong.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -188,10 +189,14 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
-    typedef Dune::PersistentContainer< typename GridView::Grid, MaterialLawParams >   MaterialLawParamsContainer;
+    typedef typename GridView :: Grid Grid;
+
+    typedef Dune::PersistentContainer< Grid, MaterialLawParams >   MaterialLawParamsContainer;
     //!\endcond
 
 public:
+    typedef CopyRestrictProlong< Grid, MaterialLawParamsContainer > RestrictProlongOperator;
+
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
@@ -204,6 +209,14 @@ public:
      * \name Auxiliary methods
      */
     //! \{
+
+    /*!
+     * \brief \copydoc FvBaseProblem::restrictProlongOperator
+     */
+    RestrictProlongOperator restrictProlongOperator()
+    {
+        return RestrictProlongOperator( materialParams_ );
+    }
 
     /*!
      * \copydoc FvBaseProblem::name
