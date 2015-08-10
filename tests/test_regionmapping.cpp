@@ -27,8 +27,11 @@
 #define NVERBOSE  // Suppress own messages when throw()ing
 
 #define BOOST_TEST_MODULE UnitsTest
+
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 /* --- our own headers --- */
 
