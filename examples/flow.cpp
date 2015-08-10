@@ -213,10 +213,9 @@ try
         Opm::OpmLog::addBackend( "COUNTER" , counterLog );
     }
 
-    Opm::ParseMode parseMode;
+    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
-    parseMode.randomSlash = InputError::IGNORE;
     try {
         deck = parser->parseFile(deck_filename, parseMode);
         Opm::checkDeck(deck);
