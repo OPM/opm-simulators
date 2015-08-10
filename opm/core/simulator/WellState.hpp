@@ -113,6 +113,8 @@ namespace Opm
                                 case THP:
                                     thp_[w] = well_controls_iget_target( ctrl , i );
                                     break;
+                                default:
+                                    break;
                             }
                         }
 
