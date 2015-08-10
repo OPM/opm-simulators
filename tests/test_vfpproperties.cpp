@@ -498,8 +498,10 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         ADB::V adb_v_vapour(num_wells);
                         ADB::V adb_v_u(num_wells);
                         ADB::V adb_v_liquid(num_wells);
+                        table_ids.resize(num_wells);
 
                         for (unsigned int w=0; w<num_wells; ++w) {
+                            table_ids[w] = 1;
                             adb_v_x[w] = x*(w+1);
                             adb_v_aqua[w] = aqua*(w+1);
                             adb_v_vapour[w] = vapour*(w+1);
@@ -597,6 +599,12 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
         alq_v[i] = 0.0;
     }
     ADB alq = ADB::constant(alq_v);
+
+    //Set which VFP table to use for each well
+    table_ids.resize(nwells);
+    for (int i=0; i<nwells; ++i) {
+        table_ids[i] = 1;
+    }
 
     //Call the bhp function
     ADB::V bhp = properties->bhp(table_ids, *wells, qs, thp, alq).value();
@@ -853,7 +861,8 @@ VFPPROD \n\
     std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newFIELD());
 
     Opm::ParserPtr parser(new Opm::Parser());
-    deck = parser->parseString(table_str);
+    Opm::ParseMode parse_mode;
+    deck = parser->parseString(table_str, parse_mode);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
@@ -913,9 +922,10 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newMETRIC());
 
     Opm::ParserPtr parser(new Opm::Parser());
+    Opm::ParseMode parse_mode;
     boost::filesystem::path file("tests/VFPPROD2");
 
-    deck = parser->parseFile(file.string());
+    deck = parser->parseFile(file.string(), parse_mode);
     Opm::checkDeck(deck);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
