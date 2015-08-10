@@ -187,7 +187,7 @@ public:
             Scalar pcowAtSw = pc[oilPhaseIdx] - pc[waterPhaseIdx];
             if (pcowAtSw > 0.0) {
                 elemScaledEpsInfo.maxPcow *= pcow/pcowAtSw;
-                auto& elemEclEpsScalingPoints = *oilWaterScaledEpsPointsDrainage_[elemIdx];
+                auto& elemEclEpsScalingPoints = getOilWaterScaledEpsPointsDrainage_(elemIdx);
                 elemEclEpsScalingPoints.init(elemScaledEpsInfo, *oilWaterEclEpsConfig_, Opm::EclOilWaterSystem);
             }
         }
@@ -206,28 +206,22 @@ public:
 
     MaterialLawParams& materialLawParams(int elemIdx)
     {
-        assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
-
-        int paramIdx;
-        if (hasElementSpecificParameters())
-            paramIdx = elemIdx;
+        if (hasElementSpecificParameters()) {
+            assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
+            return *materialLawParams_[elemIdx];
+        }
         else
-            paramIdx = satnumRegionIdx_[elemIdx];
-
-        return *materialLawParams_[paramIdx];
+            return *materialLawParams_[satnumRegionIdx_[elemIdx]];
     }
 
     const MaterialLawParams& materialLawParams(int elemIdx) const
     {
-        assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
-
-        int paramIdx;
-        if (hasElementSpecificParameters())
-            paramIdx = elemIdx;
+        if (hasElementSpecificParameters()) {
+            assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
+            return *materialLawParams_[elemIdx];
+        }
         else
-            paramIdx = satnumRegionIdx_[elemIdx];
-
-        return *materialLawParams_[paramIdx];
+            return *materialLawParams_[satnumRegionIdx_[elemIdx]];
     }
 
     template <class FluidState>
@@ -402,7 +396,7 @@ private:
         OilWaterScalingInfoVector oilWaterScaledImbInfoVector;
 
         GasOilScalingPointsVector gasOilScaledPointsVector(numCompressedElems);
-        oilWaterScaledEpsPointsDrainage_.resize(numCompressedElems);
+        GasOilScalingPointsVector oilWaterScaledEpsPointsDrainage(numCompressedElems);
         GasOilScalingPointsVector gasOilScaledImbPointsVector;
         OilWaterScalingPointsVector oilWaterScaledImbPointsVector;
 
@@ -424,7 +418,7 @@ private:
                                     epsGridProperties,
                                     elemIdx);
             readOilWaterScaledPoints_(oilWaterScaledEpsInfoDrainage_,
-                                      oilWaterScaledEpsPointsDrainage_,
+                                      oilWaterScaledEpsPointsDrainage,
                                       oilWaterConfig,
                                       epsGridProperties,
                                       elemIdx);
@@ -475,7 +469,7 @@ private:
             auto oilWaterDrainParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
             oilWaterDrainParams->setConfig(oilWaterConfig);
             oilWaterDrainParams->setUnscaledPoints(oilWaterUnscaledPointsVector[satnumRegionIdx]);
-            oilWaterDrainParams->setScaledPoints(oilWaterScaledEpsPointsDrainage_[elemIdx]);
+            oilWaterDrainParams->setScaledPoints(oilWaterScaledEpsPointsDrainage[elemIdx]);
             oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satnumRegionIdx]);
             oilWaterDrainParams->finalize();
 
@@ -678,13 +672,33 @@ private:
         }
     }
 
+    EclEpsScalingPoints<Scalar>& getOilWaterScaledEpsPointsDrainage_(int elemIdx)
+    {
+        auto& materialParams = *materialLawParams_[elemIdx];
+        switch (materialParams.approach()) {
+        case EclStone1Approach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclStone1Approach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+
+        case EclStone2Approach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclStone2Approach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+
+        case EclDefaultApproach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+        }
+    }
+
     bool enableEndPointScaling_;
     std::shared_ptr<EclHysteresisConfig> hysteresisConfig_;
 
     std::shared_ptr<EclEpsConfig> oilWaterEclEpsConfig_;
     std::vector<Opm::EclEpsScalingPointsInfo<Scalar>> unscaledEpsInfo_;
     OilWaterScalingInfoVector oilWaterScaledEpsInfoDrainage_;
-    OilWaterScalingPointsVector oilWaterScaledEpsPointsDrainage_;
 
     EclMultiplexerApproach threePhaseApproach_;
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;

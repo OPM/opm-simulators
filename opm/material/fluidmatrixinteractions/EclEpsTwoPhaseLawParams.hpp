@@ -72,7 +72,6 @@ public:
         assert(config_);
         if (config_->enableSatScaling()) {
             assert(unscaledPoints_);
-            assert(scaledPoints_);
         }
         assert(effectiveLawParams_);
 
@@ -108,13 +107,19 @@ public:
      * \brief Set the scaling points which are seen by the physical model
      */
     void setScaledPoints(std::shared_ptr<ScalingPoints> value)
-    { scaledPoints_ = value; }
+    { scaledPoints_ = *value; }
 
     /*!
      * \brief Returns the scaling points which are seen by the physical model
      */
     const ScalingPoints& scaledPoints() const
-    { return *scaledPoints_; }
+    { return scaledPoints_; }
+
+    /*!
+     * \brief Returns the scaling points which are seen by the physical model
+     */
+    ScalingPoints& scaledPoints()
+    { return scaledPoints_; }
 
     /*!
      * \brief Sets the parameter object for the effective/nested material law.
@@ -144,7 +149,7 @@ private:
 
     std::shared_ptr<EclEpsConfig> config_;
     std::shared_ptr<ScalingPoints> unscaledPoints_;
-    std::shared_ptr<ScalingPoints> scaledPoints_;
+    ScalingPoints scaledPoints_;
 };
 
 } // namespace Opm
