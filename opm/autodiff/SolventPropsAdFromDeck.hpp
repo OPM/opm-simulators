@@ -65,6 +65,20 @@ public:
     ADB muSolvent(const ADB& pg,
               const Cells& cells) const;
 
+    /// Gas relPerm multipliers
+    /// \param[in]  solventFraction Array of n gas pressure values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n gas relPerm multiplier values.
+    ADB gasRelPermMultiplier(const ADB& solventFraction,
+              const Cells& cells) const;
+
+    /// Solvent relPerm multipliers
+    /// \param[in]  solventFraction Array of n gas pressure values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n solvent relPerm multiplier values.
+    ADB solventRelPermMultiplier(const ADB& solventFraction,
+              const Cells& cells) const;
+
     V solventSurfaceDensity(const Cells& cells) const;
 
 private:
@@ -74,6 +88,8 @@ private:
     std::vector<NonuniformTableLinear<double> > viscosity_;
     std::vector<NonuniformTableLinear<double> > inverseBmu_;
     std::vector<double> solvent_surface_densities_;
+    std::vector<NonuniformTableLinear<double> > krg_;
+    std::vector<NonuniformTableLinear<double> > krs_;
 };
 
 } // namespace OPM

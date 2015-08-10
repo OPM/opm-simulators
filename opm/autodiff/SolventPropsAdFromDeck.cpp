@@ -87,6 +87,34 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
     } else {
         OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
     }
+
+    const auto& ssfnTables = eclState->getSsfnTables();
+    // relative permeabilty multiplier
+    if (!ssfnTables.empty()) {
+
+        int numRegions = pvdsTables.size();
+
+        if(numRegions > 1) {
+            OPM_THROW(std::runtime_error, "Only single table saturation function supported for SSFN");
+        }
+        // resize the attributes of the object
+        krg_.resize(numRegions);
+        krs_.resize(numRegions);
+        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            const Opm::SsfnTable& ssfnTable = ssfnTables[regionIdx];
+
+            // Copy data
+            const std::vector<double>& solventFraction = ssfnTable.getSolventFractionColumn();
+            const std::vector<double>& krg = ssfnTable.getGasRelPermMultiplierColumn();
+            const std::vector<double>& krs = ssfnTable.getSolventRelPermMultiplierColumn();
+
+            krg_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krg);
+            krs_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krs);
+        }
+
+    } else {
+        OPM_THROW(std::runtime_error, "SSFN must be specified in SOLVENT runs\n");
+    }
 }
 
 ADB SolventPropsAdFromDeck::muSolvent(const ADB& pg,
@@ -137,6 +165,52 @@ ADB SolventPropsAdFromDeck::bSolvent(const ADB& pg,
         fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
     }
     return ADB::function(std::move(b), std::move(jacs));
+}
+
+ADB SolventPropsAdFromDeck::gasRelPermMultiplier(const ADB& solventFraction,
+                                 const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(solventFraction.value().size() == n);
+    V krg(n);
+    V dkrgdsf(n);
+    for (int i = 0; i < n; ++i) {
+        const double& solventFraction_i = solventFraction.value()[i];
+        int regionIdx = 0; // TODO add mapping from cells to sat function table
+        krg[i] = krg_[regionIdx](solventFraction_i);
+        dkrgdsf[i] = krg_[regionIdx].derivative(solventFraction_i);
+    }
+
+    ADB::M dkrgdsf_diag = spdiag(dkrgdsf);
+    const int num_blocks = solventFraction.numBlocks();
+    std::vector<ADB::M> jacs(num_blocks);
+    for (int block = 0; block < num_blocks; ++block) {
+        fastSparseProduct(dkrgdsf_diag, solventFraction.derivative()[block], jacs[block]);
+    }
+    return ADB::function(std::move(krg), std::move(jacs));
+}
+
+ADB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADB& solventFraction,
+                                 const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(solventFraction.value().size() == n);
+    V krs(n);
+    V dkrsdsf(n);
+    for (int i = 0; i < n; ++i) {
+        const double& solventFraction_i = solventFraction.value()[i];
+        int regionIdx = 0; // TODO add mapping from cells to sat function table
+        krs[i] = krs_[regionIdx](solventFraction_i);
+        dkrsdsf[i] = krs_[regionIdx].derivative(solventFraction_i);
+    }
+
+    ADB::M dkrsdsf_diag = spdiag(dkrsdsf);
+    const int num_blocks = solventFraction.numBlocks();
+    std::vector<ADB::M> jacs(num_blocks);
+    for (int block = 0; block < num_blocks; ++block) {
+        fastSparseProduct(dkrsdsf_diag, solventFraction.derivative()[block], jacs[block]);
+    }
+    return ADB::function(std::move(krs), std::move(jacs));
 }
 
 V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {

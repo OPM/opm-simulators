@@ -379,11 +379,11 @@ namespace Opm {
                 ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
                 V ones = V::Constant(nc, 1.0);
 
-                // TODO: Add support for gas/solvent function (SSFN)
                 const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);
-                rq_[solvent_pos_].mob = F_solvent * tr_mult * kr / mu;
-                rq_[actph].mob = (ones - F_solvent) * rq_[actph].mob;
+                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);               
+
+                rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
+                rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
 
                 const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
                 const ADB rhoavg_solvent = ops_.caver * rho_solvent;
