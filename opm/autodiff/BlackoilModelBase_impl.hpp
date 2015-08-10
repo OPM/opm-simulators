@@ -1120,7 +1120,6 @@ namespace detail {
                     break;
 
                 case THP:
-                    //FIXME: Not correct
                     broken = thp[well] > target;
                     break;
 
@@ -1141,7 +1140,6 @@ namespace detail {
                     break;
 
                 case THP:
-                    //FIXME: Not correct
                     broken = thp[well] < target;
                     break;
 
@@ -1374,7 +1372,7 @@ namespace detail {
         const ADB& liquid = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
         const ADB& vapour = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-        //1. Calculate THP targets
+        //THP calculation variables
         std::vector<int> table_id(nw, -1);
         ADB::V thp_v = ADB::V::Zero(nw);
         ADB::V alq_v = ADB::V::Zero(nw);

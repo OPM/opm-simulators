@@ -54,7 +54,6 @@ namespace Opm
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false ),
-          //FIXME: should be vfpProperties_(eclipse_state->getVFPInjTables(), eclipse_state->getVFPProdTables())
           vfpProperties_(eclipse_state->getVFPProdTables())
     {
         // Misc init.
