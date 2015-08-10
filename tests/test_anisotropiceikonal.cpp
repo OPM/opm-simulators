@@ -25,7 +25,10 @@
 #define NVERBOSE // to suppress our messages when throwing
 
 #define BOOST_TEST_MODULE AnisotropicEikonalTest
+
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid/GridManager.hpp>

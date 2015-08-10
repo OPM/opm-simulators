@@ -19,14 +19,15 @@
 */
 #ifndef OPM_DUNEISTLTESTHELPERS_HEADER
 #define OPM_DUNEISTLTESTHELPERS_HEADER
+
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
 // MPI header
 #if HAVE_MPI
 #include <mpi.h>
 #else
 #error "This file needs to compiled with MPI support!"
 #endif
-
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
 
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)

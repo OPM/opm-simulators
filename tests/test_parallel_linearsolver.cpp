@@ -29,9 +29,7 @@
 
 // MPI header
 #if HAVE_MPI
-#include <mpi.h>
 #include <dune/common/version.hh>
-
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #else
 #error "This file needs to compiled with MPI support!"

@@ -28,11 +28,6 @@
 
 #define BOOST_TEST_MODULE OPM-ParallelIstlInformation
 #include <boost/test/unit_test.hpp>
-#if HAVE_MPI
-#include <mpi.h>
-#else
-#error "This file needs to compiled with MPI support!"
-#endif
 #include "DuneIstlTestHelpers.hpp"
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <functional>

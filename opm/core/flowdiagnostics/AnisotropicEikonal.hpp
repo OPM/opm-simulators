@@ -25,6 +25,8 @@
 #include <set>
 #include <map>
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
 #include <boost/version.hpp>
 
 #define BOOST_HEAP_AVAILABLE ((BOOST_VERSION / 100 % 1000) >= 49)
@@ -32,6 +34,9 @@
 #if BOOST_HEAP_AVAILABLE
 #include <boost/heap/fibonacci_heap.hpp>
 #endif
+
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+
 
 struct UnstructuredGrid;
 

@@ -28,9 +28,9 @@
 #include <exception>
 
 #if HAVE_MPI && HAVE_DUNE_ISTL
-#include <mpi.h>
 
 #include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <mpi.h>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/interface.hh>
 #include <dune/common/parallel/communicator.hh>
