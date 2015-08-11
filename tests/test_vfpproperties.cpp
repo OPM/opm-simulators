@@ -42,11 +42,182 @@
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
+#include <opm/autodiff/VFPHelpers.hpp>
 
 
 
 const double max_d_tol = 1.0e-10;
 const double sad_tol = 1.0e-8;
+
+
+
+
+
+
+
+
+
+struct ConversionFixture {
+    typedef Opm::VFPProdProperties::ADB ADB;
+
+    ConversionFixture() :
+            num_wells(5),
+            aqua(ADB::null()),
+            liquid(ADB::null()),
+            vapour(ADB::null())
+    {
+        ADB::V aqua_v(num_wells);
+        ADB::V liquid_v(num_wells);
+        ADB::V vapour_v(num_wells);
+
+        for (int i=0; i<num_wells; ++i) {
+            aqua_v[i] = 300+num_wells*15;
+            liquid_v[i] = 500+num_wells*15;
+            vapour_v[i] = 700+num_wells*15;
+        }
+
+        aqua = ADB::constant(aqua_v);
+        liquid = ADB::constant(liquid_v);
+        vapour = ADB::constant(vapour_v);
+    }
+
+    ~ConversionFixture() {
+
+    }
+
+    int num_wells;
+
+    ADB aqua;
+    ADB liquid;
+    ADB vapour;
+};
+
+
+
+
+
+BOOST_FIXTURE_TEST_SUITE( ConversionTests, ConversionFixture )
+
+
+BOOST_AUTO_TEST_CASE(getFlo)
+{
+    //Compute reference solutions
+    std::vector<double> ref_flo_oil(num_wells);
+    std::vector<double> ref_flo_liq(num_wells);
+    std::vector<double> ref_flo_gas(num_wells);
+    for (int i=0; i<num_wells; ++i) {
+        ref_flo_oil[i] = liquid.value()[i];
+        ref_flo_liq[i] = aqua.value()[i] + liquid.value()[i];
+        ref_flo_gas[i] = vapour.value()[i];
+    }
+
+    {
+        ADB flo = Opm::detail::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_oil.begin(), ref_flo_oil.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_LIQ);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_liq.begin(), ref_flo_liq.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_GAS);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_gas.begin(), ref_flo_gas.end(), computed, computed+num_wells);
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(getWFR)
+{
+    //Compute reference solutions
+    std::vector<double> ref_wfr_wor(num_wells);
+    std::vector<double> ref_wfr_wct(num_wells);
+    std::vector<double> ref_wfr_wgr(num_wells);
+    for (int i=0; i<num_wells; ++i) {
+        ref_wfr_wor[i] = aqua.value()[i] / liquid.value()[i];
+        ref_wfr_wct[i] = aqua.value()[i] / (aqua.value()[i] + liquid.value()[i]);
+        ref_wfr_wgr[i] = aqua.value()[i] / vapour.value()[i];
+    }
+
+    {
+        ADB flo = Opm::detail::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WOR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wor.begin(), ref_wfr_wor.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WCT);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wct.begin(), ref_wfr_wct.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WGR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wgr.begin(), ref_wfr_wgr.end(), computed, computed+num_wells);
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(getGFR)
+{
+    //Compute reference solutions
+    std::vector<double> ref_gfr_gor(num_wells);
+    std::vector<double> ref_gfr_glr(num_wells);
+    std::vector<double> ref_gfr_ogr(num_wells);
+    for (int i=0; i<num_wells; ++i) {
+        ref_gfr_gor[i] = vapour.value()[i] / liquid.value()[i];
+        ref_gfr_glr[i] = vapour.value()[i] / (liquid.value()[i] + aqua.value()[i]);
+        ref_gfr_ogr[i] = liquid.value()[i] / vapour.value()[i];
+    }
+
+    {
+        ADB flo = Opm::detail::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GOR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_gor.begin(), ref_gfr_gor.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GLR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_glr.begin(), ref_gfr_glr.end(), computed, computed+num_wells);
+    }
+
+    {
+        ADB flo = Opm::detail::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_OGR);
+        const double* computed = &flo.value()[0];
+        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_ogr.begin(), ref_gfr_ogr.end(), computed, computed+num_wells);
+    }
+}
+
+
+
+BOOST_AUTO_TEST_SUITE_END() // unit tests
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -353,9 +524,9 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         const double liquid = m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double flo = properties->getFlo(aqua, liquid, vapour, table.getFloType());
-                        double wfr = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double gfr = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
+                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
                         //Calculate reference
                         adb_like reference;
@@ -437,9 +608,9 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         const double liquid = m / static_cast<double>(n);
 
                         //Find values that should be in table
-                        double v = properties->getFlo(aqua, liquid, vapour, table.getFloType());
-                        double y = properties->getWFR(aqua, liquid, vapour, table.getWFRType());
-                        double z = properties->getGFR(aqua, liquid, vapour, table.getGFRType());
+                        double v = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
+                        double y = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double z = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
                         double reference = x + 2*y + 3*z+ 4*u + 5*v;
                         reference_sum += reference;
@@ -524,9 +695,9 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                         double reference = 0.0;
                         for (int w=0; w < num_wells; ++w) {
                             //Find values that should be in table
-                            double v = properties->getFlo(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getFloType());
-                            double y = properties->getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getWFRType());
-                            double z = properties->getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getGFRType());
+                            double v = Opm::detail::getFlo(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getFloType());
+                            double y = Opm::detail::getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getWFRType());
+                            double z = Opm::detail::getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getGFRType());
 
                             reference = x*(w+1) + 2*y + 3*z + 4*u*(w+1) + 5*v;
                             value = bhp_val[w];
@@ -659,155 +830,6 @@ BOOST_AUTO_TEST_SUITE_END() // Trivial tests
 
 
 
-
-
-
-
-
-
-
-
-
-struct ConversionFixture {
-    typedef Opm::VFPProdProperties::ADB ADB;
-
-    ConversionFixture() :
-            num_wells(5),
-            aqua(ADB::null()),
-            liquid(ADB::null()),
-            vapour(ADB::null())
-    {
-        ADB::V aqua_v(num_wells);
-        ADB::V liquid_v(num_wells);
-        ADB::V vapour_v(num_wells);
-
-        for (int i=0; i<num_wells; ++i) {
-            aqua_v[i] = 300+num_wells*15;
-            liquid_v[i] = 500+num_wells*15;
-            vapour_v[i] = 700+num_wells*15;
-        }
-
-        aqua = ADB::constant(aqua_v);
-        liquid = ADB::constant(liquid_v);
-        vapour = ADB::constant(vapour_v);
-    }
-
-    ~ConversionFixture() {
-
-    }
-
-    int num_wells;
-
-    ADB aqua;
-    ADB liquid;
-    ADB vapour;
-};
-
-
-
-
-
-BOOST_FIXTURE_TEST_SUITE( ConversionTests, ConversionFixture )
-
-
-BOOST_AUTO_TEST_CASE(getFlo)
-{
-    //Compute reference solutions
-    std::vector<double> ref_flo_oil(num_wells);
-    std::vector<double> ref_flo_liq(num_wells);
-    std::vector<double> ref_flo_gas(num_wells);
-    for (int i=0; i<num_wells; ++i) {
-        ref_flo_oil[i] = liquid.value()[i];
-        ref_flo_liq[i] = aqua.value()[i] + liquid.value()[i];
-        ref_flo_gas[i] = vapour.value()[i];
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_OIL);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_oil.begin(), ref_flo_oil.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_LIQ);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_liq.begin(), ref_flo_liq.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getFlo(aqua, liquid, vapour, Opm::VFPProdTable::FLO_GAS);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_flo_gas.begin(), ref_flo_gas.end(), computed, computed+num_wells);
-    }
-}
-
-
-BOOST_AUTO_TEST_CASE(getWFR)
-{
-    //Compute reference solutions
-    std::vector<double> ref_wfr_wor(num_wells);
-    std::vector<double> ref_wfr_wct(num_wells);
-    std::vector<double> ref_wfr_wgr(num_wells);
-    for (int i=0; i<num_wells; ++i) {
-        ref_wfr_wor[i] = aqua.value()[i] / liquid.value()[i];
-        ref_wfr_wct[i] = aqua.value()[i] / (aqua.value()[i] + liquid.value()[i]);
-        ref_wfr_wgr[i] = aqua.value()[i] / vapour.value()[i];
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WOR);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wor.begin(), ref_wfr_wor.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WCT);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wct.begin(), ref_wfr_wct.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getWFR(aqua, liquid, vapour, Opm::VFPProdTable::WFR_WGR);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_wfr_wgr.begin(), ref_wfr_wgr.end(), computed, computed+num_wells);
-    }
-}
-
-
-BOOST_AUTO_TEST_CASE(getGFR)
-{
-    //Compute reference solutions
-    std::vector<double> ref_gfr_gor(num_wells);
-    std::vector<double> ref_gfr_glr(num_wells);
-    std::vector<double> ref_gfr_ogr(num_wells);
-    for (int i=0; i<num_wells; ++i) {
-        ref_gfr_gor[i] = vapour.value()[i] / liquid.value()[i];
-        ref_gfr_glr[i] = vapour.value()[i] / (liquid.value()[i] + aqua.value()[i]);
-        ref_gfr_ogr[i] = liquid.value()[i] / vapour.value()[i];
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GOR);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_gor.begin(), ref_gfr_gor.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_GLR);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_glr.begin(), ref_gfr_glr.end(), computed, computed+num_wells);
-    }
-
-    {
-        ADB flo = Opm::VFPProdProperties::getGFR(aqua, liquid, vapour, Opm::VFPProdTable::GFR_OGR);
-        const double* computed = &flo.value()[0];
-        BOOST_CHECK_EQUAL_COLLECTIONS(ref_gfr_ogr.begin(), ref_gfr_ogr.end(), computed, computed+num_wells);
-    }
-}
-
-
-
-BOOST_AUTO_TEST_SUITE_END() // unit tests
 
 
 

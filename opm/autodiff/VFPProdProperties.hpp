@@ -152,117 +152,11 @@ public:
             const double& bhp,
             const double& alq) const;
 
-    /**
-     * Computes the flo parameter according to the flo_type_
-     * @return Production rate of oil, gas or liquid.
-     */
-    template <typename T>
-    static T getFlo(const T& aqua, const T& liquid, const T& vapour,
-                      const VFPProdTable::FLO_TYPE& type) {
-        switch (type) {
-            case VFPProdTable::FLO_OIL:
-                //Oil = liquid phase
-                return liquid;
-            case VFPProdTable::FLO_LIQ:
-                //Liquid = aqua + liquid phases
-                return aqua + liquid;
-            case VFPProdTable::FLO_GAS:
-                //Gas = vapor phase
-                return vapour;
-            case VFPProdTable::FLO_INVALID: //Intentional fall-through
-            default:
-                OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
-        }
-    }
-
-
-    /**
-     * Computes the wfr parameter according to the wfr_type_
-     * @return Production rate of oil, gas or liquid.
-     */
-    template <typename T>
-    static T getWFR(const T& aqua, const T& liquid, const T& vapour,
-                      const VFPProdTable::WFR_TYPE& type) {
-        switch(type) {
-            case VFPProdTable::WFR_WOR: {
-                //Water-oil ratio = water / oil
-                T wor = aqua / liquid;
-                return zeroIfNan(wor);
-            }
-            case VFPProdTable::WFR_WCT:
-                //Water cut = water / (water + oil)
-                return zeroIfNan(aqua / (aqua + liquid));
-            case VFPProdTable::WFR_WGR:
-                //Water-gas ratio = water / gas
-                return zeroIfNan(aqua / vapour);
-            case VFPProdTable::WFR_INVALID: //Intentional fall-through
-            default:
-                OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
-        }
-    }
-
-    /**
-     * Computes the gfr parameter according to the gfr_type_
-     * @return Production rate of oil, gas or liquid.
-     */
-    template <typename T>
-    static T getGFR(const T& aqua, const T& liquid, const T& vapour,
-                      const VFPProdTable::GFR_TYPE& type) {
-        switch(type) {
-            case VFPProdTable::GFR_GOR:
-                // Gas-oil ratio = gas / oil
-                return zeroIfNan(vapour / liquid);
-            case VFPProdTable::GFR_GLR:
-                // Gas-liquid ratio = gas / (oil + water)
-                return zeroIfNan(vapour / (liquid + aqua));
-            case VFPProdTable::GFR_OGR:
-                // Oil-gas ratio = oil / gas
-                return zeroIfNan(liquid / vapour);
-            case VFPProdTable::GFR_INVALID: //Intentional fall-through
-            default:
-                OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
-        }
-    }
-
 
 private:
     // Map which connects the table number with the table itself
     std::map<int, const VFPProdTable*> m_tables;
 
-    /**
-     * Helper struct for linear interpolation
-     */
-    struct InterpData {
-        InterpData() : ind_{0, 0}, inv_dist_(0.0), factor_(0.0) {}
-        int ind_[2]; //[First element greater than or equal to value, Last element smaller than or equal to value]
-        double inv_dist_; // 1 / distance between the two end points of the segment. Used to calculate derivatives and uses 1.0 / 0.0 = 0.0 as a convention
-        double factor_; // Interpolation factor
-    };
-
-    /**
-     * Helper function to find indices etc. for linear interpolation
-     */
-    static InterpData find_interp_data(const double& value, const std::vector<double>& values);
-
-    /**
-     * Helper function which interpolates data using the indices etc. given in the inputs.
-     */
-    static adb_like interpolate(const VFPProdTable::array_type& array,
-            const InterpData& flo_i,
-            const InterpData& thp_i,
-            const InterpData& wfr_i,
-            const InterpData& gfr_i,
-            const InterpData& alq_i);
-
-    /**
-     * Helper function that finds x for a given value of y for a line
-     * *NOTE ORDER OF ARGUMENTS*
-     */
-    static double find_x(const double& x0,
-            const double& x1,
-            const double& y0,
-            const double& y1,
-            const double& y);
 
 
     /**
@@ -275,19 +169,6 @@ private:
      */
     const VFPProdTable* getProdTable(int table_id) const;
 
-    static inline double zeroIfNan(const double& value) {
-        return (std::isnan(value)) ? 0.0 : value;
-    }
-
-    static inline ADB zeroIfNan(const ADB& values) {
-        Selector<ADB::V::Scalar> not_nan_selector(values.value(), Selector<ADB::V::Scalar>::NotNaN);
-
-        const ADB::V z = ADB::V::Zero(values.size());
-        const ADB zero = ADB::constant(z, values.blockPattern());
-
-        ADB retval = not_nan_selector.select(values, zero);
-        return retval;
-    }
 };
 
 
