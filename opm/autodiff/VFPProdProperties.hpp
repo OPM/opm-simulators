@@ -43,19 +43,6 @@ public:
     typedef AutoDiffBlock<double> ADB;
 
     /**
-     * An "ADB-like" structure with a single value and a set of derivatives
-     */
-    struct adb_like {
-        adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
-        double value;
-        double dthp;
-        double dwfr;
-        double dgfr;
-        double dalq;
-        double dflo;
-    };
-
-    /**
      * Empty constructor
      */
     VFPProdProperties();
@@ -126,7 +113,7 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    adb_like bhp(int table_id,
+    double bhp(int table_id,
             const double& aqua,
             const double& liquid,
             const double& vapour,
@@ -172,43 +159,6 @@ private:
 };
 
 
-
-inline VFPProdProperties::adb_like operator+(
-        VFPProdProperties::adb_like lhs,
-        const VFPProdProperties::adb_like& rhs) {
-    lhs.value += rhs.value;
-    lhs.dthp += rhs.dthp;
-    lhs.dwfr += rhs.dwfr;
-    lhs.dgfr += rhs.dgfr;
-    lhs.dalq += rhs.dalq;
-    lhs.dflo += rhs.dflo;
-    return lhs;
-}
-
-inline VFPProdProperties::adb_like operator-(
-        VFPProdProperties::adb_like lhs,
-        const VFPProdProperties::adb_like& rhs) {
-    lhs.value -= rhs.value;
-    lhs.dthp -= rhs.dthp;
-    lhs.dwfr -= rhs.dwfr;
-    lhs.dgfr -= rhs.dgfr;
-    lhs.dalq -= rhs.dalq;
-    lhs.dflo -= rhs.dflo;
-    return lhs;
-}
-
-inline VFPProdProperties::adb_like operator*(
-        double lhs,
-        const VFPProdProperties::adb_like& rhs) {
-    VFPProdProperties::adb_like retval;
-    retval.value = rhs.value * lhs;
-    retval.dthp = rhs.dthp * lhs;
-    retval.dwfr = rhs.dwfr * lhs;
-    retval.dgfr = rhs.dgfr * lhs;
-    retval.dalq = rhs.dalq * lhs;
-    retval.dflo = rhs.dflo * lhs;
-    return retval;
-}
 
 
 } //namespace

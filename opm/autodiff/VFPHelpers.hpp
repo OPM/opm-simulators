@@ -73,6 +73,7 @@ inline ADB zeroIfNan(const ADB& values) {
 
 /**
  * Computes the flo parameter according to the flo_type_
+ * for production tables
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
@@ -89,6 +90,32 @@ static T getFlo(const T& aqua, const T& liquid, const T& vapour,
             //Gas = vapor phase
             return vapour;
         case VFPProdTable::FLO_INVALID: //Intentional fall-through
+        default:
+            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+    }
+}
+
+
+
+/**
+ * Computes the flo parameter according to the flo_type_
+ * for injection tables
+ * @return Production rate of oil, gas or liquid.
+ */
+template <typename T>
+static T getFlo(const T& aqua, const T& liquid, const T& vapour,
+                  const VFPInjTable::FLO_TYPE& type) {
+    switch (type) {
+        case VFPInjTable::FLO_OIL:
+            //Oil = liquid phase
+            return liquid;
+        case VFPInjTable::FLO_WAT:
+            //Liquid = aqua phase
+            return aqua;
+        case VFPInjTable::FLO_GAS:
+            //Gas = vapor phase
+            return vapour;
+        case VFPInjTable::FLO_INVALID: //Intentional fall-through
         default:
             OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
     }
@@ -222,6 +249,60 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
 
 
 
+/**
+ * An "ADB-like" structure with a single value and a set of derivatives
+ */
+struct adb_like {
+    adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+    double value;
+    double dthp;
+    double dwfr;
+    double dgfr;
+    double dalq;
+    double dflo;
+};
+
+inline adb_like operator+(
+        adb_like lhs,
+        const adb_like& rhs) {
+    lhs.value += rhs.value;
+    lhs.dthp += rhs.dthp;
+    lhs.dwfr += rhs.dwfr;
+    lhs.dgfr += rhs.dgfr;
+    lhs.dalq += rhs.dalq;
+    lhs.dflo += rhs.dflo;
+    return lhs;
+}
+
+inline adb_like operator-(
+        adb_like lhs,
+        const adb_like& rhs) {
+    lhs.value -= rhs.value;
+    lhs.dthp -= rhs.dthp;
+    lhs.dwfr -= rhs.dwfr;
+    lhs.dgfr -= rhs.dgfr;
+    lhs.dalq -= rhs.dalq;
+    lhs.dflo -= rhs.dflo;
+    return lhs;
+}
+
+inline adb_like operator*(
+        double lhs,
+        const adb_like& rhs) {
+    adb_like retval;
+    retval.value = rhs.value * lhs;
+    retval.dthp = rhs.dthp * lhs;
+    retval.dwfr = rhs.dwfr * lhs;
+    retval.dgfr = rhs.dgfr * lhs;
+    retval.dalq = rhs.dalq * lhs;
+    retval.dflo = rhs.dflo * lhs;
+    return retval;
+}
+
+
+
+
+
 
 /**
  * Helper function which interpolates data using the indices etc. given in the inputs.
@@ -230,7 +311,7 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
 #endif
-inline VFPProdProperties::adb_like interpolate(
+inline adb_like interpolate(
         const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
@@ -239,7 +320,7 @@ inline VFPProdProperties::adb_like interpolate(
         const InterpData& alq_i) {
 
     //Values and derivatives in a 5D hypercube
-    VFPProdProperties::adb_like nn[2][2][2][2][2];
+    adb_like nn[2][2][2][2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -342,6 +423,34 @@ inline VFPProdProperties::adb_like interpolate(
 #ifdef __GNUC__
 #pragma GCC pop_options //unroll loops
 #endif
+
+
+
+
+
+inline adb_like bhp(const VFPProdTable* table,
+        const double& aqua,
+        const double& liquid,
+        const double& vapour,
+        const double& thp,
+        const double& alq) {
+    //Find interpolation variables
+    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+    double wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+    double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+
+    //First, find the values to interpolate between
+    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
+    auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
+    auto wfr_i = detail::findInterpData(wfr, table->getWFRAxis());
+    auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
+    auto alq_i = detail::findInterpData(alq, table->getALQAxis());
+
+    //Then perform the interpolation itself
+    detail::adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+
+    return retval;
+}
 
 
 

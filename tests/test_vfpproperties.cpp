@@ -30,6 +30,7 @@
 #include <memory>
 #include <map>
 #include <sstream>
+#include <limits>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -228,7 +229,7 @@ BOOST_AUTO_TEST_SUITE_END() // unit tests
  */
 struct TrivialFixture {
     typedef Opm::VFPProdProperties::ADB ADB;
-    typedef Opm::VFPProdProperties::adb_like adb_like;
+    typedef Opm::detail::adb_like adb_like;
 
     TrivialFixture() : table_ids(1, 1),
             thp_axis{0.0, 1.0},
@@ -299,13 +300,14 @@ struct TrivialFixture {
      */
     inline void fillDataRandom() {
         unsigned long randx = 42;
+        static double max_val = static_cast<double>(std::numeric_limits<unsigned long>::max());
         for (int i=0; i<nx; ++i) {
             for (int j=0; j<ny; ++j) {
                 for (int k=0; k<nz; ++k) {
                     for (int l=0; l<nu; ++l) {
                         for (int m=0; m<nv; ++m) {
-                            data[i][j][k][l][m] = randx;
-                            randx = randx*1103515245 + 12345;
+                            data[i][j][k][l][m] = randx / max_val;
+                            randx = (randx*1103515245 + 12345);
                         }
                     }
                 }
@@ -389,11 +391,11 @@ BOOST_AUTO_TEST_CASE(GetTable)
     add_well(INJECTOR, 100, 1, NULL, cells, NULL, NULL, wells.get());
 
     //Create interpolation points
-    double aqua_d   = 1.5;
-    double liquid_d = 2.5;
-    double vapour_d = 3.5;
-    double thp_d    = 4.5;
-    double alq_d    = 5.5;
+    double aqua_d   = 0.15;
+    double liquid_d = 0.25;
+    double vapour_d = 0.35;
+    double thp_d    = 0.45;
+    double alq_d    = 0.55;
 
     ADB aqua_adb   = createConstantScalarADB(aqua_d);
     ADB liquid_adb = createConstantScalarADB(liquid_d);
@@ -405,18 +407,24 @@ BOOST_AUTO_TEST_CASE(GetTable)
     qs_adb_v << aqua_adb.value(), liquid_adb.value(), vapour_adb.value();
     ADB qs_adb = ADB::constant(qs_adb_v);
 
+    //Check that our reference has not changed
+    Opm::detail::adb_like ref= Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    BOOST_CHECK_CLOSE(ref.value, 1.0923565702101556,  max_d_tol);
+    BOOST_CHECK_CLOSE(ref.dthp,  0.13174065498177251, max_d_tol);
+    BOOST_CHECK_CLOSE(ref.dwfr, -1.2298177745501071,  max_d_tol);
+    BOOST_CHECK_CLOSE(ref.dgfr,  0.82988935779290274, max_d_tol);
+    BOOST_CHECK_CLOSE(ref.dalq,  1.8148520254931713,  max_d_tol);
+    BOOST_CHECK_CLOSE(ref.dflo,  9.0944843574181924,  max_d_tol);
 
     //Check that different versions of the prod_bph function work
     ADB a = properties->bhp(table_ids, aqua_adb, liquid_adb, vapour_adb, thp_adb, alq_adb);
-    adb_like b = properties->bhp(table_ids[0], aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    double b =properties->bhp(table_ids[0], aqua_d, liquid_d, vapour_d, thp_d, alq_d);
     ADB c = properties->bhp(table_ids, *wells, qs_adb, thp_adb, alq_adb);
 
-    //Check that results are actually equal
-    double d = a.value()[0];
-    double e = b.value;
-    double f = c.value()[0];
-    BOOST_CHECK_EQUAL(d, e);
-    BOOST_CHECK_EQUAL(d, f);
+    //Check that results are actually equal reference
+    BOOST_CHECK_EQUAL(a.value()[0], ref.value);
+    BOOST_CHECK_EQUAL(b,            ref.value);
+    BOOST_CHECK_EQUAL(c.value()[0], ref.value);
 
     //Table 2 does not exist.
     std::vector<int> table_ids_wrong(1, 2);
@@ -447,7 +455,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(1, v, x, y, z, u).value;
+                        sum += properties->bhp(1, v, x, y, z, u);
                     }
                 }
             }
@@ -482,7 +490,7 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        const double value = properties->bhp(1, v, x, y, z, u).value;
+                        const double value = properties->bhp(1, v, x, y, z, u);
 
                         sum += value;
                     }
@@ -508,8 +516,8 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
     initProperties();
 
     //Temps used to store reference and actual variables
-    adb_like sad;
-    adb_like max_d;
+    double sad = 0.0;
+    double max_d = 0.0;
 
     //Check interpolation
     for (int i=0; i<=n; ++i) {
@@ -529,33 +537,15 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
                         //Calculate reference
-                        adb_like reference;
-                        reference.value = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
-                        reference.dthp = 1;
-                        reference.dwfr = 2;
-                        reference.dgfr = 3;
-                        reference.dalq = 4;
-                        reference.dflo = 5;
+                        double reference = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
 
                         //Calculate actual
                         //Note order of arguments: id, aqua, liquid, vapour, thp, alq
-                        adb_like actual = properties->bhp(1, aqua, liquid, vapour, thp, alq);
+                        double actual = properties->bhp(1, aqua, liquid, vapour, thp, alq);
 
-                        adb_like abs_diff = actual - reference;
-                        abs_diff.value = std::abs(abs_diff.value);
-                        abs_diff.dthp = std::abs(abs_diff.dthp);
-                        abs_diff.dwfr = std::abs(abs_diff.dwfr);
-                        abs_diff.dgfr = std::abs(abs_diff.dgfr);
-                        abs_diff.dalq = std::abs(abs_diff.dalq);
-                        abs_diff.dflo = std::abs(abs_diff.dflo);
 
-                        max_d.value = std::max(max_d.value, abs_diff.value);
-                        max_d.dthp = std::max(max_d.dthp, abs_diff.dthp);
-                        max_d.dwfr = std::max(max_d.dwfr, abs_diff.dwfr);
-                        max_d.dgfr = std::max(max_d.dgfr, abs_diff.dgfr);
-                        max_d.dalq = std::max(max_d.dalq, abs_diff.dalq);
-                        max_d.dflo = std::max(max_d.dflo, abs_diff.dflo);
-
+                        double abs_diff = std::abs(actual - reference);
+                        double max_d = std::max(max_d, abs_diff);
                         sad = sad + abs_diff;
                     }
                 }
@@ -563,19 +553,8 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
         }
     }
 
-    BOOST_CHECK_SMALL(max_d.value, max_d_tol);
-    BOOST_CHECK_SMALL(max_d.dthp, max_d_tol);
-    BOOST_CHECK_SMALL(max_d.dwfr, max_d_tol);
-    BOOST_CHECK_SMALL(max_d.dgfr, max_d_tol);
-    BOOST_CHECK_SMALL(max_d.dalq, max_d_tol);
-    BOOST_CHECK_SMALL(max_d.dflo, max_d_tol);
-
-    BOOST_CHECK_SMALL(sad.value, sad_tol);
-    BOOST_CHECK_SMALL(sad.dthp, sad_tol);
-    BOOST_CHECK_SMALL(sad.dwfr, sad_tol);
-    BOOST_CHECK_SMALL(sad.dgfr, sad_tol);
-    BOOST_CHECK_SMALL(sad.dalq, sad_tol);
-    BOOST_CHECK_SMALL(sad.dflo, sad_tol);
+    BOOST_CHECK_SMALL(max_d, max_d_tol);
+    BOOST_CHECK_SMALL(sad, sad_tol);
 }
 
 
@@ -616,7 +595,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
                         reference_sum += reference;
 
                         //Note order of arguments! id, aqua, liquid, vapour, thp , alq
-                        double value = properties->bhp(1, aqua, liquid, vapour, x, u).value;
+                        double value = properties->bhp(1, aqua, liquid, vapour, x, u);
                         sum += value;
 
                         double abs_diff = std::abs(value - reference);
@@ -820,6 +799,90 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
 
 
 
+/**
+ * Test that the partial derivatives are reasonable
+ */
+BOOST_AUTO_TEST_CASE(PartialDerivatives)
+{
+    const int n=5;
+
+    fillDataPlane();
+    initProperties();
+
+    //Temps used to store reference and actual variables
+    adb_like sad;
+    adb_like max_d;
+
+    //Check interpolation
+    for (int i=0; i<=n; ++i) {
+        const double thp = i / static_cast<double>(n);
+        for (int j=1; j<=n; ++j) {
+            const double aqua = j / static_cast<double>(n);
+            for (int k=1; k<=n; ++k) {
+                const double vapour = k / static_cast<double>(n);
+                for (int l=0; l<=n; ++l) {
+                    const double alq = l / static_cast<double>(n);
+                    for (int m=1; m<=n; ++m) {
+                        const double liquid = m / static_cast<double>(n);
+
+                        //Find values that should be in table
+                        double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
+                        double wfr = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
+                        double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+
+                        //Calculate reference
+                        adb_like reference;
+                        reference.value = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
+                        reference.dthp = 1;
+                        reference.dwfr = 2;
+                        reference.dgfr = 3;
+                        reference.dalq = 4;
+                        reference.dflo = 5;
+
+                        //Calculate actual
+                        //Note order of arguments: id, aqua, liquid, vapour, thp, alq
+                        adb_like actual = Opm::detail::bhp(&table, aqua, liquid, vapour, thp, alq);
+
+                        adb_like abs_diff = actual - reference;
+                        abs_diff.value = std::abs(abs_diff.value);
+                        abs_diff.dthp = std::abs(abs_diff.dthp);
+                        abs_diff.dwfr = std::abs(abs_diff.dwfr);
+                        abs_diff.dgfr = std::abs(abs_diff.dgfr);
+                        abs_diff.dalq = std::abs(abs_diff.dalq);
+                        abs_diff.dflo = std::abs(abs_diff.dflo);
+
+                        max_d.value = std::max(max_d.value, abs_diff.value);
+                        max_d.dthp = std::max(max_d.dthp, abs_diff.dthp);
+                        max_d.dwfr = std::max(max_d.dwfr, abs_diff.dwfr);
+                        max_d.dgfr = std::max(max_d.dgfr, abs_diff.dgfr);
+                        max_d.dalq = std::max(max_d.dalq, abs_diff.dalq);
+                        max_d.dflo = std::max(max_d.dflo, abs_diff.dflo);
+
+                        sad = sad + abs_diff;
+                    }
+                }
+            }
+        }
+    }
+
+    BOOST_CHECK_SMALL(max_d.value, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dthp, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dwfr, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dgfr, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dalq, max_d_tol);
+    BOOST_CHECK_SMALL(max_d.dflo, max_d_tol);
+
+    BOOST_CHECK_SMALL(sad.value, sad_tol);
+    BOOST_CHECK_SMALL(sad.dthp, sad_tol);
+    BOOST_CHECK_SMALL(sad.dwfr, sad_tol);
+    BOOST_CHECK_SMALL(sad.dgfr, sad_tol);
+    BOOST_CHECK_SMALL(sad.dalq, sad_tol);
+    BOOST_CHECK_SMALL(sad.dflo, sad_tol);
+}
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END() // Trivial tests
 
 
@@ -912,7 +975,7 @@ VFPPROD \n\
                         double thp = t * 456.78;
                         double alq = a * 42.24;
 
-                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq).value;
+                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
                         double bhp_ref = thp;
                         double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq);
                         double thp_ref = thp;
@@ -1012,7 +1075,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         }
                         else {
                             //Value given as pascal, convert to barsa for comparison with reference
-                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i).value * 10.0e-6;
+                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i) * 10.0e-6;
 
                             double abs_diff = std::abs(value_i - reference[i]);
                             sad += abs_diff;

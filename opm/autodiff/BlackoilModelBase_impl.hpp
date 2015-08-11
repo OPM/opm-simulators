@@ -1246,7 +1246,7 @@ namespace detail {
                 const double& alq    = well_controls_iget_alq(wc, current);
 
                 //Set *BHP* target by calculating bhp from THP
-                xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq).value;
+                xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq);
                 break;
             }
 

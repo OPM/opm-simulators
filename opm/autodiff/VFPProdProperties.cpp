@@ -353,7 +353,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
             auto gfr_i = detail::findInterpData(gfr.value()[i], table->getGFRAxis());
             auto alq_i = detail::findInterpData(alq.value()[i], table->getALQAxis());
 
-            adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+            detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
             value[i] = bhp_val.value;
             dthp[i] = bhp_val.dthp;
@@ -405,8 +405,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
 
 
 
-
-VFPProdProperties::adb_like VFPProdProperties::bhp(int table_id,
+double VFPProdProperties::bhp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -414,24 +413,9 @@ VFPProdProperties::adb_like VFPProdProperties::bhp(int table_id,
         const double& alq) const {
     const VFPProdTable* table = getProdTable(table_id);
 
-    //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-    double wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-    double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
-
-    //First, find the values to interpolate between
-    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
-    auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
-    auto wfr_i = detail::findInterpData(wfr, table->getWFRAxis());
-    auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
-    auto alq_i = detail::findInterpData(alq, table->getALQAxis());
-
-    //Then perform the interpolation itself
-    adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
-    return retval;
+    detail::adb_like retval = detail::bhp(table, aqua, liquid, vapour, thp, alq);
+    return retval.value;
 }
-
-
 
 
 
