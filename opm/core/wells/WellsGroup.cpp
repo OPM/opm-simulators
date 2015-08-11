@@ -761,7 +761,9 @@ namespace Opm
 
             if (group_control_index_ < 0) {
                 // The well only had its own controls, no group controls.
-                append_well_controls(SURFACE_RATE, target, -1e100, -1e100, distr, self_index_, wells_);
+                append_well_controls(SURFACE_RATE, target,
+                        -std::numeric_limits<int>::max(), -std::numeric_limits<int>::max(),
+                        distr, self_index_, wells_);
                 group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             } else {
                 // We will now modify the last control, that
