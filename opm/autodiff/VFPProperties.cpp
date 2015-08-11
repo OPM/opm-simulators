@@ -21,6 +21,7 @@
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
+#include <opm/autodiff/VFPInjProperties.hpp>
 
 namespace Opm {
 
@@ -30,8 +31,7 @@ VFPProperties::VFPProperties() {
 
 VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table) {
     if (inj_table != NULL) {
-        //FIXME: Implement VFPInjProperties
-        OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
+        m_inj.reset(new VFPInjProperties(inj_table));
     }
     if (prod_table != NULL) {
         m_prod.reset(new VFPProdProperties(prod_table));
@@ -40,19 +40,7 @@ VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* p
 
 VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
                              const std::map<int, VFPProdTable>& prod_tables) {
-    //FIXME: Implement VFPInjProperties
-    OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
-    m_prod.reset(new VFPProdProperties(prod_tables));
-}
-
-
-VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables) {
-    //FIXME: Implement VFPInjProperties
-    OPM_THROW(std::logic_error, "VFPInjProperties not implemented yet");
-}
-
-
-VFPProperties::VFPProperties(const std::map<int, VFPProdTable>& prod_tables) {
+    m_inj.reset(new VFPInjProperties(inj_tables));
     m_prod.reset(new VFPProdProperties(prod_tables));
 }
 

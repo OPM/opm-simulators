@@ -56,23 +56,15 @@ public:
                   const std::map<int, VFPProdTable>& prod_tables);
 
     /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param inj_tables A map of different VFPINJ tables.
+     * Returns the VFP properties for injection wells
      */
-    VFPProperties(const std::map<int, VFPInjTable>& inj_tables);
-
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param prod_tables A map of different VFPPROD tables.
-     */
-    VFPProperties(const std::map<int, VFPProdTable>& prod_tables);
-
     const VFPInjProperties* getInj() const {
         return m_inj.get();
     }
 
+    /**
+     * Returns the VFP properties for production wells
+     */
     const VFPProdProperties* getProd() const {
         return m_prod.get();
     }

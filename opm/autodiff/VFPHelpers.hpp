@@ -23,6 +23,8 @@
 
 
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 
 
 /**
@@ -32,7 +34,7 @@ namespace Opm {
 namespace detail {
 
 
-typedef VFPProdProperties::ADB ADB;
+typedef AutoDiffBlock<double> ADB;
 
 
 
@@ -311,6 +313,8 @@ inline adb_like operator*(
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
 #endif
+
+
 inline adb_like interpolate(
         const VFPProdTable::array_type& array,
         const InterpData& flo_i,
@@ -420,6 +424,75 @@ inline adb_like interpolate(
     return nn[0][0][0][0][0];
 }
 
+
+
+
+
+
+inline adb_like interpolate(
+        const VFPInjTable::array_type& array,
+        const InterpData& flo_i,
+        const InterpData& thp_i) {
+
+    //Values and derivatives in a 5D hypercube
+    adb_like nn[2][2];
+
+
+    //Pick out nearest neighbors (nn) to our evaluation point
+    //This is not really required, but performance-wise it may pay off, since the 32-elements
+    //we copy to (nn) will fit better in cache than the full original table for the
+    //interpolation below.
+    //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
+    for (int t=0; t<=1; ++t) {
+        for (int f=0; f<=1; ++f) {
+            //Shorthands for indexing
+            const int ti = thp_i.ind_[t];
+            const int fi = flo_i.ind_[f];
+
+            //Copy element
+            nn[t][f].value = array[ti][fi];
+        }
+    }
+
+    //Calculate derivatives
+    //Note that the derivative of the two end points of a line aligned with the
+    //"axis of the derivative" are equal
+    for (int i=0; i<=1; ++i) {
+        nn[0][i].dthp = (nn[1][i].value - nn[0][i].value) * thp_i.inv_dist_;
+        nn[i][0].dwfr = -1e100;
+        nn[i][0].dgfr = -1e100;
+        nn[i][0].dalq = -1e100;
+        nn[i][0].dflo = (nn[i][1].value - nn[i][0].value) * flo_i.inv_dist_;
+
+        nn[1][i].dthp = nn[0][i].dthp;
+        nn[i][1].dwfr = nn[i][0].dwfr;
+        nn[i][1].dgfr = nn[i][0].dgfr;
+        nn[i][1].dalq = nn[i][0].dalq;
+        nn[i][1].dflo = nn[i][0].dflo;
+    }
+
+    double t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
+
+    // Remove dimensions one by one
+    // Example: going from 3D to 2D to 1D, we start by interpolating along
+    // the z axis first, leaving a 2D problem. Then interpolating along the y
+    // axis, leaving a 1D, problem, etc.
+    t2 = flo_i.factor_;
+    t1 = (1.0-t2);
+    for (int t=0; t<=1; ++t) {
+        nn[t][0] = t1*nn[t][0] + t2*nn[t][1];
+    }
+
+    t2 = thp_i.factor_;
+    t1 = (1.0-t2);
+    nn[0][0] = t1*nn[0][0] + t2*nn[1][0];
+
+    return nn[0][0];
+}
+
+
+
+
 #ifdef __GNUC__
 #pragma GCC pop_options //unroll loops
 #endif
@@ -451,6 +524,436 @@ inline adb_like bhp(const VFPProdTable* table,
 
     return retval;
 }
+
+
+
+
+
+inline adb_like bhp(const VFPInjTable* table,
+        const double& aqua,
+        const double& liquid,
+        const double& vapour,
+        const double& thp) {
+    //Find interpolation variables
+    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+
+    //First, find the values to interpolate between
+    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
+    auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
+
+    //Then perform the interpolation itself
+    detail::adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i);
+
+    return retval;
+}
+
+
+
+
+
+
+
+
+/**
+ * Returns the table from the map if found, or throws an exception
+ */
+template <typename T>
+const T* getTable(const std::map<int, T*> tables, int table_id) {
+    auto entry = tables.find(table_id);
+    if (entry == tables.end()) {
+        OPM_THROW(std::invalid_argument, "Nonexistent table " << table_id << " referenced.");
+    }
+    else {
+        return entry->second;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+/**
+ * Sets block_pattern to be the "union of x.blockPattern() and block_pattern".
+ */
+inline void extendBlockPattern(const ADB& x, std::vector<int>& block_pattern) {
+    std::vector<int> x_block_pattern = x.blockPattern();
+
+    if (x_block_pattern.empty()) {
+        return;
+    }
+    else {
+        if (block_pattern.empty()) {
+            block_pattern = x_block_pattern;
+            return;
+        }
+        else {
+            if (x_block_pattern != block_pattern) {
+                OPM_THROW(std::logic_error, "Block patterns do not match");
+            }
+        }
+    }
+}
+
+/**
+ * Finds the common block pattern for all inputs
+ */
+inline std::vector<int> commonBlockPattern(
+        const ADB& x1,
+        const ADB& x2,
+        const ADB& x3,
+        const ADB& x4) {
+    std::vector<int> block_pattern;
+
+    extendBlockPattern(x1, block_pattern);
+    extendBlockPattern(x2, block_pattern);
+    extendBlockPattern(x3, block_pattern);
+    extendBlockPattern(x4, block_pattern);
+
+    return block_pattern;
+}
+
+inline std::vector<int> commonBlockPattern(
+        const ADB& x1,
+        const ADB& x2,
+        const ADB& x3,
+        const ADB& x4,
+        const ADB& x5) {
+    std::vector<int> block_pattern = commonBlockPattern(x1, x2, x3, x4);
+    extendBlockPattern(x5, block_pattern);
+
+    return block_pattern;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Returns the type variable for FLO/GFR/WFR for production tables
+ */
+template <typename TYPE, typename TABLE>
+TYPE getType(const TABLE* table);
+
+template <>
+inline
+VFPProdTable::FLO_TYPE getType(const VFPProdTable* table) {
+    return table->getFloType();
+}
+
+template <>
+inline
+VFPProdTable::WFR_TYPE getType(const VFPProdTable* table) {
+    return table->getWFRType();
+}
+
+template <>
+inline
+VFPProdTable::GFR_TYPE getType(const VFPProdTable* table) {
+    return table->getGFRType();
+}
+
+
+/**
+ * Returns the type variable for FLO for injection tables
+ */
+template <>
+inline
+VFPInjTable::FLO_TYPE getType(const VFPInjTable* table) {
+    return table->getFloType();
+}
+
+
+
+
+/**
+ * Returns the actual ADB for the type of FLO/GFR/WFR type
+ */
+template <typename TYPE>
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour, TYPE type);
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::FLO_TYPE type) {
+    return detail::getFlo(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::WFR_TYPE type) {
+    return detail::getWFR(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::GFR_TYPE type) {
+    return detail::getGFR(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPInjTable::FLO_TYPE type) {
+    return detail::getFlo(aqua, liquid, vapour, type);
+}
+
+/**
+ * Given m wells and n types of VFP variables (e.g., FLO = {FLO_OIL, FLO_LIQ}
+ * this function combines the n types of ADB objects, so that each of the
+ * m wells gets the right ADB.
+ * @param TYPE Type of variable to return, e.g., FLO_TYPE, WFR_TYPE, GFR_TYPE
+ * @param TABLE Type of table to use, e.g., VFPInjTable, VFPProdTable.
+ */
+template <typename TYPE, typename TABLE>
+ADB gather_vars(const std::vector<const TABLE*>& well_tables,
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour) {
+
+    const int num_wells = static_cast<int>(well_tables.size());
+    assert(aqua.size() == num_wells);
+    assert(liquid.size() == num_wells);
+    assert(vapour.size() == num_wells);
+
+    //Caching variable for flo/wfr/gfr
+    std::map<TYPE, ADB> map;
+
+    //Indexing variable used when combining the different ADB types
+    std::map<TYPE, std::vector<int> > elems;
+
+    //Compute all of the different ADB types,
+    //and record which wells use which types
+    for (int i=0; i<num_wells; ++i) {
+        const TABLE* table = well_tables[i];
+
+        //Only do something if this well is under THP control
+        if (table != NULL) {
+            TYPE type = getType<TYPE>(table);
+
+            //"Caching" of flo_type etc: Only calculate used types
+            //Create type if it does not exist
+            if (map.find(type) == map.end()) {
+                map.insert(std::pair<TYPE, ADB>(
+                        type,
+                        detail::getValue<TYPE>(aqua, liquid, vapour, type)
+                        ));
+            }
+
+            //Add the index for assembly later in gather_vars
+            elems[type].push_back(i);
+        }
+    }
+
+    //Loop over all types of ADB variables, and combine them
+    //so that each well gets the proper variable
+    ADB retval = ADB::constant(ADB::V::Zero(num_wells));
+    for (const auto& entry : elems) {
+        const auto& key = entry.first;
+        const auto& value = entry.second;
+
+        //Get the ADB for this type of variable
+        assert(map.find(key) != map.end());
+        const ADB& values = map.find(key)->second;
+
+        //Get indices to all elements that should use this ADB
+        const std::vector<int>& elems = value;
+
+        //Add these elements to retval
+        retval = retval + superset(subset(values, elems), elems, values.size());
+    }
+
+    return retval;
+}
+
+/**
+ * Helper function that finds x for a given value of y for a line
+ * *NOTE ORDER OF ARGUMENTS*
+ */
+inline double findX(const double& x0,
+        const double& x1,
+        const double& y0,
+        const double& y1,
+        const double& y) {
+    const double dx = x1 - x0;
+    const double dy = y1 - y0;
+
+    /**
+     *       y = y0 + (dy / dx) * (x - x0)
+     *   =>  x = x0 + (y - y0) * (dx / dy)
+     *
+     * If dy is zero, use x1 as the value.
+     */
+
+    double x = 0.0;
+
+    if (dy != 0.0) {
+        x = x0 + (y-y0) * (dx/dy);
+    }
+    else {
+        x = x1;
+    }
+
+    return x;
+}
+
+
+
+
+
+
+
+
+
+
+/**
+ * This function finds the value of THP given a specific BHP.
+ * Essentially:
+ *   Given the function f(thp_array(x)) = bhp_array(x), which is piecewise linear,
+ *   find thp so that f(thp) = bhp.
+ */
+inline double findTHP(
+        const std::vector<double>& bhp_array,
+        const std::vector<double>& thp_array,
+        double bhp) {
+    int nthp = thp_array.size();
+
+    double thp = -1e100;
+
+    //Check that our thp axis is sorted
+    assert(std::is_sorted(thp_array.begin(), thp_array.end()));
+
+    /**
+     * Our *interpolated* bhp_array will be montonic increasing for increasing
+     * THP if our input BHP values are monotonic increasing for increasing
+     * THP values. However, if we have to *extrapolate* along any of the other
+     * axes, this guarantee holds no more, and bhp_array may be "random"
+     */
+    if (std::is_sorted(bhp_array.begin(), bhp_array.end())) {
+        //Target bhp less than all values in array, extrapolate
+        if (bhp <= bhp_array[0]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[0];
+            const double& x1 = thp_array[1];
+            const double& y0 = bhp_array[0];
+            const double& y1 = bhp_array[1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp greater than all values in array, extrapolate
+        else if (bhp > bhp_array[nthp-1]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[nthp-2];
+            const double& x1 = thp_array[nthp-1];
+            const double& y0 = bhp_array[nthp-2];
+            const double& y1 = bhp_array[nthp-1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp within table ranges, interpolate
+        else {
+            //Loop over the values and find min(bhp_array(thp)) == bhp
+            //so that we maximize the rate.
+
+            //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
+            //Assuming a small number of values in bhp_array, this should be quite
+            //efficient. Other strategies might be bisection, etc.
+            int i=0;
+            bool found = false;
+            for (; i<nthp-1; ++i) {
+                const double& y0 = bhp_array[i  ];
+                const double& y1 = bhp_array[i+1];
+
+                if (y0 < bhp && bhp <= y1) {
+                    found = true;
+                    break;
+                }
+            }
+            //Canary in a coal mine: shouldn't really be required
+            assert(found == true);
+
+            const double& x0 = thp_array[i  ];
+            const double& x1 = thp_array[i+1];
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+    }
+    //bhp_array not sorted, raw search.
+    else {
+        //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
+        //Since the BHP values might not be sorted, first search within
+        //our interpolation values, and then try to extrapolate.
+        int i=0;
+        bool found = false;
+        for (; i<nthp-1; ++i) {
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+
+            if (y0 < bhp && bhp <= y1) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            const double& x0 = thp_array[i  ];
+            const double& x1 = thp_array[i+1];
+            const double& y0 = bhp_array[i  ];
+            const double& y1 = bhp_array[i+1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+        else if (bhp <= bhp_array[0]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[0];
+            const double& x1 = thp_array[1];
+            const double& y0 = bhp_array[0];
+            const double& y1 = bhp_array[1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+        //Target bhp greater than all values in array, extrapolate
+        else if (bhp > bhp_array[nthp-1]) {
+            //TODO: LOG extrapolation
+            const double& x0 = thp_array[nthp-2];
+            const double& x1 = thp_array[nthp-1];
+            const double& y0 = bhp_array[nthp-2];
+            const double& y1 = bhp_array[nthp-1];
+            thp = detail::findX(x0, x1, y0, y1, bhp);
+        }
+        else {
+            OPM_THROW(std::logic_error, "Programmer error: Unable to find THP in THP array");
+        }
+    }
+
+    return thp;
+}
+
+
 
 
 

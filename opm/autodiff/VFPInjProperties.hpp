@@ -17,10 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
-#define OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
+#ifndef OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
+#define OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
 #include <opm/core/wells.h>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
@@ -28,36 +28,32 @@
 #include <map>
 
 
+
 namespace Opm {
 
 
-/**
- * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
- * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
- * the BHP as a function of the rate and tubing head pressure.
- */
-class VFPProdProperties {
+class VFPInjProperties {
 public:
     typedef AutoDiffBlock<double> ADB;
 
     /**
      * Empty constructor
      */
-    VFPProdProperties();
+    VFPInjProperties();
 
     /**
      * Constructor
      * Takes *no* ownership of data.
-     * @param prod_table A *single* VFPPROD table
+     * @param inj_table A *single* VFPINJ table
      */
-    VFPProdProperties(const VFPProdTable* prod_table);
+    VFPInjProperties(const VFPInjTable* inj_table);
 
     /**
      * Constructor
      * Takes *no* ownership of data.
-     * @param prod_tables A map of different VFPPROD tables.
+     * @param inj_tables A map of different VFPINJ tables.
      */
-    VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
+    VFPInjProperties(const std::map<int, VFPInjTable>& inj_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
@@ -65,7 +61,6 @@ public:
      * @param wells Wells structure with information about wells in qs
      * @param qs Flow quantities
      * @param thp Tubing head pressure
-     * @param alq Artificial lift or other parameter
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
@@ -73,8 +68,7 @@ public:
     ADB bhp(const std::vector<int>& table_id,
             const Wells& wells,
             const ADB& qs,
-            const ADB& thp,
-            const ADB& alq) const;
+            const ADB& thp) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as ADBs
@@ -86,7 +80,6 @@ public:
      * @param liquid Oil phase
      * @param vapour Gas phase
      * @param thp Tubing head pressure
-     * @param alq Artificial lift or other parameter
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table, for each entry in the
@@ -96,8 +89,7 @@ public:
             const ADB& aqua,
             const ADB& liquid,
             const ADB& vapour,
-            const ADB& thp,
-            const ADB& alq) const;
+            const ADB& thp) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -106,7 +98,6 @@ public:
      * @param liquid Oil phase
      * @param vapour Gas phase
      * @param thp Tubing head pressure
-     * @param alq Artificial lift or other parameter
      *
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
@@ -115,8 +106,8 @@ public:
             const double& aqua,
             const double& liquid,
             const double& vapour,
-            const double& thp,
-            const double& alq) const;
+            const double& thp) const;
+
 
     /**
      * Linear interpolation of thp as a function of the input parameters
@@ -125,7 +116,6 @@ public:
      * @param liquid Oil phase
      * @param vapour Gas phase
      * @param bhp Bottom hole pressure
-     * @param alq Artificial lift or other parameter
      *
      * @return The tubing hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
@@ -134,19 +124,17 @@ public:
             const double& aqua,
             const double& liquid,
             const double& vapour,
-            const double& bhp,
-            const double& alq) const;
-
+            const double& bhp) const;
 
 private:
     // Map which connects the table number with the table itself
-    std::map<int, const VFPProdTable*> m_tables;
+    std::map<int, const VFPInjTable*> m_tables;
 };
-
 
 
 
 } //namespace
 
 
-#endif /* OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_ */
+
+#endif /* OPM_AUTODIFF_VFPINJPROPERTIES_HPP_ */

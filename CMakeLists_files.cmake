@@ -43,6 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/LinearisedBlackoilResidual.cpp
 	opm/autodiff/VFPProperties.cpp
 	opm/autodiff/VFPProdProperties.cpp
+	opm/autodiff/VFPInjProperties.cpp
 	)
 
 # originally generated with the command:
@@ -136,5 +137,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	opm/autodiff/VFPProperties.hpp
 	opm/autodiff/VFPProdProperties.hpp
+	opm/autodiff/VFPInjProperties.hpp
 	)
 

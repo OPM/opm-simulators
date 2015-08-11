@@ -53,7 +53,7 @@ namespace Opm
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
-          vfpProperties_(eclipse_state->getVFPProdTables()),
+          vfpProperties_(eclipse_state->getVFPInjTables(), eclipse_state->getVFPProdTables()),
           is_parallel_run_( false )
     {
         // Misc init.

@@ -34,6 +34,7 @@
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
+#include <opm/autodiff/VFPInjProperties.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -1246,7 +1247,16 @@ namespace detail {
                 const double& alq    = well_controls_iget_alq(wc, current);
 
                 //Set *BHP* target by calculating bhp from THP
-                xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq);
+                const WellType& well_type = wells().type[w];
+                if (well_type == PRODUCER) {
+                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq);
+                }
+                else if (well_type == INJECTOR) {
+                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp);
+                }
+                else {
+                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                }
                 break;
             }
 
@@ -1374,8 +1384,10 @@ namespace detail {
         const ADB& vapour = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
         //THP calculation variables
-        std::vector<int> table_id(nw, -1);
-        ADB::V thp_v = ADB::V::Zero(nw);
+        std::vector<int> inj_table_id(nw, -1);
+        std::vector<int> prod_table_id(nw, -1);
+        ADB::V thp_inj_v = ADB::V::Zero(nw);
+        ADB::V thp_prod_v = ADB::V::Zero(nw);
         ADB::V alq_v = ADB::V::Zero(nw);
 
         //Target vars
@@ -1385,7 +1397,8 @@ namespace detail {
 
         //Selection variables
         std::vector<int> bhp_elems;
-        std::vector<int> thp_elems;
+        std::vector<int> thp_inj_elems;
+        std::vector<int> thp_prod_elems;
         std::vector<int> rate_elems;
 
         //Run through all wells to calculate BHP/RATE targets
@@ -1409,11 +1422,24 @@ namespace detail {
 
             case THP:
             {
-                table_id[w] = well_controls_iget_vfp(wc, current);
-                thp_v[w]    = well_controls_iget_target(wc, current);
-                alq_v[w]    = well_controls_iget_alq(wc, current);
+                const WellType& well_type = wells().type[w];
+                if (well_type == INJECTOR) {
+                    inj_table_id[w]  = well_controls_iget_vfp(wc, current);
+                    thp_inj_v[w] = well_controls_iget_target(wc, current);
+                    alq_v[w]     = -1e100;
 
-                thp_elems.push_back(w);
+                    thp_inj_elems.push_back(w);
+                }
+                else if (well_type == PRODUCER) {
+                    prod_table_id[w]   = well_controls_iget_vfp(wc, current);
+                    thp_prod_v[w] = well_controls_iget_target(wc, current);
+                    alq_v[w]      = well_controls_iget_alq(wc, current);
+
+                    thp_prod_elems.push_back(w);
+                }
+                else {
+                    OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER type well");
+                }
                 bhp_targets(w)  = -1e100;
                 rate_targets(w) = -1e100;
             }
@@ -1442,18 +1468,21 @@ namespace detail {
         }
 
         //Calculate BHP target from THP
-        const ADB thp = ADB::constant(thp_v);
+        const ADB thp = ADB::constant(thp_inj_v);
         const ADB alq = ADB::constant(alq_v);
-        const ADB thp_targets = vfp_properties_->getProd()->bhp(table_id, aqua, liquid, vapour, thp, alq);
+        const ADB thp_inj_targets = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp);
+        const ADB thp_prod_targets = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp, alq);
 
         //Calculate residuals
-        const ADB thp_residual = state.bhp - thp_targets;
+        const ADB thp_inj_residual = state.bhp - thp_inj_targets;
+        const ADB thp_prod_residual = state.bhp - thp_prod_targets;
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
 
         //Select the right residual for each well
         residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, bhp_residual.size()) +
-                superset(subset(thp_residual, thp_elems), thp_elems, thp_residual.size()) +
+                superset(subset(thp_inj_residual, thp_inj_elems), thp_inj_elems, thp_inj_residual.size()) +
+                superset(subset(thp_prod_residual, thp_prod_elems), thp_prod_elems, thp_prod_residual.size()) +
                 superset(subset(rate_residual, rate_elems), rate_elems, rate_residual.size());
 
         // For wells that are dead (not flowing), and therefore not communicating
@@ -1832,7 +1861,16 @@ namespace detail {
                         double alq = well_controls_iget_alq(wc, ctrl_index);
                         int table_id = well_controls_iget_vfp(wc, ctrl_index);
 
-                        well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+                        const WellType& well_type = wells().type[w];
+                        if (well_type == INJECTOR) {
+                            well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp[w]);
+                        }
+                        else if (well_type == PRODUCER) {
+                            well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+                        }
+                        else {
+                            OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
+                        }
 
                         //Assume only one THP control specified for each well
                         break;
