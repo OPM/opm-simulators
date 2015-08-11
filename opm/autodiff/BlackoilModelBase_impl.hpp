@@ -33,6 +33,7 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/VFPProdProperties.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>

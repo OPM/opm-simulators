@@ -42,6 +42,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
 	opm/autodiff/VFPProperties.cpp
+	opm/autodiff/VFPProdProperties.cpp
 	)
 
 # originally generated with the command:
@@ -134,5 +135,6 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	opm/autodiff/VFPProperties.hpp
+	opm/autodiff/VFPProdProperties.hpp
 	)
 
