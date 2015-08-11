@@ -56,9 +56,12 @@ public:
 
     EclHysteresisTwoPhaseLawParams()
     {
-        pcSwMdc_ = 1.0;
-        krnSwMdc_ = 1.0;
-        krwSwMdc_ = 1.0;
+        pcSwMdc_ = 2.0;
+        krnSwMdc_ = 2.0;
+        // krwSwMdc_ = 2.0;
+
+        deltaSwImbKrn_ = 0.0;
+        // deltaSwImbKrw_ = 0.0;
 
 #ifndef NDEBUG
         finalized_ = false;
@@ -175,7 +178,8 @@ public:
      *        wetting phase.
      */
     void setKrwSwMdc(Scalar value)
-    { krwSwMdc_ = value; };
+    {}
+    //    { krwSwMdc_ = value; };
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
@@ -183,7 +187,8 @@ public:
      *        wetting phase.
      */
     Scalar krwSwMdc() const
-    { return krwSwMdc_; };
+    { return 2.0; }
+    //    { return krwSwMdc_; };
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
@@ -209,7 +214,8 @@ public:
      * krw(Sw) = krw_imbibition(Sw + Sw_shift,krw) else
      */
     void setDeltaSwImbKrw(Scalar value)
-    { deltaSwImbKrw_ = value; }
+    {}
+    //    { deltaSwImbKrw_ = value; }
 
     /*!
      * \brief Returns the saturation value which must be added if krw is calculated using
@@ -219,7 +225,8 @@ public:
      * krw(Sw) = krw_imbibition(Sw + Sw_shift,krw) else
      */
     Scalar deltaSwImbKrw() const
-    { return deltaSwImbKrw_; }
+    { return 0.0; }
+//    { return deltaSwImbKrw_; }
 
     /*!
      * \brief Sets the saturation value which must be added if krn is calculated using
@@ -275,10 +282,18 @@ public:
             updateParams = true;
         }
 
-        if (krwSw < krwSwMdc_) {
+/*
+        // This is quite hacky: Eclipse says that it only uses relperm hysteresis for the
+        // wetting phase (indicated by '0' for the second item of the EHYSTER keyword),
+        // even though this makes about zero sense: one would expect that hysteresis can
+        // be limited to the oil phase, but the oil phase is the wetting phase of the
+        // gas-oil twophase system whilst it is non-wetting for water-oil.
+        if (krwSw < krwSwMdc_)
+        {
             krwSwMdc_ = krwSw;
             updateParams = true;
         }
+*/
 
         if (krnSw < krnSwMdc_) {
             krnSwMdc_ = krnSw;
@@ -303,10 +318,14 @@ private:
 
     void updateDynamicParams_()
     {
+        // HACK: Eclipse seems to disable the wetting-phase relperm even though this is
+        // quite pointless from the physical POV. (see comment above)
+/*
         // calculate the saturation deltas for the relative permeabilities
         Scalar krwMdcDrainage = EffLawT::twoPhaseSatKrw(drainageParams(), krwSwMdc_);
         Scalar SwKrwMdcImbibition = EffLawT::twoPhaseSatKrwInv(imbibitionParams(), krwMdcDrainage);
         deltaSwImbKrw_ = SwKrwMdcImbibition - krwSwMdc_;
+*/
 
         Scalar krnMdcDrainage = EffLawT::twoPhaseSatKrn(drainageParams(), krnSwMdc_);
         Scalar SwKrnMdcImbibition = EffLawT::twoPhaseSatKrnInv(imbibitionParams(), krnMdcDrainage);
@@ -320,8 +339,8 @@ private:
 //                        - EffLawT::twoPhaseSatPcnw(drainageParams(), pcSwMdc_)) < 1e-8);
         assert(std::abs(EffLawT::twoPhaseSatKrn(imbibitionParams(), krnSwMdc_ + deltaSwImbKrn_)
                         - EffLawT::twoPhaseSatKrn(drainageParams(), krnSwMdc_)) < 1e-8);
-        assert(std::abs(EffLawT::twoPhaseSatKrw(imbibitionParams(), krwSwMdc_ + deltaSwImbKrw_)
-                        - EffLawT::twoPhaseSatKrw(drainageParams(), krwSwMdc_)) < 1e-8);
+//        assert(std::abs(EffLawT::twoPhaseSatKrw(imbibitionParams(), krwSwMdc_ + deltaSwImbKrw_)
+//                        - EffLawT::twoPhaseSatKrw(drainageParams(), krwSwMdc_)) < 1e-8);
 
 #if 0
         Scalar Snhy = 1.0 - SwMdc_;
@@ -337,14 +356,14 @@ private:
     // largest wettinging phase saturation which is on the main-drainage curve. These are
     // three different values because the sourounding code can choose to use different
     // definitions for the saturations for different quantities
-    Scalar krwSwMdc_;
+//    Scalar krwSwMdc_;
     Scalar krnSwMdc_;
     Scalar pcSwMdc_;
 
     // offsets added to wetting phase saturation uf using the imbibition curves need to
     // be used to calculate the wetting phase relperm, the non-wetting phase relperm and
     // the capillary pressure
-    Scalar deltaSwImbKrw_;
+//    Scalar deltaSwImbKrw_;
     Scalar deltaSwImbKrn_;
     Scalar deltaSwImbPc_;
 
