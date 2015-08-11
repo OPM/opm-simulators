@@ -134,7 +134,7 @@ namespace Opm
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulatorState& state,
                            const WellState&,
-                           bool substep = false)
+                           bool /*substep*/ = false)
         {
             outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
         }
@@ -164,7 +164,7 @@ namespace Opm
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulatorState& reservoirState,
                            const WellState& wellState,
-                           bool substep = false)
+                           bool /*substep*/ = false)
         {
             const BlackoilState* state =
                 dynamic_cast< const BlackoilState* > (&reservoirState);

@@ -26,9 +26,11 @@
 
 #define BOOST_TEST_MODULE FluidPropertiesTest
 
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/utility/Units.hpp>
