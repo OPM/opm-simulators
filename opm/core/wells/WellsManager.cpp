@@ -493,9 +493,9 @@ namespace Opm
                 }
 
                 if (ok && injectionProperties.hasInjectionControl(WellInjector::THP)) {
+                    control_pos[WellsManagerDetail::InjectionControl::THP] = well_controls_get_num(w_->ctrls[well_index]);
                     const double thp_limit  = injectionProperties.THPLimit;
                     const int    vfp_number = injectionProperties.VFPTableNumber;
-                    control_pos[WellsManagerDetail::ProductionControl::THP] = well_controls_get_num(w_->ctrls[well_index]);
                     ok = append_well_controls(THP,
                                               thp_limit,
                                               -std::numeric_limits<int>::max(),
