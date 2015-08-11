@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2015 by Andreas Lauser
+  Copyright (C) 2015 by IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -535,18 +536,47 @@ private:
         dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
         auto& effParams = *dest[satnumRegionIdx];
-        const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+        size_t saturationFunctionFamily = eclState->getSaturationFunctionFamily();
 
-        // convert the saturations of the SGOF keyword from gas to oil saturations
-        std::vector<double> SoSamples(sgofTable.numRows());
-        for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
-            SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+        switch (saturationFunctionFamily) {
+        case 1:
+        {
+            const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+            // convert the saturations of the SGOF keyword from gas to oil saturations
+            std::vector<double> SoSamples(sgofTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
+                SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
 
-        effParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
-        effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
-        effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
-        effParams.finalize();
+            effParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
+            effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
+            effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
+            effParams.finalize();
+            break;
+        }
 
+        case 2:
+        {
+            const auto& sgfnTable = eclState->getSgfnTables()[satnumRegionIdx];
+            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
+
+            const auto &SoColumn = sof3Table.getSoColumn();
+            // convert the saturations of the SGFN keyword from gas to oil saturations
+            std::vector<double> SoSamples(sgfnTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx)
+                SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
+
+            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx){
+                std::cout << SoColumn[sampleIdx] << " " << SoSamples[sampleIdx] << std::endl;
+
+            }
+
+            effParams.setKrwSamples(SoColumn, sof3Table.getKrogColumn());
+            effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
+            effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
+            effParams.finalize();
+            break;
+        }
+        }
     }
 
     template <class Container>
@@ -557,15 +587,39 @@ private:
         dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
         auto& effParams = *dest[satnumRegionIdx];
-        const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
+        size_t saturationFunctionFamily = eclState->getSaturationFunctionFamily();
 
-        const auto &SwColumn = swofTable.getSwColumn();
+        switch (saturationFunctionFamily) {
+        case 1: {
+            const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
+            const auto &SwColumn = swofTable.getSwColumn();
 
-        effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
-        effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
-        effParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
-        effParams.finalize();
+            effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
+            effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
+            effParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
+            effParams.finalize();
+            break;
+        }
+        case 2:
+        {
+            const auto& swfnTable = eclState->getSwfnTables()[satnumRegionIdx];
+            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
+            const auto &SwColumn = swfnTable.getSwColumn();
+
+            // convert the saturations of the SOF3 keyword from oil to water saturations
+            std::vector<double> SwSamples(sof3Table.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
+                SwSamples[sampleIdx] = 1 - sof3Table.getSoColumn()[sampleIdx];
+
+            effParams.setKrwSamples(SwColumn, swfnTable.getKrwColumn());
+            effParams.setKrnSamples(SwSamples, sof3Table.getKrowColumn());
+            effParams.setPcnwSamples(SwColumn, swfnTable.getPcowColumn());
+            effParams.finalize();
+            break;
+        }
+        }
     }
+
 
     template <class Container>
     void readGasOilUnscaledPoints_(Container &dest,
