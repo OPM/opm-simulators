@@ -483,7 +483,6 @@ namespace Opm
 
                 if (ok && injectionProperties.hasInjectionControl(WellInjector::BHP)) {
                     control_pos[WellsManagerDetail::InjectionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]);
-                    control_pos[WellsManagerDetail::InjectionControl::BHP] = well_controls_get_num(w_->ctrls[well_index]); //Fixme: duplicate, a nop-bug?
                     ok = append_well_controls(BHP,
                                               injectionProperties.BHPLimit,
                                               -std::numeric_limits<int>::max(),
