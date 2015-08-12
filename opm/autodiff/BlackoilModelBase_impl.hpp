@@ -1468,10 +1468,11 @@ namespace detail {
         }
 
         //Calculate BHP target from THP
-        const ADB thp = ADB::constant(thp_inj_v);
+        const ADB thp_inj = ADB::constant(thp_inj_v);
+        const ADB thp_prod = ADB::constant(thp_prod_v);
         const ADB alq = ADB::constant(alq_v);
-        const ADB thp_inj_targets = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp);
-        const ADB thp_prod_targets = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp, alq);
+        const ADB thp_inj_targets = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj);
+        const ADB thp_prod_targets = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod, alq);
 
         //Calculate residuals
         const ADB thp_inj_residual = state.bhp - thp_inj_targets;
