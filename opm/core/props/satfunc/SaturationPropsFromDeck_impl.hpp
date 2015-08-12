@@ -299,6 +299,7 @@ namespace Opm
         } else {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
+                fluidState.setIndex(i);
                 if (do_hyst_) {
                    satfunc_[cell_to_func_[cells[i]]].evalKr(fluidState, kr + np*i, &(eps_transf_[cells[i]]), &(eps_transf_hyst_[cells[i]]), &(sat_hyst_[cells[i]]));
                 } else if (do_eps_) {
