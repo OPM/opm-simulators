@@ -352,8 +352,8 @@ public:
                 saturationKrwPoints_[2] = 1 - epsInfo.Swl - epsInfo.Sgl;
             }
             else {
-                saturationKrwPoints_[0] = epsInfo.Swl + epsInfo.Sgl;
-                saturationKrwPoints_[1] = 1.0 - epsInfo.Sogcr;
+                saturationKrwPoints_[0] = epsInfo.Sogcr;
+                saturationKrwPoints_[1] = 1 - epsInfo.Swl - epsInfo.Sgl;
             }
 
             // krn saturation scaling endpoints (with the non-wetting phase being gas).
