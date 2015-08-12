@@ -280,10 +280,10 @@ namespace Opm
     {
         assert(cells != 0);
 
-        ExplicitArraysFluidState fluidState;
+        const int np = phase_usage_.num_phases;
+        ExplicitArraysFluidState fluidState(np);
         fluidState.setSaturationArray(s);
 
-        const int np = phase_usage_.num_phases;
         if (dkrds) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
@@ -333,10 +333,10 @@ namespace Opm
     {
         assert(cells != 0);
 
-        ExplicitArraysFluidState fluidState;
+        const int np = phase_usage_.num_phases;
+        ExplicitArraysFluidState fluidState(np);
         fluidState.setSaturationArray(s);
 
-        const int np = phase_usage_.num_phases;
         if (dpcds) {
 // #pragma omp parallel for
             for (int i = 0; i < n; ++i) {
@@ -474,7 +474,7 @@ namespace Opm
                 const int max_np = BlackoilPhases::MaxNumPhases;
                 double s[max_np] = { 0.0 };
                 s[wpos] = swat;
-                ExplicitArraysFluidState fluidState;
+                ExplicitArraysFluidState fluidState(phase_usage_.num_phases);
                 fluidState.setSaturationArray(s);
                 fluidState.setIndex(0);
                 double pc[max_np] = { 0.0 };

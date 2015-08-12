@@ -36,10 +36,8 @@ class ExplicitArraysFluidState
 public:
     typedef double Scalar;
 
-    enum { numPhases = 3 };
-    enum { numComponents = 3 };
-
-    ExplicitArraysFluidState()
+    explicit ExplicitArraysFluidState(const unsigned int num_phases)
+	: numPhases_(num_phases)
     {}
 
     /*!
@@ -75,7 +73,7 @@ public:
      * \brief Returns the saturation of a phase for the current cell index.
      */
     Scalar saturation(int phaseIdx) const
-    { return saturations_[numPhases*arrayIdx_ + phaseIdx]; }
+    { return saturations_[numPhases_*arrayIdx_ + phaseIdx]; }
 
     /*!
      * \brief Returns the temperature [K] of a phase for the current cell index.
@@ -90,6 +88,7 @@ private:
     const double* temperature_;
 
     unsigned arrayIdx_;
+    unsigned numPhases_;
 };
 
 } // namespace Opm
