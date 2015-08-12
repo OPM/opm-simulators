@@ -137,7 +137,32 @@ public:
      */
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
-    { return params.pcnwSpline().eval(Sw, /*extrapolate=*/true); }
+    {
+        // this assumes that the capillary pressure is monotonically decreasing
+        if (Sw <= params.pcnwSpline().xMin())
+            return Evaluation(params.pcnwSpline().yFirst());
+        if (Sw >= params.pcnwSpline().xMax())
+            return Evaluation(params.pcnwSpline().yLast());
+
+        return params.pcnwSpline().eval(Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        static const Evaluation nil(0.0);
+
+        // this assumes that the capillary pressure is monotonically decreasing
+        if (pcnw >= params.pcnwSpline().yFirst())
+            return Evaluation(params.pcnwSpline().xMin());
+        if (pcnw <= params.pcnwSpline().yLast())
+            return Evaluation(params.pcnwSpline().xMax());
+
+        // the intersect() method of splines is a bit slow, but this code path is not too
+        // time critical...
+        return params.pcnwSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/pcnw);
+    }
 
     /*!
      * \brief The saturation-capillary pressure curve
@@ -182,7 +207,26 @@ public:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, params.krwSpline().eval(Sw, /*extrapolate=*/true)));
+        if (Sw <= params.krnSpline().xMin())
+            return Evaluation(params.krwSpline().yFirst());
+        if (Sw >= params.krnSpline().xMax())
+            return Evaluation(params.krwSpline().yLast());
+
+        return params.krwSpline().eval(Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        static const Evaluation nil(0.0);
+
+        if (krw <= params.krwSpline().yFirst())
+            return Evaluation(params.krwSpline().xMin());
+        if (krw >= params.krwSpline().yLast())
+            return Evaluation(params.krwSpline().xMax());
+
+        return params.krwSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krw);
     }
 
     /*!
@@ -205,7 +249,26 @@ public:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, params.krnSpline().eval(Sw, /*extrapolate=*/true)));
+        if (Sw <= params.krnSpline().xMin())
+            return Evaluation(params.krnSpline().yFirst());
+        if (Sw >= params.krnSpline().xMax())
+            return Evaluation(params.krnSpline().yLast());
+
+        return params.krnSpline().eval(Sw);
+    }
+
+    template <class Evaluation>
+    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    {
+        typedef MathToolbox<Evaluation> Toolbox;
+        static const Evaluation nil(0.0);
+
+        if (krn >= params.krnSpline().yFirst())
+            return Evaluation(params.krnSpline().xMin());
+        if (krn <= params.krnSpline().yLast())
+            return Evaluation(params.krnSpline().xMax());
+
+        return params.krnSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krn);
     }
 };
 } // namespace Opm
