@@ -304,7 +304,7 @@ public:
         const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
         Evaluation kro;
-        if (std::abs(Toolbox::value(Sg) + Toolbox::value(Sw) - Swco) < 1e-50)
+        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-20)
             kro = kro_ow; // avoid division by zero
         else {
             const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
@@ -312,7 +312,7 @@ public:
             kro = weightOilWater*kro_ow + weightGasOil*kro_go;
         }
 
-        return Toolbox::min(1.0, Toolbox::max(0.0, kro));
+        return kro;
     }
 
     /*!
