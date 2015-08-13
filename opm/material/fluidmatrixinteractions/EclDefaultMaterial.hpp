@@ -293,7 +293,9 @@ public:
 
         Scalar Swco = params.Swl();
 
-        Evaluation Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        Evaluation Sw =
+            Toolbox::max(Evaluation(Swco),
+                         FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx)));
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
