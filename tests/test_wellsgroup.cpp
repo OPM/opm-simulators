@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
             BOOST_CHECK_EQUAL(group->getTargetVoidReplacementFraction(2), wellsGroup->injSpec().voidage_replacment_fraction_);
         }
         if (group->isProductionGroup(2)) {
-            BOOST_CHECK_EQUAL(group->getReservoirMaxRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(group->getReservoirVolumeTargetRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
             BOOST_CHECK_EQUAL(group->getGasTargetRate(2), wellsGroup->prodSpec().gas_max_rate_);
             BOOST_CHECK_EQUAL(group->getOilTargetRate(2), wellsGroup->prodSpec().oil_max_rate_);
             BOOST_CHECK_EQUAL(group->getWaterTargetRate(2), wellsGroup->prodSpec().water_max_rate_);

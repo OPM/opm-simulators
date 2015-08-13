@@ -1064,7 +1064,7 @@ namespace Opm
             production_specification.gas_max_rate_ = group->getGasTargetRate(timeStep);
             production_specification.liquid_max_rate_ = group->getLiquidTargetRate(timeStep);
             production_specification.procedure_ = toProductionProcedure(GroupProductionExceedLimit::ActionEnum2String(group->getProductionExceedLimitAction(timeStep)));
-            production_specification.reservoir_flow_max_rate_ = group->getReservoirMaxRate(timeStep);
+            production_specification.reservoir_flow_max_rate_ = group->getReservoirVolumeTargetRate(timeStep);
         }
 
         std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group->name(), production_specification, injection_specification, phase_usage));
