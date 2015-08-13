@@ -299,7 +299,7 @@ public:
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
-        Evaluation So_go = 1 - Sw_ow; // == 1 - Sw - Sg;
+        Evaluation So_go = 1.0 + Swco - Sw_ow;
         const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
         const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
