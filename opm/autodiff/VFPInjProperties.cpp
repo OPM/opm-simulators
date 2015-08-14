@@ -94,7 +94,6 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
 
 
 
-
 VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
         const ADB& aqua,
         const ADB& liquid,
@@ -118,7 +117,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
     //Get the table for each well
     std::vector<const VFPInjTable*> well_tables(nw, NULL);
     for (int i=0; i<nw; ++i) {
-        if (table_id[i] >= 0) {
+        if (table_id[i] > 0) {
             well_tables[i] = detail::getTable(m_tables, table_id[i]);
         }
     }
@@ -220,6 +219,16 @@ double VFPInjProperties::thp(int table_id,
     double thp = detail::findTHP(bhp_array, thp_array, bhp);
     return thp;
 }
+
+
+
+
+
+
+const VFPInjTable* VFPInjProperties::getTable(const int table_id) const {
+    return detail::getTable(m_tables, table_id);
+}
+
 
 
 

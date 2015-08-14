@@ -260,6 +260,7 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
+        V well_perforation_densities_; //Density of each well perforation
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;

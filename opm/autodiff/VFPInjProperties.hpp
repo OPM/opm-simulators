@@ -126,6 +126,12 @@ public:
             const double& vapour,
             const double& bhp) const;
 
+    /**
+     * Returns the table associated with the ID, or throws an exception if
+     * the table does not exist
+     */
+    const VFPInjTable* getTable(const int table_id) const;
+
 private:
     // Map which connects the table number with the table itself
     std::map<int, const VFPInjTable*> m_tables;

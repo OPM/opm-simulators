@@ -235,6 +235,14 @@ double VFPProdProperties::thp(int table_id,
 
 
 
+const VFPProdTable* VFPProdProperties::getTable(const int table_id) const {
+    return detail::getTable(m_tables, table_id);
+}
+
+
+
+
+
 
 
 }

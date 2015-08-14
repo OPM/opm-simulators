@@ -657,7 +657,19 @@ namespace detail {
         }
     }
 
-
+    namespace detail {
+        double getGravity(const double* g, const int dim) {
+            double grav = 0.0;
+            if (g) {
+                // Guard against gravity in anything but last dimension.
+                for (int dd = 0; dd < dim - 1; ++dd) {
+                    assert(g[dd] == 0.0);
+                }
+                grav = g[dim - 1];
+            }
+            return grav;
+        }
+    }
 
 
 
@@ -731,22 +743,21 @@ namespace detail {
         // Surface density.
         std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
         // Gravity
-        double grav = 0.0;
-        const double* g = geo_.gravity();
-        const int dim = dimensions(grid_);
-        if (g) {
-            // Guard against gravity in anything but last dimension.
-            for (int dd = 0; dd < dim - 1; ++dd) {
-                assert(g[dd] == 0.0);
-            }
-            grav = g[dim - 1];
-        }
+        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
-        // 2. Compute pressure deltas, and store the results.
-        std::vector<double> cdp = WellDensitySegmented
-            ::computeConnectionPressureDelta(wells(), xw, fluid_.phaseUsage(),
-                                             b_perf, rsmax_perf, rvmax_perf, perf_depth,
-                                             surf_dens, grav);
+        // 2. Compute densities
+        std::vector<double> cd =
+                WellDensitySegmented::computeConnectionDensities(
+                        wells(), xw, fluid_.phaseUsage(),
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens);
+
+        // 3. Compute pressure deltas
+        std::vector<double> cdp =
+                WellDensitySegmented::computeConnectionPressureDelta(
+                        wells(), perf_depth, cd, grav);
+
+        // 4. Store the results
+        well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf);
         well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
     }
 
@@ -1166,6 +1177,25 @@ namespace detail {
     } // namespace detail
 
 
+    namespace detail {
+        double computeHydrostaticCorrection(const Wells& wells, const int w, const double vfp_ref_depth,
+                                            const ADB::V& well_perforation_densities, const double gravity) {
+            //For the initial iteration, we have no perforation densities.
+            if (well_perforation_densities.size() > w) {
+                const double well_ref_depth = wells.depth_ref[w];
+                const double dh = vfp_ref_depth - well_ref_depth;
+                const int perf = wells.well_connpos[w];
+                const double rho = well_perforation_densities[perf];
+                const double dp = rho*gravity*dh;
+
+                return dp;
+            }
+            else {
+                return 0.0;
+            }
+        }
+
+    } //Namespace
 
 
 
@@ -1218,6 +1248,9 @@ namespace detail {
                 current = xw.currentControls()[w];
             }
 
+            //Get gravity for THP hydrostatic corrrection
+            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+
             // Updating well state and primary variables.
             // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
             const double target = well_controls_iget_target(wc, current);
@@ -1248,11 +1281,24 @@ namespace detail {
 
                 //Set *BHP* target by calculating bhp from THP
                 const WellType& well_type = wells().type[w];
-                if (well_type == PRODUCER) {
-                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq);
+
+                //Gather variables for hydrostatic reconstruction
+
+                if (well_type == INJECTOR) {
+                    double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
+                    double dp = detail::computeHydrostaticCorrection(
+                            wells(), w, vfp_ref_depth,
+                            well_perforation_densities_, gravity);
+
+                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
-                else if (well_type == INJECTOR) {
-                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp);
+                else if (well_type == PRODUCER) {
+                    double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
+                    double dp = detail::computeHydrostaticCorrection(
+                            wells(), w, vfp_ref_depth,
+                            well_perforation_densities_, gravity);
+
+                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
                 else {
                     OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
@@ -1386,9 +1432,13 @@ namespace detail {
         //THP calculation variables
         std::vector<int> inj_table_id(nw, -1);
         std::vector<int> prod_table_id(nw, -1);
-        ADB::V thp_inj_v = ADB::V::Zero(nw);
-        ADB::V thp_prod_v = ADB::V::Zero(nw);
+        ADB::V thp_inj_target_v = ADB::V::Zero(nw);
+        ADB::V thp_prod_target_v = ADB::V::Zero(nw);
         ADB::V alq_v = ADB::V::Zero(nw);
+
+        //Hydrostatic correction variables
+        ADB::V rho_v = ADB::V::Zero(nw);
+        ADB::V vfp_ref_depth_v = ADB::V::Zero(nw);
 
         //Target vars
         ADB::V bhp_targets  = ADB::V::Zero(nw);
@@ -1422,18 +1472,28 @@ namespace detail {
 
             case THP:
             {
+                const int perf = wells().well_connpos[w];
+                rho_v[w] = well_perforation_densities_[perf];
+
+                const int table_id = well_controls_iget_vfp(wc, current);
+                const double target = well_controls_iget_target(wc, current);
+
                 const WellType& well_type = wells().type[w];
                 if (well_type == INJECTOR) {
-                    inj_table_id[w]  = well_controls_iget_vfp(wc, current);
-                    thp_inj_v[w] = well_controls_iget_target(wc, current);
+                    inj_table_id[w]  = table_id;
+                    thp_inj_target_v[w] = target;
                     alq_v[w]     = -1e100;
+
+                    vfp_ref_depth_v[w] = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
 
                     thp_inj_elems.push_back(w);
                 }
                 else if (well_type == PRODUCER) {
-                    prod_table_id[w]   = well_controls_iget_vfp(wc, current);
-                    thp_prod_v[w] = well_controls_iget_target(wc, current);
+                    prod_table_id[w]  = table_id;
+                    thp_prod_target_v[w] = target;
                     alq_v[w]      = well_controls_iget_alq(wc, current);
+
+                    vfp_ref_depth_v[w] =  vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
 
                     thp_prod_elems.push_back(w);
                 }
@@ -1468,23 +1528,33 @@ namespace detail {
         }
 
         //Calculate BHP target from THP
-        const ADB thp_inj = ADB::constant(thp_inj_v);
-        const ADB thp_prod = ADB::constant(thp_prod_v);
+        const ADB thp_inj_target = ADB::constant(thp_inj_target_v);
+        const ADB thp_prod_target = ADB::constant(thp_prod_target_v);
         const ADB alq = ADB::constant(alq_v);
-        const ADB thp_inj_targets = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj);
-        const ADB thp_prod_targets = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod, alq);
+        const ADB bhp_from_thp_inj = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
+        const ADB bhp_from_thp_prod = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
+
+        //Perform hydrostatic correction to computed targets
+        const ADB well_ref_depth = ADB::constant(ADB::V::Map(wells().depth_ref, nw));
+        const ADB vfp_ref_depth = ADB::constant(vfp_ref_depth_v);
+        const ADB dh = vfp_ref_depth - well_ref_depth;
+        const ADB rho = ADB::constant(rho_v);
+        double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const ADB dp = rho*gravity*dh;
+        const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
+        const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
 
         //Calculate residuals
-        const ADB thp_inj_residual = state.bhp - thp_inj_targets;
-        const ADB thp_prod_residual = state.bhp - thp_prod_targets;
+        const ADB thp_inj_residual = state.bhp - bhp_from_thp_inj + dp_inj;
+        const ADB thp_prod_residual = state.bhp - bhp_from_thp_prod + dp_prod;
         const ADB bhp_residual = state.bhp - bhp_targets;
         const ADB rate_residual = rate_distr * state.qs - rate_targets;
 
         //Select the right residual for each well
-        residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, bhp_residual.size()) +
-                superset(subset(thp_inj_residual, thp_inj_elems), thp_inj_elems, thp_inj_residual.size()) +
-                superset(subset(thp_prod_residual, thp_prod_elems), thp_prod_elems, thp_prod_residual.size()) +
-                superset(subset(rate_residual, rate_elems), rate_elems, rate_residual.size());
+        residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, nw) +
+                superset(subset(thp_inj_residual, thp_inj_elems), thp_inj_elems, nw) +
+                superset(subset(thp_prod_residual, thp_prod_elems), thp_prod_elems, nw) +
+                superset(subset(rate_residual, rate_elems), rate_elems, nw);
 
         // For wells that are dead (not flowing), and therefore not communicating
         // with the reservoir, we set the equation to be equal to the well's total

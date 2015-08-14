@@ -137,6 +137,11 @@ public:
             const double& bhp,
             const double& alq) const;
 
+    /**
+     * Returns the table associated with the ID, or throws an exception if
+     * the table does not exist
+     */
+    const VFPProdTable* getTable(const int table_id) const;
 
 private:
     // Map which connects the table number with the table itself
