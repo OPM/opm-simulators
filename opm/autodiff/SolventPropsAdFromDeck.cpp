@@ -18,7 +18,7 @@
 */
 #include <config.h>
 
-#include "SolventPropsAdFromDeck.hpp"
+#include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 

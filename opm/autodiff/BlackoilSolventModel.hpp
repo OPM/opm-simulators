@@ -77,22 +77,6 @@ namespace Opm {
                              const bool                              terminal_output,
                              const bool                              has_solvent);
 
-        /// Called once before each time step.
-        /// \param[in] dt                     time step size
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void prepareStep(const double dt,
-                         ReservoirState& reservoir_state,
-                         WellState& well_state);
-
-        /// Called once after each time step.
-        /// \param[in] dt                     time step size
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void afterStep(const double dt,
-                       ReservoirState& reservoir_state,
-                       WellState& well_state);
-
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
@@ -127,7 +111,7 @@ namespace Opm {
         // ---------  Data members  ---------
         const bool has_solvent_;
         const int solvent_pos_;
-        const SolventPropsAdFromDeck solvent_props_;
+        const SolventPropsAdFromDeck& solvent_props_;
 
         // Need to declare Base members we want to use here.
         using Base::grid_;
@@ -207,7 +191,7 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        addWellContributionToMassBalanceEq(std::vector<ADB>& cq_s,
+        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
                                            WellState& xw);
 

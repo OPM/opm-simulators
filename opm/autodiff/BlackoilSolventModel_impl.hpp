@@ -103,32 +103,6 @@ namespace Opm {
 
 
 
-    template <class Grid>
-    void
-    BlackoilSolventModel<Grid>::
-    prepareStep(const double dt,
-                ReservoirState& reservoir_state,
-                WellState& well_state)
-    {
-        Base::prepareStep(dt, reservoir_state, well_state);
-    }
-
-
-
-
-    template <class Grid>
-    void
-    BlackoilSolventModel<Grid>::
-    afterStep(const double /* dt */,
-              ReservoirState& /* reservoir_state */,
-              WellState& /* well_state */)
-    {
-
-    }
-
-
-
-
 
 
     template <class Grid>
@@ -255,7 +229,7 @@ namespace Opm {
 
 
     template <class Grid>
-    void BlackoilSolventModel<Grid>::addWellContributionToMassBalanceEq(std::vector<ADB>& cq_s,
+    void BlackoilSolventModel<Grid>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                                                         const SolutionState& state,
                                                                         WellState& xw)
 
@@ -338,9 +312,17 @@ namespace Opm {
 
             // adjust oil saturation
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const int pos = pu.phase_pos[ Oil ];
+            const int oilpos = pu.phase_pos[ Oil ];
             for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pos] = 1 - ss[c] - reservoir_state.saturation()[c*np + 0] - reservoir_state.saturation()[c*np + 2] ;
+                reservoir_state.saturation()[c*np + oilpos] = 1 - ss[c];
+                if (pu.phase_used[ Gas ]) {
+                    const int gaspos = pu.phase_pos[ Gas ];
+                    reservoir_state.saturation()[c*np + oilpos] -= reservoir_state.saturation()[c*np + gaspos];
+                }
+                if (pu.phase_used[ Water ]) {
+                    const int waterpos = pu.phase_pos[ Water ];
+                    reservoir_state.saturation()[c*np + oilpos] -= reservoir_state.saturation()[c*np + waterpos];
+                }
             }
 
         } else {
@@ -481,6 +463,7 @@ namespace Opm {
         }
 
         if (has_solvent_) {
+
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
             mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
         }
@@ -660,9 +643,11 @@ namespace Opm {
         if (std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Solvent]   > maxResidualAllowed() ||
             std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
             std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
             std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
+            std::isnan(CNV[Solvent]) || CNV[Solvent] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
@@ -683,11 +668,11 @@ namespace Opm {
                       << std::setw(11) << mass_balance_residual[Water]
                       << std::setw(11) << mass_balance_residual[Oil]
                       << std::setw(11) << mass_balance_residual[Gas]
-                      << std::setw(11) << mass_balance_residual[solvent_pos_]
+                      << std::setw(11) << mass_balance_residual[Solvent]
                       << std::setw(11) << CNV[Water]
                       << std::setw(11) << CNV[Oil]
                       << std::setw(11) << CNV[Gas]
-                      << std::setw(11) << CNV[solvent_pos_]
+                      << std::setw(11) << CNV[Solvent]
                       << std::setw(11) << well_flux_residual[Water]
                       << std::setw(11) << well_flux_residual[Oil]
                       << std::setw(11) << well_flux_residual[Gas]

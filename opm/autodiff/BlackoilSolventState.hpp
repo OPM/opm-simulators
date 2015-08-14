@@ -20,7 +20,6 @@
 #ifndef OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
 #define OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/grid.h>
 #include <vector>

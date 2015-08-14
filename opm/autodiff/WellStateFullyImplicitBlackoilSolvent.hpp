@@ -30,6 +30,7 @@ namespace Opm
         typedef WellStateFullyImplicitBlackoil  BaseType;
     public:
 
+        /// One solvent fraction per well connection
         std::vector<double>& solventFraction() { return solvent_fraction_; }
         const std::vector<double>& solventFraction() const { return solvent_fraction_; }
     private:

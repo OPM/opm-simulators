@@ -230,18 +230,12 @@ try
 
 
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-#if USE_DUNE_CORNERPOINTGRID
-    // Dune::CpGrid as grid manager
-    typedef Dune::CpGrid  Grid;
-    // Grid init
-    Grid grid;
-    grid.processEclipseFormat(deck, false, false, false, porv);
-#else
+
     // UnstructuredGrid as grid manager
     typedef UnstructuredGrid  Grid;
     GridManager gridManager( eclipseState->getEclipseGrid(), porv );
     const Grid& grid = *(gridManager.c_grid());
-#endif
+
 
     // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
     if (param.has("output_interval")) {

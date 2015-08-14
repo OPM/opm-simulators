@@ -66,19 +66,22 @@ public:
               const Cells& cells) const;
 
     /// Gas relPerm multipliers
-    /// \param[in]  solventFraction Array of n gas pressure values.
+    /// \param[in]  solventFraction Array of n solvent fraction values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n gas relPerm multiplier values.
     ADB gasRelPermMultiplier(const ADB& solventFraction,
               const Cells& cells) const;
 
     /// Solvent relPerm multipliers
-    /// \param[in]  solventFraction Array of n gas pressure values.
+    /// \param[in]  solventFraction Array of n solvent fraction values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n solvent relPerm multiplier values.
     ADB solventRelPermMultiplier(const ADB& solventFraction,
               const Cells& cells) const;
 
+    /// Solvent surface density
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n solvent density values.
     V solventSurfaceDensity(const Cells& cells) const;
 
 private:
