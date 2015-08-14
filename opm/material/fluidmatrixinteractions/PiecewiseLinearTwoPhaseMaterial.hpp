@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2009-2013 by Andreas Lauser
+  Copyright (C) 2015 by IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -141,13 +142,13 @@ public:
      */
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
-    { return eval_(params.SwSamples(), params.pcnwSamples(), Sw); }
+    { return eval_(params.SwPcwnSamples(), params.pcnwSamples(), Sw); }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
     {
         return eval_(params.pcnwSamples(),
-                     params.SwSamples(),
+                     params.SwPcwnSamples(),
                      pcnw);
     }
 
@@ -193,7 +194,7 @@ public:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        const auto& res = eval_(params.SwSamples(), params.krwSamples(), Sw);
+        const auto& res = eval_(params.SwKrwSamples(), params.krwSamples(), Sw);
         return Toolbox::max(0.0, Toolbox::min(1.0, res));
     }
 
@@ -201,7 +202,7 @@ public:
     static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
     {
         return eval_(params.krwSamples(),
-                     params.SwSamples(),
+                     params.SwKrwSamples(),
                      krw);
     }
 
@@ -224,7 +225,7 @@ public:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, eval_(params.SwSamples(),
+        return Toolbox::max(0.0, Toolbox::min(1.0, eval_(params.SwKrnSamples(),
                                                          params.krnSamples(),
                                                          Sw)));
     }
@@ -233,7 +234,7 @@ public:
     static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
     {
         return eval_(params.krnSamples(),
-                     params.SwSamples(),
+                     params.SwKrnSamples(),
                      krn);
     }
 

@@ -65,26 +65,35 @@ public:
 
         // revert the order of the sampling points if they were given
         // in reverse direction.
-        if (SwSamples_.front() > SwSamples_.back()) {
-            for (unsigned origSampleIdx = 0;
-                 origSampleIdx < SwSamples_.size() / 2;
-                 ++ origSampleIdx)
-            {
-                unsigned newSampleIdx = SwSamples_.size() - origSampleIdx - 1;
+        if (SwPcwnSamples_.front() > SwPcwnSamples_.back())
+            swapOrder_(SwPcwnSamples_, pcwnSamples_);
 
-                std::swap(SwSamples_[origSampleIdx], SwSamples_[newSampleIdx]);
-                std::swap(pcwnSamples_[origSampleIdx], pcwnSamples_[newSampleIdx]);
-                std::swap(krwSamples_[origSampleIdx], krwSamples_[newSampleIdx]);
-                std::swap(krnSamples_[origSampleIdx], krnSamples_[newSampleIdx]);
-            }
-        }
+        if (SwKrwSamples_.front() > SwKrwSamples_.back())
+            swapOrder_(SwKrwSamples_, krwSamples_);
+
+
+        if (SwKrnSamples_.front() > SwKrnSamples_.back())
+            swapOrder_(SwKrnSamples_, krnSamples_);
+
     }
 
     /*!
      * \brief Return the wetting-phase saturation values of all sampling points.
      */
-    const ValueVector& SwSamples() const
-    { assertFinalized_(); return SwSamples_; }
+    const ValueVector& SwKrwSamples() const
+    { assertFinalized_(); return SwKrwSamples_; }
+
+    /*!
+     * \brief Return the wetting-phase saturation values of all sampling points.
+     */
+    const ValueVector& SwKrnSamples() const
+    { assertFinalized_(); return SwKrnSamples_; }
+
+    /*!
+     * \brief Return the wetting-phase saturation values of all sampling points.
+     */
+    const ValueVector& SwPcwnSamples() const
+    { assertFinalized_(); return SwPcwnSamples_; }
 
     /*!
      * \brief Return the sampling points for the capillary pressure curve.
@@ -105,10 +114,10 @@ public:
         assert(SwValues.size() == values.size());
 
         int n = SwValues.size();
-        SwSamples_.resize(n);
+        SwPcwnSamples_.resize(n);
         pcwnSamples_.resize(n);
 
-        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(SwValues.begin(), SwValues.end(), SwPcwnSamples_.begin());
         std::copy(values.begin(), values.end(), pcwnSamples_.begin());
     }
 
@@ -133,10 +142,10 @@ public:
         assert(SwValues.size() == values.size());
 
         int n = SwValues.size();
-        SwSamples_.resize(n);
+        SwKrwSamples_.resize(n);
         krwSamples_.resize(n);
 
-        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(SwValues.begin(), SwValues.end(), SwKrwSamples_.begin());
         std::copy(values.begin(), values.end(), krwSamples_.begin());
     }
 
@@ -161,10 +170,10 @@ public:
         assert(SwValues.size() == values.size());
 
         int n = SwValues.size();
-        SwSamples_.resize(n);
+        SwKrnSamples_.resize(n);
         krnSamples_.resize(n);
 
-        std::copy(SwValues.begin(), SwValues.end(), SwSamples_.begin());
+        std::copy(SwValues.begin(), SwValues.end(), SwKrnSamples_.begin());
         std::copy(values.begin(), values.end(), krnSamples_.begin());
     }
 
@@ -179,7 +188,24 @@ private:
     { }
 #endif
 
-    ValueVector SwSamples_;
+    void swapOrder_(ValueVector& swValues, ValueVector& values) const
+    {
+        if (swValues.front() > values.back()) {
+            for (unsigned origSampleIdx = 0;
+                 origSampleIdx < swValues.size() / 2;
+                 ++ origSampleIdx)
+            {
+                unsigned newSampleIdx = swValues.size() - origSampleIdx - 1;
+
+                std::swap(swValues[origSampleIdx], swValues[newSampleIdx]);
+                std::swap(values[origSampleIdx], values[newSampleIdx]);
+            }
+        }
+    }
+
+    ValueVector SwPcwnSamples_;
+    ValueVector SwKrwSamples_;
+    ValueVector SwKrnSamples_;
     ValueVector pcwnSamples_;
     ValueVector krwSamples_;
     ValueVector krnSamples_;
