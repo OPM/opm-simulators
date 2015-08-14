@@ -124,6 +124,18 @@ public:
     Scalar Swl() const
     { assertFinalized_(); return Swl_; }
 
+    /*!
+     * \brief Specify whether inconsistent saturations should be used to update the
+     *        hysteresis parameters.
+     *
+     * Returning 'true' is wrong from a physical point of view because the saturations
+     * which are used to update the hysteresis parameters are calculated differently than
+     * the ones used to calculate the relperms and capillary pressures. Since Eclipse
+     * E100 probably uses inconsistent saturations, we return true here anyway.
+     */
+    bool inconsistentHysteresisUpdate() const
+    { return true; }
+
 private:
 #ifndef NDEBUG
     void assertFinalized_() const
