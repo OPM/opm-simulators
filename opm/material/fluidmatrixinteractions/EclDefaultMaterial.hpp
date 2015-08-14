@@ -296,7 +296,7 @@ public:
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
-        Evaluation So_go = 1.0 + Swco - Sw_ow;
+        Evaluation So_go = 1.0 - Sw_ow;
         const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
         const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
@@ -348,7 +348,7 @@ public:
             Sg = std::min(1.0, std::max(0.0, Sg));
 
             Scalar Sw_ow = Sg + std::max(Swco, Sw);
-            Scalar So_go = 1 + Swco - Sw_ow;
+            Scalar So_go = 1 + Sw_ow;
 
             params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/1 - Sg, /*krnSw=*/Sw_ow);
             params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/So_go, /*krnSw=*/1 - Sg);
