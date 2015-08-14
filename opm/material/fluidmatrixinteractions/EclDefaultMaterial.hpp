@@ -293,16 +293,18 @@ public:
 
         Scalar Swco = params.Swl();
 
-        Evaluation Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        Evaluation Sw =
+            Toolbox::max(Evaluation(Swco),
+                         FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx)));
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
-        Evaluation So_go = 1 - Sw_ow; // == 1 - Sw - Sg;
+        Evaluation So_go = 1.0 + Swco - Sw_ow;
         const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
         const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
         Evaluation kro;
-        if (std::abs(Toolbox::value(Sg) + Toolbox::value(Sw) - Swco) < 1e-50)
+        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-20)
             kro = kro_ow; // avoid division by zero
         else {
             const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
@@ -310,7 +312,7 @@ public:
             kro = weightOilWater*kro_ow + weightGasOil*kro_go;
         }
 
-        return Toolbox::min(1.0, Toolbox::max(0.0, kro));
+        return kro;
     }
 
     /*!
