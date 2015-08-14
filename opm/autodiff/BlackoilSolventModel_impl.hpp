@@ -269,9 +269,16 @@ namespace Opm {
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
             int oil_pos = fluid_.phaseUsage().phase_pos[Oil];
             // remove contribution from the dissolved gas.
+            // TODO compensate for gas in the oil phase
+            assert(!has_vapoil_);
             const ADB cq_s_solvent = wellSolventFraction * (cq_s[gas_pos] - rs_perfcells * cq_s[oil_pos]);
-            //cq_s[gas_pos] = ( ones - wellSolventFraction ) *  cq_s[gas_pos];;
+
+            // Solvent contribution to the mass balance equation is given as a fraction
+            // of the gas contribution.
             residual_.material_balance_eq[solvent_pos_] -= superset(cq_s_solvent, well_cells, nc);
+
+            // The gas contribution must be reduced accordingly for the total contribution to be
+            // the same.
             residual_.material_balance_eq[gas_pos] += superset(cq_s_solvent, well_cells, nc);
 
         }
@@ -463,9 +470,14 @@ namespace Opm {
         }
 
         if (has_solvent_) {
-
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
+            // Gas and solvent is combinded and solved together
+            // The input in the well equation is then the
+            // total gas phase = hydro carbon gas + solvent gas
+            // This may need to be reconsidered later, as the model
+            // is tested.
             mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
+            b_perfcells[gas_pos] += subset(rq_[solvent_pos_].b, well_cells);
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
