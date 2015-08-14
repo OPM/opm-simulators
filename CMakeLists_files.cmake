@@ -78,7 +78,7 @@ endif()
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/flow.cpp
-	examples/flow_extended.cpp
+	examples/flow_solvent.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
 	examples/opm_init_check.cpp
