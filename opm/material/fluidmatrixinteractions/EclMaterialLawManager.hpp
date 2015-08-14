@@ -537,12 +537,19 @@ private:
         auto& effParams = *dest[satnumRegionIdx];
         const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
 
+        // the situation for the gas phase is complicated that all saturations are
+        // shifted by the connate water saturation.
+        Scalar Swco = unscaledEpsInfo_[satnumRegionIdx].Swl;
+
         // convert the saturations of the SGOF keyword from gas to oil saturations
         std::vector<double> SoSamples(sgofTable.numRows());
-        for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
+        std::vector<double> SoSamplesKro(sgofTable.numRows());
+        for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
             SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+            SoSamplesKro[sampleIdx] = SoSamples[sampleIdx] - Swco;
+        }
 
-        effParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
+        effParams.setKrwSamples(SoSamplesKro, sgofTable.getKrogColumn());
         effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
         effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
         effParams.finalize();
