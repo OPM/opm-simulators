@@ -17,14 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_IMPL_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_IMPL_HEADER_INCLUDED
+#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_IMPL_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_IMPL_HEADER_INCLUDED
 
 namespace Opm
 {
     template <class GridT>
-    SimulatorFullyImplicitExtendedBlackoil<GridT>::
-    SimulatorFullyImplicitExtendedBlackoil(const parameter::ParameterGroup& param,
+    SimulatorFullyImplicitBlackoilSolvent<GridT>::
+    SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
                                           const GridT& grid,
                                           const DerivedGeology& geo,
                                           BlackoilPropsAdInterface& props,
@@ -61,7 +61,7 @@ namespace Opm
     }
 
     template <class GridT>
-    auto SimulatorFullyImplicitExtendedBlackoil<GridT>::
+    auto SimulatorFullyImplicitBlackoilSolvent<GridT>::
     createSolver(const Wells* wells)
         -> std::unique_ptr<Solver>
     {
@@ -90,7 +90,7 @@ namespace Opm
     }
 
     template <class GridT>
-    void SimulatorFullyImplicitExtendedBlackoil<GridT>::
+    void SimulatorFullyImplicitBlackoilSolvent<GridT>::
     handleAdditionalWellInflow(SimulatorTimer& timer,
                                     WellsManager& wells_manager,
                                     typename BaseType::WellState& well_state,
@@ -142,4 +142,4 @@ namespace Opm
 
 } // namespace Opm
 
-#endif // OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_IMPL_HEADER_INCLUDED
+#endif // OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_IMPL_HEADER_INCLUDED

@@ -17,13 +17,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_HEADER_INCLUDED
+#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_HEADER_INCLUDED
 
 #include <opm/autodiff/SimulatorBase.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/autodiff/ExtendedBlackoilState.hpp>
-#include <opm/autodiff/ExtendedBlackoilModel.hpp>
+#include <opm/autodiff/BlackoilSolventState.hpp>
+#include <opm/autodiff/BlackoilSolventModel.hpp>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -78,33 +78,33 @@
 namespace Opm
 {
     template <class GridT>
-    class SimulatorFullyImplicitExtendedBlackoil;
+    class SimulatorFullyImplicitBlackoilSolvent;
 
     template<class GridT>
-    struct SimulatorTraits<SimulatorFullyImplicitExtendedBlackoil<GridT> >
+    struct SimulatorTraits<SimulatorFullyImplicitBlackoilSolvent<GridT> >
     {
         typedef WellStateFullyImplicitBlackoilSolvent WellState;
-        typedef ExtendedBlackoilState ReservoirState;
+        typedef BlackoilSolventState ReservoirState;
         typedef BlackoilOutputWriter OutputWriter;
         typedef GridT Grid;
-        typedef ExtendedBlackoilModel<Grid> Model;
+        typedef BlackoilSolventModel<Grid> Model;
         typedef NewtonSolver<Model> Solver;
     };
 
     /// Class collecting all necessary components for a blackoil simulation with polymer
     /// injection.
     template <class GridT>
-    class SimulatorFullyImplicitExtendedBlackoil
-        : public SimulatorBase<SimulatorFullyImplicitExtendedBlackoil<GridT> >
+    class SimulatorFullyImplicitBlackoilSolvent
+        : public SimulatorBase<SimulatorFullyImplicitBlackoilSolvent<GridT> >
     {
-        typedef SimulatorFullyImplicitExtendedBlackoil<GridT> ThisType;
+        typedef SimulatorFullyImplicitBlackoilSolvent<GridT> ThisType;
         typedef SimulatorBase<ThisType> BaseType;
 
         typedef SimulatorTraits<ThisType> Traits;
         typedef typename Traits::Solver Solver;
 
     public:
-        SimulatorFullyImplicitExtendedBlackoil(const parameter::ParameterGroup& param,
+        SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
                                               const GridT& grid,
                                               const DerivedGeology& geo,
                                               BlackoilPropsAdInterface& props,
@@ -136,6 +136,6 @@ namespace Opm
 
 } // namespace Opm
 
-#include "SimulatorFullyImplicitExtendedBlackoil_impl.hpp"
+#include "SimulatorFullyImplicitBlackoilSolvent_impl.hpp"
 
-#endif // OPM_SIMULATORFULLYIMPLICITEXTENDEDBLACKOIL_HEADER_INCLUDED
+#endif // OPM_SIMULATORFULLYIMPLICITBLACKOILSOLVENT_HEADER_INCLUDED

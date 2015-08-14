@@ -75,7 +75,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
-#include <opm/autodiff/SimulatorFullyImplicitExtendedBlackoil.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
@@ -273,7 +273,7 @@ try
     // Gravity.
     gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
-    ExtendedBlackoilState state;
+    BlackoilSolventState state;
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(Opm::UgGridHelpers::numCells(grid),
@@ -381,7 +381,7 @@ try
 
     std::vector<double> threshold_pressures = thresholdPressures(eclipseState, grid);
 
-    SimulatorFullyImplicitExtendedBlackoil< Grid >  simulator(param,
+    SimulatorFullyImplicitBlackoilSolvent< Grid >  simulator(param,
                                                       grid,
                                                       geoprops,
                                                       new_props,

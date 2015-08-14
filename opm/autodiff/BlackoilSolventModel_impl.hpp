@@ -17,10 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_EXTENDEDBLACKOILMODEL_IMPL_HEADER_INCLUDED
-#define OPM_EXTENDEDBLACKOILMODEL_IMPL_HEADER_INCLUDED
+#ifndef OPM_BLACKOILSOLVENTMODEL_IMPL_HEADER_INCLUDED
+#define OPM_BLACKOILSOLVENTMODEL_IMPL_HEADER_INCLUDED
 
-#include <opm/autodiff/ExtendedBlackoilModel.hpp>
+#include <opm/autodiff/BlackoilSolventModel.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -70,7 +70,7 @@ namespace Opm {
 
 
     template <class Grid>
-    ExtendedBlackoilModel<Grid>::ExtendedBlackoilModel(const typename Base::ModelParameters&   param,
+    BlackoilSolventModel<Grid>::BlackoilSolventModel(const typename Base::ModelParameters&   param,
                                                      const Grid&                             grid,
                                                      const BlackoilPropsAdInterface&         fluid,
                                                      const DerivedGeology&                   geo,
@@ -105,7 +105,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::
+    BlackoilSolventModel<Grid>::
     prepareStep(const double dt,
                 ReservoirState& reservoir_state,
                 WellState& well_state)
@@ -118,7 +118,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::
+    BlackoilSolventModel<Grid>::
     afterStep(const double /* dt */,
               ReservoirState& /* reservoir_state */,
               WellState& /* well_state */)
@@ -133,7 +133,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::makeConstantState(SolutionState& state) const
+    BlackoilSolventModel<Grid>::makeConstantState(SolutionState& state) const
     {
         Base::makeConstantState(state);
         state.solvent_saturation = ADB::constant(state.solvent_saturation.value());
@@ -145,7 +145,7 @@ namespace Opm {
 
     template <class Grid>
     std::vector<V>
-    ExtendedBlackoilModel<Grid>::variableStateInitials(const ReservoirState& x,
+    BlackoilSolventModel<Grid>::variableStateInitials(const ReservoirState& x,
                                                       const WellState& xw) const
     {
         std::vector<V> vars0 = Base::variableStateInitials(x, xw);
@@ -170,7 +170,7 @@ namespace Opm {
 
     template <class Grid>
     std::vector<int>
-    ExtendedBlackoilModel<Grid>::variableStateIndices() const
+    BlackoilSolventModel<Grid>::variableStateIndices() const
     {
         std::vector<int> ind = Base::variableStateIndices();
         assert(ind.size() == 5);
@@ -189,8 +189,8 @@ namespace Opm {
 
 
     template <class Grid>
-    typename ExtendedBlackoilModel<Grid>::SolutionState
-    ExtendedBlackoilModel<Grid>::variableStateExtractVars(const ReservoirState& x,
+    typename BlackoilSolventModel<Grid>::SolutionState
+    BlackoilSolventModel<Grid>::variableStateExtractVars(const ReservoirState& x,
                                                          const std::vector<int>& indices,
                                                          std::vector<ADB>& vars) const
     {
@@ -212,7 +212,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::computeAccum(const SolutionState& state,
+    BlackoilSolventModel<Grid>::computeAccum(const SolutionState& state,
                                              const int            aix  )
     {
         Base::computeAccum(state, aix);
@@ -236,7 +236,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::
+    BlackoilSolventModel<Grid>::
     assembleMassBalanceEq(const SolutionState& state)
     {
 
@@ -255,7 +255,7 @@ namespace Opm {
 
 
     template <class Grid>
-    void ExtendedBlackoilModel<Grid>::addWellContributionToMassBalanceEq(std::vector<ADB>& cq_s,
+    void BlackoilSolventModel<Grid>::addWellContributionToMassBalanceEq(std::vector<ADB>& cq_s,
                                                                         const SolutionState& state,
                                                                         WellState& xw)
 
@@ -309,7 +309,7 @@ namespace Opm {
 
 
     template <class Grid>
-    void ExtendedBlackoilModel<Grid>::updateState(const V& dx,
+    void BlackoilSolventModel<Grid>::updateState(const V& dx,
                                                   ReservoirState& reservoir_state,
                                                   WellState& well_state)
     {
@@ -355,7 +355,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::computeMassFlux(const int               actph ,
+    BlackoilSolventModel<Grid>::computeMassFlux(const int               actph ,
                                                 const V&                transi,
                                                 const ADB&              kr    ,
                                                 const ADB&              phasePressure,
@@ -400,7 +400,7 @@ namespace Opm {
 
     template <class Grid>
     std::vector<ADB>
-    ExtendedBlackoilModel<Grid>::computeRelPerm(const SolutionState& state) const
+    BlackoilSolventModel<Grid>::computeRelPerm(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
@@ -432,7 +432,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    ExtendedBlackoilModel<Grid>::assemble(const ReservoirState& reservoir_state,
+    BlackoilSolventModel<Grid>::assemble(const ReservoirState& reservoir_state,
                                          WellState& well_state,
                                          const bool initial_assembly)
     {
@@ -500,7 +500,7 @@ namespace Opm {
 
     template <class Grid>
     double
-    ExtendedBlackoilModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
+    BlackoilSolventModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
                                                      const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
                                                      const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
                                                      std::array<double,MaxNumPhases+1>& R_sum,
@@ -589,7 +589,7 @@ namespace Opm {
 
     template <class Grid>
     bool
-    ExtendedBlackoilModel<Grid>::getConvergence(const double dt, const int iteration)
+    BlackoilSolventModel<Grid>::getConvergence(const double dt, const int iteration)
     {
         const double tol_mb    = param_.tolerance_mb_;
         const double tol_cnv   = param_.tolerance_cnv_;
@@ -700,4 +700,4 @@ namespace Opm {
 }
 
 
-#endif // OPM_EXTENDEDBLACKOIL_IMPL_HEADER_INCLUDED
+#endif // OPM_BLACKOILSOLVENT_IMPL_HEADER_INCLUDED

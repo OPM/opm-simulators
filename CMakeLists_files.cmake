@@ -108,8 +108,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SolventPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
-	opm/autodiff/ExtendedBlackoilModel.hpp
-	opm/autodiff/ExtendedBlackoilModel_impl.hpp
+	opm/autodiff/BlackoilModelSolvent.hpp
+	opm/autodiff/BlackoilModelSolvent_impl.hpp
+	opm/autodiff/BlackoilModelState.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
@@ -129,8 +130,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorBase.hpp
 	opm/autodiff/SimulatorBase_impl.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
-	opm/autodiff/SimulatorFullyImplicitExtendedBlackoil.hpp
-	opm/autodiff/SimulatorFullyImplicitExtendedBlackoil_impl.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp

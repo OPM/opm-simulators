@@ -17,12 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_EXTENDEDBLACKOILMODEL_HEADER_INCLUDED
-#define OPM_EXTENDEDBLACKOILMODEL_HEADER_INCLUDED
+#ifndef OPM_BLACKOILSOLVENTMODEL_HEADER_INCLUDED
+#define OPM_BLACKOILSOLVENTMODEL_HEADER_INCLUDED
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/ExtendedBlackoilState.hpp>
+#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 
@@ -35,18 +35,18 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class ExtendedBlackoilModel : public BlackoilModelBase<Grid, ExtendedBlackoilModel<Grid> >
+    class BlackoilSolventModel : public BlackoilModelBase<Grid, BlackoilSolventModel<Grid> >
     {
     public:
 
         // ---------  Types and enums  ---------
 
-        typedef BlackoilModelBase<Grid, ExtendedBlackoilModel<Grid> > Base;
+        typedef BlackoilModelBase<Grid, BlackoilSolventModel<Grid> > Base;
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         // The next line requires C++11 support available in g++ 4.7.
         // friend Base;
-        friend class BlackoilModelBase<Grid, ExtendedBlackoilModel<Grid> >;
+        friend class BlackoilModelBase<Grid, BlackoilSolventModel<Grid> >;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -63,7 +63,7 @@ namespace Opm {
         /// \param[in] has_vapoil          turn on vaporized oil feature
         /// \param[in] terminal_output     request output to cout/cerr
         /// \param[in] has_solvent         turn on solvent feature
-        ExtendedBlackoilModel(const typename Base::ModelParameters&   param,
+        BlackoilSolventModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
                              const BlackoilPropsAdInterface&         fluid,
                              const DerivedGeology&                   geo,
@@ -257,9 +257,9 @@ namespace Opm {
 
     /// Need to include concentration in our state variables, otherwise all is as
     /// the default blackoil model.
-    struct ExtendedBlackoilSolutionState : public DefaultBlackoilSolutionState
+    struct BlackoilSolventSolutionState : public DefaultBlackoilSolutionState
     {
-        explicit ExtendedBlackoilSolutionState(const int np)
+        explicit BlackoilSolventSolutionState(const int np)
             : DefaultBlackoilSolutionState(np),
               solvent_saturation( ADB::null())
         {
@@ -269,18 +269,18 @@ namespace Opm {
 
 
 
-    /// Providing types by template specialisation of ModelTraits for BlackoilPolymerModel.
+    /// Providing types by template specialisation of ModelTraits for BlackoilSolventModel.
     template <class Grid>
-    struct ModelTraits< ExtendedBlackoilModel<Grid> >
+    struct ModelTraits< BlackoilSolventModel<Grid> >
     {
-        typedef ExtendedBlackoilState ReservoirState;
+        typedef BlackoilSolventState ReservoirState;
         typedef WellStateFullyImplicitBlackoilSolvent WellState;
         typedef BlackoilModelParameters ModelParameters;
-        typedef ExtendedBlackoilSolutionState SolutionState;
+        typedef BlackoilSolventSolutionState SolutionState;
     };
 
 } // namespace Opm
 
-#include "ExtendedBlackoilModel_impl.hpp"
+#include "BlackoilSolventModel_impl.hpp"
 
-#endif // OPM_EXTENDEDBLACKOILMODEL_HEADER_INCLUDED
+#endif // OPM_BLACKOILSOLVENTMODEL_HEADER_INCLUDED

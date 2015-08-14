@@ -17,10 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_EXTENDEDBLACKOILSTATE_HEADER_INCLUDED
-#define OPM_EXTENDEDBLACKOILSTATE_HEADER_INCLUDED
+#ifndef OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
+#define OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
 
-#include <opm/autodiff/ExtendedBlackoilState.hpp>
+#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/grid.h>
 #include <vector>
@@ -31,7 +31,7 @@ namespace Opm
 
     /// Simulator state for blackoil simulator with solvent.
     /// We use the Blackoil state parameters.
-    class ExtendedBlackoilState : public BlackoilState
+    class BlackoilSolventState : public BlackoilState
     {
     public:
         void init(const UnstructuredGrid& g, int num_phases)
@@ -57,4 +57,4 @@ namespace Opm
 
 
 
-#endif // OPM_EXTENDEDBLACKOILSTATE_HEADER_INCLUDED
+#endif // OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
