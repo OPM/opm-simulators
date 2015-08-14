@@ -146,11 +146,7 @@ public:
 
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
-    {
-        return eval_(params.pcnwSamples(),
-                     params.SwPcwnSamples(),
-                     pcnw);
-    }
+    { return eval_(params.pcnwSamples(), params.SwPcwnSamples(), pcnw); }
 
     /*!
      * \brief The saturation-capillary pressure curve
@@ -191,20 +187,11 @@ public:
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
-    {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        const auto& res = eval_(params.SwKrwSamples(), params.krwSamples(), Sw);
-        return Toolbox::max(0.0, Toolbox::min(1.0, res));
-    }
+    { return eval_(params.SwKrwSamples(), params.krwSamples(), Sw); }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
-    {
-        return eval_(params.krwSamples(),
-                     params.SwKrwSamples(),
-                     krw);
-    }
+    { return eval_(params.krwSamples(), params.SwKrwSamples(), krw); }
 
     /*!
      * \brief The relative permeability for the non-wetting phase
@@ -222,21 +209,11 @@ public:
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
-    {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::max(0.0, Toolbox::min(1.0, eval_(params.SwKrnSamples(),
-                                                         params.krnSamples(),
-                                                         Sw)));
-    }
+    { return eval_(params.SwKrnSamples(), params.krnSamples(), Sw); }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
-    {
-        return eval_(params.krnSamples(),
-                     params.SwKrnSamples(),
-                     krn);
-    }
+    { return eval_(params.krnSamples(), params.SwKrnSamples(), krn); }
 
 private:
     template <class Evaluation>
