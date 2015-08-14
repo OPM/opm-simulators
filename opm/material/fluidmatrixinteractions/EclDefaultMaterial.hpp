@@ -181,10 +181,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(waterPhaseIdx));
-        Valgrind::CheckDefined(Sw);
-        const auto& result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
-        Valgrind::CheckDefined(result);
-        return result;
+        return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
     /*!
@@ -327,21 +324,35 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
+        Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
         Scalar So = FsToolbox::value(fluidState.saturation(oilPhaseIdx));
         Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
-        Sg = std::min(1.0, std::max(0.0, Sg));
 
-        // FIXME: the saturations which are passed to update the hysteresis curves are
-        // inconsistent with the ones used to calculate the relative permabilities. We do
-        // it like this anyway because (a) the saturation functions of opm-core do it
-        // this way (b) the simulations seem to converge better (which is not too much
-        // surprising actually, because the time step does not start on a kink in the
-        // solution) and (c) the Eclipse 100 simulator may do the same.
-        //
-        // Though be aware that from a physical perspective this is definitively
-        // incorrect!
-        params.oilWaterParams().update(/*pcSw=*/1 - So, /*krwSw=*/1 - So, /*krn_Sw=*/1 - So);
-        params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krn_Sw=*/1 - Sg);
+        if (params.inconsistentHysteresisUpdate()) {
+            Sg = std::min(1.0, std::max(0.0, Sg));
+            // NOTE: the saturations which are passed to update the hysteresis curves are
+            // inconsistent with the ones used to calculate the relative permabilities. We do
+            // it like this anyway because (a) the saturation functions of opm-core do it
+            // this way (b) the simulations seem to converge better (which is not too much
+            // surprising actually, because the time step does not start on a kink in the
+            // solution) and (c) the Eclipse 100 simulator may do the same.
+            //
+            // Though be aware that from a physical perspective this is definitively
+            // incorrect!
+            params.oilWaterParams().update(/*pcSw=*/1 - So, /*krwSw=*/1 - So, /*krn_Sw=*/1 - So);
+            params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krn_Sw=*/1 - Sg);
+        }
+        else {
+            Scalar Swco = params.Swl();
+            Sw = std::min(1.0, std::max(0.0, Sw));
+            Sg = std::min(1.0, std::max(0.0, Sg));
+
+            Scalar Sw_ow = Sg + std::max(Swco, Sw);
+            Scalar So_go = 1 + Swco - Sw_ow;
+
+            params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/1 - Sg, /*krnSw=*/Sw_ow);
+            params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/So_go, /*krnSw=*/1 - Sg);
+        }
     }
 };
 } // namespace Opm
