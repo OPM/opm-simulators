@@ -87,6 +87,7 @@ namespace Opm {
         const bool solver_verbose_;           //!< solver verbosity
         const bool timestep_verbose_;         //!< timestep verbosity
         double last_timestep_;                //!< size of last timestep
+        bool full_timestep_initially_;        //!< beginning with the size of the time step from data file
     };
 }
 

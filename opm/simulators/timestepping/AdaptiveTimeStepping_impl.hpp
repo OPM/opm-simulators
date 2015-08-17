@@ -44,6 +44,7 @@ namespace Opm {
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) )
+        , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
         , last_timestep_( -1.0 )
     {
         // valid are "pid" and "pid+iteration"
@@ -103,6 +104,10 @@ namespace Opm {
         // init last time step as a fraction of the given time step
         if( last_timestep_ < 0 ) {
             last_timestep_ = restart_factor_ * timestep;
+        }
+
+        if (full_timestep_initially_) {
+            last_timestep_ = timestep;
         }
 
         // TODO
