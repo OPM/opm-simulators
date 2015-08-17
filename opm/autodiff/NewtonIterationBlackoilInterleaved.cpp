@@ -105,8 +105,6 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Form modified system.
-        Eigen::SparseMatrix<double, Eigen::RowMajor> A;
         // calculating the size for b
         int size_b = 0;
         for (int elem = 0; elem < np; ++elem) {
