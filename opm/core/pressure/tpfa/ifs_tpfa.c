@@ -374,6 +374,7 @@ assemble_well_contrib(int                   nc ,
 
             switch (well_controls_get_current_type(ctrls)) {
             case BHP:
+            case THP : // THP is implemented as a BHP target
                 *all_rate = 0;
                 assemble_bhp_well (nc, w, W, mt, wdp, h);
                 break;

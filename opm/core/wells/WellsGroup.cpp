@@ -26,6 +26,12 @@
 #include <memory>
 #include <iostream>
 
+namespace
+{
+    static double invalid_alq = -1e100;
+    static double invalid_vfp = -2147483647;
+} //Namespace
+
 namespace Opm
 {
 
@@ -762,7 +768,7 @@ namespace Opm
             if (group_control_index_ < 0) {
                 // The well only had its own controls, no group controls.
                 append_well_controls(SURFACE_RATE, target,
-                        -std::numeric_limits<int>::max(), -std::numeric_limits<int>::max(),
+                        invalid_alq, invalid_vfp,
                         distr, self_index_, wells_);
                 group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             } else {
@@ -819,7 +825,7 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, target, -1e100, -1e100, distr, self_index_, wells_);
+            append_well_controls(wct, target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
@@ -931,7 +937,7 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, ntarget, -1e100, -1e100, distr, self_index_, wells_);
+            append_well_controls(wct, ntarget, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that

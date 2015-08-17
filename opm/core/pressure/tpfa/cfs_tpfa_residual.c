@@ -876,6 +876,7 @@ assemble_completion_to_well(int i, int w, int c, int nc, int np,
     else {
         switch (well_controls_get_current_type(ctrl)) {
         case BHP :
+        case THP : // THP is implemented as a BHP target
             welleq_coeff_bhp(np, pw - well_controls_get_current_target( ctrl ),
                              h, &res, &w2c, &w2w);
             break;

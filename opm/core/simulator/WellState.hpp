@@ -124,9 +124,9 @@ namespace Opm
                         //    pressure in first perforation cell.
                         switch (well_controls_get_current_type(ctrl)) {
                             case BHP:
+                                //Already taken care of above in 2.
                                 break;
                             case THP:
-                                //bhp_[w] = thp_[w]; //< TODO: ARB Adding this produces identical results as without THP control for artificial test case
                                 //Already taken care of above in 2.
                                 break;
 
