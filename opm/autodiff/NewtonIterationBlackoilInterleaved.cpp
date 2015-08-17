@@ -120,7 +120,7 @@ namespace Opm
             b.segment(pos, loc_size) = eqs[elem].value();
             pos += loc_size;
         }
-        assert(pos == size);
+        assert(pos == size_b);
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
         Mat istlA;
