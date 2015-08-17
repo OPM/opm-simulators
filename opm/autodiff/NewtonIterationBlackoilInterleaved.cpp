@@ -205,7 +205,7 @@ namespace Opm
         // corresponding to the jacobians with respect to pressure.
         // Use addition to get to the union structure.
         Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
-        for (int phase = 0; phase < np; ++phase) {
+        for (int phase = 1; phase < np; ++phase) {
             structure += eqs[phase].derivative()[0];
         }
 
