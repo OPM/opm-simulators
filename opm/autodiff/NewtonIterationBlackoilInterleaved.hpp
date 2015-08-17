@@ -97,7 +97,7 @@ namespace Opm
         {
             // Construct scalar product.
             typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
-	    typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
+            typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
             SPPointer sp(ScalarProductChooser::construct(parallelInformation));
 
             // Construct preconditioner.
