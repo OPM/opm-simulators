@@ -227,9 +227,6 @@ namespace Opm
         }
 
         const int size = s.rows();
-        Span span[3] = { Span(size, 1, 0),
-                         Span(size, 1, size),
-                         Span(size, 1, 2*size) };
         for (int row = 0; row < size; ++row) {
             for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
                 const int col = ja[col_ix];
