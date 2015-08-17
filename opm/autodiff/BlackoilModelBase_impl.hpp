@@ -774,6 +774,19 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
+        if (true) {
+            // Create the primary variables.
+            SolutionState state = asImpl().variableState(reservoir_state, well_state);
+
+            if (true || initial_assembly) {
+                // Create the (constant, derivativeless) initial state.
+                SolutionState state0 = state;
+                asImpl().makeConstantState(state0);
+                computeWellConnectionPressures(state0, well_state);
+            }
+
+        }
+
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
         updateWellControls(well_state);
@@ -2307,7 +2320,7 @@ namespace detail {
             std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
-            std::isnan(residualWell) || residualWell > maxResidualAllowed() )
+            std::isnan(residualWell) || residualWell > 100*maxResidualAllowed() )
         {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
         }
