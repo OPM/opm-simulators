@@ -107,12 +107,26 @@ namespace Opm
 
         // Form modified system.
         Eigen::SparseMatrix<double, Eigen::RowMajor> A;
-        V b;
-        formEllipticSystem(np, eqs, A, b);
+        // calculating the size for b
+        int size_b = 0;
+        for (int elem = 0; elem < np; ++elem) {
+            const int loc_size = eqs[elem].size();
+            size_b += loc_size;
+        }
+
+        V b(size_b);
+
+        int pos = 0;
+        for (int elem = 0; elem < np; ++elem) {
+            const int loc_size = eqs[elem].size();
+            b.segment(pos, loc_size) = eqs[elem].value();
+            pos += loc_size;
+        }
+        assert(pos == size);
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
         Mat istlA;
-        formInterleavedSystem(eqs, A, istlA);
+        formInterleavedSystem(eqs, istlA);
 
         // Solve reduced system.
         SolutionVector dx(SolutionVector::Zero(b.size()));
@@ -185,7 +199,6 @@ namespace Opm
 
 
     void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
-                                                                   const Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                                                                    Mat& istlA) const
     {
         const int np = eqs.size();
@@ -197,6 +210,7 @@ namespace Opm
         for (int phase = 0; phase < np; ++phase) {
             structure += eqs[phase].derivative()[0];
         }
+
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
@@ -211,6 +225,7 @@ namespace Opm
                 row.insert(ja[i]);
             }
         }
+
         const int size = s.rows();
         Span span[3] = { Span(size, 1, 0),
                          Span(size, 1, size),
@@ -221,7 +236,7 @@ namespace Opm
                 MatrixBlockType block;
                 for (int p1 = 0; p1 < np; ++p1) {
                     for (int p2 = 0; p2 < np; ++p2) {
-                        block[p1][p2] = A.coeff(span[p1][row], span[p2][col]);
+                        block[p1][p2] = eqs[p1].derivative()[p2].coeff(row, col);
                     }
                 }
                 istlA[row][col] = block;
