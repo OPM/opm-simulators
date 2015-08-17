@@ -105,14 +105,26 @@ namespace Opm
             eqs[phase] = eqs[phase] * matbalscale[phase];
         }
 
-        // Form modified system.
-        Eigen::SparseMatrix<double, Eigen::RowMajor> A;
-        V b;
-        formEllipticSystem(np, eqs, A, b);
+        // calculating the size for b
+        int size_b = 0;
+        for (int elem = 0; elem < np; ++elem) {
+            const int loc_size = eqs[elem].size();
+            size_b += loc_size;
+        }
+
+        V b(size_b);
+
+        int pos = 0;
+        for (int elem = 0; elem < np; ++elem) {
+            const int loc_size = eqs[elem].size();
+            b.segment(pos, loc_size) = eqs[elem].value();
+            pos += loc_size;
+        }
+        assert(pos == size);
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
         Mat istlA;
-        formInterleavedSystem(eqs, A, istlA);
+        formInterleavedSystem(eqs, istlA);
 
         // Solve reduced system.
         SolutionVector dx(SolutionVector::Zero(b.size()));
@@ -185,7 +197,6 @@ namespace Opm
 
 
     void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
-                                                                   const Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                                                                    Mat& istlA) const
     {
         const int np = eqs.size();
@@ -194,9 +205,10 @@ namespace Opm
         // corresponding to the jacobians with respect to pressure.
         // Use addition to get to the union structure.
         Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
-        for (int phase = 0; phase < np; ++phase) {
+        for (int phase = 1; phase < np; ++phase) {
             structure += eqs[phase].derivative()[0];
         }
+
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
@@ -211,17 +223,15 @@ namespace Opm
                 row.insert(ja[i]);
             }
         }
+
         const int size = s.rows();
-        Span span[3] = { Span(size, 1, 0),
-                         Span(size, 1, size),
-                         Span(size, 1, 2*size) };
         for (int row = 0; row < size; ++row) {
             for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
                 const int col = ja[col_ix];
                 MatrixBlockType block;
                 for (int p1 = 0; p1 < np; ++p1) {
                     for (int p2 = 0; p2 < np; ++p2) {
-                        block[p1][p2] = A.coeff(span[p1][row], span[p2][col]);
+                        block[p1][p2] = eqs[p1].derivative()[p2].coeff(row, col);
                     }
                 }
                 istlA[row][col] = block;
