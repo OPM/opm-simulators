@@ -136,6 +136,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
+	opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	)
 
