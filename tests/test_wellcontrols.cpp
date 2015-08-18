@@ -90,9 +90,9 @@ BOOST_AUTO_TEST_CASE(Construction)
     well_controls_iset_alq( ctrls , 1 , 234);
     BOOST_CHECK_EQUAL( 234 , well_controls_iget_alq( ctrls , 1 ));
 
-    well_controls_iset_alq( ctrls , 0 , 567);
+    well_controls_iset_vfp( ctrls , 0 , 567);
     BOOST_CHECK_EQUAL( 567 , well_controls_iget_vfp( ctrls , 0 ));
-    well_controls_iset_alq( ctrls , 1 , 890);
+    well_controls_iset_vfp( ctrls , 1 , 890);
     BOOST_CHECK_EQUAL( 890 , well_controls_iget_vfp( ctrls , 1 ));
 
     well_controls_iset_type( ctrls , 0 , SURFACE_RATE);
