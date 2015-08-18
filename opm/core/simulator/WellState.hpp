@@ -67,7 +67,6 @@ namespace Opm
                                 bhp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             case THP:
-                                assert(false && "Not properly implemented");
                                 thp_[w] = well_controls_get_current_target( ctrl );
                                 break;
                             default:
