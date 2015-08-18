@@ -774,17 +774,14 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
-        if (true) {
-            // Create the primary variables.
+        // If we have VFP tables, we need the well connection
+        // pressures for the "simple" hydrostatic correction
+        // between well depth and vfp table depth.
+        if (isVFPActive(well_state)) {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
-
-            if (true || initial_assembly) {
-                // Create the (constant, derivativeless) initial state.
-                SolutionState state0 = state;
-                asImpl().makeConstantState(state0);
-                computeWellConnectionPressures(state0, well_state);
-            }
-
+            SolutionState state0 = state;
+            asImpl().makeConstantState(state0);
+            computeWellConnectionPressures(state0, well_state);
         }
 
         // Possibly switch well controls and updating well state to
@@ -845,7 +842,7 @@ namespace detail {
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        addWellControlEq(state, well_state, aliveWells);        
+        addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -1210,6 +1207,37 @@ namespace detail {
 
     } //Namespace
 
+
+    template <class Grid, class Implementation>
+    bool BlackoilModelBase<Grid, Implementation>::isVFPActive(const WellState& xw) const
+    {
+        if( ! wellsActive() ) {
+            return false;
+        }
+
+        if ( vfp_properties_->getProd()->empty() && vfp_properties_->getInj()->empty() ) {
+            return false;
+        }
+
+        const int nw = wells().number_of_wells;
+        //Loop over all wells
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells().ctrls[w];
+
+            const int nwc = well_controls_get_num(wc);
+
+            //Loop over all controls
+            for (int c=0; c < nwc; ++c) {
+                const WellControlType ctrl_type = well_controls_iget_type(wc, c);
+
+                if (ctrl_type == THP) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
 
     template <class Grid, class Implementation>

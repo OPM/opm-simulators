@@ -132,6 +132,13 @@ public:
      */
     const VFPInjTable* getTable(const int table_id) const;
 
+    /**
+     * Returns true if no vfp tables are in the current map
+     */
+    inline const bool empty() const {
+        return m_tables.empty();
+    }
+
 private:
     // Map which connects the table number with the table itself
     std::map<int, const VFPInjTable*> m_tables;

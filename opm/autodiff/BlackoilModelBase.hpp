@@ -374,6 +374,8 @@ namespace Opm {
 
         bool getWellConvergence(const int iteration);
 
+        bool isVFPActive(const WellState& well_state) const;
+
         std::vector<ADB>
         computePressures(const ADB& po,
                          const ADB& sw,

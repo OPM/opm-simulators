@@ -58,14 +58,14 @@ public:
     /**
      * Returns the VFP properties for injection wells
      */
-    const VFPInjProperties* getInj() const {
+    inline const VFPInjProperties* getInj() const {
         return m_inj.get();
     }
 
     /**
      * Returns the VFP properties for production wells
      */
-    const VFPProdProperties* getProd() const {
+    inline const VFPProdProperties* getProd() const {
         return m_prod.get();
     }
 
