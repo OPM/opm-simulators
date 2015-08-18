@@ -130,6 +130,38 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
 
             detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
+            /*
+            static const int N=40;
+            std::cout << "bhp=" << bhp_val.value << ";" << std::endl;
+            std::cout << "flo=" << flo.value()[i] << ";" << std::endl;
+            std::cout << "thp=" << thp.value()[i] << ";" << std::endl;
+            std::cout << "wfr=" << wfr.value()[i] << ";" << std::endl;
+            std::cout << "gfr=" << gfr.value()[i] << ";" << std::endl;
+            std::cout << "alq=" << alq.value()[i] << ";" << std::endl;
+            std::cout << "bhp_vfp=[" << std::endl;
+            for (int j=0; j<N; ++j) {
+                const double start = table->getFloAxis().front();
+                const double end = table->getFloAxis().back();
+                const double dist = end - start;
+                double flo_d = start + (j/static_cast<double>(N-1)) * dist;
+                auto flo_i = detail::findInterpData(flo_d, table->getFloAxis());
+                detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+                std::cout << bhp_val.value << ",";
+            }
+            std::cout << "];" << std::endl;
+
+            std::cout << "flo_vfp=[" << std::endl;
+            for (int j=0; j<N; ++j) {
+                const double start = table->getFloAxis().front();
+                const double end = table->getFloAxis().back();
+                const double dist = end - start;
+                double flo_d = start + (j/static_cast<double>(N-1)) * dist;
+                std::cout << flo_d << ",";
+            }
+            std::cout << "];" << std::endl;
+            */
+
+
             value[i] = bhp_val.value;
             dthp[i] = bhp_val.dthp;
             dwfr[i] = bhp_val.dwfr;
@@ -170,7 +202,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
             jacs[block] += dalq_diag * alq.derivative()[block];
         }
         if (!flo.derivative().empty()) {
-            jacs[block] += dflo_diag * flo.derivative()[block];
+            jacs[block] -= dflo_diag * flo.derivative()[block];
         }
     }
 

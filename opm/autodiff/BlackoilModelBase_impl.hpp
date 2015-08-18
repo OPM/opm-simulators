@@ -777,7 +777,7 @@ namespace detail {
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
-        if (isVFPActive(well_state)) {
+        if (isVFPActive()) {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
@@ -923,7 +923,6 @@ namespace detail {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
         }
     }
-
 
 
 
@@ -1191,25 +1190,19 @@ namespace detail {
         double computeHydrostaticCorrection(const Wells& wells, const int w, const double vfp_ref_depth,
                                             const ADB::V& well_perforation_densities, const double gravity) {
             //For the initial iteration, we have no perforation densities.
-            if (well_perforation_densities.size() > w) {
-                const double well_ref_depth = wells.depth_ref[w];
-                const double dh = vfp_ref_depth - well_ref_depth;
-                const int perf = wells.well_connpos[w];
-                const double rho = well_perforation_densities[perf];
-                const double dp = rho*gravity*dh;
+            const double well_ref_depth = wells.depth_ref[w];
+            const double dh = vfp_ref_depth - well_ref_depth;
+            const int perf = wells.well_connpos[w];
+            const double rho = well_perforation_densities[perf];
+            const double dp = rho*gravity*dh;
 
-                return dp;
-            }
-            else {
-                return 0.0;
-            }
+            return dp;
         }
-
     } //Namespace
 
 
     template <class Grid, class Implementation>
-    bool BlackoilModelBase<Grid, Implementation>::isVFPActive(const WellState& xw) const
+    bool BlackoilModelBase<Grid, Implementation>::isVFPActive() const
     {
         if( ! wellsActive() ) {
             return false;
@@ -1576,6 +1569,7 @@ namespace detail {
         const ADB bhp_from_thp_prod = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
 
         //Perform hydrostatic correction to computed targets
+        //FIXME: Use computeHydrostaticCorrection
         const ADB well_ref_depth = ADB::constant(ADB::V::Map(wells().depth_ref, nw));
         const ADB vfp_ref_depth = ADB::constant(vfp_ref_depth_v);
         const ADB dh = vfp_ref_depth - well_ref_depth;

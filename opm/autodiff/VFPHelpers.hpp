@@ -208,6 +208,8 @@ struct InterpData {
 inline InterpData findInterpData(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
+    const double abs_value = std::abs(value);
+
     //If we only have one value in our vector, return that
     if (values.size() == 1) {
         retval.ind_[0] = 0;
@@ -220,7 +222,7 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
         //First element greater than or equal to value
         //Start with the second element, so that floor_iter does not go out of range
         //Don't access out-of-range, therefore values.end()-1
-        auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, value);
+        auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, abs_value);
 
         //Find last element smaller than range
         auto floor_iter = ceil_iter-1;
@@ -235,7 +237,7 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
             //Possible source for floating point error here if value and floor are large,
             //but very close to each other
             retval.inv_dist_ = 1.0 / dist;
-            retval.factor_ = (value-*floor_iter) * retval.inv_dist_;
+            retval.factor_ = (abs_value-*floor_iter) * retval.inv_dist_;
         }
         else {
             retval.inv_dist_ = 0.0;
@@ -519,7 +521,6 @@ inline adb_like bhp(const VFPProdTable* table,
     auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
     auto alq_i = detail::findInterpData(alq, table->getALQAxis());
 
-    //Then perform the interpolation itself
     detail::adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
