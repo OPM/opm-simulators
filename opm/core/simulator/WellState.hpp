@@ -53,32 +53,29 @@ namespace Opm
                     const WellControls* ctrl = wells->ctrls[w];
                     if (well_controls_well_is_stopped(ctrl)) {
                         // Stopped well:
-                        // 1. Assign zero well rates.
+                        // 1. Rates: assign zero well rates.
                         for (int p = 0; p < np; ++p) {
                             wellrates_[np*w + p] = 0.0;
                         }
-                        // 2. Assign bhp equal to bhp control, if
-                        //    applicable, otherwise assign equal to
-                        //    first perforation cell pressure.
-                        //    Similarly set thp to thp control, or
-                        //    -1e100 if not applicable
-                        switch (well_controls_get_current_type(ctrl)) {
-                            case BHP:
-                                bhp_[w] = well_controls_get_current_target( ctrl );
-                                break;
-                            case THP:
-                                thp_[w] = well_controls_get_current_target( ctrl );
-                                break;
-                            default:
-                            {
-                                const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                                bhp_[w] = state.pressure()[first_cell];
-                                thp_[w] = -1e100;
-                            }
-                        }
+			// 2. Bhp: assign bhp equal to bhp control, if
+			//    applicable, otherwise assign equal to
+			//    first perforation cell pressure.
+                        if (well_controls_get_current_type(ctrl) == BHP) {
+                            bhp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                            bhp_[w] = state.pressure()[first_cell];
+			}
+			// 3. Thp: assign thp equal to thp control, if applicable,
+			//    otherwise assign equal to bhp value.
+                        if (well_controls_get_current_type(ctrl) == THP) {
+                            thp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            thp_[w] = bhp_[w];
+			}
                     } else {
                         // Open well:
-                        // 1. Initialize well rates to match controls
+                        // 1. Rates: initialize well rates to match controls
                         //    if type is SURFACE_RATE.  Otherwise, we
                         //    cannot set the correct value here, so we
                         //    assign a small rate with the correct
@@ -98,47 +95,29 @@ namespace Opm
                             }
                         }
 
-                        // 2. if we have a thp/bhp control,
-                        //    set target (may be overridden later)
-                        // Assumes only one THP / BHP control.
-                        thp_[w] = -1e100;
-                        bhp_[w] = -1e100;
-                        int num_controls = well_controls_get_num( ctrl );
-                        for (int i=0; i<num_controls; ++i) {
-                            switch (well_controls_iget_type( ctrl , i )) {
-                                case BHP:
-                                    bhp_[w] = well_controls_iget_target( ctrl , i );
-                                    break;
-                                case THP:
-                                    thp_[w] = well_controls_iget_target( ctrl , i );
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
+                        // 2. Bhp: initialize bhp to be target pressure if
+                        //    bhp-controlled well, otherwise set to a
+			//    little above or below (depending on if
+			//    the well is an injector or producer)
+			//    pressure in first perforation cell.
+                        if (well_controls_get_current_type(ctrl) == BHP) {
+                            bhp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                            const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                            bhp_[w] = safety_factor*state.pressure()[first_cell];
+			}
 
-                        // 3. Set BHP to a
-                        //    little above or below (depending on if
-                        //    the well is an injector or producer)
-                        //    pressure in first perforation cell.
-                        switch (well_controls_get_current_type(ctrl)) {
-                            case BHP:
-                                //Already taken care of above in 2.
-                                break;
-                            case THP:
-                                //Already taken care of above in 2.
-                                break;
+			// 3. Thp: assign thp equal to thp control, if applicable,
+			//    otherwise assign equal to bhp value.
+                        if (well_controls_get_current_type(ctrl) == THP) {
+                            thp_[w] = well_controls_get_current_target( ctrl );
+                        } else {
+                            thp_[w] = bhp_[w];
+			}
+		    }
+		}
 
-                            default:
-                            {
-                                const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                                const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
-                                bhp_[w] = safety_factor*state.pressure()[first_cell];
-                                // thp_[w] = -1e100;
-                            }
-                        }
-                    }
-                }
                 // The perforation rates and perforation pressures are
                 // not expected to be consistent with bhp_ and wellrates_
                 // after init().
