@@ -505,7 +505,8 @@ namespace Opm
                     return false; // failed in finding the solution.
                 }
             } else {
-                if (std::abs(water_vel[i]) < maxShearVel) {
+                // check if the failure in finding the shear multiplier is due to too big water velocity.
+                if ((logWaterVelO - logShearVRF.back()) < logShearWaterVel.back()) {
                     std::cout << " the veclocity is " << water_vel[i] << std::endl;
                     std::cout << " max shear velocity is " << maxShearVel << std::endl;
                     std::cerr << " something wrong happend in finding segment" << std::endl;
