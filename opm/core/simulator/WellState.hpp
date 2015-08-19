@@ -57,22 +57,22 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             wellrates_[np*w + p] = 0.0;
                         }
-			// 2. Bhp: assign bhp equal to bhp control, if
-			//    applicable, otherwise assign equal to
-			//    first perforation cell pressure.
+                        // 2. Bhp: assign bhp equal to bhp control, if
+                        //    applicable, otherwise assign equal to
+                        //    first perforation cell pressure.
                         if (well_controls_get_current_type(ctrl) == BHP) {
                             bhp_[w] = well_controls_get_current_target( ctrl );
                         } else {
                             const int first_cell = wells->well_cells[wells->well_connpos[w]];
                             bhp_[w] = state.pressure()[first_cell];
-			}
-			// 3. Thp: assign thp equal to thp control, if applicable,
-			//    otherwise assign equal to bhp value.
+                        }
+                        // 3. Thp: assign thp equal to thp control, if applicable,
+                        //    otherwise assign equal to bhp value.
                         if (well_controls_get_current_type(ctrl) == THP) {
                             thp_[w] = well_controls_get_current_target( ctrl );
                         } else {
                             thp_[w] = bhp_[w];
-			}
+                        }
                     } else {
                         // Open well:
                         // 1. Rates: initialize well rates to match controls
@@ -97,26 +97,26 @@ namespace Opm
 
                         // 2. Bhp: initialize bhp to be target pressure if
                         //    bhp-controlled well, otherwise set to a
-			//    little above or below (depending on if
-			//    the well is an injector or producer)
-			//    pressure in first perforation cell.
-                        if (well_controls_get_current_type(ctrl) == BHP) {
-                            bhp_[w] = well_controls_get_current_target( ctrl );
-                        } else {
-                            const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                            const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
-                            bhp_[w] = safety_factor*state.pressure()[first_cell];
-			}
+                        //    little above or below (depending on if
+                        //    the well is an injector or producer)
+                        //    pressure in first perforation cell.
+                                    if (well_controls_get_current_type(ctrl) == BHP) {
+                                        bhp_[w] = well_controls_get_current_target( ctrl );
+                                    } else {
+                                        const int first_cell = wells->well_cells[wells->well_connpos[w]];
+                                        const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
+                                        bhp_[w] = safety_factor*state.pressure()[first_cell];
+                        }
 
-			// 3. Thp: assign thp equal to thp control, if applicable,
-			//    otherwise assign equal to bhp value.
-                        if (well_controls_get_current_type(ctrl) == THP) {
-                            thp_[w] = well_controls_get_current_target( ctrl );
-                        } else {
-                            thp_[w] = bhp_[w];
-			}
-		    }
-		}
+                        // 3. Thp: assign thp equal to thp control, if applicable,
+                        //    otherwise assign equal to bhp value.
+                                    if (well_controls_get_current_type(ctrl) == THP) {
+                                        thp_[w] = well_controls_get_current_target( ctrl );
+                                    } else {
+                                        thp_[w] = bhp_[w];
+                        }
+                        }
+                }
 
                 // The perforation rates and perforation pressures are
                 // not expected to be consistent with bhp_ and wellrates_
