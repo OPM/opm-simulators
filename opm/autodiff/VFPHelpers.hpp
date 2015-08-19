@@ -444,20 +444,20 @@ inline VFPEvaluation interpolate(
 
 
 
-
+/**
+ * This basically models interpolate(VFPProdTable::array_type, ...)
+ * which performs 5D interpolation, but here for the 2D case only
+ */
 inline VFPEvaluation interpolate(
         const VFPInjTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i) {
 
-    //Values and derivatives in a 5D hypercube
+    //Values and derivatives in a 2D plane
     VFPEvaluation nn[2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
-    //This is not really required, but performance-wise it may pay off, since the 32-elements
-    //we copy to (nn) will fit better in cache than the full original table for the
-    //interpolation below.
     //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
     for (int t=0; t<=1; ++t) {
         for (int f=0; f<=1; ++f) {
@@ -489,16 +489,13 @@ inline VFPEvaluation interpolate(
 
     double t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
 
-    // Remove dimensions one by one
-    // Example: going from 3D to 2D to 1D, we start by interpolating along
-    // the z axis first, leaving a 2D problem. Then interpolating along the y
-    // axis, leaving a 1D, problem, etc.
+    // Go from 2D to 1D
     t2 = flo_i.factor_;
     t1 = (1.0-t2);
-    for (int t=0; t<=1; ++t) {
-        nn[t][0] = t1*nn[t][0] + t2*nn[t][1];
-    }
+    nn[0][0] = t1*nn[0][0] + t2*nn[0][1];
+    nn[1][0] = t1*nn[1][0] + t2*nn[1][1];
 
+    // Go from line to point on line
     t2 = thp_i.factor_;
     t1 = (1.0-t2);
     nn[0][0] = t1*nn[0][0] + t2*nn[1][0];
