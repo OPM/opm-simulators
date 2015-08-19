@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_SUITE_END() // unit tests
  */
 struct TrivialFixture {
     typedef Opm::VFPProdProperties::ADB ADB;
-    typedef Opm::detail::adb_like adb_like;
+    typedef Opm::detail::VFPEvaluation VFPEvaluation;
 
     TrivialFixture() : table_ids(1, 1),
             thp_axis{0.0, 1.0},
@@ -408,7 +408,7 @@ BOOST_AUTO_TEST_CASE(GetTable)
     ADB qs_adb = ADB::constant(qs_adb_v);
 
     //Check that our reference has not changed
-    Opm::detail::adb_like ref= Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    Opm::detail::VFPEvaluation ref= Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
     BOOST_CHECK_CLOSE(ref.value, 1.0923565702101556,  max_d_tol);
     BOOST_CHECK_CLOSE(ref.dthp,  0.13174065498177251, max_d_tol);
     BOOST_CHECK_CLOSE(ref.dwfr, -1.2298177745501071,  max_d_tol);
@@ -810,8 +810,8 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
     initProperties();
 
     //Temps used to store reference and actual variables
-    adb_like sad;
-    adb_like max_d;
+    VFPEvaluation sad;
+    VFPEvaluation max_d;
 
     //Check interpolation
     for (int i=0; i<=n; ++i) {
@@ -831,7 +831,7 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
                         double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
                         //Calculate reference
-                        adb_like reference;
+                        VFPEvaluation reference;
                         reference.value = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
                         reference.dthp = 1;
                         reference.dwfr = 2;
@@ -841,9 +841,9 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
 
                         //Calculate actual
                         //Note order of arguments: id, aqua, liquid, vapour, thp, alq
-                        adb_like actual = Opm::detail::bhp(&table, aqua, liquid, vapour, thp, alq);
+                        VFPEvaluation actual = Opm::detail::bhp(&table, aqua, liquid, vapour, thp, alq);
 
-                        adb_like abs_diff = actual - reference;
+                        VFPEvaluation abs_diff = actual - reference;
                         abs_diff.value = std::abs(abs_diff.value);
                         abs_diff.dthp = std::abs(abs_diff.dthp);
                         abs_diff.dwfr = std::abs(abs_diff.dwfr);
@@ -1010,7 +1010,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseMode parse_mode;
-    boost::filesystem::path file("tests/VFPPROD2");
+    boost::filesystem::path file("VFPPROD2");
 
     deck = parser->parseFile(file.string(), parse_mode);
     Opm::checkDeck(deck);

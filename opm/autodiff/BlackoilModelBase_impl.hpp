@@ -1244,7 +1244,6 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const std::vector<double> wr = xw.wellRates();
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
@@ -1300,13 +1299,13 @@ namespace detail {
                 double vapour = 0.0;
 
                 if (active_[ Water ]) {
-                    aqua = wr[w*np + pu.phase_pos[ Water ] ];
+                    aqua = xw.wellRates()[w*np + pu.phase_pos[ Water ] ];
                 }
                 if (active_[ Oil ]) {
-                    liquid = wr[w*np + pu.phase_pos[ Oil ] ];
+                    liquid = xw.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                 }
                 if (active_[ Gas ]) {
-                    vapour = wr[w*np + pu.phase_pos[ Gas ] ];
+                    vapour = xw.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                 }
 
                 const int vfp        = well_controls_iget_vfp(wc, current);
@@ -1459,9 +1458,19 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
 
-        const ADB& aqua   = subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
-        const ADB& liquid = subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
-        const ADB& vapour = subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+        ADB aqua   = ADB::constant(ADB::V::Zero(nw));
+        ADB liquid = ADB::constant(ADB::V::Zero(nw));
+        ADB vapour = ADB::constant(ADB::V::Zero(nw));
+
+        if (active_[Water]) {
+            aqua += subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+        }
+        if (active_[Oil]) {
+            liquid += subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+        }
+        if (active_[Gas]) {
+            vapour += subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+        }
 
         //THP calculation variables
         std::vector<int> inj_table_id(nw, -1);
@@ -2332,6 +2341,9 @@ namespace detail {
         converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
         const bool   converged        = converged_MB && converged_CNV && converged_Well;
 
+        // Residual in Pascal can have high values and still be ok.
+        const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
+
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
         if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
@@ -2342,7 +2354,7 @@ namespace detail {
             std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
-            std::isnan(residualWell) || residualWell > 100*maxResidualAllowed() )
+            std::isnan(residualWell) || residualWell > maxWellResidualAllowed )
         {
             OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
         }

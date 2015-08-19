@@ -133,7 +133,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
             auto flo_i = detail::findInterpData(flo.value()[i], table->getFloAxis());
             auto thp_i = detail::findInterpData(thp.value()[i], table->getTHPAxis());
 
-            detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
+            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
 
             value[i] = bhp_val.value;
             dthp[i] = bhp_val.dthp;
@@ -179,7 +179,7 @@ double VFPInjProperties::bhp(int table_id,
         const double& thp) const {
     const VFPInjTable* table = detail::getTable(m_tables, table_id);
 
-    detail::adb_like retval = detail::bhp(table, aqua, liquid, vapour, thp);
+    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp);
     return retval.value;
 }
 

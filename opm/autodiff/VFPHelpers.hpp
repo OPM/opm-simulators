@@ -256,8 +256,8 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
 /**
  * An "ADB-like" structure with a single value and a set of derivatives
  */
-struct adb_like {
-    adb_like() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+struct VFPEvaluation {
+    VFPEvaluation() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
     double value;
     double dthp;
     double dwfr;
@@ -266,9 +266,9 @@ struct adb_like {
     double dflo;
 };
 
-inline adb_like operator+(
-        adb_like lhs,
-        const adb_like& rhs) {
+inline VFPEvaluation operator+(
+        VFPEvaluation lhs,
+        const VFPEvaluation& rhs) {
     lhs.value += rhs.value;
     lhs.dthp += rhs.dthp;
     lhs.dwfr += rhs.dwfr;
@@ -278,9 +278,9 @@ inline adb_like operator+(
     return lhs;
 }
 
-inline adb_like operator-(
-        adb_like lhs,
-        const adb_like& rhs) {
+inline VFPEvaluation operator-(
+        VFPEvaluation lhs,
+        const VFPEvaluation& rhs) {
     lhs.value -= rhs.value;
     lhs.dthp -= rhs.dthp;
     lhs.dwfr -= rhs.dwfr;
@@ -290,10 +290,10 @@ inline adb_like operator-(
     return lhs;
 }
 
-inline adb_like operator*(
+inline VFPEvaluation operator*(
         double lhs,
-        const adb_like& rhs) {
-    adb_like retval;
+        const VFPEvaluation& rhs) {
+    VFPEvaluation retval;
     retval.value = rhs.value * lhs;
     retval.dthp = rhs.dthp * lhs;
     retval.dwfr = rhs.dwfr * lhs;
@@ -317,7 +317,7 @@ inline adb_like operator*(
 #endif
 
 
-inline adb_like interpolate(
+inline VFPEvaluation interpolate(
         const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
@@ -326,7 +326,7 @@ inline adb_like interpolate(
         const InterpData& alq_i) {
 
     //Values and derivatives in a 5D hypercube
-    adb_like nn[2][2][2][2][2];
+    VFPEvaluation nn[2][2][2][2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -431,13 +431,13 @@ inline adb_like interpolate(
 
 
 
-inline adb_like interpolate(
+inline VFPEvaluation interpolate(
         const VFPInjTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i) {
 
     //Values and derivatives in a 5D hypercube
-    adb_like nn[2][2];
+    VFPEvaluation nn[2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -503,7 +503,7 @@ inline adb_like interpolate(
 
 
 
-inline adb_like bhp(const VFPProdTable* table,
+inline VFPEvaluation bhp(const VFPProdTable* table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -521,7 +521,7 @@ inline adb_like bhp(const VFPProdTable* table,
     auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
     auto alq_i = detail::findInterpData(alq, table->getALQAxis());
 
-    detail::adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
 }
@@ -530,7 +530,7 @@ inline adb_like bhp(const VFPProdTable* table,
 
 
 
-inline adb_like bhp(const VFPInjTable* table,
+inline VFPEvaluation bhp(const VFPInjTable* table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -543,7 +543,7 @@ inline adb_like bhp(const VFPInjTable* table,
     auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
 
     //Then perform the interpolation itself
-    detail::adb_like retval = detail::interpolate(table->getTable(), flo_i, thp_i);
+    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i);
 
     return retval;
 }

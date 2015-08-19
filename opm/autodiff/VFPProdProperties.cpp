@@ -128,7 +128,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
             auto gfr_i = detail::findInterpData(gfr.value()[i], table->getGFRAxis());
             auto alq_i = detail::findInterpData(alq.value()[i], table->getALQAxis());
 
-            detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
             /*
             static const int N=40;
@@ -145,7 +145,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
                 const double dist = end - start;
                 double flo_d = start + (j/static_cast<double>(N-1)) * dist;
                 auto flo_i = detail::findInterpData(flo_d, table->getFloAxis());
-                detail::adb_like bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+                detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
                 std::cout << bhp_val.value << ",";
             }
             std::cout << "];" << std::endl;
@@ -220,7 +220,7 @@ double VFPProdProperties::bhp(int table_id,
         const double& alq) const {
     const VFPProdTable* table = detail::getTable(m_tables, table_id);
 
-    detail::adb_like retval = detail::bhp(table, aqua, liquid, vapour, thp, alq);
+    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp, alq);
     return retval.value;
 }
 
