@@ -44,8 +44,8 @@ namespace Opm {
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) )
-        , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
         , last_timestep_( -1.0 )
+        , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
     {
         // valid are "pid" and "pid+iteration"
         std::string control = param.getDefault("timestep.control", std::string("pid+iteration") );
