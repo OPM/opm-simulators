@@ -941,6 +941,45 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
 
 
 
+BOOST_AUTO_TEST_CASE(THPToBHPAndBackPlane)
+{
+    fillDataPlane();
+    initProperties();
+
+    double aqua = -0.5;
+    double liquid = -0.9;
+    double vapour = -0.1;
+    double thp = 50.0;
+    double alq = 32.9;
+
+    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq);
+    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
+
+    BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
+}
+
+
+
+BOOST_AUTO_TEST_CASE(THPToBHPAndBackNonTrivial)
+{
+    fillDataRandom();
+    initProperties();
+
+    double aqua = -0.5;
+    double liquid = -0.9;
+    double vapour = -0.1;
+    double thp = 50.0;
+    double alq = 32.9;
+
+    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq);
+    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
+
+    BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
+}
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END() // Trivial tests
 
 
