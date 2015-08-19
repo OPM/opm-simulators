@@ -38,6 +38,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
+	opm/autodiff/SolventPropsAdFromDeck.cpp
 	opm/autodiff/BlackoilModelParameters.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
@@ -77,9 +78,10 @@ endif()
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/flow.cpp
+	examples/flow_solvent.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
-        examples/opm_init_check.cpp
+	examples/opm_init_check.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -103,8 +105,12 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilModelEnums.hpp
 	opm/autodiff/BlackoilModelParameters.hpp
 	opm/autodiff/BlackoilPropsAdFromDeck.hpp
+	opm/autodiff/SolventPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
+	opm/autodiff/BlackoilModelSolvent.hpp
+	opm/autodiff/BlackoilModelSolvent_impl.hpp
+	opm/autodiff/BlackoilModelState.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
@@ -124,10 +130,13 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorBase.hpp
 	opm/autodiff/SimulatorBase_impl.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
+	opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
 	)
 

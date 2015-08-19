@@ -843,7 +843,7 @@ namespace detail {
         V trans_all(transi.size() + trans_nnc.size());
         trans_all << transi, trans_nnc;
 
-        const std::vector<ADB> kr = computeRelPerm(state);
+        const std::vector<ADB> kr = asImpl().computeRelPerm(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
@@ -1569,10 +1569,10 @@ namespace detail {
             }
         }
 
-        const V sumSat = sw + so + sg;
-        sw = sw / sumSat;
-        so = so / sumSat;
-        sg = sg / sumSat;
+        //const V sumSat = sw + so + sg;
+        //sw = sw / sumSat;
+        //so = so / sumSat;
+        //sg = sg / sumSat;
 
         // Update the reservoir_state
         for (int c = 0; c < nc; ++c) {
@@ -1606,7 +1606,6 @@ namespace detail {
             const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
             rv = rv_old - drv_limited;
         }
-
 
         // Sg is used as primal variable for water only cells.
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
