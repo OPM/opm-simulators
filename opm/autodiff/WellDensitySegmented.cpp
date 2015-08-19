@@ -26,16 +26,17 @@
 #include <cmath>
 
 
+
+
+
 std::vector<double>
-Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
-                                                          const WellStateFullyImplicitBlackoil& wstate,
-                                                          const PhaseUsage& phase_usage,
-                                                          const std::vector<double>& b_perf,
-                                                          const std::vector<double>& rsmax_perf,
-                                                          const std::vector<double>& rvmax_perf,
-                                                          const std::vector<double>& z_perf,
-                                                          const std::vector<double>& surf_dens,
-                                                          const double gravity)
+Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
+                                                      const WellStateFullyImplicitBlackoil& wstate,
+                                                      const PhaseUsage& phase_usage,
+                                                      const std::vector<double>& b_perf,
+                                                      const std::vector<double>& rsmax_perf,
+                                                      const std::vector<double>& rvmax_perf,
+                                                      const std::vector<double>& surf_dens)
 {
     // Verify that we have consistent input.
     const int np = wells.number_of_phases;
@@ -53,9 +54,6 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
     if (nperf*np != int(b_perf.size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. b_perf.");
     }
-    if (nperf != int(z_perf.size())) {
-        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. z_perf.");
-    }
     if ((!rsmax_perf.empty()) || (!rvmax_perf.empty())) {
         // Need both oil and gas phases.
         if (!phase_usage.phase_used[BlackoilPhases::Liquid]) {
@@ -65,14 +63,6 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
             OPM_THROW(std::logic_error, "Gas phase inactive, but non-empty rsmax_perf or rvmax_perf.");
         }
     }
-
-    // Algorithm:
-
-    // We'll assume the perforations are given in order from top to
-    // bottom for each well.  By top and bottom we do not necessarily
-    // mean in a geometric sense (depth), but in a topological sense:
-    // the 'top' perforation is nearest to the surface topologically.
-    // Our goal is to compute a pressure delta for each perforation.
 
     // 1. Compute the flow (in surface volume units for each
     //    component) exiting up the wellbore from each perforation,
@@ -145,7 +135,37 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
         }
     }
 
-    // 3. Compute pressure differences between perforations.
+    return dens;
+}
+
+
+
+
+
+std::vector<double>
+Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
+                                                          const std::vector<double>& z_perf,
+                                                          const std::vector<double>& dens_perf,
+                                                          const double gravity) {
+    const int nw = wells.number_of_wells;
+    const int nperf = wells.well_connpos[nw];
+
+    if (nperf != int(z_perf.size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. z_perf.");
+    }
+    if (nperf != int(dens_perf.size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. dens_perf.");
+    }
+
+    // Algorithm:
+
+    // We'll assume the perforations are given in order from top to
+    // bottom for each well.  By top and bottom we do not necessarily
+    // mean in a geometric sense (depth), but in a topological sense:
+    // the 'top' perforation is nearest to the surface topologically.
+    // Our goal is to compute a pressure delta for each perforation.
+
+    // 1. Compute pressure differences between perforations.
     //    dp_perf will contain the pressure difference between a
     //    perforation and the one above it, except for the first
     //    perforation for each well, for which it will be the
@@ -155,11 +175,11 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
         for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w+1]; ++perf) {
             const double z_above = perf == wells.well_connpos[w] ? wells.depth_ref[w] : z_perf[perf - 1];
             const double dz = z_perf[perf] - z_above;
-            dp_perf[perf] = dz * dens[perf] * gravity;
+            dp_perf[perf] = dz * dens_perf[perf] * gravity;
         }
     }
 
-    // 4. Compute pressure differences to the reference point (bhp) by
+    // 2. Compute pressure differences to the reference point (bhp) by
     //    accumulating the already computed adjacent pressure
     //    differences, storing the result in dp_perf.
     //    This accumulation must be done per well.

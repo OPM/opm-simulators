@@ -263,6 +263,12 @@ namespace {
     constructSupersetSparseMatrix(const int full_size, const IntVec& indices)
     {
         const int subset_size = indices.size();
+
+        if (subset_size == 0) {
+            typename AutoDiffBlock<Scalar>::M mat(full_size, 0);
+            return mat;
+        }
+
         typename AutoDiffBlock<Scalar>::M mat(full_size, subset_size);
         mat.reserve(Eigen::VectorXi::Constant(subset_size, 1));
         for (int i = 0; i < subset_size; ++i) {
@@ -354,7 +360,7 @@ spdiag(const AutoDiffBlock<double>::V& d)
     public:
         typedef AutoDiffBlock<Scalar> ADB;
 
-        enum CriterionForLeftElement { GreaterEqualZero, GreaterZero, Zero, NotEqualZero, LessZero, LessEqualZero };
+        enum CriterionForLeftElement { GreaterEqualZero, GreaterZero, Zero, NotEqualZero, LessZero, LessEqualZero, NotNaN };
 
         Selector(const typename ADB::V& selection_basis,
                  CriterionForLeftElement crit = GreaterEqualZero)
@@ -384,6 +390,9 @@ spdiag(const AutoDiffBlock<double>::V& d)
                     break;
                 case LessEqualZero:
                     chooseleft = selection_basis[i] <= 0.0;
+                    break;
+                case NotNaN:
+                    chooseleft = !isnan(selection_basis[i]);
                     break;
                 default:
                     OPM_THROW(std::logic_error, "No such criterion: " << crit);

@@ -347,7 +347,7 @@ namespace Opm
 
         // Densities, one std::array per PVT region.
         std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
-        
+
         // VAPPARS
         double vap1_;
         double vap2_;

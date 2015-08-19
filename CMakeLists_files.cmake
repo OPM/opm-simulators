@@ -42,6 +42,9 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/BlackoilModelParameters.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
+	opm/autodiff/VFPProperties.cpp
+	opm/autodiff/VFPProdProperties.cpp
+	opm/autodiff/VFPInjProperties.cpp
 	)
 
 # originally generated with the command:
@@ -56,10 +59,13 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_scalar_mult.cpp
 	tests/test_transmissibilitymultipliers.cpp
 	tests/test_welldensitysegmented.cpp
+	tests/test_vfpproperties.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
 	tests/fluid.data
+	tests/VFPPROD1
+	tests/VFPPROD2
 	)
 
 # Note, these two files are not included in the repo.
@@ -138,5 +144,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/WellStateFullyImplicitBlackoil.hpp
 	opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
+	opm/autodiff/VFPProperties.hpp
+	opm/autodiff/VFPHelpers.hpp
+	opm/autodiff/VFPProdProperties.hpp
+	opm/autodiff/VFPInjProperties.hpp
 	)
 

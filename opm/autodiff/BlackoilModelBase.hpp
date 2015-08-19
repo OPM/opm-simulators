@@ -31,6 +31,7 @@
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/autodiff/VFPProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <array>
@@ -43,6 +44,7 @@ namespace Opm {
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
+    class VFPProperties;
 
 
     /// Struct for containing iteration variables.
@@ -117,6 +119,7 @@ namespace Opm {
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
+        /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] has_disgas       turn on dissolved gas
@@ -236,6 +239,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells*                    wells_;
+        VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
@@ -256,6 +260,7 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
+        V well_perforation_densities_; //Density of each well perforation
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
@@ -368,6 +373,8 @@ namespace Opm {
                              WellState& well_state);
 
         bool getWellConvergence(const int iteration);
+
+        bool isVFPActive() const;
 
         std::vector<ADB>
         computePressures(const ADB& po,
