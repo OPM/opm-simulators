@@ -729,6 +729,18 @@ public:
     { return x_(numSamples() - 1); }
 
     /*!
+     * \brief Return the y value of the leftmost sampling point.
+     */
+    Scalar yFirst() const
+    { return y_(0); }
+
+    /*!
+     * \brief Return the y value of the rightmost sampling point.
+     */
+    Scalar yLast() const
+    { return y_(numSamples() - 1); }
+
+    /*!
      * \brief Prints k tuples of the format (x, y, dx/dy, isMonotonic)
      *        to stdout.
      *
