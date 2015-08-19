@@ -61,12 +61,11 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         const ADB& qs,
         const ADB& thp,
         const ADB& alq) const {
-    const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
     //TODO enable support for two-phase.
-    assert(np == 3);
+    assert(wells.number_of_phases == 3);
     const ADB& w = subset(qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
