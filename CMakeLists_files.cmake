@@ -108,9 +108,9 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SolventPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
-	opm/autodiff/BlackoilModelSolvent.hpp
-	opm/autodiff/BlackoilModelSolvent_impl.hpp
-	opm/autodiff/BlackoilModelState.hpp
+	opm/autodiff/BlackoilSolventModel.hpp
+	opm/autodiff/BlackoilSolventModel_impl.hpp
+	opm/autodiff/BlackoilSolventState.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
