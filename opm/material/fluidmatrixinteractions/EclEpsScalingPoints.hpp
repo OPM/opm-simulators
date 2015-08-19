@@ -306,7 +306,7 @@ struct EclEpsScalingPointsInfo
             // maximum saturations
             Swu = swfnTable.getSwColumn().back();
             Sowu = sof3Table.getSoColumn().back();
-            assert(Sowu == 1 - swfnTableSwColumn.front());
+            assert(Sowu == 1 - swfnTable.getSwColumn().front());
             Sgu = sgfnTable.getSgColumn().back();
             Sogu = 1 - sgfnTable.getSgColumn().front();
 
