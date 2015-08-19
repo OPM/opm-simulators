@@ -747,7 +747,7 @@ ADB getValue(
  * @param TABLE Type of table to use, e.g., VFPInjTable, VFPProdTable.
  */
 template <typename TYPE, typename TABLE>
-ADB gather_vars(const std::vector<const TABLE*>& well_tables,
+ADB combineADBVars(const std::vector<const TABLE*>& well_tables,
         const ADB& aqua,
         const ADB& liquid,
         const ADB& vapour) {

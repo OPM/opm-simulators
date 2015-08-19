@@ -113,9 +113,9 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
     }
 
     //Get the right FLO/GFR/WFR variable for each well as a single ADB
-    const ADB flo = detail::gather_vars<VFPProdTable::FLO_TYPE>(well_tables, aqua, liquid, vapour);
-    const ADB wfr = detail::gather_vars<VFPProdTable::WFR_TYPE>(well_tables, aqua, liquid, vapour);
-    const ADB gfr = detail::gather_vars<VFPProdTable::GFR_TYPE>(well_tables, aqua, liquid, vapour);
+    const ADB flo = detail::combineADBVars<VFPProdTable::FLO_TYPE>(well_tables, aqua, liquid, vapour);
+    const ADB wfr = detail::combineADBVars<VFPProdTable::WFR_TYPE>(well_tables, aqua, liquid, vapour);
+    const ADB gfr = detail::combineADBVars<VFPProdTable::GFR_TYPE>(well_tables, aqua, liquid, vapour);
 
     //Compute the BHP for each well independently
     for (int i=0; i<nw; ++i) {
