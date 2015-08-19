@@ -92,9 +92,9 @@ namespace Opm
     template <class GridT>
     void SimulatorFullyImplicitBlackoilSolvent<GridT>::
     handleAdditionalWellInflow(SimulatorTimer& timer,
-                                    WellsManager& wells_manager,
-                                    typename BaseType::WellState& well_state,
-                                    const Wells* wells)
+			       WellsManager& /*wells_manager*/,
+			       typename BaseType::WellState& well_state,
+			       const Wells* wells)
     {
         // compute solvent inflow
         if (deck_->hasKeyword("WSOLVENT")) {
