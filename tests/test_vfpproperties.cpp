@@ -67,25 +67,43 @@ BOOST_AUTO_TEST_SUITE( HelperTests )
 BOOST_AUTO_TEST_CASE(findInterpData)
 {
     std::vector<double> values = {1, 5, 7, 9, 11, 15};
-    double interpolate = 6.87;
-    double extrapolate_left = -1.89;
-    double extrapolate_right = 32.1;
+    double exact = 9.0;
+    double interpolate = 6.0;
+    double extrapolate_left = -1.0;
+    double extrapolate_right = 19;
+    double first = 1;
+    double last = 15;
 
+    Opm::detail::InterpData eval0 = Opm::detail::findInterpData(exact, values);
     Opm::detail::InterpData eval1 = Opm::detail::findInterpData(interpolate, values);
     Opm::detail::InterpData eval2 = Opm::detail::findInterpData(extrapolate_left, values);
     Opm::detail::InterpData eval3 = Opm::detail::findInterpData(extrapolate_right, values);
+    Opm::detail::InterpData eval4 = Opm::detail::findInterpData(first, values);
+    Opm::detail::InterpData eval5 = Opm::detail::findInterpData(last, values);
+
+    BOOST_CHECK_EQUAL(eval0.ind_[0], 2);
+    BOOST_CHECK_EQUAL(eval0.ind_[1], 3);
+    BOOST_CHECK_EQUAL(eval0.factor_, 1.0);
 
     BOOST_CHECK_EQUAL(eval1.ind_[0], 1);
     BOOST_CHECK_EQUAL(eval1.ind_[1], 2);
-    BOOST_CHECK_EQUAL(eval1.factor_, (interpolate-values[1]) / (values[2] - values[1]));
+    BOOST_CHECK_EQUAL(eval1.factor_, 0.5);
 
     BOOST_CHECK_EQUAL(eval2.ind_[0], 0);
     BOOST_CHECK_EQUAL(eval2.ind_[1], 1);
-    BOOST_CHECK_EQUAL(eval2.factor_, (extrapolate_left-values[0]) / (values[1] - values[0]));
+    BOOST_CHECK_EQUAL(eval2.factor_, -0.5);
 
     BOOST_CHECK_EQUAL(eval3.ind_[0], 4);
     BOOST_CHECK_EQUAL(eval3.ind_[1], 5);
-    BOOST_CHECK_EQUAL(eval3.factor_, (extrapolate_right-values[4]) / (values[5] - values[4]));
+    BOOST_CHECK_EQUAL(eval3.factor_, 2.0);
+
+    BOOST_CHECK_EQUAL(eval4.ind_[0], 0);
+    BOOST_CHECK_EQUAL(eval4.ind_[1], 1);
+    BOOST_CHECK_EQUAL(eval4.factor_, 0.0);
+
+    BOOST_CHECK_EQUAL(eval5.ind_[0], 4);
+    BOOST_CHECK_EQUAL(eval5.ind_[1], 5);
+    BOOST_CHECK_EQUAL(eval5.factor_, 1.0);
 }
 
 BOOST_AUTO_TEST_SUITE_END() // HelperTests

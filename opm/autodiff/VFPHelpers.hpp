@@ -203,12 +203,15 @@ struct InterpData {
 
 
 /**
- * Helper function to find indices etc. for linear interpolation
+ * Helper function to find indices etc. for linear interpolation and extrapolation
+ *  @param value Value to find in values
+ *  @param values Sorted list of values to search for value in.
+ *  @return Data required to find the interpolated value
  */
 inline InterpData findInterpData(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
-    const double abs_value = value;//std::abs(value);
+    const int nvalues = values.size();
 
     //If we only have one value in our vector, return that
     if (values.size() == 1) {
@@ -219,25 +222,36 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
     }
     // Else search in the vector
     else {
-        //First element greater than or equal to value
-        //Start with the second element, so that floor_iter does not go out of range
-        //Don't access out-of-range, therefore values.end()-1
-        auto ceil_iter = std::lower_bound(values.begin()+1, values.end()-1, abs_value);
+        //If value is less than all values, use first interval
+        if (value < values.front()) {
+            retval.ind_[0] = 0;
+            retval.ind_[1] = 1;
+        }
+        //If value is greater than all values, use last interval
+        else if (value >= values.back()) {
+            retval.ind_[0] = nvalues-2;
+            retval.ind_[1] = nvalues-1;
+        }
+        else {
+            //Search internal intervals
+            for (int i=1; i<nvalues; ++i) {
+                if (values[i] >= value) {
+                    retval.ind_[0] = i-1;
+                    retval.ind_[1] = i;
+                    break;
+                }
+            }
+        }
 
-        //Find last element smaller than range
-        auto floor_iter = ceil_iter-1;
-
-        //Find the indices
-        retval.ind_[0] = floor_iter - values.begin();
-        retval.ind_[1] = ceil_iter - values.begin();
+        const double start = values[retval.ind_[0]];
+        const double end   = values[retval.ind_[1]];
 
         //Find interpolation ratio
-        double dist = (*ceil_iter - *floor_iter);
-        if (std::abs(dist) > 0.0) {
-            //Possible source for floating point error here if value and floor are large,
+        if (end > start) {
+            //FIXME: Possible source for floating point error here if value and floor are large,
             //but very close to each other
-            retval.inv_dist_ = 1.0 / dist;
-            retval.factor_ = (abs_value-*floor_iter) * retval.inv_dist_;
+            retval.inv_dist_ = 1.0 / (end-start);
+            retval.factor_ = (value-start) * retval.inv_dist_;
         }
         else {
             retval.inv_dist_ = 0.0;

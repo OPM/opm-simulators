@@ -31,7 +31,6 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
