@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2015 by Andreas Lauser
+  Copyright (C) 2015 by IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -527,6 +528,42 @@ private:
         }
     }
 
+    // The saturation function family.
+    // If SWOF and SGOF are specified in the deck it return FamilyI
+    // If SWFN, SGFN and SOF3 are specified in the deck it return FamilyII
+    // If keywords are missing or mixed, an error is given.
+
+    enum SaturationFunctionFamily { noFamily = 0, FamilyI = 1, FamilyII = 2};
+
+    const SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const{
+
+        const std::vector<SwofTable>& swofTables = eclState->getSwofTables();
+        const std::vector<SgofTable>& sgofTables = eclState->getSgofTables();
+        const std::vector<SwfnTable>& swfnTables = eclState->getSwfnTables();
+        const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
+        const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
+
+        bool family1 = !sgofTables.empty() && !swofTables.empty();
+        bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
+
+        if (family1 && family2) {
+            throw std::invalid_argument("Saturation families should not be mixed \n"
+                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
+        }
+
+        if (!family1 && !family2) {
+            throw std::invalid_argument("Saturations function must be specified using either "
+                                        "family 1 or family 2 keywords \n"
+                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
+        }
+
+        if (family1 && !family2)
+            return SaturationFunctionFamily::FamilyI;
+        else if (family2 && !family1)
+            return SaturationFunctionFamily::FamilyII;
+        return SaturationFunctionFamily::noFamily; // no family or two families
+    }
+
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
                                         Opm::EclipseStateConstPtr eclState,
@@ -535,25 +572,43 @@ private:
         dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
         auto& effParams = *dest[satnumRegionIdx];
-        const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+        switch (getSaturationFunctionFamily(eclState)) {
+        case FamilyI:
+        {
+            const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+            // convert the saturations of the SGOF keyword from gas to oil saturations
+            std::vector<double> SoSamples(sgofTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
+                SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
 
-        // the situation for the gas phase is complicated that all saturations are
-        // shifted by the connate water saturation.
-        Scalar Swco = unscaledEpsInfo_[satnumRegionIdx].Swl;
-
-        // convert the saturations of the SGOF keyword from gas to oil saturations
-        std::vector<double> SoSamples(sgofTable.numRows());
-        std::vector<double> SoSamplesKro(sgofTable.numRows());
-        for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
-            SoSamplesKro[sampleIdx] = SoSamples[sampleIdx] - Swco;
+            effParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
+            effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
+            effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
+            effParams.finalize();
+            break;
         }
 
-        effParams.setKrwSamples(SoSamplesKro, sgofTable.getKrogColumn());
-        effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
-        effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
-        effParams.finalize();
+        case FamilyII:
+        {
+            const auto& sgfnTable = eclState->getSgfnTables()[satnumRegionIdx];
+            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
 
+            const auto &SoColumn = sof3Table.getSoColumn();
+            // convert the saturations of the SGFN keyword from gas to oil saturations
+            std::vector<double> SoSamples(sgfnTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx)
+                SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
+
+            effParams.setKrwSamples(SoColumn, sof3Table.getKrogColumn());
+            effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
+            effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
+            effParams.finalize();
+            break;
+        }
+        default:
+            throw std::domain_error("No valid saturation keyword family specified");
+
+        }
     }
 
     template <class Container>
@@ -564,15 +619,41 @@ private:
         dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
         auto& effParams = *dest[satnumRegionIdx];
+        switch (getSaturationFunctionFamily(eclState)) {
+        case FamilyI: {
         const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
 
         const auto &SwColumn = swofTable.getSwColumn();
 
-        effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
-        effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
-        effParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
-        effParams.finalize();
+            effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
+            effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
+            effParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
+            effParams.finalize();
+            break;
+        }
+        case FamilyII:
+        {
+            const auto& swfnTable = eclState->getSwfnTables()[satnumRegionIdx];
+            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
+            const auto &SwColumn = swfnTable.getSwColumn();
+
+            // convert the saturations of the SOF3 keyword from oil to water saturations
+            std::vector<double> SwSamples(sof3Table.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
+                SwSamples[sampleIdx] = 1 - sof3Table.getSoColumn()[sampleIdx];
+
+            effParams.setKrwSamples(SwColumn, swfnTable.getKrwColumn());
+            effParams.setKrnSamples(SwSamples, sof3Table.getKrowColumn());
+            effParams.setPcnwSamples(SwColumn, swfnTable.getPcowColumn());
+            effParams.finalize();
+            break;
+        }
+        default:
+            throw std::domain_error("No valid saturation keyword family specified");
+
+        }
     }
+
 
     template <class Container>
     void readGasOilUnscaledPoints_(Container &dest,

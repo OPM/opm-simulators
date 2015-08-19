@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2015 by Andreas Lauser
+  Copyright (C) 2015 by IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -182,8 +183,19 @@ struct EclEpsScalingPointsInfo
                          int satRegionIdx)
     {
         // TODO: support for the SOF2/SOF3 keyword family
-        const auto& swofTable = eclState->getSwofTables()[satRegionIdx];
-        const auto& sgofTable = eclState->getSgofTables()[satRegionIdx];
+        const std::vector<SwofTable>& swofTables = eclState->getSwofTables();
+        const std::vector<SgofTable>& sgofTables = eclState->getSgofTables();
+        const std::vector<SwfnTable>& swfnTables = eclState->getSwfnTables();
+        const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
+        const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
+
+        bool family1 = !sgofTables.empty() && !swofTables.empty();
+        bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
+
+        if (family1)
+        {
+            const auto& swofTable = swofTables[satRegionIdx];
+            const auto& sgofTable = sgofTables[satRegionIdx];
 
         // connate saturations
         Swl = swofTable.getSwColumn().front();
@@ -243,6 +255,78 @@ struct EclEpsScalingPointsInfo
 
         maxKrg = sgofTable.getKrgColumn().back();
         maxKrog = sgofTable.getKrogColumn().front();
+        }
+        else if (family2)
+        {
+            const auto& swfnTable = swfnTables[satRegionIdx];
+            const auto& sof3Table = sof3Tables[satRegionIdx];
+            const auto& sgfnTable = sgfnTables[satRegionIdx];
+
+            // connate saturations
+            Swl = swfnTable.getSwColumn().front();
+            Sowl = sof3Table.getSoColumn().front() + Sgl;
+            Sgl = sgfnTable.getSgColumn().front();
+            Sogl = sof3Table.getSoColumn().front() + Swl;
+
+            // critical water saturation
+            for (unsigned rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
+                if (swfnTable.getKrwColumn()[rowIdx] > 0) {
+                    assert(rowIdx > 0);
+                    Swcr = swfnTable.getSwColumn()[rowIdx - 1];
+                    break;
+                };
+            }
+
+            // critical oil saturation of oil-water system
+            for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+                if (sof3Table.getKrowColumn()[rowIdx] > 0) {
+                    assert(rowIdx > 0);
+                    Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
+                    break;
+                };
+            }
+
+            // critical oil saturation of gas-oil system
+            for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+                if (sof3Table.getKrogColumn()[rowIdx] > 0) {
+                    assert(rowIdx > 0);
+                    Sogcr = sof3Table.getSoColumn()[rowIdx - 1];
+                    break;
+                };
+            }
+
+            // critical gas saturation
+            for (unsigned rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
+                if (sgfnTable.getKrgColumn()[rowIdx] > 0) {
+                    assert(rowIdx > 0);
+                    Sgcr = sgfnTable.getSgColumn()[rowIdx - 1];
+                    break;
+                };
+            }
+            // maximum saturations
+            Swu = swfnTable.getSwColumn().back();
+            Sowu = sof3Table.getSoColumn().back();
+            assert(Sowu == 1 - swfnTableSwColumn.front());
+            Sgu = sgfnTable.getSgColumn().back();
+            Sogu = 1 - sgfnTable.getSgColumn().front();
+
+            // maximum capillary pressures
+            maxPcow = swfnTable.getPcowColumn().front();
+            maxPcgo = sgfnTable.getPcogColumn().back();
+
+            // maximum relative permeabilities
+            maxKrw = swfnTable.getKrwColumn().back();
+            maxKrow = sof3Table.getKrowColumn().back();
+
+            maxKrg = sgfnTable.getKrgColumn().back();
+            maxKrog = sof3Table.getKrogColumn().back();
+
+            assert(maxKrw == maxKrg);
+
+        } else {
+            throw std::domain_error("No valid saturation keyword family specified");
+        }
+
     }
 #endif
 
