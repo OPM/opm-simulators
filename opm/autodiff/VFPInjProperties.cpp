@@ -115,7 +115,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
     ADB::V dflo = ADB::V::Zero(nw);
 
     //Get the table for each well
-    std::vector<const VFPInjTable*> well_tables(nw, NULL);
+    std::vector<const VFPInjTable*> well_tables(nw, nullptr);
     for (int i=0; i<nw; ++i) {
         if (table_id[i] > 0) {
             well_tables[i] = detail::getTable(m_tables, table_id[i]);
@@ -128,7 +128,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
     //Compute the BHP for each well independently
     for (int i=0; i<nw; ++i) {
         const VFPInjTable* table = well_tables[i];
-        if (table != NULL) {
+        if (table != nullptr) {
             //First, find the values to interpolate between
             auto flo_i = detail::findInterpData(flo.value()[i], table->getFloAxis());
             auto thp_i = detail::findInterpData(thp.value()[i], table->getTHPAxis());

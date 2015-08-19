@@ -46,14 +46,14 @@ public:
      * Takes *no* ownership of data.
      * @param inj_table A *single* VFPINJ table
      */
-    VFPInjProperties(const VFPInjTable* inj_table);
+    explicit VFPInjProperties(const VFPInjTable* inj_table);
 
     /**
      * Constructor
      * Takes *no* ownership of data.
      * @param inj_tables A map of different VFPINJ tables.
      */
-    VFPInjProperties(const std::map<int, VFPInjTable>& inj_tables);
+    explicit VFPInjProperties(const std::map<int, VFPInjTable>& inj_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
@@ -135,7 +135,7 @@ public:
     /**
      * Returns true if no vfp tables are in the current map
      */
-    inline const bool empty() const {
+    bool empty() const {
         return m_tables.empty();
     }
 

@@ -50,14 +50,14 @@ public:
      * Takes *no* ownership of data.
      * @param prod_table A *single* VFPPROD table
      */
-    VFPProdProperties(const VFPProdTable* prod_table);
+    explicit VFPProdProperties(const VFPProdTable* prod_table);
 
     /**
      * Constructor
      * Takes *no* ownership of data.
      * @param prod_tables A map of different VFPPROD tables.
      */
-    VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
+    explicit VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
 
     /**
      * Linear interpolation of bhp as function of the input parameters.
@@ -146,7 +146,7 @@ public:
     /**
      * Returns true if no vfp tables are in the current map
      */
-    inline const bool empty() const {
+    bool empty() const {
         return m_tables.empty();
     }
 

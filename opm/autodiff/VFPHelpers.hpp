@@ -208,7 +208,7 @@ struct InterpData {
 inline InterpData findInterpData(const double& value, const std::vector<double>& values) {
     InterpData retval;
 
-    const double abs_value = std::abs(value);
+    const double abs_value = value;//std::abs(value);
 
     //If we only have one value in our vector, return that
     if (values.size() == 1) {
@@ -515,11 +515,12 @@ inline VFPEvaluation bhp(const VFPProdTable* table,
     double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
 
     //First, find the values to interpolate between
-    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
-    auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
-    auto wfr_i = detail::findInterpData(wfr, table->getWFRAxis());
-    auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
-    auto alq_i = detail::findInterpData(alq, table->getALQAxis());
+    //Recall that flo is negative in Opm, so switch sign.
+    auto flo_i = detail::findInterpData(-flo, table->getFloAxis());
+    auto thp_i = detail::findInterpData( thp, table->getTHPAxis());
+    auto wfr_i = detail::findInterpData( wfr, table->getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table->getALQAxis());
 
     detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
@@ -786,10 +787,10 @@ ADB gather_vars(const std::vector<const TABLE*>& well_tables,
         const ADB& values = map.find(key)->second;
 
         //Get indices to all elements that should use this ADB
-        const std::vector<int>& elems = value;
+        const std::vector<int>& current = value;
 
         //Add these elements to retval
-        retval = retval + superset(subset(values, elems), elems, values.size());
+        retval = retval + superset(subset(values, current), current, values.size());
     }
 
     return retval;

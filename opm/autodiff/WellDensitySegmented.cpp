@@ -147,7 +147,6 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
                                                           const std::vector<double>& z_perf,
                                                           const std::vector<double>& dens_perf,
                                                           const double gravity) {
-    const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
     const int nperf = wells.well_connpos[nw];
 
@@ -177,7 +176,6 @@ Opm::WellDensitySegmented::computeConnectionPressureDelta(const Wells& wells,
             const double z_above = perf == wells.well_connpos[w] ? wells.depth_ref[w] : z_perf[perf - 1];
             const double dz = z_perf[perf] - z_above;
             dp_perf[perf] = dz * dens_perf[perf] * gravity;
-            //dens[wells.well_connpos[w]]
         }
     }
 

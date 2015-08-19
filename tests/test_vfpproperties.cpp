@@ -31,9 +31,12 @@
 #include <map>
 #include <sstream>
 #include <limits>
+#include <vector>
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/wells.h>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -49,6 +52,43 @@
 
 const double max_d_tol = 1.0e-10;
 const double sad_tol = 1.0e-8;
+
+
+
+
+
+
+
+
+
+
+BOOST_AUTO_TEST_SUITE( HelperTests )
+
+BOOST_AUTO_TEST_CASE(findInterpData)
+{
+    std::vector<double> values = {1, 5, 7, 9, 11, 15};
+    double interpolate = 6.87;
+    double extrapolate_left = -1.89;
+    double extrapolate_right = 32.1;
+
+    Opm::detail::InterpData eval1 = Opm::detail::findInterpData(interpolate, values);
+    Opm::detail::InterpData eval2 = Opm::detail::findInterpData(extrapolate_left, values);
+    Opm::detail::InterpData eval3 = Opm::detail::findInterpData(extrapolate_right, values);
+
+    BOOST_CHECK_EQUAL(eval1.ind_[0], 1);
+    BOOST_CHECK_EQUAL(eval1.ind_[1], 2);
+    BOOST_CHECK_EQUAL(eval1.factor_, (interpolate-values[1]) / (values[2] - values[1]));
+
+    BOOST_CHECK_EQUAL(eval2.ind_[0], 0);
+    BOOST_CHECK_EQUAL(eval2.ind_[1], 1);
+    BOOST_CHECK_EQUAL(eval2.factor_, (extrapolate_left-values[0]) / (values[1] - values[0]));
+
+    BOOST_CHECK_EQUAL(eval3.ind_[0], 4);
+    BOOST_CHECK_EQUAL(eval3.ind_[1], 5);
+    BOOST_CHECK_EQUAL(eval3.factor_, (extrapolate_right-values[4]) / (values[5] - values[4]));
+}
+
+BOOST_AUTO_TEST_SUITE_END() // HelperTests
 
 
 
@@ -391,11 +431,11 @@ BOOST_AUTO_TEST_CASE(GetTable)
     add_well(INJECTOR, 100, 1, NULL, cells, NULL, NULL, wells.get());
 
     //Create interpolation points
-    double aqua_d   = 0.15;
-    double liquid_d = 0.25;
-    double vapour_d = 0.35;
-    double thp_d    = 0.45;
-    double alq_d    = 0.55;
+    double aqua_d   = -0.15;
+    double liquid_d = -0.25;
+    double vapour_d = -0.35;
+    double thp_d    =  0.45;
+    double alq_d    =  0.55;
 
     ADB aqua_adb   = createConstantScalarADB(aqua_d);
     ADB liquid_adb = createConstantScalarADB(liquid_d);
@@ -408,7 +448,7 @@ BOOST_AUTO_TEST_CASE(GetTable)
     ADB qs_adb = ADB::constant(qs_adb_v);
 
     //Check that our reference has not changed
-    Opm::detail::VFPEvaluation ref= Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    Opm::detail::VFPEvaluation ref = Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
     BOOST_CHECK_CLOSE(ref.value, 1.0923565702101556,  max_d_tol);
     BOOST_CHECK_CLOSE(ref.dthp,  0.13174065498177251, max_d_tol);
     BOOST_CHECK_CLOSE(ref.dwfr, -1.2298177745501071,  max_d_tol);
@@ -523,13 +563,13 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
     for (int i=0; i<=n; ++i) {
         const double thp = i / static_cast<double>(n);
         for (int j=1; j<=n; ++j) {
-            const double aqua = j / static_cast<double>(n);
+            const double aqua = -j / static_cast<double>(n);
             for (int k=1; k<=n; ++k) {
-                const double vapour = k / static_cast<double>(n);
+                const double vapour = -k / static_cast<double>(n);
                 for (int l=0; l<=n; ++l) {
                     const double alq = l / static_cast<double>(n);
                     for (int m=1; m<=n; ++m) {
-                        const double liquid = m / static_cast<double>(n);
+                        const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
                         double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
@@ -537,7 +577,7 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
                         double gfr = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
                         //Calculate reference
-                        double reference = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
+                        double reference = thp + 2*wfr + 3*gfr+ 4*alq - 5*flo;
 
                         //Calculate actual
                         //Note order of arguments: id, aqua, liquid, vapour, thp, alq
@@ -545,7 +585,7 @@ BOOST_AUTO_TEST_CASE(InterpolatePlane)
 
 
                         double abs_diff = std::abs(actual - reference);
-                        double max_d = std::max(max_d, abs_diff);
+                        max_d = std::max(max_d, abs_diff);
                         sad = sad + abs_diff;
                     }
                 }
@@ -578,20 +618,20 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlane)
     for (int i=0; i<=n+o; ++i) {
         const double x = i / static_cast<double>(n);
         for (int j=1; j<=n+o; ++j) {
-            const double aqua = j / static_cast<double>(n);
+            const double aqua = -j / static_cast<double>(n);
             for (int k=1; k<=n+o; ++k) {
-                const double vapour = k / static_cast<double>(n);
+                const double vapour = -k / static_cast<double>(n);
                 for (int l=0; l<=n+o; ++l) {
                     const double u = l / static_cast<double>(n);
                     for (int m=1; m<=n+o; ++m) {
-                        const double liquid = m / static_cast<double>(n);
+                        const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
                         double v = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
                         double y = Opm::detail::getWFR(aqua, liquid, vapour, table.getWFRType());
                         double z = Opm::detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
-                        double reference = x + 2*y + 3*z+ 4*u + 5*v;
+                        double reference = x + 2*y + 3*z+ 4*u - 5*v;
                         reference_sum += reference;
 
                         //Note order of arguments! id, aqua, liquid, vapour, thp , alq
@@ -635,13 +675,13 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
     for (int i=0; i<=n+o; ++i) {
         const double x = i / static_cast<double>(n);
         for (int j=1; j<=n+o; ++j) {
-            const double aqua = j / static_cast<double>(n);
+            const double aqua = -j / static_cast<double>(n);
             for (int k=1; k<=n+o; ++k) {
-                const double vapour = k / static_cast<double>(n);
+                const double vapour = -k / static_cast<double>(n);
                 for (int l=0; l<=n+o; ++l) {
                     const double u = l / static_cast<double>(n);
                     for (int m=1; m<=n+o; ++m) {
-                        const double liquid = m / static_cast<double>(n);
+                        const double liquid = -m / static_cast<double>(n);
 
                         //Temporary variables used to represent independent wells
                         const int num_wells = 5;
@@ -678,7 +718,7 @@ BOOST_AUTO_TEST_CASE(ExtrapolatePlaneADB)
                             double y = Opm::detail::getWFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getWFRType());
                             double z = Opm::detail::getGFR(aqua*(w+1), liquid*(w+1), vapour*(w+1), table.getGFRType());
 
-                            reference = x*(w+1) + 2*y + 3*z + 4*u*(w+1) + 5*v;
+                            reference = x*(w+1) + 2*y + 3*z + 4*u*(w+1) - 5*v;
                             value = bhp_val[w];
 
                             sum += value;
@@ -733,7 +773,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
     ADB::V qs_v(nphases*nwells);
     for (int j=0; j<nphases; ++j) {
         for (int i=0; i<nwells; ++i) {
-            qs_v[j*nwells+i] = (j*nwells+i) / static_cast<double>(nwells*nphases-1.0);
+            qs_v[j*nwells+i] = -(j*nwells+i) / static_cast<double>(nwells*nphases-1.0);
         }
     }
     ADB qs = ADB::constant(qs_v);
@@ -778,7 +818,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
         double flo = oil[i];
         double wor = water[i]/oil[i];
         double gor = gas[i]/oil[i];
-        reference[i] = thp_v[i] + 2*wor + 3*gor + 4*alq_v[i] + 5*flo;
+        reference[i] = thp_v[i] + 2*wor + 3*gor + 4*alq_v[i] - 5*flo;
     }
 
     //Check that interpolation matches
@@ -817,13 +857,13 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
     for (int i=0; i<=n; ++i) {
         const double thp = i / static_cast<double>(n);
         for (int j=1; j<=n; ++j) {
-            const double aqua = j / static_cast<double>(n);
+            const double aqua = -j / static_cast<double>(n);
             for (int k=1; k<=n; ++k) {
-                const double vapour = k / static_cast<double>(n);
+                const double vapour = -k / static_cast<double>(n);
                 for (int l=0; l<=n; ++l) {
                     const double alq = l / static_cast<double>(n);
                     for (int m=1; m<=n; ++m) {
-                        const double liquid = m / static_cast<double>(n);
+                        const double liquid = -m / static_cast<double>(n);
 
                         //Find values that should be in table
                         double flo = Opm::detail::getFlo(aqua, liquid, vapour, table.getFloType());
@@ -832,7 +872,7 @@ BOOST_AUTO_TEST_CASE(PartialDerivatives)
 
                         //Calculate reference
                         VFPEvaluation reference;
-                        reference.value = thp + 2*wfr + 3*gfr+ 4*alq + 5*flo;
+                        reference.value = thp + 2*wfr + 3*gfr+ 4*alq - 5*flo;
                         reference.dthp = 1;
                         reference.dwfr = 2;
                         reference.dgfr = 3;
@@ -1040,7 +1080,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                 //for (unsigned int a=0; a<n; ++a) { //n==1, skip this loop
                     for (int f=0; f<n; ++f) {
                         //Liq given as SM3/day => convert to SM3/second
-                        double f_i = liq[f]*1.1574074074074073e-05;
+                        double f_i = -liq[f]*1.1574074074074073e-05;
 
                         //THP given as BARSA => convert to Pascal
                         double t_i = thp[t]*100000.0;

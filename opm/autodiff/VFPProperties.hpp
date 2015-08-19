@@ -44,7 +44,7 @@ public:
      * @param inj_table  A *single* VFPINJ table or NULL (no table)
      * @param prod_table A *single* VFPPROD table or NULL (no table)
      */
-    VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table);
+    explicit VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table);
 
     /**
      * Constructor
@@ -58,14 +58,14 @@ public:
     /**
      * Returns the VFP properties for injection wells
      */
-    inline const VFPInjProperties* getInj() const {
+    const VFPInjProperties* getInj() const {
         return m_inj.get();
     }
 
     /**
      * Returns the VFP properties for production wells
      */
-    inline const VFPProdProperties* getProd() const {
+    const VFPProdProperties* getProd() const {
         return m_prod.get();
     }
 

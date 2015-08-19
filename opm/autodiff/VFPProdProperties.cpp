@@ -105,7 +105,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
     ADB::V dflo = ADB::V::Zero(nw);
 
     //Get the table for each well
-    std::vector<const VFPProdTable*> well_tables(nw, NULL);
+    std::vector<const VFPProdTable*> well_tables(nw, nullptr);
     for (int i=0; i<nw; ++i) {
         if (table_id[i] >= 0) {
             well_tables[i] = detail::getTable(m_tables, table_id[i]);
@@ -120,47 +120,16 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
     //Compute the BHP for each well independently
     for (int i=0; i<nw; ++i) {
         const VFPProdTable* table = well_tables[i];
-        if (table != NULL) {
+        if (table != nullptr) {
             //First, find the values to interpolate between
-            auto flo_i = detail::findInterpData(flo.value()[i], table->getFloAxis());
-            auto thp_i = detail::findInterpData(thp.value()[i], table->getTHPAxis());
-            auto wfr_i = detail::findInterpData(wfr.value()[i], table->getWFRAxis());
-            auto gfr_i = detail::findInterpData(gfr.value()[i], table->getGFRAxis());
-            auto alq_i = detail::findInterpData(alq.value()[i], table->getALQAxis());
+            //Value of FLO is negative in OPM for producers, but positive in VFP table
+            auto flo_i = detail::findInterpData(-flo.value()[i], table->getFloAxis());
+            auto thp_i = detail::findInterpData( thp.value()[i], table->getTHPAxis());
+            auto wfr_i = detail::findInterpData( wfr.value()[i], table->getWFRAxis());
+            auto gfr_i = detail::findInterpData( gfr.value()[i], table->getGFRAxis());
+            auto alq_i = detail::findInterpData( alq.value()[i], table->getALQAxis());
 
             detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
-
-            /*
-            static const int N=40;
-            std::cout << "bhp=" << bhp_val.value << ";" << std::endl;
-            std::cout << "flo=" << flo.value()[i] << ";" << std::endl;
-            std::cout << "thp=" << thp.value()[i] << ";" << std::endl;
-            std::cout << "wfr=" << wfr.value()[i] << ";" << std::endl;
-            std::cout << "gfr=" << gfr.value()[i] << ";" << std::endl;
-            std::cout << "alq=" << alq.value()[i] << ";" << std::endl;
-            std::cout << "bhp_vfp=[" << std::endl;
-            for (int j=0; j<N; ++j) {
-                const double start = table->getFloAxis().front();
-                const double end = table->getFloAxis().back();
-                const double dist = end - start;
-                double flo_d = start + (j/static_cast<double>(N-1)) * dist;
-                auto flo_i = detail::findInterpData(flo_d, table->getFloAxis());
-                detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
-                std::cout << bhp_val.value << ",";
-            }
-            std::cout << "];" << std::endl;
-
-            std::cout << "flo_vfp=[" << std::endl;
-            for (int j=0; j<N; ++j) {
-                const double start = table->getFloAxis().front();
-                const double end = table->getFloAxis().back();
-                const double dist = end - start;
-                double flo_d = start + (j/static_cast<double>(N-1)) * dist;
-                std::cout << flo_d << ",";
-            }
-            std::cout << "];" << std::endl;
-            */
-
 
             value[i] = bhp_val.value;
             dthp[i] = bhp_val.dthp;
@@ -247,11 +216,12 @@ double VFPProdProperties::thp(int table_id,
      * Find the function bhp_array(thp) by creating a 1D view of the data
      * by interpolating for every value of thp. This might be somewhat
      * expensive, but let us assome that nthp is small
+     * Recall that flo is negative in Opm, so switch the sign
      */
-    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
-    auto wfr_i = detail::findInterpData(wfr, table->getWFRAxis());
-    auto gfr_i = detail::findInterpData(gfr, table->getGFRAxis());
-    auto alq_i = detail::findInterpData(alq, table->getALQAxis());
+    auto flo_i = detail::findInterpData(-flo, table->getFloAxis());
+    auto wfr_i = detail::findInterpData( wfr, table->getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table->getALQAxis());
     std::vector<double> bhp_array(nthp);
     for (int i=0; i<nthp; ++i) {
         auto thp_i = detail::findInterpData(thp_array[i], thp_array);

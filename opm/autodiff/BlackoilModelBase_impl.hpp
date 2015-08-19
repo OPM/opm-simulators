@@ -1972,7 +1972,6 @@ namespace detail {
                             vapour = wr[w*np + pu.phase_pos[ Gas ] ];
                         }
 
-                        auto wc = wells().ctrls[w];
                         double alq = well_controls_iget_alq(wc, ctrl_index);
                         int table_id = well_controls_iget_vfp(wc, ctrl_index);
 
