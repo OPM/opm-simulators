@@ -147,7 +147,6 @@ namespace detail {
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
                   const Wells*                    wells,
-                  const VFPProperties*            vfp_properties,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
@@ -158,7 +157,7 @@ namespace detail {
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
-        , vfp_properties_(vfp_properties)
+        , vfp_properties_(eclState->getVFPInjTables(), eclState->getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
@@ -1208,7 +1207,7 @@ namespace detail {
             return false;
         }
 
-        if ( vfp_properties_->getProd()->empty() && vfp_properties_->getInj()->empty() ) {
+        if ( vfp_properties_.getProd()->empty() && vfp_properties_.getInj()->empty() ) {
             return false;
         }
 
@@ -1318,20 +1317,20 @@ namespace detail {
                 //Gather variables for hydrostatic reconstruction
 
                 if (well_type == INJECTOR) {
-                    double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
+                    double vfp_ref_depth = vfp_properties_.getInj()->getTable(vfp)->getDatumDepth();
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_ref_depth,
                             well_perforation_densities_, gravity);
 
-                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                    xw.bhp()[w] = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
-                    double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
+                    double vfp_ref_depth = vfp_properties_.getProd()->getTable(vfp)->getDatumDepth();
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_ref_depth,
                             well_perforation_densities_, gravity);
 
-                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                    xw.bhp()[w] = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
                 else {
                     OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
@@ -1527,7 +1526,7 @@ namespace detail {
                     thp_inj_target_v[w] = target;
                     alq_v[w]     = -1e100;
 
-                    vfp_ref_depth_v[w] = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
+                    vfp_ref_depth_v[w] = vfp_properties_.getInj()->getTable(table_id)->getDatumDepth();
 
                     thp_inj_elems.push_back(w);
                 }
@@ -1536,7 +1535,7 @@ namespace detail {
                     thp_prod_target_v[w] = target;
                     alq_v[w]      = well_controls_iget_alq(wc, current);
 
-                    vfp_ref_depth_v[w] =  vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
+                    vfp_ref_depth_v[w] =  vfp_properties_.getProd()->getTable(table_id)->getDatumDepth();
 
                     thp_prod_elems.push_back(w);
                 }
@@ -1574,8 +1573,8 @@ namespace detail {
         const ADB thp_inj_target = ADB::constant(thp_inj_target_v);
         const ADB thp_prod_target = ADB::constant(thp_prod_target_v);
         const ADB alq = ADB::constant(alq_v);
-        const ADB bhp_from_thp_inj = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
-        const ADB bhp_from_thp_prod = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
+        const ADB bhp_from_thp_inj = vfp_properties_.getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
+        const ADB bhp_from_thp_prod = vfp_properties_.getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
 
         //Perform hydrostatic correction to computed targets
         //FIXME: Use computeHydrostaticCorrection
@@ -1977,10 +1976,10 @@ namespace detail {
 
                         const WellType& well_type = wells().type[w];
                         if (well_type == INJECTOR) {
-                            well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp[w]);
+                            well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w]);
                         }
                         else if (well_type == PRODUCER) {
-                            well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+                            well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
                         }
                         else {
                             OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");

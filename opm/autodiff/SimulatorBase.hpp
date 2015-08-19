@@ -192,8 +192,6 @@ namespace Opm
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
-        //Vertical flow performance tables
-        VFPProperties vfpProperties_;
         // Whether this a parallel simulation or not
         bool is_parallel_run_;
     };

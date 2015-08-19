@@ -31,6 +31,7 @@
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/autodiff/VFPProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <array>
@@ -130,7 +131,6 @@ namespace Opm {
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
                           const Wells*                    wells,
-                          const VFPProperties*            vfp_properties,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
@@ -239,7 +239,7 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells*                    wells_;
-        const VFPProperties*            vfp_properties_;
+        VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
