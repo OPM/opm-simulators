@@ -229,7 +229,7 @@ public:
 
         // if it is enabled, use either the drainage or the imbibition curve. if the
         // imbibition curve is used, the saturation must be shifted.
-        if (Sw < params.krwSwMdc())
+        if (Sw <= params.krwSwMdc())
             return EffectiveLaw::twoPhaseSatKrw(params.drainageParams(), Sw);
 
         return EffectiveLaw::twoPhaseSatKrw(params.imbibitionParams(),
@@ -255,7 +255,7 @@ public:
 
         // if it is enabled, use either the drainage or the imbibition curve. if the
         // imbibition curve is used, the saturation must be shifted.
-        if (Sw < params.krnSwMdc())
+        if (Sw <= params.krnSwMdc())
             return EffectiveLaw::twoPhaseSatKrn(params.drainageParams(), Sw);
 
         return EffectiveLaw::twoPhaseSatKrn(params.imbibitionParams(),
