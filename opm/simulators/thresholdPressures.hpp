@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
-
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 
 #ifndef OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
 #define OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
@@ -46,10 +46,16 @@ namespace Opm
 
 
     template <class Grid>
-    std::vector<double> thresholdPressures(EclipseStateConstPtr eclipseState, const Grid& grid)
+    std::vector<double> thresholdPressures(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const Grid& grid)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
-        const std::vector<double>& thresholdPressureTable = simulationConfig->getThresholdPressureTable();
+        const std::vector<double>& thresholdPressureTable;
+        if(simulationConfig->hasThresholdPressure()){
+           thresholdPressureTable = simulationConfig->getThresholdPressureTable();
+        }else{
+            std::string msg = "Inferring threshold pressure from the initial state is not supported.";
+            parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
+        }
 
         std::vector<double> thpres_vals;
 
