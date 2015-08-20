@@ -322,7 +322,6 @@ subset(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
     const Index size = indices.size();
     V val(size);
     D jac(size, NumDerivs);
-    Eigen::Array<Scalar, Eigen::Dynamic, 1> ret( size );
     for (Index i = 0; i < size; ++i) {
         val[i] = x.value()[indices[i]];
         jac.row(i) = x.derivative().row(indices[i]);
@@ -441,7 +440,7 @@ spdiag(const AutoDiffBlock<double>::V& d)
             }
         }
 
-        /// Apply selector to ADB quantities.
+        /// Apply selector to constant (no derivs) quantities.
         typename ADB::V select(const typename ADB::V& x1, const typename ADB::V& x2) const
         {
             if (right_elems_.empty()) {
@@ -453,6 +452,37 @@ spdiag(const AutoDiffBlock<double>::V& d)
                     + superset(subset(x2, right_elems_), right_elems_, x2.size());
             }
         }
+
+        /// Apply selector to ADDB quantities.
+	template <int NumDerivs>
+        AutoDiffDenseBlock<Scalar, NumDerivs>
+	select(const AutoDiffDenseBlock<Scalar, NumDerivs>& x1,
+	       const AutoDiffDenseBlock<Scalar, NumDerivs>& x2) const
+        {
+	    assert(x1.size() == x2.size());
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            }
+	    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADDB;
+	    typedef typename ADDB::Value V;
+	    typedef typename ADDB::Derivative D;
+	    typedef typename V::Index Index;
+	    const Index size = x1.size();
+	    V val(size);
+	    D jac(size, NumDerivs);
+	    const Index nl = left_elems_.size();
+	    for (Index i : left_elems_) {
+		val[i] = x1.value()[i];
+		jac.row(i) = x1.derivative().row(i);
+	    }
+	    for (Index i : right_elems_) {
+		val[i] = x2.value()[i];
+		jac.row(i) = x2.derivative().row(i);
+	    }
+	    return ADDB::function(std::move(val), std::move(jac));
+	}
 
     private:
         std::vector<int> left_elems_;
