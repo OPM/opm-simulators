@@ -50,6 +50,7 @@ public:
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef std::vector<int> Cells;
+    typedef AutoDiffDenseBlock<double, 3> ADDB;
 
     /// Solvent formation volume factor.
     /// \param[in]  pg     Array of n gas pressure values.
@@ -78,6 +79,38 @@ public:
     /// \return                     Array of n solvent relPerm multiplier values.
     ADB solventRelPermMultiplier(const ADB& solventFraction,
               const Cells& cells) const;
+
+
+    // Dense block interfaces.
+
+    /// Solvent formation volume factor.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n formation volume factor values.
+    ADDB bSolvent(const ADDB& pg,
+             const Cells& cells) const;
+
+    /// Solvent viscosity.
+    /// \param[in]  pg     Array of n gas pressure values.
+    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
+    /// \return            Array of n viscosity values.
+    ADDB muSolvent(const ADDB& pg,
+              const Cells& cells) const;
+
+    /// Gas relPerm multipliers
+    /// \param[in]  solventFraction Array of n solvent fraction values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n gas relPerm multiplier values.
+    ADDB gasRelPermMultiplier(const ADDB& solventFraction,
+              const Cells& cells) const;
+
+    /// Solvent relPerm multipliers
+    /// \param[in]  solventFraction Array of n solvent fraction values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n solvent relPerm multiplier values.
+    ADDB solventRelPermMultiplier(const ADDB& solventFraction,
+              const Cells& cells) const;
+
 
     /// Solvent surface density
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.

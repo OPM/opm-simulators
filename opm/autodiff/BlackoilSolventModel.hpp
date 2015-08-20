@@ -164,8 +164,9 @@ namespace Opm {
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
+	using Base::blockPattern;
 
-        std::vector<ADB>
+        std::vector<ADDB>
         computeRelPerm(const SolutionState& state) const;
 
         void
@@ -181,7 +182,7 @@ namespace Opm {
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,
-                                 std::vector<ADB>& vars) const;
+                                 std::vector<ADDB>& vars) const;
 
         void
         computeAccum(const SolutionState& state,
@@ -198,8 +199,8 @@ namespace Opm {
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,
-                        const ADB&              kr    ,
-                        const ADB&              p     ,
+                        const ADDB&             kr    ,
+                        const ADDB&             p     ,
                         const SolutionState&    state );
 
         const std::vector<PhasePresence>
@@ -245,10 +246,10 @@ namespace Opm {
     {
         explicit BlackoilSolventSolutionState(const int np)
             : DefaultBlackoilSolutionState(np),
-              solvent_saturation( ADB::null())
+              solvent_saturation( ADDB::null())
         {
         }
-        ADB solvent_saturation;
+        ADDB solvent_saturation;
     };
 
 
