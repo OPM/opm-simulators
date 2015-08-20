@@ -352,7 +352,7 @@ namespace Opm
     AutoDiffDenseBlock<Scalar, NumDerivs> operator-(const typename AutoDiffDenseBlock<Scalar, NumDerivs>::Value& lhs,
                                                     const AutoDiffDenseBlock<Scalar, NumDerivs>& rhs)
     {
-        return AutoDiffDenseBlock<Scalar, NumDerivs>::constant(lhs, rhs.blockPattern()) - rhs;
+        return AutoDiffDenseBlock<Scalar, NumDerivs>::constant(lhs) - rhs;
     }
 
 
