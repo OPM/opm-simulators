@@ -472,7 +472,6 @@ spdiag(const AutoDiffBlock<double>::V& d)
 	    const Index size = x1.size();
 	    V val(size);
 	    D jac(size, NumDerivs);
-	    const Index nl = left_elems_.size();
 	    for (Index i : left_elems_) {
 		val[i] = x1.value()[i];
 		jac.row(i) = x1.derivative().row(i);
