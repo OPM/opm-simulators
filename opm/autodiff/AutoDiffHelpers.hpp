@@ -794,6 +794,7 @@ AutoDiffBlock<Scalar> convertToAutoDiffBlock(const AutoDiffDenseBlock<Scalar, Nu
         // Build sparse diagonal Jacobians.
         typedef typename AutoDiffBlock<Scalar>::M M;
         std::vector<M> jacs;
+        jacs.reserve(bpn);
         for (int ii = 0; ii < NumDerivs; ++ii) {
             if (x.hasZeroDerivative(ii)) {
                 jacs.emplace_back(n, n);
