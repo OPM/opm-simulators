@@ -315,9 +315,9 @@ AutoDiffDenseBlock<Scalar, NumDerivs>
 subset(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
        const IntVec& indices)
 {
-    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADD;
-    typedef typename ADD::Value V;
-    typedef typename ADD::Derivative D;
+    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADDB;
+    typedef typename ADDB::Value V;
+    typedef typename ADDB::Derivative D;
     typedef typename V::Index Index;
     const Index size = indices.size();
     V val(size);
@@ -327,7 +327,7 @@ subset(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
         val[i] = x.value()[indices[i]];
         jac.row(i) = x.derivative().row(indices[i]);
     }
-    return ADD::function(std::move(val), std::move(jac));
+    return ADDB::function(std::move(val), std::move(jac));
 }
 
 

@@ -177,9 +177,9 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         virtual
-        ADD muWat(const ADD& pw,
-                  const ADD& T,
-                  const Cells& cells) const;
+        ADDB muWat(const ADDB& pw,
+		   const ADDB& T,
+		   const Cells& cells) const;
 
         /// Oil viscosity.
         /// \param[in]  po     Array of n oil pressure values.
@@ -189,11 +189,11 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         virtual
-        ADD muOil(const ADD& po,
-                  const ADD& T,
-                  const ADD& rs,
-                  const std::vector<PhasePresence>& cond,
-                  const Cells& cells) const;
+        ADDB muOil(const ADDB& po,
+		   const ADDB& T,
+		   const ADDB& rs,
+		   const std::vector<PhasePresence>& cond,
+		   const Cells& cells) const;
 
         /// Gas viscosity.
         /// \param[in]  pg     Array of n gas pressure values.
@@ -203,11 +203,11 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n viscosity values.
         virtual
-        ADD muGas(const ADD& pg,
-                  const ADD& T,
-                  const ADD& rv,
-                  const std::vector<PhasePresence>& cond,
-                  const Cells& cells) const;
+        ADDB muGas(const ADDB& pg,
+		   const ADDB& T,
+		   const ADDB& rv,
+		   const std::vector<PhasePresence>& cond,
+		   const Cells& cells) const;
 
         // ------ Formation volume factor (b) ------
 
@@ -254,9 +254,9 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
-        ADD bWat(const ADD& pw,
-                 const ADD& T,
-                 const Cells& cells) const;
+        ADDB bWat(const ADDB& pw,
+		  const ADDB& T,
+		  const Cells& cells) const;
 
         /// Oil formation volume factor.
         /// \param[in]  po     Array of n oil pressure values.
@@ -266,11 +266,11 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
-        ADD bOil(const ADD& po,
-                 const ADD& T,
-                 const ADD& rs,
-                 const std::vector<PhasePresence>& cond,
-                 const Cells& cells) const;
+        ADDB bOil(const ADDB& po,
+		  const ADDB& T,
+		  const ADDB& rs,
+		  const std::vector<PhasePresence>& cond,
+		  const Cells& cells) const;
 
         /// Gas formation volume factor.
         /// \param[in]  pg     Array of n gas pressure values.
@@ -280,11 +280,11 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n formation volume factor values.
         virtual
-        ADD bGas(const ADD& pg,
-                 const ADD& T,
-                 const ADD& rv,
-                 const std::vector<PhasePresence>& cond,
-                 const Cells& cells) const;
+        ADDB bGas(const ADDB& pg,
+		  const ADDB& T,
+		  const ADDB& rv,
+		  const std::vector<PhasePresence>& cond,
+		  const Cells& cells) const;
 
         // ------ Rs bubble point curve ------
 
@@ -327,8 +327,8 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         virtual
-        ADD rsSat(const ADD& po,
-                  const Cells& cells) const;
+        ADDB rsSat(const ADDB& po,
+		   const Cells& cells) const;
 
         /// Bubble point curve for Rs as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
@@ -336,9 +336,9 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n bubble point values for Rs.
         virtual
-        ADD rsSat(const ADD& po,
-                  const ADD& so,
-                  const Cells& cells) const;
+        ADDB rsSat(const ADDB& po,
+		   const ADDB& so,
+		   const Cells& cells) const;
 
         // ------ Rv condensation curve ------
 
@@ -365,8 +365,8 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n condensation point values for Rv.
         virtual
-        ADD rvSat(const ADD& po,
-                  const Cells& cells) const;
+        ADDB rvSat(const ADDB& po,
+		   const Cells& cells) const;
 
         /// Condensation curve for Rv as function of oil pressure.
         /// \param[in]  po     Array of n oil pressure values.
@@ -374,9 +374,9 @@ namespace Opm
         /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
         /// \return            Array of n condensation point values for Rv.
         virtual
-        ADD rvSat(const ADD& po,
-                  const ADD& so,
-                  const Cells& cells) const;
+        ADDB rvSat(const ADDB& po,
+		   const ADDB& so,
+		   const Cells& cells) const;
 
         // ------ Saturation functions ------
 
@@ -415,10 +415,10 @@ namespace Opm
         /// \return            An std::vector with 3 elements, each an array of n relperm values,
         ///                    containing krw, kro, krg. Use PhaseIndex for indexing into the result.
         virtual
-        std::vector<ADD> relperm(const ADD& sw,
-                                 const ADD& so,
-                                 const ADD& sg,
-                                 const Cells& cells) const;
+        std::vector<ADDB> relperm(const ADDB& sw,
+				  const ADDB& so,
+				  const ADDB& sg,
+				  const Cells& cells) const;
 
         /// Capillary pressure for all phases.
         /// \param[in]  sw     Array of n water saturation values.
@@ -429,10 +429,10 @@ namespace Opm
         ///                    containing the offsets for each p_g, p_o, p_w. The capillary pressure between
         ///                    two arbitrary phases alpha and beta is then given as p_alpha - p_beta.
         virtual
-        std::vector<ADD> capPress(const ADD& sw,
-                                  const ADD& so,
-                                  const ADD& sg,
-                                  const Cells& cells) const;
+        std::vector<ADDB> capPress(const ADDB& sw,
+				   const ADDB& so,
+				   const ADDB& sg,
+				   const Cells& cells) const;
 
         /// Saturation update for hysteresis behavior.
         /// \param[in]  cells       Array of n cell indices to be associated with the saturation values.
@@ -446,7 +446,7 @@ namespace Opm
         /// \param[in]  saturation Array of n*numPhases saturation values.
         /// \param[in]  pc         Array of n*numPhases capillary pressure values.
         void setSwatInitScaling(const std::vector<double>& saturation,
-                      const std::vector<double>& pc);
+				const std::vector<double>& pc);
 
 
     private:
@@ -472,8 +472,8 @@ namespace Opm
                       const std::vector<int>& cells,
                       const double vap) const;
 
-        void applyVap(ADD& r,
-                      const ADD& so,
+        void applyVap(ADDB& r,
+                      const ADDB& so,
                       const std::vector<int>& cells,
                       const double vap) const;
 

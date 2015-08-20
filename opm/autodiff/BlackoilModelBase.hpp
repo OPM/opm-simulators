@@ -52,27 +52,27 @@ namespace Opm {
     struct DefaultBlackoilSolutionState
     {
         typedef AutoDiffBlock<double> ADB;
-        typedef AutoDiffDenseBlock<double, 3> ADD;
+        typedef AutoDiffDenseBlock<double, 3> ADDB;
         explicit DefaultBlackoilSolutionState(const int np)
-            : pressure  (    ADD::null())
-            , temperature(   ADD::null())
-            , saturation(np, ADD::null())
-            , rs        (    ADD::null())
-            , rv        (    ADD::null())
+            : pressure  (    ADDB::null())
+            , temperature(   ADDB::null())
+            , saturation(np, ADDB::null())
+            , rs        (    ADDB::null())
+            , rv        (    ADDB::null())
             , qs        (    ADB::null())
             , bhp       (    ADB::null())
-            , canonical_phase_pressures(3, ADD::null())
+            , canonical_phase_pressures(3, ADDB::null())
         {
         }
-        ADD              pressure;
-        ADD              temperature;
-        std::vector<ADD> saturation;
-        ADD              rs;
-        ADD              rv;
-        ADB              qs;
-        ADB              bhp;
+        ADDB              pressure;
+        ADDB              temperature;
+        std::vector<ADDB> saturation;
+        ADDB              rs;
+        ADDB              rv;
+        ADB               qs;
+        ADB               bhp;
         // Below are quantities stored in the state for optimization purposes.
-        std::vector<ADD> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
+        std::vector<ADDB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
     };
 
 
@@ -104,7 +104,7 @@ namespace Opm {
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
-        typedef AutoDiffDenseBlock<double, 3> ADD;
+        typedef AutoDiffDenseBlock<double, 3> ADDB;
 
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
         typedef typename ModelTraits<Implementation>::WellState WellState;
@@ -222,11 +222,11 @@ namespace Opm {
 
         struct ReservoirResidualQuant {
             ReservoirResidualQuant();
-            std::vector<ADD> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADD              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADD              mob;   // Phase mobility (per cell)
+            std::vector<ADDB> accum; // Accumulations
+            ADB               mflux; // Mass flux (surface conditions)
+            ADDB              b;     // Reciprocal FVF
+            ADB               dh;    // Pressure drop across int. interfaces
+            ADDB              mob;   // Phase mobility (per cell)
         };
 
         struct WellOps {
@@ -323,7 +323,7 @@ namespace Opm {
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,
-                                 std::vector<ADD>& vars) const;
+                                 std::vector<ADDB>& vars) const;
 
         void
         variableStateExtractWellsVars(const std::vector<int>& indices,
@@ -383,11 +383,11 @@ namespace Opm {
 
         bool isVFPActive() const;
 
-        std::vector<ADD>
-        computePressures(const ADD& po,
-                         const ADD& sw,
-                         const ADD& so,
-                         const ADD& sg) const;
+        std::vector<ADDB>
+        computePressures(const ADDB& po,
+                         const ADDB& sw,
+                         const ADDB& so,
+                         const ADDB& sg) const;
 
         V
         computeGasPressure(const V& po,
@@ -395,49 +395,49 @@ namespace Opm {
                            const V& so,
                            const V& sg) const;
 
-        std::vector<ADD>
+        std::vector<ADDB>
         computeRelPerm(const SolutionState& state) const;
 
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,
-                        const ADD&              kr    ,
-                        const ADD&              p     ,
+                        const ADDB&              kr    ,
+                        const ADDB&              p     ,
                         const SolutionState&    state );
 
         void applyThresholdPressures(ADB& dp);
 
-        ADD
-        fluidViscosity(const int               phase,
-                       const ADD&              p    ,
-                       const ADD&              temp ,
-                       const ADD&              rs   ,
-                       const ADD&              rv   ,
+        ADDB
+        fluidViscosity(const int                phase,
+                       const ADDB&              p    ,
+                       const ADDB&              temp ,
+                       const ADDB&              rs   ,
+                       const ADDB&              rv   ,
                        const std::vector<PhasePresence>& cond) const;
 
-        ADD
+        ADDB
         fluidReciprocFVF(const int phase,
-                         const ADD& p,
-                         const ADD& temp,
-                         const ADD& rs,
-                         const ADD& rv,
+                         const ADDB& p,
+                         const ADDB& temp,
+                         const ADDB& rs,
+                         const ADDB& rv,
                          const std::vector<PhasePresence>& cond) const;
 
 
-        ADD
+        ADDB
         fluidDensity(const int  phase,
-                     const ADD& b,
-                     const ADD& rs,
-                     const ADD& rv) const;
+                     const ADDB& b,
+                     const ADDB& rs,
+                     const ADDB& rv) const;
 
         V
         fluidRsSat(const V&                p,
                    const V&                so,
                    const std::vector<int>& cells) const;
 
-        ADD
-        fluidRsSat(const ADD&              p,
-                   const ADD&              so,
+        ADDB
+        fluidRsSat(const ADDB&              p,
+                   const ADDB&              so,
                    const std::vector<int>& cells) const;
 
         V
@@ -445,16 +445,16 @@ namespace Opm {
                    const V&                so,
                    const std::vector<int>& cells) const;
 
-        ADD
-        fluidRvSat(const ADD&              p,
-                   const ADD&              so,
+        ADDB
+        fluidRvSat(const ADDB&              p,
+                   const ADDB&              so,
                    const std::vector<int>& cells) const;
 
-        ADD
-        poroMult(const ADD& p) const;
+        ADDB
+        poroMult(const ADDB& p) const;
 
-        ADD
-        transMult(const ADD& p) const;
+        ADDB
+        transMult(const ADDB& p) const;
 
         const std::vector<PhasePresence>
         phaseCondition() const {return phaseCondition_;}

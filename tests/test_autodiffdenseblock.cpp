@@ -33,9 +33,9 @@
 using namespace Opm;
 
 
-typedef AutoDiffDenseBlock<double, 3> ADD;
-typedef ADD::Value V;
-typedef ADD::Derivative D;
+typedef AutoDiffDenseBlock<double, 3> ADDB;
+typedef ADDB::Value V;
+typedef ADDB::Derivative D;
 
 
 
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(ConstantInitialisation)
     V v(3);
     v << 0.2, 1.2, 13.4;
 
-    ADD a = ADD::constant(v);
+    ADDB a = ADDB::constant(v);
     BOOST_CHECK(a.value().matrix() == v.matrix());
 
     const D& da = a.derivative();
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(VariableInitialisation)
 
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
 
-    ADD x = ADD::variable(FirstVar, v);
+    ADDB x = ADDB::variable(FirstVar, v);
 
     BOOST_CHECK(x.value().matrix() == v.matrix());
 
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 
     V v_copy(v);
     D jac_copy(jac);
-    ADD f = ADD::function(std::move(v_copy), std::move(jac_copy));
+    ADDB f = ADDB::function(std::move(v_copy), std::move(jac_copy));
 
     BOOST_CHECK(f.value().matrix() == v.matrix());
     BOOST_CHECK(f.derivative().matrix() == jac.matrix());
@@ -108,16 +108,16 @@ BOOST_AUTO_TEST_CASE(Addition)
 
     enum { FirstVar = 0, SecondVar = 1, ThirdVar = 2 };
 
-    ADD a = ADD::constant(va);
-    ADD x = ADD::variable(FirstVar, vx);
+    ADDB a = ADDB::constant(va);
+    ADDB x = ADDB::variable(FirstVar, vx);
 
-    ADD xpx = x + x;
+    ADDB xpx = x + x;
 
     BOOST_CHECK((xpx.value() == 2*x.value()).all());
     BOOST_CHECK((xpx.derivative() == 2*x.derivative()).all());
 
     V  r = 2*x.value() + a.value();
-    ADD xpxpa = x + x + a;
+    ADDB xpxpa = x + x + a;
     BOOST_CHECK(xpxpa.value().matrix() == r.matrix());
     BOOST_CHECK((xpxpa.derivative() == 2*x.derivative()).all());
 }
@@ -134,14 +134,14 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
     vy << 1.0, 2.2, 3.4;
 
     std::vector<V> vals{ vx, vy };
-    std::vector<ADD> vars = ADD::variables(vals);
+    std::vector<ADDB> vars = ADDB::variables(vals);
 
-    const ADD x = vars[0];
-    const ADD y = vars[1];
+    const ADDB x = vars[0];
+    const ADDB y = vars[1];
 
-    ADD z = x;
+    ADDB z = x;
     z += y;
-    ADD sum = x + y;
+    ADDB sum = x + y;
     const double tolerance = 1e-14;
     BOOST_CHECK(z.value().isApprox(sum.value(), tolerance));
     BOOST_CHECK(z.derivative().isApprox(sum.derivative(), tolerance));
@@ -150,10 +150,10 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
     BOOST_CHECK(z.derivative().isApprox(x.derivative(), tolerance));
 
     // Testing the case when the left hand side is constant.
-    ADD yconst = ADD::constant(vy);
+    ADDB yconst = ADDB::constant(vy);
     z = yconst;
     z -= x;
-    ADD diff = yconst - x;
+    ADDB diff = yconst - x;
     BOOST_CHECK(z.value().isApprox(diff.value(), tolerance));
     BOOST_CHECK(z.derivative().isApprox(diff.derivative(), tolerance));
     z += x;
@@ -172,12 +172,12 @@ BOOST_AUTO_TEST_CASE(Multiplication)
     vy << 1.0, 2.2, 3.4;
 
     std::vector<V> vals{ vx, vy };
-    std::vector<ADD> vars = ADD::variables(vals);
+    std::vector<ADDB> vars = ADDB::variables(vals);
 
-    const ADD x = vars[0];
-    const ADD y = vars[1];
+    const ADDB x = vars[0];
+    const ADDB y = vars[1];
 
-    const ADD xxy = x * x * y;
+    const ADDB xxy = x * x * y;
 
     const double tolerance = 1e-14;
     BOOST_CHECK(xxy.value().isApprox(vx * vx * vy, tolerance));
@@ -196,12 +196,12 @@ BOOST_AUTO_TEST_CASE(Division)
     vy << 1.0, 2.2, 3.4;
 
     std::vector<V> vals{ vx, vy };
-    std::vector<ADD> vars = ADD::variables(vals);
+    std::vector<ADDB> vars = ADDB::variables(vals);
 
-    const ADD x = vars[0];
-    const ADD y = vars[1];
+    const ADDB x = vars[0];
+    const ADDB y = vars[1];
 
-    const ADD xxBy = x * x / y;
+    const ADDB xxBy = x * x / y;
 
     const double tolerance = 1e-14;
     BOOST_CHECK(xxBy.value().isApprox(vx * vx / vy, tolerance));

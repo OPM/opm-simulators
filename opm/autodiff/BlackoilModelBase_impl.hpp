@@ -83,7 +83,7 @@ namespace Opm {
 typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
-typedef AutoDiffDenseBlock<double, 3> ADD;
+typedef AutoDiffDenseBlock<double, 3> ADDB;
 typedef Eigen::Array<double,
                      Eigen::Dynamic,
                      Eigen::Dynamic,
@@ -300,11 +300,11 @@ namespace detail {
 
     template <class Grid, class Implementation>
     BlackoilModelBase<Grid, Implementation>::ReservoirResidualQuant::ReservoirResidualQuant()
-        : accum(2, ADD::null())
+        : accum(2, ADDB::null())
         , mflux(   ADB::null())
-        , b    (   ADD::null())
+        , b    (   ADDB::null())
         , dh   (   ADB::null())
-        , mob  (   ADD::null())
+        , mob  (   ADDB::null())
     {
     }
 
@@ -356,20 +356,20 @@ namespace detail {
         // performant way to do things, but it will make the state
         // automatically consistent with variableState() (and doing
         // things automatically is all the rage in this module ;)
-        state.pressure = ADD::constant(state.pressure.value());
-        state.temperature = ADD::constant(state.temperature.value());
-        state.rs = ADD::constant(state.rs.value());
-        state.rv = ADD::constant(state.rv.value());
+        state.pressure = ADDB::constant(state.pressure.value());
+        state.temperature = ADDB::constant(state.temperature.value());
+        state.rs = ADDB::constant(state.rs.value());
+        state.rv = ADDB::constant(state.rv.value());
         const int num_phases = state.saturation.size();
         for (int phaseIdx = 0; phaseIdx < num_phases; ++ phaseIdx) {
-            state.saturation[phaseIdx] = ADD::constant(state.saturation[phaseIdx].value());
+            state.saturation[phaseIdx] = ADDB::constant(state.saturation[phaseIdx].value());
         }
         state.qs = ADB::constant(state.qs.value());
         state.bhp = ADB::constant(state.bhp.value());
         assert(state.canonical_phase_pressures.size() == static_cast<std::size_t>(Opm::BlackoilPhases::MaxNumPhases));
         for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
-            ADD& pp = state.canonical_phase_pressures[canphase];
-            pp = ADD::constant(pp.value());
+            ADDB& pp = state.canonical_phase_pressures[canphase];
+            pp = ADDB::constant(pp.value());
         }
     }
 
@@ -385,7 +385,7 @@ namespace detail {
         // std::vector<V> vars0 = asImpl().variableStateInitials(x, xw);
         std::vector<V> res_vars0;
         asImpl().variableReservoirStateInitials(x, res_vars0);
-        std::vector<ADD> res_vars = ADD::variables(res_vars0);
+        std::vector<ADDB> res_vars = ADDB::variables(res_vars0);
         SolutionState state = asImpl().variableStateExtractVars(x, asImpl().variableStateIndices(), res_vars);
         std::vector<V> well_vars0;
         asImpl().variableWellStateInitials(xw, well_vars0);
@@ -541,7 +541,7 @@ namespace detail {
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
     BlackoilModelBase<Grid, Implementation>::variableStateExtractVars(const ReservoirState& x,
                                                                       const std::vector<int>& indices,
-                                                                      std::vector<ADD>& vars) const
+                                                                      std::vector<ADDB>& vars) const
     {
         //using namespace Opm::AutoDiffGrid;
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
@@ -554,39 +554,39 @@ namespace detail {
 
         // Temperature cannot be a variable at this time (only constant).
         const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
-        state.temperature = ADD::constant(temp);
+        state.temperature = ADDB::constant(temp);
 
         // Saturations
         {
-            ADD so = ADD::constant(V::Ones(nc, 1));
+            ADDB so = ADDB::constant(V::Ones(nc, 1));
 
             if (active_[ Water ]) {
                 state.saturation[pu.phase_pos[ Water ]] = std::move(vars[indices[Sw]]);
-                const ADD& sw = state.saturation[pu.phase_pos[ Water ]];
+                const ADDB& sw = state.saturation[pu.phase_pos[ Water ]];
                 so -= sw;
             }
 
             if (active_[ Gas ]) {
                 // Define Sg Rs and Rv in terms of xvar.
                 // Xvar is only defined if gas phase is active
-                const ADD& xvar = vars[indices[Xvar]];
-                ADD& sg = state.saturation[ pu.phase_pos[ Gas ] ];
+                const ADDB& xvar = vars[indices[Xvar]];
+                ADDB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
                 sg = isSg_*xvar + isRv_*so;
                 so -= sg;
 
                 if (active_[ Oil ]) {
                     // RS and RV is only defined if both oil and gas phase are active.
-                    const ADD& sw = (active_[ Water ]
+                    const ADDB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADD::constant(V::Zero(nc, 1)));
+                                             : ADDB::constant(V::Zero(nc, 1)));
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
-                    const ADD rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
+                    const ADDB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
                         state.rs = (1-isRs_)*rsSat + isRs_*xvar;
                     } else {
                         state.rs = rsSat;
                     }
-                    const ADD rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
+                    const ADDB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
                         state.rv = (1-isRv_)*rvSat + isRv_*xvar;
                     } else {
@@ -656,15 +656,15 @@ namespace detail {
     {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
-        const ADD&              press = state.pressure;
-        const ADD&              temp  = state.temperature;
-        const std::vector<ADD>& sat   = state.saturation;
-        const ADD&              rs    = state.rs;
-        const ADD&              rv    = state.rv;
+        const ADDB&              press = state.pressure;
+        const ADDB&              temp  = state.temperature;
+        const std::vector<ADDB>& sat   = state.saturation;
+        const ADDB&              rs    = state.rs;
+        const ADDB&              rv    = state.rv;
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        const ADD pv_mult = poroMult(press);
+        const ADDB pv_mult = poroMult(press);
 
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         for (int phase = 0; phase < maxnp; ++phase) {
@@ -684,7 +684,7 @@ namespace detail {
 
             // Temporary copy to avoid contribution of dissolved gas in the vaporized oil
             // when both dissolved gas and vaporized oil are present.
-            const ADD accum_gas_copy =rq_[pg].accum[aix];
+            const ADDB accum_gas_copy =rq_[pg].accum[aix];
 
             rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
             rq_[po].accum[aix] += state.rv * accum_gas_copy;
@@ -734,12 +734,12 @@ namespace detail {
         }
 
         // Use cell values for the temperature as the wells don't knows its temperature yet.
-        const ADD perf_temp = subset(state.temperature, well_cells);
+        const ADDB perf_temp = subset(state.temperature, well_cells);
 
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
         // and cell values for rs, rv, phase condition and temperature.
-        const ADD avg_press_ad = ADD::constant(avg_press);
+        const ADDB avg_press_ad = ADDB::constant(avg_press);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
         for (int perf = 0; perf < nperf; ++perf) {
@@ -756,14 +756,14 @@ namespace detail {
         assert(active_[Oil]);
         const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
-            const ADD perf_rs = subset(state.rs, well_cells);
+            const ADDB perf_rs = subset(state.rs, well_cells);
             const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
-            const ADD perf_rv = subset(state.rv, well_cells);
+            const ADDB perf_rv = subset(state.rv, well_cells);
             const V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
             const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
@@ -904,7 +904,7 @@ namespace detail {
         V trans_all(transi.size() + trans_nnc.size());
         trans_all << transi, trans_nnc;
 
-        const std::vector<ADD> kr = asImpl().computeRelPerm(state);
+        const std::vector<ADDB> kr = asImpl().computeRelPerm(state);
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
@@ -979,8 +979,8 @@ namespace detail {
         V Tw = Eigen::Map<const V>(wells().WI, nperf);
         const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
-        std::function<ADB(const ADD&)> noderivs = [](const ADD& x){ return ADB::constant(x.value()); };
-        std::function<ADB(const ADD&)> normal = [this](const ADD& x){ return convertToAutoDiffBlock(x, blockPattern()); };
+        std::function<ADB(const ADDB&)> noderivs = [](const ADDB& x){ return ADB::constant(x.value()); };
+        std::function<ADB(const ADDB&)> normal = [this](const ADDB& x){ return convertToAutoDiffBlock(x, blockPattern()); };
         auto toADB = use_well_only_blockpattern_ ? noderivs : normal;
 
         // pressure diffs computed already (once per step, not changing per iteration)
@@ -2039,24 +2039,24 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    std::vector<ADD>
+    std::vector<ADDB>
     BlackoilModelBase<Grid, Implementation>::computeRelPerm(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
 
-        const ADD zero = ADD::constant(V::Zero(nc));
+        const ADDB zero = ADDB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADD& sw = (active_[ Water ]
+        const ADDB& sw = (active_[ Water ]
                          ? state.saturation[ pu.phase_pos[ Water ] ]
                          : zero);
 
-        const ADD& so = (active_[ Oil ]
+        const ADDB& so = (active_[ Oil ]
                          ? state.saturation[ pu.phase_pos[ Oil ] ]
                          : zero);
 
-        const ADD& sg = (active_[ Gas ]
+        const ADDB& sg = (active_[ Gas ]
                          ? state.saturation[ pu.phase_pos[ Gas ] ]
                          : zero);
 
@@ -2068,15 +2068,15 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    std::vector<ADD>
+    std::vector<ADDB>
     BlackoilModelBase<Grid, Implementation>::
-    computePressures(const ADD& po,
-                     const ADD& sw,
-                     const ADD& so,
-                     const ADD& sg) const
+    computePressures(const ADDB& po,
+                     const ADDB& sw,
+                     const ADDB& so,
+                     const ADDB& sg) const
     {
         // convert the pressure offsets to the capillary pressures
-        std::vector<ADD> pressure = fluid_.capPress(sw, so, sg, cells_);
+        std::vector<ADDB> pressure = fluid_.capPress(sw, so, sg, cells_);
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
             // The reference pressure is always the liquid phase (oil) pressure.
             if (phaseIdx == BlackoilPhases::Liquid)
@@ -2127,19 +2127,19 @@ namespace detail {
     void
     BlackoilModelBase<Grid, Implementation>::computeMassFlux(const int               actph ,
                                                              const V&                transi,
-                                                             const ADD&              kr    ,
-                                                             const ADD&              phasePressure,
+                                                             const ADDB&              kr    ,
+                                                             const ADDB&              phasePressure,
                                                              const SolutionState&    state)
     {
         // Compute and store mobilities.
         const int canonicalPhaseIdx = canph_[ actph ];
         const std::vector<PhasePresence>& cond = phaseCondition();
-        const ADD tr_mult = transMult(state.pressure);
-        const ADD mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
+        const ADDB tr_mult = transMult(state.pressure);
+        const ADDB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
         rq_[ actph ].mob = tr_mult * kr / mu;
 
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
-        const ADD rho = fluidDensity(canonicalPhaseIdx, rq_[actph].b, state.rs, state.rv);
+        const ADDB rho = fluidDensity(canonicalPhaseIdx, rq_[actph].b, state.rs, state.rv);
         const ADB rhoavg = ops_.caver * convertToAutoDiffBlock(rho, blockPattern());
         rq_[ actph ].dh = ops_.ngrad * convertToAutoDiffBlock(phasePressure, blockPattern())
             - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
@@ -2148,8 +2148,8 @@ namespace detail {
         }
 
         // Compute phase fluxes with upwinding of formation value factor and mobility.
-        const ADD& b   = rq_[ actph ].b;
-        const ADD& mob = rq_[ actph ].mob;
+        const ADDB& b   = rq_[ actph ].b;
+        const ADDB& mob = rq_[ actph ].mob;
         const ADB& dh  = rq_[ actph ].dh;
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
         rq_[ actph ].mflux = upwind.select(convertToAutoDiffBlock((b * mob), asImpl().blockPattern())) * (transi * dh);
@@ -2506,12 +2506,12 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
+    ADDB
     BlackoilModelBase<Grid, Implementation>::fluidViscosity(const int               phase,
-                                                            const ADD&              p    ,
-                                                            const ADD&              temp ,
-                                                            const ADD&              rs   ,
-                                                            const ADD&              rv   ,
+                                                            const ADDB&              p    ,
+                                                            const ADDB&              temp ,
+                                                            const ADDB&              rs   ,
+                                                            const ADDB&              rv   ,
                                                             const std::vector<PhasePresence>& cond) const
     {
         switch (phase) {
@@ -2531,12 +2531,12 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
+    ADDB
     BlackoilModelBase<Grid, Implementation>::fluidReciprocFVF(const int phase,
-                                                              const ADD& p,
-                                                              const ADD& temp,
-                                                              const ADD& rs,
-                                                              const ADD& rv,
+                                                              const ADDB& p,
+                                                              const ADDB& temp,
+                                                              const ADDB& rs,
+                                                              const ADDB& rv,
                                                               const std::vector<PhasePresence>& cond) const
     {
         switch (phase) {
@@ -2556,14 +2556,14 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
+    ADDB
     BlackoilModelBase<Grid, Implementation>::fluidDensity(const int  phase,
-                                                          const ADD& b,
-                                                          const ADD& rs,
-                                                          const ADD& rv) const
+                                                          const ADDB& b,
+                                                          const ADDB& rs,
+                                                          const ADDB& rv) const
     {
         const double* rhos = fluid_.surfaceDensity();
-        ADD rho = rhos[phase] * b;
+        ADDB rho = rhos[phase] * b;
         if (phase == Oil && active_[Gas]) {
             // It is correct to index into rhos with canonical phase indices.
             rho += rhos[Gas] * rs * b;
@@ -2585,7 +2585,7 @@ namespace detail {
                                                const V&                satOil,
                                                const std::vector<int>& cells) const
     {
-        return fluid_.rsSat(ADD::constant(p), ADD::constant(satOil), cells).value();
+        return fluid_.rsSat(ADDB::constant(p), ADDB::constant(satOil), cells).value();
     }
 
 
@@ -2593,9 +2593,9 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
-    BlackoilModelBase<Grid, Implementation>::fluidRsSat(const ADD&              p,
-                                               const ADD&              satOil,
+    ADDB
+    BlackoilModelBase<Grid, Implementation>::fluidRsSat(const ADDB&              p,
+                                               const ADDB&              satOil,
                                                const std::vector<int>& cells) const
     {
         return fluid_.rsSat(p, satOil, cells);
@@ -2611,7 +2611,7 @@ namespace detail {
                                                const V&              satOil,
                                                const std::vector<int>& cells) const
     {
-        return fluid_.rvSat(ADD::constant(p), ADD::constant(satOil), cells).value();
+        return fluid_.rvSat(ADDB::constant(p), ADDB::constant(satOil), cells).value();
     }
 
 
@@ -2619,9 +2619,9 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
-    BlackoilModelBase<Grid, Implementation>::fluidRvSat(const ADD&              p,
-                                               const ADD&              satOil,
+    ADDB
+    BlackoilModelBase<Grid, Implementation>::fluidRvSat(const ADDB&              p,
+                                               const ADDB&              satOil,
                                                const std::vector<int>& cells) const
     {
         return fluid_.rvSat(p, satOil, cells);
@@ -2632,8 +2632,8 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
-    BlackoilModelBase<Grid, Implementation>::poroMult(const ADD& p) const
+    ADDB
+    BlackoilModelBase<Grid, Implementation>::poroMult(const ADDB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -2643,10 +2643,10 @@ namespace detail {
                 pm[i] = rock_comp_props_->poroMult(p.value()[i]);
                 dpm[i] = rock_comp_props_->poroMultDeriv(p.value()[i]);
             }
-            ADD::Derivative jac = p.derivative().colwise() * dpm;
-            return ADD::function(std::move(pm), std::move(jac));
+            ADDB::Derivative jac = p.derivative().colwise() * dpm;
+            return ADDB::function(std::move(pm), std::move(jac));
         } else {
-            return ADD::constant(V::Constant(n, 1.0));
+            return ADDB::constant(V::Constant(n, 1.0));
         }
     }
 
@@ -2655,8 +2655,8 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    ADD
-    BlackoilModelBase<Grid, Implementation>::transMult(const ADD& p) const
+    ADDB
+    BlackoilModelBase<Grid, Implementation>::transMult(const ADDB& p) const
     {
         const int n = p.size();
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
@@ -2666,10 +2666,10 @@ namespace detail {
                 tm[i] = rock_comp_props_->transMult(p.value()[i]);
                 dtm[i] = rock_comp_props_->transMultDeriv(p.value()[i]);
             }
-            ADD::Derivative jac = p.derivative().colwise() * dtm;
-            return ADD::function(std::move(tm), std::move(jac));
+            ADDB::Derivative jac = p.derivative().colwise() * dtm;
+            return ADDB::function(std::move(tm), std::move(jac));
         } else {
-            return ADD::constant(V::Constant(n, 1.0));
+            return ADDB::constant(V::Constant(n, 1.0));
         }
     }
 
