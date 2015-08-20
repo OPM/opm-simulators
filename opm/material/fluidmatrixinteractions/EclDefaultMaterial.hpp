@@ -295,21 +295,20 @@ public:
                          FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx)));
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
-        Evaluation Sw_ow = Sg + Sw;
-        Evaluation So_go = 1.0 - Sw_ow;
-        const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
-        const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
-
-        Evaluation kro;
-        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-20)
-            kro = kro_ow; // avoid division by zero
-        else {
-            const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
-            const auto& weightGasOil = 1 - weightOilWater;
-            kro = weightOilWater*kro_ow + weightGasOil*kro_go;
+        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-10) {
+            // avoid division by zero. This takes advantage of the fact that the oil
+            // relperms of the gas-oil and oil-water twophase systems must be identical
+            // for So = 1.0
+            return GasOilMaterialLaw::template twoPhaseSatKrw<Scalar>(params.gasOilParams(), Scalar(1.0));
         }
+        else {
+            Evaluation Sw_ow = Sg + Sw;
+            Evaluation So_go = 1.0 - Sw_ow;
+            const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
+            const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
-        return kro;
+            return (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
+        }
     }
 
     /*!
