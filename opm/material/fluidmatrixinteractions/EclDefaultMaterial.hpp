@@ -295,20 +295,27 @@ public:
                          FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx)));
         Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
-        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-10) {
-            // avoid division by zero. This takes advantage of the fact that the oil
-            // relperms of the gas-oil and oil-water twophase systems must be identical
-            // for So = 1.0
-            return GasOilMaterialLaw::template twoPhaseSatKrw<Scalar>(params.gasOilParams(), Scalar(1.0));
-        }
-        else {
-            Evaluation Sw_ow = Sg + Sw;
-            Evaluation So_go = 1.0 - Sw_ow;
-            const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
-            const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
+        Evaluation Sw_ow = Sg + Sw;
+        Evaluation So_go = 1.0 - Sw_ow;
+        const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
+        const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
-            return (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
+        // avoid the division by zero: chose a regularized kro which is used if Sw - Swco
+        // < epsilon/2 and interpolate between the oridinary and the regularized kro between
+        // epsilon and epsilon/2
+        const Scalar epsilon = 1e-5;
+        if (Toolbox::value(Sw_ow) - Swco < epsilon) {
+            Evaluation kro2 = (kro_ow + kro_go)/2;;
+            if (Toolbox::value(Sw_ow) - Swco > epsilon/2) {
+                Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
+                Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
+                return kro2*alpha + kro1*(1 - alpha);
+            }
+
+            return kro2;
         }
+        else
+            return (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
     }
 
     /*!
