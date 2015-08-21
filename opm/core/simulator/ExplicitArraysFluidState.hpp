@@ -35,9 +35,10 @@ class ExplicitArraysFluidState
 {
 public:
     typedef double Scalar;
+    enum { numPhases = BlackoilPhases::MaxNumPhases };
 
-    explicit ExplicitArraysFluidState(const unsigned int num_phases)
-	: numPhases_(num_phases)
+    explicit ExplicitArraysFluidState(const PhaseUsage& phaseUsage)
+        : phaseUsage_(phaseUsage)
     {}
 
     /*!
@@ -47,7 +48,17 @@ public:
      * index.
      */
     void setIndex(unsigned arrayIdx)
-    { arrayIdx_ = arrayIdx; }
+    {
+        int np = phaseUsage_.num_phases;
+        for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
+            if (!phaseUsage_.phase_used[phaseIdx]) {
+                sats_[phaseIdx] = 0.0;
+            }
+            else {
+                sats_[phaseIdx] = saturations_[np*arrayIdx + phaseUsage_.phase_pos[phaseIdx]];
+            }
+        }
+    }
 
     /*!
      * \brief Set the array containing the phase saturations.
@@ -61,34 +72,17 @@ public:
     { saturations_ = saturations; }
 
     /*!
-     * \brief Set the array containing the phase temperatures.
-     *
-     * This array is supposed to be of size 'size' and is not allowed to be
-     * deleted while the ExplicitArraysFluidState object is alive.
-     */
-    void setTemperatureArray(const double* temperature)
-    { temperature_ = temperature; }
-
-    /*!
      * \brief Returns the saturation of a phase for the current cell index.
      */
     Scalar saturation(int phaseIdx) const
-    { return saturations_[numPhases_*arrayIdx_ + phaseIdx]; }
+    { return sats_[phaseIdx]; }
 
-    /*!
-     * \brief Returns the temperature [K] of a phase for the current cell index.
-     */
-    Scalar temperature(int /* phaseIdx */) const
-    { return temperature_[arrayIdx_]; }
-
-    // TODO (?) pressure, composition, etc
+    // TODO (?) temperature, pressure, composition, etc
 
 private:
+    const PhaseUsage phaseUsage_;
     const double* saturations_;
-    const double* temperature_;
-
-    unsigned arrayIdx_;
-    unsigned numPhases_;
+    std::array<Scalar, BlackoilPhases::MaxNumPhases> sats_;
 };
 
 } // namespace Opm

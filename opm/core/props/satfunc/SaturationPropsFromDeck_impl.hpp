@@ -281,7 +281,7 @@ namespace Opm
         assert(cells != 0);
 
         const int np = phase_usage_.num_phases;
-        ExplicitArraysFluidState fluidState(np);
+        ExplicitArraysFluidState fluidState(phase_usage_);
         fluidState.setSaturationArray(s);
 
         if (dkrds) {
@@ -334,7 +334,7 @@ namespace Opm
         assert(cells != 0);
 
         const int np = phase_usage_.num_phases;
-        ExplicitArraysFluidState fluidState(np);
+        ExplicitArraysFluidState fluidState(phase_usage_);
         fluidState.setSaturationArray(s);
 
         if (dpcds) {
@@ -474,7 +474,7 @@ namespace Opm
                 const int max_np = BlackoilPhases::MaxNumPhases;
                 double s[max_np] = { 0.0 };
                 s[wpos] = swat;
-                ExplicitArraysFluidState fluidState(phase_usage_.num_phases);
+                ExplicitArraysFluidState fluidState(phase_usage_);
                 fluidState.setSaturationArray(s);
                 fluidState.setIndex(0);
                 double pc[max_np] = { 0.0 };
