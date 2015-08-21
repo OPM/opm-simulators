@@ -363,7 +363,7 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, grid);
+    std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, grid);
 
     SimulatorFullyImplicitBlackoil< Grid >  simulator(param,
                                                       grid,
