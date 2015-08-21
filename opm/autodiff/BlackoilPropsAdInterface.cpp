@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 Opm::BlackoilPropsAdInterface::~BlackoilPropsAdInterface()
