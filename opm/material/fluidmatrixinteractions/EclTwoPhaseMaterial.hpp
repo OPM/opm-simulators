@@ -20,19 +20,16 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclMultiplexerMaterial
+ * \copydoc Opm::EclTwoPhaseMaterial
  */
-#ifndef OPM_ECL_MULTIPLEXER_MATERIAL_HPP
-#define OPM_ECL_MULTIPLEXER_MATERIAL_HPP
+#ifndef OPM_ECL_TWO_PHASE_MATERIAL_HPP
+#define OPM_ECL_TWO_PHASE_MATERIAL_HPP
 
-#include "EclMultiplexerMaterialParams.hpp"
-#include "EclDefaultMaterial.hpp"
-#include "EclStone1Material.hpp"
-#include "EclStone2Material.hpp"
-#include "EclTwoPhaseMaterial.hpp"
+#include "EclTwoPhaseMaterialParams.hpp"
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
+
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
 
@@ -43,25 +40,23 @@ namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
  *
- * \brief Implements a multiplexer class that provides all three phase capillary pressure
- *        laws used by the ECLipse simulator.
+ * \brief Implements a multiplexer class that provides ECL saturation functions for
+ *        twophase simulations.
+ *
+ * The basic idea is that all inputs and outputs are still done on three phases, but only
+ * the quanties for active phases are calculated.
  */
 template <class TraitsT,
           class GasOilMaterialLawT,
           class OilWaterMaterialLawT,
-          class ParamsT = EclMultiplexerMaterialParams<TraitsT,
-                                                       GasOilMaterialLawT,
-                                                       OilWaterMaterialLawT> >
-class EclMultiplexerMaterial : public TraitsT
+          class ParamsT = EclTwoPhaseMaterialParams<TraitsT,
+                                                    typename GasOilMaterialLawT::Params,
+                                                    typename OilWaterMaterialLawT::Params> >
+class EclTwoPhaseMaterial : public TraitsT
 {
 public:
     typedef GasOilMaterialLawT GasOilMaterialLaw;
     typedef OilWaterMaterialLawT OilWaterMaterialLaw;
-
-    typedef Opm::EclStone1Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone1Material;
-    typedef Opm::EclStone2Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone2Material;
-    typedef Opm::EclDefaultMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> DefaultMaterial;
-    typedef Opm::EclTwoPhaseMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> TwoPhaseMaterial;
 
     // some safety checks
     static_assert(TraitsT::numPhases == 3,
@@ -130,30 +125,38 @@ public:
                                    const Params &params,
                                    const FluidState &fluidState)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         switch (params.approach()) {
-        case EclStone1Approach:
-            Stone1Material::capillaryPressures(values,
-                                               params.template getRealParams<EclStone1Approach>(),
-                                               fluidState);
-            break;
+        case EclTwoPhaseGasOil: {
+            const Evaluation& So =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
-        case EclStone2Approach:
-            Stone2Material::capillaryPressures(values,
-                                               params.template getRealParams<EclStone2Approach>(),
-                                               fluidState);
+            values[oilPhaseIdx] = 0.0;
+            values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), So);
             break;
+        }
 
-        case EclDefaultApproach:
-            DefaultMaterial::capillaryPressures(values,
-                                                params.template getRealParams<EclDefaultApproach>(),
-                                                fluidState);
-            break;
+        case EclTwoPhaseOilWater: {
+            const Evaluation& Sw =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
-        case EclTwoPhaseApproach:
-            TwoPhaseMaterial::capillaryPressures(values,
-                                                 params.template getRealParams<EclTwoPhaseApproach>(),
-                                                 fluidState);
+            values[waterPhaseIdx] = 0.0;
+            values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
             break;
+        }
+
+        case EclTwoPhaseGasWater: {
+            const Evaluation& Sw =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+
+            values[waterPhaseIdx] = 0.0;
+            values[gasPhaseIdx] =
+                OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw)
+                + GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), 0.0);
+            break;
+        }
         }
     }
 
@@ -250,30 +253,36 @@ public:
                                        const Params &params,
                                        const FluidState &fluidState)
     {
+        typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         switch (params.approach()) {
-        case EclStone1Approach:
-            Stone1Material::relativePermeabilities(values,
-                                                   params.template getRealParams<EclStone1Approach>(),
-                                                   fluidState);
-            break;
+        case EclTwoPhaseGasOil: {
+            const Evaluation& So =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
-        case EclStone2Approach:
-            Stone2Material::relativePermeabilities(values,
-                                                   params.template getRealParams<EclStone2Approach>(),
-                                                   fluidState);
+            values[oilPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So);
+            values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), So);
             break;
+        }
 
-        case EclDefaultApproach:
-            DefaultMaterial::relativePermeabilities(values,
-                                                    params.template getRealParams<EclDefaultApproach>(),
-                                                    fluidState);
-            break;
+        case EclTwoPhaseOilWater: {
+            const Evaluation& Sw =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
-        case EclTwoPhaseApproach:
-            TwoPhaseMaterial::relativePermeabilities(values,
-                                                     params.template getRealParams<EclTwoPhaseApproach>(),
-                                                     fluidState);
+            values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
+            values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
             break;
+        }
+
+        case EclTwoPhaseGasWater: {
+            const Evaluation& Sw =
+                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+
+            values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
+            values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
+            break;
+        }
         }
     }
 
@@ -318,26 +327,32 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params &params, const FluidState &fluidState)
     {
+        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
+
         switch (params.approach()) {
-        case EclStone1Approach:
-            Stone1Material::updateHysteresis(params.template getRealParams<EclStone1Approach>(),
-                                             fluidState);
-            break;
+        case EclTwoPhaseGasOil: {
+            Scalar So = FsToolbox::value(fluidState.saturation(oilPhaseIdx));
 
-        case EclStone2Approach:
-            Stone2Material::updateHysteresis(params.template getRealParams<EclStone2Approach>(),
-                                             fluidState);
+            params.oilWaterParams().update(/*pcSw=*/0.0, /*krwSw=*/0.0, /*krnSw=*/0.0);
+            params.gasOilParams().update(/*pcSw=*/So, /*krwSw=*/So, /*krnSw=*/So);
             break;
+        }
 
-        case EclDefaultApproach:
-            DefaultMaterial::updateHysteresis(params.template getRealParams<EclDefaultApproach>(),
-                                              fluidState);
-            break;
+        case EclTwoPhaseOilWater: {
+            Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
 
-        case EclTwoPhaseApproach:
-            TwoPhaseMaterial::updateHysteresis(params.template getRealParams<EclTwoPhaseApproach>(),
-                                               fluidState);
+            params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
+            params.gasOilParams().update(/*pcSw=*/0.0, /*krwSw=*/0.0, /*krnSw=*/0.0);
             break;
+        }
+
+        case EclTwoPhaseGasWater: {
+            Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
+
+            params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/0);
+            params.gasOilParams().update(/*pcSw=*/1.0, /*krwSw=*/0.0, /*krnSw=*/Sw);
+            break;
+        }
         }
     }
 };
