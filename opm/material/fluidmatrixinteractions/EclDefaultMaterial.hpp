@@ -335,7 +335,7 @@ public:
         Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
 
         if (params.inconsistentHysteresisUpdate()) {
-            Sg = std::min(1.0, std::max(0.0, Sg));
+            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
             // NOTE: the saturations which are passed to update the hysteresis curves are
             // inconsistent with the ones used to calculate the relative permabilities. We do
             // it like this anyway because (a) the saturation functions of opm-core do it
@@ -350,8 +350,8 @@ public:
         }
         else {
             Scalar Swco = params.Swl();
-            Sw = std::min(1.0, std::max(0.0, Sw));
-            Sg = std::min(1.0, std::max(0.0, Sg));
+            Sw = std::min(Scalar(1.0), std::max(Scalar(0.0), Sw));
+            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
 
             Scalar Sw_ow = Sg + std::max(Swco, Sw);
             Scalar So_go = 1 + Sw_ow;
