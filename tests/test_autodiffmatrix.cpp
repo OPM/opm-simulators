@@ -26,100 +26,150 @@
 #define BOOST_TEST_MODULE AutoDiffMatrixTest
 
 #include <opm/autodiff/AutoDiffMatrix.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <boost/test/unit_test.hpp>
 
-using namespace Opm::AutoDiffMatrix;
-using std::make_shared;
 typedef Eigen::SparseMatrix<double> Sp;
+typedef Opm::AutoDiffMatrix Mat;
+using namespace Opm;
 
-namespace {
-    template <typename Scalar>
-    bool
-    operator ==(const Eigen::SparseMatrix<Scalar>& A,
-                const Eigen::SparseMatrix<Scalar>& B)
-    {
-        // Two SparseMatrices are equal if
-        //   0) They have the same ordering (enforced by equal types)
-        //   1) They have the same outer and inner dimensions
-        //   2) They have the same number of non-zero elements
-        //   3) They have the same sparsity structure
-        //   4) The non-zero elements are equal
+bool
+operator ==(const Eigen::SparseMatrix<double>& A,
+	    const Eigen::SparseMatrix<double>& B)
+{
+    // Two SparseMatrices are equal if
+    //   0) They have the same ordering (enforced by equal types)
+    //   1) They have the same outer and inner dimensions
+    //   2) They have the same number of non-zero elements
+    //   3) They have the same sparsity structure
+    //   4) The non-zero elements are equal
 
-        // 1) Outer and inner dimensions
-        bool eq =       (A.outerSize() == B.outerSize());
-        eq      = eq && (A.innerSize() == B.innerSize());
+    // 1) Outer and inner dimensions
+    bool eq =       (A.outerSize() == B.outerSize());
+    eq      = eq && (A.innerSize() == B.innerSize());
 
-        // 2) Equal number of non-zero elements
-        eq      = eq && (A.nonZeros() == B.nonZeros());
+    // 2) Equal number of non-zero elements
+    eq      = eq && (A.nonZeros() == B.nonZeros());
 
-        for (typename Eigen::SparseMatrix<Scalar>::Index
-                 k0 = 0, kend = A.outerSize(); eq && (k0 < kend); ++k0) {
-            for (typename Eigen::SparseMatrix<Scalar>::InnerIterator
-                     iA(A, k0), iB(B, k0); eq && (iA && iB); ++iA, ++iB) {
-                // 3) Sparsity structure
-                eq = (iA.row() == iB.row()) && (iA.col() == iB.col());
+    for (typename Eigen::SparseMatrix<double>::Index
+	     k0 = 0, kend = A.outerSize(); eq && (k0 < kend); ++k0) {
+	for (typename Eigen::SparseMatrix<double>::InnerIterator
+		 iA(A, k0), iB(B, k0); eq && (iA && iB); ++iA, ++iB) {
+	    // 3) Sparsity structure
+	    eq = (iA.row() == iB.row()) && (iA.col() == iB.col());
 
-                // 4) Equal non-zero elements
-                eq = eq && (iA.value() == iB.value());
-            }
-        }
-
-        return eq;
-
-        // Note: Investigate implementing this operator as
-        // return A.cwiseNotEqual(B).count() == 0;
+	    // 4) Equal non-zero elements
+	    eq = eq && (iA.value() == iB.value());
+	}
     }
-}
 
+    return eq;
+
+    // Note: Investigate implementing this operator as
+    // return A.cwiseNotEqual(B).count() == 0;
+}
 
 
 BOOST_AUTO_TEST_CASE(Initialization)
 {
     // Setup.
-    Mat z = make_shared<Zero>(3,3);
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
 
-    Mat i = make_shared<Identity>(3);
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
 
-    Eigen::Array<double, Eigen::Dynamic> d1(3);
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
     d1 << 0.2, 1.2, 13.4;
-    Mat d = make_shared<Diagonal>(d1);
+    Mat d = Mat(d1.matrix().asDiagonal());
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,2);
     s1 <<
         1.0, 0.0, 2.0,
         0.0, 1.0, 0.0;
-    Sp s2(s1);
-    Mat s = make_shared<Sparse>(s2);
+    Sp s2(s1.sparseView());
+    Mat s = Mat(s2);
 }
 
 BOOST_AUTO_TEST_CASE(EigenConversion)
 {
-    // Setup
-    Mat z = make_shared<Zero>(3,3);
+    // Setup.
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
 
-    Mat i = make_shared<Identity>(3);
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
 
-    Eigen::Array<double, Eigen::Dynamic> d1(3);
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
     d1 << 0.2, 1.2, 13.4;
-    Mat d = make_shared<Diagonal>(d1);
+    Mat d = Mat(d1.matrix().asDiagonal());
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,2);
     s1 <<
         1.0, 0.0, 2.0,
         0.0, 1.0, 0.0;
-    Mat s = make_shared<Sparse>(Sp(s1));
+    Sp s2(s1.sparseView());
+    Mat s = Mat(s2);
 
     // Convert to Eigen::SparseMatrix
     Sp x;
-    z->toSparse(x);
-    BOOST_CHECK_EQUAL(x, Sp(3,3));
-    i->toSparse(x);
-    Sp i1(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3));
-    BOOST_CHECK_EQUAL(x, i1);
-    d->toSparse(x);
-    BOOST_CHECK_EQUAL(x, Sp(d1.matrix().asDiagonal()));
-    s->toSparse(x);
-    BOOST_CHECK_EQUAL(x, Sp(s1));
+    z.toSparse(x);
+    Sp z1(3,3);
+    BOOST_CHECK(x == z1);
+    i.toSparse(x);
+    Sp i1(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+    BOOST_CHECK(x == i1);
+    d.toSparse(x);
+    Sp d2 = spdiag(d1);
+    BOOST_CHECK(x == d2);
+    s.toSparse(x);
+    BOOST_CHECK(x == s2);
+}
+
+
+
+BOOST_AUTO_TEST_CASE(AdditionOps)
+{
+    // Setup.
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Sp zs(3,3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+	0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    // Convert to Eigen::SparseMatrix
+    Sp x;
+    z.toSparse(x);
+    BOOST_CHECK(x == zs);
+    i.toSparse(x);
+    BOOST_CHECK(x == is);
+    d.toSparse(x);
+    BOOST_CHECK(x == ds);
+    s.toSparse(x);
+    BOOST_CHECK(x == ss);
+
+    // Adding zero.
+    auto zpz = z + z;
+    zpz.toSparse(x);
+    BOOST_CHECK(x == zs);
+    auto ipz = i + z;
+    ipz.toSparse(x);
+    BOOST_CHECK(x == is);
+    auto dpz = d + z;
+    dpz.toSparse(x);
+    BOOST_CHECK(x == ds);
+    auto spz = s + z;
+    spz.toSparse(x);
+    BOOST_CHECK(x == ss);
 }
 
