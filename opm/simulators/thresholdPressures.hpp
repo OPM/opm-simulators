@@ -49,14 +49,7 @@ namespace Opm
     std::vector<double> thresholdPressures(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const Grid& grid)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
-        const std::vector<double>& thresholdPressureTable;
-        if(simulationConfig->hasThresholdPressure()){
-           thresholdPressureTable = simulationConfig->getThresholdPressureTable();
-        }else{
-            std::string msg = "Inferring threshold pressure from the initial state is not supported.";
-            parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
-        }
-
+        const std::vector<std::pair<bool, double>>& thresholdPressureTable = simulationConfig->getThresholdPressureTable();
         std::vector<double> thpres_vals;
 
         if (thresholdPressureTable.size() > 0) {
@@ -79,7 +72,13 @@ namespace Opm
                 }
                 const int eq1 = eqlnumData[gc[c1]] - 1;
                 const int eq2 = eqlnumData[gc[c2]] - 1;
-                thpres_vals[face] = thresholdPressureTable[eq1 + maxEqlnum*eq2];
+                std::pair<bool, double> value = thresholdPressureTable[eq1 + maxEqlnum*eq2];
+                if(value.first){
+                    thpres_vals[face] = value.second;
+                }else{
+                    std::string msg = "Inferring threshold pressure from the initial state is not supported.";
+                    parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
+                }
             }
         }
         return thpres_vals;
