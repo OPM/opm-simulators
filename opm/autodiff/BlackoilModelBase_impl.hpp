@@ -1186,9 +1186,16 @@ namespace detail {
 
 
     namespace detail {
-        double computeHydrostaticCorrection(const Wells& wells, const int w, const double vfp_ref_depth,
+        /**
+         * Simple hydrostatic correction for VFP table
+         * @param wells - wells struct
+         * @param w Well number
+         * @param vfp_table VFP table
+         * @param well_perforation_densities Densities at well perforations
+         * @param gravity Gravitational constant (e.g., 9.81...)
+         */
+        double computeHydrostaticCorrection(const Wells& wells, const int w, double vfp_ref_depth,
                                             const ADB::V& well_perforation_densities, const double gravity) {
-            //For the initial iteration, we have no perforation densities.
             const double well_ref_depth = wells.depth_ref[w];
             const double dh = vfp_ref_depth - well_ref_depth;
             const int perf = wells.well_connpos[w];
@@ -1197,6 +1204,19 @@ namespace detail {
 
             return dp;
         }
+
+        ADB::V computeHydrostaticCorrection(const Wells& wells, const ADB::V vfp_ref_depth,
+                const ADB::V& well_perforation_densities, const double gravity) {
+            const int nw = wells.number_of_wells;
+            ADB::V retval = ADB::V::Zero(nw);
+
+            for (int i=0; i<nw; ++i) {
+                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities, gravity);
+            }
+
+            return retval;
+        }
+
     } //Namespace
 
 
@@ -1314,20 +1334,16 @@ namespace detail {
                 //Set *BHP* target by calculating bhp from THP
                 const WellType& well_type = wells().type[w];
 
-                //Gather variables for hydrostatic reconstruction
-
                 if (well_type == INJECTOR) {
-                    double vfp_ref_depth = vfp_properties_.getInj()->getTable(vfp)->getDatumDepth();
                     double dp = detail::computeHydrostaticCorrection(
-                            wells(), w, vfp_ref_depth,
+                            wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
                             well_perforation_densities_, gravity);
 
                     xw.bhp()[w] = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
-                    double vfp_ref_depth = vfp_properties_.getProd()->getTable(vfp)->getDatumDepth();
                     double dp = detail::computeHydrostaticCorrection(
-                            wells(), w, vfp_ref_depth,
+                            wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
                             well_perforation_densities_, gravity);
 
                     xw.bhp()[w] = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
@@ -1577,13 +1593,9 @@ namespace detail {
         const ADB bhp_from_thp_prod = vfp_properties_.getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
 
         //Perform hydrostatic correction to computed targets
-        //FIXME: Use computeHydrostaticCorrection
-        const ADB well_ref_depth = ADB::constant(ADB::V::Map(wells().depth_ref, nw));
-        const ADB vfp_ref_depth = ADB::constant(vfp_ref_depth_v);
-        const ADB dh = vfp_ref_depth - well_ref_depth;
-        const ADB rho = ADB::constant(rho_v);
         double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB dp = rho*gravity*dh;
+        const ADB::V dp_v = detail::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, well_perforation_densities_, gravity);
+        const ADB dp = ADB::constant(dp_v);
         const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
         const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
 
@@ -1945,6 +1957,9 @@ namespace detail {
             const V bhp = bhp_old - dbhp_limited;
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
+            //Get gravity for THP hydrostatic correction
+            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+
             // Thp update
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             //Loop over all wells
@@ -1975,10 +1990,18 @@ namespace detail {
 
                         const WellType& well_type = wells().type[w];
                         if (well_type == INJECTOR) {
-                            well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w]);
+                            double dp = detail::computeHydrostaticCorrection(
+                                    wells(), w, vfp_properties_.getInj()->getTable(table_id)->getDatumDepth(),
+                                    well_perforation_densities_, gravity);
+
+                            well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
                         }
                         else if (well_type == PRODUCER) {
-                            well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w], alq);
+                            double dp = detail::computeHydrostaticCorrection(
+                                    wells(), w, vfp_properties_.getProd()->getTable(table_id)->getDatumDepth(),
+                                    well_perforation_densities_, gravity);
+
+                            well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
                         }
                         else {
                             OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
