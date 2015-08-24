@@ -571,6 +571,10 @@ private:
     {
         dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
+        // the situation for the gas phase is complicated that all saturations are
+        // shifted by the connate water saturation.
+        Scalar Swco = unscaledEpsInfo_[satnumRegionIdx].Swl;
+
         auto& effParams = *dest[satnumRegionIdx];
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
@@ -578,10 +582,13 @@ private:
             const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
             // convert the saturations of the SGOF keyword from gas to oil saturations
             std::vector<double> SoSamples(sgofTable.numRows());
-            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx)
+            std::vector<double> SoKroSamples(sgofTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
                 SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+                SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+            }
 
-            effParams.setKrwSamples(SoSamples, sgofTable.getKrogColumn());
+            effParams.setKrwSamples(SoKroSamples, sgofTable.getKrogColumn());
             effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
             effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
             effParams.finalize();
@@ -593,13 +600,15 @@ private:
             const auto& sgfnTable = eclState->getSgfnTables()[satnumRegionIdx];
             const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
 
-            const auto &SoColumn = sof3Table.getSoColumn();
             // convert the saturations of the SGFN keyword from gas to oil saturations
             std::vector<double> SoSamples(sgfnTable.numRows());
-            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx)
+            std::vector<double> SoKroSamples(sgfnTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
                 SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
+                SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+            }
 
-            effParams.setKrwSamples(SoColumn, sof3Table.getKrogColumn());
+            effParams.setKrwSamples(SoKroSamples, sof3Table.getKrogColumn());
             effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
             effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
             effParams.finalize();
@@ -621,9 +630,8 @@ private:
         auto& effParams = *dest[satnumRegionIdx];
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI: {
-        const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
-
-        const auto &SwColumn = swofTable.getSwColumn();
+            const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
+            const auto &SwColumn = swofTable.getSwColumn();
 
             effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
             effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
