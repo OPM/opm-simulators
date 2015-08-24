@@ -538,12 +538,13 @@ private:
     const SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const{
 
         const std::vector<SwofTable>& swofTables = eclState->getSwofTables();
+        const std::vector<SlgofTable>& slgofTables = eclState->getSlgofTables();
         const std::vector<SgofTable>& sgofTables = eclState->getSgofTables();
         const std::vector<SwfnTable>& swfnTables = eclState->getSwfnTables();
         const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
         const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
 
-        bool family1 = !sgofTables.empty() && !swofTables.empty();
+        bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
         if (family1 && family2) {
@@ -579,19 +580,39 @@ private:
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
         {
-            const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
-            // convert the saturations of the SGOF keyword from gas to oil saturations
-            std::vector<double> SoSamples(sgofTable.numRows());
-            std::vector<double> SoKroSamples(sgofTable.numRows());
-            for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
-                SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
-                SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+            if (!eclState->getSgofTables().empty()) {
+                const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+
+                // convert the saturations of the SGOF keyword from gas to oil saturations
+                std::vector<double> SoSamples(sgofTable.numRows());
+                std::vector<double> SoKroSamples(sgofTable.numRows());
+                for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
+                    SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+                    SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+                }
+
+                effParams.setKrwSamples(SoKroSamples, sgofTable.getKrogColumn());
+                effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
+                effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
+                effParams.finalize();
+            }
+            else if (!eclState->getSlgofTables().empty()) {
+                const auto& slgofTable = eclState->getSlgofTables()[satnumRegionIdx];
+
+                // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
+                std::vector<double> SoSamples(slgofTable.numRows());
+                std::vector<double> SoKroSamples(slgofTable.numRows());
+                for (size_t sampleIdx = 0; sampleIdx < slgofTable.numRows(); ++ sampleIdx) {
+                    SoSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx];
+                    SoKroSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx] - Swco;
+                }
+
+                effParams.setKrwSamples(SoKroSamples, slgofTable.getKrogColumn());
+                effParams.setKrnSamples(SoSamples, slgofTable.getKrgColumn());
+                effParams.setPcnwSamples(SoSamples, slgofTable.getPcogColumn());
+                effParams.finalize();
             }
 
-            effParams.setKrwSamples(SoKroSamples, sgofTable.getKrogColumn());
-            effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
-            effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
-            effParams.finalize();
             break;
         }
 
