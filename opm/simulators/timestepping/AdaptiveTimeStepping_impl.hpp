@@ -44,7 +44,7 @@ namespace Opm {
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) )
-        , last_timestep_( -1.0 )
+        , suggested_next_timestep_( -1.0 )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
     {
         // valid are "pid" and "pid+iteration"
@@ -102,19 +102,19 @@ namespace Opm {
         const double timestep = simulatorTimer.currentStepLength();
 
         // init last time step as a fraction of the given time step
-        if( last_timestep_ < 0 ) {
-            last_timestep_ = restart_factor_ * timestep;
+        if( suggested_next_timestep_ < 0 ) {
+            suggested_next_timestep_ = restart_factor_ * timestep;
         }
 
         if (full_timestep_initially_) {
-            last_timestep_ = timestep;
+            suggested_next_timestep_ = timestep;
         }
 
         // TODO
         // take change in well state into account
 
         // create adaptive step timer with previously used sub step size
-        AdaptiveSimulatorTimer substepTimer( simulatorTimer, last_timestep_, max_time_step_ );
+        AdaptiveSimulatorTimer substepTimer( simulatorTimer, suggested_next_timestep_, max_time_step_ );
 
         // copy states in case solver has to be restarted (to be revised)
         State  last_state( state );
@@ -226,15 +226,15 @@ namespace Opm {
 
 
         // store estimated time step for next reportStep
-        last_timestep_ = substepTimer.currentStepLength();
+        suggested_next_timestep_ = substepTimer.currentStepLength();
         if( timestep_verbose_ )
         {
             substepTimer.report( std::cout );
-            std::cout << "Suggested next step size = " << unit::convert::to( last_timestep_, unit::day ) << " (days)" << std::endl;
+            std::cout << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
         }
 
-        if( ! std::isfinite( last_timestep_ ) ) { // check for NaN
-            last_timestep_ = timestep;
+        if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
+            suggested_next_timestep_ = timestep;
         }
     }
 }
