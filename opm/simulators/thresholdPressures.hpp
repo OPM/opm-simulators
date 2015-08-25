@@ -17,12 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <vector>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
-
 #ifndef OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
 #define OPM_THRESHOLDPRESSURES_HEADER_INCLUDED
+
+#include <vector>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+
 
 namespace Opm
 {
@@ -49,14 +51,11 @@ namespace Opm
     std::vector<double> thresholdPressures(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const Grid& grid)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
-        const std::vector<std::pair<bool, double>>& thresholdPressureTable = simulationConfig->getThresholdPressureTable();
         std::vector<double> thpres_vals;
-
-        if (thresholdPressureTable.size() > 0) {
-
+        if (simulationConfig->hasThresholdPressure()) {
+            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
             std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
             auto eqlnumData = eqlnum->getData();
-            int maxEqlnum = *std::max_element(eqlnumData.begin(), eqlnumData.end());
 
             // Set values for each face.
             const int num_faces = UgGridHelpers::numFaces(grid);
@@ -70,14 +69,18 @@ namespace Opm
                     // Boundary face, skip this.
                     continue;
                 }
-                const int eq1 = eqlnumData[gc[c1]] - 1;
-                const int eq2 = eqlnumData[gc[c2]] - 1;
-                std::pair<bool, double> value = thresholdPressureTable[eq1 + maxEqlnum*eq2];
-                if(value.first){
-                    thpres_vals[face] = value.second;
-                }else{
-                    std::string msg = "Inferring threshold pressure from the initial state is not supported.";
-                    parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
+                const int gc1 = (gc == 0) ? c1 : gc[c1];
+                const int gc2 = (gc == 0) ? c2 : gc[c2];
+                const int eq1 = eqlnumData[gc1];
+                const int eq2 = eqlnumData[gc2];
+
+                if (thresholdPressure->hasRegionBarrier(eq1,eq2)) {
+                    if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
+                        thpres_vals[face] = thresholdPressure->getThresholdPressure(eq1,eq2);
+                    } else {
+                        std::string msg = "Initializing the THPRES pressure values from the initial state is not supported - using 0.0";
+                        parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
+                    }
                 }
             }
         }
