@@ -384,7 +384,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         if (pw.derivative().empty()) {
             return ADB::constant(std::move(mu));
         } else {
-            ADB::M dmudp_diag = spdiag(dmudp);
+            // ADB::M dmudp_diag = spdiag(dmudp);
+            ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
             const int num_blocks = pw.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
@@ -420,15 +421,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
                                                 &cond[0], mu.data(), dmudp.data(), dmudr.data());
 
-        ADB::M dmudp_diag = spdiag(dmudp);
-        ADB::M dmudr_diag = spdiag(dmudr);
+        // ADB::M dmudp_diag = spdiag(dmudp);
+        // ADB::M dmudr_diag = spdiag(dmudr);
+        ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
+        ADB::M dmudr_diag(dmudr.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dmudp_diag, po.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
-            jacs[block] += temp;
+            // jacs[block] += temp;
+	    jacs[block] = jacs[block] + temp;
         }
         return ADB::function(std::move(mu), std::move(jacs));
     }
@@ -459,15 +463,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(),&cond[0],
                                                   mu.data(), dmudp.data(), dmudr.data());
 
-        ADB::M dmudp_diag = spdiag(dmudp);
-        ADB::M dmudr_diag = spdiag(dmudr);
+        // ADB::M dmudp_diag = spdiag(dmudp);
+        // ADB::M dmudr_diag = spdiag(dmudr);
+        ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
+        ADB::M dmudr_diag(dmudr.matrix().asDiagonal());
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dmudr_diag, rv.derivative()[block], temp);
-            jacs[block] += temp;
+            // jacs[block] += temp;
+	    jacs[block] = jacs[block] + temp;
         }
         return ADB::function(std::move(mu), std::move(jacs));
     }
@@ -500,7 +507,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
                                                  b.data(), dbdp.data(), dbdr.data());
 
-        ADB::M dbdp_diag = spdiag(dbdp);
+        // ADB::M dbdp_diag = spdiag(dbdp);
+        ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
         const int num_blocks = pw.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
@@ -536,15 +544,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
                                                &cond[0], b.data(), dbdp.data(), dbdr.data());
 
-        ADB::M dbdp_diag = spdiag(dbdp);
-        ADB::M dbdr_diag = spdiag(dbdr);
+        // ADB::M dbdp_diag = spdiag(dbdp);
+        // ADB::M dbdr_diag = spdiag(dbdr);
+        ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
+        ADB::M dbdr_diag(dbdr.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dbdp_diag, po.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
-            jacs[block] += temp;
+            // jacs[block] += temp;
+	    jacs[block] = jacs[block] + temp;
         }
         return ADB::function(std::move(b), std::move(jacs));
     }
@@ -576,15 +587,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(), &cond[0],
                                                b.data(), dbdp.data(), dbdr.data());
 
-        ADB::M dbdp_diag = spdiag(dbdp);
-        ADB::M dbdr_diag = spdiag(dbdr);
+        // ADB::M dbdp_diag = spdiag(dbdp);
+        // ADB::M dbdr_diag = spdiag(dbdr);
+        ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
+        ADB::M dbdr_diag(dbdr.matrix().asDiagonal());
         const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dbdr_diag, rv.derivative()[block], temp);
-            jacs[block] += temp;
+            // jacs[block] += temp;
+	    jacs[block] = jacs[block] + temp;
         }
         return ADB::function(std::move(b), std::move(jacs));
     }
@@ -609,7 +623,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rbub(n);
         V drbubdp(n);
         props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.value().data(), rbub.data(), drbubdp.data());
-        ADB::M drbubdp_diag = spdiag(drbubdp);
+        // ADB::M drbubdp_diag = spdiag(drbubdp);
+        ADB::M drbubdp_diag(drbubdp.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
@@ -650,7 +665,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rv(n);
         V drvdp(n);
         props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.value().data(), rv.data(), drvdp.data());
-        ADB::M drvdp_diag = spdiag(drvdp);
+        // ADB::M drvdp_diag = spdiag(drvdp);
+        ADB::M drvdp_diag(drvdp.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
@@ -726,11 +742,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                     const int phase2_pos = phase_usage_.phase_pos[phase2];
                     // Assemble dkr1/ds2.
                     const int column = phase1_pos + np*phase2_pos; // Recall: Fortran ordering from props_.relperm()
-                    ADB::M dkr1_ds2_diag = spdiag(dkr.col(column));
+                    // ADB::M dkr1_ds2_diag = spdiag(dkr.col(column));
+                    ADB::M dkr1_ds2_diag(dkr.col(column).matrix().asDiagonal());
                     for (int block = 0; block < num_blocks; ++block) {
                         ADB::M temp;
                         fastSparseProduct(dkr1_ds2_diag, s[phase2]->derivative()[block], temp);
-                        jacs[block] += temp;
+                        // jacs[block] += temp;
+                        jacs[block] = jacs[block] + temp;
                     }
                 }
                 ADB::V val = kr.col(phase1_pos);
@@ -787,11 +805,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                     const int phase2_pos = phase_usage_.phase_pos[phase2];
                     // Assemble dpc1/ds2.
                     const int column = phase1_pos + nActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
-                    ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                    // ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
+                    ADB::M dpc1_ds2_diag(dpc.col(column).matrix().asDiagonal());
                     for (int block = 0; block < nBlocks; ++block) {
                         ADB::M temp;
                         fastSparseProduct(dpc1_ds2_diag, s[phase2]->derivative()[block], temp);
-                        jacs[block] += temp;
+                        // jacs[block] += temp;
+                        jacs[block] = jacs[block] + temp;
                     }
                 }
                 ADB::V val = pc.col(phase1_pos);
@@ -892,7 +912,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                     dfactor_dso[i] = vap*std::pow(so_i/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
                 }
             }
-            ADB::M dfactor_dso_diag = spdiag(dfactor_dso);
+            // ADB::M dfactor_dso_diag = spdiag(dfactor_dso);
+            ADB::M dfactor_dso_diag(dfactor_dso.matrix().asDiagonal());
             const int num_blocks = so.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {

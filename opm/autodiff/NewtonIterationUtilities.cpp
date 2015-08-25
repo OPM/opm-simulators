@@ -62,14 +62,17 @@ namespace Opm
         const std::vector<M>& Jn = eqs[n].derivative();
 
         // Use sparse LU to solve the block submatrices i.e compute inv(D)
+	typedef Eigen::SparseMatrix<double> Sp;
+	Sp Jnn;
+	Jn[n].toSparse(Jnn);
 #if HAVE_UMFPACK
-        const Eigen::UmfPackLU< M > solver(Jn[n]);
+        const Eigen::UmfPackLU<Sp> solver(Jnn);
 #else
-        const Eigen::SparseLU< M > solver(Jn[n]);
+        const Eigen::SparseLU<Sp> solver(Jnn);
 #endif
-        M id(Jn[n].rows(), Jn[n].cols());
+        Sp id(Jn[n].rows(), Jn[n].cols());
         id.setIdentity();
-        const Eigen::SparseMatrix<M::Scalar, Eigen::ColMajor> Di = solver.solve(id);
+        const Sp Di = solver.solve(id);
 
         // compute inv(D)*bn for the update of the right hand side
         const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
@@ -105,7 +108,9 @@ namespace Opm
                 // Subtract Bu (B*inv(D)*C)
                 M Bu;
                 fastSparseProduct(B, u, Bu);
-                J -= Bu;
+                // J -= Bu;
+		Bu = Bu * -1.0;
+		J = J + Bu;
             }
         }
 
@@ -136,7 +141,7 @@ namespace Opm
         // the eliminated equation, and x is the partial solution
         // of the non-eliminated unknowns.
 
-        const M& D = equation.derivative()[n];
+        const M& D1 = equation.derivative()[n];
         // Build C.
         std::vector<M> C_jacs = equation.derivative();
         C_jacs.erase(C_jacs.begin() + n);
@@ -145,10 +150,13 @@ namespace Opm
         const M& C = eq_coll.derivative()[0];
 
         // Use sparse LU to solve the block submatrices
+	typedef Eigen::SparseMatrix<double> Sp;
+	Sp D;
+	D1.toSparse(D);
 #if HAVE_UMFPACK
-        const Eigen::UmfPackLU< M > solver(D);
+        const Eigen::UmfPackLU<Sp> solver(D);
 #else
-        const Eigen::SparseLU< M > solver(D);
+        const Eigen::SparseLU<Sp> solver(D);
 #endif
 
         // Compute value of eliminated variable.
@@ -190,6 +198,7 @@ namespace Opm
                             Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                             V& b)
     {
+	/*
         if (num_phases != 3) {
             OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases.");
         }
@@ -269,6 +278,7 @@ namespace Opm
         // Create output as product of L with equations.
         A = L * total_residual.derivative()[0];
         b = L * total_residual.value().matrix();
+	*/
     }
 
 

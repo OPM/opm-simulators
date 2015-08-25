@@ -47,6 +47,7 @@ namespace Opm
     NewtonIterationBlackoilSimple::SolutionVector
     NewtonIterationBlackoilSimple::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
+	/*
         typedef LinearisedBlackoilResidual::ADB ADB;
         const int np = residual.material_balance_eq.size();
         ADB mass_res = residual.material_balance_eq[0];
@@ -73,6 +74,7 @@ namespace Opm
                       "Linear solver convergence failure.");
         }
         return dx;
+	*/
     }
 
     const boost::any& NewtonIterationBlackoilSimple::parallelInformation() const

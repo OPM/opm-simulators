@@ -28,6 +28,9 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/autodiff/AutoDiffMatrix.hpp>
+
+
 #include <utility>
 #include <vector>
 #include <cassert>
@@ -94,7 +97,7 @@ namespace Opm
         /// Underlying type for values.
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> V;
         /// Underlying type for jacobians.
-        typedef Eigen::SparseMatrix<Scalar> M;
+        typedef AutoDiffMatrix M;
 
         /// Construct an empty AutoDiffBlock.
         static AutoDiffBlock null()
@@ -155,22 +158,23 @@ namespace Opm
             }
             // ... then set the one corrresponding to this variable to identity.
             assert(blocksizes[index] == num_elem);
-            if(val.size()>0)
-            {
-                // if val is empty the following will run into an assertion
-                // with Eigen
-                jac[index].reserve(Eigen::VectorXi::Constant(val.size(), 1));
-                for (typename M::Index row = 0; row < val.size(); ++row) {
-                    jac[index].insert(row, row) = Scalar(1.0);
-                }
-            }
-            else
-            {
-                // Do some check. Empty jacobian only make sense for empty val.
-                for (int i = 0; i < num_blocks; ++i) {
-                    assert(jac[i].size()==0);
-            }
-            }
+	    jac[index] = M(M::IdentityMatrix, val.size());
+            // if(val.size()>0)
+            // {
+            //     // if val is empty the following will run into an assertion
+            //     // with Eigen
+            //     jac[index].reserve(Eigen::VectorXi::Constant(val.size(), 1));
+            //     for (typename M::Index row = 0; row < val.size(); ++row) {
+            //         jac[index].insert(row, row) = Scalar(1.0);
+            //     }
+            // }
+            // else
+            // {
+            //     // Do some check. Empty jacobian only make sense for empty val.
+            //     for (int i = 0; i < num_blocks; ++i) {
+            //         assert(jac[i].size()==0);
+            // }
+            // }
             return AutoDiffBlock(std::move(val), std::move(jac));
         }
 
@@ -254,7 +258,8 @@ namespace Opm
                 const int num_blocks = rhs.numBlocks();
                 jac_.resize(num_blocks);
                 for (int block = 0; block < num_blocks; ++block) {
-                    jac_[block] = -rhs.jac_[block];
+                    // jac_[block] = -rhs.jac_[block];
+                    jac_[block] = rhs.jac_[block] * (-1.0);
                 }
             } else if (!rhs.jac_.empty()) {
                 assert (numBlocks()    == rhs.numBlocks());
@@ -334,9 +339,11 @@ namespace Opm
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
-            typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
-            D D1 = val_.matrix().asDiagonal();
-            D D2 = rhs.val_.matrix().asDiagonal();
+            // typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
+            // D D1 = val_.matrix().asDiagonal();
+            // D D2 = rhs.val_.matrix().asDiagonal();
+            M D1(val_.matrix().asDiagonal());
+	    M D2(rhs.val_.matrix().asDiagonal());
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -371,9 +378,12 @@ namespace Opm
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
             typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
-            D D1 = val_.matrix().asDiagonal();
-            D D2 = rhs.val_.matrix().asDiagonal();
-            D D3 = (1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal();
+            // D D1 = val_.matrix().asDiagonal();
+            // D D2 = rhs.val_.matrix().asDiagonal();
+            // D D3 = (1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal();
+            M D1(val_.matrix().asDiagonal());
+	    M D2(rhs.val_.matrix().asDiagonal());
+	    M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -381,15 +391,14 @@ namespace Opm
                     jac[block] = M( D3.rows(), jac_[block].cols() );
                 }
                 else if( jac_[block].nonZeros() == 0 ) {
-                    jac[block] = D3 * ( D1*rhs.jac_[block]);
-                    jac[block] *= -1.0;
+                    jac[block] =  D3 * ( D1*rhs.jac_[block]) * (-1.0);
                 }
                 else if ( rhs.jac_[block].nonZeros() == 0 )
                 {
                     jac[block] = D3 * (D2*jac_[block]);
                 }
                 else {
-                    jac[block] = D3 * (D2*jac_[block] - D1*rhs.jac_[block]);
+                    jac[block] = D3 * (D2*jac_[block] + (D1*rhs.jac_[block]*(-1.0)));
                 }
             }
             return function(val_ / rhs.val_, std::move(jac));
@@ -489,9 +498,26 @@ namespace Opm
     }
 
 
-    /// Multiply with sparse matrix from the left.
+    /// Multiply with AutoDiffMatrix from the left.
     template <typename Scalar>
     AutoDiffBlock<Scalar> operator*(const typename AutoDiffBlock<Scalar>::M& lhs,
+                                    const AutoDiffBlock<Scalar>& rhs)
+    {
+        int num_blocks = rhs.numBlocks();
+        std::vector<typename AutoDiffBlock<Scalar>::M> jac(num_blocks);
+        assert(lhs.cols() == rhs.value().rows());
+        for (int block = 0; block < num_blocks; ++block) {
+            // jac[block] = lhs*rhs.derivative()[block];
+            fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
+        }
+        typename AutoDiffBlock<Scalar>::V val = lhs*rhs.value().matrix();
+        return AutoDiffBlock<Scalar>::function(std::move(val), std::move(jac));
+    }
+
+
+    /// Multiply with Eigen sparse matrix from the left.
+    template <typename Scalar>
+    AutoDiffBlock<Scalar> operator*(const Eigen::SparseMatrix<Scalar>& lhs,
                                     const AutoDiffBlock<Scalar>& rhs)
     {
         int num_blocks = rhs.numBlocks();

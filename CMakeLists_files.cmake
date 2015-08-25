@@ -33,12 +33,12 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/NewtonIterationBlackoilSimple.cpp
 	opm/autodiff/NewtonIterationUtilities.cpp
 	opm/autodiff/GridHelpers.cpp
-	opm/autodiff/ImpesTPFAAD.cpp
+#	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
-	opm/autodiff/SimulatorIncompTwophaseAd.cpp
-	opm/autodiff/TransportSolverTwophaseAd.cpp
+#	opm/autodiff/SimulatorIncompTwophaseAd.cpp
+#	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
-	opm/autodiff/SolventPropsAdFromDeck.cpp
+#	opm/autodiff/SolventPropsAdFromDeck.cpp
 	opm/autodiff/BlackoilModelParameters.cpp
 	opm/autodiff/WellDensitySegmented.cpp
 	opm/autodiff/LinearisedBlackoilResidual.cpp
@@ -83,20 +83,20 @@ endif()
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
-	examples/find_zero.cpp
+#	examples/find_zero.cpp
 	examples/flow.cpp
-	examples/flow_solvent.cpp
-	examples/sim_2p_incomp_ad.cpp
-	examples/sim_simple.cpp
-	examples/opm_init_check.cpp
+#	examples/flow_solvent.cpp
+#	examples/sim_2p_incomp_ad.cpp
+#	examples/sim_simple.cpp
+#	examples/opm_init_check.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
-	examples/sim_2p_incomp_ad.cpp
+#	examples/sim_2p_incomp_ad.cpp
 	examples/flow.cpp
-        examples/opm_init_check.cpp
+#        examples/opm_init_check.cpp
 	)
 
 # originally generated with the command:
