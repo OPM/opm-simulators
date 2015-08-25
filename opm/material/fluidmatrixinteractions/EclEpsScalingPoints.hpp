@@ -190,7 +190,7 @@ struct EclEpsScalingPointsInfo
         const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
         const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
 
-        bool family1 = !sgofTables.empty() && !swofTables.empty();
+        bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
         if (family1)
