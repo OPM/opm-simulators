@@ -27,6 +27,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/autodiff/fastSparseProduct.hpp>
 
 namespace Opm
 {
@@ -38,6 +39,15 @@ namespace Opm
 	    : type_(Z),
 	      rows_(0),
 	      cols_(0)
+	{
+	}
+
+
+
+	AutoDiffMatrix(const int rows, const int cols)
+	    : type_(Z),
+	      rows_(rows),
+	      cols_(cols)
 	{
 	}
 
@@ -156,6 +166,82 @@ namespace Opm
 		}
 	    }
 	}
+
+
+
+
+
+
+
+	AutoDiffMatrix& operator+=(const AutoDiffMatrix& rhs)
+	{
+	    *this = *this + rhs;
+	    return *this;
+	}
+
+
+
+
+
+
+	AutoDiffMatrix& operator-=(const AutoDiffMatrix& rhs)
+	{
+	    *this = *this + rhs * -1.0;
+	    return *this;
+	}
+
+
+
+
+
+
+	AutoDiffMatrix operator*(const double rhs) const
+	{
+	    switch (type_) {
+	    case Z:
+		return *this;
+	    case I:
+		{
+		    AutoDiffMatrix retval(*this);
+		    retval.type_ = D;
+		    retval.d_ = rhs * Eigen::VectorXd::Ones(rows_).asDiagonal();
+		    return retval;
+		}
+	    case D:
+		{
+		    AutoDiffMatrix retval(*this);
+		    retval.d_ = rhs * retval.d_;
+		    return retval;
+		}
+	    case S:
+		{
+		    AutoDiffMatrix retval(*this);
+		    retval.s_ *= rhs;
+		    return retval;
+		}
+	    }
+	}
+
+
+
+
+
+
+	Eigen::VectorXd operator*(const Eigen::VectorXd& rhs) const
+	{
+	    assert(cols_ == rhs.size());
+	    switch (type_) {
+	    case Z:
+		return Eigen::VectorXd::Zero(rows_);
+	    case I:
+		return rhs;
+	    case D:
+		return d_ * rhs;
+	    case S:
+		return s_ * rhs;
+	    }
+	}
+
 
 
 
@@ -282,7 +368,8 @@ namespace Opm
 	    retval.type_ = S;
 	    retval.rows_ = lhs.rows_;
 	    retval.cols_ = rhs.cols_;
-	    retval.s_ = lhs.s_ * rhs.s_;
+	    // retval.s_ = lhs.s_ * rhs.s_;
+	    fastSparseProduct(lhs.s_, rhs.s_, retval.s_);
 	    return retval;
 	}
 
@@ -306,6 +393,46 @@ namespace Opm
 	    }
 	}
 
+
+	int rows() const
+	{
+	    return rows_;
+	}
+
+	int cols() const
+	{
+	    return cols_;
+	}
+
+	int nonZeros() const
+	{
+	    switch (type_) {
+	    case Z:
+		return 0;
+	    case I:
+		return rows_;
+	    case D:
+		return rows_;
+	    case S:
+		return s_.nonZeros();
+	    }
+	}
+
+
+	double coeff(const int row, const int col) const
+	{
+	    switch (type_) {
+	    case Z:
+		return 0.0;
+	    case I:
+		return (row == col) ? 1.0 : 0.0;
+	    case D:
+		return (row == col) ? d_.diagonal()(row) : 0.0;
+	    case S:
+		return s_.coeff(row, col);
+	    }
+	}
+
     private:
 	enum MatrixType { Z, I, D, S };
 	MatrixType type_;
@@ -313,7 +440,6 @@ namespace Opm
 	int cols_;
 	Eigen::DiagonalMatrix<double, Eigen::Dynamic> d_;
 	Eigen::SparseMatrix<double> s_;
-
 
 	template <class V>
 	static inline
@@ -332,6 +458,28 @@ namespace Opm
 	}
 
     };
+
+
+
+
+    inline void fastSparseProduct(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs, AutoDiffMatrix& res)
+    {
+	res = lhs * rhs;
+    }
+
+
+    inline void fastSparseProduct(const Eigen::SparseMatrix<double>& lhs, const AutoDiffMatrix& rhs, AutoDiffMatrix& res)
+    {
+	res = AutoDiffMatrix(lhs) * rhs;
+    }
+
+
+    inline AutoDiffMatrix operator*(const Eigen::SparseMatrix<double>& lhs, const AutoDiffMatrix& rhs)
+    {
+	AutoDiffMatrix retval;
+	fastSparseProduct(lhs, rhs, retval);
+	return retval;
+    }
 
 } // namespace Opm
 
