@@ -225,8 +225,8 @@ namespace Opm {
         }
 
 
-        // store max of the small time step for next reportStep
-        last_timestep_ = substepTimer.averageStepLength();
+        // store estimated time step for next reportStep
+        last_timestep_ = substepTimer.currentStepLength();
         if( timestep_verbose_ )
         {
             substepTimer.report( std::cout );
