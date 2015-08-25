@@ -268,7 +268,7 @@ try
     bool use_local_perm = param.getDefault("use_local_perm", true);
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
 
-    std::vector<double> threshold_pressures = thresholdPressures(eclipseState, *grid->c_grid());
+    std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, *grid->c_grid());
 
     SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid>
         simulator(param,
