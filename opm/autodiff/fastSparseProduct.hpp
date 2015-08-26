@@ -153,7 +153,7 @@ inline void fastDiagSparseProduct(const Eigen::DiagonalMatrix<double, Eigen::Dyn
     for (int col = 0; col < n; ++col) {
 	typedef Eigen::SparseMatrix<double>::InnerIterator It;
 	for (It it(res, col); it; ++it) {
-	    it.valueRef() *= rhs.diagonal()(it.row());
+	    it.valueRef() *= lhs.diagonal()(it.row());
 	}
     }
 }
