@@ -330,10 +330,11 @@ namespace Opm
 	{
 	    assert(lhs.type_ == D);
 	    assert(rhs.type_ == D);
-	    AutoDiffMatrix retval = lhs;
-	    for (int r = 0; r < lhs.rows_; ++r) {
-		retval.d_.diagonal().array() *= rhs.d_.diagonal().array();
-	    }
+	    AutoDiffMatrix retval;
+	    retval.type_ = D;
+	    retval.rows_ = lhs.rows_;
+	    retval.cols_ = rhs.cols_;
+	    retval.d_ = (lhs.d_.diagonal().array() * rhs.d_.diagonal().array()).matrix().asDiagonal();
 	    return retval;
 	}
 

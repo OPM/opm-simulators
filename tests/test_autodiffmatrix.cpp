@@ -173,3 +173,51 @@ BOOST_AUTO_TEST_CASE(AdditionOps)
     BOOST_CHECK(x == ss);
 }
 
+BOOST_AUTO_TEST_CASE(MultOps)
+{
+    // Setup.
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Sp zs(3,3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+	0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    // Convert to Eigen::SparseMatrix
+    Sp x;
+    z.toSparse(x);
+    BOOST_CHECK(x == zs);
+    i.toSparse(x);
+    BOOST_CHECK(x == is);
+    d.toSparse(x);
+    BOOST_CHECK(x == ds);
+    s.toSparse(x);
+    BOOST_CHECK(x == ss);
+
+    // Multiply by diagonal matrix.
+    auto ztd = z * d;
+    ztd.toSparse(x);
+    BOOST_CHECK(x == zs*ds);
+    auto itd = i * d;
+    itd.toSparse(x);
+    BOOST_CHECK(x == is*ds);
+    auto dtd = d * d;
+    dtd.toSparse(x);
+    BOOST_CHECK(x == ds*ds);
+    auto std = s * d;
+    std.toSparse(x);
+    BOOST_CHECK(x == ss*ds);
+}
+
