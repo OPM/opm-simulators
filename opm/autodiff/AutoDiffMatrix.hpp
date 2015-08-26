@@ -343,11 +343,13 @@ namespace Opm
 	    assert(lhs.type_ == D);
 	    assert(rhs.type_ == S);
 	    AutoDiffMatrix retval;
-	    Eigen::SparseMatrix<double> diag = spdiag(lhs.d_.diagonal());
+	    // Eigen::SparseMatrix<double> diag = spdiag(lhs.d_.diagonal());
 	    retval.type_ = S;
 	    retval.rows_ = lhs.rows_;
 	    retval.cols_ = rhs.cols_;
-	    fastSparseProduct(diag, rhs.s_, retval.s_);
+	    // fastSparseProduct(diag, rhs.s_, retval.s_);
+	    fastDiagSparseProduct(lhs.d_, rhs.s_, retval.s_);
+	    // retval.s_ = lhs.d_ * rhs.s_;
 	    return retval;
 	}
 
@@ -356,11 +358,13 @@ namespace Opm
 	    assert(lhs.type_ == S);
 	    assert(rhs.type_ == D);
 	    AutoDiffMatrix retval;
-	    Eigen::SparseMatrix<double> diag = spdiag(rhs.d_.diagonal());
+	    // Eigen::SparseMatrix<double> diag = spdiag(rhs.d_.diagonal());
 	    retval.type_ = S;
 	    retval.rows_ = lhs.rows_;
 	    retval.cols_ = rhs.cols_;
-	    fastSparseProduct(lhs.s_, diag, retval.s_);
+	    // fastSparseProduct(lhs.s_, diag, retval.s_);
+	    fastSparseDiagProduct(lhs.s_, rhs.d_, retval.s_);
+	    // retval.s_ = lhs.s_ * rhs.d_;
 	    return retval;
 	}
 
