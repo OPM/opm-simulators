@@ -464,9 +464,11 @@ collapseJacs(const AutoDiffBlock<double>& x, Matrix& jacobian)
 	jac1.toSparse(jac);
         for (Eigen::SparseMatrix<double>::Index k = 0; k < jac.outerSize(); ++k) {
             for (Eigen::SparseMatrix<double>::InnerIterator i(jac, k); i ; ++i) {
-                t.push_back(Tri(i.row(),
-                                i.col() + block_col_start,
-                                i.value()));
+		if (i.value() != 0.0) {
+		    t.push_back(Tri(i.row(),
+				    i.col() + block_col_start,
+				    i.value()));
+		}
             }
         }
         block_col_start += jac.cols();
