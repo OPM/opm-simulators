@@ -43,10 +43,17 @@ namespace Opm
     {
     public:
 
+        WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells);
 
-        size_t numberOfPerforations() const;
-        size_t numberOfSegment() const;
+        const size_t numberOfPerforations() const;
+        const size_t numberOfSegment() const;
 
+        const struct WellControls* wellControls() const;
+        const std::vector<double>& compFrac() const;
+
+        const size_t numberOfPhases() const;
+
+        const enum WellType wellType() const;
         const std::vector<double>& wellIndex() const;
         const std::vector<double>& perfDepth() const;
         const std::vector<int>& wellCell() const;
@@ -65,10 +72,21 @@ namespace Opm
 
     private:
         // name of the well
-        std::string m_well_name;
+        std::string m_well_name_;
         // flag to indicate if this well is a
         // multi-segmented well
         bool m_is_multi_segment_;
+        // well type
+        // INJECTOR or PRODUCER
+        enum WellType m_well_type_;
+        // number of phases
+        size_t m_number_of_phases_;
+        // component fractions for each well
+        std::vector<double> m_comp_frac_;
+        // controls for this well
+        // using pointer for temporary
+        // changing it when figuring out how to using it
+        struct WellControls *m_well_controls_;
         // components of the pressure drop to be included
         WellSegment::CompPresureDropEnum m_comp_pressure_drop_;
         // multi-phase flow model
@@ -79,7 +97,7 @@ namespace Opm
         size_t m_number_of_segments_;
         // well index for each completion
         std::vector<double> m_well_index_;
-        // depth for each completion
+        // depth for each completion // form the keyword COMPSEGS?
         std::vector<double> m_perf_depth_;
         // well cell for each completion
         std::vector<int> m_well_cell_;
@@ -107,6 +125,8 @@ namespace Opm
         // the completions that is related to each segment
         // the completions's ids are their location in the vector m_well_index_
         // m_well_cell_
+        // This is also assuming the order of the completions in Well is the same with
+        // the order of the completions in wells.
         std::vector<std::vector<int>> m_segment_perforations_;
     };
 

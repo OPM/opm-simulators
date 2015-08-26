@@ -25,6 +25,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/autodiff/WellMultiSegment.hpp>
 #include <vector>
 #include <cassert>
 #include <string>
@@ -41,27 +42,71 @@ namespace Opm
         : public WellState
     {
     public:
+
         // typedef std::array< int, 3 >  mapentry_t;
         // typedef std::map< std::string, mapentry_t > WellMapType;
+        // this map needs to change a little bit?
+        /* struct mapentry {
+            int well_number;
+            int number_of_segments;
+            std::vector<int> number_of_performations;
+        } */
+        // MAYNOT NEED THIS
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class State, class PrevState>
-        void init(const Wells* wells, const State& state, const PrevState& prevState)
+        void init(const std::vector<WellMultiSegment>& wells, const State& state, const PrevState& prevState)
         {
+            const int nw = wells.size();
+            if (nw == 0) {
+                return;
+            }
+
+            const int np = wells[0].numberOfPhases(); // number of the phases
+
+            int nperf = 0; // the number of the perforations
+            int nseg = 0; // the nubmer of the segments
+
+            for (int iw = 0; iw < nw; ++iw) {
+                nperf += wells[i].numberOfPerforations();
+                nseg += wells[i].numberOfSegment();
+            }
+
+            bhp_.resize(nw);
+            thp_.resize(nw);
+            wellrates_.resize(nw * np, 0.0);
+
+            current_controls_.resize(nw);
+            for(int iw = 0; iw < nw; ++iw) {
+                current_controls_[iw] = well_controls_get_current(wells[iw].wellControls());
+            }
+
+            for (int iw = 0; iw < nw; ++iw) {
+                assert((wells[i].wellType() == INJECTOR) || (wells[i].wellType() == PRODUCER));
+                const WellControls* ctrl = wells[iw]->wellControls();
+            }
+
+
+            // Map is used to map the value from the previous state to the current state as the initial values
+            // TODO: handle this later.
+            // Trying to figure out the work flow first.
         }
 
     private:
         // pressure for the segment nodes
-        // pressure for the top segment nodes are the bhp
-        std::vector<double> segpressure_;
+        std::vector<double> seg_pressure_;
         // phase rates for the segments
-        std::vector<double> segphaserates_;
+        std::vector<double> seg_phaserates_;
         // phase rates for the completions
-        std::vector<double> perfphaserates_;
+        std::vector<double> perf_phaserates_;
+        // fractions for each segments (W, O, G)
+        std::vector<double> seg_phasefrac_;
+        // total flow rates for each segments, G_T
+        std::vector<double> seg_totalrate_;
         std::vector<int> current_controls_;
-        // WellMapType wellMap_;
+        WellMapType wellMap_;
     };
 
 } // namespace Opm
