@@ -412,7 +412,9 @@ namespace Opm
             int num_blocks = jac_.size();
             os << "Value =\n" << val_ << "\n\nJacobian =\n";
             for (int i = 0; i < num_blocks; ++i) {
-                os << "Sub Jacobian #" << i << '\n' << jac_[i] << "\n";
+		Eigen::SparseMatrix<double> m;
+		jac_[i].toSparse(m);
+                os << "Sub Jacobian #" << i << '\n' << m << "\n";
             }
             return os;
         }
