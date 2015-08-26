@@ -116,6 +116,9 @@ public:
         for (int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto &fluidState = initialFluidStates_[elemIdx];
 
+            // get the PVT region index of the current element
+            int regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
+
             // set the phase saturations
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar S = opmBlackoilState.saturation()[elemIdx*numPhases + phaseIdx];
@@ -138,6 +141,7 @@ public:
             Scalar po = opmBlackoilState.pressure()[elemIdx];
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
+            Scalar pg = fluidState.pressure(gasPhaseIdx);
 
             // reset the phase compositions
             for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -158,6 +162,10 @@ public:
                 // mass fraction to mole fraction
                 Scalar xoG = XoG*MO / (MG*(1 - XoG) + XoG*MO);
 
+                Scalar xoGMax = FluidSystem::saturatedOilGasMoleFraction(T, pg, regionIdx);
+                if (fluidState.saturation(gasPhaseIdx) > 0.0 || xoG > xoGMax)
+                    xoG = xoGMax;
+
                 fluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1 - xoG);
                 fluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
             }
@@ -170,6 +178,10 @@ public:
                 Scalar XgO = Rv/(rhogRef/rhooRef + Rv);
                 // mass fraction to mole fraction
                 Scalar xgO = XgO*MG / (MO*(1 - XgO) + XgO*MG);
+
+                Scalar xgOMax = FluidSystem::saturatedGasOilMoleFraction(T, pg, regionIdx);
+                if (fluidState.saturation(oilPhaseIdx) > 0.0 || xgO > xgOMax)
+                    xgO = xgOMax;
 
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);

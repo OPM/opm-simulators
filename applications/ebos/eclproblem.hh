@@ -567,6 +567,12 @@ public:
      */
     template <class Context>
     int pvtRegionIndex(const Context &context, int spaceIdx, int timeIdx) const
+    { return pvtRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the index the relevant PVT region given a cell index
+     */
+    int pvtRegionIndex(int elemIdx) const
     {
         Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
 
@@ -575,10 +581,7 @@ public:
 
         const auto& gridManager = this->simulator().gridManager();
 
-        // this is quite specific to the ECFV discretization. But so is everything in an
-        // ECL deck, i.e., we don't need to care here...
-        int compressedDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        int cartesianDofIdx = gridManager.cartesianCellId(compressedDofIdx);
+        int cartesianDofIdx = gridManager.cartesianCellId(elemIdx);
 
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
