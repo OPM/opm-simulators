@@ -87,6 +87,26 @@ namespace Opm
 
 
 
+        AutoDiffMatrix(const AutoDiffMatrix& other) = default;
+        AutoDiffMatrix& operator=(const AutoDiffMatrix& other) = default;
+
+
+
+        AutoDiffMatrix(AutoDiffMatrix&& other)
+        {
+            swap(other);
+        }
+
+
+
+        AutoDiffMatrix& operator=(AutoDiffMatrix&& other)
+        {
+            swap(other);
+            return *this;
+        }
+
+
+
         void swap(AutoDiffMatrix& other)
         {
             std::swap(type_, other.type_);
