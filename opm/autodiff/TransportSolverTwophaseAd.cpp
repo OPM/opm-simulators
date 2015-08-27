@@ -96,6 +96,7 @@ namespace Opm
         {
             typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
             typedef Eigen::Array<double, Eigen::Dynamic, 4, Eigen::RowMajor> FourCol;
+            typedef Eigen::SparseMatrix<double> S;
             typedef typename ADB::V V;
             typedef typename ADB::M M;
             const int nc = props.numCells();
@@ -117,8 +118,8 @@ namespace Opm
             //    dkro/dsw = col(1) - col(3)
             V dkrw = dkr.leftCols<1>() - dkr.rightCols<2>().leftCols<1>();
             V dkro = dkr.leftCols<2>().rightCols<1>() - dkr.rightCols<1>();
-            M krwjac(nc,nc);
-            M krojac(nc,nc);
+            S krwjac(nc,nc);
+            S krojac(nc,nc);
             auto sizes = Eigen::ArrayXi::Ones(nc);
             krwjac.reserve(sizes);
             krojac.reserve(sizes);
@@ -127,8 +128,8 @@ namespace Opm
                 krojac.insert(c,c) = dkro(c);
             }
             const double* mu = props.viscosity();
-            std::vector<M> dmw = { krwjac/mu[0] };
-            std::vector<M> dmo = { krojac/mu[1] };
+            std::vector<M> dmw = { M(krwjac)/mu[0] };
+            std::vector<M> dmo = { M(krojac)/mu[1] };
 
             std::vector<ADB> pmobc = { ADB::function(krw / mu[0], std::move(dmw)) ,
                                        ADB::function(kro / mu[1], std::move(dmo)) };
@@ -229,7 +230,8 @@ namespace Opm
             std::cout << "Residual l2-norm = " << res_norm << std::endl;
 
             // Solve linear system.
-            Eigen::SparseMatrix<double, Eigen::RowMajor> smatr = transport_residual.derivative()[0];
+            Eigen::SparseMatrix<double, Eigen::RowMajor> smatr;
+            transport_residual.derivative()[0].toSparse(smatr);
             assert(smatr.isCompressed());
             V ds(nc);
             LinearSolverInterface::LinearSolverReport rep

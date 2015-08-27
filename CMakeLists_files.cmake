@@ -35,8 +35,8 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/GridHelpers.cpp
 	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
-#	opm/autodiff/SimulatorIncompTwophaseAd.cpp
-#	opm/autodiff/TransportSolverTwophaseAd.cpp
+	opm/autodiff/SimulatorIncompTwophaseAd.cpp
+	opm/autodiff/TransportSolverTwophaseAd.cpp
 	opm/autodiff/BlackoilPropsAdFromDeck.cpp
 #	opm/autodiff/SolventPropsAdFromDeck.cpp
 	opm/autodiff/BlackoilModelParameters.cpp

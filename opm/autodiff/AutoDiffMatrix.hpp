@@ -265,6 +265,40 @@ namespace Opm
 
 
 
+        AutoDiffMatrix operator/(const double rhs) const
+        {
+            switch (type_) {
+            case Z:
+                return *this;
+            case I:
+                {
+                    AutoDiffMatrix retval(*this);
+                    retval.type_ = D;
+                    retval.d_.assign(rows_, 1.0/rhs);
+                    return retval;
+                }
+            case D:
+                {
+                    AutoDiffMatrix retval(*this);
+                    for (double& elem : retval.d_) {
+                        elem /= rhs;
+                    }
+                    return retval;
+                }
+            case S:
+                {
+                    AutoDiffMatrix retval(*this);
+                    retval.s_ /= rhs;
+                    return retval;
+                }
+            }
+        }
+
+
+
+
+
+
         Eigen::VectorXd operator*(const Eigen::VectorXd& rhs) const
         {
             assert(cols_ == rhs.size());
