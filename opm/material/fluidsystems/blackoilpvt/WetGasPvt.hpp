@@ -344,8 +344,8 @@ private:
     {
         const LhsEval& Rv =
             XgO/(1 - XgO)
-            * (BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx)
-               / BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx));
+            * (BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx)
+               / BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx));
 
         const LhsEval& invBg = inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
         const LhsEval& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
@@ -366,15 +366,16 @@ private:
         Scalar rhogRef = BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
 
         const LhsEval& Bg = formationVolumeFactor_(regionIdx, temperature, pressure, XgO);
-        LhsEval rhoo = rhooRef/Bg;
+
+        LhsEval rhog = rhogRef/Bg;
 
         // the oil formation volume factor just represents the partial density of the gas
         // component in the gas phase. to get the total density of the phase, we have to
         // add the partial density of the oil component.
-        const LhsEval& Rv = XgO/(1 - XgO) * (rhooRef/rhogRef);
-        rhoo += (rhogRef*Rv)/Bg;
+        const LhsEval& Rv = XgO/(1 - XgO) * (rhogRef/rhooRef);
+        rhog += (rhogRef*Rv)/Bg;
 
-        return rhoo;
+        return rhog;
     }
 
     /*!
@@ -388,8 +389,8 @@ private:
     {
         const LhsEval& Rv =
             XgO/(1-XgO)
-            *BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx)
-            /BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
+            *(BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx)
+              /BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx));
 
         return 1.0 / inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
     }
