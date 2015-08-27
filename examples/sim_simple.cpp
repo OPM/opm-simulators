@@ -66,6 +66,7 @@ phaseMobility(const Opm::IncompPropertiesInterface& props,
 {
     typedef Eigen::Array<double, Eigen::Dynamic, 2, Eigen::RowMajor> TwoCol;
     typedef Eigen::Array<double, Eigen::Dynamic, 4, Eigen::RowMajor> FourCol;
+    typedef Eigen::SparseMatrix<double> S;
     typedef typename ADB::V V;
     typedef typename ADB::M M;
     const int nc = props.numCells();
@@ -79,8 +80,8 @@ phaseMobility(const Opm::IncompPropertiesInterface& props,
     V kro = kr.rightCols<1>();
     V dkrw = dkr.leftCols<1>();  // Left column is top-left of dkr/ds 2x2 matrix.
     V dkro = -dkr.rightCols<1>(); // Right column is bottom-right of dkr/ds 2x2 matrix.
-    M krwjac(nc,nc);
-    M krojac(nc,nc);
+    S krwjac(nc,nc);
+    S krojac(nc,nc);
     auto sizes = Eigen::ArrayXi::Ones(nc);
     krwjac.reserve(sizes);
     krojac.reserve(sizes);
@@ -89,8 +90,8 @@ phaseMobility(const Opm::IncompPropertiesInterface& props,
         krojac.insert(c,c) = dkro(c);
     }
     const double* mu = props.viscosity();
-    std::vector<M> dmw = { krwjac/mu[0] };
-    std::vector<M> dmo = { krojac/mu[1] };
+    std::vector<M> dmw = { M(krwjac)/mu[0] };
+    std::vector<M> dmo = { M(krojac)/mu[1] };
 
     std::vector<ADB> pmobc = { ADB::function(krw / mu[0], std::move(dmw)) ,
                                ADB::function(kro / mu[1], std::move(dmo)) };
@@ -116,6 +117,7 @@ try
     typedef Opm::AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
+    typedef Eigen::SparseMatrix<double> S;
 
     Opm::time::StopWatch clock;
     clock.start();
@@ -211,13 +213,14 @@ try
     // residual.derived()[0].
 
 #if HAVE_SUITESPARSE_UMFPACK_H
-    typedef Eigen::UmfPackLU<M> LinSolver;
+    typedef Eigen::UmfPackLU<S> LinSolver;
 #else
-    typedef Eigen::BiCGSTAB<M>  LinSolver;
+    typedef Eigen::BiCGSTAB<S>  LinSolver;
 #endif  // HAVE_SUITESPARSE_UMFPACK_H
 
     LinSolver solver;
-    M pmatr = residual.derivative()[0];
+    S pmatr;
+    residual.derivative()[0].toSparse(pmatr);
     pmatr.coeffRef(0,0) *= 2.0;
     pmatr.makeCompressed();
     solver.compute(pmatr);
@@ -275,7 +278,8 @@ try
         std::cout << "res_norm[" << it << "] = "
                   << res_norm << std::endl;
 
-        M smatr = transport_residual.derivative()[0];
+        S smatr;
+        transport_residual.derivative()[0].toSparse(smatr);
         smatr.makeCompressed();
         solver.compute(smatr);
         if (solver.info() != Eigen::Success) {

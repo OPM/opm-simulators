@@ -83,11 +83,11 @@ endif()
 # originally generated with the command:
 # find tutorials examples -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND EXAMPLE_SOURCE_FILES
-#	examples/find_zero.cpp
+	examples/find_zero.cpp
 	examples/flow.cpp
-#	examples/flow_solvent.cpp
-#	examples/sim_2p_incomp_ad.cpp
-#	examples/sim_simple.cpp
+	examples/flow_solvent.cpp
+	examples/sim_2p_incomp_ad.cpp
+	examples/sim_simple.cpp
 #	examples/opm_init_check.cpp
 	)
 
