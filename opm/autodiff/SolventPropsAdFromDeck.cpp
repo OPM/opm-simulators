@@ -26,6 +26,8 @@ namespace Opm
 {
 // Making these typedef to make the code more readable.
 typedef SolventPropsAdFromDeck::ADB ADB;
+typedef Eigen::SparseMatrix<double> S;
+typedef Eigen::DiagonalMatrix<double, Eigen::Dynamic> D;
 typedef SolventPropsAdFromDeck::V V;
 typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
 
@@ -135,11 +137,11 @@ ADB SolventPropsAdFromDeck::muSolvent(const ADB& pg,
                          - tempInvB * inverseBmu_[regionIdx].derivative(pg_i)) / (tempInvBmu * tempInvBmu);
     }
 
-    ADB::M dmudp_diag = spdiag(dmudp);
+    ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
     const int num_blocks = pg.numBlocks();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
-        fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
+        jacs[block] = dmudp_diag * pg.derivative()[block];
     }
     return ADB::function(std::move(mu), std::move(jacs));
 }
@@ -159,7 +161,7 @@ ADB SolventPropsAdFromDeck::bSolvent(const ADB& pg,
         dbdp[i] = b_[regionIdx].derivative(pg_i);
     }
 
-    ADB::M dbdp_diag = spdiag(dbdp);
+    ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
     const int num_blocks = pg.numBlocks();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
@@ -182,7 +184,7 @@ ADB SolventPropsAdFromDeck::gasRelPermMultiplier(const ADB& solventFraction,
         dkrgdsf[i] = krg_[regionIdx].derivative(solventFraction_i);
     }
 
-    ADB::M dkrgdsf_diag = spdiag(dkrgdsf);
+    ADB::M dkrgdsf_diag(dkrgdsf.matrix().asDiagonal());
     const int num_blocks = solventFraction.numBlocks();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
@@ -205,7 +207,7 @@ ADB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADB& solventFraction,
         dkrsdsf[i] = krs_[regionIdx].derivative(solventFraction_i);
     }
 
-    ADB::M dkrsdsf_diag = spdiag(dkrsdsf);
+    ADB::M dkrsdsf_diag(dkrsdsf.matrix().asDiagonal());
     const int num_blocks = solventFraction.numBlocks();
     std::vector<ADB::M> jacs(num_blocks);
     for (int block = 0; block < num_blocks; ++block) {
