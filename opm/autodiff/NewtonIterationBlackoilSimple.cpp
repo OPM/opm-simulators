@@ -47,7 +47,6 @@ namespace Opm
     NewtonIterationBlackoilSimple::SolutionVector
     NewtonIterationBlackoilSimple::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
-        /*
         typedef LinearisedBlackoilResidual::ADB ADB;
         const int np = residual.material_balance_eq.size();
         ADB mass_res = residual.material_balance_eq[0];
@@ -57,7 +56,8 @@ namespace Opm
         const ADB well_res = vertcat(residual.well_flux_eq, residual.well_eq);
         const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
 
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
+        Eigen::SparseMatrix<double, Eigen::RowMajor> matr;
+        total_residual.derivative()[0].toSparse(matr);
 
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
@@ -74,7 +74,6 @@ namespace Opm
                       "Linear solver convergence failure.");
         }
         return dx;
-        */
     }
 
     const boost::any& NewtonIterationBlackoilSimple::parallelInformation() const

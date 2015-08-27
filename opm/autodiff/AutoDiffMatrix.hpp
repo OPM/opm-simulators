@@ -47,10 +47,10 @@ namespace Opm
 
 
 
-        AutoDiffMatrix(const int rows, const int cols)
+        AutoDiffMatrix(const int num_rows, const int num_cols)
             : type_(Z),
-              rows_(rows),
-              cols_(cols)
+              rows_(num_rows),
+              cols_(num_cols)
         {
         }
 
@@ -59,10 +59,10 @@ namespace Opm
         enum CreationType { ZeroMatrix, IdentityMatrix };
 
 
-        AutoDiffMatrix(const CreationType t, const int rows)
+        AutoDiffMatrix(const CreationType t, const int num_rows)
             : type_(t == ZeroMatrix ? Z : I),
-              rows_(rows),
-              cols_(rows)
+              rows_(num_rows),
+              cols_(num_rows)
         {
         }
 

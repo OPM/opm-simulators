@@ -39,6 +39,7 @@ namespace Opm
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
+    typedef Eigen::SparseMatrix<double> S;
 
 
     std::vector<ADB> eliminateVariable(const std::vector<ADB>& eqs, const int n)
@@ -75,7 +76,8 @@ namespace Opm
         const Sp Di = solver.solve(id);
 
         // compute inv(D)*bn for the update of the right hand side
-        const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
+        ADB::V eqs_n_v = eqs[n].value();
+        const Eigen::VectorXd& Dibn = solver.solve(eqs_n_v.matrix());
 
         std::vector<V> vals(num_eq);              // Number n will remain empty.
         std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
@@ -198,7 +200,6 @@ namespace Opm
                             Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                             V& b)
     {
-        /*
         if (num_phases != 3) {
             OPM_THROW(std::logic_error, "formEllipticSystem() requires 3 phases.");
         }
@@ -215,14 +216,17 @@ namespace Opm
         // The l1 block indicates if the equation for a given cell and phase is
         // sufficiently strong on the diagonal.
         Block l1 = Block::Zero(n, num_phases);
-        for (int phase = 0; phase < num_phases; ++phase) {
-            const M& J = eqs[phase].derivative()[0];
-            V dj = J.diagonal().cwiseAbs();
-            V sod = V::Zero(n);
-            for (int elem = 0; elem < n; ++elem) {
-                sod(elem) = J.col(elem).cwiseAbs().sum() - dj(elem);
+        {
+            S J;
+            for (int phase = 0; phase < num_phases; ++phase) {
+                eqs[phase].derivative()[0].toSparse(J);
+                V dj = J.diagonal().cwiseAbs();
+                V sod = V::Zero(n);
+                for (int elem = 0; elem < n; ++elem) {
+                    sod(elem) = J.col(elem).cwiseAbs().sum() - dj(elem);
+                }
+                l1.col(phase) = (dj/sod > ratio_limit).cast<double>();
             }
-            l1.col(phase) = (dj/sod > ratio_limit).cast<double>();
         }
 
         // By default, replace first equation with sum of all phase equations.
@@ -269,16 +273,18 @@ namespace Opm
             t.emplace_back(i3[ii], i1[ii], l31(ii));
             t.emplace_back(i3[ii], i3[ii], l33(ii));
         }
-        M L(3*n, 3*n);
+        S L(3*n, 3*n);
         L.setFromTriplets(t.begin(), t.end());
 
         // Combine in single block.
         ADB total_residual = vertcatCollapseJacs(eqs);
 
+        S derivative;
+        total_residual.derivative()[0].toSparse(derivative);
+
         // Create output as product of L with equations.
-        A = L * total_residual.derivative()[0];
+        A = L * derivative;
         b = L * total_residual.value().matrix();
-        */
     }
 
 
