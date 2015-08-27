@@ -132,7 +132,7 @@ namespace Opm
                 case Z:
                     return *this;
                 case I:
-                    return sumII(*this, rhs);
+                    return addII(*this, rhs);
                 case D:
                     return rhs + (*this);
                 case S:
@@ -145,9 +145,9 @@ namespace Opm
                 case Z:
                     return *this;
                 case I:
-                    return sumDI(*this, rhs);
+                    return addDI(*this, rhs);
                 case D:
-                    return sumDD(*this, rhs);
+                    return addDD(*this, rhs);
                 case S:
                     return rhs + (*this);
                 default:
@@ -158,11 +158,11 @@ namespace Opm
                 case Z:
                     return *this;
                 case I:
-                    return sumSI(*this, rhs);
+                    return addSI(*this, rhs);
                 case D:
-                    return sumSD(*this, rhs);
+                    return addSD(*this, rhs);
                 case S:
-                    return sumSS(*this, rhs);
+                    return addSS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
@@ -197,9 +197,9 @@ namespace Opm
                 case I:
                     return *this;
                 case D:
-                    return prodDD(*this, rhs);
+                    return mulDD(*this, rhs);
                 case S:
-                    return prodDS(*this, rhs);
+                    return mulDS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
@@ -210,9 +210,9 @@ namespace Opm
                 case I:
                     return *this;
                 case D:
-                    return prodSD(*this, rhs);
+                    return mulSD(*this, rhs);
                 case S:
-                    return prodSS(*this, rhs);
+                    return mulSS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
@@ -343,7 +343,7 @@ namespace Opm
 
 
 
-        static AutoDiffMatrix sumII(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addII(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == I);
             assert(rhs.type_ == I);
@@ -355,7 +355,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix sumDI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addDI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             static_cast<void>(rhs); // Silence release-mode warning.
             assert(lhs.type_ == D);
@@ -367,7 +367,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix sumDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == D);
             assert(rhs.type_ == D);
@@ -378,7 +378,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix sumSI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addSI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == I);
@@ -391,7 +391,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix sumSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == D);
@@ -404,7 +404,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix sumSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix addSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == S);
@@ -420,7 +420,7 @@ namespace Opm
 
 
 
-        static AutoDiffMatrix prodDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix mulDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == D);
             assert(rhs.type_ == D);
@@ -435,7 +435,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix prodDS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix mulDS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == D);
             assert(rhs.type_ == S);
@@ -447,7 +447,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix prodSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix mulSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == D);
@@ -459,7 +459,7 @@ namespace Opm
             return retval;
         }
 
-        static AutoDiffMatrix prodSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
+        static AutoDiffMatrix mulSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == S);
