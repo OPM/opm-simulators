@@ -158,7 +158,7 @@ namespace Opm
             }
             // ... then set the one corrresponding to this variable to identity.
             assert(blocksizes[index] == num_elem);
-	    jac[index] = M(M::IdentityMatrix, val.size());
+            jac[index] = M(M::IdentityMatrix, val.size());
             // if(val.size()>0)
             // {
             //     // if val is empty the following will run into an assertion
@@ -343,7 +343,7 @@ namespace Opm
             // D D1 = val_.matrix().asDiagonal();
             // D D2 = rhs.val_.matrix().asDiagonal();
             M D1(val_.matrix().asDiagonal());
-	    M D2(rhs.val_.matrix().asDiagonal());
+            M D2(rhs.val_.matrix().asDiagonal());
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -382,8 +382,8 @@ namespace Opm
             // D D2 = rhs.val_.matrix().asDiagonal();
             // D D3 = (1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal();
             M D1(val_.matrix().asDiagonal());
-	    M D2(rhs.val_.matrix().asDiagonal());
-	    M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());
+            M D2(rhs.val_.matrix().asDiagonal());
+            M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -412,8 +412,8 @@ namespace Opm
             int num_blocks = jac_.size();
             os << "Value =\n" << val_ << "\n\nJacobian =\n";
             for (int i = 0; i < num_blocks; ++i) {
-		Eigen::SparseMatrix<double> m;
-		jac_[i].toSparse(m);
+                Eigen::SparseMatrix<double> m;
+                jac_[i].toSparse(m);
                 os << "Sub Jacobian #" << i << '\n' << m << "\n";
             }
             return os;

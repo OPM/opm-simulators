@@ -797,7 +797,7 @@ namespace detail {
         // get reasonable initial conditions for the wells
         updateWellControls(well_state);
 
-        // Create the primary variables.      
+        // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
@@ -978,7 +978,7 @@ namespace detail {
                 selectInjectingPerforations[c] = 1;
             else
                 selectProducingPerforations[c] = 1;
-        }   
+        }
 
         // HANDLE FLOW INTO WELLBORE
         // compute phase volumetric rates at standard conditions
@@ -1441,9 +1441,9 @@ namespace detail {
                 eqs.push_back(residual_.well_eq);
                 ADB total_residual = vertcatCollapseJacs(eqs);
                 const std::vector<M>& Jn = total_residual.derivative();
-	        typedef Eigen::SparseMatrix<double> Sp;
-	        Sp Jn0;
-	        Jn[0].toSparse(Jn0);
+                typedef Eigen::SparseMatrix<double> Sp;
+                Sp Jn0;
+                Jn[0].toSparse(Jn0);
                 const Eigen::SparseLU< Sp > solver(Jn0);
                 const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
                 assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
@@ -1520,7 +1520,7 @@ namespace detail {
         //Target vars
         ADB::V bhp_targets  = ADB::V::Zero(nw);
         ADB::V rate_targets = ADB::V::Zero(nw);
-	Eigen::SparseMatrix<double> rate_distr(nw, np*nw);
+        Eigen::SparseMatrix<double> rate_distr(nw, np*nw);
 
         //Selection variables
         std::vector<int> bhp_elems;
@@ -1633,7 +1633,7 @@ namespace detail {
         // For wells that are dead (not flowing), and therefore not communicating
         // with the reservoir, we set the equation to be equal to the well's total
         // flow. This will be a solution only if the target rate is also zero.
-	Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
+        Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             for (int phase = 0; phase < np; ++phase) {
                 rate_summer.insert(w, phase*nw + w) = 1.0;

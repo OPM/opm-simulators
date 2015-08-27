@@ -251,7 +251,7 @@ struct HelperOps
         }
 
     private:
-	Eigen::SparseMatrix<double> select_;
+        Eigen::SparseMatrix<double> select_;
     };
 
 
@@ -460,15 +460,15 @@ collapseJacs(const AutoDiffBlock<double>& x, Matrix& jacobian)
     int block_col_start = 0;
     for (int block = 0; block < nb; ++block) {
         const ADB::M& jac1 = x.derivative()[block];
-	Eigen::SparseMatrix<double> jac;
-	jac1.toSparse(jac);
+        Eigen::SparseMatrix<double> jac;
+        jac1.toSparse(jac);
         for (Eigen::SparseMatrix<double>::Index k = 0; k < jac.outerSize(); ++k) {
             for (Eigen::SparseMatrix<double>::InnerIterator i(jac, k); i ; ++i) {
-		if (i.value() != 0.0) {
-		    t.push_back(Tri(i.row(),
-				    i.col() + block_col_start,
-				    i.value()));
-		}
+                if (i.value() != 0.0) {
+                    t.push_back(Tri(i.row(),
+                                    i.col() + block_col_start,
+                                    i.value()));
+                }
             }
         }
         block_col_start += jac.cols();
@@ -588,8 +588,8 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
         if (!x[elem].derivative().empty()) {
             for (int block = 0; block < num_blocks; ++block) {
                 // const ADB::M& jac = x[elem].derivative()[block];
-		M jac;
-		x[elem].derivative()[block].toSparse(jac);
+                M jac;
+                x[elem].derivative()[block].toSparse(jac);
                 for (M::Index k = 0; k < jac.outerSize(); ++k) {
                     for (M::InnerIterator i(jac, k); i ; ++i) {
                         t.push_back(Tri(i.row() + block_row_start,

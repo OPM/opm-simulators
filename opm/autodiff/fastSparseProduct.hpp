@@ -144,18 +144,18 @@ void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 
 inline void fastDiagSparseProduct(// const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& lhs,
                                   const std::vector<double>& lhs,
-				  const Eigen::SparseMatrix<double>& rhs,
-				  Eigen::SparseMatrix<double>& res)
+                                  const Eigen::SparseMatrix<double>& rhs,
+                                  Eigen::SparseMatrix<double>& res)
 {
     res = rhs;
 
     // Multiply rows by diagonal lhs.
     int n = res.cols();
     for (int col = 0; col < n; ++col) {
-	typedef Eigen::SparseMatrix<double>::InnerIterator It;
-	for (It it(res, col); it; ++it) {
-	    it.valueRef() *= lhs[it.row()]; // lhs.diagonal()(it.row());
-	}
+        typedef Eigen::SparseMatrix<double>::InnerIterator It;
+        for (It it(res, col); it; ++it) {
+            it.valueRef() *= lhs[it.row()]; // lhs.diagonal()(it.row());
+        }
     }
 }
 
@@ -163,19 +163,19 @@ inline void fastDiagSparseProduct(// const Eigen::DiagonalMatrix<double, Eigen::
 
 
 inline void fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
-				  // const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& rhs,
+                                  // const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& rhs,
                                   const std::vector<double>& rhs,
-				  Eigen::SparseMatrix<double>& res)
+                                  Eigen::SparseMatrix<double>& res)
 {
     res = lhs;
 
     // Multiply columns by diagonal rhs.
     int n = res.cols();
     for (int col = 0; col < n; ++col) {
-	typedef Eigen::SparseMatrix<double>::InnerIterator It;
-	for (It it(res, col); it; ++it) {
-	    it.valueRef() *= rhs[col]; // rhs.diagonal()(col);
-	}
+        typedef Eigen::SparseMatrix<double>::InnerIterator It;
+        for (It it(res, col); it; ++it) {
+            it.valueRef() *= rhs[col]; // rhs.diagonal()(col);
+        }
     }
 }
 

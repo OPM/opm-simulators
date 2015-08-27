@@ -36,7 +36,7 @@ using namespace Opm;
 
 bool
 operator ==(const Eigen::SparseMatrix<double>& A,
-	    const Eigen::SparseMatrix<double>& B)
+            const Eigen::SparseMatrix<double>& B)
 {
     // Two SparseMatrices are equal if
     //   0) They have the same ordering (enforced by equal types)
@@ -53,15 +53,15 @@ operator ==(const Eigen::SparseMatrix<double>& A,
     eq      = eq && (A.nonZeros() == B.nonZeros());
 
     for (typename Eigen::SparseMatrix<double>::Index
-	     k0 = 0, kend = A.outerSize(); eq && (k0 < kend); ++k0) {
-	for (typename Eigen::SparseMatrix<double>::InnerIterator
-		 iA(A, k0), iB(B, k0); eq && (iA && iB); ++iA, ++iB) {
-	    // 3) Sparsity structure
-	    eq = (iA.row() == iB.row()) && (iA.col() == iB.col());
+             k0 = 0, kend = A.outerSize(); eq && (k0 < kend); ++k0) {
+        for (typename Eigen::SparseMatrix<double>::InnerIterator
+                 iA(A, k0), iB(B, k0); eq && (iA && iB); ++iA, ++iB) {
+            // 3) Sparsity structure
+            eq = (iA.row() == iB.row()) && (iA.col() == iB.col());
 
-	    // 4) Equal non-zero elements
-	    eq = eq && (iA.value() == iB.value());
-	}
+            // 4) Equal non-zero elements
+            eq = eq && (iA.value() == iB.value());
+        }
     }
 
     return eq;
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(AdditionOps)
     s1 <<
         1.0, 0.0, 2.0,
         0.0, 1.0, 0.0,
-	0.0, 0.0, 2.0;
+        0.0, 0.0, 2.0;
     Sp ss(s1.sparseView());
     Mat s = Mat(ss);
 
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE(MultOps)
     s1 <<
         1.0, 0.0, 2.0,
         0.0, 1.0, 0.0,
-	0.0, 0.0, 2.0;
+        0.0, 0.0, 2.0;
     Sp ss(s1.sparseView());
     Mat s = Mat(ss);
 
