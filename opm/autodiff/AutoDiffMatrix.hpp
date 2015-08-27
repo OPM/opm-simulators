@@ -93,6 +93,7 @@ namespace Opm
 
 
         AutoDiffMatrix(AutoDiffMatrix&& other)
+            : AutoDiffMatrix()
         {
             swap(other);
         }
