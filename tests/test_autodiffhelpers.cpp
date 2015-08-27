@@ -79,6 +79,7 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
+    typedef Eigen::SparseMatrix<double> S;
 
     // We will build a system with the block structure
     // { 2, 0, 1 } (total of three columns) and { 1, 2, 1 } (row) sizes.
@@ -95,13 +96,17 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
         // First block.
         V val(1);
         val << 10;
-        std::vector<M> jacs(3);
-        jacs[0] = M(1, 2);
-        jacs[1] = M(1, 0);
-        jacs[2] = M(1, 1);
-        jacs[0].insert(0, 0) = 1.0;
-        jacs[0].insert(0, 1) = 2.0;
-        jacs[2].insert(0, 0) = 3.0;
+        std::vector<M> jacs;
+        jacs.reserve(3);
+        S s1(1, 2);
+        S s2(1, 0);
+        S s3(1, 1);
+        s1.insert(0, 0) = 1.0;
+        s1.insert(0, 1) = 2.0;
+        s3.insert(0, 0) = 3.0;
+        jacs.push_back(M(s1));
+        jacs.push_back(M(s2));
+        jacs.push_back(M(s3));
         v.push_back(ADB::function(val, jacs));
     }
     {
@@ -114,13 +119,17 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
         // Third block.
         V val(1);
         val << 13;
-        std::vector<M> jacs(3);
-        jacs[0] = M(1, 2);
-        jacs[1] = M(1, 0);
-        jacs[2] = M(1, 1);
-        jacs[0].insert(0, 0) = 4.0;
-        jacs[0].insert(0, 1) = 5.0;
-        jacs[2].insert(0, 0) = 6.0;
+        std::vector<M> jacs(0);
+        jacs.reserve(3);
+        S s1(1, 2);
+        S s2(1, 0);
+        S s3(1, 1);
+        s1.insert(0, 0) = 4.0;
+        s1.insert(0, 1) = 5.0;
+        s3.insert(0, 0) = 6.0;
+        jacs.push_back(M(s1));
+        jacs.push_back(M(s2));
+        jacs.push_back(M(s3));
         v.push_back(ADB::function(val, jacs));
     }
     std::vector<int> expected_block_pattern{ 2, 0, 1 };
@@ -132,17 +141,20 @@ BOOST_AUTO_TEST_CASE(vertcatCollapseJacsTest)
     // Build expected results.
     V expected_val(4);
     expected_val << 10, 11, 12, 13;
-    M expected_jac(4, 3);
-    expected_jac.insert(0, 0) = 1.0;
-    expected_jac.insert(0, 1) = 2.0;
-    expected_jac.insert(0, 2) = 3.0;
-    expected_jac.insert(3, 0) = 4.0;
-    expected_jac.insert(3, 1) = 5.0;
-    expected_jac.insert(3, 2) = 6.0;
+    S expected_jac_s(4, 3);
+    expected_jac_s.insert(0, 0) = 1.0;
+    expected_jac_s.insert(0, 1) = 2.0;
+    expected_jac_s.insert(0, 2) = 3.0;
+    expected_jac_s.insert(3, 0) = 4.0;
+    expected_jac_s.insert(3, 1) = 5.0;
+    expected_jac_s.insert(3, 2) = 6.0;
+    M expected_jac(expected_jac_s);
 
     // Compare.
     BOOST_CHECK((x.value() == expected_val).all());
-    BOOST_CHECK(x.derivative()[0] == expected_jac);
+    S derivative;
+    x.derivative()[0].toSparse(derivative);
+    BOOST_CHECK(derivative == expected_jac_s);
 }
 
 
