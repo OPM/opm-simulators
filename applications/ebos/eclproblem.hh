@@ -344,9 +344,17 @@ public:
             ++ nextEpisodeIdx;
         }
 
+        Scalar episodeLength = timeMap->getTimeStepLength(nextEpisodeIdx);
+        Scalar dt = episodeLength;
+        if (nextEpisodeIdx == 0) {
+            // allow the size of the initial time step to be set via an external parameter
+            Scalar initialDt = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
+            dt = std::min(dt, initialDt);
+        }
+
         if (nextEpisodeIdx < numReportSteps) {
-            simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
-            simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
+            simulator.startNextEpisode(episodeLength);
+            simulator.setTimeStepSize(dt);
         }
 
         // set up the wells
