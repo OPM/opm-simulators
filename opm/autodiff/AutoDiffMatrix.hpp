@@ -491,7 +491,9 @@ namespace Opm
             M mat(n, n);
             mat.reserve(Eigen::ArrayXi::Ones(n, 1));
             for (M::Index i = 0; i < n; ++i) {
-                mat.insert(i, i) = d[i];
+                if (d[i] != 0.0) {
+                    mat.insert(i, i) = d[i];
+                }
             }
 
             return mat;
