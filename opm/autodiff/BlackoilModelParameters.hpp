@@ -46,6 +46,9 @@ namespace Opm
         /// Solve well equation initially
         bool solve_welleq_initially_;
 
+        /// Update scaling factors for mass balance equations
+        bool update_equations_scaling_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const parameter::ParameterGroup& param );
 

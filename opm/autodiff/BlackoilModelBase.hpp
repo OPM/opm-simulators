@@ -208,6 +208,9 @@ namespace Opm {
         /// The number of active phases in the model.
         int numPhases() const;
 
+        /// Update the scaling factors for mass balance equations
+        void updateEquationsScaling();
+
     protected:
 
         // ---------  Types and enums  ---------

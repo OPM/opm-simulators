@@ -104,9 +104,8 @@ namespace Opm
         }
 
         // Scale material balance equations.
-        const double matbalscale[3] = { 1.1169, 1.0031, 0.0031 }; // HACK hardcoded instead of computed.
         for (int phase = 0; phase < np; ++phase) {
-            eqs[phase] = eqs[phase] * matbalscale[phase];
+            eqs[phase] = eqs[phase] * residual.matbalscale[phase];
         }
 
         // Add material balance equations (or other manipulations) to

@@ -63,6 +63,8 @@ namespace Opm
         /// pressure specification.
         ADB well_eq;
 
+        std::array<double, 3> matbalscale;
+
         /// The size of the non-linear system.
         int sizeNonLinear() const;
     };

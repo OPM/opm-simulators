@@ -176,7 +176,8 @@ namespace detail {
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
-                        ADB::null() } )
+                        ADB::null(),
+                        { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
         , terminal_output_ (terminal_output)
     {
 #if HAVE_MPI
@@ -909,6 +910,32 @@ namespace detail {
 
             // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
 
+        }
+
+
+        if (param_.update_equations_scaling_) {
+            updateEquationsScaling();
+        }
+
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::updateEquationsScaling() {
+        ADB::V B;
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            if (active_[idx]) {
+                const int pos    = pu.phase_pos[idx];
+                const ADB& tempB = rq_[pos].b;
+                B = 1./tempB.value();
+                residual_.matbalscale[idx] = B.mean();
+            }
         }
     }
 
