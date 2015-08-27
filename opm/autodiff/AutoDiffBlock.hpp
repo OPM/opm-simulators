@@ -339,9 +339,6 @@ namespace Opm
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
-            // typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
-            // D D1 = val_.matrix().asDiagonal();
-            // D D2 = rhs.val_.matrix().asDiagonal();
             M D1(val_.matrix().asDiagonal());
             M D2(rhs.val_.matrix().asDiagonal());
             for (int block = 0; block < num_blocks; ++block) {
@@ -377,10 +374,6 @@ namespace Opm
             int num_blocks = numBlocks();
             std::vector<M> jac(num_blocks);
             assert(numBlocks() == rhs.numBlocks());
-            typedef Eigen::DiagonalMatrix<Scalar, Eigen::Dynamic> D;
-            // D D1 = val_.matrix().asDiagonal();
-            // D D2 = rhs.val_.matrix().asDiagonal();
-            // D D3 = (1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal();
             M D1(val_.matrix().asDiagonal());
             M D2(rhs.val_.matrix().asDiagonal());
             M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());

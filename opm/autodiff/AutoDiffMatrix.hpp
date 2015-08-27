@@ -27,6 +27,7 @@
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/autodiff/fastSparseProduct.hpp>
 #include <vector>
 
@@ -136,6 +137,8 @@ namespace Opm
                     return rhs + (*this);
                 case S:
                     return rhs + (*this);
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
             case D:
                 switch (rhs.type_) {
@@ -147,6 +150,8 @@ namespace Opm
                     return sumDD(*this, rhs);
                 case S:
                     return rhs + (*this);
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
             case S:
                 switch (rhs.type_) {
@@ -158,7 +163,11 @@ namespace Opm
                     return sumSD(*this, rhs);
                 case S:
                     return sumSS(*this, rhs);
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
             }
         }
 
@@ -178,6 +187,8 @@ namespace Opm
                     return rhs;
                 case S:
                     return rhs;
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
             case D:
                 switch (rhs.type_) {
@@ -189,6 +200,8 @@ namespace Opm
                     return prodDD(*this, rhs);
                 case S:
                     return prodDS(*this, rhs);
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
             case S:
                 switch (rhs.type_) {
@@ -200,7 +213,11 @@ namespace Opm
                     return prodSD(*this, rhs);
                 case S:
                     return prodSS(*this, rhs);
+                default:
+                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
             }
         }
 
@@ -258,6 +275,8 @@ namespace Opm
                     retval.s_ *= rhs;
                     return retval;
                 }
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
@@ -292,6 +311,8 @@ namespace Opm
                     retval.s_ /= rhs;
                     return retval;
                 }
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
@@ -312,6 +333,8 @@ namespace Opm
                 return Eigen::Map<const Eigen::VectorXd>(d_.data(), rows_) * rhs;
             case S:
                 return s_ * rhs;
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
@@ -490,6 +513,8 @@ namespace Opm
                 return rows_;
             case S:
                 return s_.nonZeros();
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
@@ -505,6 +530,8 @@ namespace Opm
                 return (row == col) ? d_[row] : 0.0;
             case S:
                 return s_.coeff(row, col);
+            default:
+                OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
