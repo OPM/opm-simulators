@@ -28,6 +28,7 @@ namespace Opm
 typedef SolventPropsAdFromDeck::ADB ADB;
 typedef SolventPropsAdFromDeck::V V;
 typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
+typedef SolventPropsAdFromDeck::ADDB ADDB;
 
 SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                                                      EclipseStateConstPtr eclState,
@@ -212,6 +213,85 @@ ADB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADB& solventFraction,
     }
     return ADB::function(std::move(krs), std::move(jacs));
 }
+
+
+
+
+ADDB SolventPropsAdFromDeck::muSolvent(const ADDB& pg,
+                                 const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(pg.value().size() == n);
+    V mu(n);
+    V dmudp(n);
+    for (int i = 0; i < n; ++i) {
+        const double& pg_i = pg.value()[i];
+        int regionIdx = cellPvtRegionIdx_[i];
+        double tempInvB = b_[regionIdx](pg_i);
+        double tempInvBmu = inverseBmu_[regionIdx](pg_i);
+        mu[i] = tempInvB / tempInvBmu;
+        dmudp[i] = (tempInvBmu * b_[regionIdx].derivative(pg_i)
+                         - tempInvB * inverseBmu_[regionIdx].derivative(pg_i)) / (tempInvBmu * tempInvBmu);
+    }
+    ADDB::Derivative jac = pg.derivative().colwise() * dmudp;
+    return ADDB::function(std::move(mu), std::move(jac));
+}
+
+ADDB SolventPropsAdFromDeck::bSolvent(const ADDB& pg,
+                                const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(pg.size() == n);
+
+    V b(n);
+    V dbdp(n);
+    for (int i = 0; i < n; ++i) {
+        const double& pg_i = pg.value()[i];
+        int regionIdx = cellPvtRegionIdx_[i];
+        b[i] = b_[regionIdx](pg_i);
+        dbdp[i] = b_[regionIdx].derivative(pg_i);
+    }
+    ADDB::Derivative jac = pg.derivative().colwise() * dbdp;
+    return ADDB::function(std::move(b), std::move(jac));
+}
+
+ADDB SolventPropsAdFromDeck::gasRelPermMultiplier(const ADDB& solventFraction,
+                                 const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(solventFraction.value().size() == n);
+    V krg(n);
+    V dkrgdsf(n);
+    for (int i = 0; i < n; ++i) {
+        const double& solventFraction_i = solventFraction.value()[i];
+        int regionIdx = 0; // TODO add mapping from cells to sat function table
+        krg[i] = krg_[regionIdx](solventFraction_i);
+        dkrgdsf[i] = krg_[regionIdx].derivative(solventFraction_i);
+    }
+    ADDB::Derivative jac = solventFraction.derivative().colwise() * dkrgdsf;
+    return ADDB::function(std::move(krg), std::move(jac));
+}
+
+ADDB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADDB& solventFraction,
+                                 const Cells& cells) const
+{
+    const int n = cells.size();
+    assert(solventFraction.value().size() == n);
+    V krs(n);
+    V dkrsdsf(n);
+    for (int i = 0; i < n; ++i) {
+        const double& solventFraction_i = solventFraction.value()[i];
+        int regionIdx = 0; // TODO add mapping from cells to sat function table
+        krs[i] = krs_[regionIdx](solventFraction_i);
+        dkrsdsf[i] = krs_[regionIdx].derivative(solventFraction_i);
+    }
+    ADDB::Derivative jac = solventFraction.derivative().colwise() * dkrsdsf;
+    return ADDB::function(std::move(krs), std::move(jac));
+}
+
+
+
+
 
 V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {
     const int n = cells.size();

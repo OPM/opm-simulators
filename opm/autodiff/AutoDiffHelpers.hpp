@@ -22,6 +22,7 @@
 #define OPM_AUTODIFFHELPERS_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffDenseBlock.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/utility/ErrorMacros.hpp>
@@ -308,6 +309,27 @@ subset(const AutoDiffBlock<Scalar>& x,
 }
 
 
+/// Returns x(indices).
+template <typename Scalar, int NumDerivs, class IntVec>
+AutoDiffDenseBlock<Scalar, NumDerivs>
+subset(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
+       const IntVec& indices)
+{
+    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADDB;
+    typedef typename ADDB::Value V;
+    typedef typename ADDB::Derivative D;
+    typedef typename V::Index Index;
+    const Index size = indices.size();
+    V val(size);
+    D jac(size, NumDerivs);
+    for (Index i = 0; i < size; ++i) {
+        val[i] = x.value()[indices[i]];
+        jac.row(i) = x.derivative().row(indices[i]);
+    }
+    return ADDB::function(std::move(val), std::move(jac));
+}
+
+
 /// Returns v where v(indices) == x, v(!indices) == 0 and v.size() == n.
 template <typename Scalar, class IntVec>
 AutoDiffBlock<Scalar>
@@ -418,7 +440,7 @@ spdiag(const AutoDiffBlock<double>::V& d)
             }
         }
 
-        /// Apply selector to ADB quantities.
+        /// Apply selector to constant (no derivs) quantities.
         typename ADB::V select(const typename ADB::V& x1, const typename ADB::V& x2) const
         {
             if (right_elems_.empty()) {
@@ -430,6 +452,36 @@ spdiag(const AutoDiffBlock<double>::V& d)
                     + superset(subset(x2, right_elems_), right_elems_, x2.size());
             }
         }
+
+        /// Apply selector to ADDB quantities.
+	template <int NumDerivs>
+        AutoDiffDenseBlock<Scalar, NumDerivs>
+	select(const AutoDiffDenseBlock<Scalar, NumDerivs>& x1,
+	       const AutoDiffDenseBlock<Scalar, NumDerivs>& x2) const
+        {
+	    assert(x1.size() == x2.size());
+            if (right_elems_.empty()) {
+                return x1;
+            } else if (left_elems_.empty()) {
+                return x2;
+            }
+	    typedef AutoDiffDenseBlock<Scalar, NumDerivs> ADDB;
+	    typedef typename ADDB::Value V;
+	    typedef typename ADDB::Derivative D;
+	    typedef typename V::Index Index;
+	    const Index size = x1.size();
+	    V val(size);
+	    D jac(size, NumDerivs);
+	    for (Index i : left_elems_) {
+		val[i] = x1.value()[i];
+		jac.row(i) = x1.derivative().row(i);
+	    }
+	    for (Index i : right_elems_) {
+		val[i] = x2.value()[i];
+		jac.row(i) = x2.derivative().row(i);
+	    }
+	    return ADDB::function(std::move(val), std::move(jac));
+	}
 
     private:
         std::vector<int> left_elems_;
@@ -709,6 +761,55 @@ inline Eigen::ArrayXd sign (const Eigen::ArrayXd& x)
         retval[i] = x[i] < 0.0 ? -1.0 : (x[i] > 0.0 ? 1.0 : 0.0);
     }
     return retval;
+}
+
+
+
+
+/// Convert an AutoDiffDenseBlock to an AutoDiffBlock, with a given
+/// block pattern. It is assumed and checked that the first NumDerivs
+/// elements of block_pattern are equal to x.size(). For these blocks
+/// the result contains a diagonal matrix. For any further blocks, a
+/// zero matrix (of the correct size) is generated.
+template <typename Scalar, int NumDerivs>
+AutoDiffBlock<Scalar> convertToAutoDiffBlock(const AutoDiffDenseBlock<Scalar, NumDerivs>& x,
+                                             const std::vector<int>& block_pattern)
+{
+    // Checking that the input is consistent.
+    const int bpn = block_pattern.size();
+    if (bpn < NumDerivs) {
+        OPM_THROW(std::logic_error, "Block pattern has "
+                  << bpn << " elements which is smaller than NumDerivs ( = " << NumDerivs << ")");
+    }
+    const int n = x.size();
+    for (int ii = 0; ii < NumDerivs; ++ii) {
+        if (block_pattern[ii] != n) {
+            OPM_THROW(std::logic_error, "First elements of block pattern must be equal to x.size()");
+        }
+    }
+
+    if (x.isConstant()) {
+        return AutoDiffBlock<Scalar>::constant(x.value());
+    } else {
+        // Build sparse diagonal Jacobians.
+        typedef typename AutoDiffBlock<Scalar>::M M;
+        std::vector<M> jacs;
+        jacs.reserve(bpn);
+        for (int ii = 0; ii < NumDerivs; ++ii) {
+            if (x.hasZeroDerivative(ii)) {
+                jacs.emplace_back(n, n);
+            } else {
+                jacs.emplace_back(spdiag(x.derivative().col(ii)));
+            }
+        }
+        for (int ii = NumDerivs; ii < bpn; ++ii) {
+            jacs.emplace_back(n, block_pattern[ii]);
+        }
+
+        // Return using move to avoid copying of Jacobians.
+        typename AutoDiffBlock<Scalar>::V val_copy = x.value();
+        return AutoDiffBlock<Scalar>::function(std::move(val_copy), std::move(jacs));
+    }
 }
 
 } // namespace Opm

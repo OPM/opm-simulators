@@ -50,6 +50,8 @@ list (APPEND MAIN_SOURCE_FILES
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
+	tests/test_autodiffdense.cpp
+	tests/test_autodiffdenseblock.cpp
 	tests/test_autodiffhelpers.cpp
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
@@ -102,6 +104,8 @@ list (APPEND PROGRAM_SOURCE_FILES
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/AutoDiffBlock.hpp
+	opm/autodiff/AutoDiffDense.hpp
+	opm/autodiff/AutoDiffDenseBlock.hpp
 	opm/autodiff/AutoDiffHelpers.hpp
 	opm/autodiff/AutoDiff.hpp
 	opm/autodiff/BackupRestore.hpp

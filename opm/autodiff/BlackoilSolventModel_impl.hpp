@@ -110,7 +110,7 @@ namespace Opm {
     BlackoilSolventModel<Grid>::makeConstantState(SolutionState& state) const
     {
         Base::makeConstantState(state);
-        state.solvent_saturation = ADB::constant(state.solvent_saturation.value());
+        state.solvent_saturation = ADDB::constant(state.solvent_saturation.value());
     }
 
 
@@ -166,7 +166,7 @@ namespace Opm {
     typename BlackoilSolventModel<Grid>::SolutionState
     BlackoilSolventModel<Grid>::variableStateExtractVars(const ReservoirState& x,
                                                          const std::vector<int>& indices,
-                                                         std::vector<ADB>& vars) const
+                                                         std::vector<ADDB>& vars) const
     {
         SolutionState state = Base::variableStateExtractVars(x, indices, vars);
         if (has_solvent_) {
@@ -193,12 +193,12 @@ namespace Opm {
 
         // Compute accumulation of the solvent
         if (has_solvent_) {
-            const ADB& press = state.pressure;
-            const ADB& ss = state.solvent_saturation;
-            const ADB pv_mult = poroMult(press); // also computed in Base::computeAccum, could be optimized.
+            const ADDB& press = state.pressure;
+            const ADDB& ss = state.solvent_saturation;
+            const ADDB pv_mult = poroMult(press); // also computed in Base::computeAccum, could be optimized.
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
-            const ADB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
+            const ADDB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
             rq_[solvent_pos_].b = solvent_props_.bSolvent(pg,cells_);
             rq_[solvent_pos_].accum[aix] = pv_mult * rq_[solvent_pos_].b * ss;
         }
@@ -218,7 +218,7 @@ namespace Opm {
 
         if (has_solvent_) {
             residual_.material_balance_eq[ solvent_pos_ ] =
-                pvdt_ * (rq_[solvent_pos_].accum[1] - rq_[solvent_pos_].accum[0])
+                convertToAutoDiffBlock(pvdt_ * (rq_[solvent_pos_].accum[1] - rq_[solvent_pos_].accum[0]), blockPattern())
                 + ops_.div*rq_[solvent_pos_].mflux;
         }
 
@@ -244,9 +244,9 @@ namespace Opm {
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB zero = ADB::constant(V::Zero(nc));
-            const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active_[ Gas ]
+            const ADDB zero = ADDB::constant(V::Zero(nc));
+            const ADDB& ss = state.solvent_saturation;
+            const ADDB& sg = (active_[ Gas ]
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
@@ -265,13 +265,13 @@ namespace Opm {
                 }
             }
 
-            const ADB& rs_perfcells = subset(state.rs, well_cells);
+            const ADDB& rs_perfcells = subset(state.rs, well_cells);
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
             int oil_pos = fluid_.phaseUsage().phase_pos[Oil];
             // remove contribution from the dissolved gas.
             // TODO compensate for gas in the oil phase
             assert(!has_vapoil_);
-            const ADB cq_s_solvent = wellSolventFraction * (cq_s[gas_pos] - rs_perfcells * cq_s[oil_pos]);
+            const ADB cq_s_solvent = wellSolventFraction * (cq_s[gas_pos] - convertToAutoDiffBlock(rs_perfcells, blockPattern()) * cq_s[oil_pos]);
 
             // Solvent contribution to the mass balance equation is given as a fraction
             // of the gas contribution.
@@ -346,8 +346,8 @@ namespace Opm {
     void
     BlackoilSolventModel<Grid>::computeMassFlux(const int               actph ,
                                                 const V&                transi,
-                                                const ADB&              kr    ,
-                                                const ADB&              phasePressure,
+                                                const ADDB&             kr    ,
+                                                const ADDB&             phasePressure,
                                                 const SolutionState&    state)
     {
         Base::computeMassFlux(actph, transi, kr, phasePressure, state);
@@ -358,29 +358,30 @@ namespace Opm {
                 const int  nc   = Opm::UgGridHelpers::numCells(grid_);
 
                 const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-                const ADB zero = ADB::constant(V::Zero(nc));
-                const ADB& ss = state.solvent_saturation;
-                const ADB& sg = (active_[ Gas ]
+                const ADDB zero = ADDB::constant(V::Zero(nc));
+                const ADDB& ss = state.solvent_saturation;
+                const ADDB& sg = (active_[ Gas ]
                                  ? state.saturation[ pu.phase_pos[ Gas ] ]
                                  : zero);
 
                 Selector<double> zero_selector(ss.value(), Selector<double>::Zero);
-                ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+                ADDB F_solvent = zero_selector.select(ss, ss / (ss + sg));
                 V ones = V::Constant(nc, 1.0);
 
-                const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);               
+                const ADDB tr_mult = transMult(state.pressure);
+                const ADDB mu = solvent_props_.muSolvent(phasePressure,cells_);               
 
                 rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
                 rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
 
-                const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
-                const ADB rhoavg_solvent = ops_.caver * rho_solvent;
-                rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
+                const ADDB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
+                const ADB rhoavg_solvent = ops_.caver * convertToAutoDiffBlock(rho_solvent, blockPattern());
+                rq_[ solvent_pos_ ].dh = ops_.ngrad * convertToAutoDiffBlock(phasePressure, blockPattern())
+		    - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
 
                 UpwindSelector<double> upwind(grid_, ops_, rq_[solvent_pos_].dh.value());
                 // Compute solvent flux.
-                rq_[solvent_pos_].mflux = upwind.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
+                rq_[solvent_pos_].mflux = upwind.select(convertToAutoDiffBlock(rq_[solvent_pos_].b * rq_[solvent_pos_].mob, blockPattern())) * (transi * rq_[solvent_pos_].dh);
 
             }
         }
@@ -388,29 +389,29 @@ namespace Opm {
     }
 
     template <class Grid>
-    std::vector<ADB>
+    std::vector<ADDB>
     BlackoilSolventModel<Grid>::computeRelPerm(const SolutionState& state) const
     {
         using namespace Opm::AutoDiffGrid;
         const int               nc   = numCells(grid_);
 
-        const ADB zero = ADB::constant(V::Zero(nc));
+        const ADDB zero = ADDB::constant(V::Zero(nc));
 
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        const ADB& sw = (active_[ Water ]
+        const ADDB& sw = (active_[ Water ]
                          ? state.saturation[ pu.phase_pos[ Water ] ]
                          : zero);
 
-        const ADB& so = (active_[ Oil ]
+        const ADDB& so = (active_[ Oil ]
                          ? state.saturation[ pu.phase_pos[ Oil ] ]
                          : zero);
 
-        const ADB& sg = (active_[ Gas ]
+        const ADDB& sg = (active_[ Gas ]
                          ? state.saturation[ pu.phase_pos[ Gas ] ]
                          : zero);
 
         if (has_solvent_) {
-            const ADB& ss = state.solvent_saturation;
+            const ADDB& ss = state.solvent_saturation;
             return fluid_.relperm(sw, so, sg+ss, cells_);
         } else {
             return fluid_.relperm(sw, so, sg, cells_);
@@ -465,8 +466,8 @@ namespace Opm {
         std::vector<ADB> mob_perfcells(np, ADB::null());
         std::vector<ADB> b_perfcells(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
+            mob_perfcells[phase] = subset(convertToAutoDiffBlock(rq_[phase].mob, blockPattern()), well_cells);
+            b_perfcells[phase] = subset(convertToAutoDiffBlock(rq_[phase].b, blockPattern()), well_cells);
         }
 
         if (has_solvent_) {
@@ -476,8 +477,8 @@ namespace Opm {
             // total gas phase = hydro carbon gas + solvent gas
             // This may need to be reconsidered later, as the model
             // is tested.
-            mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
-            b_perfcells[gas_pos] += subset(rq_[solvent_pos_].b, well_cells);
+            mob_perfcells[gas_pos] += subset(convertToAutoDiffBlock(rq_[solvent_pos_].mob, blockPattern()), well_cells);
+	    b_perfcells[gas_pos] += subset(convertToAutoDiffBlock(rq_[solvent_pos_].b, blockPattern()), well_cells);
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
@@ -614,14 +615,14 @@ namespace Opm {
         {
             if (active_[idx]) {
                 const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
+                const ADDB& tempB = rq_[pos].b;
                 B.col(idx)       = 1./tempB.value();
                 R.col(idx)       = residual_.material_balance_eq[idx].value();
                 tempV.col(idx)   = R.col(idx).abs()/pv;
             }
         }
         if (has_solvent_) {
-            const ADB& tempB = rq_[solvent_pos_].b;
+            const ADDB& tempB = rq_[solvent_pos_].b;
             B.col(MaxNumPhases) = 1. / tempB.value();
             R.col(MaxNumPhases) = residual_.material_balance_eq[solvent_pos_].value();
             tempV.col(MaxNumPhases) = R.col(MaxNumPhases).abs()/pv;

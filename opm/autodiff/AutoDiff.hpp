@@ -256,7 +256,7 @@ namespace Opm
                const AutoDiff<Scalar>& rhs)
     {
         Scalar a =  Scalar(lhs) / rhs.val();
-        Scalar b = -Scalar(lhs) / (rhs.val() * rhs.val());
+        Scalar b = (-Scalar(lhs) / (rhs.val() * rhs.val())) * rhs.der();
 
         return AutoDiff<Scalar>::function(a, b);
     }

@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(Division)
     const double atol = 1.0e-14;
 
     AdFW a = AdFW::variable(10.0);
-    AdFW b = AdFW::variable(1.0);
+    AdFW b = AdFW::function(1.0, 4.0);
 
     AdFW aob = a / b;
     BOOST_CHECK_CLOSE(aob.val(), a.val() * b.val(), atol);
