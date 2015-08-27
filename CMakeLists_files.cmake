@@ -33,7 +33,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/NewtonIterationBlackoilSimple.cpp
 	opm/autodiff/NewtonIterationUtilities.cpp
 	opm/autodiff/GridHelpers.cpp
-#	opm/autodiff/ImpesTPFAAD.cpp
+	opm/autodiff/ImpesTPFAAD.cpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
 #	opm/autodiff/SimulatorIncompTwophaseAd.cpp
 #	opm/autodiff/TransportSolverTwophaseAd.cpp

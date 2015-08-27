@@ -496,7 +496,6 @@ collapseJacs(const AutoDiffBlock<double>& x)
 }
 
 
-    /*
 
 /// Returns the vertical concatenation [ x; y ] of the inputs.
 inline
@@ -519,7 +518,6 @@ vertcat(const AutoDiffBlock<double>& x,
 }
 
 
-    */
 
 
 /// Returns the vertical concatenation [ x[0]; x[1]; ...; x[n-1] ] of the inputs.

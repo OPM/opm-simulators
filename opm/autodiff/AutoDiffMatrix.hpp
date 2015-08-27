@@ -414,12 +414,12 @@ namespace Opm
         }
 
 
-
-        void toSparse(Eigen::SparseMatrix<double>& s) const
+        template<class Scalar, int Options, class Index>
+        void toSparse(Eigen::SparseMatrix<Scalar, Options, Index>& s) const
         {
             switch (type_) {
             case Z:
-                s = Eigen::SparseMatrix<double>(rows_, cols_);
+                s = Eigen::SparseMatrix<Scalar, Options, Index>(rows_, cols_);
                 return;
             case I:
                 s = spdiag(Eigen::VectorXd::Ones(rows_));
