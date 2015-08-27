@@ -87,10 +87,10 @@ public:
     //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 3;
 
-    //! Index of the oil phase
-    static const int oilPhaseIdx = 0;
     //! Index of the water phase
-    static const int waterPhaseIdx = 1;
+    static const int waterPhaseIdx = 0;
+    //! Index of the oil phase
+    static const int oilPhaseIdx = 1;
     //! Index of the gas phase
     static const int gasPhaseIdx = 2;
 
@@ -220,7 +220,7 @@ public:
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(const int phaseIdx)
     {
-        static const char *name[] = { "oil", "water", "gas" };
+        static const char *name[] = { "water", "oil", "gas" };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
         return name[phaseIdx];
@@ -250,7 +250,7 @@ public:
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(int compIdx)
     {
-        static const char *name[] = { "O", "W", "G" };
+        static const char *name[] = { "Oil", "Water", "Gas" };
 
         assert(0 <= compIdx && compIdx < numComponents);
         return name[compIdx];
