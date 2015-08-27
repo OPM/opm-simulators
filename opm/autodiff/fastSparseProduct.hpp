@@ -151,7 +151,6 @@ inline void fastDiagSparseProduct(// const Eigen::DiagonalMatrix<double, Eigen::
 
     // Multiply rows by diagonal lhs.
     int n = res.cols();
-#pragma omp parallel for
     for (int col = 0; col < n; ++col) {
         typedef Eigen::SparseMatrix<double>::InnerIterator It;
         for (It it(res, col); it; ++it) {
@@ -172,7 +171,6 @@ inline void fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
 
     // Multiply columns by diagonal rhs.
     int n = res.cols();
-#pragma omp parallel for
     for (int col = 0; col < n; ++col) {
         typedef Eigen::SparseMatrix<double>::InnerIterator It;
         for (It it(res, col); it; ++it) {
