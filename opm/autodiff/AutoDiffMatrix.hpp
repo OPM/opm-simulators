@@ -44,7 +44,9 @@ namespace Opm
         AutoDiffMatrix()
             : type_(Z),
               rows_(0),
-              cols_(0)
+              cols_(0),
+              diag_(),
+              sparse_()
         {
         }
 
@@ -53,7 +55,9 @@ namespace Opm
         AutoDiffMatrix(const int num_rows, const int num_cols)
             : type_(Z),
               rows_(num_rows),
-              cols_(num_cols)
+              cols_(num_cols),
+              diag_(),
+              sparse_()
         {
         }
 
@@ -65,7 +69,9 @@ namespace Opm
         AutoDiffMatrix(const CreationType t, const int num_rows)
             : type_(t == ZeroMatrix ? Z : I),
               rows_(num_rows),
-              cols_(num_rows)
+              cols_(num_rows),
+              diag_(),
+              sparse_()
         {
         }
 
@@ -75,7 +81,8 @@ namespace Opm
             : type_(D),
               rows_(d.rows()),
               cols_(d.cols()),
-              diag_(d.diagonal().array().data(), d.diagonal().array().data() + d.rows())
+              diag_(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()),
+              sparse_()
         {
         }
 
@@ -84,9 +91,10 @@ namespace Opm
         explicit AutoDiffMatrix(const Eigen::SparseMatrix<double>& s)
             : type_(S),
               rows_(s.rows()),
-              cols_(s.cols())
+              cols_(s.cols()),
+              diag_(),
+              sparse_(s)
         {
-            sparse_[0] = s;
         }
 
 
@@ -106,11 +114,13 @@ namespace Opm
                     diag_ = other.diag_;
                     break;
                 case S:
-                    sparse_[0] = other.sparse_[0];
+                    sparse_ = other.sparse_;
                     break;
                 default:
                     break;
             }
+
+            return *this;
         }
 
 
@@ -294,7 +304,7 @@ namespace Opm
             case S:
                 {
                     AutoDiffMatrix retval(*this);
-                    retval.sparse_[0] *= rhs;
+                    retval.sparse_ *= rhs;
                     return retval;
                 }
             default:
@@ -330,7 +340,7 @@ namespace Opm
             case S:
                 {
                     AutoDiffMatrix retval(*this);
-                    retval.sparse_[0] /= rhs;
+                    retval.sparse_ /= rhs;
                     return retval;
                 }
             default:
@@ -354,7 +364,7 @@ namespace Opm
             case D:
                 return Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_) * rhs;
             case S:
-                return sparse_[0] * rhs;
+                return sparse_ * rhs;
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -408,8 +418,8 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = lhs.sparse_[0];
-            retval.sparse_[0] += spdiag(Eigen::VectorXd::Ones(lhs.rows_));
+            retval.sparse_ = lhs.sparse_;
+            retval.sparse_ += spdiag(Eigen::VectorXd::Ones(lhs.rows_));
             return retval;
         }
 
@@ -421,8 +431,8 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = lhs.sparse_[0];
-            retval.sparse_[0] += spdiag(rhs.diag_);
+            retval.sparse_ = lhs.sparse_;
+            retval.sparse_ += spdiag(rhs.diag_);
             return retval;
         }
 
@@ -431,7 +441,7 @@ namespace Opm
             assert(lhs.type_ == S);
             assert(rhs.type_ == S);
             AutoDiffMatrix retval = lhs;
-            retval.sparse_[0] += rhs.sparse_[0];
+            retval.sparse_ += rhs.sparse_;
             return retval;
         }
 
@@ -458,7 +468,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = std::move(fastDiagSparseProduct(lhs.diag_, rhs.sparse_[0]));
+            retval.sparse_ = std::move(fastDiagSparseProduct(lhs.diag_, rhs.sparse_));
             return retval;
         }
 
@@ -470,7 +480,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = std::move(fastSparseDiagProduct(lhs.sparse_[0], rhs.diag_));
+            retval.sparse_ = std::move(fastSparseDiagProduct(lhs.sparse_, rhs.diag_));
             return retval;
         }
 
@@ -482,7 +492,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = std::move(fastSparseProduct<Sparse>(lhs.sparse_[0], rhs.sparse_[0]));
+            retval.sparse_ = std::move(fastSparseProduct<Sparse>(lhs.sparse_, rhs.sparse_));
             return retval;
         }
 
@@ -501,7 +511,7 @@ namespace Opm
                 s = spdiag(diag_);
                 return;
             case S:
-                s = sparse_[0];
+                s = sparse_;
                 return;
             }
         }
@@ -527,7 +537,7 @@ namespace Opm
             case D:
                 return rows_;
             case S:
-                return sparse_[0].nonZeros();
+                return sparse_.nonZeros();
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -544,7 +554,7 @@ namespace Opm
             case D:
                 return (row == col) ? diag_[row] : 0.0;
             case S:
-                return sparse_[0].coeff(row, col);
+                return sparse_.coeff(row, col);
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -556,13 +566,7 @@ namespace Opm
         int rows_;
         int cols_;
         Diag diag_;
-
-        /**
-         * Eigen uses memory allocation within the default constructor, so that
-         * Sparse a; actually calls malloc. To prevent this, we here use
-         * Sparse a[1], and only construct the object when needed.
-         */
-        Sparse sparse_[1];
+        Sparse sparse_;
 
         template <class V>
         static inline
