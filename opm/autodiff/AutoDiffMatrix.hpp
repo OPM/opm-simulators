@@ -75,7 +75,7 @@ namespace Opm
             : type_(D),
               rows_(d.rows()),
               cols_(d.cols()),
-              diag_(Diag(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()))
+              diag_(d.diagonal().array().data(), d.diagonal().array().data() + d.rows())
         {
         }
 
@@ -137,7 +137,7 @@ namespace Opm
             std::swap(rows_, other.rows_);
             std::swap(cols_, other.cols_);
             diag_.swap(other.diag_);
-            sparse_[0].swap(other.sparse_[0]);
+            std::swap(sparse_, other.sparse_);
         }
 
 
@@ -280,7 +280,7 @@ namespace Opm
                 {
                     AutoDiffMatrix retval(*this);
                     retval.type_ = D;
-                    retval.diag_ = Diag(rows_, rhs);
+                    retval.diag_.assign(rows_, rhs);
                     return retval;
                 }
             case D:
@@ -352,13 +352,9 @@ namespace Opm
             case I:
                 return rhs;
             case D:
-                {
-                    return Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_) * rhs;
-                }
+                return Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_) * rhs;
             case S:
-                {
-                    return sparse_[0] * rhs;
-                }
+                return sparse_[0] * rhs;
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -531,7 +527,7 @@ namespace Opm
             case D:
                 return rows_;
             case S:
-                return sparse_->nonZeros();
+                return sparse_[0].nonZeros();
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -548,7 +544,7 @@ namespace Opm
             case D:
                 return (row == col) ? diag_[row] : 0.0;
             case S:
-                return sparse_->coeff(row, col);
+                return sparse_[0].coeff(row, col);
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
