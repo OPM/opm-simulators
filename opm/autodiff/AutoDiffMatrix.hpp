@@ -126,7 +126,7 @@ namespace Opm
             std::swap(rows_, other.rows_);
             std::swap(cols_, other.cols_);
             d_.swap(other.d_);
-            std::swap(s_, other.s_);
+            s_.swap(other.s_);
         }
 
 
