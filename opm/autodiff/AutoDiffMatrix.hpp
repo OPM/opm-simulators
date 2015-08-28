@@ -24,7 +24,6 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <boost/any.hpp>
 
 #include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
@@ -76,7 +75,7 @@ namespace Opm
             : type_(D),
               rows_(d.rows()),
               cols_(d.cols()),
-              data_(Diag(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()))
+              diag_(Diag(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()))
         {
         }
 
@@ -85,15 +84,34 @@ namespace Opm
         explicit AutoDiffMatrix(const Eigen::SparseMatrix<double>& s)
             : type_(S),
               rows_(s.rows()),
-              cols_(s.cols()),
-              data_(s)
+              cols_(s.cols())
         {
+            sparse_[0] = s;
         }
 
 
 
-        AutoDiffMatrix(const AutoDiffMatrix& other) = default;
-        AutoDiffMatrix& operator=(const AutoDiffMatrix& other) = default;
+        AutoDiffMatrix(const AutoDiffMatrix& other)
+        {
+            *this = other;
+        }
+
+        AutoDiffMatrix& operator=(const AutoDiffMatrix& other)
+        {
+            type_ = other.type_;
+            rows_ = other.rows_;
+            cols_ = other.cols_;
+            switch(type_) {
+                case D:
+                    diag_ = other.diag_;
+                    break;
+                case S:
+                    sparse_[0] = other.sparse_[0];
+                    break;
+                default:
+                    break;
+            }
+        }
 
 
 
@@ -118,7 +136,8 @@ namespace Opm
             std::swap(type_, other.type_);
             std::swap(rows_, other.rows_);
             std::swap(cols_, other.cols_);
-            data_.swap(other.data_);
+            diag_.swap(other.diag_);
+            sparse_[0].swap(other.sparse_[0]);
         }
 
 
@@ -261,14 +280,13 @@ namespace Opm
                 {
                     AutoDiffMatrix retval(*this);
                     retval.type_ = D;
-                    retval.data_ = boost::any(Diag(rows_, rhs));
+                    retval.diag_ = Diag(rows_, rhs);
                     return retval;
                 }
             case D:
                 {
                     AutoDiffMatrix retval(*this);
-                    Diag& d = boost::any_cast<Diag&>(retval.data_);
-                    for (double& elem : d) {
+                    for (double& elem : retval.diag_) {
                         elem *= rhs;
                     }
                     return retval;
@@ -276,8 +294,7 @@ namespace Opm
             case S:
                 {
                     AutoDiffMatrix retval(*this);
-                    Sparse& s = boost::any_cast<Sparse&>(retval.data_);
-                    s *= rhs;
+                    retval.sparse_[0] *= rhs;
                     return retval;
                 }
             default:
@@ -299,14 +316,13 @@ namespace Opm
                 {
                     AutoDiffMatrix retval(*this);
                     retval.type_ = D;
-                    boost::any_cast<Diag&>(retval.data_).assign(rows_, 1.0/rhs);
+                    retval.diag_.assign(rows_, 1.0/rhs);
                     return retval;
                 }
             case D:
                 {
                     AutoDiffMatrix retval(*this);
-                    Diag& d = boost::any_cast<Diag&>(retval.data_);
-                    for (double& elem : d) {
+                    for (double& elem : retval.diag_) {
                         elem /= rhs;
                     }
                     return retval;
@@ -314,8 +330,7 @@ namespace Opm
             case S:
                 {
                     AutoDiffMatrix retval(*this);
-                    Sparse& s = boost::any_cast<Sparse&>(retval.data_);
-                    s /= rhs;
+                    retval.sparse_[0] /= rhs;
                     return retval;
                 }
             default:
@@ -338,13 +353,11 @@ namespace Opm
                 return rhs;
             case D:
                 {
-                    const Diag& d = boost::any_cast<const Diag&>(data_);
-                    return Eigen::Map<const Eigen::VectorXd>(d.data(), rows_) * rhs;
+                    return Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_) * rhs;
                 }
             case S:
                 {
-                    const Sparse& s = boost::any_cast<const Sparse&>(data_);
-                    return s * rhs;
+                    return sparse_[0] * rhs;
                 }
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
@@ -364,7 +377,7 @@ namespace Opm
             retval.type_ = D;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.data_ = boost::any(Diag(lhs.rows_, 2.0));
+            retval.diag_.assign(lhs.rows_, 2.0);
             return retval;
         }
 
@@ -374,9 +387,8 @@ namespace Opm
             assert(lhs.type_ == D);
             assert(rhs.type_ == I);
             AutoDiffMatrix retval = lhs;
-            Diag& d = boost::any_cast<Diag&>(retval.data_);
             for (int r = 0; r < lhs.rows_; ++r) {
-                d[r] += 1.0;
+                retval.diag_[r] += 1.0;
             }
             return retval;
         }
@@ -386,10 +398,8 @@ namespace Opm
             assert(lhs.type_ == D);
             assert(rhs.type_ == D);
             AutoDiffMatrix retval = lhs;
-            Diag& d_lhs = boost::any_cast<Diag&>(retval.data_);
-            const Diag& d_rhs = boost::any_cast<const Diag&>(rhs.data_);
             for (int r = 0; r < lhs.rows_; ++r) {
-                d_lhs[r] += d_rhs[r];
+                retval.diag_[r] += rhs.diag_[r];
             }
             return retval;
         }
@@ -399,12 +409,11 @@ namespace Opm
             assert(lhs.type_ == S);
             assert(rhs.type_ == I);
             AutoDiffMatrix retval;
-            Eigen::SparseMatrix<double> ident = spdiag(Eigen::VectorXd::Ones(lhs.rows_));
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            const Sparse& s = boost::any_cast<const Sparse&>(lhs.data_);
-            retval.data_ = static_cast<Sparse>(s + ident);
+            retval.sparse_[0] = lhs.sparse_[0];
+            retval.sparse_[0] += spdiag(Eigen::VectorXd::Ones(lhs.rows_));
             return retval;
         }
 
@@ -413,12 +422,11 @@ namespace Opm
             assert(lhs.type_ == S);
             assert(rhs.type_ == D);
             AutoDiffMatrix retval;
-            Sparse diag = spdiag(boost::any_cast<const Diag&>(rhs.data_));
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            const Sparse& s = boost::any_cast<const Sparse&>(lhs.data_);
-            retval.data_ = static_cast<Sparse>(s + diag);
+            retval.sparse_[0] = lhs.sparse_[0];
+            retval.sparse_[0] += spdiag(rhs.diag_);
             return retval;
         }
 
@@ -426,13 +434,8 @@ namespace Opm
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == S);
-            AutoDiffMatrix retval;
-            retval.type_ = S;
-            retval.rows_ = lhs.rows_;
-            retval.cols_ = rhs.cols_;
-            const Sparse& s_lhs = boost::any_cast<const Sparse&>(lhs.data_);
-            const Sparse& s_rhs = boost::any_cast<const Sparse&>(rhs.data_);
-            retval.data_ = static_cast<Sparse>(s_lhs + s_rhs);
+            AutoDiffMatrix retval = lhs;
+            retval.sparse_[0] += rhs.sparse_[0];
             return retval;
         }
 
@@ -444,16 +447,9 @@ namespace Opm
         {
             assert(lhs.type_ == D);
             assert(rhs.type_ == D);
-            AutoDiffMatrix retval;
-            retval.type_ = D;
-            retval.rows_ = lhs.rows_;
-            retval.cols_ = rhs.cols_;
-            retval.data_ = boost::any(Diag(lhs.rows_));
-            Diag& d = boost::any_cast<Diag&>(retval.data_);
-            const Diag& d_lhs = boost::any_cast<const Diag&>(lhs.data_);
-            const Diag& d_rhs = boost::any_cast<const Diag&>(rhs.data_);
+            AutoDiffMatrix retval = lhs;
             for (int r = 0; r < lhs.rows_; ++r) {
-                d[r] = d_lhs[r] * d_rhs[r];
+                retval.diag_[r] *= rhs.diag_[r];
             }
             return retval;
         }
@@ -466,11 +462,8 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.data_ = boost::any(Sparse(retval.rows_, retval.cols_)); //FIXME: Superfluous?
-            const Diag& a = boost::any_cast<const Diag&>(lhs.data_);
-            const Sparse& b = boost::any_cast<const Sparse&>(rhs.data_);
-            Sparse& c = boost::any_cast<Sparse&>(retval.data_);
-            fastDiagSparseProduct(a, b, c);
+            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
+            fastDiagSparseProduct(lhs.diag_, rhs.sparse_[0], retval.sparse_[0]);
             return retval;
         }
 
@@ -482,11 +475,8 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.data_ = boost::any(Sparse(retval.rows_, retval.cols_)); //FIXME: Superfluous?
-            const Sparse& a = boost::any_cast<const Sparse&>(lhs.data_);
-            const Diag& b = boost::any_cast<const Diag&>(rhs.data_);
-            Sparse& c = boost::any_cast<Sparse&>(retval.data_);
-            fastSparseDiagProduct(a, b, c);
+            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
+            fastSparseDiagProduct(lhs.sparse_[0], rhs.diag_, retval.sparse_[0]);
             return retval;
         }
 
@@ -498,11 +488,8 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.data_ = boost::any(Sparse(retval.rows_, retval.cols_)); //FIXME: Superfluous?
-            const Sparse& a = boost::any_cast<const Sparse&>(lhs.data_);
-            const Sparse& b = boost::any_cast<const Sparse&>(rhs.data_);
-            Sparse& c = boost::any_cast<Sparse&>(retval.data_);
-            fastSparseProduct(a, b, c);
+            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
+            fastSparseProduct(lhs.sparse_[0], rhs.sparse_[0], retval.sparse_[0]);
             return retval;
         }
 
@@ -518,10 +505,10 @@ namespace Opm
                 s = spdiag(Eigen::VectorXd::Ones(rows_));
                 return;
             case D:
-                s = spdiag(boost::any_cast<const Diag&>(data_));
+                s = spdiag(diag_);
                 return;
             case S:
-                s = boost::any_cast<const Sparse&>(data_);
+                s = sparse_[0];
                 return;
             }
         }
@@ -547,7 +534,7 @@ namespace Opm
             case D:
                 return rows_;
             case S:
-                return boost::any_cast<const Sparse&>(data_).nonZeros();
+                return sparse_->nonZeros();
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -562,9 +549,9 @@ namespace Opm
             case I:
                 return (row == col) ? 1.0 : 0.0;
             case D:
-                return (row == col) ? boost::any_cast<const Diag&>(data_)[row] : 0.0;
+                return (row == col) ? diag_[row] : 0.0;
             case S:
-                return boost::any_cast<const Sparse&>(data_).coeff(row, col);
+                return sparse_->coeff(row, col);
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
@@ -575,22 +562,24 @@ namespace Opm
         MatrixType type_;
         int rows_;
         int cols_;
-        boost::any data_;
-        /*
-        std::vector<double> d_;
-        Eigen::SparseMatrix<double> s_;
-        */
+        Diag diag_;
+
+        /**
+         * Eigen uses memory allocation within the default constructor, so that
+         * Sparse a; actually calls malloc. To prevent this, we here use
+         * Sparse a[1], and only construct the object when needed.
+         */
+        Sparse sparse_[1];
 
         template <class V>
         static inline
-        Eigen::SparseMatrix<double>
+        Sparse
         spdiag(const V& d)
         {
-            typedef Eigen::SparseMatrix<double> M;
             const int n = d.size();
-            M mat(n, n);
+            Sparse mat(n, n);
             mat.reserve(Eigen::ArrayXi::Ones(n, 1));
-            for (M::Index i = 0; i < n; ++i) {
+            for (Sparse::Index i = 0; i < n; ++i) {
                 if (d[i] != 0.0) {
                     mat.insert(i, i) = d[i];
                 }
