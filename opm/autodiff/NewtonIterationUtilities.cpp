@@ -76,6 +76,7 @@ namespace Opm
         const Sp Di = solver.solve(id);
 
         // compute inv(D)*bn for the update of the right hand side
+        // Note: Eigen version > 3.2 requires a non-const reference to solve.
         ADB::V eqs_n_v = eqs[n].value();
         const Eigen::VectorXd& Dibn = solver.solve(eqs_n_v.matrix());
 
