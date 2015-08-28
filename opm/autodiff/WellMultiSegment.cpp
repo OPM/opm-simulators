@@ -46,6 +46,7 @@ namespace Opm
             // m_number_of_perforations_ from wells
             // m_well_index_ from wells
             m_outlet_segment_.resize(m_number_of_segments_);
+            m_inlet_segments_.resize(m_number_of_segments_);
             m_segment_length_.resize(m_number_of_segments_);
             m_segment_depth_.resize(m_number_of_segments_);
             m_segment_internal_diameter_.resize(m_number_of_segments_);
@@ -135,6 +136,13 @@ namespace Opm
             }
 
             assert(perf_count == m_number_of_perforations_);
+
+            // update m_inlet_segments_
+            for (size_t is = 0; is < m_number_of_segments_; ++is) {
+                const int index_outlet = m_outlet_segment_[is];
+                m_inlet_segments_[index_outlet].push_back(is);
+            }
+
             // std::cin.ignore();
 
             // how to build the relation between segments and completions
@@ -207,6 +215,8 @@ namespace Opm
                 m_segment_perforations_[0][i] = i;
             }
 
+            m_inlet_segments_.resize(1);
+
             // std::cin.ignore();
 
             // how to build the relation between segments and completions
@@ -234,6 +244,68 @@ namespace Opm
             // while for usual wells, it is typically SEG.
         }
 
+        // update the wellOps (m_wops)
+        m_wops_.s2p = M(m_number_of_perforations_, m_number_of_segments_);
+        m_wops_.p2s = M(m_number_of_segments_, m_number_of_perforations_);
+
+        typedef Eigen::Triplet<double> Tri;
+
+        std::vector<Tri> s2p;
+        std::vector<Tri> p2s;
+
+        s2p.reserve(m_number_of_perforations_);
+        p2s.reserve(m_number_of_perforations_);
+
+        for(int s = 0; s < (int)m_number_of_segments_; ++s) {
+            int temp_nperf = m_segment_perforations_.size();
+            assert(temp_nperf > 0);
+            for (int perf = 0; perf < temp_nperf; ++perf) {
+                const int index_perf = m_segment_perforations_[s][perf];
+                s2p.push_back(Tri(index_perf, s, 1.0));
+                p2s.push_back(Tri(s, index_perf, 1.0));
+            }
+        }
+        m_wops_.s2p.setFromTriplets(s2p.begin(), s2p.end());
+        m_wops_.p2s.setFromTriplets(p2s.begin(), p2s.end());
+
+        m_wops_.s2s_gather = M(m_number_of_segments_, m_number_of_segments_);
+        std::vector<Tri> s2s_gather;
+
+        s2s_gather.reserve(m_number_of_segments_ * m_number_of_segments_);
+        // a brutal way first
+        // will generate matrix with entries bigger than 1.0
+        // Then we need to normalize all the values.
+        for (int s = 0; s < (int)m_number_of_segments_; ++s) {
+            s2s_gather.push_back(Tri(s, s, 1.0));
+            int temp_s = s;
+            while (m_outlet_segment_[temp_s] >=0) {
+                s2s_gather.push_back(Tri(m_outlet_segment_[temp_s], temp_s, 1.0));
+                temp_s = m_outlet_segment_[temp_s];
+            }
+        }
+
+        M temp_s2s_gather(m_number_of_segments_, m_number_of_segments_);
+        M inverse_s2s_gather(m_number_of_segments_, m_number_of_segments_);
+
+        temp_s2s_gather.setFromTriplets(s2s_gather.begin(), s2s_gather.end());
+        inverse_s2s_gather = temp_s2s_gather.cwiseInverse();
+
+        m_wops_.s2s_gather = temp_s2s_gather.cwiseProduct(inverse_s2s_gather);
+        // p2w should be simple
+
+        m_wops_.p2s_gather = M(m_number_of_segments_, m_number_of_perforations_);
+        m_wops_.p2s_gather = m_wops_.s2s_gather * m_wops_.s2p;
+
+        // s2s_gather
+
+    }
+
+    const std::string& WellMultiSegment::name() const {
+        return m_well_name_;
+    }
+
+    const bool WellMultiSegment::isMultiSegmented() const {
+        return m_is_multi_segment_;
     }
 
     const enum WellType WellMultiSegment::wellType() const {
@@ -248,7 +320,7 @@ namespace Opm
         return m_number_of_perforations_;
     }
 
-    const size_t WellMultiSegment::numberOfSegment() const {
+    const size_t WellMultiSegment::numberOfSegments() const {
         return m_number_of_segments_;
     }
 
@@ -268,7 +340,7 @@ namespace Opm
         return m_perf_depth_;
     }
 
-    const std::vector<int>& WellMultiSegment::wellCell() const {
+    const std::vector<int>& WellMultiSegment::wellCells() const {
         return m_well_cell_;
     }
 
@@ -296,7 +368,11 @@ namespace Opm
         return m_segment_volume_;
     }
 
-    const std::vector<std::vector<int>>& WellMultiSegment::segmentPerforatioins() const {
+    const std::vector<std::vector<int>>& WellMultiSegment::segmentPerforations() const {
         return m_segment_perforations_;
+    }
+
+    const WellMultiSegment::WellOps& WellMultiSegment::wellOps() const {
+        return m_wops_;
     }
 }

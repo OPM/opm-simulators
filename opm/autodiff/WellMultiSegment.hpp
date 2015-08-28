@@ -21,6 +21,11 @@
 #define OPM_WELLMULTISEGMENT_HEADER_INCLUDED
 
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <Eigen/Eigen>
+#include <Eigen/Sparse>
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
@@ -43,10 +48,15 @@ namespace Opm
     {
     public:
 
+        typedef Eigen::Array<double, Eigen::Dynamic, 1> V;
+        typedef Eigen::SparseMatrix<double> M;
+
         WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells);
 
+        const std::string& name() const;
+        const bool isMultiSegmented() const;
         const size_t numberOfPerforations() const;
-        const size_t numberOfSegment() const;
+        const size_t numberOfSegments() const;
 
         const struct WellControls* wellControls() const;
         const std::vector<double>& compFrac() const;
@@ -56,14 +66,31 @@ namespace Opm
         const enum WellType wellType() const;
         const std::vector<double>& wellIndex() const;
         const std::vector<double>& perfDepth() const;
-        const std::vector<int>& wellCell() const;
+        const std::vector<int>& wellCells() const;
         const std::vector<int>& outletSegment() const;
+        const std::vector<std::vector<int>>& inletSegments() const;
         const std::vector<double>& segmentLength() const;
         const std::vector<double>& segmentDepth() const;
         const std::vector<double>& segmentCrossArea() const;
         const std::vector<double>& segmentRoughness() const;
         const std::vector<double>& segmentVolume() const;
-        const std::vector<std::vector<int>>& segmentPerforatioins() const;
+        const std::vector<std::vector<int>>& segmentPerforations() const;
+
+        struct WellOps {
+            M s2p;              // segment -> perf (scatter)
+            M p2s;              // perf -> segment (gather)
+            // M w2p;              // well -> perf (scatter)
+            // M p2w;              // perf - > well (gather)
+                                // but since only one well, so it is just an arrary
+                                // not needed now.
+            // M w2s;              // well -> segment (scatter)
+            M s2s_gather;       // segment -> segment (in an accumlative way)
+                                // means the outlet segments will gather all the contribution
+                                // from all the inlet segments in a recurisive way
+            M p2s_gather;       // perforation -> segment (in an accumative way)
+        };
+
+        const WellOps& wellOps() const;
 
     private:
         // for the moment, we use the information from wells.
@@ -106,8 +133,12 @@ namespace Opm
         // maybe here we can use the location in the vector
         // at the moment, we still use the ID number
         // then a mapping from the ID number to the actual location will be required
+        // The ID is already changed to the location now.
         std::vector<int> m_outlet_segment_;
-        std::map<int, int> m_number_to_location_;
+        // for convinience, we store the inlet segments for each segment
+        std::vector<std::vector<int>> m_inlet_segments_;
+        // this one is not necessary any more, since the segment number is its location.
+        // std::map<int, int> m_number_to_location_;
         // has not decided to use the absolute length from the well head
         // or the length of this single segment
         // using the absolute length first
@@ -128,6 +159,8 @@ namespace Opm
         // This is also assuming the order of the completions in Well is the same with
         // the order of the completions in wells.
         std::vector<std::vector<int>> m_segment_perforations_;
+
+        WellOps m_wops_;
     };
 
     typedef std::shared_ptr<WellMultiSegment> WellMutliSegmentPtr;

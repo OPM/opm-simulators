@@ -34,6 +34,10 @@
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
+// temporary usuage
+#include <opm/autodiff/WellStateMultiSegment.hpp>
+#include <opm/autodiff/WellMultiSegment.hpp>
+
 #include <array>
 
 struct Wells;
@@ -74,7 +78,35 @@ namespace Opm {
     };
 
 
+    struct MultiSegmentBlackoilSolutionState
+    {
+        typedef AutoDiffBlock<double> ADB;
+        explicit MultiSegmentBlackoilSolutionState(const int np)
+            : pressure     (    ADB::null())
+            , temperature  (    ADB::null())
+            , saturation   (np, ADB::null())
+            , rs           (    ADB::null())
+            , rv           (    ADB::null())
+            , qs           (    ADB::null())
+            , pseg         (    ADB::null())
+            , canonical_phase_pressures(3, ADB::null())
+        {
+        }
 
+        ADB              pressure;
+        ADB              temperature;
+        std::vector<ADB> saturation;
+        ADB              rs;
+        ADB              rv;
+        // the flow rates for each segments
+        // the first one for each well is the flow rate
+        ADB              qs;
+        // the pressure for the segments
+        // the first one for each well is the bhp
+        ADB              pseg;
+        // Below are quantities stored in the state for optimization purposes.
+        std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
+    };
 
     /// Class used for reporting the outcome of a nonlinearIteration() call.
     struct IterationReport
@@ -199,6 +231,10 @@ namespace Opm {
                       WellState& well_state,
                       const bool initial_assembly);
 
+        void assemble(const ReservoirState& reservoir_state,
+                      WellStateMultiSegment& well_state,
+                      const bool initial_assembly);
+
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
         /// \return a vector that contains for each phase the norm of the mass balance
@@ -282,6 +318,9 @@ namespace Opm {
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const Wells*                    wells_;
+        // FOR TEMPORARY
+        // SHOUlD BE A REFERENCE
+        const std::vector<WellMultiSegment> wells_multi_segment_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -304,8 +343,47 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
+
+        // For the non-segmented well, it should be the density with AVG or SEG way.
+        // while usually SEG way
         V well_perforation_densities_; //Density of each well perforation
+
+        // ADB version, when using AVG way, the calculation of the density and hydrostatic head
+        // is implicit
+        ADB well_perforation_densities_adb_;
+
+        // Diff to the pressure of the related segment.
+        // When the well is a usual well, the bhp will be the pressure of the top segment
+        // For mutlti-segmented wells, only AVG is allowed.
+        // For non-segmented wells, typically SEG is used. AVG way might not have been
+        // implemented yet.
+
+        // Diff to bhp for each well perforation. only for usual wells.
+        // For segmented wells, they are zeros.
         V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+
+        // ADB version. Eventually, only ADB version will be kept.
+        ADB well_perforation_pressure_diffs_adb_;
+
+        // Pressure correction due to the different depth of the perforation
+        // and the cell center of the grid block
+        // For the non-segmented wells, since the perforation are forced to be
+        // at the center of the grid cell, it should be ZERO.
+        // It should only apply to the mutli-segmented wells.
+        V well_perforation_pressure_cell_diffs_;
+        ADB well_perforation_pressure_cell_diffs_adb_;
+
+        // Pressure correction due to the depth differennce between segment depth and perforation depth.
+        // TODO: It should be able to be merge as a part of the perforation_pressure_diffs_.
+        ADB well_perforations_segment_pressure_diffs_;
+
+        // the average of the fluid densities in the grid block
+        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
+        // and the cell center of the grid block
+        V well_perforation_cell_densities_;
+        ADB well_perforation_cell_densities_adb_;
+
+        V well_perforatoin_cell_pressure_diffs_;
 
         LinearisedBlackoilResidual residual_;
 
@@ -341,8 +419,10 @@ namespace Opm {
         bool wellsActive() const { return wells_active_; }
         // return true if wells are available on this process
         bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
+
         // return wells object
         const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
+        const std::vector<WellMultiSegment>& wellsMultiSegment() const { return wells_multi_segment_; }
 
         void
         makeConstantState(SolutionState& state) const;
@@ -351,14 +431,28 @@ namespace Opm {
         variableState(const ReservoirState& x,
                       const WellState& xw) const;
 
+        SolutionState
+        variableState(const ReservoirState& x,
+                      const WellStateMultiSegment& xw) const;
+
         std::vector<V>
         variableStateInitials(const ReservoirState& x,
                               const WellState& xw) const;
+        std::vector<V>
+        variableStateInitials(const ReservoirState& x,
+                              const WellStateMultiSegment& xw) const;
         void
         variableReservoirStateInitials(const ReservoirState& x,
                                        std::vector<V>& vars0) const;
         void
         variableWellStateInitials(const WellState& xw,
+                                  std::vector<V>& vars0) const;
+
+        void variableWellStateInitials(const WellStateMultiSegment& xw,
+                                       std::vector<V>& vars0) const;
+
+        void
+        variableWellState(const WellStateMultiSegment& xw,
                                   std::vector<V>& vars0) const;
 
         std::vector<int>
@@ -384,6 +478,9 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellStateMultiSegment& xw);
+
         void
         assembleMassBalanceEq(const SolutionState& state);
 
@@ -401,13 +498,28 @@ namespace Opm {
                         std::vector<ADB>& cq_s);
 
         void
+        computeWellFlux(const MultiSegmentBlackoilSolutionState& state,
+                        const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
+                        V& aliveWells,
+                        std::vector<ADB>& cq_s);
+        void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
                                          WellState& xw);
 
         void
+        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                         const MultiSegmentBlackoilSolutionState& state,
+                                         WellStateMultiSegment& xw);
+
+        void
         addWellFluxEq(const std::vector<ADB>& cq_s,
                       const SolutionState& state);
+
+        void
+        addWellFluxEq(const std::vector<ADB>& cq_s,
+                      const MultiSegmentBlackoilSolutionState& state);
 
         void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
@@ -419,7 +531,14 @@ namespace Opm {
                          const WellState& xw,
                          const V& aliveWells);
 
+        void
+        addWellControlEq(const MultiSegmentBlackoilSolutionState& state,
+                         const WellStateMultiSegment& xw,
+                         const V& aliveWells);
+
+
         void updateWellControls(WellState& xw) const;
+        void updateWellControls(WellStateMultiSegment& xw) const;
 
         void updateWellState(const V& dwells,
                              WellState& well_state);
