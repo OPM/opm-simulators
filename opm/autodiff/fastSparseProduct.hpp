@@ -56,16 +56,16 @@ struct QuickSort< 0 >
 };
 
 
-template<typename ResultType, typename Lhs, typename Rhs>
-ResultType fastSparseProduct(const Lhs& lhs, const Rhs& rhs)
+template<typename Lhs, typename Rhs, typename ResultType>
+void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 {
   // initialize result
-  ResultType res(lhs.rows(), rhs.cols());
+  res = ResultType(lhs.rows(), rhs.cols());
 
   // if one of the matrices does not contain non zero elements
   // the result will only contain an empty matrix
   if( lhs.nonZeros() == 0 || rhs.nonZeros() == 0 )
-    return res;
+    return;
 
   typedef typename Eigen::internal::remove_all<Lhs>::type::Scalar Scalar;
   typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
@@ -137,19 +137,17 @@ ResultType fastSparseProduct(const Lhs& lhs, const Rhs& rhs)
 
   }
   res.finalize();
-
-  return res;
 }
 
 
 
 
-inline
-Eigen::SparseMatrix<double>
-fastDiagSparseProduct(const std::vector<double>& lhs,
-                      const Eigen::SparseMatrix<double>& rhs)
+inline void fastDiagSparseProduct(// const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& lhs,
+                                  const std::vector<double>& lhs,
+                                  const Eigen::SparseMatrix<double>& rhs,
+                                  Eigen::SparseMatrix<double>& res)
 {
-    Eigen::SparseMatrix<double> res = rhs;
+    res = rhs;
 
     // Multiply rows by diagonal lhs.
     int n = res.cols();
@@ -159,19 +157,17 @@ fastDiagSparseProduct(const std::vector<double>& lhs,
             it.valueRef() *= lhs[it.row()]; // lhs.diagonal()(it.row());
         }
     }
-
-    return res;
 }
 
 
 
 
-inline
-Eigen::SparseMatrix<double>
-fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
-                      const std::vector<double>& rhs)
+inline void fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
+                                  // const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& rhs,
+                                  const std::vector<double>& rhs,
+                                  Eigen::SparseMatrix<double>& res)
 {
-    Eigen::SparseMatrix<double> res = lhs;
+    res = lhs;
 
     // Multiply columns by diagonal rhs.
     int n = res.cols();
@@ -181,8 +177,6 @@ fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
             it.valueRef() *= rhs[col]; // rhs.diagonal()(col);
         }
     }
-
-    return res;
 }
 
 

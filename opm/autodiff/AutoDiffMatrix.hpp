@@ -99,29 +99,8 @@ namespace Opm
 
 
 
-        AutoDiffMatrix(const AutoDiffMatrix& other)
-        {
-            *this = other;
-        }
-
-        AutoDiffMatrix& operator=(const AutoDiffMatrix& other)
-        {
-            type_ = other.type_;
-            rows_ = other.rows_;
-            cols_ = other.cols_;
-            switch(type_) {
-                case D:
-                    diag_ = other.diag_;
-                    break;
-                case S:
-                    sparse_ = other.sparse_;
-                    break;
-                default:
-                    break;
-            }
-
-            return *this;
-        }
+        AutoDiffMatrix(const AutoDiffMatrix& other) = default;
+        AutoDiffMatrix& operator=(const AutoDiffMatrix& other) = default;
 
 
 
@@ -418,8 +397,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_ = lhs.sparse_;
-            retval.sparse_ += spdiag(Eigen::VectorXd::Ones(lhs.rows_));
+            retval.sparse_ = lhs.sparse_ + spdiag(Eigen::VectorXd::Ones(lhs.rows_));
             return retval;
         }
 
@@ -431,8 +409,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_ = lhs.sparse_;
-            retval.sparse_ += spdiag(rhs.diag_);
+            retval.sparse_ = lhs.sparse_ + spdiag(rhs.diag_);
             return retval;
         }
 
@@ -440,8 +417,16 @@ namespace Opm
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == S);
+#if 1
+            AutoDiffMatrix retval;
+            retval.type_ = S;
+            retval.rows_ = lhs.rows_;
+            retval.cols_ = rhs.cols_;
+            retval.sparse_ = lhs.sparse_ + rhs.sparse_;
+#else
             AutoDiffMatrix retval = lhs;
             retval.sparse_ += rhs.sparse_;
+#endif
             return retval;
         }
 
@@ -453,10 +438,21 @@ namespace Opm
         {
             assert(lhs.type_ == D);
             assert(rhs.type_ == D);
+#if 1
+            AutoDiffMatrix retval;
+            retval.type_ = D;
+            retval.rows_ = lhs.rows_;
+            retval.cols_ = rhs.cols_;
+            retval.diag_.resize(lhs.rows_);
+            for (int r = 0; r < lhs.rows_; ++r) {
+                retval.diag_[r] = lhs.diag_[r] * rhs.diag_[r];
+            }
+#else
             AutoDiffMatrix retval = lhs;
             for (int r = 0; r < lhs.rows_; ++r) {
                 retval.diag_[r] *= rhs.diag_[r];
             }
+#endif
             return retval;
         }
 
@@ -468,7 +464,11 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
+#if 1
+            fastDiagSparseProduct(lhs.diag_, rhs.sparse_, retval.sparse_);
+#else
             retval.sparse_ = std::move(fastDiagSparseProduct(lhs.diag_, rhs.sparse_));
+#endif
             return retval;
         }
 
@@ -480,7 +480,11 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
+#if 1
+            fastSparseDiagProduct(lhs.sparse_, rhs.diag_, retval.sparse_);
+#else
             retval.sparse_ = std::move(fastSparseDiagProduct(lhs.sparse_, rhs.diag_));
+#endif
             return retval;
         }
 
@@ -492,7 +496,11 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
+#if 1
+            fastSparseProduct(lhs.sparse_, rhs.sparse_, retval.sparse_);
+#else
             retval.sparse_ = std::move(fastSparseProduct<Sparse>(lhs.sparse_, rhs.sparse_));
+#endif
             return retval;
         }
 
