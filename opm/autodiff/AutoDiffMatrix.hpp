@@ -462,8 +462,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
-            fastDiagSparseProduct(lhs.diag_, rhs.sparse_[0], retval.sparse_[0]);
+            retval.sparse_[0] = std::move(fastDiagSparseProduct(lhs.diag_, rhs.sparse_[0]));
             return retval;
         }
 
@@ -475,8 +474,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
-            fastSparseDiagProduct(lhs.sparse_[0], rhs.diag_, retval.sparse_[0]);
+            retval.sparse_[0] = std::move(fastSparseDiagProduct(lhs.sparse_[0], rhs.diag_));
             return retval;
         }
 
@@ -488,8 +486,7 @@ namespace Opm
             retval.type_ = S;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
-            retval.sparse_[0] = Sparse(retval.rows_, retval.cols_);
-            fastSparseProduct(lhs.sparse_[0], rhs.sparse_[0], retval.sparse_[0]);
+            retval.sparse_[0] = std::move(fastSparseProduct<Sparse>(lhs.sparse_[0], rhs.sparse_[0]));
             return retval;
         }
 
