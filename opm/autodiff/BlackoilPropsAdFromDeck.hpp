@@ -61,7 +61,20 @@ namespace Opm
     public:
         typedef typename SaturationPropsFromDeck::MaterialLawManager MaterialLawManager;
 
-        /// Constructor wrapping an opm-core black oil interface.
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// The materialLawManager parameter represents the object from opm-material
+        /// which handles the creating and updating parameter objects for the capillary
+        /// pressure/relperm relations for each grid cell. This object is created
+        /// internally for the constructors below, but if it is already available
+        /// externally some performance can be gained by creating it only once.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param materialLawManager The container for the material law parameter objects
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 std::shared_ptr<MaterialLawManager> materialLawManager,
@@ -69,7 +82,20 @@ namespace Opm
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
-        /// Constructor wrapping an opm-core black oil interface.
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// The materialLawManager parameter represents the object from opm-material
+        /// which handles the creating and updating parameter objects for the capillary
+        /// pressure/relperm relations for each grid cell. This object is created
+        /// internally for the constructors below, but if it is already available
+        /// externally some performance can be gained by creating it only once.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param materialLawManager The container for the material law parameter objects
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 std::shared_ptr<MaterialLawManager> materialLawManager,
@@ -77,14 +103,26 @@ namespace Opm
                                 const bool init_rock = true );
 #endif
 
-        /// Constructor wrapping an opm-core black oil interface.
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
-        /// Constructor wrapping an opm-core black oil interface.
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 const Dune::CpGrid& grid,
