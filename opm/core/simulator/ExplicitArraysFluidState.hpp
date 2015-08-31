@@ -20,7 +20,9 @@
 #ifndef OPM_EXPLICIT_ARRAYS_FLUID_STATE_HEADER_INCLUDED
 #define OPM_EXPLICIT_ARRAYS_FLUID_STATE_HEADER_INCLUDED
 
-#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <array>
 
 namespace Opm
 {

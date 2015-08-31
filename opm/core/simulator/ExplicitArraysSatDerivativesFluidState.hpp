@@ -23,6 +23,10 @@
 #include <opm/material/localad/Evaluation.hpp>
 #include <opm/material/localad/Math.hpp>
 
+#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <array>
+
 namespace Opm
 {
 

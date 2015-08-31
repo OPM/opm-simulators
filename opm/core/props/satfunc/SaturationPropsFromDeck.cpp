@@ -16,23 +16,21 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#ifndef OPM_SATURATIONPROPSFROMDECK_IMPL_HEADER_INCLUDED
-#define OPM_SATURATIONPROPSFROMDECK_IMPL_HEADER_INCLUDED
-
+#include "config.h"
 
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/utility/NonuniformTableLinear.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-#include <opm/core/simulator/ExplicitArraysFluidState.hpp>
-#include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
+#include <opm/core/simulator/ExplicitArraysFluidState.hpp>
+#include <opm/core/simulator/ExplicitArraysSatDerivativesFluidState.hpp>
 
 #include <opm/parser/eclipse/Utility/EndscaleWrapper.hpp>
 #include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
 
 #include <iostream>
 #include <map>
+
+#include "SaturationPropsFromDeck.hpp"
 
 namespace Opm
 {
@@ -42,13 +40,11 @@ namespace Opm
 
 
     /// Default constructor.
-    inline
     SaturationPropsFromDeck::SaturationPropsFromDeck()
     {
     }
 
     /// Initialize from deck.
-    inline
     void SaturationPropsFromDeck::init(Opm::DeckConstPtr deck,
                                        Opm::EclipseStateConstPtr eclipseState,
                                        std::shared_ptr<MaterialLawManager> materialLawManager,
@@ -60,7 +56,6 @@ namespace Opm
     }
 
     /// Initialize from deck.
-    inline
     void SaturationPropsFromDeck::init(const PhaseUsage &phaseUsage,
                                        std::shared_ptr<MaterialLawManager> materialLawManager)
     {
@@ -68,21 +63,7 @@ namespace Opm
         materialLawManager_ = materialLawManager;
     }
 
-    /// Initialize from deck.
-    template<class T>
-    void SaturationPropsFromDeck::init(Opm::DeckConstPtr deck,
-                                       Opm::EclipseStateConstPtr eclipseState,
-                                       std::shared_ptr<MaterialLawManager> materialLawManager,
-                                                   int number_of_cells,
-                                                   const int* global_cell,
-                                                   const T& begin_cell_centroids,
-                                                   int dimensions)
-    {
-        init(Opm::phaseUsageFromDeck(deck), materialLawManager);
-    }
-
     /// \return   P, the number of phases.
-    inline
     int SaturationPropsFromDeck::numPhases() const
     {
         return phaseUsage_.num_phases;
@@ -101,7 +82,6 @@ namespace Opm
     ///                    The P^2 derivative matrix is
     ///                           m_{ij} = \frac{dkr_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-    inline
     void SaturationPropsFromDeck::relperm(const int n,
                                           const double* s,
                                           const int* cells,
@@ -161,7 +141,6 @@ namespace Opm
     ///                    The P^2 derivative matrix is
     ///                           m_{ij} = \frac{dpc_i}{ds^j},
     ///                    and is output in Fortran order (m_00 m_10 m_20 m01 ...)
-    inline
     void SaturationPropsFromDeck::capPress(const int n,
                                            const double* s,
                                            const int* cells,
@@ -216,7 +195,6 @@ namespace Opm
     /// \param[in]  cells  Array of n cell indices.
     /// \param[out] smin   Array of nP minimum s values, array must be valid before calling.
     /// \param[out] smax   Array of nP maximum s values, array must be valid before calling.
-    inline
     void SaturationPropsFromDeck::satRange(const int n,
                                            const int* cells,
                                            double* smin,
@@ -245,7 +223,6 @@ namespace Opm
     /// Update saturation state for the hysteresis tracking 
     /// \param[in]  n      Number of data points. 
     /// \param[in]  s      Array of nP saturation values.
-    inline
     void SaturationPropsFromDeck::updateSatHyst(const int n,
                                                             const int* cells,
                                                             const double* s)
@@ -268,7 +245,6 @@ namespace Opm
     /// \param[in]     cell  Cell index.
     /// \param[in]     pcow  P_oil - P_water.
     /// \param[in/out] swat  Water saturation. / Possibly modified Water saturation.
-    inline
     void SaturationPropsFromDeck::swatInitScaling(const int cell,
                                                               const double pcow,
                                                               double& swat)
@@ -276,5 +252,3 @@ namespace Opm
         swat = materialLawManager_->applySwatinit(cell, pcow, swat);
     }
 } // namespace Opm
-
-#endif // OPM_SATURATIONPROPSFROMDECK_IMPL_HEADER_INCLUDED
