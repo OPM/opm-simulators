@@ -228,7 +228,8 @@ try
         return EXIT_FAILURE;
     }
     // const Eigen::VectorXd dp = solver.solve(residual.value().matrix());
-    const V dp = solver.solve(residual.value().matrix()).array();
+    ADB::V residual_v = residual.value();
+    const V dp = solver.solve(residual_v.matrix()).array();
     if (solver.info() != Eigen::Success) {
         std::cerr << "Pressure/flow solve failure\n";
         return EXIT_FAILURE;
@@ -285,7 +286,8 @@ try
             std::cerr << "Transport Jacobian decomposition error\n";
             return EXIT_FAILURE;
         }
-        const V ds = solver.solve(transport_residual.value().matrix()).array();
+        ADB::V transport_residual_v = transport_residual.value();
+        const V ds = solver.solve(transport_residual_v.matrix()).array();
         if (solver.info() != Eigen::Success) {
             std::cerr << "Transport solve failure\n";
             return EXIT_FAILURE;

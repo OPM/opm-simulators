@@ -1445,7 +1445,8 @@ namespace detail {
                 Sp Jn0;
                 Jn[0].toSparse(Jn0);
                 const Eigen::SparseLU< Sp > solver(Jn0);
-                const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
+                ADB::V total_residual_v = total_residual.value();
+                const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
                 updateWellState(dx.array(), well_state);
                 updateWellControls(well_state);
