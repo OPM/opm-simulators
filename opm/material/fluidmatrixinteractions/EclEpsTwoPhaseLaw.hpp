@@ -35,13 +35,13 @@ namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
  *
- * \brief This material law takes a material law defined for effective
- *        saturations and converts it to a material law defined on absolute
- *        saturations.
+ * \brief This material law takes a material law defined for unscaled saturation and
+ *        converts it to a material law defined on scaled saturations.
  *
- * This class provides the endpoint scaling functionality used by the ECL reservoir
- * simulator.  The basic purpose of this class is the same as the one of \a EffToAbsLaw,
- * but it is quite a bit more complex.
+ * In ECL, simulations "live" in scaled space, while the saturation functions operate on
+ * and produce unscaled quantities. This class implements the "impedance adaption" layer
+ * between the two worlds. The basic purpose of it is thus the same as the one of \a
+ * EffToAbsLaw, but it is quite a bit more complex.
  */
 template <class EffLawT,
           class ParamsT = EclEpsTwoPhaseLawParams<EffLawT> >
@@ -148,19 +148,19 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& SwAbs)
+    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& SwScaled)
     {
-        const Evaluation& SwEff = effectiveSaturationPc(params, SwAbs);
-        const Evaluation& pcUnscaled = EffLaw::twoPhaseSatPcnw(params.effectiveLawParams(), SwEff);
-        return scaleCapillaryPressure_(params, pcUnscaled);
+        const Evaluation& SwUnscaled = scaledToUnscaledSatPc(params, SwScaled);
+        const Evaluation& pcUnscaled = EffLaw::twoPhaseSatPcnw(params.effectiveLawParams(), SwUnscaled);
+        return unscaledToScaledPcnw_(params, pcUnscaled);
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnwScaled)
     {
-        Evaluation pcnwUnscaled = scaleCapillaryPressureInv_(params, pcnw);
+        Evaluation pcnwUnscaled = scaledToUnscaledPcnw_(params, pcnwScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatPcnwInv(params.effectiveLawParams(), pcnwUnscaled);
-        return effectiveSaturationPcInv(params, SwUnscaled);
+        return unscaledToScaledSatPc(params, SwUnscaled);
     }
 
     /*!
@@ -226,19 +226,19 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& SwScaled)
     {
-        const Evaluation& Swe = effectiveSaturationKrw(params, Sw);
-        const Evaluation& rawKrw = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), Swe);
-        return scaleKrw_(params, rawKrw);
+        const Evaluation& SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
+        const Evaluation& krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
+        return unscaledToScaledKrw_(params, krwUnscaled);
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krwScaled)
     {
-        Evaluation krwUnscaled = scaleKrwInv_(params, krw);
+        Evaluation krwUnscaled = scaledToUnscaledKrw_(params, krwScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatKrwInv(params.effectiveLawParams(), krwUnscaled);
-        return effectiveSaturationKrwInv(params, SwUnscaled);
+        return unscaledToScaledSatKrw(params, SwUnscaled);
     }
 
     /*!
@@ -252,19 +252,19 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& SwScaled)
     {
-        const Evaluation& Swe = effectiveSaturationKrn(params, Sw);
-        const Evaluation& rawKrn = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), Swe);
-        return scaleKrn_(params, rawKrn);
+        const Evaluation& SwUnscaled = scaledToUnscaledSatKrn(params, SwScaled);
+        const Evaluation& krnUnscaled = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), SwUnscaled);
+        return unscaledToScaledKrn_(params, krnUnscaled);
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krnScaled)
     {
-        Evaluation krnUnscaled = scaleKrnInv_(params, krn);
+        Evaluation krnUnscaled = scaledToUnscaledKrn_(params, krnScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatKrnInv(params.effectiveLawParams(), krnUnscaled);
-        return effectiveSaturationKrnInv(params, SwUnscaled);
+        return unscaledToScaledSatKrn(params, SwUnscaled);
     }
 
     /*!
@@ -273,29 +273,29 @@ public:
      * The effective saturation is then feed into the "raw" capillary pressure law.
      */
     template <class Evaluation>
-    static Evaluation effectiveSaturationPc(const Params &params, const Evaluation& Sw)
+    static Evaluation scaledToUnscaledSatPc(const Params &params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwScaled;
 
         // the saturations of capillary pressure are always scaled using two-point
         // scaling
-        return scaleSatTwoPoint_(Sw,
-                                 params.unscaledPoints().saturationPcPoints(),
-                                 params.scaledPoints().saturationPcPoints());
+        return scaledToUnscaledSatTwoPoint_(SwScaled,
+                                            params.unscaledPoints().saturationPcPoints(),
+                                            params.scaledPoints().saturationPcPoints());
     }
 
     template <class Evaluation>
-    static Evaluation effectiveSaturationPcInv(const Params &params, const Evaluation& Sw)
+    static Evaluation unscaledToScaledSatPc(const Params &params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwUnscaled;
 
         // the saturations of capillary pressure are always scaled using two-point
         // scaling
-        return scaleSatTwoPointInv_(Sw,
-                                    params.unscaledPoints().saturationPcPoints(),
-                                    params.scaledPoints().saturationPcPoints());
+        return unscaledToScaledSatTwoPoint_(SwUnscaled,
+                                            params.unscaledPoints().saturationPcPoints(),
+                                            params.scaledPoints().saturationPcPoints());
     }
 
     /*!
@@ -303,38 +303,38 @@ public:
      *        relperm of the wetting phase.
      */
     template <class Evaluation>
-    static Evaluation effectiveSaturationKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation scaledToUnscaledSatKrw(const Params &params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwScaled;
 
         if (params.config().enableThreePointKrSatScaling()) {
-            return scaleSatThreePoint_(Sw,
-                                       params.unscaledPoints().saturationKrwPoints(),
-                                       params.scaledPoints().saturationKrwPoints());
+            return scaledToUnscaledSatThreePoint_(SwScaled,
+                                                  params.unscaledPoints().saturationKrwPoints(),
+                                                  params.scaledPoints().saturationKrwPoints());
         }
         else { // two-point relperm saturation scaling
-            return scaleSatTwoPoint_(Sw,
-                                     params.unscaledPoints().saturationKrwPoints(),
-                                     params.scaledPoints().saturationKrwPoints());
+            return scaledToUnscaledSatTwoPoint_(SwScaled,
+                                                params.unscaledPoints().saturationKrwPoints(),
+                                                params.scaledPoints().saturationKrwPoints());
         }
     }
 
     template <class Evaluation>
-    static Evaluation effectiveSaturationKrwInv(const Params &params, const Evaluation& Sw)
+    static Evaluation unscaledToScaledSatKrw(const Params &params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwUnscaled;
 
         if (params.config().enableThreePointKrSatScaling()) {
-            return scaleSatThreePointInv_(Sw,
-                                          params.unscaledPoints().saturationKrwPoints(),
-                                          params.scaledPoints().saturationKrwPoints());
+            return unscaledToScaledSatThreePoint_(SwUnscaled,
+                                                  params.unscaledPoints().saturationKrwPoints(),
+                                                  params.scaledPoints().saturationKrwPoints());
         }
         else { // two-point relperm saturation scaling
-            return scaleSatTwoPointInv_(Sw,
-                                        params.unscaledPoints().saturationKrwPoints(),
-                                        params.scaledPoints().saturationKrwPoints());
+            return unscaledToScaledSatTwoPoint_(SwUnscaled,
+                                                params.unscaledPoints().saturationKrwPoints(),
+                                                params.scaledPoints().saturationKrwPoints());
         }
     }
 
@@ -343,172 +343,172 @@ public:
      *        relperm of the non-wetting phase.
      */
     template <class Evaluation>
-    static Evaluation effectiveSaturationKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation scaledToUnscaledSatKrn(const Params &params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwScaled;
 
         if (params.config().enableThreePointKrSatScaling())
-            return scaleSatThreePoint_(Sw,
-                                       params.unscaledPoints().saturationKrnPoints(),
-                                       params.scaledPoints().saturationKrnPoints());
+            return scaledToUnscaledSatThreePoint_(SwScaled,
+                                                  params.unscaledPoints().saturationKrnPoints(),
+                                                  params.scaledPoints().saturationKrnPoints());
         else // two-point relperm saturation scaling
-            return scaleSatTwoPoint_(Sw,
-                                     params.unscaledPoints().saturationKrnPoints(),
-                                     params.scaledPoints().saturationKrnPoints());
+            return scaledToUnscaledSatTwoPoint_(SwScaled,
+                                                params.unscaledPoints().saturationKrnPoints(),
+                                                params.scaledPoints().saturationKrnPoints());
     }
 
 
     template <class Evaluation>
-    static Evaluation effectiveSaturationKrnInv(const Params &params, const Evaluation& Sw)
+    static Evaluation unscaledToScaledSatKrn(const Params &params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
-            return Sw;
+            return SwUnscaled;
 
         if (params.config().enableThreePointKrSatScaling()) {
-            return scaleSatThreePointInv_(Sw,
-                                          params.unscaledPoints().saturationKrnPoints(),
-                                          params.scaledPoints().saturationKrnPoints());
+            return unscaledToScaledSatThreePoint_(SwUnscaled,
+                                                  params.unscaledPoints().saturationKrnPoints(),
+                                                  params.scaledPoints().saturationKrnPoints());
         }
         else { // two-point relperm saturation scaling
-            return scaleSatTwoPointInv_(Sw,
-                                        params.unscaledPoints().saturationKrnPoints(),
-                                        params.scaledPoints().saturationKrnPoints());
+            return unscaledToScaledSatTwoPoint_(SwUnscaled,
+                                                params.unscaledPoints().saturationKrnPoints(),
+                                                params.scaledPoints().saturationKrnPoints());
         }
     }
 
 private:
     template <class Evaluation, class PointsContainer>
-    static Evaluation scaleSatTwoPoint_(const Evaluation& S,
-                                        const PointsContainer& unscaledSats,
-                                        const PointsContainer& scaledSats)
+    static Evaluation scaledToUnscaledSatTwoPoint_(const Evaluation& scaledSat,
+                                                   const PointsContainer& unscaledSats,
+                                                   const PointsContainer& scaledSats)
     {
         return
             unscaledSats[0]
             +
-            (S - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
+            (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
-    static Evaluation scaleSatTwoPointInv_(const Evaluation& S,
-                                        const PointsContainer& unscaledSats,
-                                        const PointsContainer& scaledSats)
+    static Evaluation unscaledToScaledSatTwoPoint_(const Evaluation& unscaledSat,
+                                                   const PointsContainer& unscaledSats,
+                                                   const PointsContainer& scaledSats)
     {
         return
             scaledSats[0]
             +
-            (S - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
+            (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
-    static Evaluation scaleSatThreePoint_(const Evaluation& S,
-                                          const PointsContainer& unscaledSats,
-                                          const PointsContainer& scaledSats)
+    static Evaluation scaledToUnscaledSatThreePoint_(const Evaluation& scaledSat,
+                                                     const PointsContainer& unscaledSats,
+                                                     const PointsContainer& scaledSats)
     {
         if (unscaledSats[1] >= unscaledSats[2])
-            return scaleSatTwoPoint_(S, unscaledSats, scaledSats);
+            return scaledToUnscaledSatTwoPoint_(scaledSat, unscaledSats, scaledSats);
 
-        if (S < scaledSats[1])
+        if (scaledSat < scaledSats[1])
             return
                 unscaledSats[0]
                 +
-                (S - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
+                (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
         else
             return
                 unscaledSats[1]
                 +
-                (S - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/(scaledSats[2] - scaledSats[1]));
+                (scaledSat - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/(scaledSats[2] - scaledSats[1]));
     }
 
     template <class Evaluation, class PointsContainer>
-    static Evaluation scaleSatThreePointInv_(const Evaluation& S,
-                                             const PointsContainer& unscaledSats,
-                                             const PointsContainer& scaledSats)
+    static Evaluation unscaledToScaledSatThreePoint_(const Evaluation& unscaledSat,
+                                                     const PointsContainer& unscaledSats,
+                                                     const PointsContainer& scaledSats)
     {
         if (unscaledSats[1] >= unscaledSats[2])
-            return scaleSatTwoPointInv_(S, unscaledSats, scaledSats);
+            return unscaledToScaledSatTwoPoint_(unscaledSat, unscaledSats, scaledSats);
 
-        if (S < unscaledSats[1])
+        if (unscaledSat < unscaledSats[1])
             return
                 scaledSats[0]
                 +
-                (S - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
+                (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
         else
             return
                 scaledSats[1]
                 +
-                (S - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/(unscaledSats[2] - unscaledSats[1]));
+                (unscaledSat - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/(unscaledSats[2] - unscaledSats[1]));
     }
 
     /*!
      * \brief Scale the capillary pressure according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation scaleCapillaryPressure_(const Params &params, const Evaluation& pc)
+    static Evaluation unscaledToScaledPcnw_(const Params &params, const Evaluation& unscaledPcnw)
     {
         if (!params.config().enablePcScaling())
-            return pc;
+            return unscaledPcnw;
 
         Scalar alpha = params.scaledPoints().maxPcnw()/params.unscaledPoints().maxPcnw();
-        return pc*alpha;
+        return unscaledPcnw*alpha;
     }
 
     template <class Evaluation>
-    static Evaluation scaleCapillaryPressureInv_(const Params &params, const Evaluation& pc)
+    static Evaluation scaledToUnscaledPcnw_(const Params &params, const Evaluation& scaledPcnw)
     {
         if (!params.config().enablePcScaling())
-            return pc;
+            return scaledPcnw;
 
         Scalar alpha = params.unscaledPoints().maxPcnw()/params.scaledPoints().maxPcnw();
-        return pc/alpha;
+        return scaledPcnw/alpha;
     }
 
     /*!
      * \brief Scale the wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation scaleKrw_(const Params &params, const Evaluation& krw)
+    static Evaluation unscaledToScaledKrw_(const Params &params, const Evaluation& unscaledKrw)
     {
         if (!params.config().enableKrwScaling())
-            return krw;
+            return unscaledKrw;
 
         // TODO: three point krw y-scaling
         Scalar alpha = params.scaledPoints().maxKrw()/params.unscaledPoints().maxKrw();
-        return krw*alpha;
+        return unscaledKrw*alpha;
     }
 
     template <class Evaluation>
-    static Evaluation scaleKrwInv_(const Params &params, const Evaluation& krw)
+    static Evaluation scaledToUnscaledKrw_(const Params &params, const Evaluation& scaledKrw)
     {
         if (!params.config().enableKrwScaling())
-            return krw;
+            return scaledKrw;
 
         Scalar alpha = params.unscaledPoints().maxKrw()/params.scaledPoints().maxKrw();
-        return krw*alpha;
+        return scaledKrw*alpha;
     }
 
     /*!
      * \brief Scale the non-wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation scaleKrn_(const Params &params, const Evaluation& krn)
+    static Evaluation unscaledToScaledKrn_(const Params &params, const Evaluation& unscaledKrn)
     {
         if (!params.config().enableKrnScaling())
-            return krn;
+            return unscaledKrn;
 
         //TODO: three point krn y-scaling
         Scalar alpha = params.scaledPoints().maxKrn()/params.unscaledPoints().maxKrn();
-        return krn*alpha;
+        return unscaledKrn*alpha;
     }
 
     template <class Evaluation>
-    static Evaluation scaleKrnInv_(const Params &params, const Evaluation& krn)
+    static Evaluation scaledToUnscaledKrn_(const Params &params, const Evaluation& scaledKrn)
     {
         if (!params.config().enableKrnScaling())
-            return krn;
+            return scaledKrn;
 
         Scalar alpha = params.unscaledPoints().maxKrn()/params.scaledPoints().maxKrn();
-        return krn*alpha;
+        return scaledKrn*alpha;
     }
 };
 } // namespace Opm
