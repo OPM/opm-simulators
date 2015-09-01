@@ -84,6 +84,7 @@ namespace Opm
               diag_(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()),
               sparse_()
         {
+            assert(rows_ == cols_);
         }
 
 
@@ -145,9 +146,9 @@ namespace Opm
                 case I:
                     return addII(*this, rhs);
                 case D:
-                    return rhs + (*this);
+                    return addDI(rhs, *this);
                 case S:
-                    return rhs + (*this);
+                    return addSI(rhs, *this);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
@@ -160,7 +161,7 @@ namespace Opm
                 case D:
                     return addDD(*this, rhs);
                 case S:
-                    return rhs + (*this);
+                    return addSD(rhs, *this);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
@@ -189,18 +190,7 @@ namespace Opm
             case Z:
                 return AutoDiffMatrix(rows_, rhs.cols_);
             case I:
-                switch (rhs.type_) {
-                case Z:
-                    return rhs;
-                case I:
-                    return rhs;
-                case D:
-                    return rhs;
-                case S:
-                    return rhs;
-                default:
-                    OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
-                }
+                return rhs;
             case D:
                 switch (rhs.type_) {
                 case Z:
@@ -251,7 +241,7 @@ namespace Opm
 
         AutoDiffMatrix& operator-=(const AutoDiffMatrix& rhs)
         {
-            *this = *this + rhs * -1.0;
+            *this = *this + (rhs * -1.0);
             return *this;
         }
 
@@ -341,7 +331,10 @@ namespace Opm
             case I:
                 return rhs;
             case D:
-                return Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_) * rhs;
+                {
+                    const Eigen::VectorXd d = Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_);
+                    return d.cwiseProduct(rhs);
+                }
             case S:
                 return sparse_ * rhs;
             default:
@@ -393,11 +386,8 @@ namespace Opm
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == I);
-            AutoDiffMatrix retval;
-            retval.type_ = S;
-            retval.rows_ = lhs.rows_;
-            retval.cols_ = rhs.cols_;
-            retval.sparse_ = lhs.sparse_ + spdiag(Eigen::VectorXd::Ones(lhs.rows_));;
+            AutoDiffMatrix retval = lhs;
+            retval.sparse_ += spdiag(Eigen::VectorXd::Ones(lhs.rows_));;
             return retval;
         }
 
@@ -405,11 +395,8 @@ namespace Opm
         {
             assert(lhs.type_ == S);
             assert(rhs.type_ == D);
-            AutoDiffMatrix retval;
-            retval.type_ = S;
-            retval.rows_ = lhs.rows_;
-            retval.cols_ = rhs.cols_;
-            retval.sparse_ = lhs.sparse_ + spdiag(rhs.diag_);
+            AutoDiffMatrix retval = lhs;
+            retval.sparse_ += spdiag(rhs.diag_);
             return retval;
         }
 
