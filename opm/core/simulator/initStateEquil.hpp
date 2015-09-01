@@ -281,14 +281,14 @@ namespace Opm
                 {
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(deck);
-
+                    std::shared_ptr<const TableManager> tables = eclipseState->getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
                     if (deck->hasKeyword("DISGAS")) {                    
-                        const std::vector<RsvdTable>& rsvdTables = eclipseState->getRsvdTables();
+                        const std::vector<RsvdTable>& rsvdTables = tables->getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
@@ -320,7 +320,7 @@ namespace Opm
 
                     rv_func_.reserve(rec.size());
                     if (deck->hasKeyword("VAPOIL")) {                    
-                        const std::vector<RvvdTable>& rvvdTables = eclipseState->getRvvdTables();
+                        const std::vector<RvvdTable>& rvvdTables = tables->getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
