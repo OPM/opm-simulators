@@ -30,6 +30,7 @@
 #ifndef OPM_ECL_MATERIAL_LAW_MANAGER_HPP
 #define OPM_ECL_MATERIAL_LAW_MANAGER_HPP
 
+#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterialParams.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLaw.hpp>
@@ -47,6 +48,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <algorithm>
+
 
 namespace Opm {
 
@@ -286,11 +288,37 @@ private:
 
     void readGlobalThreePhaseOptions_(Opm::DeckConstPtr deck)
     {
-        threePhaseApproach_ = Opm::EclDefaultApproach;
-        if (deck->hasKeyword("STONE") || deck->hasKeyword("STONE2"))
-            threePhaseApproach_ = Opm::EclStone2Approach;
-        else if (deck->hasKeyword("STONE1"))
-            threePhaseApproach_ = Opm::EclStone1Approach;
+        bool gasEnabled = deck->hasKeyword("GAS");
+        bool oilEnabled = deck->hasKeyword("OIL");
+        bool waterEnabled = deck->hasKeyword("WATER");
+
+        int numEnabled =
+            (gasEnabled?1:0)
+            + (oilEnabled?1:0)
+            + (waterEnabled?1:0);
+
+        if (numEnabled < 2)
+            OPM_THROW(std::runtime_error,
+                      "At least two fluid phases must be enabled. (Is: " << numEnabled << ")");
+
+        if (numEnabled == 2) {
+            threePhaseApproach_ = Opm::EclTwoPhaseApproach;
+            if (!gasEnabled)
+                twoPhaseApproach_ = Opm::EclTwoPhaseOilWater;
+            else if (!oilEnabled)
+                twoPhaseApproach_ = Opm::EclTwoPhaseGasWater;
+            else if (!waterEnabled)
+                twoPhaseApproach_ = Opm::EclTwoPhaseGasOil;
+        }
+        else {
+            assert(numEnabled == 3);
+
+            threePhaseApproach_ = Opm::EclDefaultApproach;
+            if (deck->hasKeyword("STONE") || deck->hasKeyword("STONE2"))
+                threePhaseApproach_ = Opm::EclStone2Approach;
+            else if (deck->hasKeyword("STONE1"))
+                threePhaseApproach_ = Opm::EclStone1Approach;
+        }
     }
 
     void initNonElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
@@ -786,6 +814,15 @@ private:
             realParams.finalize();
             break;
         }
+
+        case EclTwoPhaseApproach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
+            realParams.setGasOilParams(gasOilParams);
+            realParams.setOilWaterParams(oilWaterParams);
+            realParams.setApproach(twoPhaseApproach_);
+            realParams.finalize();
+            break;
+        }
         }
     }
 
@@ -807,6 +844,11 @@ private:
             auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
+
+        case EclTwoPhaseApproach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
         }
     }
 
@@ -817,7 +859,11 @@ private:
     std::vector<Opm::EclEpsScalingPointsInfo<Scalar>> unscaledEpsInfo_;
     OilWaterScalingInfoVector oilWaterScaledEpsInfoDrainage_;
 
-    EclMultiplexerApproach threePhaseApproach_;
+    Opm::EclMultiplexerApproach threePhaseApproach_;
+
+    // this attribute only makes sense for twophase simulations!
+    enum EclTwoPhaseApproach twoPhaseApproach_;
+
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 
     std::vector<int> compressedToCartesianElemIdx_;

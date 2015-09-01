@@ -28,6 +28,7 @@
 #include "EclStone1Material.hpp"
 #include "EclStone2Material.hpp"
 #include "EclDefaultMaterial.hpp"
+#include "EclTwoPhaseMaterial.hpp"
 
 #include <type_traits>
 #include <cassert>
@@ -38,7 +39,8 @@ namespace Opm {
 enum EclMultiplexerApproach {
     EclDefaultApproach,
     EclStone1Approach,
-    EclStone2Approach
+    EclStone2Approach,
+    EclTwoPhaseApproach
 };
 
 /*!
@@ -57,16 +59,14 @@ class EclMultiplexerMaterialParams : public Traits
     typedef Opm::EclStone1Material<Traits, GasOilMaterialLawT, OilWaterMaterialLawT> Stone1Material;
     typedef Opm::EclStone2Material<Traits, GasOilMaterialLawT, OilWaterMaterialLawT> Stone2Material;
     typedef Opm::EclDefaultMaterial<Traits, GasOilMaterialLawT, OilWaterMaterialLawT> DefaultMaterial;
+    typedef Opm::EclTwoPhaseMaterial<Traits, GasOilMaterialLawT, OilWaterMaterialLawT> TwoPhaseMaterial;
 
     typedef typename Stone1Material::Params Stone1Params;
     typedef typename Stone2Material::Params Stone2Params;
     typedef typename DefaultMaterial::Params DefaultParams;
+    typedef typename TwoPhaseMaterial::Params TwoPhaseParams;
 
 public:
-    typedef typename GasOilMaterialLawT::Params GasOilParams;
-    typedef typename OilWaterMaterialLawT::Params OilWaterParams;
-
-
     /*!
      * \brief The multiplexer constructor.
      */
@@ -83,15 +83,19 @@ public:
     {
         switch (approach()) {
         case EclStone1Approach:
-            delete static_cast<Stone1Material*>(realParams_);
+            delete static_cast<Stone1Params*>(realParams_);
             break;
 
         case EclStone2Approach:
-            delete static_cast<Stone2Material*>(realParams_);
+            delete static_cast<Stone2Params*>(realParams_);
             break;
 
         case EclDefaultApproach:
-            delete static_cast<DefaultMaterial*>(realParams_);
+            delete static_cast<DefaultParams*>(realParams_);
+            break;
+
+        case EclTwoPhaseApproach:
+            delete static_cast<TwoPhaseParams*>(realParams_);
             break;
         }
     }
@@ -104,34 +108,6 @@ public:
 #ifndef NDEBUG
         finalized_ = true;
 #endif
-    }
-
-    OilWaterParams& oilWaterParams()
-    {
-        switch (approach()) {
-        case EclStone1Approach:
-            return getRealParams<EclStone1Approach>().oilWaterParams();
-
-        case EclStone2Approach:
-            return getRealParams<EclStone2Approach>().oilWaterParams();
-
-        case EclDefaultApproach:
-            return getRealParams<EclDefaultApproach>().oilWaterParams();
-        }
-    }
-
-    GasOilParams& gasOilParams()
-    {
-        switch (approach()) {
-        case EclStone1Approach:
-            return getRealParams<EclStone1Approach>().gasOilParams();
-
-        case EclStone2Approach:
-            return getRealParams<EclStone2Approach>().gasOilParams();
-
-        case EclDefaultApproach:
-            return getRealParams<EclDefaultApproach>().gasOilParams();
-        }
     }
 
     void setApproach(EclMultiplexerApproach newApproach)
@@ -150,6 +126,10 @@ public:
 
         case EclDefaultApproach:
             realParams_ = new DefaultParams;
+            break;
+
+        case EclTwoPhaseApproach:
+            realParams_ = new TwoPhaseParams;
             break;
         }
     }
@@ -191,7 +171,7 @@ public:
         return *static_cast<const Stone2Params*>(realParams_);
     }
 
-    // get the parameter object for the Default case
+    // get the parameter object for the default case
     template <EclMultiplexerApproach approachV>
     typename std::enable_if<approachV == EclDefaultApproach, DefaultParams>::type&
     getRealParams()
@@ -206,6 +186,23 @@ public:
     {
         assert(approach() == approachV);
         return *static_cast<const DefaultParams*>(realParams_);
+    }
+
+    // get the parameter object for the twophase case
+    template <EclMultiplexerApproach approachV>
+    typename std::enable_if<approachV == EclTwoPhaseApproach, TwoPhaseParams>::type&
+    getRealParams()
+    {
+        assert(approach() == approachV);
+        return *static_cast<TwoPhaseParams*>(realParams_);
+    }
+
+    template <EclMultiplexerApproach approachV>
+    typename std::enable_if<approachV == EclTwoPhaseApproach, const TwoPhaseParams>::type&
+    getRealParams() const
+    {
+        assert(approach() == approachV);
+        return *static_cast<const TwoPhaseParams*>(realParams_);
     }
 
 private:
