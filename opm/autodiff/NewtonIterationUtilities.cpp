@@ -112,8 +112,7 @@ namespace Opm
                 M Bu;
                 fastSparseProduct(B, u, Bu);
                 // J -= Bu;
-                Bu = Bu * -1.0;
-                J = J + Bu;
+                J = J + (Bu * -1.0);
             }
         }
 

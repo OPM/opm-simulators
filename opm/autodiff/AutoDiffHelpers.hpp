@@ -580,25 +580,27 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
     typedef Eigen::Triplet<double> Tri;
     std::vector<Tri> t;
     t.reserve(nnz);
-    int block_row_start = 0;
-    for (int elem = 0; elem < nx; ++elem) {
-        int block_col_start = 0;
-        if (!x[elem].derivative().empty()) {
-            for (int block = 0; block < num_blocks; ++block) {
-                // const ADB::M& jac = x[elem].derivative()[block];
-                M jac;
-                x[elem].derivative()[block].toSparse(jac);
-                for (M::Index k = 0; k < jac.outerSize(); ++k) {
-                    for (M::InnerIterator i(jac, k); i ; ++i) {
-                        t.push_back(Tri(i.row() + block_row_start,
-                                        i.col() + block_col_start,
-                                        i.value()));
+    {
+        int block_row_start = 0;
+        M jac;
+        for (int elem = 0; elem < nx; ++elem) {
+            int block_col_start = 0;
+            if (!x[elem].derivative().empty()) {
+                for (int block = 0; block < num_blocks; ++block) {
+                    // const ADB::M& jac = x[elem].derivative()[block];
+                    x[elem].derivative()[block].toSparse(jac);
+                    for (M::Index k = 0; k < jac.outerSize(); ++k) {
+                        for (M::InnerIterator i(jac, k); i ; ++i) {
+                            t.push_back(Tri(i.row() + block_row_start,
+                                            i.col() + block_col_start,
+                                            i.value()));
+                        }
                     }
+                    block_col_start += jac.cols();
                 }
-                block_col_start += jac.cols();
             }
+            block_row_start += x[elem].size();
         }
-        block_row_start += x[elem].size();
     }
 
     // Build final jacobian.
@@ -606,7 +608,7 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
     comb_jac.reserve(nnz);
     comb_jac.setFromTriplets(t.begin(), t.end());
     std::vector<ADB::M> jac(1);
-    jac[0] = ADB::M(comb_jac);
+    jac[0] = ADB::M(std::move(comb_jac));
 
     // Use move semantics to return result efficiently.
     return ADB::function(std::move(val), std::move(jac));

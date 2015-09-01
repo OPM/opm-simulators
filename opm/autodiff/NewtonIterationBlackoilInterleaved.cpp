@@ -211,10 +211,12 @@ namespace Opm
         typedef Eigen::SparseMatrix<double> Sp;
         Sp structure;
         eqs[0].derivative()[0].toSparse(structure);
-        for (int phase = 1; phase < np; ++phase) {
+        {
             Sp s0;
-            eqs[phase].derivative()[0].toSparse(s0);
-            structure += s0;
+            for (int phase = 1; phase < np; ++phase) {
+                eqs[phase].derivative()[0].toSparse(s0);
+                structure += s0;
+            }
         }
 
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
