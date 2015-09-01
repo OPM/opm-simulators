@@ -200,23 +200,38 @@ namespace Opm
                                            double* smin,
                                            double* smax) const
     {
-        const int np = BlackoilPhases::MaxNumPhases;
+        int wpos = phaseUsage_.phase_pos[BlackoilPhases::Aqua];
+        int gpos = phaseUsage_.phase_pos[BlackoilPhases::Vapour];
+        int opos = phaseUsage_.phase_pos[BlackoilPhases::Liquid];
+
+        const int np = phaseUsage_.num_phases;
         for (int i = 0; i < n; ++i) {
             const auto& scaledDrainageInfo =
                 materialLawManager_->oilWaterScaledEpsInfoDrainage(cells[i]);
 
-            smin[np*i + BlackoilPhases::Aqua] = scaledDrainageInfo.Swl;
-            smax[np*i + BlackoilPhases::Aqua] = scaledDrainageInfo.Swu;
-            smin[np*i + BlackoilPhases::Vapour] = scaledDrainageInfo.Sgl;
-            smax[np*i + BlackoilPhases::Vapour] = scaledDrainageInfo.Sgu;
+            if (phaseUsage_.phase_used[BlackoilPhases::Aqua]) {
+                smin[np*i + wpos] = scaledDrainageInfo.Swl;
+                smax[np*i + wpos] = scaledDrainageInfo.Swu;
+            }
 
-            smin[np*i + BlackoilPhases::Liquid] = 1.0;
-            smax[np*i + BlackoilPhases::Liquid] = 1.0;
-            smin[np*i + BlackoilPhases::Liquid] -= smax[np*i + BlackoilPhases::Aqua];
-            smax[np*i + BlackoilPhases::Liquid] -= smin[np*i + BlackoilPhases::Aqua];
-            smin[np*i + BlackoilPhases::Liquid] -= smax[np*i + BlackoilPhases::Vapour];
-            smax[np*i + BlackoilPhases::Liquid] -= smin[np*i + BlackoilPhases::Vapour];
-            smin[np*i + BlackoilPhases::Liquid] = std::max(0.0, smin[np*i + BlackoilPhases::Liquid]);
+            if (phaseUsage_.phase_used[BlackoilPhases::Vapour]) {
+                smin[np*i + gpos] = scaledDrainageInfo.Sgl;
+                smax[np*i + gpos] = scaledDrainageInfo.Sgu;
+            }
+
+            if (phaseUsage_.phase_used[BlackoilPhases::Liquid]) {
+                smin[np*i + opos] = 1.0;
+                smax[np*i + opos] = 1.0;
+                if (phaseUsage_.phase_used[BlackoilPhases::Aqua]) {
+                    smin[np*i + opos] -= smax[np*i + wpos];
+                    smax[np*i + opos] -= smin[np*i + wpos];
+                }
+                if (phaseUsage_.phase_used[BlackoilPhases::Vapour]) {
+                    smin[np*i + opos] -= smax[np*i + gpos];
+                    smax[np*i + opos] -= smin[np*i + gpos];
+                }
+                smin[np*i + opos] = std::max(0.0, smin[np*i + opos]);
+            }
         }
     }
 
