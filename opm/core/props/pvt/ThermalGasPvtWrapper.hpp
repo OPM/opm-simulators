@@ -44,18 +44,18 @@ namespace Opm
                           Opm::EclipseStateConstPtr eclipseState)
         {
             isothermalPvt_ = isothermalPvt;
-
+            auto tables = eclipseState->getTableManager();
             int numRegions;
             if (deck->hasKeyword("PVTG"))
-                numRegions = eclipseState->getPvtgTables().size();
+                numRegions = tables->getPvtgTables().size();
             else if (deck->hasKeyword("PVDG"))
-                numRegions = eclipseState->getPvdgTables().size();
+                numRegions = tables->getPvdgTables().size();
             else
                 OPM_THROW(std::runtime_error, "Gas phase was not initialized using a known way");
 
             // viscosity
             if (deck->hasKeyword("GASVISCT")) {
-                gasvisctTables_ = &eclipseState->getGasvisctTables();
+                gasvisctTables_ = &tables->getGasvisctTables();
                 assert(int(gasvisctTables_->size()) == numRegions);
 
                 gasCompIdx_ = deck->getKeyword("GCOMPIDX")->getRecord(0)->getItem("GAS_COMPONENT_INDEX")->getInt(0) - 1;

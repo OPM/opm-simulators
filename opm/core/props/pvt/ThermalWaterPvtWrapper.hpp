@@ -65,7 +65,8 @@ namespace Opm
             // quantities required for the temperature dependence of the viscosity
             // (basically we expect well-behaved VISCREF and WATVISCT keywords.)
             if (deck->hasKeyword("VISCREF")) {
-                watvisctTables_ = &eclipseState->getWatvisctTables();
+                auto tables = eclipseState->getTableManager();
+                watvisctTables_ = &tables->getWatvisctTables();
                 Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
 
                 assert(int(watvisctTables_->size()) == numRegions);

@@ -594,6 +594,7 @@ namespace Opm
         std::vector<std::vector<double> > param_col;
         std::vector<std::vector<double> > depth_col;
         std::vector<std::string> col_names;
+        std::shared_ptr<const TableManager> tables = eclipseState->getTableManager();
 
         // Active keyword assigned default values for each cell (in case of possible box-wise assignment)
         if ((keyword[0] == 'S' && (useStateKeyword || hasENPTVD)) || (keyword[1] == 'S' && useStateKeyword) ) {
@@ -602,7 +603,7 @@ namespace Opm
                 scaleparam.resize(number_of_cells);
             }
             if (!useKeyword && itab > 0) {
-                const auto& enptvdTables = eclipseState->getEnptvdTables();
+                const auto& enptvdTables = tables->getEnptvdTables();
                 int num_tables = enptvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);
@@ -667,7 +668,7 @@ namespace Opm
                 OPM_THROW(std::runtime_error, " -- unknown keyword: '" << keyword << "'");
             }
             if (!useKeyword && itab > 0) {
-                const auto& enkrvdTables = eclipseState->getEnkrvdTables();
+                const auto& enkrvdTables = tables->getEnkrvdTables();
                 int num_tables = enkrvdTables.size();
                 param_col.resize(num_tables);
                 depth_col.resize(num_tables);

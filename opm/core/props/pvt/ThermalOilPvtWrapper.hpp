@@ -46,10 +46,12 @@ namespace Opm
             isothermalPvt_ = isothermalPvt;
 
             int numRegions;
+            auto tables = eclipseState->getTableManager();
+
             if (deck->hasKeyword("PVTO"))
-                numRegions = eclipseState->getPvtoTables().size();
+                numRegions = tables->getPvtoTables().size();
             else if (deck->hasKeyword("PVDO"))
-                numRegions = eclipseState->getPvdoTables().size();
+                numRegions = tables->getPvdoTables().size();
             else if (deck->hasKeyword("PVCDO"))
                 numRegions = deck->getKeyword("PVCDO")->size();
             else
@@ -57,7 +59,7 @@ namespace Opm
 
             // viscosity
             if (deck->hasKeyword("VISCREF")) {
-                oilvisctTables_ = &eclipseState->getOilvisctTables();
+                oilvisctTables_ = &tables->getOilvisctTables();
                 Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
 
                 assert(int(oilvisctTables_->size()) == numRegions);

@@ -43,7 +43,8 @@ namespace Opm
         : pref_(0.0),
           rock_comp_(0.0)
     {
-        const auto& rocktabTables = eclipseState->getRocktabTables();
+        const auto tables = eclipseState->getTableManager();
+        const auto& rocktabTables = tables->getRocktabTables();
         if (rocktabTables.size() > 0) {
             if (rocktabTables.size() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
