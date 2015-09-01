@@ -334,8 +334,8 @@ private:
         EclEpsScalingPointsInfo<Scalar> dummyInfo;
         for (int satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satnumRegionIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satnumRegionIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satnumRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satnumRegionIdx);
 
             auto gasOilDrainParams = std::make_shared<GasOilEpsTwoPhaseParams>();
             gasOilDrainParams->setConfig(oilWaterEclEpsConfig_);
@@ -409,8 +409,8 @@ private:
             readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector, oilWaterConfig, deck, eclState, satnumRegionIdx);
 
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, eclState, satnumRegionIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, eclState, satnumRegionIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satnumRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satnumRegionIdx);
 
             // read the end point scaling info for the saturation region
             unscaledEpsInfo_[satnumRegionIdx].extractUnscaled(deck, eclState, satnumRegionIdx);
@@ -599,73 +599,69 @@ private:
 
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
+                                        Opm::DeckConstPtr deck,
                                         Opm::EclipseStateConstPtr eclState,
                                         int satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
+        bool hasWater = deck->hasKeyword("WATER");
+        bool hasGas = deck->hasKeyword("GAS");
+        bool hasOil = deck->hasKeyword("OIL");
+
+        auto& effParams = *dest[satnumRegionIdx];
+
         // the situation for the gas phase is complicated that all saturations are
         // shifted by the connate water saturation.
         Scalar Swco = unscaledEpsInfo_[satnumRegionIdx].Swl;
 
+        // handle the twophase case
         const auto& tableManager = eclState->getTableManager();
-        auto& effParams = *dest[satnumRegionIdx];
+        if (!hasWater) {
+            if (!tableManager->getSgofTables().empty())
+                readGasOilEffectiveParametersSgof_(effParams,
+                                                   Swco,
+                                                   tableManager->getSgofTables()[satnumRegionIdx]);
+            else {
+                assert(!tableManager->getSlgofTables().empty());
+                readGasOilEffectiveParametersSlgof_(effParams,
+                                                    Swco,
+                                                    tableManager->getSlgofTables()[satnumRegionIdx]);
+            }
+
+            // Todo (?): support for twophase simulations using family2?
+            return;
+        }
+        else if (!hasGas) {
+            return;
+        }
+
+        // so far, only water-oil and oil-gas simulations are supported, i.e.,
+        // there's no gas-water yet.
+        if (!hasWater || !hasGas || !hasOil)
+            throw std::domain_error("The specified phase configuration is not suppored");
+
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
         {
-            if (!tableManager->getSgofTables().empty()) {
-                const auto& sgofTable = tableManager->getSgofTables()[satnumRegionIdx];
-
-                // convert the saturations of the SGOF keyword from gas to oil saturations
-                std::vector<double> SoSamples(sgofTable.numRows());
-                std::vector<double> SoKroSamples(sgofTable.numRows());
-                for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
-                    SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
-                    SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
-                }
-
-                effParams.setKrwSamples(SoKroSamples, sgofTable.getKrogColumn());
-                effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
-                effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
-                effParams.finalize();
-            }
-            else if (!tableManager->getSlgofTables().empty()) {
-                const auto& slgofTable = tableManager->getSlgofTables()[satnumRegionIdx];
-
-                // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
-                std::vector<double> SoSamples(slgofTable.numRows());
-                std::vector<double> SoKroSamples(slgofTable.numRows());
-                for (size_t sampleIdx = 0; sampleIdx < slgofTable.numRows(); ++ sampleIdx) {
-                    SoSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx];
-                    SoKroSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx] - Swco;
-                }
-
-                effParams.setKrwSamples(SoKroSamples, slgofTable.getKrogColumn());
-                effParams.setKrnSamples(SoSamples, slgofTable.getKrgColumn());
-                effParams.setPcnwSamples(SoSamples, slgofTable.getPcogColumn());
-                effParams.finalize();
-            }
+            if (!tableManager->getSgofTables().empty())
+                readGasOilEffectiveParametersSgof_(effParams,
+                                                   Swco,
+                                                   tableManager->getSgofTables()[satnumRegionIdx]);
+            else if (!tableManager->getSlgofTables().empty())
+                readGasOilEffectiveParametersSlgof_(effParams,
+                                                    Swco,
+                                                    tableManager->getSlgofTables()[satnumRegionIdx]);
 
             break;
         }
 
         case FamilyII:
         {
-            const auto& sgfnTable = tableManager->getSgfnTables()[satnumRegionIdx];
-            const auto& sof3Table = tableManager->getSof3Tables()[satnumRegionIdx];
-
-            // convert the saturations of the SGFN keyword from gas to oil saturations
-            std::vector<double> SoSamples(sgfnTable.numRows());
-            std::vector<double> SoKroSamples(sgfnTable.numRows());
-            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
-                SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
-                SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
-            }
-
-            effParams.setKrwSamples(SoKroSamples, sof3Table.getKrogColumn());
-            effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
-            effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
-            effParams.finalize();
+            readGasOilEffectiveParametersFamily2_(effParams,
+                                                  Swco,
+                                                  tableManager->getSof3Tables()[satnumRegionIdx],
+                                                  tableManager->getSgfnTables()[satnumRegionIdx]);
             break;
         }
         default:
@@ -674,15 +670,98 @@ private:
         }
     }
 
+    void readGasOilEffectiveParametersSgof_(GasOilEffectiveTwoPhaseParams& effParams,
+                                            Scalar Swco,
+                                            const Opm::SgofTable& sgofTable)
+    {
+        // convert the saturations of the SGOF keyword from gas to oil saturations
+        std::vector<double> SoSamples(sgofTable.numRows());
+        std::vector<double> SoKroSamples(sgofTable.numRows());
+        for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
+            SoSamples[sampleIdx] = 1 - sgofTable.getSgColumn()[sampleIdx];
+            SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+        }
+
+        effParams.setKrwSamples(SoKroSamples, sgofTable.getKrogColumn());
+        effParams.setKrnSamples(SoSamples, sgofTable.getKrgColumn());
+        effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
+        effParams.finalize();
+    }
+
+    void readGasOilEffectiveParametersSlgof_(GasOilEffectiveTwoPhaseParams& effParams,
+                                             Scalar Swco,
+                                             const Opm::SlgofTable& slgofTable)
+    {
+        // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
+        std::vector<double> SoSamples(slgofTable.numRows());
+        std::vector<double> SoKroSamples(slgofTable.numRows());
+        for (size_t sampleIdx = 0; sampleIdx < slgofTable.numRows(); ++ sampleIdx) {
+            SoSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx];
+            SoKroSamples[sampleIdx] = slgofTable.getSlColumn()[sampleIdx] - Swco;
+        }
+
+        effParams.setKrwSamples(SoKroSamples, slgofTable.getKrogColumn());
+        effParams.setKrnSamples(SoSamples, slgofTable.getKrgColumn());
+        effParams.setPcnwSamples(SoSamples, slgofTable.getPcogColumn());
+        effParams.finalize();
+    }
+
+    void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
+                                               Scalar Swco,
+                                               const Opm::Sof3Table& sof3Table,
+                                               const Opm::SgfnTable& sgfnTable)
+    {
+        // convert the saturations of the SGFN keyword from gas to oil saturations
+        std::vector<double> SoSamples(sgfnTable.numRows());
+        std::vector<double> SoKroSamples(sgfnTable.numRows());
+        for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
+            SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
+            SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+        }
+
+        effParams.setKrwSamples(SoKroSamples, sof3Table.getKrogColumn());
+        effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
+        effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
+        effParams.finalize();
+    }
+
     template <class Container>
     void readOilWaterEffectiveParameters_(Container& dest,
+                                          Opm::DeckConstPtr deck,
                                           Opm::EclipseStateConstPtr eclState,
                                           int satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
-        const auto& tableManager = eclState->getTableManager();
+        bool hasWater = deck->hasKeyword("WATER");
+        bool hasGas = deck->hasKeyword("GAS");
+        bool hasOil = deck->hasKeyword("OIL");
+
+        const auto tableManager = eclState->getTableManager();
         auto& effParams = *dest[satnumRegionIdx];
+
+        // handle the twophase case
+        if (!hasWater) {
+            return;
+        }
+        else if (!hasGas) {
+            const auto& swofTable = tableManager->getSwofTables()[satnumRegionIdx];
+            const auto &SwColumn = swofTable.getSwColumn();
+
+            effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
+            effParams.setKrnSamples(SwColumn, swofTable.getKrowColumn());
+            effParams.setPcnwSamples(SwColumn, swofTable.getPcowColumn());
+            effParams.finalize();
+
+            // Todo (?): support for twophase simulations using family2?
+            return;
+        }
+
+        // so far, only water-oil and oil-gas simulations are supported, i.e.,
+        // there's no gas-water yet.
+        if (!hasWater || !hasGas || !hasOil)
+            throw std::domain_error("The specified phase configuration is not suppored");
+
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI: {
             const auto& swofTable = tableManager->getSwofTables()[satnumRegionIdx];

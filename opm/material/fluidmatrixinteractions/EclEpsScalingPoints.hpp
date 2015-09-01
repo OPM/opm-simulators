@@ -215,12 +215,11 @@ struct EclEpsScalingPointsInfo
             extractUnscaledSwof_(swofTables[satRegionIdx]);
             return;
         }
-        else {
-            // so far, only water-oil and oil-gas simulations are supported, i.e.,
-            // there's no gas-water yet.
-            assert(hasOil);
-        }
 
+        // so far, only water-oil and oil-gas simulations are supported, i.e.,
+        // there's no gas-water yet.
+        if (!hasWater || !hasGas || !hasOil)
+            throw std::domain_error("The specified phase configuration is not suppored");
 
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
