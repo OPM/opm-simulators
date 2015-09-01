@@ -880,6 +880,7 @@ namespace detail {
         trans_all << transi, trans_nnc;
 
         const std::vector<ADB> kr = asImpl().computeRelPerm(state);
+#pragma omp parallel for schedule(static)
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
@@ -1259,6 +1260,7 @@ namespace detail {
             const int nw = wells.number_of_wells;
             ADB::V retval = ADB::V::Zero(nw);
 
+#pragma omp parallel for schedule(static)
             for (int i=0; i<nw; ++i) {
                 retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities, gravity);
             }
@@ -1312,6 +1314,7 @@ namespace detail {
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+#pragma omp parallel for schedule(dynamic)
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
@@ -2022,6 +2025,7 @@ namespace detail {
             // Thp update
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             //Loop over all wells
+#pragma omp parallel for schedule(static)
             for (int w=0; w<nw; ++w) {
                 const WellControls* wc = wells().ctrls[w];
                 const int nwc = well_controls_get_num(wc);
@@ -2678,6 +2682,7 @@ namespace detail {
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
             V pm(n);
             V dpm(n);
+#pragma omp parallel for schedule(static)
             for (int i = 0; i < n; ++i) {
                 pm[i] = rock_comp_props_->poroMult(p.value()[i]);
                 dpm[i] = rock_comp_props_->poroMultDeriv(p.value()[i]);
@@ -2685,6 +2690,7 @@ namespace detail {
             ADB::M dpm_diag(dpm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
+#pragma omp parallel for schedule(dynamic)
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dpm_diag, p.derivative()[block], jacs[block]);
             }
@@ -2706,6 +2712,7 @@ namespace detail {
         if (rock_comp_props_ && rock_comp_props_->isActive()) {
             V tm(n);
             V dtm(n);
+#pragma omp parallel for schedule(static)
             for (int i = 0; i < n; ++i) {
                 tm[i] = rock_comp_props_->transMult(p.value()[i]);
                 dtm[i] = rock_comp_props_->transMultDeriv(p.value()[i]);
@@ -2713,6 +2720,7 @@ namespace detail {
             ADB::M dtm_diag(dtm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
+#pragma omp parallel for schedule(dynamic)
             for (int block = 0; block < num_blocks; ++block) {
                 fastSparseProduct(dtm_diag, p.derivative()[block], jacs[block]);
             }
