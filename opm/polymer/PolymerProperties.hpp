@@ -121,7 +121,8 @@ namespace Opm
         void readFromDeck(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclipseState)
         {
             // We assume NTMISC=1
-            const auto& plymaxTable = eclipseState->getPlymaxTables()[0];
+            auto tables = eclipseState->getTableManager();
+            const auto& plymaxTable = tables->getPlymaxTables()[0];
             const auto plmixparRecord = deck->getKeyword("PLMIXPAR")->getRecord(0);
 
             // We also assume that each table has exactly one row...
@@ -131,7 +132,7 @@ namespace Opm
             mix_param_ = plmixparRecord->getItem("TODD_LONGSTAFF")->getSIDouble(0);
 
             // We assume NTSFUN=1
-            const auto& plyrockTable = eclipseState->getPlyrockTables()[0];
+            const auto& plyrockTable = tables->getPlyrockTables()[0];
 
             // We also assume that each table has exactly one row...
             assert(plyrockTable.numRows() == 1);
@@ -143,14 +144,14 @@ namespace Opm
             c_max_ads_ = plyrockTable.getMaxAdsorbtionColumn()[0];
 
             // We assume NTPVT=1
-            const auto& plyviscTable = eclipseState->getPlyviscTables()[0];
+            const auto& plyviscTable = tables->getPlyviscTables()[0];
 
 
             c_vals_visc_ = plyviscTable.getPolymerConcentrationColumn();
             visc_mult_vals_ =  plyviscTable.getViscosityMultiplierColumn();
 
             // We assume NTSFUN=1
-            const auto& plyadsTable = eclipseState->getPlyadsTables()[0];
+            const auto& plyadsTable = tables->getPlyadsTables()[0];
 
             c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
             ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
@@ -160,7 +161,7 @@ namespace Opm
 
             if (has_plyshlog_) {
                 // Assuming NTPVT == 1 always due to the limitation of the parser
-                const auto& plyshlogTable = eclipseState->getPlyshlogTables()[0];
+                const auto& plyshlogTable = tables->getPlyshlogTables()[0];
 
                 water_vel_vals_ = plyshlogTable.getWaterVelocityColumn();
                 shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn();
