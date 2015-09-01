@@ -96,7 +96,6 @@ namespace Opm
 
     double AdaptiveSimulatorTimer::currentStepLength () const
     {
-        assert( ! done () );
         return dt_;
     }
 
