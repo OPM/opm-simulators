@@ -121,6 +121,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         // Surface densities. Accounting for different orders in eclipse and our code.
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numRegions = densityKeyword->size();
+        auto tables = eclState->getTableManager();
 
         densities_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -153,7 +154,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             props_[phase_usage_.phase_pos[Aqua]] = pvtw;
 
             // handle temperature dependence of the oil phase
-            if (!eclState->getWatvisctTables().empty() || deck->hasKeyword("WATDENT")) {
+            if (!tables->getWatvisctTables().empty() || deck->hasKeyword("WATDENT")) {
                 // deal with temperature dependent properties
                 std::shared_ptr<ThermalWaterPvtWrapper> waterNiPvt(new ThermalWaterPvtWrapper);
                 waterNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Aqua]], deck, eclState);
@@ -165,8 +166,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         if (phase_usage_.phase_used[Liquid]) {
             // for oil, we support the "PVDO", "PVTO" and "PVCDO"
             // keywords...
-            const auto& pvdoTables = eclState->getPvdoTables();
-            const auto& pvtoTables = eclState->getPvtoTables();
+            const auto& pvdoTables = tables->getPvdoTables();
+            const auto& pvtoTables = tables->getPvtoTables();
             if (!pvdoTables.empty()) {
                 if (numSamples > 0) {
                     auto splinePvdo = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
@@ -189,7 +190,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             }
 
             // handle temperature dependence of the oil phase
-            if (!eclState->getOilvisctTables().empty() || deck->hasKeyword("THERMEX1")) {
+            if (!tables->getOilvisctTables().empty() || deck->hasKeyword("THERMEX1")) {
                 std::shared_ptr<ThermalOilPvtWrapper> oilNiPvt(new ThermalOilPvtWrapper);
                 oilNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Liquid]], deck, eclState);
 
@@ -199,8 +200,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         // Gas PVT
         if (phase_usage_.phase_used[Vapour]) {
             // gas can be specified using the "PVDG" or "PVTG" keywords...
-            const auto& pvdgTables = eclState->getPvdgTables();
-            const auto& pvtgTables = eclState->getPvtgTables();
+            const auto& pvdgTables = tables->getPvdgTables();
+            const auto& pvtgTables = tables->getPvtgTables();
             if (!pvdgTables.empty()) {
                 if (numSamples > 0) {
                     std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
@@ -218,7 +219,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             }
 
             // handle temperature dependence of the gas phase
-            if (!eclState->getGasvisctTables().empty() || deck->hasKeyword("TREF")) {
+            if (!tables->getGasvisctTables().empty() || deck->hasKeyword("TREF")) {
                 std::shared_ptr<ThermalGasPvtWrapper> gasNiPvt(new ThermalGasPvtWrapper);
                 gasNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Vapour]], deck, eclState);
 
