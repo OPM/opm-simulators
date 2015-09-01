@@ -445,11 +445,11 @@ namespace Opm
                                                       invalid_alq, invalid_vfp,
                                                       & distr[0], ctrl);
 
-                            // For WCONHIST/RESV the BHP limit is set to 1 atm.
-                            // TODO: Make it possible to modify the BHP limit using
-                            // the WELTARG keyword
+                            // For WCONHIST the BHP limit is set to 1 atm.
+                            // or a value specified using WELTARG
+                            double bhp_limit = (p.BHPLimit > 0) ? p.BHPLimit : unit::convert::from(1.0, unit::atm);
                             const int ok_bhp =
-                                well_controls_add_new(BHP, unit::convert::from(1.0, unit::atm),
+                                well_controls_add_new(BHP, bhp_limit,
                                                       invalid_alq, invalid_vfp,
                                                       NULL, ctrl);
 
@@ -462,5 +462,31 @@ namespace Opm
                 }
             }
         }
+
+        for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
+            WellControls* ctrl = wells->ctrls[w];
+            const bool is_producer = wells->type[w] == PRODUCER;
+            if (!is_producer && wells->name[w] != 0) {
+                WellMap::const_iterator i = wmap.find(wells->name[w]);
+                if (i != wmap.end()) {
+                    WellConstPtr wp = i->second;
+                    const WellInjectionProperties& i = wp->getInjectionProperties(step);
+                    if (!i.predictionMode) {
+                        //History matching WCONINJEH
+                        static const double invalid_alq = -std::numeric_limits<double>::max();
+                        static const int invalid_vfp = -std::numeric_limits<int>::max();
+                        // For WCONINJEH the BHP limit is set to a large number
+                        // or a value specified using WELTARG
+                        double bhp_limit = (i.BHPLimit > 0) ? i.BHPLimit : std::numeric_limits<double>::max();
+                        const int ok_bhp =
+                                well_controls_add_new(BHP, bhp_limit,
+                                                      invalid_alq, invalid_vfp,
+                                                      NULL, ctrl);
+                        assert(ok_bhp != 0);
+                    }
+                }
+            }
+        }
+
     }
 } // namespace Opm
