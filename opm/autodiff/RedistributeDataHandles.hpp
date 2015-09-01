@@ -245,9 +245,10 @@ public:
           size_(1)
     {
         // satOilMax might be non empty. In this case we will need to send it, too.
+        // It has to have the same size as the cellPvtRegionIdx_
         if ( sendProps.satOilMax_.size()>0 )
         {
-            recvProps_.satOilMax_.resize(recvProps_.satOilMax_.size(),
+            recvProps_.satOilMax_.resize(recvProps_.cellPvtRegionIdx_.size(),
                                          -std::numeric_limits<double>::max());
             ++size_;
         }
