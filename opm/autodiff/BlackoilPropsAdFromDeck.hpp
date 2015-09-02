@@ -59,14 +59,70 @@ namespace Opm
     {
         friend class BlackoilPropsDataHandle;
     public:
-        /// Constructor wrapping an opm-core black oil interface.
+        typedef typename SaturationPropsFromDeck::MaterialLawManager MaterialLawManager;
+
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// The materialLawManager parameter represents the object from opm-material
+        /// which handles the creating and updating parameter objects for the capillary
+        /// pressure/relperm relations for each grid cell. This object is created
+        /// internally for the constructors below, but if it is already available
+        /// externally some performance can be gained by creating it only once.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param materialLawManager The container for the material law parameter objects
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
+                                std::shared_ptr<MaterialLawManager> materialLawManager,
+                                const UnstructuredGrid& grid,
+                                const bool init_rock = true );
+
+#ifdef HAVE_DUNE_CORNERPOINT
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// The materialLawManager parameter represents the object from opm-material
+        /// which handles the creating and updating parameter objects for the capillary
+        /// pressure/relperm relations for each grid cell. This object is created
+        /// internally for the constructors below, but if it is already available
+        /// externally some performance can be gained by creating it only once.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param materialLawManager The container for the material law parameter objects
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
+        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                Opm::EclipseStateConstPtr eclState,
+                                std::shared_ptr<MaterialLawManager> materialLawManager,
+                                const Dune::CpGrid& grid,
+                                const bool init_rock = true );
+#endif
+
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
 #ifdef HAVE_DUNE_CORNERPOINT
-        /// Constructor wrapping an opm-core black oil interface.
+        /// Constructor to create a blackoil properties from an ECL deck.
+        ///
+        /// \param deck The unprocessed ECL deck from opm-parser
+        /// \param eclState The processed ECL deck from opm-parser
+        /// \param grid The grid upon which the simulation is run on.
+        /// \param init_rock If true the rock properties (rock compressibility and
+        ///                  reference pressure) are read from the deck
         BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                 Opm::EclipseStateConstPtr eclState,
                                 const Dune::CpGrid& grid,
@@ -305,6 +361,7 @@ namespace Opm
         template <class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
+                  std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
@@ -327,9 +384,11 @@ namespace Opm
         void mapPvtRegions(const std::vector<int>& cells) const;
 
         RockFromDeck rock_;
+
         // This has to be a shared pointer as we must
         // be able to make a copy of *this in the parallel case.
-        std::shared_ptr<SaturationPropsInterface> satprops_;
+        std::shared_ptr<MaterialLawManager> materialLawManager_;
+        std::shared_ptr<SaturationPropsFromDeck> satprops_;
 
         PhaseUsage phase_usage_;
         // bool has_vapoil_;

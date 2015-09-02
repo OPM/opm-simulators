@@ -50,10 +50,11 @@ namespace Opm
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                                      Opm::EclipseStateConstPtr eclState,
+                                                     std::shared_ptr<MaterialLawManager> materialLawManager,
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {
-        init(deck, eclState, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, 
              grid.cell_centroids, grid.dimensions, init_rock);
     }
 
@@ -64,7 +65,49 @@ namespace Opm
                                                      const Dune::CpGrid& grid,
                                                      const bool init_rock )
     {
-        init(deck, eclState, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
+        auto materialLawManager = std::make_shared<MaterialLawManager>();
+        unsigned number_of_cells = grid.size(0);
+        std::vector<int> compressedToCartesianIdx(number_of_cells);
+        for (unsigned cellIdx = 0; cellIdx < number_of_cells; ++cellIdx) {
+            compressedToCartesianIdx[cellIdx] = grid.globalCell()[cellIdx];
+        }
+        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
+        init(deck, eclState, materialLawManager, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
+             static_cast<const int*>(&grid.logicalCartesianSize()[0]),
+             grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
+    }
+#endif
+
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                                     Opm::EclipseStateConstPtr eclState,
+                                                     const UnstructuredGrid& grid,
+                                                     const bool init_rock)
+    {
+        auto materialLawManager = std::make_shared<MaterialLawManager>();
+        std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
+        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+            if (grid.global_cell) {
+                compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
+            }
+            else {
+                compressedToCartesianIdx[cellIdx] = cellIdx;
+            }
+        }
+        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+             grid.cell_centroids, grid.dimensions, init_rock);
+    }
+
+#ifdef HAVE_DUNE_CORNERPOINT
+    /// Constructor wrapping an opm-core black oil interface.
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
+                                                     Opm::EclipseStateConstPtr eclState,
+                                                     std::shared_ptr<MaterialLawManager> materialLawManager,
+                                                     const Dune::CpGrid& grid,
+                                                     const bool init_rock )
+    {
+        init(deck, eclState, materialLawManager, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
              static_cast<const int*>(&grid.logicalCartesianSize()[0]),
              grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
     }
@@ -81,6 +124,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     if (number_of_cells < 0) {
         OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
     }
+
+    materialLawManager_ = props.materialLawManager_;
+
     // Copy properties that do not depend on the postion within the grid.
     rock_             = props.rock_;
     satprops_         = props.satprops_;
@@ -99,6 +145,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     template <class CentroidIterator>
     void BlackoilPropsAdFromDeck::init(Opm::DeckConstPtr deck,
                                        Opm::EclipseStateConstPtr eclState,
+                                       std::shared_ptr<MaterialLawManager> materialLawManager,
                                        int number_of_cells,
                                        const int* global_cell,
                                        const int* cart_dims,
@@ -106,6 +153,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        int dimension,
                                        const bool init_rock)
     {
+        materialLawManager_ = materialLawManager;
+
         // retrieve the cell specific PVT table index from the deck
         // and using the grid...
         extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
@@ -239,7 +288,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         SaturationPropsFromDeck* ptr
             = new SaturationPropsFromDeck();
         satprops_.reset(ptr);
-        ptr->init(deck, eclState, number_of_cells, global_cell, begin_cell_centroids, dimension);
+        ptr->init(deck, eclState, materialLawManager_, number_of_cells, global_cell, begin_cell_centroids, dimension);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "

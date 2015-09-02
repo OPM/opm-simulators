@@ -114,6 +114,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SolventPropsAdFromDeck.hpp
 	opm/autodiff/BlackoilPropsAdInterface.hpp
 	opm/autodiff/CPRPreconditioner.hpp
+	opm/autodiff/createGlobalCellArray.hpp
 	opm/autodiff/BlackoilSolventModel.hpp
 	opm/autodiff/BlackoilSolventModel_impl.hpp
 	opm/autodiff/BlackoilSolventState.hpp
