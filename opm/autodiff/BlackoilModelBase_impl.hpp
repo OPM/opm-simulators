@@ -157,7 +157,7 @@ namespace detail {
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
         , wells_ (wells)
-        , vfp_properties_(eclState->getVFPInjTables(), eclState->getVFPProdTables())
+        , vfp_properties_(eclState->getTableManager()->getVFPInjTables(), eclState->getTableManager()->getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))

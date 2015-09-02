@@ -51,8 +51,9 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
     }
 
+    auto tables = eclState->getTableManager();
     // pvt
-    const auto& pvdsTables = eclState->getPvdsTables();
+    const auto& pvdsTables = tables->getPvdsTables();
     if (!pvdsTables.empty()) {
 
         int numRegions = pvdsTables.size();
@@ -88,7 +89,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
     }
 
-    const auto& ssfnTables = eclState->getSsfnTables();
+    const auto& ssfnTables = tables->getSsfnTables();
     // relative permeabilty multiplier
     if (!ssfnTables.empty()) {
 
