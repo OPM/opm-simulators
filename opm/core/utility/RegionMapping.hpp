@@ -20,6 +20,9 @@
 #ifndef OPM_REGIONMAPPING_HEADER_INCLUDED
 #define OPM_REGIONMAPPING_HEADER_INCLUDED
 
+#include <boost/range.hpp>
+
+#include <unordered_map>
 #include <vector>
 
 namespace Opm
@@ -47,7 +50,7 @@ namespace Opm
          */
         explicit
         RegionMapping(const Region& reg)
-        : reg_(reg)
+            : reg_(reg)
         {
             rev_.init(reg_);
         }
@@ -70,58 +73,7 @@ namespace Opm
          */
         typedef typename std::vector<CellId>::const_iterator CellIter;
 
-        /**
-         * Range of cells.  Result from reverse (region-to-cell)
-         * mapping.
-         */
-        class CellRange {
-        public:
-            /**
-             * Constructor.
-             *
-             * \param[in] b Beginning of range.
-             * \param[in] e One past end of range.
-             */
-            CellRange(const CellIter b,
-                      const CellIter e)
-                : b_(b), e_(e)
-            {}
-
-            /**
-             * Read-only iterator on cell ranges.
-             */
-            typedef CellIter const_iterator;
-
-            /**
-             * Size type for this range.
-             */
-            typedef typename std::vector<CellId>::size_type size_type;
-
-            /**
-             * Beginning of cell range.
-             */
-            const_iterator begin() const { return b_; }
-
-            /**
-             * One past end of cell range.
-             */
-            const_iterator end()   const { return e_; }
-
-            /**
-             * Number of elements in the range.
-             */
-            size_type size() const { return e_ - b_; }
-
-        private:
-            const_iterator b_;
-            const_iterator e_;
-        };
-
-        /**
-         * Number of declared regions in cell-to-region mapping.
-         */
-        RegionId
-        numRegions() const { return RegionId(rev_.p.size()) - 1; }
+        typedef boost::iterator_range<CellIter> Range;
 
         /**
          * Compute region number of given active cell.
@@ -132,17 +84,33 @@ namespace Opm
         RegionId
         region(const CellId c) const { return reg_[c]; }
 
+        const std::vector<RegionId>&
+        activeRegions() const
+        {
+            return rev_.active;
+        }
+
         /**
          * Extract active cells in particular region.
          *
          * \param[in] r Region number
-         * \returns Range of active cells in region @c r.
+         *
+         * \return Range of active cells in region @c r.  Empty if @c r is
+         * not an active region.
          */
-        CellRange
+        Range
         cells(const RegionId r) const {
-            const RegionId i = r - rev_.low;
-            return CellRange(rev_.c.begin() + rev_.p[i + 0],
-                             rev_.c.begin() + rev_.p[i + 1]);
+            const auto id = rev_.binid.find(r);
+
+            if (id == rev_.binid.end()) {
+                // Region 'r' not an active region.  Return empty.
+                return Range(rev_.c.end(), rev_.c.end());
+            }
+
+            const auto i = id->second;
+
+            return Range(rev_.c.begin() + rev_.p[i + 0],
+                         rev_.c.begin() + rev_.p[i + 1]);
         }
 
     private:
@@ -156,9 +124,12 @@ namespace Opm
          */
         struct {
             typedef typename std::vector<CellId>::size_type Pos;
+
+            std::unordered_map<RegionId, Pos> binid;
+            std::vector<RegionId>             active;
+
             std::vector<Pos>    p;   /**< Region start pointers */
             std::vector<CellId> c;   /**< Region cells */
-            RegionId            low; /**< Smallest region number */
 
             /**
              * Compute reverse mapping.  Standard linear insertion
@@ -167,32 +138,37 @@ namespace Opm
             void
             init(const Region& reg)
             {
-                typedef typename Region::const_iterator CI;
-                const std::pair<CI,CI>
-                    m = std::minmax_element(reg.begin(), reg.end());
-
-                low  = *m.first;
-
-                const typename Region::size_type
-                    n = *m.second - low + 1;
-
-                p.resize(n + 1);  std::fill(p.begin(), p.end(), Pos(0));
-                for (CellId i = 0, nc = reg.size(); i < nc; ++i) {
-                    p[ reg[i] - low + 1 ] += 1;
+                binid.clear();
+                for (const auto& r : reg) {
+                    ++binid[r];
                 }
 
-                for (typename std::vector<Pos>::size_type
-                         i = 1, sz = p.size(); i < sz; ++i) {
+                p     .clear();  p.emplace_back(0);
+                active.clear();
+                {
+                    Pos n = 0;
+                    for (auto& id : binid) {
+                        active.push_back(id.first);
+                        p     .push_back(id.second);
+
+                        id.second = n++;
+                    }
+                }
+
+                for (decltype(p.size()) i = 1, sz = p.size(); i < sz; ++i) {
                     p[0] += p[i];
                     p[i]  = p[0] - p[i];
                 }
 
-                assert (p[0] ==
-                        static_cast<typename Region::size_type>(reg.size()));
+                assert (p[0] == static_cast<Pos>(reg.size()));
 
                 c.resize(reg.size());
-                for (CellId i = 0, nc = reg.size(); i < nc; ++i) {
-                    c[ p[ reg[i] - low + 1 ] ++ ] = i;
+                {
+                    CellId i = 0;
+                    for (const auto& r : reg) {
+                        auto& pos  = p[ binid[r] + 1 ];
+                        c[ pos++ ] = i++;
+                    }
                 }
 
                 p[0] = 0;
