@@ -411,24 +411,24 @@ namespace Opm
                                           rs_func_[r], rv_func_[r],
                                           props.phaseUsage());
                    
-                        PVec press = phasePressures(G, eqreg, cells, grav);
+                        PVec pressures = phasePressures(G, eqreg, cells, grav);
                         const std::vector<double>& temp = temperature(G, eqreg, cells);
 
-                        const PVec sat = phaseSaturations(G, eqreg, cells, props, swat_init_, press);
+                        const PVec sat = phaseSaturations(G, eqreg, cells, props, swat_init_, pressures);
 
                         const int np = props.numPhases();
                         for (int p = 0; p < np; ++p) {
-                            copyFromRegion(press[p], cells, pp_[p]);
+                            copyFromRegion(pressures[p], cells, pp_[p]);
                             copyFromRegion(sat[p], cells, sat_[p]);
                         }
                         if (props.phaseUsage().phase_used[BlackoilPhases::Liquid]
                             && props.phaseUsage().phase_used[BlackoilPhases::Vapour]) {
                             const int oilpos = props.phaseUsage().phase_pos[BlackoilPhases::Liquid];
                             const int gaspos = props.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                            const Vec rs = computeRs(G, cells, press[oilpos], temp, *(rs_func_[r]), sat[gaspos]);
-                            const Vec rv = computeRs(G, cells, press[gaspos], temp, *(rv_func_[r]), sat[oilpos]);
-                            copyFromRegion(rs, cells, rs_);
-                            copyFromRegion(rv, cells, rv_);
+                            const Vec rs_vals = computeRs(G, cells, pressures[oilpos], temp, *(rs_func_[r]), sat[gaspos]);
+                            const Vec rv_vals = computeRs(G, cells, pressures[gaspos], temp, *(rv_func_[r]), sat[oilpos]);
+                            copyFromRegion(rs_vals, cells, rs_);
+                            copyFromRegion(rv_vals, cells, rv_);
                         }
                     }
                 }
