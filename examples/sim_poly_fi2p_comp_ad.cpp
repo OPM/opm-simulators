@@ -44,6 +44,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
+#include <opm/autodiff/createGlobalCellArray.hpp>
 
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -57,6 +58,7 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
 
 #include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
@@ -175,8 +177,21 @@ try
                                            pu );
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
+
+    std::vector<int> compressedToCartesianIdx;
+    Opm::createGlobalCellArray(*grid->c_grid(), compressedToCartesianIdx);
+
+    typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    props.reset(new BlackoilPropertiesFromDeck( deck, eclipseState, materialLawManager,
+                                                Opm::UgGridHelpers::numCells(cGrid),
+                                                Opm::UgGridHelpers::globalCell(cGrid),
+                                                Opm::UgGridHelpers::cartDims(cGrid),
+                                                Opm::UgGridHelpers::beginCellCentroids(cGrid),
+                                                Opm::UgGridHelpers::dimensions(cGrid), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
 

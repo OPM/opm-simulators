@@ -51,6 +51,8 @@
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/createGlobalCellArray.hpp>
 
 #include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
@@ -187,8 +189,21 @@ try
                                            pu );
 
     // Rock and fluid init
-    props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid(), param));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
+
+    std::vector<int> compressedToCartesianIdx;
+    Opm::createGlobalCellArray(*grid->c_grid(), compressedToCartesianIdx);
+
+    typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    props.reset(new BlackoilPropertiesFromDeck( deck, eclipseState, materialLawManager,
+                                                Opm::UgGridHelpers::numCells(cGrid),
+                                                Opm::UgGridHelpers::globalCell(cGrid),
+                                                Opm::UgGridHelpers::cartDims(cGrid),
+                                                Opm::UgGridHelpers::beginCellCentroids(cGrid),
+                                                Opm::UgGridHelpers::dimensions(cGrid), param));
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     const bool polymer = deck->hasKeyword("POLYMER");
     const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
     PolymerProperties polymer_props(deck, eclipseState);
