@@ -40,18 +40,6 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-
-namespace {
-    inline
-    void silenceCompilerWarnings() {
-        static_cast<void>(Opm::unit::stb);
-        static_cast<void>(Opm::unit::liter);
-        static_cast<void>(Opm::unit::barsa);
-        static_cast<void>(Opm::unit::psia);
-        static_cast<void>(Opm::unit::darcy);
-    }
-}
-
 namespace Opm
 {
     // Making these typedef to make the code more readable.
