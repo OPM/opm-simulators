@@ -560,17 +560,21 @@ private:
     // If SWOF and SGOF are specified in the deck it return FamilyI
     // If SWFN, SGFN and SOF3 are specified in the deck it return FamilyII
     // If keywords are missing or mixed, an error is given.
+    enum SaturationFunctionFamily {
+        noFamily,
+        FamilyI,
+        FamilyII
+    };
 
-    enum SaturationFunctionFamily { noFamily = 0, FamilyI = 1, FamilyII = 2};
-
-    const SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const{
-
-        const std::vector<SwofTable>& swofTables = eclState->getSwofTables();
-        const std::vector<SlgofTable>& slgofTables = eclState->getSlgofTables();
-        const std::vector<SgofTable>& sgofTables = eclState->getSgofTables();
-        const std::vector<SwfnTable>& swfnTables = eclState->getSwfnTables();
-        const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
-        const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
+    SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const
+    {
+        const auto& tableManager = eclState->getTableManager();
+        const std::vector<SwofTable>& swofTables = tableManager->getSwofTables();
+        const std::vector<SlgofTable>& slgofTables = tableManager->getSlgofTables();
+        const std::vector<SgofTable>& sgofTables = tableManager->getSgofTables();
+        const std::vector<SwfnTable>& swfnTables = tableManager->getSwfnTables();
+        const std::vector<SgfnTable>& sgfnTables = tableManager->getSgfnTables();
+        const std::vector<Sof3Table>& sof3Tables = tableManager->getSof3Tables();
 
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
@@ -604,12 +608,13 @@ private:
         // shifted by the connate water saturation.
         Scalar Swco = unscaledEpsInfo_[satnumRegionIdx].Swl;
 
+        const auto& tableManager = eclState->getTableManager();
         auto& effParams = *dest[satnumRegionIdx];
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
         {
-            if (!eclState->getSgofTables().empty()) {
-                const auto& sgofTable = eclState->getSgofTables()[satnumRegionIdx];
+            if (!tableManager->getSgofTables().empty()) {
+                const auto& sgofTable = tableManager->getSgofTables()[satnumRegionIdx];
 
                 // convert the saturations of the SGOF keyword from gas to oil saturations
                 std::vector<double> SoSamples(sgofTable.numRows());
@@ -624,8 +629,8 @@ private:
                 effParams.setPcnwSamples(SoSamples, sgofTable.getPcogColumn());
                 effParams.finalize();
             }
-            else if (!eclState->getSlgofTables().empty()) {
-                const auto& slgofTable = eclState->getSlgofTables()[satnumRegionIdx];
+            else if (!tableManager->getSlgofTables().empty()) {
+                const auto& slgofTable = tableManager->getSlgofTables()[satnumRegionIdx];
 
                 // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
                 std::vector<double> SoSamples(slgofTable.numRows());
@@ -646,8 +651,8 @@ private:
 
         case FamilyII:
         {
-            const auto& sgfnTable = eclState->getSgfnTables()[satnumRegionIdx];
-            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
+            const auto& sgfnTable = tableManager->getSgfnTables()[satnumRegionIdx];
+            const auto& sof3Table = tableManager->getSof3Tables()[satnumRegionIdx];
 
             // convert the saturations of the SGFN keyword from gas to oil saturations
             std::vector<double> SoSamples(sgfnTable.numRows());
@@ -676,10 +681,11 @@ private:
     {
         dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
+        const auto& tableManager = eclState->getTableManager();
         auto& effParams = *dest[satnumRegionIdx];
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI: {
-            const auto& swofTable = eclState->getSwofTables()[satnumRegionIdx];
+            const auto& swofTable = tableManager->getSwofTables()[satnumRegionIdx];
             const auto &SwColumn = swofTable.getSwColumn();
 
             effParams.setKrwSamples(SwColumn, swofTable.getKrwColumn());
@@ -690,8 +696,8 @@ private:
         }
         case FamilyII:
         {
-            const auto& swfnTable = eclState->getSwfnTables()[satnumRegionIdx];
-            const auto& sof3Table = eclState->getSof3Tables()[satnumRegionIdx];
+            const auto& swfnTable = tableManager->getSwfnTables()[satnumRegionIdx];
+            const auto& sof3Table = tableManager->getSof3Tables()[satnumRegionIdx];
             const auto &SwColumn = swfnTable.getSwColumn();
 
             // convert the saturations of the SOF3 keyword from oil to water saturations
