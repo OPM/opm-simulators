@@ -164,7 +164,7 @@ try
     }
 #pragma omp parallel
     if (omp_get_thread_num() == 0){
-        std::cout << "OpenMP using " << omp_get_num_threads() << " threads.";
+        std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
     }
 #endif
 
