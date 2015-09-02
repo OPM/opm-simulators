@@ -838,6 +838,7 @@ private:
     Opm::OilPvtInterface<Scalar, Evaluation>* createOilPvt_(Opm::DeckConstPtr deck,
                                                             Opm::EclipseStateConstPtr eclState)
     {
+        const auto tableManager = eclState->getTableManager();
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numPvtRegions = densityKeyword->size();
 
@@ -846,7 +847,7 @@ private:
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvtoTable(regionIdx, eclState->getPvtoTables()[regionIdx]);
+                oilPvt->setPvtoTable(regionIdx, tableManager->getPvtoTables()[regionIdx]);
 
             oilPvt->initEnd();
             return oilPvt;
@@ -856,7 +857,7 @@ private:
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvdoTable(regionIdx, eclState->getPvdoTables()[regionIdx]);
+                oilPvt->setPvdoTable(regionIdx, tableManager->getPvdoTables()[regionIdx]);
 
             oilPvt->initEnd();
             return oilPvt;
@@ -882,6 +883,7 @@ private:
                                                             Opm::EclipseStateConstPtr eclState)
     {
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        const auto tableManager = eclState->getTableManager();
         int numPvtRegions = densityKeyword->size();
 
         if (deck->hasKeyword("PVTG")) {
@@ -889,7 +891,7 @@ private:
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvtgTable(regionIdx, eclState->getPvtgTables()[regionIdx]);
+                gasPvt->setPvtgTable(regionIdx, tableManager->getPvtgTables()[regionIdx]);
 
             gasPvt->initEnd();
             return gasPvt;
@@ -899,7 +901,7 @@ private:
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvdgTable(regionIdx, eclState->getPvdgTables()[regionIdx]);
+                gasPvt->setPvdgTable(regionIdx, tableManager->getPvdgTables()[regionIdx]);
 
             gasPvt->initEnd();
             return gasPvt;
