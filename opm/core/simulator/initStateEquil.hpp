@@ -399,13 +399,10 @@ namespace Opm
                                  const Grid&                       G    ,
                                  const double grav)
                 {
-                    for (typename RMap::RegionId
-                             r = 0, nr = reg.numRegions();
-                         r < nr; ++r)
-                    {
-                        const typename RMap::CellRange cells = reg.cells(r);
-
+                    for (const auto& r : reg.activeRegions()) {
+                        const auto& cells = reg.cells(r);
                         const int repcell = *cells.begin();
+
                         const RhoCalc calc(props, repcell);
                         const EqReg eqreg(rec[r], calc,
                                           rs_func_[r], rv_func_[r],
