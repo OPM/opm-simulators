@@ -87,10 +87,26 @@ namespace Opm {
         }
 
         template <class Container>
+        void readData(std::istream& stream, Container& container, size_t datasize)
+        {
+            stream.read( (char*) container.data(), datasize );
+        }
+
+        //We need to be careful with string, because string.data() returns something that
+        //"A program shall not alter any of the characters in this sequence."
+        template <>
+        void readData<std::string>(std::istream& stream, std::string& string, size_t datasize)
+        {
+            std::vector<char> raw_data(datasize);
+            readData(stream, raw_data, datasize);
+            string = std::string(raw_data.data(), datasize);
+        }
+
+        template <class Container>
         void readContainerImpl( std::istream& stream, Container& container, const bool adjustSize )
         {
             typedef typename Container :: value_type T;
-            unsigned int dataSize = 0;
+            size_t dataSize = 0;
             readValue( stream, dataSize );
             if( adjustSize && dataSize > 0 ) {
                 resizeContainer( container, dataSize/sizeof(T) );
@@ -103,7 +119,7 @@ namespace Opm {
                         << dataSize << " " << (container.size() * sizeof( T )) );
             }
             if( dataSize > 0 ) {
-                stream.read( (char *) container.data(), dataSize );
+                readData(stream, container, dataSize);
             }
         }
 
