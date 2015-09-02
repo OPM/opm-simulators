@@ -89,7 +89,7 @@ namespace Opm {
         template <class Container>
         void readData(std::istream& stream, Container& container, size_t datasize)
         {
-            stream.read( (char*) container.data(), datasize );
+            stream.read( reinterpret_cast<char*>( container.data() ), datasize );
         }
 
         //We need to be careful with string, because string.data() returns something that
