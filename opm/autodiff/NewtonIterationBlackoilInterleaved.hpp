@@ -92,19 +92,19 @@ namespace Opm
         template<int category=Dune::SolverCategory::sequential, class O, class POrComm>
         void constructPreconditionerAndSolve(O& opA,
                                              Vector& x, Vector& istlb,
-                                             const POrComm& parallelInformation,
+                                             const POrComm& parallelInformation_arg,
                                              Dune::InverseOperatorResult& result) const
         {
             // Construct scalar product.
             typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
             typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-            SPPointer sp(ScalarProductChooser::construct(parallelInformation));
+            SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
 
             // Construct preconditioner.
-            auto precond = constructPrecond(opA, parallelInformation);
+            auto precond = constructPrecond(opA, parallelInformation_arg);
 
             // Communicate if parallel.
-            parallelInformation.copyOwnerToAll(istlb, istlb);
+            parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
             // Solve.
             solve(opA, x, istlb, *sp, precond, result);

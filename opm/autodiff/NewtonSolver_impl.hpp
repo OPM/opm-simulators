@@ -77,7 +77,7 @@ namespace Opm
         bool isOscillate = false;
         bool isStagnate = false;
         const enum RelaxType relaxtype = relaxType();
-        int linearIterations = 0;
+        int linIters = 0;
 
         // ----------  Main Newton loop  ----------
         while ( (!converged && (iteration < maxIter())) || (minIter() > iteration)) {
@@ -85,7 +85,7 @@ namespace Opm
             V dx = model_->solveJacobianSystem();
 
             // Store number of linear iterations used.
-            linearIterations += model_->linearIterationsLastSolve();
+            linIters += model_->linearIterationsLastSolve();
 
             // Stabilize the Newton update.
             detectNewtonOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
@@ -119,15 +119,15 @@ namespace Opm
             return -1; // -1 indicates that the solver has to be restarted
         }
 
-        linearIterations_ += linearIterations;
+        linearIterations_ += linIters;
         newtonIterations_ += iteration;
-        linearIterationsLast_ = linearIterations;
+        linearIterationsLast_ = linIters;
         newtonIterationsLast_ = iteration;
 
         // Do model-specific post-step actions.
         model_->afterStep(dt, reservoir_state, well_state);
 
-        return linearIterations;
+        return linIters;
     }
 
 
@@ -178,7 +178,7 @@ namespace Opm
     template <class PhysicalModel>
     void
     NewtonSolver<PhysicalModel>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                          const int it, const double relaxRelTol,
+                                                          const int it, const double relaxRelTol_arg,
                                                           bool& oscillate, bool& stagnate) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
@@ -201,7 +201,7 @@ namespace Opm
             const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
             const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 
-            oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
+            oscillatePhase += (d1 < relaxRelTol_arg) && (relaxRelTol_arg < d2);
 
             // Process is 'stagnate' unless at least one phase
             // exhibits significant residual change.

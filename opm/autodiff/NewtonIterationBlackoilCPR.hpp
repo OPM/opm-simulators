@@ -87,18 +87,18 @@ namespace Opm
         template<int category=Dune::SolverCategory::sequential, class O, class P>
         void constructPreconditionerAndSolve(O& opA, DuneMatrix& istlAe,
                                              Vector& x, Vector& istlb,
-                                             const P& parallelInformation,
+                                             const P& parallelInformation_arg,
                                              const P& parallelInformationAe,
                                              Dune::InverseOperatorResult& result) const
         {
             typedef Dune::ScalarProductChooser<Vector,P,category> ScalarProductChooser;
             std::unique_ptr<typename ScalarProductChooser::ScalarProduct>
-                sp(ScalarProductChooser::construct(parallelInformation));
+                sp(ScalarProductChooser::construct(parallelInformation_arg));
             // Construct preconditioner.
             // typedef Dune::SeqILU0<Mat,Vector,Vector> Preconditioner;
            typedef Opm::CPRPreconditioner<Mat,Vector,Vector,P> Preconditioner;
-            parallelInformation.copyOwnerToAll(istlb, istlb);
-            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation,
+            parallelInformation_arg.copyOwnerToAll(istlb, istlb);
+            Preconditioner precond(cpr_param_, opA.getmat(), istlAe, parallelInformation_arg,
                                    parallelInformationAe);
 
             // TODO: Revise when linear solvers interface opm-core is done

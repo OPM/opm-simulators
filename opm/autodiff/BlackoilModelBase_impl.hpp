@@ -92,6 +92,7 @@ typedef Eigen::Array<double,
 namespace detail {
 
 
+    inline
     std::vector<int>
     buildAllCells(const int nc)
     {
@@ -146,7 +147,7 @@ namespace detail {
                   const BlackoilPropsAdInterface& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
-                  const Wells*                    wells,
+                  const Wells*                    wells_arg,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
@@ -156,7 +157,7 @@ namespace detail {
         , fluid_ (fluid)
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
-        , wells_ (wells)
+        , wells_ (wells_arg)
         , vfp_properties_(eclState->getTableManager()->getVFPInjTables(), eclState->getTableManager()->getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
@@ -657,6 +658,7 @@ namespace detail {
     }
 
     namespace detail {
+        inline
         double getGravity(const double* g, const int dim) {
             double grav = 0.0;
             if (g) {
@@ -1103,6 +1105,7 @@ namespace detail {
 
     namespace detail
     {
+        inline
         double rateToCompare(const std::vector<double>& well_phase_flow_rate,
                              const int well,
                              const int num_phases,
@@ -1117,6 +1120,7 @@ namespace detail {
             return rate;
         }
 
+        inline
         bool constraintBroken(const std::vector<double>& bhp,
                               const std::vector<double>& thp,
                               const std::vector<double>& well_phase_flow_rate,
@@ -1194,6 +1198,7 @@ namespace detail {
          * @param well_perforation_densities Densities at well perforations
          * @param gravity Gravitational constant (e.g., 9.81...)
          */
+        inline
         double computeHydrostaticCorrection(const Wells& wells, const int w, double vfp_ref_depth,
                                             const ADB::V& well_perforation_densities, const double gravity) {
             const double well_ref_depth = wells.depth_ref[w];
@@ -1205,6 +1210,7 @@ namespace detail {
             return dp;
         }
 
+        inline
         ADB::V computeHydrostaticCorrection(const Wells& wells, const ADB::V vfp_ref_depth,
                 const ADB::V& well_perforation_densities, const double gravity) {
             const int nw = wells.number_of_wells;
@@ -1646,6 +1652,7 @@ namespace detail {
         /// \param a The container to compute the infinity norm on.
         ///          It has to have one entry for each cell.
         /// \param info In a parallel this holds the information about the data distribution.
+        inline
         double infinityNorm( const ADB& a, const boost::any& pinfo = boost::any() )
         {
             static_cast<void>(pinfo); // Suppress warning in non-MPI case.
@@ -1673,6 +1680,7 @@ namespace detail {
         /// \brief Compute the L-infinity norm of a vector representing a well equation.
         /// \param a The container to compute the infinity norm on.
         /// \param info In a parallel this holds the information about the data distribution.
+        inline
         double infinityNormWell( const ADB& a, const boost::any& pinfo )
         {
             static_cast<void>(pinfo); // Suppress warning in non-MPI case.

@@ -698,29 +698,29 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                                        const ADB& sg,
                                                        const Cells& cells) const
     {
-        const int numCells = cells.size();
-        const int numActivePhases = numPhases();
-        const int numBlocks = so.numBlocks();
+        const int nCells = cells.size();
+        const int nActivePhases = numPhases();
+        const int nBlocks = so.numBlocks();
 
-        Block activeSat(numCells, numActivePhases);
+        Block activeSat(nCells, nActivePhases);
         if (phase_usage_.phase_used[Water]) {
-            assert(sw.value().size() == numCells);
+            assert(sw.value().size() == nCells);
             activeSat.col(phase_usage_.phase_pos[Water]) = sw.value();
         }
         if (phase_usage_.phase_used[Oil]) {
-            assert(so.value().size() == numCells);
+            assert(so.value().size() == nCells);
             activeSat.col(phase_usage_.phase_pos[Oil]) = so.value();
         } else {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::relperm() assumes oil phase is active.");
         }
         if (phase_usage_.phase_used[Gas]) {
-            assert(sg.value().size() == numCells);
+            assert(sg.value().size() == nCells);
             activeSat.col(phase_usage_.phase_pos[Gas]) = sg.value();
         }
 
-        Block pc(numCells, numActivePhases);
-        Block dpc(numCells, numActivePhases*numActivePhases);
-        satprops_->capPress(numCells, activeSat.data(), cells.data(), pc.data(), dpc.data());
+        Block pc(nCells, nActivePhases);
+        Block dpc(nCells, nActivePhases*nActivePhases);
+        satprops_->capPress(nCells, activeSat.data(), cells.data(), pc.data(), dpc.data());
 
         std::vector<ADB> adbCapPressures;
         adbCapPressures.reserve(3);
@@ -728,18 +728,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         for (int phase1 = 0; phase1 < 3; ++phase1) {
             if (phase_usage_.phase_used[phase1]) {
                 const int phase1_pos = phase_usage_.phase_pos[phase1];
-                std::vector<ADB::M> jacs(numBlocks);
-                for (int block = 0; block < numBlocks; ++block) {
-                    jacs[block] = ADB::M(numCells, s[phase1]->derivative()[block].cols());
+                std::vector<ADB::M> jacs(nBlocks);
+                for (int block = 0; block < nBlocks; ++block) {
+                    jacs[block] = ADB::M(nCells, s[phase1]->derivative()[block].cols());
                 }
                 for (int phase2 = 0; phase2 < 3; ++phase2) {
                     if (!phase_usage_.phase_used[phase2])
                         continue;
                     const int phase2_pos = phase_usage_.phase_pos[phase2];
                     // Assemble dpc1/ds2.
-                    const int column = phase1_pos + numActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
+                    const int column = phase1_pos + nActivePhases*phase2_pos; // Recall: Fortran ordering from props_.relperm()
                     ADB::M dpc1_ds2_diag = spdiag(dpc.col(column));
-                    for (int block = 0; block < numBlocks; ++block) {
+                    for (int block = 0; block < nBlocks; ++block) {
                         ADB::M temp;
                         fastSparseProduct(dpc1_ds2_diag, s[phase2]->derivative()[block], temp);
                         jacs[block] += temp;

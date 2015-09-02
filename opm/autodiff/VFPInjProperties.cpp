@@ -74,7 +74,7 @@ VFPInjProperties::VFPInjProperties(const std::map<int, VFPInjTable>& tables) {
 VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
         const Wells& wells,
         const ADB& qs,
-        const ADB& thp) const {
+        const ADB& thp_val) const {
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
@@ -84,7 +84,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    return bhp(table_id, w, o, g, thp);
+    return bhp(table_id, w, o, g, thp_val);
 }
 
 
@@ -97,16 +97,16 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
         const ADB& aqua,
         const ADB& liquid,
         const ADB& vapour,
-        const ADB& thp) const {
-    const int nw = thp.size();
+        const ADB& thp_arg) const {
+    const int nw = thp_arg.size();
 
-    std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp);
+    std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp_arg);
 
     assert(static_cast<int>(table_id.size()) == nw);
     assert(aqua.size()     == nw);
     assert(liquid.size()   == nw);
     assert(vapour.size()   == nw);
-    assert(thp.size()      == nw);
+    assert(thp_arg.size()      == nw);
 
     //Allocate data for bhp's and partial derivatives
     ADB::V value = ADB::V::Zero(nw);
@@ -130,7 +130,7 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
         if (table != nullptr) {
             //First, find the values to interpolate between
             auto flo_i = detail::findInterpData(flo.value()[i], table->getFloAxis());
-            auto thp_i = detail::findInterpData(thp.value()[i], table->getTHPAxis());
+            auto thp_i = detail::findInterpData(thp_arg.value()[i], table->getTHPAxis());
 
             detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
 
@@ -155,8 +155,8 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
         //but may not save too much on that.
         jacs[block] = ADB::M(nw, block_pattern[block]);
 
-        if (!thp.derivative().empty()) {
-            jacs[block] += dthp_diag * thp.derivative()[block];
+        if (!thp_arg.derivative().empty()) {
+            jacs[block] += dthp_diag * thp_arg.derivative()[block];
         }
         if (!flo.derivative().empty()) {
             jacs[block] += dflo_diag * flo.derivative()[block];
@@ -175,10 +175,10 @@ double VFPInjProperties::bhp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
-        const double& thp) const {
+        const double& thp_arg) const {
     const VFPInjTable* table = detail::getTable(m_tables, table_id);
 
-    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp);
+    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg);
     return retval.value;
 }
 
@@ -193,7 +193,7 @@ double VFPInjProperties::thp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
-        const double& bhp) const {
+        const double& bhp_arg) const {
     const VFPInjTable* table = detail::getTable(m_tables, table_id);
     const VFPInjTable::array_type& data = table->getTable();
 
@@ -215,8 +215,8 @@ double VFPInjProperties::thp(int table_id,
         bhp_array[i] = detail::interpolate(data, flo_i, thp_i).value;
     }
 
-    double thp = detail::findTHP(bhp_array, thp_array, bhp);
-    return thp;
+    double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);
+    return retval;
 }
 
 
