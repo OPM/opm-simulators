@@ -183,12 +183,13 @@ struct EclEpsScalingPointsInfo
                          int satRegionIdx)
     {
         // TODO: support for the SOF2/SOF3 keyword family
-        const std::vector<SwofTable>& swofTables = eclState->getSwofTables();
-        const std::vector<SgofTable>& sgofTables = eclState->getSgofTables();
-        const std::vector<SlgofTable>& slgofTables = eclState->getSlgofTables();
-        const std::vector<SwfnTable>& swfnTables = eclState->getSwfnTables();
-        const std::vector<SgfnTable>& sgfnTables = eclState->getSgfnTables();
-        const std::vector<Sof3Table>& sof3Tables = eclState->getSof3Tables();
+        auto tables = eclState->getTableManager();
+        const std::vector<SwofTable>& swofTables = tables->getSwofTables();
+        const std::vector<SgofTable>& sgofTables = tables->getSgofTables();
+        const std::vector<SlgofTable>& slgofTables = tables->getSlgofTables();
+        const std::vector<SwfnTable>& swfnTables = tables->getSwfnTables();
+        const std::vector<SgfnTable>& sgfnTables = tables->getSgfnTables();
+        const std::vector<Sof3Table>& sof3Tables = tables->getSof3Tables();
 
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
