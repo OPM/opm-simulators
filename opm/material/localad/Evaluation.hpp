@@ -32,6 +32,8 @@
 #include <cassert>
 #include <opm/material/common/Valgrind.hpp>
 
+#include <dune/common/version.hh>
+
 namespace Opm {
 namespace LocalAd {
 /*!
@@ -419,9 +421,9 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, n
 } // namespace LocalAd
 } // namespace Opm
 
-// make the Dune matrix/vector classes happy. Obviously, this is not very elegant...
-
-#ifdef DUNE_DENSEMATRIX_HH
+// In Dune 2.3, the Evaluation.hpp header must be included before the fmatrix.hh
+// header. Dune 2.4+ does not suffer from this because of some c++-foo.
+//
 // for those who are wondering: in C++ function templates cannot be partially
 // specialized, and function argument overloads must be known _before_ they are used. The
 // latter is what we do for the 'Dune::fvmeta::absreal()' function.
@@ -441,11 +443,27 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, n
 // { std::cout << foo(0) << "\n"; }
 //
 // this will print '0' for bar() and '1' for foobar()...
-//
-#error "Due to some C++ peculiarity regarding function template specialization,"
-#error "the 'evaluation.hh' header must be included before Dune's 'densematrix.hh'!"
+#if !(DUNE_VERSION_NEWER(DUNE_COMMON, 2,4))
+
+#include "Math.hpp"
+
+namespace std {
+template <class Scalar, class VarSetTag, int numVars>
+const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> abs(const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars>& x)
+{ return Opm::LocalAd::abs(x); }
+
+} // namespace std
+
+#if defined DUNE_DENSEMATRIX_HH
+#warning \
+ "Due to some C++ peculiarity regarding function overloads, the 'Evaluation.hpp'" \
+ "header file must be included before Dune's 'densematrix.hh' for Dune < 2.4. " \
+ "(If Evaluations are to be used in conjunction with a dense matrix.)"
 #endif
 
+#endif
+
+// this makes the Dune matrix/vector classes happy...
 #include <dune/common/ftraits.hh>
 
 namespace Dune {
@@ -454,16 +472,11 @@ struct FieldTraits<Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> >
 {
 public:
     typedef Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> field_type;
-    typedef Scalar real_type;
+    // setting real_type to field_type here potentially leads to slightly worse
+    // performance, but at least it makes things compile.
+    typedef field_type real_type;
 };
 
-namespace fvmeta {
-template <class Scalar, class VarSetTag, int numVars>
-inline Scalar absreal(const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars>& k)
-{
-    return std::abs(k.value);
-}
-
-}} // namespace fvmeta, Dune
+} // namespace Dune
 
 #endif
