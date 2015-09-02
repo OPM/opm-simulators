@@ -95,6 +95,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <memory>
 #include <algorithm>
 #include <cstdlib>
@@ -149,6 +153,20 @@ try
         std::cout << "*                                                                    *\n";
         std::cout << "**********************************************************************\n\n";
     }
+
+#ifdef _OPENMP
+    if (!getenv("OPM_NUM_THREADS")) {
+        //Default to max(4,#cores) threads,
+        //not number of cores (unless ENV(OMP_NUM_THREADS) is defined)
+        int num_cores = omp_get_num_procs();
+        int num_threads = std::min(4, num_cores);
+        omp_set_num_threads(num_threads);
+    }
+#pragma omp parallel
+    if (omp_get_thread_num() == 0){
+        std::cout << "OpenMP using " << omp_get_num_threads() << " threads.";
+    }
+#endif
 
     // Read parameters, see if a deck was specified on the command line.
     if ( output_cout )
