@@ -51,6 +51,7 @@
 #include <opm/core/grid/cornerpoint_grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/createGlobalCellArray.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -251,17 +252,8 @@ try
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
     Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
-    int numCells = Opm::UgGridHelpers::numCells(grid);
-    const auto& globalCell = Opm::UgGridHelpers::globalCell(grid);
-    std::vector<int> compressedToCartesianIdx(numCells);
-    for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-        if (globalCell) {
-            compressedToCartesianIdx[cellIdx] = globalCell[cellIdx];
-        }
-        else {
-            compressedToCartesianIdx[cellIdx] = cellIdx;
-        }
-    }
+    std::vector<int> compressedToCartesianIdx;
+    Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
 
     typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
     auto materialLawManager = std::make_shared<MaterialLawManager>();
