@@ -180,11 +180,11 @@ public:
         }
     }
     template<class B, class T>
-    void scatter(B& buffer, const T& e, std::size_t size)
+    void scatter(B& buffer, const T& e, std::size_t size_arg)
     {
         assert( T::codimension == 0);
-        assert( int(size) == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
-        static_cast<void>(size);
+        assert( int(size_arg) == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
+        static_cast<void>(size_arg);
 
         double val;
         for ( int i=0; i<recvState_.numPhases(); ++i )
@@ -283,10 +283,10 @@ public:
         }
     }
     template<class B, class T>
-    void scatter(B& buffer, const T& e, std::size_t size)
+    void scatter(B& buffer, const T& e, std::size_t size_arg)
     {
         assert( T::codimension == 0);
-        assert( size==size_ ); (void) size;
+        assert( size_arg==size_ ); (void) size_arg;
         double val;
         buffer.read(val);
         recvProps_.cellPvtRegionIdx_[e.index()]=val;

@@ -33,8 +33,8 @@ namespace Opm
     /// \param[in] parallelInformation In the case of a parallel run
     ///  with dune-istl the information about the parallelization.
     NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param,
-                                                                 const boost::any& parallelInformation)
-        : iterations_( 0 ), parallelInformation_(parallelInformation)
+                                                                 const boost::any& parallelInformation_arg)
+        : iterations_( 0 ), parallelInformation_(parallelInformation_arg)
     {
         linsolver_.reset(new LinearSolverFactory(param));
     }

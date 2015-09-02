@@ -53,7 +53,7 @@ namespace Opm {
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
         /// \param[in] rock_comp_props  if non-null, rock compressibility properties
-        /// \param[in] wells            well structure
+        /// \param[in] wells_arg        well structure
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] has_disgas       turn on dissolved gas
@@ -64,13 +64,13 @@ namespace Opm {
                       const BlackoilPropsAdInterface&         fluid,
                       const DerivedGeology&                   geo,
                       const RockCompressibility*              rock_comp_props,
-                      const Wells*                            wells,
+                      const Wells*                            wells_arg,
                       const NewtonIterationBlackoilInterface& linsolver,
                       Opm::EclipseStateConstPtr               eclState,
                       const bool                              has_disgas,
                       const bool                              has_vapoil,
                       const bool                              terminal_output)
-            : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver,
+            : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
         {
         }

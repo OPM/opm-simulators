@@ -28,11 +28,13 @@
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #if HAVE_SUITESPARSE_UMFPACK_H
 #include <Eigen/UmfPackSupport>
 #else
 #include <Eigen/IterativeLinearSolvers>
 #endif
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 #include <iostream>
 #include <cstdlib>

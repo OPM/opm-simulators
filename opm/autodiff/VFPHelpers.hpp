@@ -910,6 +910,7 @@ inline double findTHP(
             }
             //Canary in a coal mine: shouldn't really be required
             assert(found == true);
+            static_cast<void>(found); //Silence compiler warning
 
             const double& x0 = thp_array[i  ];
             const double& x1 = thp_array[i+1];

@@ -21,8 +21,12 @@
 #define OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
 #ifdef HAVE_DUNE_CORNERPOINT
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
+
 #include<dune/grid/CpGrid.hpp>
 #include<boost/any.hpp>
+
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 namespace Opm
 {

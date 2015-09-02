@@ -30,11 +30,13 @@
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
+#include <opm/core/utility/platform_dependent/disable_warnings.h>
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
 #else
 #include <Eigen/SparseLU>
 #endif
+#include <opm/core/utility/platform_dependent/reenable_warnings.h>
 
 
 namespace Opm
@@ -51,9 +53,9 @@ namespace Opm
 
     /// Construct a system solver.
     NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
-                                                                           const boost::any& parallelInformation)
+                                                                           const boost::any& parallelInformation_arg)
       : iterations_( 0 ),
-        parallelInformation_(parallelInformation),
+        parallelInformation_(parallelInformation_arg),
         newton_use_gmres_( param.getDefault("newton_use_gmres", false ) ),
         linear_solver_reduction_( param.getDefault("linear_solver_reduction", 1e-2 ) ),
         linear_solver_maxiter_( param.getDefault("linear_solver_maxiter", 50 ) ),

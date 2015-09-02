@@ -59,7 +59,7 @@ VFPProdProperties::VFPProdProperties(const std::map<int, VFPProdTable>& tables) 
 VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         const Wells& wells,
         const ADB& qs,
-        const ADB& thp,
+        const ADB& thp_arg,
         const ADB& alq) const {
     const int nw = wells.number_of_wells;
 
@@ -70,7 +70,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
     const ADB& o = subset(qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
     const ADB& g = subset(qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
 
-    return bhp(table_id, w, o, g, thp, alq);
+    return bhp(table_id, w, o, g, thp_arg, alq);
 }
 
 
@@ -82,17 +82,17 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         const ADB& aqua,
         const ADB& liquid,
         const ADB& vapour,
-        const ADB& thp,
+        const ADB& thp_arg,
         const ADB& alq) const {
-    const int nw = thp.size();
+    const int nw = thp_arg.size();
 
-    std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp, alq);
+    std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp_arg, alq);
 
     assert(static_cast<int>(table_id.size()) == nw);
     assert(aqua.size()     == nw);
     assert(liquid.size()   == nw);
     assert(vapour.size()   == nw);
-    assert(thp.size()      == nw);
+    assert(thp_arg.size()      == nw);
     assert(alq.size()      == nw);
 
     //Allocate data for bhp's and partial derivatives
@@ -123,7 +123,7 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
             //First, find the values to interpolate between
             //Value of FLO is negative in OPM for producers, but positive in VFP table
             auto flo_i = detail::findInterpData(-flo.value()[i], table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp.value()[i], table->getTHPAxis());
+            auto thp_i = detail::findInterpData( thp_arg.value()[i], table->getTHPAxis());
             auto wfr_i = detail::findInterpData( wfr.value()[i], table->getWFRAxis());
             auto gfr_i = detail::findInterpData( gfr.value()[i], table->getGFRAxis());
             auto alq_i = detail::findInterpData( alq.value()[i], table->getALQAxis());
@@ -157,8 +157,8 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
         //but may not save too much on that.
         jacs[block] = ADB::M(nw, block_pattern[block]);
 
-        if (!thp.derivative().empty()) {
-            jacs[block] += dthp_diag * thp.derivative()[block];
+        if (!thp_arg.derivative().empty()) {
+            jacs[block] += dthp_diag * thp_arg.derivative()[block];
         }
         if (!wfr.derivative().empty()) {
             jacs[block] += dwfr_diag * wfr.derivative()[block];
@@ -184,11 +184,11 @@ double VFPProdProperties::bhp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
-        const double& thp,
+        const double& thp_arg,
         const double& alq) const {
     const VFPProdTable* table = detail::getTable(m_tables, table_id);
 
-    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp, alq);
+    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg, alq);
     return retval.value;
 }
 
@@ -198,7 +198,7 @@ double VFPProdProperties::thp(int table_id,
         const double& aqua,
         const double& liquid,
         const double& vapour,
-        const double& bhp,
+        const double& bhp_arg,
         const double& alq) const {
     const VFPProdTable* table = detail::getTable(m_tables, table_id);
     const VFPProdTable::array_type& data = table->getTable();
@@ -227,8 +227,8 @@ double VFPProdProperties::thp(int table_id,
         bhp_array[i] = detail::interpolate(data, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
-    double thp = detail::findTHP(bhp_array, thp_array, bhp);
-    return thp;
+    double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);
+    return retval;
 }
 
 
