@@ -191,193 +191,64 @@ struct EclEpsScalingPointsInfo
         const std::vector<SgfnTable>& sgfnTables = tables->getSgfnTables();
         const std::vector<Sof3Table>& sof3Tables = tables->getSof3Tables();
 
+        bool hasWater = deck->hasKeyword("WATER");
+        bool hasGas = deck->hasKeyword("GAS");
+        bool hasOil = deck->hasKeyword("OIL");
+
+        if (!hasWater) {
+            Swl = 0.0;
+            Swu = 0.0;
+            Swcr = 0.0;
+            if (!sgofTables.empty())
+                extractUnscaledSgof_(sgofTables[satRegionIdx]);
+            else {
+                assert(!slgofTables.empty());
+                extractUnscaledSlgof_(slgofTables[satRegionIdx]);
+            }
+            return;
+        }
+        else if (!hasGas) {
+            assert(!swofTables.empty());
+            Sgl = 0.0;
+            Sgu = 0.0;
+            Sgcr = 0.0;
+            extractUnscaledSwof_(swofTables[satRegionIdx]);
+            return;
+        }
+
+        // so far, only water-oil and oil-gas simulations are supported, i.e.,
+        // there's no gas-water yet.
+        if (!hasWater || !hasGas || !hasOil)
+            throw std::domain_error("The specified phase configuration is not suppored");
+
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
-        if (family1)
-        {
-            const auto& swofTable = swofTables[satRegionIdx];
-
-            // connate saturations
-            Swl = swofTable.getSwColumn().front();
-            Sowl = 1.0 - swofTable.getSwColumn().back();
+        if (family1) {
+            extractUnscaledSwof_(swofTables[satRegionIdx]);
 
             if (!sgofTables.empty()) {
                 // gas-oil parameters are specified using the SGOF keyword
-                const auto& sgofTable = sgofTables[satRegionIdx];
-
-                // minimum gas and oil-in-gas-oil saturation
-                Sgl = sgofTable.getSgColumn().front();
-                Sogl = 1.0 - sgofTable.getSgColumn().back();
-
-                // maximum gas and oil-in-gas-oil saturation
-                Sgu = sgofTable.getSgColumn().back();
-                Sogu = 1.0 - sgofTable.getSgColumn().front();
-
-                // critical gas saturation
-                for (unsigned rowIdx = 0; rowIdx < sgofTable.numRows(); ++ rowIdx) {
-                    if (sgofTable.getKrgColumn()[rowIdx] > 0) {
-                        assert(rowIdx > 0);
-                        Sgcr = sgofTable.getSgColumn()[rowIdx - 1];
-                        break;
-                    };
-                }
-
-                // critical oil saturation of gas-oil system
-                for (int rowIdx = sgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-                    if (sgofTable.getKrogColumn()[rowIdx] > 0) {
-                        assert(rowIdx < (int) sgofTable.numRows() - 1);
-                        Sogcr = 1.0 - sgofTable.getSgColumn()[rowIdx + 1];
-                        break;
-                    };
-                }
-
-                // maximum gas-oil capillary pressure
-                maxPcgo = sgofTable.getPcogColumn().back();
-
-                // maximum gas-* relperms
-                maxKrg = sgofTable.getKrgColumn().back();
-                maxKrog = sgofTable.getKrogColumn().front();
+                extractUnscaledSgof_(sgofTables[satRegionIdx]);
             }
             else {
                 // gas-oil parameters are specified using the SLGOF keyword
                 assert(!slgofTables.empty());
 
-                const auto& slgofTable = slgofTables[satRegionIdx];
-
-                // minimum gas and oil-in-gas-oil saturation
-                Sgl = 1.0 - slgofTable.getSlColumn().back();
-                Sogl = slgofTable.getSlColumn().front();
-
-                assert(std::abs(Sgl) < 1e-10); // this is required in the documentation for SLGOF
-
-                // maximum gas and oil-in-gas-oil saturation
-                Sgu = 1.0 - slgofTable.getSlColumn().front();
-                Sogu = slgofTable.getSlColumn().back();
-
-                // critical gas saturation
-                for (int rowIdx = slgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-                    if (slgofTable.getKrgColumn()[rowIdx] > 0) {
-                        assert(rowIdx < (int) slgofTable.numRows() - 1);
-                        Sgcr = 1 - slgofTable.getSlColumn()[rowIdx + 1];
-                        break;
-                    };
-                }
-
-                // critical oil saturation of gas-oil system
-                for (unsigned rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
-                    if (slgofTable.getKrogColumn()[rowIdx] > 0) {
-                        assert(rowIdx > 0);
-                        Sogcr = slgofTable.getSlColumn()[rowIdx - 1];
-                        break;
-                    };
-                }
-
-                // maximum gas-oil capillary pressure
-                maxPcgo = slgofTable.getPcogColumn().front();
-
-                // maximum gas-* relperms
-                maxKrg = slgofTable.getKrgColumn().front();
-                maxKrog = slgofTable.getKrogColumn().back();
+                extractUnscaledSlgof_(slgofTables[satRegionIdx]);
             }
-
-            // critical water saturation
-            for (unsigned rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
-                if (swofTable.getKrwColumn()[rowIdx] > 0) {
-                    assert(rowIdx > 0);
-                    Swcr = swofTable.getSwColumn()[rowIdx - 1];
-                    break;
-                };
-            }
-
-            // critical oil saturation of oil-water system
-            for (int rowIdx = swofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-                if (swofTable.getKrowColumn()[rowIdx] > 0) {
-                    assert(rowIdx < (int) swofTable.numRows() - 1);
-                    Sowcr = 1.0 - swofTable.getSwColumn()[rowIdx + 1];
-                    break;
-                };
-            }
-
-            // maximum water and oil-in-oil-water saturations
-            Swu = swofTable.getSwColumn().back();
-            Sowu = 1.0 - swofTable.getSwColumn().front();
-
-            // maximum oil-water capillary pressures
-            maxPcow = swofTable.getPcowColumn().front();
-
-            // maximum water-* relative permeabilities
-            maxKrw = swofTable.getKrwColumn().back();
-            maxKrow = swofTable.getKrowColumn().front();
         }
-        else if (family2)
-        {
-            const auto& swfnTable = swfnTables[satRegionIdx];
-            const auto& sof3Table = sof3Tables[satRegionIdx];
-            const auto& sgfnTable = sgfnTables[satRegionIdx];
+        else if (family2) {
+            extractUnscaledSwfn_(swfnTables[satRegionIdx]);
+            extractUnscaledSgfn_(sgfnTables[satRegionIdx]);
+            extractUnscaledSof3_(sof3Tables[satRegionIdx]);
 
-            // connate saturations
-            Swl = swfnTable.getSwColumn().front();
-            Sowl = sof3Table.getSoColumn().front() + Sgl;
-            Sgl = sgfnTable.getSgColumn().front();
-            Sogl = sof3Table.getSoColumn().front() + Swl;
-
-            // critical water saturation
-            for (unsigned rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
-                if (swfnTable.getKrwColumn()[rowIdx] > 0) {
-                    assert(rowIdx > 0);
-                    Swcr = swfnTable.getSwColumn()[rowIdx - 1];
-                    break;
-                };
-            }
-
-            // critical oil saturation of oil-water system
-            for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
-                if (sof3Table.getKrowColumn()[rowIdx] > 0) {
-                    assert(rowIdx > 0);
-                    Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
-                    break;
-                };
-            }
-
-            // critical oil saturation of gas-oil system
-            for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
-                if (sof3Table.getKrogColumn()[rowIdx] > 0) {
-                    assert(rowIdx > 0);
-                    Sogcr = sof3Table.getSoColumn()[rowIdx - 1];
-                    break;
-                };
-            }
-
-            // critical gas saturation
-            for (unsigned rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
-                if (sgfnTable.getKrgColumn()[rowIdx] > 0) {
-                    assert(rowIdx > 0);
-                    Sgcr = sgfnTable.getSgColumn()[rowIdx - 1];
-                    break;
-                };
-            }
-            // maximum saturations
-            Swu = swfnTable.getSwColumn().back();
-            Sowu = sof3Table.getSoColumn().back();
-            assert(Sowu == 1 - swfnTable.getSwColumn().front());
-            Sgu = sgfnTable.getSgColumn().back();
-            Sogu = 1 - sgfnTable.getSgColumn().front();
-
-            // maximum capillary pressures
-            maxPcow = swfnTable.getPcowColumn().front();
-            maxPcgo = sgfnTable.getPcogColumn().back();
-
-            // maximum relative permeabilities
-            maxKrw = swfnTable.getKrwColumn().back();
-            maxKrow = sof3Table.getKrowColumn().back();
-
-            maxKrg = sgfnTable.getKrgColumn().back();
-            maxKrog = sof3Table.getKrogColumn().back();
-
+            // some safety checks mandated by the ECL documentation
+            assert(Sowu == 1 - swfnTables[satRegionIdx].getSwColumn().front());
             assert(maxKrw == maxKrg);
 
-        } else {
+        }
+        else {
             throw std::domain_error("No valid saturation keyword family specified");
         }
 
@@ -414,6 +285,197 @@ struct EclEpsScalingPointsInfo
     }
 
 private:
+    void extractUnscaledSgof_(const Opm::SgofTable& sgofTable)
+    {
+        // minimum gas and oil-in-gas-oil saturation
+        Sgl = sgofTable.getSgColumn().front();
+        Sogl = 1.0 - sgofTable.getSgColumn().back();
+
+        // maximum gas and oil-in-gas-oil saturation
+        Sgu = sgofTable.getSgColumn().back();
+        Sogu = 1.0 - sgofTable.getSgColumn().front();
+
+        // critical gas saturation
+        for (unsigned rowIdx = 0; rowIdx < sgofTable.numRows(); ++ rowIdx) {
+            if (sgofTable.getKrgColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Sgcr = sgofTable.getSgColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // critical oil saturation of gas-oil system
+        for (int rowIdx = sgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
+            if (sgofTable.getKrogColumn()[rowIdx] > 0) {
+                assert(rowIdx < (int) sgofTable.numRows() - 1);
+                Sogcr = 1.0 - sgofTable.getSgColumn()[rowIdx + 1];
+                break;
+            };
+        }
+
+        // maximum gas-oil capillary pressure
+        maxPcgo = sgofTable.getPcogColumn().back();
+
+        // maximum gas-* relperms
+        maxKrg = sgofTable.getKrgColumn().back();
+        maxKrog = sgofTable.getKrogColumn().front();
+    }
+
+    void extractUnscaledSlgof_(const Opm::SlgofTable& slgofTable)
+    {
+        // minimum gas and oil-in-gas-oil saturation
+        Sgl = 1.0 - slgofTable.getSlColumn().back();
+        Sogl = slgofTable.getSlColumn().front();
+
+        assert(std::abs(Sgl) < 1e-10); // this is required in the documentation for SLGOF
+
+        // maximum gas and oil-in-gas-oil saturation
+        Sgu = 1.0 - slgofTable.getSlColumn().front();
+        Sogu = slgofTable.getSlColumn().back();
+
+        // critical gas saturation
+        for (int rowIdx = slgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
+            if (slgofTable.getKrgColumn()[rowIdx] > 0) {
+                assert(rowIdx < (int) slgofTable.numRows() - 1);
+                Sgcr = 1 - slgofTable.getSlColumn()[rowIdx + 1];
+                break;
+            };
+        }
+
+        // critical oil saturation of gas-oil system
+        for (unsigned rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
+            if (slgofTable.getKrogColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Sogcr = slgofTable.getSlColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // maximum gas-oil capillary pressure
+        maxPcgo = slgofTable.getPcogColumn().front();
+
+        // maximum gas-* relperms
+        maxKrg = slgofTable.getKrgColumn().front();
+        maxKrog = slgofTable.getKrogColumn().back();
+    }
+
+    void extractUnscaledSwof_(const Opm::SwofTable& swofTable)
+    {
+        // connate saturations
+        Swl = swofTable.getSwColumn().front();
+        Sowl = 1.0 - swofTable.getSwColumn().back();
+
+        // maximum water and oil-in-oil-water saturations
+        Swu = swofTable.getSwColumn().back();
+        Sowu = 1.0 - swofTable.getSwColumn().front();
+
+        // critical water saturation
+        for (unsigned rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
+            if (swofTable.getKrwColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Swcr = swofTable.getSwColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // critical oil saturation of oil-water system
+        for (int rowIdx = swofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
+            if (swofTable.getKrowColumn()[rowIdx] > 0) {
+                assert(rowIdx < (int) swofTable.numRows() - 1);
+                Sowcr = 1.0 - swofTable.getSwColumn()[rowIdx + 1];
+                break;
+            };
+        }
+
+        // maximum oil-water capillary pressures
+        maxPcow = swofTable.getPcowColumn().front();
+
+        // maximum water-* relative permeabilities
+        maxKrw = swofTable.getKrwColumn().back();
+        maxKrow = swofTable.getKrowColumn().front();
+    }
+
+    void extractUnscaledSwfn_(const Opm::SwfnTable& swfnTable)
+    {
+        // connate water saturation
+        Swl = swfnTable.getSwColumn().front();
+
+        // maximum water saturation
+        Swu = swfnTable.getSwColumn().back();
+
+        // critical water saturation
+        for (unsigned rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
+            if (swfnTable.getKrwColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Swcr = swfnTable.getSwColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // maximum oil-water capillary pressure
+        maxPcow = swfnTable.getPcowColumn().front();
+
+        // maximum water relative permeability
+        maxKrw = swfnTable.getKrwColumn().back();
+    }
+
+    void extractUnscaledSgfn_(const Opm::SgfnTable& sgfnTable)
+    {
+        // connate gas saturation
+        Sgl = sgfnTable.getSgColumn().front();
+
+        // maximum gas saturations
+        Sgu = sgfnTable.getSgColumn().back();
+        Sogu = 1 - sgfnTable.getSgColumn().front();
+
+        // critical gas saturation
+        for (unsigned rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
+            if (sgfnTable.getKrgColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Sgcr = sgfnTable.getSgColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // maximum capillary pressure
+        maxPcgo = sgfnTable.getPcogColumn().back();
+
+        // maximum relative gas permeability
+        maxKrg = sgfnTable.getKrgColumn().back();
+    }
+
+    void extractUnscaledSof3_(const Opm::Sof3Table& sof3Table)
+    {
+        // connate oil saturations
+        Sowl = sof3Table.getSoColumn().front() + Sgl;
+        Sogl = sof3Table.getSoColumn().front() + Swl;
+
+        // maximum oil saturations
+        Sowu = sof3Table.getSoColumn().back();
+
+        // critical oil saturation of oil-water system
+        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+            if (sof3Table.getKrowColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // critical oil saturation of gas-oil system
+        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+            if (sof3Table.getKrogColumn()[rowIdx] > 0) {
+                assert(rowIdx > 0);
+                Sogcr = sof3Table.getSoColumn()[rowIdx - 1];
+                break;
+            };
+        }
+
+        // maximum relative oil permeabilities
+        maxKrow = sof3Table.getKrowColumn().back();
+        maxKrog = sof3Table.getKrogColumn().back();
+    }
+
     void extractGridPropertyValue_(Scalar& targetValue,
                                    const std::vector<double>* propData,
                                    int cartesianCellIdx)
