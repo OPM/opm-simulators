@@ -445,7 +445,11 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, n
 // this will print '0' for bar() and '1' for foobar()...
 #if !(DUNE_VERSION_NEWER(DUNE_COMMON, 2,4))
 
-#include "Math.hpp"
+namespace Opm {
+namespace LocalAd {
+template <class Scalar, class VarSetTag, int numVars>
+Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, numVars>&);
+}}
 
 namespace std {
 template <class Scalar, class VarSetTag, int numVars>
