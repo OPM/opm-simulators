@@ -655,11 +655,11 @@ namespace Opm {
         if (std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
             std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Solvent]   > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[MaxNumPhases]   > maxResidualAllowed() ||
             std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
             std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
             std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
-            std::isnan(CNV[Solvent]) || CNV[Solvent] > maxResidualAllowed() ||
+            std::isnan(CNV[MaxNumPhases]) || CNV[MaxNumPhases] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
             std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
@@ -680,11 +680,11 @@ namespace Opm {
                       << std::setw(11) << mass_balance_residual[Water]
                       << std::setw(11) << mass_balance_residual[Oil]
                       << std::setw(11) << mass_balance_residual[Gas]
-                      << std::setw(11) << mass_balance_residual[Solvent]
+                      << std::setw(11) << mass_balance_residual[MaxNumPhases]
                       << std::setw(11) << CNV[Water]
                       << std::setw(11) << CNV[Oil]
                       << std::setw(11) << CNV[Gas]
-                      << std::setw(11) << CNV[Solvent]
+                      << std::setw(11) << CNV[MaxNumPhases]
                       << std::setw(11) << well_flux_residual[Water]
                       << std::setw(11) << well_flux_residual[Oil]
                       << std::setw(11) << well_flux_residual[Gas]
