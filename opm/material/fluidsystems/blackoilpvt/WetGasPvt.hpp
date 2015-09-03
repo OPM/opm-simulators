@@ -489,14 +489,15 @@ private:
         Scalar rho_gRef = BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
         Scalar rho_oRef = BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
 
-        // calculate the mass of the oil component [kg/m^3] in the oil phase. This is
-        // equivalent to the gas dissolution factor [m^3/m^3] at current pressure times
-        // the gas density [kg/m^3] at standard pressure
-        const LhsEval& rho_oG = oilVaporizationFactor_(regionIdx, temperature, pressure) * rho_gRef;
+        // calculate the mass of the oil component [kg/m^3] in the gas phase. This is
+        // equivalent to the oil vaporization factor [m^3/m^3] at current pressure times
+        // the oil density [kg/m^3] at standard pressure
+        const LhsEval& Rv = oilVaporizationFactor_(regionIdx, temperature, pressure);
+        const LhsEval& rho_gO = Rv * rho_oRef;
 
         // we now have the total density of saturated oil and the partial density of the
         // oil component within it. The gas mass fraction is the ratio of these two.
-        return rho_oG/(rho_oRef + rho_oG);
+        return rho_gO/(rho_gRef + rho_gO);
     }
 
     template <class LhsEval>
@@ -513,9 +514,7 @@ private:
         Scalar MO = BlackOilFluidSystem::molarMass(oilCompIdx, regionIdx);
 
         const LhsEval& avgMolarMass = MO/(1 + (1 - XgO)*(MO/MG - 1));
-        const LhsEval& xgO = XgO*avgMolarMass/MG;
-
-        return xgO;
+        return XgO*avgMolarMass/MO;
     }
 
 private:
