@@ -206,6 +206,34 @@ BOOST_AUTO_TEST_CASE(MultOps)
     s.toSparse(x);
     BOOST_CHECK(x == ss);
 
+    //Multiply by zero matrix
+    auto ztz = z * z;
+    ztz.toSparse(x);
+    BOOST_CHECK(x == zs*zs);
+    auto itz = i * z;
+    itz.toSparse(x);
+    BOOST_CHECK(x == is*zs);
+    auto dtz = d * z;
+    dtz.toSparse(x);
+    BOOST_CHECK(x == ds*zs);
+    auto stz = s * z;
+    stz.toSparse(x);
+    BOOST_CHECK(x == ss*zs);
+
+    //Multiply by identity matrix
+    auto zti = z * i;
+    zti.toSparse(x);
+    BOOST_CHECK(x == zs*is);
+    auto iti = i * i;
+    iti.toSparse(x);
+    BOOST_CHECK(x == is*is);
+    auto dti = d * i;
+    dti.toSparse(x);
+    BOOST_CHECK(x == ds*is);
+    auto sti = s * i;
+    sti.toSparse(x);
+    BOOST_CHECK(x == ss*is);
+
     // Multiply by diagonal matrix.
     auto ztd = z * d;
     ztd.toSparse(x);
@@ -219,5 +247,177 @@ BOOST_AUTO_TEST_CASE(MultOps)
     auto std = s * d;
     std.toSparse(x);
     BOOST_CHECK(x == ss*ds);
+
+    // Multiply by sparse matrix.
+    auto zts = z * s;
+    zts.toSparse(x);
+    BOOST_CHECK(x == zs*ss);
+    auto its = i * s;
+    its.toSparse(x);
+    BOOST_CHECK(x == is*ss);
+    auto dts = d * s;
+    dts.toSparse(x);
+    BOOST_CHECK(x == ds*ss);
+    auto sts = s * s;
+    sts.toSparse(x);
+    BOOST_CHECK(x == ss*ss);
+}
+
+
+BOOST_AUTO_TEST_CASE(MultOpsDouble)
+{
+    // Setup.
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Sp zs(3,3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    static double factor = 5.3;
+
+    Sp x;
+    auto zd = z*factor;
+    zd.toSparse(x);
+    BOOST_CHECK(x == zs*factor);
+    auto id = i*factor;
+    id.toSparse(x);
+    BOOST_CHECK(x == is*factor);
+    auto dd = d*factor;
+    dd.toSparse(x);
+    BOOST_CHECK(x == ds*factor);
+    auto sd = s*factor;
+    sd.toSparse(x);
+    BOOST_CHECK(x == ss*factor);
+}
+
+
+BOOST_AUTO_TEST_CASE(DivOpsDouble)
+{
+    // Setup.
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Sp zs(3,3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    static double factor = 5.3;
+
+    Sp x;
+    auto zd = z/factor;
+    zd.toSparse(x);
+    BOOST_CHECK(x == zs/factor);
+    auto id = i/factor;
+    id.toSparse(x);
+    BOOST_CHECK(x == is/factor);
+    auto dd = d/factor;
+    dd.toSparse(x);
+    BOOST_CHECK(x == ds/factor);
+    auto sd = s/factor;
+    sd.toSparse(x);
+    BOOST_CHECK(x == ss/factor);
+}
+
+BOOST_AUTO_TEST_CASE(MultVectorXd)
+{
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Sp zs(3,3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    Eigen::VectorXd vec(3);
+    vec << 1.0, 2.0, 3.0;
+
+    Sp x;
+    Eigen::VectorXd zd = z*vec;
+    BOOST_CHECK(zd == zs*vec);
+    Eigen::VectorXd id = i*vec;
+    BOOST_CHECK(id == is*vec);
+    Eigen::VectorXd dd = d*vec;
+    BOOST_CHECK(dd == ds*vec);
+    Eigen::VectorXd sd = s*vec;
+    BOOST_CHECK(sd == ss*vec);
+}
+
+BOOST_AUTO_TEST_CASE(Coeff)
+{
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,2);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0;
+    Sp s2(s1.sparseView());
+    Mat s = Mat(s2);
+
+    for (int row=0; row<s1.rows(); ++row) {
+        for (int col=0; col<s1.cols(); ++col) {
+            double a = s.coeff(row, col);
+            double b = s1(row, col);
+            BOOST_CHECK_EQUAL(a, b);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(nonZeros)
+{
+    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+
+    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+
+    Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
+    d1 << 0.2, 1.2, 13.4;
+    Mat d = Mat(d1.matrix().asDiagonal());
+    Sp ds = spdiag(d1);
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> s1(3,3);
+    s1 <<
+        1.0, 0.0, 2.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 2.0;
+    Sp ss(s1.sparseView());
+    Mat s = Mat(ss);
+
+    BOOST_CHECK_EQUAL(z.nonZeros(), 0);
+    BOOST_CHECK_EQUAL(i.nonZeros(), 3);
+    BOOST_CHECK_EQUAL(d.nonZeros(), 3);
+    BOOST_CHECK_EQUAL(s.nonZeros(), 4);
 }
 
