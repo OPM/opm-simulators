@@ -158,7 +158,6 @@ namespace Opm
         /// \param verbose    if true get some output (default = false)
         PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
                                              const double tol = 1e-3,
-                                             const double maxgrowth = 3.0,
                                              const boost::any& = boost::any(),
                                              const bool verbose = false);
 
@@ -167,7 +166,6 @@ namespace Opm
 
     protected:
         const int     target_iterations_;
-        const double  maxgrowth_;
     };
 
 

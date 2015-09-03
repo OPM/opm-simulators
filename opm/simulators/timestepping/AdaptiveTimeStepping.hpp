@@ -82,6 +82,7 @@ namespace Opm {
         TimeStepControlType timeStepControl_; //!< time step control object
         const double restart_factor_;         //!< factor to multiply time step with when solver fails to converge
         const double growth_factor_;          //!< factor to multiply time step when solver recovered from failed convergence
+        const double max_growth_;             //!< factor that limits the maximum growth of a time step
         const double max_time_step_;          //!< maximal allowed time step size
         const int solver_restart_max_;        //!< how many restart of solver are allowed
         const bool solver_verbose_;           //!< solver verbosity

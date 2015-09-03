@@ -169,12 +169,10 @@ namespace Opm
     PIDAndIterationCountTimeStepControl::
     PIDAndIterationCountTimeStepControl( const int target_iterations,
                                          const double tol,
-                                         const double maxgrowth,
                                          const boost::any& pinfo,
                                          const bool verbose)
         : BaseType( tol, pinfo, verbose )
         , target_iterations_( target_iterations )
-        , maxgrowth_( maxgrowth )
     {}
 
     double PIDAndIterationCountTimeStepControl::
@@ -188,9 +186,6 @@ namespace Opm
             // if iterations was the same or dts were the same, do some magic
             dtEstimate *= double( target_iterations_ ) / double(iterations);
         }
-
-        // limit the growth of the timestep size by the growth factor
-        dtEstimate = std::min( dtEstimate, double(maxgrowth_ * dt) );
 
         return dtEstimate;
     }

@@ -39,6 +39,7 @@ namespace Opm {
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
+        , max_growth_( param.getDefault("timestep.control.maxgrowth", double(3.0) ) )
           // default is 1 year, convert to seconds
         , max_time_step_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0 ), unit::day) )
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
@@ -59,8 +60,7 @@ namespace Opm {
         else if ( control == "pid+iteration" )
         {
             const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
-            const double maxgrowth = param.getDefault("timestep.control.maxgrowth", double(3.0) );
-            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, maxgrowth, parallel_information ) );
+            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, parallel_information ) );
         }
         else if ( control == "iterationcount" )
         {
@@ -175,7 +175,10 @@ namespace Opm {
                 double dtEstimate =
                     timeStepControl_->computeTimeStepSize( dt, linearIterations, state );
 
-                // avoid time step size growth
+                // limit the growth of the timestep size by the growth factor
+                dtEstimate = std::min( dtEstimate, double(max_growth_ * dt) );
+
+                // further restrict time step size growth after convergence problems
                 if( restarts > 0 ) {
                     dtEstimate = std::min( growth_factor_ * dt, dtEstimate );
                     // solver converged, reset restarts counter
