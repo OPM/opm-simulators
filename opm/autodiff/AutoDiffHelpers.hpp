@@ -39,7 +39,6 @@ namespace Opm
 /// operations on (AD or regular) vectors of data.
 struct HelperOps
 {
-    // typedef AutoDiffBlock<double>::M M;
     typedef Eigen::SparseMatrix<double> M;
     typedef AutoDiffBlock<double>::V V;
 
@@ -337,11 +336,9 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 /// elements of d on the diagonal.
 /// Need to mark this as inline since it is defined in a header and not a template.
 inline
-//AutoDiffBlock<double>::M
 Eigen::SparseMatrix<double>
 spdiag(const AutoDiffBlock<double>::V& d)
 {
-    // typedef AutoDiffBlock<double>::M M;
     typedef Eigen::SparseMatrix<double> M;
 
     const int n = d.size();
@@ -587,7 +584,6 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
             int block_col_start = 0;
             if (!x[elem].derivative().empty()) {
                 for (int block = 0; block < num_blocks; ++block) {
-                    // const ADB::M& jac = x[elem].derivative()[block];
                     x[elem].derivative()[block].toSparse(jac);
                     for (M::Index k = 0; k < jac.outerSize(); ++k) {
                         for (M::InnerIterator i(jac, k); i ; ++i) {

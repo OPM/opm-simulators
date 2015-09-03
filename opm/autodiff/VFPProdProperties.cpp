@@ -143,11 +143,6 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
     }
 
     //Create diagonal matrices from ADB::Vs
-    // ADB::M dthp_diag = spdiag(dthp);
-    // ADB::M dwfr_diag = spdiag(dwfr);
-    // ADB::M dgfr_diag = spdiag(dgfr);
-    // ADB::M dalq_diag = spdiag(dalq);
-    // ADB::M dflo_diag = spdiag(dflo);
     ADB::M dthp_diag(dthp.matrix().asDiagonal());
     ADB::M dwfr_diag(dwfr.matrix().asDiagonal());
     ADB::M dgfr_diag(dgfr.matrix().asDiagonal());

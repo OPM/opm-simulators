@@ -111,7 +111,6 @@ namespace Opm
                 // Subtract Bu (B*inv(D)*C)
                 M Bu;
                 fastSparseProduct(B, u, Bu);
-                // J -= Bu;
                 J = J + (Bu * -1.0);
             }
         }

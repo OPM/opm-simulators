@@ -159,22 +159,6 @@ namespace Opm
             // ... then set the one corrresponding to this variable to identity.
             assert(blocksizes[index] == num_elem);
             jac[index] = M(M::IdentityMatrix, val.size());
-            // if(val.size()>0)
-            // {
-            //     // if val is empty the following will run into an assertion
-            //     // with Eigen
-            //     jac[index].reserve(Eigen::VectorXi::Constant(val.size(), 1));
-            //     for (typename M::Index row = 0; row < val.size(); ++row) {
-            //         jac[index].insert(row, row) = Scalar(1.0);
-            //     }
-            // }
-            // else
-            // {
-            //     // Do some check. Empty jacobian only make sense for empty val.
-            //     for (int i = 0; i < num_blocks; ++i) {
-            //         assert(jac[i].size()==0);
-            // }
-            // }
             return AutoDiffBlock(std::move(val), std::move(jac));
         }
 
@@ -258,7 +242,6 @@ namespace Opm
                 const int num_blocks = rhs.numBlocks();
                 jac_.resize(num_blocks);
                 for (int block = 0; block < num_blocks; ++block) {
-                    // jac_[block] = -rhs.jac_[block];
                     jac_[block] = rhs.jac_[block] * (-1.0);
                 }
             } else if (!rhs.jac_.empty()) {
@@ -502,7 +485,6 @@ namespace Opm
         std::vector<typename AutoDiffBlock<Scalar>::M> jac(num_blocks);
         assert(lhs.cols() == rhs.value().rows());
         for (int block = 0; block < num_blocks; ++block) {
-            // jac[block] = lhs*rhs.derivative()[block];
             fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
         }
         typename AutoDiffBlock<Scalar>::V val = lhs*rhs.value().matrix();
@@ -519,7 +501,6 @@ namespace Opm
         std::vector<typename AutoDiffBlock<Scalar>::M> jac(num_blocks);
         assert(lhs.cols() == rhs.value().rows());
         for (int block = 0; block < num_blocks; ++block) {
-            // jac[block] = lhs*rhs.derivative()[block];
             fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
         }
         typename AutoDiffBlock<Scalar>::V val = lhs*rhs.value().matrix();
