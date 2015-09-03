@@ -62,7 +62,7 @@ namespace Opm
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 1.0e-3;
-        solve_welleq_initially_ = false;
+        solve_welleq_initially_ = true;
     }
 
 
