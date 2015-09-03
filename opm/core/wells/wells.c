@@ -544,7 +544,8 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
         return are_equal;
     }
 
-    for (int i=0; i<W1->number_of_wells; i++) {
+    int i;
+    for (i=0; i<W1->number_of_wells; i++) {
         if (are_equal) {
             /*
               The name attribute can be NULL. The comparison is as

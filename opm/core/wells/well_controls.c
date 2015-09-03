@@ -364,7 +364,8 @@ well_controls_get_current_distr(const struct WellControls * ctrl) {
 void 
 well_controls_iset_distr(const struct WellControls * ctrl, int control_index, const double * distr) {
     int offset = control_index * ctrl->number_of_phases;
-    for (int p=0; p < ctrl->number_of_phases; p++)
+    int p;
+    for (p=0; p < ctrl->number_of_phases; p++)
         ctrl->distr[offset + p] = distr[p];
 }
 
