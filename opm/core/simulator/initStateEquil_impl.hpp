@@ -777,7 +777,8 @@ namespace Opm
         /// Convert saturations from a vector of individual phase saturation vectors
         /// to an interleaved format where all values for a given cell come before all
         /// values for the next cell, all in a single vector.
-        std::vector<double> convertSats(const std::vector< std::vector<double> >& sat)
+        inline std::vector<double>
+        convertSats(const std::vector< std::vector<double> >& sat)
         {
             const int np = sat.size();
             const int nc = sat[0].size();
