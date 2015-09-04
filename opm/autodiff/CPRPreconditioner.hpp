@@ -47,36 +47,12 @@
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 
+#include <opm/autodiff/AdditionalObjectDeleter.hpp>
+#include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hh>
 namespace Opm
 {
 namespace
 {
-//! \brief A custom deleter for the parallel preconditioners.
-//!
-//! In dune-istl they hold a reference to the sequential preconditioner.
-//! In CPRPreconditioner we use unique_ptr for the memory management.
-//! Ergo we need to construct the sequential preconditioner with new and
-//! make sure that it gets deleted together with the enclosing parallel
-//! preconditioner. Therefore this deleter stores a pointer to it and deletes
-//! it during destruction.
-template<class PREC>
-class ParallelPreconditionerDeleter
-{
-public:
-    ParallelPreconditionerDeleter()
-        : ilu_()
-    {}
-    ParallelPreconditionerDeleter(PREC& ilu)
-    : ilu_(&ilu){}
-    template<class T>
-    void operator()(T* pt)
-    {
-        delete pt;
-        delete ilu_;
-    }
-private:
-    PREC* ilu_;
-};
 ///
 /// \brief A traits class for selecting the types of the preconditioner.
 ///
@@ -124,7 +100,7 @@ struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
     EllipticPreconditioner;
     /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
     typedef std::unique_ptr<EllipticPreconditioner,
-                            ParallelPreconditionerDeleter<Dune::SeqILU0<M,X,X> > >
+                            AdditionalObjectDeleter<Dune::SeqILU0<M,X,X> > >
     EllipticPreconditionerPointer;
 
     typedef EllipticPreconditioner Smoother;
@@ -146,11 +122,11 @@ struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
 //! \param  ilu A reference to the wrapped preconditioner
 //! \param  p The parallel information for template parameter deduction.
 template<class ILU, class I1, class I2>
-ParallelPreconditionerDeleter<ILU>
+AdditionalObjectDeleter<ILU>
 createParallelDeleter(ILU& ilu, const Dune::OwnerOverlapCopyCommunication<I1,I2>& p)
     {
         (void) p;
-        return ParallelPreconditionerDeleter<ILU>(ilu);
+        return AdditionalObjectDeleter<ILU>(ilu);
     }
 #endif
 
