@@ -887,9 +887,9 @@ namespace Opm
         }
 
         /// Return true if capillary pressure function is constant
-        bool isConstPc(const BlackoilPropertiesInterface& props,
-                       const int phase,
-                       const int cell)
+        inline bool isConstPc(const BlackoilPropertiesInterface& props,
+                              const int                          phase,
+                              const int                          cell)
         {
             // Find minimum and maximum saturations.
             double sminarr[BlackoilPhases::MaxNumPhases];
