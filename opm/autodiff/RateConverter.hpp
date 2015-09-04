@@ -1,6 +1,6 @@
 /*
-  Copyright 2014 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 Statoil ASA.
+  Copyright 2014, 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2014, 2015 Statoil ASA.
 
   This file is part of the Open Porous Media Project (OPM).
 
@@ -31,6 +31,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 /**
@@ -50,74 +55,170 @@ namespace Opm {
          * facility.
          */
         namespace Details {
-            /**
-             * Count number of cells in all regions.
-             *
-             * This value is needed to compute the average (arithmetic
-             * mean) hydrocarbon pressure in each region.
-             *
-             * \tparam RMap Region mapping.  Typically an instance of
-             * class Opm::RegionMapping<> from module opm-core.
-             *
-             * \param[in] m Specific region mapping.
-             *
-             * \return Array containing number of cells in each region
-             * defined by the region mapping.
-             */
-            template <class RMap>
-            Eigen::ArrayXd
-            countCells(const RMap& m)
-            {
-                // Note: Floating point type (double) to represent
-                // cell counts is intentional.  The count will be
-                // subsequently used to compute average (pressure)
-                // values only, and that operation is safer if we
-                // guarantee a floating point type here.
-                Eigen::ArrayXd n(m.numRegions());
-
-                for (typename RMap::RegionId
-                         r = 0, nr = m.numRegions(); r < nr; ++r)
+            namespace Select {
+                template <class RegionID, bool>
+                struct RegionIDParameter
                 {
-                    n(r) = double(m.cells(r).size());
-                }
+                    using type =
+                        typename std::remove_reference<RegionID>::type &;
+                };
 
-                return n;
-            }
+                template <class RegionID>
+                struct RegionIDParameter<RegionID, true>
+                {
+                    using type = RegionID;
+                };
+            } // Select
 
             /**
-             * Extract representative cell in each region.
+             * Provide mapping from Region IDs to user-specified collection
+             * of per-region attributes.
              *
-             * These are the cells for which fluid properties will be
-             * computed.
+             * \tparam RegionId Region identifier type.  Must be hashable by
+             * \code std::hash<> \endcode.  Typically a built-in integer
+             * type--e.g., \c int.
              *
-             * \tparam Cells Type of cell container.  Must be
-             * commensurable with the properties object's input
-             * requirements and support a single (integer) argument
-             * constructor that specifies the number of regions.
-             * Typically \code std::vector<int> \endcode.
-             *
-             * \tparam RMap Region mapping.  Typically an instance of
-             * class Opm::RegionMapping<> from module opm-core.
-             *
-             * \param[in] m Specific region mapping.
-             *
-             * \return Array of representative cells, one cell in each
-             * region defined by @c m.
+             * \tparam Attributes User-defined type that represents
+             * collection of attributes that have meaning in a per-region
+             * aggregate sense.  Must be copy-constructible.
              */
-            template <class Cells, class RMap>
-            Cells
-            representative(const RMap& m)
+            template <typename RegionId, class Attributes>
+            class RegionAttributes
             {
-                Cells c(m.numRegions());
+            public:
+                /**
+                 * Expose \c RegionId as a vocabulary type for use in query
+                 * methods.
+                 */
+                using RegionID =
+                    typename Select::RegionIDParameter
+                    <RegionId, std::is_integral<RegionId>::value>::type;
 
-                for (typename RMap::RegionId
-                         r = 0, nr = m.numRegions(); r < nr; ++r)
+                /**
+                 * Constructor.
+                 *
+                 * \tparam RMap Class type that implements the RegionMapping
+                 * protocol.  Typically an instantiation of \code
+                 * Opm::RegionMapping<> \endcode.
+                 *
+                 * \param[in] rmap Specific region mapping that provides
+                 * reverse lookup from regions to cells.
+                 *
+                 * \param[in] attr Pre-constructed initialiser for \c
+                 * Attributes.
+                 */
+                template <class RMap>
+                RegionAttributes(const RMap&       rmap,
+                                 const Attributes& attr)
                 {
-                    c[r] = *m.cells(r).begin();
+                    using VT = typename AttributeMap::value_type;
+
+                    for (const auto& r : rmap.activeRegions()) {
+                        auto v = std::unique_ptr<Value>(new Value(attr));
+
+                        const auto stat = attr_.insert(VT(r, std::move(v)));
+
+                        if (stat.second) {
+                            // New value inserted.
+                            const auto& cells = rmap.cells(r);
+
+                            assert (! cells.empty());
+
+                            // Region's representative cell.
+                            stat.first->second->cell_ = cells[0];
+                        }
+                    }
                 }
 
-                return c;
-            }
+                /**
+                 * Retrieve representative cell in region.
+                 *
+                 * \param[in] reg Specific region.
+                 *
+                 * \return Representative cell in region \p reg.
+                 */
+                int cell(const RegionID reg) const
+                {
+                    return this->find(reg).cell_;
+                }
+
+                /**
+                 * Request read-only access to region's attributes.
+                 *
+                 * \param[in] reg Specific region.
+                 *
+                 * \return Read-only access to region \p reg's per-region
+                 * attributes.
+                 */
+                const Attributes& attributes(const RegionID reg) const
+                {
+                    return this->find(reg).attr_;
+                }
+
+                /**
+                 * Request modifiable access to region's attributes.
+                 *
+                 * \param[in] reg Specific region.
+                 *
+                 * \return Read-write access to region \p reg's per-region
+                 * attributes.
+                 */
+                Attributes& attributes(const RegionID reg)
+                {
+                    return this->find(reg).attr_;
+                }
+
+            private:
+                /**
+                 * Aggregate per-region attributes along with region's
+                 * representative cell.
+                 */
+                struct Value {
+                    Value(const Attributes& attr)
+                        : attr_(attr)
+                        , cell_(-1)
+                    {}
+
+                    Attributes attr_;
+                    int        cell_;
+                };
+
+                using ID =
+                    typename std::remove_reference<RegionId>::type;
+
+                using AttributeMap =
+                    std::unordered_map<ID, std::unique_ptr<Value>>;
+
+                AttributeMap attr_;
+
+                /**
+                 * Read-only access to region's properties.
+                 */
+                const Value& find(const RegionID reg) const
+                {
+                    const auto& i = attr_.find(reg);
+
+                    if (i == attr_.end()) {
+                        throw std::invalid_argument("Unknown region ID");
+                    }
+
+                    return *i->second;
+                }
+
+                /**
+                 * Read-write access to region's properties.
+                 */
+                Value& find(const RegionID reg)
+                {
+                    const auto& i = attr_.find(reg);
+
+                    if (i == attr_.end()) {
+                        throw std::invalid_argument("Unknown region ID");
+                    }
+
+                    return *i->second;
+                }
+            };
 
             /**
              * Convenience functions for querying presence/absence of
@@ -262,13 +363,9 @@ namespace Opm {
              */
             SurfaceToReservoirVoidage(const Property& props,
                                       const Region&   region)
-                : props_   (props)
-                , rmap_    (region)
-                , repcells_(Details::representative<typename Property::Cells>(rmap_))
-                , ncells_  (Details::countCells(rmap_))
-                , p_avg_   (rmap_.numRegions())
-                , T_avg_   (rmap_.numRegions())
-                , Rmax_    (rmap_.numRegions(), props.numPhases())
+                : props_(props)
+                , rmap_ (region)
+                , attr_ (rmap_, Attributes(props_.numPhases()))
             {}
 
             /**
@@ -285,8 +382,7 @@ namespace Opm {
             void
             defineState(const BlackoilState& state)
             {
-                averagePressure(state);
-                averageTemperature(state);
+                calcAverages(state);
                 calcRmax();
             }
 
@@ -323,26 +419,27 @@ namespace Opm {
             template <class Input,
                       class Coeff>
             void
-            calcCoeff(const Input& in, const RegionId r, Coeff& coeff)
+            calcCoeff(const Input& in, const RegionId r, Coeff& coeff) const
             {
-                typedef typename Property::V V;
-                typedef typename Property::ADB ADB;
+                using V = typename Property::V;
 
-                const PhaseUsage&               pu = props_.phaseUsage();
-                const V&                        p  = getRegPress(r);
-                const V&                        T  = getRegTemp(r);
-                const typename Property::Cells& c  = getRegCell (r);
+                const auto& pu = props_.phaseUsage();
+                const auto& ra = attr_.attributes(r);
 
-                const int iw = Details::PhasePos::water(pu);
-                const int io = Details::PhasePos::oil  (pu);
-                const int ig = Details::PhasePos::gas  (pu);
+                const auto  p  = this->constant(ra.pressure);
+                const auto  T  = this->constant(ra.temperature);
+                const auto  c  = this->getRegCell(r);
+
+                const int   iw = Details::PhasePos::water(pu);
+                const int   io = Details::PhasePos::oil  (pu);
+                const int   ig = Details::PhasePos::gas  (pu);
 
                 std::fill(& coeff[0], & coeff[0] + props_.numPhases(), 0.0);
 
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const V bw = props_.bWat(ADB::constant(p), ADB::constant(T), c).value();
+                    const V bw = props_.bWat(p, T, c).value();
 
                     coeff[iw] = 1.0 / bw(0);
                 }
@@ -355,7 +452,8 @@ namespace Opm {
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const V      bo  = props_.bOil(ADB::constant(p), ADB::constant(T), ADB::constant(m.rs), m.cond, c).value();
+                    const auto   rs  = this->constant(m.rs);
+                    const V      bo  = props_.bOil(p, T, rs, m.cond, c).value();
                     const double den = bo(0) * detR;
 
                     coeff[io] += 1.0 / den;
@@ -368,7 +466,8 @@ namespace Opm {
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const V      bg  = props_.bGas(ADB::constant(p), ADB::constant(T), ADB::constant(m.rv), m.cond, c).value();
+                    const auto   rv  = this->constant(m.rv);
+                    const V      bg  = props_.bGas(p, T, rv, m.cond, c).value();
                     const double den = bg(0) * detR;
 
                     coeff[ig] += 1.0 / den;
@@ -391,36 +490,21 @@ namespace Opm {
             const RegionMapping<Region> rmap_;
 
             /**
-             * Representative cells in each FIP region.
+             * Derived property attributes for each active region.
              */
-            const typename Property::Cells repcells_;
+            struct Attributes {
+                Attributes(const int np)
+                    : pressure   (0.0)
+                    , temperature(0.0)
+                    , Rmax       (Eigen::ArrayXd::Zero(np, 1))
+                {}
 
-            /**
-             * Number of cells in each region.
-             *
-             * Floating-point type (double) for purpose of average
-             * pressure calculation.
-             */
-            const Eigen::ArrayXd ncells_;
+                double         pressure;
+                double         temperature;
+                Eigen::ArrayXd Rmax;
+            };
 
-            /**
-             * Average hydrocarbon pressure in each FIP region.
-             */
-            Eigen::ArrayXd p_avg_;
-
-            /**
-             * Average temperature in each FIP region.
-             */
-            Eigen::ArrayXd T_avg_;
-
-            /**
-             * Maximum dissolution and evaporation ratios at average
-             * hydrocarbon pressure.
-             *
-             * Size (number of regions)-by-(number of fluid phases).
-             * Water value is, strictly speaking, wasted if present.
-             */
-            Eigen::ArrayXXd Rmax_;
+            Details::RegionAttributes<RegionId, Attributes> attr_;
 
             /**
              * Aggregate structure defining fluid miscibility
@@ -464,43 +548,34 @@ namespace Opm {
             };
 
             /**
-             * Compute average hydrocarbon pressure in all regions.
+             * Compute average hydrocarbon pressure and temperatures in all
+             * regions.
              *
              * \param[in] state Dynamic reservoir state.
              */
             void
-            averagePressure(const BlackoilState& state)
+            calcAverages(const BlackoilState& state)
             {
-                p_avg_.setZero();
+                const auto& press = state.pressure();
+                const auto& temp  = state.temperature();
 
-                const std::vector<double>& p = state.pressure();
-                for (std::vector<double>::size_type
-                         i = 0, n = p.size(); i < n; ++i)
-                {
-                    p_avg_(rmap_.region(i)) += p[i];
+                for (const auto& reg : rmap_.activeRegions()) {
+                    auto& ra = attr_.attributes(reg);
+                    auto& p  = ra.pressure;
+                    auto& T  = ra.temperature;
+
+                    std::size_t n = 0;
+                    p = T = 0.0;
+                    for (const auto& cell : rmap_.cells(reg)) {
+                        p += press[ cell ];
+                        T += temp [ cell ];
+
+                        n += 1;
+                    }
+
+                    p /= n;
+                    T /= n;
                 }
-
-                p_avg_ /= ncells_;
-            }
-
-            /**
-             * Compute average temperature in all regions.
-             *
-             * \param[in] state Dynamic reservoir state.
-             */
-            void
-            averageTemperature(const BlackoilState& state)
-            {
-                T_avg_.setZero();
-
-                const std::vector<double>& T = state.temperature();
-                for (std::vector<double>::size_type
-                         i = 0, n = T.size(); i < n; ++i)
-                {
-                    T_avg_(rmap_.region(i)) += T[i];
-                }
-
-                T_avg_ /= ncells_;
             }
 
             /**
@@ -513,14 +588,12 @@ namespace Opm {
             void
             calcRmax()
             {
-                Rmax_.setZero();
-
                 const PhaseUsage& pu = props_.phaseUsage();
 
                 if (Details::PhaseUsed::oil(pu) &&
                     Details::PhaseUsed::gas(pu))
                 {
-                    const Eigen::ArrayXXd::Index
+                    const Eigen::ArrayXd::Index
                         io = Details::PhasePos::oil(pu),
                         ig = Details::PhasePos::gas(pu);
 
@@ -528,9 +601,18 @@ namespace Opm {
                     // pressure into account.  This facility uses the
                     // average *hydrocarbon* pressure rather than
                     // average phase pressure.
-                    typedef BlackoilPropsAdInterface::ADB ADB;
-                    Rmax_.col(io) = props_.rsSat(ADB::constant(p_avg_), ADB::constant(T_avg_), repcells_).value();
-                    Rmax_.col(ig) = props_.rvSat(ADB::constant(p_avg_), ADB::constant(T_avg_), repcells_).value();
+
+                    for (const auto& reg : rmap_.activeRegions()) {
+                        auto& ra = attr_.attributes(reg);
+
+                        const auto c = this->getRegCell(reg);
+                        const auto p = this->constant(ra.pressure);
+                        const auto T = this->constant(ra.temperature);
+
+                        auto& Rmax = ra.Rmax;
+                        Rmax.row(io) = props_.rsSat(p, T, c).value();
+                        Rmax.row(ig) = props_.rvSat(p, T, c).value();
+                    }
                 }
             }
 
@@ -555,7 +637,8 @@ namespace Opm {
             Miscibility
             calcMiscibility(const Input& in, const RegionId r) const
             {
-                const PhaseUsage& pu = props_.phaseUsage();
+                const auto& pu   = props_.phaseUsage();
+                const auto& attr = attr_.attributes(r);
 
                 const int io = Details::PhasePos::oil(pu);
                 const int ig = Details::PhasePos::gas(pu);
@@ -571,7 +654,7 @@ namespace Opm {
                     cond.setFreeOil();
 
                     if (Details::PhaseUsed::gas(pu)) {
-                        const double rsmax = Rmax_(r, io);
+                        const double rsmax = attr.Rmax(io);
                         const double rs =
                             (0.0 < std::abs(in[io]))
                             ? in[ig] / in[io]
@@ -592,7 +675,7 @@ namespace Opm {
                     }
 
                     if (Details::PhaseUsed::oil(pu)) {
-                        const double rvmax = Rmax_(r, ig);
+                        const double rvmax = attr.Rmax(ig);
                         const double rv =
                             (0.0 < std::abs(in[ig]))
                             ? (in[io] / in[ig])
@@ -606,35 +689,26 @@ namespace Opm {
             }
 
             /**
-             * Retrieve average hydrocarbon pressure in region.
-             *
-             * \param[in] r Particular region.
-             *
-             * \return Average hydrocarbon pressure in region \c r.
+             * Conversion from \code Property::V \endcode to (constant)
+             * \code Property::ADB \endcode (zero derivatives).
              */
-            typename Property::V
-            getRegPress(const RegionId r) const
+            typename Property::ADB
+            constant(const typename Property::V& x) const
             {
-                typename Property::V p(1);
-                p << p_avg_(r);
-
-                return p;
+                return Property::ADB::constant(x);
             }
 
             /**
-             * Retrieve average temperature in region.
-             *
-             * \param[in] r Particular region.
-             *
-             * \return Average temperature in region \c r.
+             * Conversion from \c double to (constant) \code Property::ADB
+             * \endcode (zero derivatives).
              */
-            typename Property::V
-            getRegTemp(const RegionId r) const
+            typename Property::ADB
+            constant(const double x) const
             {
-                typename Property::V T(1);
-                T << T_avg_(r);
+                typename Property::V y(1);
+                y << x;
 
-                return T;
+                return this->constant(y);
             }
 
             /**
@@ -647,7 +721,7 @@ namespace Opm {
             typename Property::Cells
             getRegCell(const RegionId r) const
             {
-                typename Property::Cells c(1, repcells_[r]);
+                typename Property::Cells c(1, this->attr_.cell(r));
 
                 return c;
             }
