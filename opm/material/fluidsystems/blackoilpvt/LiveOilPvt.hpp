@@ -501,7 +501,7 @@ private:
         // calculate the mass of the gas component [kg/m^3] in the oil phase. This is
         // equivalent to the gas dissolution factor [m^3/m^3] at current pressure times
         // the gas density [kg/m^3] at standard pressure
-        const LhsEval& rho_oG = gasDissolutionFactorTable_[regionIdx].eval(pressure,  /*extrapolate=*/true) * rho_gRef;
+        const LhsEval& rho_oG = gasDissolutionFactor_(regionIdx, temperature, pressure) * rho_gRef;
 
         // we now have the total density of saturated oil and the partial density of the
         // gas component within it. The gas mass fraction is the ratio of these two.
@@ -522,9 +522,7 @@ private:
         Scalar MO = BlackOilFluidSystem::molarMass(oilCompIdx, regionIdx);
 
         LhsEval avgMolarMass = MO/(1 + XoG*(MO/MG - 1));
-        LhsEval xoG = XoG*avgMolarMass/MG;
-
-        return xoG;
+        return XoG*avgMolarMass/MG;
     }
 
     void updateSaturationPressureSpline_(int regionIdx)
