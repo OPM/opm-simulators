@@ -780,14 +780,22 @@ namespace Opm
         inline std::vector<double>
         convertSats(const std::vector< std::vector<double> >& sat)
         {
-            const int np = sat.size();
-            const int nc = sat[0].size();
+            const auto np = sat.size();
+            const auto nc = sat[0].size();
+
             std::vector<double> s(np * nc);
-            for (int c = 0; c < nc; ++c) {
-                for (int p = 0; p < np; ++p) {
-                    s[np*c + p] = sat[p][c];
+
+            for (decltype(sat.size()) p = 0; p < np; ++p) {
+                const auto& sat_p = sat[p];
+                double*     sp    = & s[0*nc + p];
+
+                for (decltype(sat[0].size()) c = 0;
+                     c < nc; ++c, sp += np)
+                {
+                    *sp = sat_p[c];
                 }
             }
+
             return s;
         }
     } // namespace Details
