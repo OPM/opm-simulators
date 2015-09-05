@@ -153,8 +153,10 @@ namespace Opm
             const ParallelISTLInformation& info =
                 boost::any_cast<const ParallelISTLInformation&>( parallelInformation_);
             Comm istlComm(info.communicator());
+            // As we use a dune-istl with block size np the number of components
+            // per parallel is only one.
             info.copyValuesTo(istlComm.indexSet(), istlComm.remoteIndices(),
-                              size, np);
+                              size, 1);
             // Construct operator, scalar product and vectors needed.
             typedef Dune::OverlappingSchwarzOperator<Mat,Vector,Vector,Comm> Operator;
             Operator opA(istlA, istlComm);
