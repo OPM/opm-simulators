@@ -180,15 +180,23 @@ namespace detail {
         , terminal_output_ (terminal_output)
     {
 #if HAVE_MPI
-        if ( terminal_output_ ) {
-            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            if ( terminal_output_ ) {
                 // Only rank 0 does print to std::cout if terminal_output is enabled
                 terminal_output_ = (info.communicator().rank()==0);
             }
+            int global_number_of_wells = wells_->number_of_wells;
+            global_number_of_wells = info.communicator().sum(global_number_of_wells);
+            wells_active_ = ( global_number_of_wells > 0 );
+        }else
+        {
+            wells_active_ = (wells_->number_of_wells > 0 );
         }
+#else
+        wells_active_ = (wells_->number_of_wells > 0 );
 #endif
     }
 
@@ -455,7 +463,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::variableWellStateInitials(const WellState&     xw, std::vector<V>& vars0) const
     {
         // Initial well rates.
-        if ( wellsActive() )
+        if ( localWellsActive() )
         {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
@@ -678,7 +686,7 @@ namespace detail {
     void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
                                                                         const WellState& xw)
     {
-        if( ! wellsActive() ) return ;
+        if( ! localWellsActive() ) return ;
 
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -936,7 +944,7 @@ namespace detail {
                                                              V& aliveWells,
                                                              std::vector<ADB>& cq_s)
     {
-        if( ! wellsActive() ) return ;
+        if( ! localWellsActive() ) return ;
 
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
@@ -1229,7 +1237,7 @@ namespace detail {
     template <class Grid, class Implementation>
     bool BlackoilModelBase<Grid, Implementation>::isVFPActive() const
     {
-        if( ! wellsActive() ) {
+        if( ! localWellsActive() ) {
             return false;
         }
 
@@ -1261,7 +1269,7 @@ namespace detail {
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
-        if( ! wellsActive() ) return ;
+        if( ! localWellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
@@ -1425,18 +1433,20 @@ namespace detail {
             }
 
             ++it;
-            std::vector<ADB> eqs;
-            eqs.reserve(2);
-            eqs.push_back(residual_.well_flux_eq);
-            eqs.push_back(residual_.well_eq);
-            ADB total_residual = vertcatCollapseJacs(eqs);
-            const std::vector<M>& Jn = total_residual.derivative();
-            const Eigen::SparseLU< M > solver(Jn[0]);
-            const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
-            assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
-            updateWellState(dx.array(), well_state);
-            updateWellControls(well_state);
-
+            if( localWellsActive() )
+            {
+                std::vector<ADB> eqs;
+                eqs.reserve(2);
+                eqs.push_back(residual_.well_flux_eq);
+                eqs.push_back(residual_.well_eq);
+                ADB total_residual = vertcatCollapseJacs(eqs);
+                const std::vector<M>& Jn = total_residual.derivative();
+                const Eigen::SparseLU< M > solver(Jn[0]);
+                const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
+                assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
+                updateWellState(dx.array(), well_state);
+                updateWellControls(well_state);
+            }
         } while (it < 15);
 
         if (converged) {
@@ -1474,7 +1484,7 @@ namespace detail {
                                                           const WellState& xw,
                                                           const V& aliveWells)
     {
-        if( ! wellsActive() ) return;
+        if( ! localWellsActive() ) return;
 
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
@@ -1713,7 +1723,7 @@ namespace detail {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
         const int nc = numCells(grid_);
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
+        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
@@ -1934,10 +1944,10 @@ namespace detail {
                                                              WellState& well_state)
     {
 
-        if( wellsActive() )
+        if( localWellsActive() )
         {
             const int np = wells().number_of_phases;
-            const int nw = wellsActive() ? wells().number_of_wells : 0;
+            const int nw = wells().number_of_wells;
 
             // Extract parts of dwells corresponding to each part.
             int varstart = 0;
@@ -2316,7 +2326,7 @@ namespace detail {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
+        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
@@ -2423,7 +2433,7 @@ namespace detail {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
+        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const V pv = geo_.poreVolume();
