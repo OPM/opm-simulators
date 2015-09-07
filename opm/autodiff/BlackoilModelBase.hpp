@@ -253,6 +253,7 @@ namespace Opm {
 
         ModelParameters                 param_;
         bool use_threshold_pressure_;
+        bool wells_active_;
         V threshold_pressures_by_interior_face_;
 
         std::vector<ReservoirResidualQuant> rq_;
@@ -287,8 +288,10 @@ namespace Opm {
             return static_cast<const Implementation&>(*this);
         }
 
-        // return true if wells are available
-        bool wellsActive() const { return wells_ ? wells_->number_of_wells > 0 : false ; }
+        // return true if wells are available in the reservoir
+        bool wellsActive() const { return wells_active_; }
+        // return true if wells are available on this process
+        bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
         // return wells object
         const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
 
