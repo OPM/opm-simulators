@@ -26,6 +26,7 @@
 
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
@@ -107,17 +108,18 @@ namespace Opm
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
             // Solve.
-            solve(opA, x, istlb, *sp, precond, result);
+            solve(opA, x, istlb, *sp, *precond, result);
         }
 
 
         typedef Dune::SeqILU0<Mat, Vector, Vector> SeqPreconditioner;
 
         template <class Operator>
-        SeqPreconditioner constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
+        std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
         {
             const double relax = 1.0;
-            SeqPreconditioner precond(opA.getmat(), relax);
+            std::unique_ptr<SeqPreconditioner>
+                precond(new SeqPreconditioner(opA.getmat(), relax));
             return precond;
         }
 
@@ -126,11 +128,17 @@ namespace Opm
         typedef Dune::BlockPreconditioner<Vector, Vector, Comm, SeqPreconditioner> ParPreconditioner;
 
         template <class Operator>
-        ParPreconditioner constructPrecond(Operator& opA, const Comm& comm) const
+        std::unique_ptr<ParPreconditioner,
+                        AdditionalObjectDeleter<SeqPreconditioner> >
+        constructPrecond(Operator& opA, const Comm& comm) const
         {
             const double relax = 1.0;
-            SeqPreconditioner seq_precond(opA.getmat(), relax);
-            ParPreconditioner precond(seq_precond, comm);
+            SeqPreconditioner* seq_precond= new SeqPreconditioner(opA.getmat(),
+                                                                  relax);
+            typedef AdditionalObjectDeleter<SeqPreconditioner> Deleter;
+            std::unique_ptr<ParPreconditioner, Deleter>
+                precond(new ParPreconditioner(*seq_precond, comm),
+                        Deleter(*seq_precond));
             return precond;
         }
 #endif
