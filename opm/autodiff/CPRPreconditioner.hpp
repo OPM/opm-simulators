@@ -48,7 +48,6 @@
 #include <opm/core/utility/Exceptions.hpp>
 
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
-#include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hh>
 namespace Opm
 {
 namespace
