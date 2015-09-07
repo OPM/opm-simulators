@@ -106,7 +106,11 @@ namespace Opm
 
 
         AutoDiffMatrix(AutoDiffMatrix&& other)
-            : AutoDiffMatrix()
+            : type_(Z),
+              rows_(0),
+              cols_(0),
+              diag_(),
+              sparse_()
         {
             swap(other);
         }
