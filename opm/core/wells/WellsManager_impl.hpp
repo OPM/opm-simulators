@@ -136,7 +136,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
 
         {   // COMPDAT handling
             CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
+            // shut completions and open ones stored in this process will have 1 others 0.
             std::vector<std::size_t> completion_on_proc(completionSet->size(), 1);
+            std::size_t shut_completions_number = 0;
             for (size_t c=0; c<completionSet->size(); c++) {
                 CompletionConstPtr completion = completionSet->get(c);
                 if (completion->getState() == WellCompletion::OPEN) {
@@ -195,6 +197,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                         wellperf_data[well_index].push_back(pd);
                     }
                 } else {
+                    ++shut_completions_number;
                     if (completion->getState() != WellCompletion::SHUT) {
                         OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
                     }
@@ -205,7 +208,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                 // Set wells that are on other processor to SHUT.
                 std::size_t sum_completions_on_proc = std::accumulate(completion_on_proc.begin(),
                                                                       completion_on_proc.end(),0);
-                if ( sum_completions_on_proc == 0 )
+                if ( sum_completions_on_proc == shut_completions_number )
                 {
                     // Mark well as not existent on this process
                     wells_on_proc[wellIter-wells.begin()] = 0;
@@ -214,7 +217,10 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                 // Check that the complete well is on this process
                 if( sum_completions_on_proc < completionSet->size() )
                 {
-                    OPM_THROW(std::runtime_error, "Wells must be completely on processor!");
+                    OPM_THROW(std::runtime_error, "Each well must be completely stored 
+                              <<"on processor! Not the case for "<< well->name()<<": "
+                              <<completionSet->size()-shut_completions-sum_completions_on_proc
+                              <<" completions missing.");
                 }
             }
         }
