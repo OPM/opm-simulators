@@ -366,7 +366,7 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-    if (param.getDefault("use_interleaved", false)) {
+    if (param.getDefault("use_interleaved", true)) {
         fis_solver.reset(new NewtonIterationBlackoilInterleaved(param));
     } else if (param.getDefault("use_cpr", true)) {
         fis_solver.reset(new NewtonIterationBlackoilCPR(param));
