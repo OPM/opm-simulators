@@ -29,7 +29,7 @@ namespace Opm
                                                            bool init_rock)
     {
         std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
             if (grid.global_cell) {
                 compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
             }
@@ -52,7 +52,7 @@ namespace Opm
                                                            bool init_rock)
     {
         std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
             if (grid.global_cell) {
                 compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
             }
@@ -64,7 +64,7 @@ namespace Opm
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
 
-        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids, 
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, grid.cell_centroids,
              grid.dimensions, param, init_rock);
     }
 
@@ -333,14 +333,14 @@ namespace Opm
     {
         satprops_->satRange(n, cells, smin, smax);
     }
- 
- 
+
+
     /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
-    /// \param[in]     cell   Cell index. 
+    /// \param[in]     cell   Cell index.
     /// \param[in]     pcow   P_oil - P_water.
     /// \param[in/out] swat   Water saturation. / Possibly modified Water saturation.
     void BlackoilPropertiesFromDeck::swatInitScaling(const int cell,
-                                                     const double pcow, 
+                                                     const double pcow,
                                                      double & swat)
     {
         satprops_->swatInitScaling(cell, pcow, swat);
