@@ -188,8 +188,8 @@ namespace detail {
                 // Only rank 0 does print to std::cout if terminal_output is enabled
                 terminal_output_ = (info.communicator().rank()==0);
             }
-            int global_number_of_wells = wells_->number_of_wells;
-            global_number_of_wells = info.communicator().sum(global_number_of_wells);
+            int local_number_of_wells = wells_->number_of_wells;
+            int global_number_of_wells = info.communicator().sum(local_number_of_wells);
             wells_active_ = ( global_number_of_wells > 0 );
         }else
         {
