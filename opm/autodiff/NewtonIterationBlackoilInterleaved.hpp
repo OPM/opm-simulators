@@ -147,7 +147,10 @@ namespace Opm
             catch ( Dune::MatrixBlockError error )
             {
                 message = error.what();
-                std::cerr<<message<<std::endl;
+                std::cerr<<"Exception occured on process " <<
+                    comm.communicator().rank() << " during " <<
+                    "setup of ILU0 preconditioner with message: " <<
+                    message<<std::endl;
                 ilu_setup_successful = 0;
             }
             // Check whether there was a problem on some process
