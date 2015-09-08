@@ -138,19 +138,20 @@ namespace Opm
             int ilu_setup_successful = 1;
             std::string message;
             const double relax = 1.0;
-            try{
+            try {
                 SeqPreconditioner* seq_precond= new SeqPreconditioner(opA.getmat(),
                                                                   relax);
                 precond = Pointer(new ParPreconditioner(*seq_precond, comm),
                                   Deleter(*seq_precond));
-            }catch(Dune::MatrixBlockError error)
+            }
+            catch ( Dune::MatrixBlockError error )
             {
                 message = error.what();
                 std::cerr<<message<<std::endl;
                 ilu_setup_successful = 0;
             }
             // Check wether there was a problem on some process
-            if(comm.communicator().min(ilu_setup_successful) == 0)
+            if ( comm.communicator().min(ilu_setup_successful) == 0 )
             {
                 throw Dune::MatrixBlockError();
             }
