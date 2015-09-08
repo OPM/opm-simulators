@@ -134,15 +134,13 @@ namespace Opm
         {
             typedef AdditionalObjectDeleter<SeqPreconditioner> Deleter;
             typedef std::unique_ptr<ParPreconditioner, Deleter> Pointer;
-            Pointer precond;
             int ilu_setup_successful = 1;
             std::string message;
             const double relax = 1.0;
+            SeqPreconditioner* seq_precond = nullptr;
             try {
-                SeqPreconditioner* seq_precond= new SeqPreconditioner(opA.getmat(),
-                                                                  relax);
-                precond = Pointer(new ParPreconditioner(*seq_precond, comm),
-                                  Deleter(*seq_precond));
+                seq_precond= new SeqPreconditioner(opA.getmat(),
+                                                   relax);
             }
             catch ( Dune::MatrixBlockError error )
             {
@@ -158,7 +156,8 @@ namespace Opm
             {
                 throw Dune::MatrixBlockError();
             }
-            return precond;
+            return Pointer(new ParPreconditioner(*seq_precond, comm),
+                                  Deleter(*seq_precond));
         }
 #endif
 
