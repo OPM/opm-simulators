@@ -179,7 +179,7 @@ namespace Opm {
     	    inv_mu_w_eff(i) = im;
     	    dinv_mu_w_eff(i) = dim;
     	}
-        ADB::M dim_diag = spdiag(dinv_mu_w_eff);
+        ADB::M dim_diag(dinv_mu_w_eff.matrix().asDiagonal());
         const int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
@@ -226,7 +226,7 @@ namespace Opm {
             dmc(i) = dm;
         }
 
-        ADB::M dmc_diag = spdiag(dmc);
+        ADB::M dmc_diag(dmc.matrix().asDiagonal());
         const int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
@@ -274,7 +274,7 @@ namespace Opm {
             dads(i) = dc_ads;
         }
 
-        ADB::M dads_diag = spdiag(dads);
+        ADB::M dads_diag(dads.matrix().asDiagonal());
         int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {

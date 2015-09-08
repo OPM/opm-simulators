@@ -81,7 +81,7 @@ namespace {
 
 
     template <class GeoProps>
-    AutoDiffBlock<double>::M
+    Eigen::SparseMatrix<double>
     gravityOperator(const UnstructuredGrid& grid,
                     const HelperOps&        ops ,
                     const GeoProps&         geo )
@@ -123,7 +123,8 @@ namespace {
             grav.push_back(Tri(i, c2, - t * dG2));
         }
 
-        M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
+        Eigen::SparseMatrix<double> G(ni, nc);
+        G.setFromTriplets(grav.begin(), grav.end());
 
         return G;
     }
@@ -661,21 +662,21 @@ namespace {
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw);
         V rate_targets(nw);
-        M rate_distr(nw, np*nw);
+        Eigen::SparseMatrix<double> rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
-			if (well_controls_get_current_type(wc) == BHP) {
-				bhp_targets[w] = well_controls_get_current_target(wc);
+            if (well_controls_get_current_type(wc) == BHP) {
+                bhp_targets[w] = well_controls_get_current_target(wc);
                 rate_targets[w] = -1e100;
             } else if (well_controls_get_current_type(wc) == SURFACE_RATE) {
                 bhp_targets[w] = -1e100;
-				rate_targets[w] = well_controls_get_current_target(wc);
-				{	
-					const double* distr = well_controls_get_current_distr(wc);
+                rate_targets[w] = well_controls_get_current_target(wc);
+                {
+                    const double* distr = well_controls_get_current_distr(wc);
             	    for (int phase = 0; phase < np; ++phase) {
-                	    rate_distr.insert(w, phase*nw + w) = distr[phase];
-                	}
-				}
+                        rate_distr.insert(w, phase*nw + w) = distr[phase];
+                    }
+                }
             } else {
                 OPM_THROW(std::runtime_error, "Can only handle BHP and SURFACE_RATE type controls.");
             }
@@ -981,7 +982,7 @@ namespace {
                 pm[i] = rock_comp_props_->poroMult(p.value()[i]);
                 dpm[i] = rock_comp_props_->poroMultDeriv(p.value()[i]);
             }
-            ADB::M dpm_diag = spdiag(dpm);
+            ADB::M dpm_diag(dpm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
@@ -1008,7 +1009,7 @@ namespace {
                 tm[i] = rock_comp_props_->transMult(p.value()[i]);
                 dtm[i] = rock_comp_props_->transMultDeriv(p.value()[i]);
             }
-            ADB::M dtm_diag = spdiag(dtm);
+            ADB::M dtm_diag(dtm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {

@@ -123,8 +123,8 @@ namespace Opm {
 
         struct WellOps {
             WellOps(const Wells& wells);
-            M w2p;              // well -> perf (scatter)
-            M p2w;              // perf -> well (gather)
+            Eigen::SparseMatrix<double> w2p;  // well -> perf (scatter)
+            Eigen::SparseMatrix<double> p2w;  // perf -> well (gather)
         };
 
         enum { Water = BlackoilPropsAdInterface::Water,
