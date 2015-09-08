@@ -139,7 +139,7 @@ namespace Opm
             const double relax = 1.0;
             SeqPreconditioner* seq_precond = nullptr;
             try {
-                seq_precond= new SeqPreconditioner(opA.getmat(),
+                seq_precond = new SeqPreconditioner(opA.getmat(),
                                                    relax);
             }
             catch ( Dune::MatrixBlockError error )
@@ -154,6 +154,11 @@ namespace Opm
             // Check whether there was a problem on some process
             if ( comm.communicator().min(ilu_setup_successful) == 0 )
             {
+                if ( seq_precond ) // not null if constructor succeeded
+                {
+                    // prevent memory leak
+                    delete seq_precond;
+                }
                 throw Dune::MatrixBlockError();
             }
             return Pointer(new ParPreconditioner(*seq_precond, comm),

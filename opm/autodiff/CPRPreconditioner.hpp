@@ -196,6 +196,11 @@ createILU0Ptr(const M& A, double relax,
     // Check whether there was a problem on some process
     if ( comm.communicator().min(ilu_setup_successful) == 0 )
     {
+        if ( ilu ) // not null if constructor succeeded
+        {
+            // prevent memory leak
+            delete ilu;
+        }
         throw Dune::MatrixBlockError();
     }
     return typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>
