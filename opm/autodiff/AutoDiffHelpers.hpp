@@ -39,7 +39,7 @@ namespace Opm
 /// operations on (AD or regular) vectors of data.
 struct HelperOps
 {
-    typedef AutoDiffBlock<double>::M M;
+    typedef Eigen::SparseMatrix<double> M;
     typedef AutoDiffBlock<double>::V V;
 
     /// A list of internal faces.
@@ -250,7 +250,7 @@ struct HelperOps
         }
 
     private:
-        typename ADB::M select_;
+        Eigen::SparseMatrix<double> select_;
     };
 
 
@@ -259,17 +259,17 @@ namespace {
 
 
     template <typename Scalar, class IntVec>
-    typename AutoDiffBlock<Scalar>::M
+    typename Eigen::SparseMatrix<Scalar>
     constructSupersetSparseMatrix(const int full_size, const IntVec& indices)
     {
         const int subset_size = indices.size();
 
         if (subset_size == 0) {
-            typename AutoDiffBlock<Scalar>::M mat(full_size, 0);
+            Eigen::SparseMatrix<Scalar> mat(full_size, 0);
             return mat;
         }
 
-        typename AutoDiffBlock<Scalar>::M mat(full_size, subset_size);
+        Eigen::SparseMatrix<Scalar> mat(full_size, subset_size);
         mat.reserve(Eigen::VectorXi::Constant(subset_size, 1));
         for (int i = 0; i < subset_size; ++i) {
             mat.insert(indices[i], i) = 1;
@@ -302,8 +302,8 @@ AutoDiffBlock<Scalar>
 subset(const AutoDiffBlock<Scalar>& x,
        const IntVec& indices)
 {
-    const typename AutoDiffBlock<Scalar>::M sub
-        = constructSupersetSparseMatrix<Scalar>(x.value().size(), indices).transpose();
+    const Eigen::SparseMatrix<Scalar> sub
+        = constructSupersetSparseMatrix<Scalar>(x.value().size(), indices).transpose().eval();
     return sub * x;
 }
 
@@ -336,10 +336,10 @@ superset(const Eigen::Array<Scalar, Eigen::Dynamic, 1>& x,
 /// elements of d on the diagonal.
 /// Need to mark this as inline since it is defined in a header and not a template.
 inline
-AutoDiffBlock<double>::M
+Eigen::SparseMatrix<double>
 spdiag(const AutoDiffBlock<double>::V& d)
 {
-    typedef AutoDiffBlock<double>::M M;
+    typedef Eigen::SparseMatrix<double> M;
 
     const int n = d.size();
     M mat(n, n);
@@ -456,12 +456,16 @@ collapseJacs(const AutoDiffBlock<double>& x, Matrix& jacobian)
     t.reserve(nnz);
     int block_col_start = 0;
     for (int block = 0; block < nb; ++block) {
-        const ADB::M& jac = x.derivative()[block];
-        for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
-            for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
-                t.push_back(Tri(i.row(),
-                                i.col() + block_col_start,
-                                i.value()));
+        const ADB::M& jac1 = x.derivative()[block];
+        Eigen::SparseMatrix<double> jac;
+        jac1.toSparse(jac);
+        for (Eigen::SparseMatrix<double>::Index k = 0; k < jac.outerSize(); ++k) {
+            for (Eigen::SparseMatrix<double>::InnerIterator i(jac, k); i ; ++i) {
+                if (i.value() != 0.0) {
+                    t.push_back(Tri(i.row(),
+                                    i.col() + block_col_start,
+                                    i.value()));
+                }
             }
         }
         block_col_start += jac.cols();
@@ -478,14 +482,15 @@ inline
 AutoDiffBlock<double>
 collapseJacs(const AutoDiffBlock<double>& x)
 {
-    typedef AutoDiffBlock<double> ADB;
+    Eigen::SparseMatrix<double> comb_jac;
+    collapseJacs( x, comb_jac );
     // Build final jacobian.
+    typedef AutoDiffBlock<double> ADB;
     std::vector<ADB::M> jacs(1);
-    collapseJacs( x, jacs[ 0 ] );
+    jacs[0] = AutoDiffMatrix(std::move(comb_jac));
     ADB::V val = x.value();
     return ADB::function(std::move(val), std::move(jacs));
 }
-
 
 
 
@@ -508,7 +513,6 @@ vertcat(const AutoDiffBlock<double>& x,
     }
     return superset(x, xind, n) + superset(y, yind, n);
 }
-
 
 
 
@@ -569,33 +573,38 @@ vertcatCollapseJacs(const std::vector<AutoDiffBlock<double> >& x)
     }
 
     // Set up for batch insertion of all Jacobian elements.
+    typedef Eigen::SparseMatrix<double> M;
     typedef Eigen::Triplet<double> Tri;
     std::vector<Tri> t;
     t.reserve(nnz);
-    int block_row_start = 0;
-    for (int elem = 0; elem < nx; ++elem) {
-        int block_col_start = 0;
-        if (!x[elem].derivative().empty()) {
-            for (int block = 0; block < num_blocks; ++block) {
-                const ADB::M& jac = x[elem].derivative()[block];
-                for (ADB::M::Index k = 0; k < jac.outerSize(); ++k) {
-                    for (ADB::M::InnerIterator i(jac, k); i ; ++i) {
-                        t.push_back(Tri(i.row() + block_row_start,
-                                        i.col() + block_col_start,
-                                        i.value()));
+    {
+        int block_row_start = 0;
+        M jac;
+        for (int elem = 0; elem < nx; ++elem) {
+            int block_col_start = 0;
+            if (!x[elem].derivative().empty()) {
+                for (int block = 0; block < num_blocks; ++block) {
+                    x[elem].derivative()[block].toSparse(jac);
+                    for (M::Index k = 0; k < jac.outerSize(); ++k) {
+                        for (M::InnerIterator i(jac, k); i ; ++i) {
+                            t.push_back(Tri(i.row() + block_row_start,
+                                            i.col() + block_col_start,
+                                            i.value()));
+                        }
                     }
+                    block_col_start += jac.cols();
                 }
-                block_col_start += jac.cols();
             }
+            block_row_start += x[elem].size();
         }
-        block_row_start += x[elem].size();
     }
 
     // Build final jacobian.
+    M comb_jac = M(size, num_cols);
+    comb_jac.reserve(nnz);
+    comb_jac.setFromTriplets(t.begin(), t.end());
     std::vector<ADB::M> jac(1);
-    jac[0] = Eigen::SparseMatrix<double>(size, num_cols);
-    jac[0].reserve(nnz);
-    jac[0].setFromTriplets(t.begin(), t.end());
+    jac[0] = ADB::M(std::move(comb_jac));
 
     // Use move semantics to return result efficiently.
     return ADB::function(std::move(val), std::move(jac));

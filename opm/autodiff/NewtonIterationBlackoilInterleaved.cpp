@@ -208,9 +208,15 @@ namespace Opm
         // Find sparsity structure as union of basic block sparsity structures,
         // corresponding to the jacobians with respect to pressure.
         // Use addition to get to the union structure.
-        Eigen::SparseMatrix<double> structure = eqs[0].derivative()[0];
-        for (int phase = 1; phase < np; ++phase) {
-            structure += eqs[phase].derivative()[0];
+        typedef Eigen::SparseMatrix<double> Sp;
+        Sp structure;
+        eqs[0].derivative()[0].toSparse(structure);
+        {
+            Sp s0;
+            for (int phase = 1; phase < np; ++phase) {
+                eqs[phase].derivative()[0].toSparse(s0);
+                structure += s0;
+            }
         }
 
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;

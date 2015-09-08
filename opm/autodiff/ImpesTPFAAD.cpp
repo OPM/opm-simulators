@@ -38,6 +38,7 @@ namespace Opm {
 typedef AutoDiffBlock<double> ADB;
 typedef ADB::V V;
 typedef ADB::M M;
+typedef Eigen::SparseMatrix<double> S;
 
 
 namespace {
@@ -103,7 +104,9 @@ namespace {
             grav.push_back(Tri(i, c2, - t * dG2));
         }
 
-        M G(ni, nc);  G.setFromTriplets(grav.begin(), grav.end());
+        S G_s(ni, nc);
+        G_s.setFromTriplets(grav.begin(), grav.end());
+        M G(G_s);
 
         return G;
     }
@@ -336,7 +339,7 @@ namespace {
         const ADB p_perfcell = subset(p, well_cells);
         const ADB T_perfcell = subset(T, well_cells);
         // Construct matrix to map wells->perforations.
-        M well_to_perf(well_cells.size(), nw);
+        S well_to_perf(well_cells.size(), nw);
         typedef Eigen::Triplet<double> Tri;
         std::vector<Tri> w2p;
         for (int w = 0; w < nw; ++w) {
@@ -345,7 +348,7 @@ namespace {
             }
         }
         well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
-        const M perf_to_well = well_to_perf.transpose();
+        const S perf_to_well = well_to_perf.transpose();
         // Finally construct well perforation pressures and well flows.
         const ADB p_perfwell = well_to_perf*bhp + well_perf_dp_;
         const ADB nkgradp_well = transw * (p_perfcell - p_perfwell);
@@ -392,7 +395,7 @@ namespace {
         // Handling BHP and SURFACE_RATE wells.
         V bhp_targets(nw,1);
         V rate_targets(nw,1);
-        M rate_distr(nw, np*nw);
+        S rate_distr(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells_.ctrls[w];
             if (well_controls_get_current_type(wc) == BHP) {
@@ -438,7 +441,8 @@ namespace {
         const int nw = wells_.number_of_wells;
         // const int np = state.numPhases();
 
-        Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual_.derivative()[0];
+        Eigen::SparseMatrix<double, Eigen::RowMajor> matr;
+        total_residual_.derivative()[0].toSparse(matr);
 
         V dx(V::Zero(total_residual_.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep
@@ -490,7 +494,7 @@ namespace {
         const std::vector<int> well_cells(wells_.well_cells,
                                           wells_.well_cells + nperf);
         // Construct matrix to map wells->perforations.
-        M well_to_perf(well_cells.size(), nw);
+        S well_to_perf(well_cells.size(), nw);
         typedef Eigen::Triplet<double> Tri;
         std::vector<Tri> w2p;
         for (int w = 0; w < nw; ++w) {
@@ -499,7 +503,7 @@ namespace {
             }
         }
         well_to_perf.setFromTriplets(w2p.begin(), w2p.end());
-        const M perf_to_well = well_to_perf.transpose();
+        const S perf_to_well = well_to_perf.transpose();
         const V transw = Eigen::Map<const V>(wells_.WI, nperf, 1);
 
         const V p = Eigen::Map<const V>(&state.pressure()[0], nc, 1);

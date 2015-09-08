@@ -327,8 +327,8 @@ namespace detail {
     {
         if( wells )
         {
-            w2p = M(wells->well_connpos[ wells->number_of_wells ], wells->number_of_wells);
-            p2w = M(wells->number_of_wells, wells->well_connpos[ wells->number_of_wells ]);
+            w2p = Eigen::SparseMatrix<double>(wells->well_connpos[ wells->number_of_wells ], wells->number_of_wells);
+            p2w = Eigen::SparseMatrix<double>(wells->number_of_wells, wells->well_connpos[ wells->number_of_wells ]);
 
             const int        nw   = wells->number_of_wells;
             const int* const wpos = wells->well_connpos;
@@ -797,7 +797,7 @@ namespace detail {
         // get reasonable initial conditions for the wells
         updateWellControls(well_state);
 
-        // Create the primary variables.      
+        // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
@@ -978,7 +978,7 @@ namespace detail {
                 selectInjectingPerforations[c] = 1;
             else
                 selectProducingPerforations[c] = 1;
-        }   
+        }
 
         // HANDLE FLOW INTO WELLBORE
         // compute phase volumetric rates at standard conditions
@@ -1441,8 +1441,12 @@ namespace detail {
                 eqs.push_back(residual_.well_eq);
                 ADB total_residual = vertcatCollapseJacs(eqs);
                 const std::vector<M>& Jn = total_residual.derivative();
-                const Eigen::SparseLU< M > solver(Jn[0]);
-                const Eigen::VectorXd& dx = solver.solve(total_residual.value().matrix());
+                typedef Eigen::SparseMatrix<double> Sp;
+                Sp Jn0;
+                Jn[0].toSparse(Jn0);
+                const Eigen::SparseLU< Sp > solver(Jn0);
+                ADB::V total_residual_v = total_residual.value();
+                const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
                 updateWellState(dx.array(), well_state);
                 updateWellControls(well_state);
@@ -1517,7 +1521,7 @@ namespace detail {
         //Target vars
         ADB::V bhp_targets  = ADB::V::Zero(nw);
         ADB::V rate_targets = ADB::V::Zero(nw);
-        ADB::M rate_distr(nw, np*nw);
+        Eigen::SparseMatrix<double> rate_distr(nw, np*nw);
 
         //Selection variables
         std::vector<int> bhp_elems;
@@ -1630,7 +1634,7 @@ namespace detail {
         // For wells that are dead (not flowing), and therefore not communicating
         // with the reservoir, we set the equation to be equal to the well's total
         // flow. This will be a solution only if the target rate is also zero.
-        M rate_summer(nw, np*nw);
+        Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
         for (int w = 0; w < nw; ++w) {
             for (int phase = 0; phase < np; ++phase) {
                 rate_summer.insert(w, phase*nw + w) = 1.0;
@@ -2175,7 +2179,7 @@ namespace detail {
         const V high_potential = (dp.value().abs() >= threshold_pressures_by_interior_face_).template cast<double>();
 
         // Create a sparse vector that nullifies the low potential elements.
-        const M keep_high_potential = spdiag(high_potential);
+        const M keep_high_potential(high_potential.matrix().asDiagonal());
 
         // Find the current sign for the threshold modification
         const V sign_dp = sign(dp.value());
@@ -2641,7 +2645,7 @@ namespace detail {
                 pm[i] = rock_comp_props_->poroMult(p.value()[i]);
                 dpm[i] = rock_comp_props_->poroMultDeriv(p.value()[i]);
             }
-            ADB::M dpm_diag = spdiag(dpm);
+            ADB::M dpm_diag(dpm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {
@@ -2669,7 +2673,7 @@ namespace detail {
                 tm[i] = rock_comp_props_->transMult(p.value()[i]);
                 dtm[i] = rock_comp_props_->transMultDeriv(p.value()[i]);
             }
-            ADB::M dtm_diag = spdiag(dtm);
+            ADB::M dtm_diag(dtm.matrix().asDiagonal());
             const int num_blocks = p.numBlocks();
             std::vector<ADB::M> jacs(num_blocks);
             for (int block = 0; block < num_blocks; ++block) {

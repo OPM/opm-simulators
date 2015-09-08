@@ -39,6 +39,7 @@ namespace Opm
     typedef AutoDiffBlock<double> ADB;
     typedef ADB::V V;
     typedef ADB::M M;
+    typedef Eigen::SparseMatrix<double> S;
 
 
     std::vector<ADB> eliminateVariable(const std::vector<ADB>& eqs, const int n)
@@ -62,17 +63,22 @@ namespace Opm
         const std::vector<M>& Jn = eqs[n].derivative();
 
         // Use sparse LU to solve the block submatrices i.e compute inv(D)
+        typedef Eigen::SparseMatrix<double> Sp;
+        Sp Jnn;
+        Jn[n].toSparse(Jnn);
 #if HAVE_UMFPACK
-        const Eigen::UmfPackLU< M > solver(Jn[n]);
+        const Eigen::UmfPackLU<Sp> solver(Jnn);
 #else
-        const Eigen::SparseLU< M > solver(Jn[n]);
+        const Eigen::SparseLU<Sp> solver(Jnn);
 #endif
-        M id(Jn[n].rows(), Jn[n].cols());
+        Sp id(Jn[n].rows(), Jn[n].cols());
         id.setIdentity();
-        const Eigen::SparseMatrix<M::Scalar, Eigen::ColMajor> Di = solver.solve(id);
+        const Sp Di = solver.solve(id);
 
         // compute inv(D)*bn for the update of the right hand side
-        const Eigen::VectorXd& Dibn = solver.solve(eqs[n].value().matrix());
+        // Note: Eigen version > 3.2 requires a non-const reference to solve.
+        ADB::V eqs_n_v = eqs[n].value();
+        const Eigen::VectorXd& Dibn = solver.solve(eqs_n_v.matrix());
 
         std::vector<V> vals(num_eq);              // Number n will remain empty.
         std::vector<std::vector<M>> jacs(num_eq); // Number n will remain empty.
@@ -105,7 +111,7 @@ namespace Opm
                 // Subtract Bu (B*inv(D)*C)
                 M Bu;
                 fastSparseProduct(B, u, Bu);
-                J -= Bu;
+                J = J + (Bu * -1.0);
             }
         }
 
@@ -136,7 +142,7 @@ namespace Opm
         // the eliminated equation, and x is the partial solution
         // of the non-eliminated unknowns.
 
-        const M& D = equation.derivative()[n];
+        const M& D1 = equation.derivative()[n];
         // Build C.
         std::vector<M> C_jacs = equation.derivative();
         C_jacs.erase(C_jacs.begin() + n);
@@ -145,10 +151,13 @@ namespace Opm
         const M& C = eq_coll.derivative()[0];
 
         // Use sparse LU to solve the block submatrices
+        typedef Eigen::SparseMatrix<double> Sp;
+        Sp D;
+        D1.toSparse(D);
 #if HAVE_UMFPACK
-        const Eigen::UmfPackLU< M > solver(D);
+        const Eigen::UmfPackLU<Sp> solver(D);
 #else
-        const Eigen::SparseLU< M > solver(D);
+        const Eigen::SparseLU<Sp> solver(D);
 #endif
 
         // Compute value of eliminated variable.
@@ -206,14 +215,17 @@ namespace Opm
         // The l1 block indicates if the equation for a given cell and phase is
         // sufficiently strong on the diagonal.
         Block l1 = Block::Zero(n, num_phases);
-        for (int phase = 0; phase < num_phases; ++phase) {
-            const M& J = eqs[phase].derivative()[0];
-            V dj = J.diagonal().cwiseAbs();
-            V sod = V::Zero(n);
-            for (int elem = 0; elem < n; ++elem) {
-                sod(elem) = J.col(elem).cwiseAbs().sum() - dj(elem);
+        {
+            S J;
+            for (int phase = 0; phase < num_phases; ++phase) {
+                eqs[phase].derivative()[0].toSparse(J);
+                V dj = J.diagonal().cwiseAbs();
+                V sod = V::Zero(n);
+                for (int elem = 0; elem < n; ++elem) {
+                    sod(elem) = J.col(elem).cwiseAbs().sum() - dj(elem);
+                }
+                l1.col(phase) = (dj/sod > ratio_limit).cast<double>();
             }
-            l1.col(phase) = (dj/sod > ratio_limit).cast<double>();
         }
 
         // By default, replace first equation with sum of all phase equations.
@@ -260,14 +272,17 @@ namespace Opm
             t.emplace_back(i3[ii], i1[ii], l31(ii));
             t.emplace_back(i3[ii], i3[ii], l33(ii));
         }
-        M L(3*n, 3*n);
+        S L(3*n, 3*n);
         L.setFromTriplets(t.begin(), t.end());
 
         // Combine in single block.
         ADB total_residual = vertcatCollapseJacs(eqs);
 
+        S derivative;
+        total_residual.derivative()[0].toSparse(derivative);
+
         // Create output as product of L with equations.
-        A = L * total_residual.derivative()[0];
+        A = L * derivative;
         b = L * total_residual.value().matrix();
     }
 

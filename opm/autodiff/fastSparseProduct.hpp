@@ -141,6 +141,44 @@ void fastSparseProduct(const Lhs& lhs, const Rhs& rhs, ResultType& res)
 
 
 
+
+inline void fastDiagSparseProduct(const std::vector<double>& lhs,
+                                  const Eigen::SparseMatrix<double>& rhs,
+                                  Eigen::SparseMatrix<double>& res)
+{
+    res = rhs;
+
+    // Multiply rows by diagonal lhs.
+    int n = res.cols();
+    for (int col = 0; col < n; ++col) {
+        typedef Eigen::SparseMatrix<double>::InnerIterator It;
+        for (It it(res, col); it; ++it) {
+            it.valueRef() *= lhs[it.row()];
+        }
+    }
+}
+
+
+
+
+inline void fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
+                                  const std::vector<double>& rhs,
+                                  Eigen::SparseMatrix<double>& res)
+{
+    res = lhs;
+
+    // Multiply columns by diagonal rhs.
+    int n = res.cols();
+    for (int col = 0; col < n; ++col) {
+        typedef Eigen::SparseMatrix<double>::InnerIterator It;
+        for (It it(res, col); it; ++it) {
+            it.valueRef() *= rhs[col];
+        }
+    }
+}
+
+
+
 } // end namespace Opm
 
 #endif // OPM_FASTSPARSEPRODUCT_HEADER_INCLUDED

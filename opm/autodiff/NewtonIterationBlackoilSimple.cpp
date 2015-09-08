@@ -56,7 +56,8 @@ namespace Opm
         const ADB well_res = vertcat(residual.well_flux_eq, residual.well_eq);
         const ADB total_residual = collapseJacs(vertcat(mass_res, well_res));
 
-        const Eigen::SparseMatrix<double, Eigen::RowMajor> matr = total_residual.derivative()[0];
+        Eigen::SparseMatrix<double, Eigen::RowMajor> matr;
+        total_residual.derivative()[0].toSparse(matr);
 
         SolutionVector dx(SolutionVector::Zero(total_residual.size()));
         Opm::LinearSolverInterface::LinearSolverReport rep

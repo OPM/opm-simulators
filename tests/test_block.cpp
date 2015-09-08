@@ -71,6 +71,52 @@ namespace {
         // Note: Investigate implementing this operator as
         // return A.cwiseNotEqual(B).count() == 0;
     }
+
+
+    bool operator==(const AutoDiffMatrix& lhs,
+                    const AutoDiffMatrix& rhs)
+    {
+        Eigen::SparseMatrix<double> lhs_s, rhs_s;
+
+        lhs.toSparse(lhs_s);
+        rhs.toSparse(rhs_s);
+
+        return lhs_s == rhs_s;
+    }
+
+    void checkClose(const AutoDiffBlock<double>& lhs, const AutoDiffBlock<double>& rhs, double tolerance) {
+
+        BOOST_CHECK(lhs.value().isApprox(rhs.value(), tolerance));
+
+        auto lhs_d = lhs.derivative();
+        auto rhs_d = rhs.derivative();
+
+        Eigen::SparseMatrix<double> lhs_s, rhs_s;
+
+        //If lhs has no derivatives, make sure all rhs derivatives are zero
+        if (lhs_d.size() == 0) {
+            for (size_t i=0; i<rhs_d.size(); ++i) {
+                rhs.derivative()[i].toSparse(rhs_s);
+                BOOST_CHECK_EQUAL(rhs_s.nonZeros(), 0);
+            }
+        }
+        //If rhs has no derivatives, make sure all lhs derivatives are zero
+        else if (rhs_d.size() == 0) {
+            for (size_t i=0; i<lhs_d.size(); ++i) {
+                lhs.derivative()[i].toSparse(lhs_s);
+                BOOST_CHECK_EQUAL(lhs_s.nonZeros(), 0);
+            }
+        }
+        //Else, check that derivatives are close to each other
+        else {
+            BOOST_CHECK_EQUAL(lhs_d.size(), rhs_d.size());
+            for (size_t i=0; i<lhs_d.size(); ++i) {
+                lhs.derivative()[i].toSparse(lhs_s);
+                rhs.derivative()[i].toSparse(rhs_s);
+                BOOST_CHECK(lhs_s.isApprox(rhs_s, tolerance));
+            }
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(ConstantInitialisation)
@@ -108,8 +154,17 @@ BOOST_AUTO_TEST_CASE(VariableInitialisation)
     const std::vector<ADB::M>& J = x.derivative();
     BOOST_REQUIRE(J[0].nonZeros() == v.size());
 
-    const Eigen::Diagonal<const ADB::M, 0>& d = J[0].diagonal();
-    BOOST_REQUIRE((d.array() == 1.0).all());
+    const ADB::M& d = J[0];
+    for (int i=0; i<d.cols(); ++i) {
+        for (int j=0; j<d.rows(); ++j) {
+            if (i==j) {
+                BOOST_REQUIRE_EQUAL(d.coeff(j, i), 1.0);
+            }
+            else {
+                BOOST_REQUIRE_EQUAL(d.coeff(j, i), 0.0);
+            }
+        }
+    }
 
     for (std::vector<ADB::M>::const_iterator
              b = J.begin() + 1, e = J.end(); b != e; ++b) {
@@ -131,8 +186,9 @@ BOOST_AUTO_TEST_CASE(FunctionInitialisation)
 
     std::vector<ADB::M> jacs(num_blocks);
     for (std::vector<int>::size_type j = 0; j < num_blocks; ++j) {
-        jacs[j] = ADB::M(blocksizes[FirstVar], blocksizes[j]);
-        jacs[j].insert(0,0) = -1.0;
+        Eigen::SparseMatrix<double> sm(blocksizes[FirstVar], blocksizes[j]);
+        sm.insert(0,0) = -1.0;
+        jacs[j] = ADB::M(sm);
     }
 
     ADB::V v_copy(v);
@@ -212,24 +268,18 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
     z += y;
     ADB sum = x + y;
     const double tolerance = 1e-14;
-    BOOST_CHECK(z.value().isApprox(sum.value(), tolerance));
-    BOOST_CHECK(z.derivative()[0].isApprox(sum.derivative()[0], tolerance));
-    BOOST_CHECK(z.derivative()[1].isApprox(sum.derivative()[1], tolerance));
+    checkClose(z, sum, tolerance);
+
     z -= y;
-    BOOST_CHECK(z.value().isApprox(x.value(), tolerance));
-    BOOST_CHECK(z.derivative()[0].isApprox(x.derivative()[0], tolerance));
-    BOOST_CHECK(z.derivative()[1].isApprox(x.derivative()[1], tolerance));
+    checkClose(z, x, tolerance);
 
     // Testing the case when the left hand side has empty() jacobian.
     ADB yconst = ADB::constant(vy);
     z = yconst;
     z -= x;
     ADB diff = yconst - x;
-    BOOST_CHECK(z.value().isApprox(diff.value(), tolerance));
-    BOOST_CHECK(z.derivative()[0].isApprox(diff.derivative()[0], tolerance));
-    BOOST_CHECK(z.derivative()[1].isApprox(diff.derivative()[1], tolerance));
+    checkClose(z, diff, tolerance);
+
     z += x;
-    BOOST_CHECK(z.value().isApprox(yconst.value(), tolerance));
-    BOOST_CHECK(z.derivative()[0].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
-    BOOST_CHECK(z.derivative()[1].isApprox(Eigen::Matrix<double, 3, 3>::Zero()));
+    checkClose(z, yconst, tolerance);
 }
