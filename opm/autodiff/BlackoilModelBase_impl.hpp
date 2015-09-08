@@ -932,8 +932,8 @@ namespace detail {
         {
             if (active_[idx]) {
                 const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
-                B = 1./tempB.value();
+                const ADB& temp_b = rq_[pos].b;
+                B = 1. / temp_b.value();
                 residual_.matbalscale[idx] = B.mean();
             }
         }
