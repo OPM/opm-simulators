@@ -3,5 +3,5 @@ Description: Utilities for automatic differentiation and simulators based on AD
 Version: 0.9
 Label: 2013.10
 Maintainer: atgeirr@sintef.no
-Depends: opm-cmake opm-core dune-istl (>=2.2)
+Depends: opm-common opm-core dune-istl (>=2.2)
 Suggests: dune-cornerpoint
