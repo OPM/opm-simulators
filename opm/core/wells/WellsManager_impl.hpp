@@ -217,13 +217,16 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     wells_on_proc[wellIter-wells.begin()] = 0;
                     continue;
                 }
-                // Check that the complete well is on this process
-                if( sum_completions_on_proc < completionSet->size() )
+                else
                 {
-                    std::size_t missing = completionSet->size()-shut_completions_number-sum_completions_on_proc;
-                    OPM_THROW(std::runtime_error, "Each well must be completely stored "
-                              <<"on one process! Not the case for "<< well->name()<<": "
-                              <<missing<<" completions missing.");
+                    // Check that the complete well is on this process
+                    if ( sum_completions_on_proc < completionSet->size() )
+                    {
+                        std::size_t missing = completionSet->size()-sum_completions_on_proc;
+                        OPM_THROW(std::runtime_error, "Each well must be completely stored "
+                                  << "on one process! Not the case for " << well->name() << ": "
+                                  << missing << " completions missing.");
+                    }
                 }
             }
         }
