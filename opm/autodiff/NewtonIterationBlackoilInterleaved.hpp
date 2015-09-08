@@ -132,13 +132,28 @@ namespace Opm
                         AdditionalObjectDeleter<SeqPreconditioner> >
         constructPrecond(Operator& opA, const Comm& comm) const
         {
-            const double relax = 1.0;
-            SeqPreconditioner* seq_precond= new SeqPreconditioner(opA.getmat(),
-                                                                  relax);
             typedef AdditionalObjectDeleter<SeqPreconditioner> Deleter;
-            std::unique_ptr<ParPreconditioner, Deleter>
-                precond(new ParPreconditioner(*seq_precond, comm),
-                        Deleter(*seq_precond));
+            typedef std::unique_ptr<ParPreconditioner, Deleter> Pointer;
+            Pointer precond;
+            int ilu_setup_successful = 1;
+            std::string message;
+            const double relax = 1.0;
+            try{
+                SeqPreconditioner* seq_precond= new SeqPreconditioner(opA.getmat(),
+                                                                  relax);
+                precond = Pointer(new ParPreconditioner(*seq_precond, comm),
+                                  Deleter(*seq_precond));
+            }catch(Dune::MatrixBlockError error)
+            {
+                message = error.what();
+                std::cerr<<message<<std::endl;
+                ilu_setup_successful = 0;
+            }
+            // Check wether there was a problem on some process
+            if(comm.communicator().min(ilu_setup_successful) == 0)
+            {
+                throw Dune::MatrixBlockError();
+            }
             return precond;
         }
 #endif
