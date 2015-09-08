@@ -205,9 +205,12 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
             }
             if ( is_parallel_run_ )
             {
-                // Set wells that are on other processor to SHUT.
+                // sum_completions_on_proc includes completions
+                // that are shut
                 std::size_t sum_completions_on_proc = std::accumulate(completion_on_proc.begin(),
                                                                       completion_on_proc.end(),0);
+                // Set wells that are not on this processor to SHUT.
+                // A well is not here if only shut completions are found.
                 if ( sum_completions_on_proc == shut_completions_number )
                 {
                     // Mark well as not existent on this process
