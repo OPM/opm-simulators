@@ -150,7 +150,7 @@ namespace Opm
                 std::cerr<<message<<std::endl;
                 ilu_setup_successful = 0;
             }
-            // Check wether there was a problem on some process
+            // Check whether there was a problem on some process
             if ( comm.communicator().min(ilu_setup_successful) == 0 )
             {
                 throw Dune::MatrixBlockError();
