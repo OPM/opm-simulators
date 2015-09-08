@@ -152,10 +152,6 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     if (cgit == cartesian_to_compressed.end()) {
                         if ( is_parallel_run_ )
                         {
-                            // \todo remove hack for parallel runs! HACK!
-                            std::cerr<<" Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
-                                     << k << " not found in grid (well = " << well->name()
-                                     << ") Assuming a parallel run and ignoring it"<<std::endl;
                             completion_on_proc[c]=0;
                             continue;
                         }
@@ -222,10 +218,12 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     // Check that the complete well is on this process
                     if ( sum_completions_on_proc < completionSet->size() )
                     {
-                        std::size_t missing = completionSet->size()-sum_completions_on_proc;
-                        OPM_THROW(std::runtime_error, "Each well must be completely stored "
-                                  << "on one process! Not the case for " << well->name() << ": "
-                                  << missing << " completions missing.");
+                        std::cout<< "Well "<< well->name() << " semms not be in "
+                                 << "completely in the disjoint partition of "
+                                 << "process deactivating here." << std::endl;
+                        // Mark well as not existent on this process
+                        wells_on_proc[wellIter-wells.begin()] = 0;
+                        continue;
                     }
                 }
             }
