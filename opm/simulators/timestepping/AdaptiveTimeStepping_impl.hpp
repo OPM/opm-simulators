@@ -37,8 +37,8 @@ namespace Opm {
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
                                             const boost::any& parallel_information )
         : timeStepControl_()
-        , restart_factor_( param.getDefault("solver.restartfactor", double(0.1) ) )
-        , growth_factor_( param.getDefault("solver.growthfactor", double(1.25) ) )
+        , restart_factor_( param.getDefault("solver.restartfactor", double(0.33) ) )
+        , growth_factor_( param.getDefault("solver.growthfactor", double(2) ) )
         , max_growth_( param.getDefault("timestep.control.maxgrowth", double(3.0) ) )
           // default is 1 year, convert to seconds
         , max_time_step_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0 ), unit::day) )
@@ -49,11 +49,11 @@ namespace Opm {
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
     {
         // valid are "pid" and "pid+iteration"
-        std::string control = param.getDefault("timestep.control", std::string("pid+iteration") );
+        std::string control = param.getDefault("timestep.control", std::string("pid") );
         // iterations is the accumulation of all linear iterations over all newton steops per time step
         const int defaultTargetIterations = 30;
 
-        const double tol = param.getDefault("timestep.control.tol", double(1e-3) );
+        const double tol = param.getDefault("timestep.control.tol", double(1e-1) );
         if( control == "pid" ) {
             timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol, parallel_information ) );
         }
