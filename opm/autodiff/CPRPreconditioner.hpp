@@ -48,6 +48,7 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
+#include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 namespace Opm
 {
 namespace
@@ -95,7 +96,11 @@ struct CPRSelector<M,X,Y,Dune::OwnerOverlapCopyCommunication<I1,I2> >
     /// \brief The operator type;
     typedef Dune::OverlappingSchwarzOperator<M,X,X,ParallelInformation> Operator;
     /// \brief The type of the preconditioner used for the elliptic part.
-    typedef Dune::BlockPreconditioner<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
+    //typedef Dune::BlockPreconditioner<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
+    //EllipticPreconditioner;
+    //typedef ParallelRestrictedOverlappingSchwarz<X, X, ParallelInformation, Dune::SeqILU0<M,X,X> >
+    //EllipticPreconditioner;
+    typedef ParallelOverlappingILU0<M,X, X, ParallelInformation>
     EllipticPreconditioner;
     /// \brief The type of the unique pointer to the preconditioner of the elliptic part.
     typedef std::unique_ptr<EllipticPreconditioner,
@@ -252,16 +257,14 @@ typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
 createEllipticPreconditionerPointer(const M& Ae, double relax,
                                     const Dune::OwnerOverlapCopyCommunication<I1,I2>& comm)
 {
-    typedef Dune::BlockPreconditioner<X, X,
-                                      Dune::OwnerOverlapCopyCommunication<I1,I2>,
-                                      Dune::SeqILU0<M,X,X> >
-    ParallelPreconditioner;
+    typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
+        ::EllipticPreconditioner ParallelPreconditioner;
 
-    Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax);
+    //Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax);
     typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
         ::EllipticPreconditionerPointer EllipticPreconditionerPointer;
-    return EllipticPreconditionerPointer(new ParallelPreconditioner(*ilu, comm),
-                                         createParallelDeleter(*ilu, comm));
+    return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));//,
+    //                                         createParallelDeleter(*ilu, comm));
 }
 #endif
 } // end namespace
