@@ -6,7 +6,7 @@ src_dir=$(dirname $0)
 mod_dir=
 for OPT in "$@"; do
     case "$OPT" in
-        --with-opm-cmake=*)
+        --with-opm-common=*)
             # remove everything before equal sign and assign the rest
             mod_dir=${OPT#*=}
             # tilde expansion; note that doing eval may have side effects
@@ -27,7 +27,7 @@ fi
 
 # terminate with error message here if the module directory is not found
 if [ ! -r "$mod_dir/$conf_file" ]; then
-    echo Build macros not located in \"$mod_dir\", use --with-opm-cmake= to specify! 1>&2
+    echo Build macros not located in \"$mod_dir\", use --with-opm-common= to specify! 1>&2
     exit 1
 fi
 
