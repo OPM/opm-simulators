@@ -529,6 +529,14 @@ namespace Opm
             }
         }
 
+
+        const Sparse& getSparse() const {
+            if (type_ != S) {
+                OPM_THROW(std::logic_error, "Must not call getSparse() for non-sparse type.");
+            }
+            return sparse_;
+        }
+
     private:
         enum MatrixType { Z, I, D, S };
         MatrixType type_;

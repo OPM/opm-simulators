@@ -233,17 +233,30 @@ namespace Opm
             }
         }
 
+        // Set all blocks to zero.
         const int size = s.rows();
+        assert(size == s.cols());
         for (int row = 0; row < size; ++row) {
             for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
                 const int col = ja[col_ix];
-                MatrixBlockType block;
-                for (int p1 = 0; p1 < np; ++p1) {
-                    for (int p2 = 0; p2 < np; ++p2) {
-                        block[p1][p2] = eqs[p1].derivative()[p2].coeff(row, col);
+                istlA[row][col] = 0.0;
+            }
+        }
+
+        // Go through all jacobians, insert in correct spot
+        for (int col = 0; col < size; ++col) {
+            for (int p1 = 0; p1 < np; ++p1) {
+                for (int p2 = 0; p2 < np; ++p2) {
+                    // Note that that since these are CSC and not CSR matrices,
+                    // ja contains row numbers instead of column numbers.
+                    const int* ia = eqs[p1].derivative()[p2].getSparse().outerIndexPtr();
+                    const int* ja = eqs[p1].derivative()[p2].getSparse().innerIndexPtr();
+                    const double* sa = eqs[p1].derivative()[p2].getSparse().valuePtr();
+                    for (int elem_ix = ia[col]; elem_ix < ia[col + 1]; ++elem_ix) {
+                        const int row = ja[elem_ix];
+                        istlA[row][col][p1][p2] = sa[elem_ix];
                     }
                 }
-                istlA[row][col] = block;
             }
         }
     }
