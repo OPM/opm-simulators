@@ -30,6 +30,13 @@
 #include <ewoms/common/parametersystem.hh>
 
 #include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/dgf.hh>
+#endif
+
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
@@ -62,6 +69,8 @@ NEW_PROP_TAG(GridGlobalRefinements);
 
 // set the Grid and GridManager properties
 SET_TYPE_PROP(LensGridManager, Grid, Dune::YaspGrid<2>);
+//SET_TYPE_PROP(LensGridManager, Grid, Dune::ALUGrid< 2, 2, Dune::cube, Dune::nonconforming > );
+
 SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
 } // namespace Properties
 
@@ -115,16 +124,11 @@ public:
     LensGridManager(Simulator &simulator)
         : ParentType(simulator)
     {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
-        std::bitset<dim> isPeriodic(false);
-        std::array<int, dim> cellRes;
-#else
-        Dune::FieldVector<bool, dim> isPeriodic(false);
         Dune::FieldVector<int, dim> cellRes;
-#endif
 
         typedef double GridScalar;
         Dune::FieldVector<GridScalar, dim> upperRight;
+        Dune::FieldVector<GridScalar, dim> lowerLeft( 0 );
 
         upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
         upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
@@ -136,18 +140,21 @@ public:
             cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
+        std::stringstream dgffile;
+        dgffile << "DGF" << std::endl;
+        dgffile << "INTERVAL" << std::endl;
+        dgffile << lowerLeft  << std::endl;
+        dgffile << upperRight << std::endl;
+        dgffile << cellRes    << std::endl;
+        dgffile << "#" << std::endl;
+        dgffile << "GridParameter" << std::endl;
+        dgffile << "overlap 1" << std::endl;
+        dgffile << "#" << std::endl;
+
+        // use DGF parser to create a grid from interval block
+        gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
+
         unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
-        gridPtr_.reset(new Dune::YaspGrid<dim>(upperRight, cellRes));
-#else
-        gridPtr_.reset(new Dune::YaspGrid<dim>(
-#ifdef HAVE_MPI
-                           /*mpiCommunicator=*/Dune::MPIHelper::getCommunicator(),
-#endif
-                           /*upperRightCorner=*/upperRight,
-                           /*numCells=*/cellRes, isPeriodic,
-                           /*overlap=*/1));
-#endif
         gridPtr_->globalRefine(numRefinements);
 
         this->finalizeInit_();
