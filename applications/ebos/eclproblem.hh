@@ -365,7 +365,14 @@ public:
      * \brief Called by the simulator before each time integration.
      */
     void beginTimeStep()
-    { wellManager_.beginTimeStep(); }
+    {
+        wellManager_.beginTimeStep();
+
+        // the initial condition, we need to write before the time step has finished.
+        if (this->simulator().episodeIndex() == 0)
+            // write the summary information after each time step
+            summaryWriter_.write(wellManager_, /*isInitial=*/true);
+    }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
