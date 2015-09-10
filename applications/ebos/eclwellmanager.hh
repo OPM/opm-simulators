@@ -656,7 +656,7 @@ protected:
             elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = gridManager.cartesianCellId(globalDofIdx);
+                int cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip
@@ -683,9 +683,8 @@ protected:
         auto deckSchedule = eclStatePtr->getSchedule();
         auto eclGrid = eclStatePtr->getEclipseGrid();
 
-        int nx = eclGrid->getNX();
-        int ny = eclGrid->getNY();
-        //int nz = eclGrid->getNZ();
+        assert( eclGrid->getNX() == simulator_.gridManager().cartesianDimensions()[ 0 ] );
+        assert( eclGrid->getNY() == simulator_.gridManager().cartesianDimensions()[ 1 ] );
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
@@ -701,11 +700,17 @@ protected:
                 continue;
             }
 
+            std::array<int, 3> cartesianCoordinate;
             // set the well parameters defined by the current set of completions
             Opm::CompletionSetConstPtr completionSet = deckWell->getCompletions(reportStepIdx);
             for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
                 Opm::CompletionConstPtr completion = completionSet->get(complIdx);
-                int cartIdx = completion->getI() + completion->getJ()*nx + completion->getK()*nx*ny;
+                cartesianCoordinate[ 0 ] = completion->getI();
+                cartesianCoordinate[ 1 ] = completion->getJ();
+                cartesianCoordinate[ 2 ] = completion->getK();
+                const int cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
+                assert( cartIdx == (completion->getI() + completion->getJ()*eclGrid->getNX()
+                                      + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
 
                 // in this code we only support each cell to be part of at most a single
                 // well. TODO (?) change this?
@@ -748,7 +753,7 @@ protected:
             elemCtx.updateStencil(elem);
             for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = gridManager.cartesianCellId(globalDofIdx);
+                int cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip

@@ -184,8 +184,8 @@ public:
                 if (insideElemIdx > outsideElemIdx)
                     continue;
 
-                int cartesianElemIdxInside = gridManager.cartesianCellId(insideElemIdx);
-                int cartesianElemIdxOutside = gridManager.cartesianCellId(outsideElemIdx);
+                int cartesianElemIdxInside = gridManager.cartesianIndex(insideElemIdx);
+                int cartesianElemIdxOutside = gridManager.cartesianIndex(outsideElemIdx);
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection

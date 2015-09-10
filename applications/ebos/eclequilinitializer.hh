@@ -135,7 +135,7 @@ public:
             // set the phase pressures. the Opm::BlackoilState only provides the oil
             // phase pressure, so we need to calculate the other phases' pressures
             // ourselfs.
-            Scalar pC[numPhases];
+            Dune::FieldVector< Scalar, numPhases >  pC( 0 );
             const auto& matParams = simulator.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             Scalar po = opmBlackoilState.pressure()[elemIdx];

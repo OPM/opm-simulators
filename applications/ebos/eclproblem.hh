@@ -596,8 +596,7 @@ public:
 
         const auto& gridManager = this->simulator().gridManager();
 
-        int cartesianDofIdx = gridManager.cartesianCellId(elemIdx);
-
+        int cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
 
@@ -716,7 +715,7 @@ private:
             eclState->getIntGridProperty("PVTNUM")->getData();
         rockTableIdx_.resize(gridManager.gridView().size(/*codim=*/0));
         for (size_t elemIdx = 0; elemIdx < rockTableIdx_.size(); ++ elemIdx) {
-            int cartElemIdx = gridManager.cartesianCellId(elemIdx);
+            int cartElemIdx = gridManager.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices
             rockTableIdx_[elemIdx] = pvtnumData[cartElemIdx] - 1;
@@ -751,7 +750,7 @@ private:
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 intrinsicPermeability_[dofIdx] = 0.0;
                 intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
                 intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
@@ -779,7 +778,7 @@ private:
                 eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
@@ -791,7 +790,7 @@ private:
                 eclState->getDoubleGridProperty("PORV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 if (std::isfinite(porvData[cartesianElemIdx])) {
                     Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
                     porosity_[dofIdx] = porvData[cartesianElemIdx]/dofVolume;
@@ -805,7 +804,7 @@ private:
                 eclState->getDoubleGridProperty("NTG")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= ntgData[gridManager.cartesianCellId(dofIdx)];
+                porosity_[dofIdx] *= ntgData[gridManager.cartesianIndex(dofIdx)];
         }
 
         // apply the MULTPV keyword to the porosity
@@ -814,13 +813,13 @@ private:
                 eclState->getDoubleGridProperty("MULTPV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= multpvData[gridManager.cartesianCellId(dofIdx)];
+                porosity_[dofIdx] *= multpvData[gridManager.cartesianIndex(dofIdx)];
         }
 
         // the fluid-matrix interactions for ECL problems are dealt with by a separate class
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianCellId(elemIdx);
+            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
@@ -1042,7 +1041,7 @@ private:
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
-        const auto &cartSize = this->simulator().gridManager().logicalCartesianSize();
+        const auto &cartSize = this->simulator().gridManager().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
@@ -1057,7 +1056,7 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
 
-            size_t cartesianDofIdx = gridManager.cartesianCellId(dofIdx);
+            size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
 
@@ -1088,7 +1087,7 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Scalar pc[numPhases];
+            Dune::FieldVector< Scalar, numPhases > pc( 0 );
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(oilPressure);
@@ -1127,7 +1126,7 @@ private:
 
                 if (RsReal > RsSat) {
                     std::array<int, 3> ijk;
-                    gridManager.getIJK(dofIdx, ijk);
+                    gridManager.cartesianCoordinate(dofIdx, ijk);
                     std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
                               << " than the maximium\n"
                               << "         amount which can be dissolved in oil"
@@ -1167,7 +1166,7 @@ private:
 
                 if (RvReal > RvSat) {
                     std::array<int, 3> ijk;
-                    gridManager.getIJK(dofIdx, ijk);
+                    gridManager.cartesianCoordinate(dofIdx, ijk);
                     std::cerr << "Warning: The specified amount oil (R_v = " << RvReal << ") is more"
                               << " than the maximium\n"
                               << "         amount which can be dissolved in gas"
