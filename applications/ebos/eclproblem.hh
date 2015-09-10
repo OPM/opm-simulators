@@ -30,6 +30,7 @@
 
 #include "eclgridmanager.hh"
 #include "eclwellmanager.hh"
+#include "eclequilinitializer.hh"
 #include "eclwriter.hh"
 #include "eclsummarywriter.hh"
 #include "ecloutputblackoilmodule.hh"
@@ -343,9 +344,17 @@ public:
             ++ nextEpisodeIdx;
         }
 
+        Scalar episodeLength = timeMap->getTimeStepLength(nextEpisodeIdx);
+        Scalar dt = episodeLength;
+        if (nextEpisodeIdx == 0) {
+            // allow the size of the initial time step to be set via an external parameter
+            Scalar initialDt = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
+            dt = std::min(dt, initialDt);
+        }
+
         if (nextEpisodeIdx < numReportSteps) {
-            simulator.startNextEpisode(timeMap->getTimeStepLength(nextEpisodeIdx));
-            simulator.setTimeStepSize(timeMap->getTimeStepLength(nextEpisodeIdx));
+            simulator.startNextEpisode(episodeLength);
+            simulator.setTimeStepSize(dt);
         }
 
         // set up the wells
@@ -555,14 +564,23 @@ public:
                                                int spaceIdx, int timeIdx) const
     {
         int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return materialLawParams_(globalSpaceIdx);
+        return materialLawParams(globalSpaceIdx);
     }
+
+    const MaterialLawParams& materialLawParams(int globalDofIdx) const
+    { return materialLawManager_->materialLawParams(globalDofIdx); }
 
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
     template <class Context>
     int pvtRegionIndex(const Context &context, int spaceIdx, int timeIdx) const
+    { return pvtRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the index the relevant PVT region given a cell index
+     */
+    int pvtRegionIndex(int elemIdx) const
     {
         Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
 
@@ -571,10 +589,7 @@ public:
 
         const auto& gridManager = this->simulator().gridManager();
 
-        // this is quite specific to the ECFV discretization. But so is everything in an
-        // ECL deck, i.e., we don't need to care here...
-        int compressedDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        int cartesianDofIdx = gridManager.cartesianCellId(compressedDofIdx);
+        int cartesianDofIdx = gridManager.cartesianCellId(elemIdx);
 
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
@@ -622,8 +637,12 @@ public:
 
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
 
-        const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
-        values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
+        if (useMassConservativeInitialCondition_) {
+            const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
+            values.assignMassConservative(initialFluidStates_[globalDofIdx], matParams);
+        }
+        else
+            values.assignNaive(initialFluidStates_[globalDofIdx]);
     }
 
     void initialSolutionApplied()
@@ -794,7 +813,8 @@ private:
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
             compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianCellId(elemIdx);
 
-        materialLawManager_.initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        materialLawManager_ = std::make_shared<EclMaterialLawManager>();
+        materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
     }
 
     void initFluidSystem_()
@@ -836,6 +856,7 @@ private:
     Opm::OilPvtInterface<Scalar, Evaluation>* createOilPvt_(Opm::DeckConstPtr deck,
                                                             Opm::EclipseStateConstPtr eclState)
     {
+        const auto tableManager = eclState->getTableManager();
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numPvtRegions = densityKeyword->size();
 
@@ -844,7 +865,7 @@ private:
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvtoTable(regionIdx, eclState->getPvtoTables()[regionIdx]);
+                oilPvt->setPvtoTable(regionIdx, tableManager->getPvtoTables()[regionIdx]);
 
             oilPvt->initEnd();
             return oilPvt;
@@ -854,7 +875,7 @@ private:
             oilPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvdoTable(regionIdx, eclState->getPvdoTables()[regionIdx]);
+                oilPvt->setPvdoTable(regionIdx, tableManager->getPvdoTables()[regionIdx]);
 
             oilPvt->initEnd();
             return oilPvt;
@@ -880,6 +901,7 @@ private:
                                                             Opm::EclipseStateConstPtr eclState)
     {
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        const auto tableManager = eclState->getTableManager();
         int numPvtRegions = densityKeyword->size();
 
         if (deck->hasKeyword("PVTG")) {
@@ -887,7 +909,7 @@ private:
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvtgTable(regionIdx, eclState->getPvtgTables()[regionIdx]);
+                gasPvt->setPvtgTable(regionIdx, tableManager->getPvtgTables()[regionIdx]);
 
             gasPvt->initEnd();
             return gasPvt;
@@ -897,7 +919,7 @@ private:
             gasPvt->setNumRegions(numPvtRegions);
 
             for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvdgTable(regionIdx, eclState->getPvdgTables()[regionIdx]);
+                gasPvt->setPvdgTable(regionIdx, tableManager->getPvdgTables()[regionIdx]);
 
             gasPvt->initEnd();
             return gasPvt;
@@ -930,27 +952,64 @@ private:
     {
         const auto &gridManager = this->simulator().gridManager();
         const auto deck = gridManager.deck();
+
+        if (!deck->hasKeyword("EQUIL"))
+            readExplicitInitialCondition_();
+        else
+            readEquilInitialCondition_();
+    }
+
+    void readEquilInitialCondition_()
+    {
+        // The EQUIL initializer also modifies the material law manager according to
+        // SWATINIT (although it does not belong there strictly speaking)
+        typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
+        EquilInitializer equilInitializer(this->simulator(), materialLawManager_);
+
+        // since the EquilInitializer provides fluid states that are consistent with the
+        // black-oil model, we can use naive instead of mass conservative determination
+        // of the primary variables.
+        useMassConservativeInitialCondition_ = false;
+
+        size_t numElems = this->model().numGridDof();
+        initialFluidStates_.resize(numElems);
+        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto &elemFluidState = initialFluidStates_[elemIdx];
+            elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
+        }
+    }
+
+    void readExplicitInitialCondition_()
+    {
+        const auto &gridManager = this->simulator().gridManager();
+        const auto deck = gridManager.deck();
         const auto eclState = gridManager.eclState();
+
+        // since the values specified in the deck do not need to be consistent, we use an
+        // initial condition that conserves the total mass specified by these values.
+        useMassConservativeInitialCondition_ = true;
 
         bool enableDisgas = deck->hasKeyword("DISGAS");
         bool enableVapoil = deck->hasKeyword("VAPOIL");
 
         // make sure all required quantities are enables
-        if (!deck->hasKeyword("SWAT") ||
-            !deck->hasKeyword("SGAS"))
-            OPM_THROW(std::runtime_error,
-                      "So far, the ECL input file requires the presence of the SWAT "
-                      "and SGAS keywords");
-        if (!deck->hasKeyword("PRESSURE"))
-            OPM_THROW(std::runtime_error,
-                      "So far, the ECL input file requires the presence of the PRESSURE "
-                      "keyword");
-        if (enableDisgas && !deck->hasKeyword("RS"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the RS keyword to be present if dissolved gas is enabled");
-        if (enableVapoil && !deck->hasKeyword("RV"))
-            OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the RV keyword to be present if vaporized oil is enabled");
+         if (!deck->hasKeyword("SWAT") ||
+             !deck->hasKeyword("SGAS"))
+             OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the presence of the SWAT "
+                      "and SGAS keywords if the model is initialized explicitly");
+         if (!deck->hasKeyword("PRESSURE"))
+             OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the presence of the PRESSURE "
+                      "keyword if the model is initialized explicitly");
+         if (enableDisgas && !deck->hasKeyword("RS"))
+             OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the RS keyword to be present if"
+                      " dissolved gas is enabled");
+         if (enableVapoil && !deck->hasKeyword("RV"))
+             OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the RV keyword to be present if"
+                      " vaporized oil is enabled");
 
         size_t numDof = this->model().numGridDof();
 
@@ -1020,9 +1079,8 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Scalar pc[numPhases] = { 0 };
-
-            const auto& matParams = materialLawParams_(dofIdx);
+            Scalar pc[numPhases];
+            const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(oilPressure);
             Valgrind::CheckDefined(pc);
@@ -1130,15 +1188,10 @@ private:
         }
     }
 
-    const MaterialLawParams& materialLawParams_(int globalDofIdx) const
-    {
-        return materialLawManager_.materialLawParams(globalDofIdx);
-    }
-
     // update the hysteresis parameters of the material laws for the whole grid
     void updateHysteresis_()
     {
-        if (!materialLawManager_.enableHysteresis())
+        if (!materialLawManager_->enableHysteresis())
             return;
 
         ElementContext elemCtx(this->simulator());
@@ -1154,9 +1207,8 @@ private:
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             int compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            int cartesianDofIdx = gridManager.cartesianCellId(compressedDofIdx);
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            materialLawManager_.updateHysteresis(intQuants.fluidState(), cartesianDofIdx);
+            materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
     }
 
@@ -1164,11 +1216,12 @@ private:
     std::vector<DimMatrix> intrinsicPermeability_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
-    EclMaterialLawManager materialLawManager_;
+    std::shared_ptr<EclMaterialLawManager> materialLawManager_;
 
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
+    bool useMassConservativeInitialCondition_;
     std::vector<ScalarFluidState> initialFluidStates_;
 
     EclWellManager<TypeTag> wellManager_;
