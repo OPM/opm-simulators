@@ -250,17 +250,19 @@ namespace Opm {
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
-            Selector<double> zero_selector(ss.value(), Selector<double>::Zero);
-            V F_solvent = zero_selector.select(ss, ss / (ss + sg)).value();
-
             const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-            const int nw = wells().number_of_wells;
-            V wellSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
+            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
 
+            const int nw = wells().number_of_wells;
+            V injectedSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
+
+            V isProducer = V::Zero(nperf);
+            V ones = V::Constant(nperf,1.0);
             for (int w = 0; w < nw; ++w) {
                 if(wells().type[w] == PRODUCER) {
                     for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                        wellSolventFraction[perf] = F_solvent[well_cells[perf]];
+                        isProducer[perf] = 1;
                     }
                 }
             }
@@ -271,7 +273,7 @@ namespace Opm {
             // remove contribution from the dissolved gas.
             // TODO compensate for gas in the oil phase
             assert(!has_vapoil_);
-            const ADB cq_s_solvent = wellSolventFraction * (cq_s[gas_pos] - rs_perfcells * cq_s[oil_pos]);
+            const ADB cq_s_solvent = (isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction) * (cq_s[gas_pos] - rs_perfcells * cq_s[oil_pos]);
 
             // Solvent contribution to the mass balance equation is given as a fraction
             // of the gas contribution.
