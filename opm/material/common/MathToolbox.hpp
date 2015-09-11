@@ -112,7 +112,7 @@ public:
      * regard to x. For scalar evaluations (which do not consider derivatives), this
      * method does nothing.
      */
-    static Scalar createVariable(Scalar value, int varIdx)
+    static Scalar createVariable(Scalar value, int /* varIdx */)
     { return value; }
 
     /*!

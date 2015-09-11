@@ -77,6 +77,7 @@ inline bool CheckDefined(const T &value)
     auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(&value, sizeof(T));
     return tmp == 0;
 #else
+    static_cast<void>(value);
     return true;
 #endif
 }
@@ -113,6 +114,8 @@ inline bool CheckDefined(const T *value, int size)
     auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(value, size*sizeof(T));
     return tmp == 0;
 #else
+    static_cast<void>(value);
+    static_cast<void>(size);
     return true;
 #endif
 }
@@ -140,6 +143,7 @@ inline void SetUndefined(const T &value)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(&value, sizeof(T));
 #endif
+    static_cast<void>(value);
 }
 
 /*!
@@ -166,6 +170,8 @@ inline void SetUndefined(const T *value, int size)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(value, size*sizeof(T));
 #endif
+    static_cast<void>(value);
+    static_cast<void>(size);
 }
 
 /*!
@@ -190,6 +196,7 @@ inline void SetDefined(const T &value)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(&value, sizeof(T));
 #endif
+    static_cast<void>(value);
 }
 
 /*!
@@ -216,6 +223,8 @@ inline void SetDefined(const T *value, int n)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(value, n*sizeof(T));
 #endif
+    static_cast<void>(value);
+    static_cast<void>(n);
 }
 
 /*!
@@ -240,6 +249,7 @@ inline void SetNoAccess(const T &value)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(&value, sizeof(T));
 #endif
+    static_cast<void>(value);
 }
 
 /*!
@@ -264,6 +274,8 @@ inline void SetNoAccess(const T *value, int size)
 #if !defined NDEBUG && HAVE_VALGRIND
     auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(value, size*sizeof(T));
 #endif
+    static_cast<void>(value);
+    static_cast<void>(size);
 }
 
 } // namespace Valgrind
