@@ -380,7 +380,7 @@ private:
         }
 
         materialLawParams_.resize(numCompressedElems);
-        for (int elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+        for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             int satnumRegionIdx = satnumRegionIdx_[elemIdx];
             materialLawParams_[elemIdx] = satRegionParams[satnumRegionIdx];
         }
@@ -800,8 +800,8 @@ private:
     template <class Container>
     void readGasOilUnscaledPoints_(Container &dest,
                                    std::shared_ptr<EclEpsConfig> config,
-                                   Opm::DeckConstPtr deck,
-                                   Opm::EclipseStateConstPtr eclState,
+                                   Opm::DeckConstPtr /* deck */,
+                                   Opm::EclipseStateConstPtr /* eclState */,
                                    int satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -811,8 +811,8 @@ private:
     template <class Container>
     void readOilWaterUnscaledPoints_(Container &dest,
                                      std::shared_ptr<EclEpsConfig> config,
-                                     Opm::DeckConstPtr deck,
-                                     Opm::EclipseStateConstPtr eclState,
+                                     Opm::DeckConstPtr /* deck */,
+                                     Opm::EclipseStateConstPtr /* eclState */,
                                      int satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
