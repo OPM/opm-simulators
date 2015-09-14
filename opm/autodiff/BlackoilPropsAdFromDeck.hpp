@@ -358,15 +358,12 @@ namespace Opm
 
     private:
         /// Initializes the properties.
-        template <class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
-                  const CentroidIterator& begin_cell_centroids,
-                  int dimension,
                   const bool init_rock);
 
         /// Correction to rs/rv according to kw VAPPARS
