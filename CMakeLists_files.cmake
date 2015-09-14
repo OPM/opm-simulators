@@ -135,6 +135,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonSolver.hpp
 	opm/autodiff/NewtonSolver_impl.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
+	opm/autodiff/ParallelDebugOutput.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp
 	opm/autodiff/SimulatorBase.hpp

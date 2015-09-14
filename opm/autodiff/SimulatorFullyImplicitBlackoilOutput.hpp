@@ -31,6 +31,7 @@
 #include <opm/core/io/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/ParallelDebugOutput.hpp>
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
@@ -214,6 +215,8 @@ namespace Opm
                      const int desiredReportStep);
 
     protected:
+        std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;
+
         // Parameters for output.
         const bool output_;
         const std::string outputDir_;
@@ -240,22 +243,25 @@ namespace Opm
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
                          const Opm::PhaseUsage &phaseUsage )
-      : output_( param.getDefault("output", true) ),
+      : parallelOutput_( new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases ) ),
+        output_( param.getDefault("output", true) ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
                      new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
-        matlabWriter_( output_ && param.getDefault("output_matlab", false) ?
+        matlabWriter_( output_ && parallelOutput_->isIORank() &&
+                       param.getDefault("output_matlab", false) ?
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
-        eclWriter_( output_ && param.getDefault("output_ecl", true) ?
+        eclWriter_( output_ && parallelOutput_->isIORank() &&
+                    param.getDefault("output_ecl", true) ?
                     new EclipseWriter(param, eclipseState, phaseUsage,
-                                      Opm::UgGridHelpers::numCells( grid ),
-                                      Opm::UgGridHelpers::globalCell( grid ) )
+                                      parallelOutput_->numCells(),
+                                      parallelOutput_->globalCell() )
                    : 0 )
     {
         // For output.
-        if (output_) {
+        if (output_ && parallelOutput_->isIORank() ) {
             // Ensure that output dir exists
             boost::filesystem::path fpath(outputDir_);
             try {
