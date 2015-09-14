@@ -260,8 +260,7 @@ try
                                       Opm::UgGridHelpers::numCells(grid),
                                       Opm::UgGridHelpers::globalCell(grid),
                                       Opm::UgGridHelpers::cartDims(grid),
-                                      Opm::UgGridHelpers::beginCellCentroids(grid),
-                                      Opm::UgGridHelpers::dimensions(grid), param);
+                                      param);
 
     BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
 
