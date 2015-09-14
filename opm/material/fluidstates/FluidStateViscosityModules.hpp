@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The viscosity of a fluid phase [-]
      */
-    Scalar viscosity(int phaseIdx) const
+    Scalar viscosity(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Viscosity is not provided by this fluid state"); }
 
     /*!
@@ -116,7 +116,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

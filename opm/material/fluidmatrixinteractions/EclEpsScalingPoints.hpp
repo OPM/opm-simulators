@@ -52,7 +52,7 @@ class EclEpsGridProperties
 
 public:
 #if HAVE_OPM_PARSER
-    void initFromDeck(Opm::DeckConstPtr deck,
+    void initFromDeck(Opm::DeckConstPtr /* deck */,
                       Opm::EclipseStateConstPtr eclState,
                       bool useImbibition)
     {
@@ -453,7 +453,7 @@ private:
         Sowu = sof3Table.getSoColumn().back();
 
         // critical oil saturation of oil-water system
-        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
             if (sof3Table.getKrowColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
@@ -462,7 +462,7 @@ private:
         }
 
         // critical oil saturation of gas-oil system
-        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
             if (sof3Table.getKrogColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Sogcr = sof3Table.getSoColumn()[rowIdx - 1];

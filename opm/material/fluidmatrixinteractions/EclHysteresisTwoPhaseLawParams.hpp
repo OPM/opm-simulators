@@ -101,8 +101,8 @@ public:
      * \brief Sets the parameters used for the drainage curve
      */
     void setDrainageParams(std::shared_ptr<EffLawParams> value,
-                           const EclEpsScalingPointsInfo<Scalar>& info,
-                           EclTwoPhaseSystemType twoPhaseSystem)
+                           const EclEpsScalingPointsInfo<Scalar>& /* info */,
+                           EclTwoPhaseSystemType /* twoPhaseSystem */)
 
     {
         drainageParams_ = *value;
@@ -133,8 +133,8 @@ public:
      * \brief Sets the parameters used for the imbibition curve
      */
     void setImbibitionParams(std::shared_ptr<EffLawParams> value,
-                             const EclEpsScalingPointsInfo<Scalar>& info,
-                             EclTwoPhaseSystemType twoPhaseSystem)
+                             const EclEpsScalingPointsInfo<Scalar>& /* info */,
+                             EclTwoPhaseSystemType /* twoPhaseSystem */)
     {
         imbibitionParams_ = *value;
 
@@ -177,7 +177,7 @@ public:
      *        drainage curve (MDC) to imbibition happend on the relperm curve for the
      *        wetting phase.
      */
-    void setKrwSwMdc(Scalar value)
+    void setKrwSwMdc(Scalar /* value */)
     {}
     //    { krwSwMdc_ = value; };
 
@@ -213,7 +213,7 @@ public:
      * This means that krw(Sw) = krw_drainage(Sw) if Sw < SwMdc and
      * krw(Sw) = krw_imbibition(Sw + Sw_shift,krw) else
      */
-    void setDeltaSwImbKrw(Scalar value)
+    void setDeltaSwImbKrw(Scalar /* value */)
     {}
     //    { deltaSwImbKrw_ = value; }
 
@@ -274,7 +274,7 @@ public:
      * This updates the scanning curves and the imbibition<->drainage reversal points as
      * appropriate.
      */
-    void update(Scalar pcSw, Scalar krwSw, Scalar krnSw)
+    void update(Scalar pcSw, Scalar /* krwSw */, Scalar krnSw)
     {
         bool updateParams = false;
         if (pcSw < pcSwMdc_) {

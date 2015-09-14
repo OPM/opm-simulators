@@ -117,7 +117,7 @@ public:
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    const Scalar& internalEnergy(int phaseIdx) const
+    const Scalar& internalEnergy(int /* phaseIdx */) const
     {
         static Scalar tmp = 0;
         Valgrind::SetUndefined(tmp);
@@ -127,7 +127,7 @@ public:
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    const Scalar& enthalpy(int phaseIdx) const
+    const Scalar& enthalpy(int /* phaseIdx */) const
     {
         static Scalar tmp = 0;
         Valgrind::SetUndefined(tmp);
@@ -139,7 +139,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

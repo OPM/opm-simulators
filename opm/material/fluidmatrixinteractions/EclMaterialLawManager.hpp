@@ -118,7 +118,7 @@ public:
         compressedToCartesianElemIdx_ = compressedToCartesianElemIdx;
         // get the number of saturation regions and the number of cells in the deck
         int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        unsigned numCompressedElems = compressedToCartesianElemIdx.size();;
+        int numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
@@ -332,7 +332,7 @@ private:
         OilWaterParamVector oilWaterParams(numSatRegions);
         MaterialLawParamsVector satRegionParams(numSatRegions);
         EclEpsScalingPointsInfo<Scalar> dummyInfo;
-        for (int satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
+        for (size_t satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
             // the parameters for the effective two-phase matererial laws
             readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satnumRegionIdx);
             readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satnumRegionIdx);
@@ -512,24 +512,24 @@ private:
             if (enableHysteresis()) {
                 int imbRegionIdx = imbnumData[elemIdx] - 1;
 
-                auto gasOilImbParams = std::make_shared<GasOilEpsTwoPhaseParams>();
-                gasOilImbParams->setConfig(gasOilConfig);
-                gasOilImbParams->setUnscaledPoints(gasOilUnscaledPointsVector[imbRegionIdx]);
-                gasOilImbParams->setScaledPoints(gasOilScaledImbPointsVector[elemIdx]);
-                gasOilImbParams->setEffectiveLawParams(gasOilEffectiveParamVector[imbRegionIdx]);
-                gasOilImbParams->finalize();
+                auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
+                gasOilImbParamsHyst->setConfig(gasOilConfig);
+                gasOilImbParamsHyst->setUnscaledPoints(gasOilUnscaledPointsVector[imbRegionIdx]);
+                gasOilImbParamsHyst->setScaledPoints(gasOilScaledImbPointsVector[elemIdx]);
+                gasOilImbParamsHyst->setEffectiveLawParams(gasOilEffectiveParamVector[imbRegionIdx]);
+                gasOilImbParamsHyst->finalize();
 
-                auto oilWaterImbParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
-                oilWaterImbParams->setConfig(oilWaterConfig);
-                oilWaterImbParams->setUnscaledPoints(oilWaterUnscaledPointsVector[imbRegionIdx]);
-                oilWaterImbParams->setScaledPoints(oilWaterScaledImbPointsVector[elemIdx]);
-                oilWaterImbParams->setEffectiveLawParams(oilWaterEffectiveParamVector[imbRegionIdx]);
-                oilWaterImbParams->finalize();
+                auto oilWaterImbParamsHyst = std::make_shared<OilWaterEpsTwoPhaseParams>();
+                oilWaterImbParamsHyst->setConfig(oilWaterConfig);
+                oilWaterImbParamsHyst->setUnscaledPoints(oilWaterUnscaledPointsVector[imbRegionIdx]);
+                oilWaterImbParamsHyst->setScaledPoints(oilWaterScaledImbPointsVector[elemIdx]);
+                oilWaterImbParamsHyst->setEffectiveLawParams(oilWaterEffectiveParamVector[imbRegionIdx]);
+                oilWaterImbParamsHyst->finalize();
 
-                gasOilParams[elemIdx]->setImbibitionParams(gasOilImbParams,
+                gasOilParams[elemIdx]->setImbibitionParams(gasOilImbParamsHyst,
                                                                *gasOilScaledImbInfoVector[elemIdx],
                                                                EclGasOilSystem);
-                oilWaterParams[elemIdx]->setImbibitionParams(oilWaterImbParams,
+                oilWaterParams[elemIdx]->setImbibitionParams(oilWaterImbParamsHyst,
                                                                  *gasOilScaledImbInfoVector[elemIdx],
                                                                  EclGasOilSystem);
             }
@@ -854,7 +854,7 @@ private:
     }
 
     void initThreePhaseParams_(Opm::DeckConstPtr deck,
-                               Opm::EclipseStateConstPtr eclState,
+                               Opm::EclipseStateConstPtr /* eclState */,
                                MaterialLawParams& materialParams,
                                int satnumIdx,
                                const EclEpsScalingPointsInfo<Scalar>& epsInfo,
