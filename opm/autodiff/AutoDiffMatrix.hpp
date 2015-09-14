@@ -388,6 +388,7 @@ namespace Opm
 
         static AutoDiffMatrix addSI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
+            static_cast<void>(rhs); // Silence release-mode warning.
             assert(lhs.type_ == S);
             assert(rhs.type_ == I);
             AutoDiffMatrix retval = lhs;

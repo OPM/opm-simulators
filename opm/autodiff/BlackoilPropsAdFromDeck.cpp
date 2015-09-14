@@ -57,8 +57,8 @@ namespace Opm
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {
-        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, 
-             grid.cell_centroids, grid.dimensions, init_rock);
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims,
+             init_rock);
     }
 
 #ifdef HAVE_DUNE_CORNERPOINT
@@ -77,7 +77,7 @@ namespace Opm
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
         init(deck, eclState, materialLawManager, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
              static_cast<const int*>(&grid.logicalCartesianSize()[0]),
-             grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
+             init_rock);
     }
 #endif
 
@@ -89,7 +89,7 @@ namespace Opm
     {
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (unsigned cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
+        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
             if (grid.global_cell) {
                 compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
             }
@@ -99,7 +99,7 @@ namespace Opm
         }
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
         init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, 
-             grid.cell_centroids, grid.dimensions, init_rock);
+             init_rock);
     }
 
 #ifdef HAVE_DUNE_CORNERPOINT
@@ -112,7 +112,7 @@ namespace Opm
     {
         init(deck, eclState, materialLawManager, grid.numCells(), static_cast<const int*>(&grid.globalCell()[0]),
              static_cast<const int*>(&grid.logicalCartesianSize()[0]),
-             grid.beginCellCentroids(), Dune::CpGrid::dimension, init_rock);
+             init_rock);
     }
 #endif
 
@@ -145,15 +145,12 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 }
 
     /// Initializes the properties.
-    template <class CentroidIterator>
     void BlackoilPropsAdFromDeck::init(Opm::DeckConstPtr deck,
                                        Opm::EclipseStateConstPtr eclState,
                                        std::shared_ptr<MaterialLawManager> materialLawManager,
                                        int number_of_cells,
                                        const int* global_cell,
                                        const int* cart_dims,
-                                       const CentroidIterator& begin_cell_centroids,
-                                       int dimension,
                                        const bool init_rock)
     {
         materialLawManager_ = materialLawManager;

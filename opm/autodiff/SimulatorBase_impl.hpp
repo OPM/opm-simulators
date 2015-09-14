@@ -482,7 +482,9 @@ namespace Opm
                                 well_controls_add_new(BHP, bhp_limit,
                                                       invalid_alq, invalid_vfp,
                                                       NULL, ctrl);
-                        assert(ok_bhp != 0);
+                        if (!ok_bhp) {
+                            OPM_THROW(std::runtime_error, "Failed to add well control.");
+                        }
                     }
                 }
             }

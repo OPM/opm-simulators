@@ -34,7 +34,7 @@ void createGlobalCellArray(const Grid &grid, std::vector<int>& dest)
     dest.resize(numCells);
     const auto& globalCell = Opm::UgGridHelpers::globalCell(grid);
     std::vector<int> compressedToCartesianIdx(numCells);
-    for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+    for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
         if (globalCell) {
             dest[cellIdx] = globalCell[cellIdx];
         }
