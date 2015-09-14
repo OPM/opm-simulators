@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <iostream>
@@ -45,7 +46,7 @@ namespace Opm
         }
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
 
-        satprops_.init(deck, eclState, materialLawManager, grid);
+        satprops_.init(deck, materialLawManager);
         if (pvt_.numPhases() != satprops_.numPhases()) {
             OPM_THROW(std::runtime_error, "IncompPropertiesFromDeck::IncompPropertiesFromDeck() - Inconsistent number of phases in pvt data ("
                   << pvt_.numPhases() << ") and saturation-dependent function data (" << satprops_.numPhases() << ").");

@@ -27,8 +27,6 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <memory>

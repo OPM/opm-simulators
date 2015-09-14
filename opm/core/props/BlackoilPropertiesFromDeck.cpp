@@ -19,24 +19,40 @@
 
 #include "config.h"
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <vector>
+#include <numeric>
 
 namespace Opm
 {
+
+    namespace
+    {
+        // Construct explicit mapping from active/compressed to logical cartesian
+        // indices, either as given in global_cell or as { 0, 1, 2, ....} if null.
+        std::vector<int> compressedToCartesian(const int num_cells,
+                                               const int* global_cell)
+        {
+            std::vector<int> retval;
+            if (global_cell) {
+                retval.assign(global_cell, global_cell + num_cells);
+            } else {
+                retval.resize(num_cells);
+                std::iota(retval.begin(), retval.end(), 0);
+            }
+            return retval;
+        }
+    } // anonymous namespace
+
+
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
                                                            Opm::EclipseStateConstPtr eclState,
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
-        std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
-            if (grid.global_cell) {
-                compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
-            }
-            else {
-                compressedToCartesianIdx[cellIdx] = cellIdx;
-            }
-        }
+        std::vector<int> compressedToCartesianIdx
+            = compressedToCartesian(grid.number_of_cells, grid.global_cell);
 
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
@@ -51,15 +67,8 @@ namespace Opm
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
     {
-        std::vector<int> compressedToCartesianIdx(grid.number_of_cells);
-        for (int cellIdx = 0; cellIdx < grid.number_of_cells; ++cellIdx) {
-            if (grid.global_cell) {
-                compressedToCartesianIdx[cellIdx] = grid.global_cell[cellIdx];
-            }
-            else {
-                compressedToCartesianIdx[cellIdx] = cellIdx;
-            }
-        }
+        std::vector<int> compressedToCartesianIdx
+            = compressedToCartesian(grid.number_of_cells, grid.global_cell);
 
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
@@ -74,15 +83,9 @@ namespace Opm
                                                            const int* cart_dims,
                                                            bool init_rock)
     {
-        std::vector<int> compressedToCartesianIdx(number_of_cells);
-        for (int cellIdx = 0; cellIdx < number_of_cells; ++cellIdx) {
-            if (global_cell) {
-                compressedToCartesianIdx[cellIdx] = global_cell[cellIdx];
-            }
-            else {
-                compressedToCartesianIdx[cellIdx] = cellIdx;
-            }
-        }
+        std::vector<int> compressedToCartesianIdx
+            = compressedToCartesian(number_of_cells, global_cell);
+
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
 
@@ -98,15 +101,9 @@ namespace Opm
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
     {
-        std::vector<int> compressedToCartesianIdx(number_of_cells);
-        for (int cellIdx = 0; cellIdx < number_of_cells; ++cellIdx) {
-            if (global_cell) {
-                compressedToCartesianIdx[cellIdx] = global_cell[cellIdx];
-            }
-            else {
-                compressedToCartesianIdx[cellIdx] = cellIdx;
-            }
-        }
+        std::vector<int> compressedToCartesianIdx
+            = compressedToCartesian(number_of_cells, global_cell);
+
         auto materialLawManager = std::make_shared<MaterialLawManager>();
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
 

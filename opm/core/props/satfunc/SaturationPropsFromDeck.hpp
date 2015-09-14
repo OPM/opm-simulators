@@ -29,14 +29,20 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
 #include <vector>
 
 struct UnstructuredGrid;
 
 namespace Opm
 {
+
+    // Forward declaring the EclMaterialLawManager template.
+    template <class ScalarT, int wettingPhaseIdxV, int nonWettingasPhaseIdxV, int gasPhaseIdxV>
+    class ThreePhaseMaterialTraits;
+    template <class Traits>
+    class EclMaterialLawManager;
+
+
     /// Interface to saturation functions from deck.
     class SaturationPropsFromDeck : public SaturationPropsInterface
     {
@@ -46,47 +52,22 @@ namespace Opm
                                               /*nonWettingPhaseIdx=*/BlackoilPhases::Liquid,
                                               /*gasPhaseIdx=*/BlackoilPhases::Vapour> MaterialTraits;
         typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
-        typedef MaterialLawManager::MaterialLaw MaterialLaw;
-        typedef MaterialLawManager::MaterialLawParams MaterialLawParams;
 
         /// Default constructor.
         SaturationPropsFromDeck();
 
-        /// Initialize from a MaterialLawManager object and a compressed to cartesian cell index map.
+        /// Initialize from a MaterialLawManager object.
+        /// \param[in]  phaseUsage          Phase configuration
         /// \param[in]  materialLawManager  An initialized MaterialLawManager object
-        void init(const PhaseUsage &phaseUsage,
+        void init(const PhaseUsage& phaseUsage,
                   std::shared_ptr<MaterialLawManager> materialLawManager);
 
 
-        /// Initialize from deck and grid.
-        /// \param[in]  deck     Deck input parser
-        /// \param[in]  grid     Grid to which property object applies, needed for the
-        ///                      mapping from cell indices (typically from a processed grid)
-        ///                      to logical cartesian indices consistent with the deck.
+        /// Initialize from deck and MaterialLawManager.
+        /// \param[in]  deck                Input deck
+        /// \param[in]  materialLawManager  An initialized MaterialLawManager object
         void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclipseState,
-                  std::shared_ptr<MaterialLawManager> materialLawManager,
-                  const UnstructuredGrid& grid);
-
-        /// Initialize from deck and grid.
-        /// \param[in]  deck     Deck input parser
-        /// \param[in]  number_of_cells The number of cells of the grid to which property
-        ///                             object applies, needed for the
-        ///                             mapping from cell indices (typically from a processed
-        ///                             grid) to logical cartesian indices consistent with the
-        ///                             deck.
-        /// \param[in]  global_cell     The mapping from local cell indices of the grid to
-        ///                             global cell indices used in the deck.
-        /// \param[in]  begin_cell_centroids Pointer to the first cell_centroid of the grid.
-        /// \param[in]  dimensions      The dimensions of the grid. 
-        template<class T>
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclipseState,
-                  std::shared_ptr<MaterialLawManager> materialLawManager,
-                  int number_of_cells,
-                  const int* global_cell,
-                  const T& begin_cell_centroids,
-                  int dimensions)
+                  std::shared_ptr<MaterialLawManager> materialLawManager)
         {
             init(Opm::phaseUsageFromDeck(deck), materialLawManager);
         }

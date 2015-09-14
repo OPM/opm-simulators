@@ -18,6 +18,10 @@
 */
 #include "config.h"
 
+#include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
 #include <opm/core/utility/UniformTableLinear.hpp>
 #include <opm/core/utility/NonuniformTableLinear.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
@@ -30,11 +34,10 @@
 #include <iostream>
 #include <map>
 
-#include "SaturationPropsFromDeck.hpp"
-
 namespace Opm
 {
 
+    typedef SaturationPropsFromDeck::MaterialLawManager::MaterialLaw MaterialLaw;
 
     // ----------- Methods of SaturationPropsFromDeck ---------
 
@@ -42,17 +45,6 @@ namespace Opm
     /// Default constructor.
     SaturationPropsFromDeck::SaturationPropsFromDeck()
     {
-    }
-
-    /// Initialize from deck.
-    void SaturationPropsFromDeck::init(Opm::DeckConstPtr deck,
-                                       Opm::EclipseStateConstPtr eclipseState,
-                                       std::shared_ptr<MaterialLawManager> materialLawManager,
-                                                   const UnstructuredGrid& grid)
-    {
-        this->init(deck, eclipseState, materialLawManager, grid.number_of_cells,
-                   grid.global_cell, grid.cell_centroids,
-                   grid.dimensions);
     }
 
     /// Initialize from deck.
