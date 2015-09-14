@@ -71,36 +71,27 @@ namespace Opm
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
-        template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
                                    Opm::EclipseStateConstPtr eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
-                                   const CentroidIterator& begin_cell_centroids,
-                                   int dimension,
                                    bool init_rock=true);
 
-        template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
                                    Opm::EclipseStateConstPtr eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
-                                   const CentroidIterator& begin_cell_centroids,
-                                   int dimension,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
-        template<class CentroidIterator>
         BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
                                    Opm::EclipseStateConstPtr eclState,
                                    std::shared_ptr<MaterialLawManager> materialLawManager,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
-                                   const CentroidIterator& begin_cell_centroids,
-                                   int dimension,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
@@ -252,25 +243,20 @@ namespace Opm
             return pvtTableIdx[cellIdx];
         }
 
-        template<class CentroidIterator>
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
-                  const CentroidIterator& begin_cell_centroids,
-                  int dimension,
                   bool init_rock);
-        template<class CentroidIterator>
+
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
-                  const CentroidIterator& begin_cell_centroids,
-                  int dimension,
                   const parameter::ParameterGroup& param,
                   bool init_rock);
 
@@ -288,7 +274,5 @@ namespace Opm
 
 
 } // namespace Opm
-
-#include "BlackoilPropertiesFromDeck_impl.hpp"
 
 #endif // OPM_BLACKOILPROPERTIESFROMDECK_HEADER_INCLUDED
