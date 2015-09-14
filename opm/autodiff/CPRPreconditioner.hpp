@@ -178,7 +178,31 @@ createILU0Ptr(const M& A, double relax,
         Dune::OwnerOverlapCopyCommunication<I1,I2>,
         Dune::SeqILU0<M,X,X>
         > PointerType;
-    Dune::SeqILU0<M,X,X>* ilu = new Dune::SeqILU0<M,X,X>(A, relax);
+    Dune::SeqILU0<M,X,X>* ilu = nullptr;
+    int ilu_setup_successful = 1;
+    std::string message;
+    try {
+        ilu = new Dune::SeqILU0<M,X,X>(A, relax);
+    }
+    catch ( Dune::MatrixBlockError error )
+    {
+                message = error.what();
+                std::cerr<<"Exception occured on process " <<
+                    comm.communicator().rank() << " during " <<
+                    "setup of ILU0 preconditioner with message: " <<
+                    message<<std::endl;
+                ilu_setup_successful = 0;
+    }
+    // Check whether there was a problem on some process
+    if ( comm.communicator().min(ilu_setup_successful) == 0 )
+    {
+        if ( ilu ) // not null if constructor succeeded
+        {
+            // prevent memory leak
+            delete ilu;
+        }
+        throw Dune::MatrixBlockError();
+    }
     return typename SelectParallelILUSharedPtr<Dune::SeqILU0<M,X,X>, I1, I2>
         ::type ( new PointerType(*ilu, comm), createParallelDeleter(*ilu, comm));
 }
