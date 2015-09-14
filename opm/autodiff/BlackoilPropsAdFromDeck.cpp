@@ -22,6 +22,9 @@
 #include <config.h>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -288,7 +291,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         SaturationPropsFromDeck* ptr
             = new SaturationPropsFromDeck();
         satprops_.reset(ptr);
-        ptr->init(deck, eclState, materialLawManager_, number_of_cells, global_cell, begin_cell_centroids, dimension);
+        ptr->init(deck, materialLawManager_);
 
         if (phase_usage_.num_phases != satprops_->numPhases()) {
             OPM_THROW(std::runtime_error, "BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck() - "
