@@ -64,6 +64,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available). \TODO: Fix.
 
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -264,8 +265,7 @@ try
                                       Opm::UgGridHelpers::numCells(grid),
                                       Opm::UgGridHelpers::globalCell(grid),
                                       Opm::UgGridHelpers::cartDims(grid),
-                                      Opm::UgGridHelpers::beginCellCentroids(grid),
-                                      Opm::UgGridHelpers::dimensions(grid), param);
+                                      param);
 
     BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
     // check_well_controls = param.getDefault("check_well_controls", false);
