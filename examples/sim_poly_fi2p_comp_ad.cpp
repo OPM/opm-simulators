@@ -189,8 +189,7 @@ try
                                                 Opm::UgGridHelpers::numCells(cGrid),
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
-                                                Opm::UgGridHelpers::beginCellCentroids(cGrid),
-                                                Opm::UgGridHelpers::dimensions(cGrid), param));
+                                                param));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);

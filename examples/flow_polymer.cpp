@@ -201,8 +201,7 @@ try
                                                 Opm::UgGridHelpers::numCells(cGrid),
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
-                                                Opm::UgGridHelpers::beginCellCentroids(cGrid),
-                                                Opm::UgGridHelpers::dimensions(cGrid), param));
+                                                param));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     const bool polymer = deck->hasKeyword("POLYMER");
     const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
