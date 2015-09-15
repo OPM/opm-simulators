@@ -21,30 +21,12 @@
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/utility/compressedToCartesian.hpp>
 #include <vector>
 #include <numeric>
 
 namespace Opm
 {
-
-    namespace
-    {
-        // Construct explicit mapping from active/compressed to logical cartesian
-        // indices, either as given in global_cell or as { 0, 1, 2, ....} if null.
-        std::vector<int> compressedToCartesian(const int num_cells,
-                                               const int* global_cell)
-        {
-            std::vector<int> retval;
-            if (global_cell) {
-                retval.assign(global_cell, global_cell + num_cells);
-            } else {
-                retval.resize(num_cells);
-                std::iota(retval.begin(), retval.end(), 0);
-            }
-            return retval;
-        }
-    } // anonymous namespace
-
 
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
                                                            Opm::EclipseStateConstPtr eclState,
