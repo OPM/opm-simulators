@@ -63,6 +63,7 @@ namespace Opm
 
                     // setup wellname -> well index mapping
                     {
+                        assert( wells->name[ w ] );
                         std::string name( wells->name[ w ] );
                         assert( name.size() > 0 );
                         mapentry_t& wellMapEntry = wellMap_[name];
