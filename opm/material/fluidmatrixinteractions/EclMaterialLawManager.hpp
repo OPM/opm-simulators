@@ -713,13 +713,12 @@ private:
     {
         // convert the saturations of the SGFN keyword from gas to oil saturations
         std::vector<double> SoSamples(sgfnTable.numRows());
-        std::vector<double> SoKroSamples(sgfnTable.numRows());
+        const auto &SoColumn = sof3Table.getSoColumn();
         for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
             SoSamples[sampleIdx] = 1 - sgfnTable.getSgColumn()[sampleIdx];
-            SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
         }
 
-        effParams.setKrwSamples(SoKroSamples, sof3Table.getKrogColumn());
+        effParams.setKrwSamples(SoColumn, sof3Table.getKrogColumn());
         effParams.setKrnSamples(SoSamples, sgfnTable.getKrgColumn());
         effParams.setPcnwSamples(SoSamples, sgfnTable.getPcogColumn());
         effParams.finalize();
