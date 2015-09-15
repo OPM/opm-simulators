@@ -2,6 +2,7 @@
 #include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/core/utility/compressedToCartesian.hpp>
 
 #include <algorithm>
 #include <array>
@@ -380,8 +381,11 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     // use cell thickness (dz) from eclGrid
     // dz overwrites values calculated by WellDetails::getCubeDim
     std::vector<double> dz(number_of_cells);
-    for (int cell = 0; cell < number_of_cells; ++cell) {
-        dz[cell] = eclGrid->getCellThicknes(global_cell[cell]);
+    {
+        std::vector<int> gc = compressedToCartesian(number_of_cells, global_cell);
+        for (int cell = 0; cell < number_of_cells; ++cell) {
+            dz[cell] = eclGrid->getCellThicknes(gc[cell]);
+        }
     }
 
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
