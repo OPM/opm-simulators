@@ -192,6 +192,9 @@ public:
                             const Params &params,
                             const FluidState &fs)
     {
+        static_cast<void>(values);
+        static_cast<void>(params);
+        static_cast<void>(fs);
         OPM_THROW(std::logic_error, "Not implemented: saturations()");
     }
 
@@ -202,6 +205,8 @@ public:
     static Evaluation Sg(const Params &params,
                          const FluidState &fluidState)
     {
+        static_cast<void>(params);
+        static_cast<void>(fluidState);
         OPM_THROW(std::logic_error, "Not implemented: Sg()");
     }
 
@@ -212,6 +217,8 @@ public:
     static Evaluation Sn(const Params &params,
                          const FluidState &fluidState)
     {
+        static_cast<void>(params);
+        static_cast<void>(fluidState);
         OPM_THROW(std::logic_error, "Not implemented: Sn()");
     }
 
@@ -222,6 +229,8 @@ public:
     static Evaluation Sw(const Params &params,
                          const FluidState &fluidState)
     {
+        static_cast<void>(params);
+        static_cast<void>(fluidState);
         OPM_THROW(std::logic_error, "Not implemented: Sw()");
     }
 

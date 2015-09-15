@@ -58,8 +58,8 @@ public:
      *
      * This function throws a warning when called: "No init routine defined - make sure that this is not necessary!"
      */
-    static void init(Scalar tempMin, Scalar tempMax, unsigned nTemp,
-                     Scalar pressMin, Scalar pressMax, unsigned nPress)
+    static void init(Scalar /* tempMin */, Scalar /* tempMax */, unsigned /* nTemp */,
+                     Scalar /* pressMin */, Scalar /* pressMax */, unsigned /* nPress */)
     { }
 
     /*!
@@ -123,7 +123,7 @@ public:
      * \param temperature temperature of the component in \f$\mathrm{[K]}\f$
      */
     template <class Evaluation>
-    static Evaluation vaporPressure(const Evaluation& temperature)
+    static Evaluation vaporPressure(const Evaluation& /* temperature */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::vaporPressure()"); }
 
     /*!
@@ -133,7 +133,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasDensity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasDensity()"); }
 
     /*!
@@ -143,7 +143,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidDensity()"); }
 
     /*!
@@ -153,7 +153,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasEnthalpy(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasEnthalpy()"); }
 
     /*!
@@ -163,7 +163,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidEnthalpy(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidEnthalpy()"); }
 
     /*!
@@ -173,7 +173,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasInternalEnergy(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasInternalEnergy()"); }
 
     /*!
@@ -183,7 +183,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidInternalEnergy(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidInternalEnergy(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidInternalEnergy()"); }
 
     /*!
@@ -194,7 +194,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasViscosity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasViscosity()"); }
 
     /*!
@@ -204,35 +204,35 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidViscosity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a gas.
      */
     template <class Evaluation>
-    static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasThermalConductivity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasThermalConductivity()"); }
 
     /*!
      * \brief Thermal conductivity of the component [W/(m^2 K/m)] as a liquid.
      */
     template <class Evaluation>
-    static Evaluation liquidThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidThermalConductivity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidThermalConductivity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a gas.
      */
     template <class Evaluation>
-    static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasHeatCapacity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::gasHeatCapacity()"); }
 
     /*!
      * \brief Specific isobaric heat capacity of the component [J/kg] as a liquid.
      */
     template <class Evaluation>
-    static Evaluation liquidHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidHeatCapacity(const Evaluation& /* temperature */, const Evaluation& /* pressure */)
     { OPM_THROW(std::runtime_error, "Not implemented: Component::liquidHeatCapacity()"); }
 };
 

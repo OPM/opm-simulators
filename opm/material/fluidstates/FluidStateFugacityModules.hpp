@@ -185,13 +185,13 @@ public:
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    const Scalar& fugacityCoefficient(int phaseIdx, int compIdx) const
+    const Scalar& fugacityCoefficient(int /* phaseIdx */, int /* compIdx */) const
     { OPM_THROW(std::logic_error, "Fugacity coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    const Scalar& fugacity(int phaseIdx, int compIdx) const
+    const Scalar& fugacity(int /* phaseIdx */, int /* compIdx */) const
     { OPM_THROW(std::logic_error, "Fugacities coefficients are not provided by this fluid state"); }
 
     /*!

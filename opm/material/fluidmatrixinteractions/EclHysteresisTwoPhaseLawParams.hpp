@@ -101,23 +101,11 @@ public:
      * \brief Sets the parameters used for the drainage curve
      */
     void setDrainageParams(std::shared_ptr<EffLawParams> value,
-                           const EclEpsScalingPointsInfo<Scalar>& info,
-                           EclTwoPhaseSystemType twoPhaseSystem)
+                           const EclEpsScalingPointsInfo<Scalar>& /* info */,
+                           EclTwoPhaseSystemType /* twoPhaseSystem */)
 
     {
         drainageParams_ = *value;
-
-#if 0
-        if (twoPhaseSystem == EclGasOilSystem) {
-            Sncrd_ = info.Sgcr;
-            Snmaxd_ = 1 - info.Sogcr;
-        }
-        else {
-            assert(twoPhaseSystem == EclOilWaterSystem);
-            Sncrd_ = info.Sowcr;
-            Snmaxd_ = 1 - info.Swcr;
-        }
-#endif
     }
 
     /*!
@@ -133,8 +121,8 @@ public:
      * \brief Sets the parameters used for the imbibition curve
      */
     void setImbibitionParams(std::shared_ptr<EffLawParams> value,
-                             const EclEpsScalingPointsInfo<Scalar>& info,
-                             EclTwoPhaseSystemType twoPhaseSystem)
+                             const EclEpsScalingPointsInfo<Scalar>& /* info */,
+                             EclTwoPhaseSystemType /* twoPhaseSystem */)
     {
         imbibitionParams_ = *value;
 
@@ -177,7 +165,7 @@ public:
      *        drainage curve (MDC) to imbibition happend on the relperm curve for the
      *        wetting phase.
      */
-    void setKrwSwMdc(Scalar value)
+    void setKrwSwMdc(Scalar /* value */)
     {}
     //    { krwSwMdc_ = value; };
 
@@ -213,7 +201,7 @@ public:
      * This means that krw(Sw) = krw_drainage(Sw) if Sw < SwMdc and
      * krw(Sw) = krw_imbibition(Sw + Sw_shift,krw) else
      */
-    void setDeltaSwImbKrw(Scalar value)
+    void setDeltaSwImbKrw(Scalar /* value */)
     {}
     //    { deltaSwImbKrw_ = value; }
 
@@ -248,33 +236,13 @@ public:
     Scalar deltaSwImbKrn() const
     { return deltaSwImbKrn_; }
 
-#if 0
-    /*!
-     * \brief Sets the "trapped" non-wetting phase saturation.
-     *
-     * This quantity is used for capillary pressure hysteresis. How it should be
-     * calculated depends on the hysteresis model.
-     */
-    void setSncrt(Scalar value)
-    { Sncrt_ = value; }
-
-    /*!
-     * \brief Returns the "trapped" non-wetting phase saturation.
-     *
-     * This quantity is used for capillary pressure hysteresis. How it should be
-     * calculated depends on the hysteresis model.
-     */
-    Scalar Sncrt() const
-    { return Sncrt_; }
-#endif
-
     /*!
      * \brief Notify the hysteresis law that a given wetting-phase saturation has been seen
      *
      * This updates the scanning curves and the imbibition<->drainage reversal points as
      * appropriate.
      */
-    void update(Scalar pcSw, Scalar krwSw, Scalar krnSw)
+    void update(Scalar pcSw, Scalar /* krwSw */, Scalar krnSw)
     {
         bool updateParams = false;
         if (pcSw < pcSwMdc_) {

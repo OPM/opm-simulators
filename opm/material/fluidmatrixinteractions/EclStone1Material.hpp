@@ -191,9 +191,9 @@ public:
      * \brief The inverse of the capillary pressure
      */
     template <class ContainerT, class FluidState>
-    static void saturations(ContainerT &values,
-                            const Params &params,
-                            const FluidState &fs)
+    static void saturations(ContainerT& /* values */,
+                            const Params& /* params */,
+                            const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: saturations()");
     }
@@ -202,8 +202,8 @@ public:
      * \brief The saturation of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sg(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sg(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sg()");
     }
@@ -212,8 +212,8 @@ public:
      * \brief The saturation of the non-wetting (i.e., oil) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sn(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sn()");
     }
@@ -222,8 +222,8 @@ public:
      * \brief The saturation of the wetting (i.e., water) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sw(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sw()");
     }

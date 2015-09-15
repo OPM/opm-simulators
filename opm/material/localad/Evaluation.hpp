@@ -297,13 +297,13 @@ public:
 
     bool isSame(const Evaluation& other, Scalar tolerance) const
     {
-        Scalar tmp = other.value - other.value;
-        if (std::abs(tmp) > tolerance && std::abs(tmp)/tolerance > 1.0)
+        Scalar value_diff = other.value - other.value;
+        if (std::abs(value_diff) > tolerance && std::abs(value_diff)/tolerance > 1.0)
             return false;
 
         for (int varIdx= 0; varIdx < size; ++varIdx) {
-            Scalar tmp = other.derivatives[varIdx] - this->derivatives[varIdx];
-            if (std::abs(tmp) > tolerance && std::abs(tmp)/tolerance > 1.0)
+            Scalar deriv_diff = other.derivatives[varIdx] - this->derivatives[varIdx];
+            if (std::abs(deriv_diff) > tolerance && std::abs(deriv_diff)/tolerance > 1.0)
                 return false;
         }
 

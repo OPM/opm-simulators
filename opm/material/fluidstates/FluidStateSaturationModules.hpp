@@ -106,7 +106,7 @@ public:
     /*!
      * \brief The saturation of a fluid phase [-]
      */
-    const Scalar& saturation(int phaseIdx) const
+    const Scalar& saturation(int /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Saturation is not provided by this fluid state"); }
 
     /*!
@@ -114,7 +114,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

@@ -170,8 +170,8 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcgn(const Params &params,
-                           const FluidState &fs)
+    static Evaluation pcgn(const Params& /* params */,
+                           const FluidState& /* fs */)
     {
         OPM_THROW(std::logic_error, "Not implemented: pcgn()");
     }
@@ -186,8 +186,8 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params,
-                           const FluidState &fs)
+    static Evaluation pcnw(const Params& /* params */,
+                           const FluidState& /* fs */)
     {
         OPM_THROW(std::logic_error, "Not implemented: pcnw()");
     }
@@ -196,9 +196,9 @@ public:
      * \brief The inverse of the capillary pressure
      */
     template <class ContainerT, class FluidState>
-    static void saturations(ContainerT &values,
-                            const Params &params,
-                            const FluidState &fs)
+    static void saturations(ContainerT& /* values */,
+                            const Params& /* params */,
+                            const FluidState& /* fs */)
     {
         OPM_THROW(std::logic_error, "Not implemented: saturations()");
     }
@@ -207,8 +207,8 @@ public:
      * \brief The saturation of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sg(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sg(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sg()");
     }
@@ -217,8 +217,8 @@ public:
      * \brief The saturation of the non-wetting (i.e., oil) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sn(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sn()");
     }
@@ -227,8 +227,8 @@ public:
      * \brief The saturation of the wetting (i.e., water) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params,
-                         const FluidState &fluidState)
+    static Evaluation Sw(const Params& /* params */,
+                         const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: Sw()");
     }
@@ -290,8 +290,8 @@ public:
      * \brief The relative permeability of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krg(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krg(const Params& /* params */,
+                          const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: krg()");
     }
@@ -300,8 +300,8 @@ public:
      * \brief The relative permeability of the wetting phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krw(const Params& /* params */,
+                          const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: krw()");
     }
@@ -310,8 +310,8 @@ public:
      * \brief The relative permeability of the non-wetting (i.e., oil) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krn(const Params& /* params */,
+                          const FluidState& /* fluidState */)
     {
         OPM_THROW(std::logic_error, "Not implemented: krn()");
     }

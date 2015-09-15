@@ -36,10 +36,10 @@
 
 typedef double Scalar;
 
-Scalar testFn1(Scalar x, Scalar y)
+Scalar testFn1(Scalar x, Scalar /* y */)
 { return x; }
 
-Scalar testFn2(Scalar x, Scalar y)
+Scalar testFn2(Scalar /* x */, Scalar y)
 { return y; }
 
 Scalar testFn3(Scalar x, Scalar y)

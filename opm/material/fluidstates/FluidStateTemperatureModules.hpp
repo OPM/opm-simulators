@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(int /* phaseIdx */) const
     { return temperature_; }
 
     /*!
@@ -168,7 +168,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(int /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Temperature is not provided by this fluid state"); }
 
     /*!
@@ -176,7 +176,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

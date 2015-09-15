@@ -106,7 +106,7 @@ public:
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    const Scalar& pressure(int phaseIdx) const
+    const Scalar& pressure(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Pressure is not provided by this fluid state"); }
 
 
@@ -115,7 +115,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

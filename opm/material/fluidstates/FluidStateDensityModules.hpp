@@ -123,19 +123,19 @@ public:
     /*!
      * \brief The density of a fluid phase [kg/m^3]
      */
-    const Scalar& density(int phaseIdx) const
+    const Scalar& density(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Density is not provided by this fluid state"); }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
-    Scalar molarDensity(int phaseIdx) const
+    Scalar molarDensity(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Molar density is not provided by this fluid state"); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
-    Scalar molarVolume(int phaseIdx) const
+    Scalar molarVolume(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Molar volume is not provided by this fluid state"); }
 
     /*!
@@ -143,7 +143,7 @@ public:
      *        state.
      */
     template <class FluidState>
-    void assign(const FluidState& fs)
+    void assign(const FluidState& /* fs */)
     { }
 
     /*!

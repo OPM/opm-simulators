@@ -52,7 +52,7 @@ class EclEpsGridProperties
 
 public:
 #if HAVE_OPM_PARSER
-    void initFromDeck(Opm::DeckConstPtr deck,
+    void initFromDeck(Opm::DeckConstPtr /* deck */,
                       Opm::EclipseStateConstPtr eclState,
                       bool useImbibition)
     {
@@ -63,19 +63,19 @@ public:
         else
             satnum = &eclState->getIntGridProperty("SATNUM")->getData();
 
-        retrieveGridPropertyData_(&swl, deck, eclState, kwPrefix+"SWL");
-        retrieveGridPropertyData_(&sgl, deck, eclState, kwPrefix+"SGL");
-        retrieveGridPropertyData_(&swcr, deck, eclState, kwPrefix+"SWCR");
-        retrieveGridPropertyData_(&sgcr, deck, eclState, kwPrefix+"SGCR");
-        retrieveGridPropertyData_(&sowcr, deck, eclState, kwPrefix+"SOWCR");
-        retrieveGridPropertyData_(&sogcr, deck, eclState, kwPrefix+"SOGCR");
-        retrieveGridPropertyData_(&swu, deck, eclState, kwPrefix+"SWU");
-        retrieveGridPropertyData_(&sgu, deck, eclState, kwPrefix+"SGU");
-        retrieveGridPropertyData_(&pcw, deck, eclState, kwPrefix+"PCW");
-        retrieveGridPropertyData_(&pcg, deck, eclState, kwPrefix+"PCG");
-        retrieveGridPropertyData_(&krw, deck, eclState, kwPrefix+"KRW");
-        retrieveGridPropertyData_(&kro, deck, eclState, kwPrefix+"KRO");
-        retrieveGridPropertyData_(&krg, deck, eclState, kwPrefix+"KRG");
+        retrieveGridPropertyData_(&swl, eclState, kwPrefix+"SWL");
+        retrieveGridPropertyData_(&sgl, eclState, kwPrefix+"SGL");
+        retrieveGridPropertyData_(&swcr, eclState, kwPrefix+"SWCR");
+        retrieveGridPropertyData_(&sgcr, eclState, kwPrefix+"SGCR");
+        retrieveGridPropertyData_(&sowcr, eclState, kwPrefix+"SOWCR");
+        retrieveGridPropertyData_(&sogcr, eclState, kwPrefix+"SOGCR");
+        retrieveGridPropertyData_(&swu, eclState, kwPrefix+"SWU");
+        retrieveGridPropertyData_(&sgu, eclState, kwPrefix+"SGU");
+        retrieveGridPropertyData_(&pcw, eclState, kwPrefix+"PCW");
+        retrieveGridPropertyData_(&pcg, eclState, kwPrefix+"PCG");
+        retrieveGridPropertyData_(&krw, eclState, kwPrefix+"KRW");
+        retrieveGridPropertyData_(&kro, eclState, kwPrefix+"KRO");
+        retrieveGridPropertyData_(&krg, eclState, kwPrefix+"KRG");
     }
 #endif
 
@@ -100,7 +100,6 @@ private:
     // this method makes sure that a grid property is not created if it is not explicitly
     // mentioned in the deck. (saves memory.)
     void retrieveGridPropertyData_(const DoubleData **data,
-                                   Opm::DeckConstPtr deck,
                                    Opm::EclipseStateConstPtr eclState,
                                    const std::string& properyName)
     {
@@ -454,7 +453,7 @@ private:
         Sowu = sof3Table.getSoColumn().back();
 
         // critical oil saturation of oil-water system
-        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
             if (sof3Table.getKrowColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
@@ -463,7 +462,7 @@ private:
         }
 
         // critical oil saturation of gas-oil system
-        for (int rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
             if (sof3Table.getKrogColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Sogcr = sof3Table.getSoColumn()[rowIdx - 1];
