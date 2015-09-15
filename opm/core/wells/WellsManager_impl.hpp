@@ -107,6 +107,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         const int* cart_dims,
                                         FC begin_face_centroids,
                                         int dimensions,
+                                        std::vector<double>& dz,
                                         std::vector<std::string>& well_names,
                                         std::vector<WellData>& well_data,
                                         std::map<std::string, int>& well_names_to_index,
@@ -178,8 +179,13 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                     OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
                                 }
 
-                                const std::array<double, 3> cubical =
+                                std::array<double, 3> cubical =
                                     WellsManagerDetail::getCubeDim<3>(c2f, begin_face_centroids, cell);
+
+                                // overwrite dz values calculated in getCubeDim.
+                                if (dz.size() > 0) {
+                                    cubical[2] = dz[cell];
+                                }
 
                                 const double* cell_perm = &permeability[dimensions*dimensions*cell];
                                 pd.well_index =
@@ -369,10 +375,20 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
     NTGArray    ntg(ntg_glob, global_cell);
 
+    EclipseGridConstPtr eclGrid = eclipseState->getEclipseGrid();
+
+    // use cell thickness (dz) from eclGrid
+    // dz overwrites values calculated by WellDetails::getCubeDim
+    std::vector<double> dz(number_of_cells);
+    for (int cell = 0; cell < number_of_cells; ++cell) {
+        dz[cell] = eclGrid->getCellThicknes(global_cell[cell]);
+    }
+
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
                          cart_dims,
                          begin_face_centroids,
                          dimensions,
+                         dz,
                          well_names, well_data, well_names_to_index,
                          pu, cartesian_to_compressed, permeability, ntg,
                          wells_on_proc);

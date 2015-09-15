@@ -164,6 +164,7 @@ namespace Opm
                                    const int* cart_dims,
                                    FC begin_face_centroids, 
                                    int dimensions,
+                                   std::vector<double>& dz,
                                    std::vector<std::string>& well_names,
                                    std::vector<WellData>& well_data,
                                    std::map<std::string, int> & well_names_to_index,
