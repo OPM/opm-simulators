@@ -215,10 +215,10 @@ namespace Opm
                      const int desiredReportStep);
 
     protected:
+        const bool output_;
         std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;
 
         // Parameters for output.
-        const bool output_;
         const std::string outputDir_;
         const int output_interval_;
 
@@ -243,8 +243,8 @@ namespace Opm
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
                          const Opm::PhaseUsage &phaseUsage )
-      : parallelOutput_( new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases ) ),
-        output_( param.getDefault("output", true) ),
+      : output_( param.getDefault("output", true) ),
+        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
