@@ -106,18 +106,6 @@ public:
 
     {
         drainageParams_ = *value;
-
-#if 0
-        if (twoPhaseSystem == EclGasOilSystem) {
-            Sncrd_ = info.Sgcr;
-            Snmaxd_ = 1 - info.Sogcr;
-        }
-        else {
-            assert(twoPhaseSystem == EclOilWaterSystem);
-            Sncrd_ = info.Sowcr;
-            Snmaxd_ = 1 - info.Swcr;
-        }
-#endif
     }
 
     /*!
@@ -247,26 +235,6 @@ public:
      */
     Scalar deltaSwImbKrn() const
     { return deltaSwImbKrn_; }
-
-#if 0
-    /*!
-     * \brief Sets the "trapped" non-wetting phase saturation.
-     *
-     * This quantity is used for capillary pressure hysteresis. How it should be
-     * calculated depends on the hysteresis model.
-     */
-    void setSncrt(Scalar value)
-    { Sncrt_ = value; }
-
-    /*!
-     * \brief Returns the "trapped" non-wetting phase saturation.
-     *
-     * This quantity is used for capillary pressure hysteresis. How it should be
-     * calculated depends on the hysteresis model.
-     */
-    Scalar Sncrt() const
-    { return Sncrt_; }
-#endif
 
     /*!
      * \brief Notify the hysteresis law that a given wetting-phase saturation has been seen
