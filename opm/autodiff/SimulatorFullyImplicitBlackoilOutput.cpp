@@ -84,16 +84,33 @@ namespace Opm
 
 
     void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::BlackoilState& state,
+                           const Opm::SimulatorState& state,
                            const int step,
                            const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        dm["surfvolume"] = &state.surfacevol();
-        dm["rs"] = &state.gasoilratio();
-        dm["rv"] = &state.rv();
+        for( unsigned int i=0; i<state.cellDataNames().size(); ++ i )
+        {
+            const std::string& name = state.cellDataNames()[ i ];
+            std::string key;
+            if( name == "SURFACEVOL" ) {
+                key = "surfvolume";
+            }
+            else if( name == "RV" ) {
+                key = "rv";
+            }
+            else if( name == "GASOILRATIO" ) {
+                key = "rs";
+            }
+            else { // otherwise skip entry
+                continue;
+            }
+            // set data to datmap
+            dm[ key ] = &state.cellData()[ i ];
+        }
+
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
                                   AutoDiffGrid::numFaces(grid),
