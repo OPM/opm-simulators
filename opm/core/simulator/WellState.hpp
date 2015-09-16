@@ -22,9 +22,10 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <vector>
 #include <array>
 #include <map>
+#include <string>
+#include <vector>
 #include <cassert>
 #include <cstddef>
 
@@ -34,11 +35,10 @@ namespace Opm
     /// The state of a set of wells.
     class WellState
     {
-    protected:
+    public:
         typedef std::array< int, 3 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
 
-    public:
         /// Allocate and initialize if wells is non-null.
         /// Also tries to give useful initial values to the bhp() and
         /// wellRates() fields, depending on controls.  The
