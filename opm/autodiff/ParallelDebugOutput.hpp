@@ -251,8 +251,8 @@ namespace Opm
 
                 unsigned int count = 0;
                 auto gridView = globalGrid.leafGridView();
-                for( auto it = gridView.template begin< 0 >(),
-                     end = gridView.template end< 0 >(); it != end; ++it, ++count )
+                for( auto it = gridView.begin< 0 >(),
+                     end = gridView.end< 0 >(); it != end; ++it, ++count )
                 {
                 }
                 assert( count == globalIndex_.size() );
@@ -275,8 +275,8 @@ namespace Opm
 
             unsigned int index = 0;
             auto localView = otherGrid.leafGridView();
-            for( auto it = localView.template begin< 0 >(),
-                 end = localView.template end< 0 >(); it != end; ++it, ++index )
+            for( auto it = localView.begin< 0 >(),
+                 end = localView.end< 0 >(); it != end; ++it, ++index )
             {
                 const auto element = *it ;
                 // only store interior element for collection
