@@ -55,7 +55,7 @@ namespace Opm
 
 
     void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::BlackoilState& state,
+                           const Opm::SimulatorState& state,
                            const int step,
                            const std::string& output_dir);
 
@@ -71,16 +71,32 @@ namespace Opm
 
     template<class Grid>
     void outputStateMatlab(const Grid& grid,
-                           const Opm::BlackoilState& state,
+                           const Opm::SimulatorState& state,
                            const int step,
                            const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        dm["surfvolume"] = &state.surfacevol();
-        dm["rs"] = &state.gasoilratio();
-        dm["rv"] = &state.rv();
+        for( unsigned int i=0; i<state.cellDataNames().size(); ++ i )
+        {
+            const std::string& name = state.cellDataNames()[ i ];
+            std::string key;
+            if( name == "SURFACEVOL" ) {
+                key = "surfvolume";
+            }
+            else if( name == "RV" ) {
+                key = "rv";
+            }
+            else if( name == "GASOILRATIO" ) {
+                key = "rs";
+            }
+            else { // otherwise skip entry
+                continue;
+            }
+            // set data to datmap
+            dm[ key ] = &state.cellData()[ i ];
+        }
 
         std::vector<double> cell_velocity;
         Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
@@ -167,14 +183,7 @@ namespace Opm
                            const WellState& wellState,
                            bool /*substep*/ = false)
         {
-            const BlackoilState* state =
-                dynamic_cast< const BlackoilState* > (&reservoirState);
-            if( state ) {
-                outputStateMatlab(grid_, *state, timer.currentStepNum(), outputDir_);
-            }
-            else {
-                OPM_THROW(std::logic_error,"BlackoilMatlabWriter only works for BlackoilState");
-            }
+            outputStateMatlab(grid_, reservoirState, timer.currentStepNum(), outputDir_);
             outputWellStateMatlab(wellState, timer.currentStepNum(), outputDir_);
         }
     protected:
