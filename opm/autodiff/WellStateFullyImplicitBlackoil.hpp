@@ -43,12 +43,14 @@ namespace Opm
     {
         typedef WellState  BaseType;
     public:
-        typedef std::array< int, 3 >  mapentry_t;
-        typedef std::map< std::string, mapentry_t > WellMapType;
+        typedef BaseType :: WellMapType WellMapType;
 
         using BaseType :: wellRates;
         using BaseType :: bhp;
         using BaseType :: perfPress;
+        using BaseType :: wellMap;
+        using BaseType :: numWells;
+        using BaseType :: numPhases;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -57,7 +59,7 @@ namespace Opm
         void init(const Wells* wells, const State& state, const PrevState& prevState)
         {
             // clear old name mapping
-            wellMap_.clear();
+            wellMap().clear();
 
             if (wells == 0) {
                 return;
@@ -79,18 +81,12 @@ namespace Opm
             for (int w = 0; w < nw; ++w) {
                 assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                 const WellControls* ctrl = wells->ctrls[w];
-                std::string name( wells->name[ w ] );
-                assert( name.size() > 0 );
-                mapentry_t& wellMapEntry = wellMap_[name];
-                wellMapEntry[ 0 ] = w;
-                wellMapEntry[ 1 ] = wells->well_connpos[w];
-                // also store the number of perforations in this well
-                const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
-                wellMapEntry[ 2 ] = num_perf_this_well;
 
                 if (well_controls_well_is_stopped(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
+                    // also store the number of perforations in this well
+                    const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
                     // Open well: Initialize perfphaserates_ to well
                     // rates divided by the number of perforations.
                     for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
@@ -184,21 +180,6 @@ namespace Opm
         /// One current control per well.
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
-
-        /// The number of wells present.
-        int numWells() const
-        {
-            return bhp().size();
-        }
-
-        /// The number of phases present.
-        int numPhases() const
-        {
-            return wellRates().size() / numWells();
-        }
-
-        const WellMapType& wellMap() const { return wellMap_; }
-        WellMapType& wellMap() { return wellMap_; }
 
     private:
         std::vector<double> perfphaserates_;
