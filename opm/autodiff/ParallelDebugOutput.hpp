@@ -131,7 +131,9 @@ namespace Opm
             IndexMapType& localIndexMap_;
             IndexMapStorageType& indexMaps_;
             std::map< const int, const int > globalPosition_;
+#ifndef NDEBUG
             std::set< int > checkPosition_;
+#endif
 
         public:
             DistributeIndexMapping( const std::vector<int>& globalIndex,
@@ -171,7 +173,9 @@ namespace Opm
             void pack( const int link, MessageBufferType& buffer )
             {
                 // we should only get one link
-                assert( link == 0 );
+                if( link != 0 ) {
+                    OPM_THROW(std::logic_error,"link in method pack is not 0 as execpted");
+                }
 
                 // pack all interior global cell id's
                 const int size = localIndexMap_.size();
@@ -343,7 +347,9 @@ namespace Opm
             void pack( const int link, MessageBufferType& buffer )
             {
                 // we should only get one link
-                assert( link == 0 );
+                if( link != 0 ) {
+                    OPM_THROW(std::logic_error,"link in method pack is not 0 as execpted");
+                }
 
                 // write all cell data registered in local state
                 const size_t numCells = localState_.numCells();
@@ -500,7 +506,6 @@ namespace Opm
                     // mapping there.
                 }
             }
-
         };
 
         // gather solution to rank 0 for EclipseWriter
