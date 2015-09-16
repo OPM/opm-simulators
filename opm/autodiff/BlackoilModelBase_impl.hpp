@@ -1481,7 +1481,9 @@ namespace detail {
         } while (it < 15);
 
         if (converged) {
-            std::cout << "well converged iter: " << it << std::endl;
+            if ( terminal_output_ ) {
+                std::cout << "well converged iter: " << it << std::endl;
+            }
             const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,

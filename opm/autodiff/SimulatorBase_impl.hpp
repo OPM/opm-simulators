@@ -92,7 +92,7 @@ namespace Opm
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, solver_.parallelInformation() ) );
+            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, solver_.parallelInformation(), terminal_output_ ) );
         }
 
         // init output writer
