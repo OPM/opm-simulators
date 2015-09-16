@@ -58,19 +58,16 @@ namespace Opm
         template <class State, class PrevState>
         void init(const Wells* wells, const State& state, const PrevState& prevState)
         {
-            // clear old name mapping
-            wellMap().clear();
+            // call init on base class
+            BaseType :: init(wells, state);
 
+            // if there are no well, do nothing in init
             if (wells == 0) {
                 return;
             }
 
             const int nw = wells->number_of_wells;
             if( nw == 0 ) return ;
-
-            // We use the WellState::init() function to do bhp and well rates init.
-            // The alternative would be to copy that function wholesale.
-            BaseType :: init(wells, state);
 
             // Initialize perfphaserates_, which must be done here.
             const int np = wells->number_of_phases;
@@ -85,7 +82,6 @@ namespace Opm
                 if (well_controls_well_is_stopped(ctrl)) {
                     // Shut well: perfphaserates_ are all zero.
                 } else {
-                    // also store the number of perforations in this well
                     const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
                     // Open well: Initialize perfphaserates_ to well
                     // rates divided by the number of perforations.
