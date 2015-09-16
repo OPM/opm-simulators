@@ -26,6 +26,8 @@ endif()
 if (opm-common_FOUND)
    include(OpmInit)
 else()
+   unset(opm-common_FOUND)
+
    if (NOT OPM_COMMON_ROOT AND SIBLING_SEARCH)
       set(OPM_COMMON_ROOT ${PROJECT_SOURCE_DIR}/../opm-common)
    endif()
