@@ -247,7 +247,6 @@ try
     }
 
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
     std::vector<int> compressedToCartesianIdx;
     Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
@@ -353,16 +352,13 @@ try
     // and initilialize new properties and states for it.
     if( mpi_size > 1 )
     {
-        if( param.getDefault("output_matlab", false) || param.getDefault("output_ecl", true) )
-        {
-        	std::cerr << "We only support vtk output during parallel runs. \n"
-                      << "Please use \"output_matlab=false output_ecl=false\" to deactivate the \n"
-                      << "other outputs!" << std::endl;
-        	return EXIT_FAILURE;
-        }
-
         Opm::distributeGridAndData( grid, eclipseState, state, new_props, geoprops, parallel_information, use_local_perm );
     }
+
+    // create output writer after grid is distributed, otherwise the parallel output
+    // won't work correctly since we need to create a mapping from the distributed to
+    // the global view
+    Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu );
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
