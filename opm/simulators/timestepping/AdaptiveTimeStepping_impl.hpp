@@ -35,7 +35,8 @@ namespace Opm {
     //---------------------
 
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
-                                            const boost::any& parallel_information )
+                                                const boost::any& parallel_information,
+                                                const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.33) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(2) ) )
@@ -44,7 +45,7 @@ namespace Opm {
         , max_time_step_( unit::convert::from(param.getDefault("timestep.max_timestep_in_days", 365.0 ), unit::day) )
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) )
-        , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) )
+        , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
         , suggested_next_timestep_( -1.0 )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
     {

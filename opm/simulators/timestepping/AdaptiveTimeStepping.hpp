@@ -43,7 +43,8 @@ namespace Opm {
         //! \param pinfo The information about the data distribution
         //!              and communication for a parallel run.
         AdaptiveTimeStepping( const parameter::ParameterGroup& param,
-                              const boost::any& pinfo=boost::any() );
+                              const boost::any& pinfo=boost::any(),
+                              const bool terminal_output = true );
 
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
