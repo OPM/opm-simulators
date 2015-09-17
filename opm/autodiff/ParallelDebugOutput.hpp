@@ -63,8 +63,8 @@ namespace Opm
 
     public:
         ParallelDebugOutput ( const GridImpl& grid,
-                         Opm::EclipseStateConstPtr eclipseState,
-                         const int )
+                              Opm::EclipseStateConstPtr /* eclipseState */,
+                              const int )
             : grid_( grid ) {}
 
         // gather solution to rank 0 for EclipseWriter
