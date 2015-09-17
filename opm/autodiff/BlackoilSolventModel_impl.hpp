@@ -366,7 +366,7 @@ namespace Opm {
                                  ? state.saturation[ pu.phase_pos[ Gas ] ]
                                  : zero);
 
-                Selector<double> zero_selector(ss.value(), Selector<double>::Zero);
+                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
                 ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
                 V ones = V::Constant(nc, 1.0);
 
@@ -483,10 +483,27 @@ namespace Opm {
             // Gas and solvent is combinded and solved together
             // The input in the well equation is then the
             // total gas phase = hydro carbon gas + solvent gas
-            // This may need to be reconsidered later, as the model
-            // is tested.
+
+            // The total mobility is the sum of the solvent and gas mobiliy
             mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
-            b_perfcells[gas_pos] += subset(rq_[solvent_pos_].b, well_cells);
+
+            // A weighted sum of the b-factors of gas and solvent are used.
+            const int nperf = wells().well_connpos[wells().number_of_wells];
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            const ADB zero = ADB::constant(V::Zero(nc));
+            const ADB& ss = state.solvent_saturation;
+            const ADB& sg = (active_[ Gas ]
+                             ? state.saturation[ pu.phase_pos[ Gas ] ]
+                             : zero);
+
+            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
+            V ones = V::Constant(nperf,1.0);
+            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
+            b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
