@@ -707,7 +707,7 @@ private:
     }
 
     void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
-                                               Scalar Swco,
+                                               Scalar /* Swco */,
                                                const Opm::Sof3Table& sof3Table,
                                                const Opm::SgfnTable& sgfnTable)
     {
