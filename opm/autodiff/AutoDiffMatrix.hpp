@@ -38,11 +38,12 @@ namespace Opm
     class AutoDiffMatrix
     {
     public:
-        typedef std::vector<double> Diag;
-        typedef Eigen::SparseMatrix<double> Sparse;
+        typedef std::vector<double> DiagRep;
+        typedef Eigen::SparseMatrix<double> SparseRep;
+
 
         AutoDiffMatrix()
-            : type_(Z),
+            : type_(Zero),
               rows_(0),
               cols_(0),
               diag_(),
@@ -53,7 +54,7 @@ namespace Opm
 
 
         AutoDiffMatrix(const int num_rows, const int num_cols)
-            : type_(Z),
+            : type_(Zero),
               rows_(num_rows),
               cols_(num_cols),
               diag_(),
@@ -67,7 +68,7 @@ namespace Opm
 
 
         AutoDiffMatrix(const CreationType t, const int num_rows)
-            : type_(t == ZeroMatrix ? Z : I),
+            : type_(t == ZeroMatrix ? Zero : Identity),
               rows_(num_rows),
               cols_(num_rows),
               diag_(),
@@ -78,7 +79,7 @@ namespace Opm
 
 
         explicit AutoDiffMatrix(const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& d)
-            : type_(D),
+            : type_(Diagonal),
               rows_(d.rows()),
               cols_(d.cols()),
               diag_(d.diagonal().array().data(), d.diagonal().array().data() + d.rows()),
@@ -90,7 +91,7 @@ namespace Opm
 
 
         explicit AutoDiffMatrix(const Eigen::SparseMatrix<double>& s)
-            : type_(S),
+            : type_(Sparse),
               rows_(s.rows()),
               cols_(s.cols()),
               diag_(),
@@ -106,7 +107,7 @@ namespace Opm
 
 
         AutoDiffMatrix(AutoDiffMatrix&& other)
-            : type_(Z),
+            : type_(Zero),
               rows_(0),
               cols_(0),
               diag_(),
@@ -141,43 +142,43 @@ namespace Opm
             assert(rows_ == rhs.rows_);
             assert(cols_ == rhs.cols_);
             switch (type_) {
-            case Z:
+            case Zero:
                 return rhs;
-            case I:
+            case Identity:
                 switch (rhs.type_) {
-                case Z:
+                case Zero:
                     return *this;
-                case I:
+                case Identity:
                     return addII(*this, rhs);
-                case D:
+                case Diagonal:
                     return addDI(rhs, *this);
-                case S:
+                case Sparse:
                     return addSI(rhs, *this);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
-            case D:
+            case Diagonal:
                 switch (rhs.type_) {
-                case Z:
+                case Zero:
                     return *this;
-                case I:
+                case Identity:
                     return addDI(*this, rhs);
-                case D:
+                case Diagonal:
                     return addDD(*this, rhs);
-                case S:
+                case Sparse:
                     return addSD(rhs, *this);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
-            case S:
+            case Sparse:
                 switch (rhs.type_) {
-                case Z:
+                case Zero:
                     return *this;
-                case I:
+                case Identity:
                     return addSI(*this, rhs);
-                case D:
+                case Diagonal:
                     return addSD(*this, rhs);
-                case S:
+                case Sparse:
                     return addSS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
@@ -191,32 +192,32 @@ namespace Opm
         {
             assert(cols_ == rhs.rows_);
             switch (type_) {
-            case Z:
+            case Zero:
                 return AutoDiffMatrix(rows_, rhs.cols_);
-            case I:
+            case Identity:
                 return rhs;
-            case D:
+            case Diagonal:
                 switch (rhs.type_) {
-                case Z:
+                case Zero:
                     return AutoDiffMatrix(rows_, rhs.cols_);
-                case I:
+                case Identity:
                     return *this;
-                case D:
+                case Diagonal:
                     return mulDD(*this, rhs);
-                case S:
+                case Sparse:
                     return mulDS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
                 }
-            case S:
+            case Sparse:
                 switch (rhs.type_) {
-                case Z:
+                case Zero:
                     return AutoDiffMatrix(rows_, rhs.cols_);
-                case I:
+                case Identity:
                     return *this;
-                case D:
+                case Diagonal:
                     return mulSD(*this, rhs);
-                case S:
+                case Sparse:
                     return mulSS(*this, rhs);
                 default:
                     OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << rhs.type_);
@@ -257,16 +258,16 @@ namespace Opm
         AutoDiffMatrix operator*(const double rhs) const
         {
             switch (type_) {
-            case Z:
+            case Zero:
                 return *this;
-            case I:
+            case Identity:
                 {
                     AutoDiffMatrix retval(*this);
-                    retval.type_ = D;
+                    retval.type_ = Diagonal;
                     retval.diag_.assign(rows_, rhs);
                     return retval;
                 }
-            case D:
+            case Diagonal:
                 {
                     AutoDiffMatrix retval(*this);
                     for (double& elem : retval.diag_) {
@@ -274,7 +275,7 @@ namespace Opm
                     }
                     return retval;
                 }
-            case S:
+            case Sparse:
                 {
                     AutoDiffMatrix retval(*this);
                     retval.sparse_ *= rhs;
@@ -293,16 +294,16 @@ namespace Opm
         AutoDiffMatrix operator/(const double rhs) const
         {
             switch (type_) {
-            case Z:
+            case Zero:
                 return *this;
-            case I:
+            case Identity:
                 {
                     AutoDiffMatrix retval(*this);
-                    retval.type_ = D;
+                    retval.type_ = Diagonal;
                     retval.diag_.assign(rows_, 1.0/rhs);
                     return retval;
                 }
-            case D:
+            case Diagonal:
                 {
                     AutoDiffMatrix retval(*this);
                     for (double& elem : retval.diag_) {
@@ -310,7 +311,7 @@ namespace Opm
                     }
                     return retval;
                 }
-            case S:
+            case Sparse:
                 {
                     AutoDiffMatrix retval(*this);
                     retval.sparse_ /= rhs;
@@ -330,16 +331,16 @@ namespace Opm
         {
             assert(cols_ == rhs.size());
             switch (type_) {
-            case Z:
+            case Zero:
                 return Eigen::VectorXd::Zero(rows_);
-            case I:
+            case Identity:
                 return rhs;
-            case D:
+            case Diagonal:
                 {
                     const Eigen::VectorXd d = Eigen::Map<const Eigen::VectorXd>(diag_.data(), rows_);
                     return d.cwiseProduct(rhs);
                 }
-            case S:
+            case Sparse:
                 return sparse_ * rhs;
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
@@ -353,10 +354,10 @@ namespace Opm
 
         static AutoDiffMatrix addII(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == I);
-            assert(rhs.type_ == I);
+            assert(lhs.type_ == Identity);
+            assert(rhs.type_ == Identity);
             AutoDiffMatrix retval;
-            retval.type_ = D;
+            retval.type_ = Diagonal;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
             retval.diag_.assign(lhs.rows_, 2.0);
@@ -366,8 +367,8 @@ namespace Opm
         static AutoDiffMatrix addDI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             static_cast<void>(rhs); // Silence release-mode warning.
-            assert(lhs.type_ == D);
-            assert(rhs.type_ == I);
+            assert(lhs.type_ == Diagonal);
+            assert(rhs.type_ == Identity);
             AutoDiffMatrix retval = lhs;
             for (int r = 0; r < lhs.rows_; ++r) {
                 retval.diag_[r] += 1.0;
@@ -377,8 +378,8 @@ namespace Opm
 
         static AutoDiffMatrix addDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == D);
-            assert(rhs.type_ == D);
+            assert(lhs.type_ == Diagonal);
+            assert(rhs.type_ == Diagonal);
             AutoDiffMatrix retval = lhs;
             for (int r = 0; r < lhs.rows_; ++r) {
                 retval.diag_[r] += rhs.diag_[r];
@@ -389,8 +390,8 @@ namespace Opm
         static AutoDiffMatrix addSI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             static_cast<void>(rhs); // Silence release-mode warning.
-            assert(lhs.type_ == S);
-            assert(rhs.type_ == I);
+            assert(lhs.type_ == Sparse);
+            assert(rhs.type_ == Identity);
             AutoDiffMatrix retval = lhs;
             retval.sparse_ += spdiag(Eigen::VectorXd::Ones(lhs.rows_));;
             return retval;
@@ -398,8 +399,8 @@ namespace Opm
 
         static AutoDiffMatrix addSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == S);
-            assert(rhs.type_ == D);
+            assert(lhs.type_ == Sparse);
+            assert(rhs.type_ == Diagonal);
             AutoDiffMatrix retval = lhs;
             retval.sparse_ += spdiag(rhs.diag_);
             return retval;
@@ -407,8 +408,8 @@ namespace Opm
 
         static AutoDiffMatrix addSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == S);
-            assert(rhs.type_ == S);
+            assert(lhs.type_ == Sparse);
+            assert(rhs.type_ == Sparse);
             AutoDiffMatrix retval = lhs;
             retval.sparse_ += rhs.sparse_;
             return retval;
@@ -420,8 +421,8 @@ namespace Opm
 
         static AutoDiffMatrix mulDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == D);
-            assert(rhs.type_ == D);
+            assert(lhs.type_ == Diagonal);
+            assert(rhs.type_ == Diagonal);
             AutoDiffMatrix retval = lhs;
             for (int r = 0; r < lhs.rows_; ++r) {
                 retval.diag_[r] *= rhs.diag_[r];
@@ -431,10 +432,10 @@ namespace Opm
 
         static AutoDiffMatrix mulDS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == D);
-            assert(rhs.type_ == S);
+            assert(lhs.type_ == Diagonal);
+            assert(rhs.type_ == Sparse);
             AutoDiffMatrix retval;
-            retval.type_ = S;
+            retval.type_ = Sparse;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
             fastDiagSparseProduct(lhs.diag_, rhs.sparse_, retval.sparse_);
@@ -443,10 +444,10 @@ namespace Opm
 
         static AutoDiffMatrix mulSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == S);
-            assert(rhs.type_ == D);
+            assert(lhs.type_ == Sparse);
+            assert(rhs.type_ == Diagonal);
             AutoDiffMatrix retval;
-            retval.type_ = S;
+            retval.type_ = Sparse;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
             fastSparseDiagProduct(lhs.sparse_, rhs.diag_, retval.sparse_);
@@ -455,10 +456,10 @@ namespace Opm
 
         static AutoDiffMatrix mulSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
-            assert(lhs.type_ == S);
-            assert(rhs.type_ == S);
+            assert(lhs.type_ == Sparse);
+            assert(rhs.type_ == Sparse);
             AutoDiffMatrix retval;
-            retval.type_ = S;
+            retval.type_ = Sparse;
             retval.rows_ = lhs.rows_;
             retval.cols_ = rhs.cols_;
             fastSparseProduct(lhs.sparse_, rhs.sparse_, retval.sparse_);
@@ -470,16 +471,16 @@ namespace Opm
         void toSparse(Eigen::SparseMatrix<Scalar, Options, Index>& s) const
         {
             switch (type_) {
-            case Z:
+            case Zero:
                 s = Eigen::SparseMatrix<Scalar, Options, Index>(rows_, cols_);
                 return;
-            case I:
+            case Identity:
                 s = spdiag(Eigen::VectorXd::Ones(rows_));
                 return;
-            case D:
+            case Diagonal:
                 s = spdiag(diag_);
                 return;
-            case S:
+            case Sparse:
                 s = sparse_;
                 return;
             }
@@ -499,13 +500,13 @@ namespace Opm
         int nonZeros() const
         {
             switch (type_) {
-            case Z:
+            case Zero:
                 return 0;
-            case I:
+            case Identity:
                 return rows_;
-            case D:
+            case Diagonal:
                 return rows_;
-            case S:
+            case Sparse:
                 return sparse_.nonZeros();
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
@@ -516,44 +517,51 @@ namespace Opm
         double coeff(const int row, const int col) const
         {
             switch (type_) {
-            case Z:
+            case Zero:
                 return 0.0;
-            case I:
+            case Identity:
                 return (row == col) ? 1.0 : 0.0;
-            case D:
+            case Diagonal:
                 return (row == col) ? diag_[row] : 0.0;
-            case S:
+            case Sparse:
                 return sparse_.coeff(row, col);
             default:
                 OPM_THROW(std::logic_error, "Invalid AutoDiffMatrix type encountered: " << type_);
             }
         }
 
-
-        const Sparse& getSparse() const {
-            if (type_ != S) {
-                OPM_THROW(std::logic_error, "Must not call getSparse() for non-sparse type.");
+        const SparseRep& getSparse() const {
+            if (type_ != Sparse) {
+                /**
+                 * If we are not a sparse matrix, our internal variable sparse_
+                 * is undefined, and hence changing it so that it happens to be
+                 * a sparse representation of our true data does not change our
+                 * true data, and hence justifies that we do not really violate
+                 * the const qualifier.
+                 */
+                SparseRep& mutable_sparse = const_cast<SparseRep&>(sparse_);
+                toSparse(mutable_sparse);
             }
             return sparse_;
         }
 
     private:
-        enum MatrixType { Z, I, D, S };
-        MatrixType type_;
+        enum AudoDiffMatrixType { Zero, Identity, Diagonal, Sparse };
+        AudoDiffMatrixType type_;
         int rows_;
         int cols_;
-        Diag diag_;
-        Sparse sparse_;
+        DiagRep diag_;
+        SparseRep sparse_;
 
         template <class V>
         static inline
-        Sparse
+        SparseRep
         spdiag(const V& d)
         {
             const int n = d.size();
-            Sparse mat(n, n);
+            SparseRep mat(n, n);
             mat.reserve(Eigen::ArrayXi::Ones(n, 1));
-            for (Sparse::Index i = 0; i < n; ++i) {
+            for (SparseRep::Index i = 0; i < n; ++i) {
                 if (d[i] != 0.0) {
                     mat.insert(i, i) = d[i];
                 }
