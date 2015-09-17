@@ -374,16 +374,23 @@ namespace Opm {
                 const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);               
 
                 rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
-                rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
 
                 const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
                 const ADB rhoavg_solvent = ops_.caver * rho_solvent;
                 rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
 
-                UpwindSelector<double> upwind(grid_, ops_, rq_[solvent_pos_].dh.value());
+                UpwindSelector<double> upwind_solvent(grid_, ops_, rq_[solvent_pos_].dh.value());
                 // Compute solvent flux.
-                rq_[solvent_pos_].mflux = upwind.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
+                rq_[solvent_pos_].mflux = upwind_solvent.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
 
+                // Update gas mobility and flux
+                rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
+
+                const ADB& b   = rq_[ actph ].b;
+                const ADB& mob = rq_[ actph ].mob;
+                const ADB& dh  = rq_[ actph ].dh;
+                UpwindSelector<double> upwind_gas(grid_, ops_, dh.value());
+                rq_[ actph ].mflux = upwind_gas.select(b * mob) * (transi * dh);
             }
         }
 
