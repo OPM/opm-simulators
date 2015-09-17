@@ -87,8 +87,6 @@ public:
             Opm::UgGridHelpers::numCells(grid),
             Opm::UgGridHelpers::globalCell(grid),
             Opm::UgGridHelpers::cartDims(grid),
-            Opm::UgGridHelpers::beginCellCentroids(grid),
-            Opm::UgGridHelpers::dimensions(grid),
             tmpParam);
 
         // initialize the boiler plate of opm-core the state structure.
