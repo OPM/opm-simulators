@@ -2743,7 +2743,7 @@ namespace detail {
         //Target vars
         ADB::V bhp_targets  = ADB::V::Zero(nw);
         ADB::V rate_targets = ADB::V::Zero(nw);
-        ADB::M rate_distr(nw, np*nw);
+        Eigen::SparseMatrix<double>  rate_distr(nw, np*nw);
 
         //Selection variables
         std::vector<int> bhp_elems;
