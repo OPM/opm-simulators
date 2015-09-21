@@ -88,7 +88,16 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
     const std::vector<double> rsmax_perf = { 50, 50, 50, 50, 50, 50, 50, 50, 50, 50 };
     const std::vector<double> rvmax_perf = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01 };
     const std::vector<double> z_perf = { 10, 30, 50, 70, 90, 10, 30, 50, 70, 90 };
-    const std::vector<double> surf_dens = { 1000.0, 800.0, 10.0 };
+    const std::vector<double> surf_dens = { 1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0,
+                                          1000.0, 800.0, 10.0};
     const double gravity = Opm::unit::gravity;
 
     std::vector<double> cd =
