@@ -20,7 +20,6 @@
 */
 
 #include <algorithm>
-#include <opm/autodiff/WellMultiSegment.hpp>
 
 namespace Opm
 {
@@ -137,24 +136,6 @@ namespace Opm
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             well_state.init(wells, state, prev_well_state);
-
-            const std::vector<WellConstPtr>& wells_ecl = eclipse_state_->getSchedule()->getWells(timer.currentStepNum());
-
-            std::vector<WellMutliSegmentPtr> wells_multisegment(wells_ecl.size());
-
-            // wells_multisegment.resize(wells_ecl.size());
-
-            for (size_t i = 0; i < wells_multisegment.size(); ++i) {
-                wells_multisegment[i].reset(new WellMultiSegment(wells_ecl[i], timer.currentStepNum(), wells));
-            }
-
-            // for DEBUGGING OUTPUT
-            std::cout << " the number of the wells from EclipseState " << wells_ecl.size() << std::endl;
-            for (size_t i = 0; i < wells_ecl.size(); ++i) {
-                std::cout << " well name " << wells_ecl[i]->name() << std::endl;
-                std::cout << " segment wells " << wells_ecl[i]->isMultiSegment() << std::endl;
-            }
-            std::cin.ignore();
 
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);

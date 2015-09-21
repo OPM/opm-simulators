@@ -23,10 +23,10 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <vector>
 #include <cassert>
 #include <string>
@@ -42,7 +42,7 @@ namespace Opm
     /// since we are avoiding to use the old wells structure
     /// it makes it might be a good idea not to relate this State to the WellState
     class WellStateMultiSegment
-         : public WellState
+         : public WellStateFullyImplicitBlackoil
     {
     public:
 
