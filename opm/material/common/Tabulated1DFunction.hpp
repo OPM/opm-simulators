@@ -27,6 +27,7 @@
 
 #include <opm/material/common/ErrorMacros.hpp>
 #include <opm/material/common/Exceptions.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -368,7 +369,7 @@ public:
      * In the corner case that the function is constant within the given
      * interval, this method returns 3.
      */
-    int monotonic(Scalar x0, Scalar x1, bool extrapolate=false) const
+    int monotonic(Scalar x0, Scalar x1, bool extrapolate OPM_UNUSED = false) const
     {
         assert(x0 != x1);
 
@@ -380,7 +381,6 @@ public:
 
         int r = 3;
         if (x0 < xMin()) {
-            static_cast<void>(extrapolate);
             assert(extrapolate);
 
             x0 = xMin();

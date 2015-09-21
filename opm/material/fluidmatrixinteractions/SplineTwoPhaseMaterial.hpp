@@ -150,7 +150,6 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
         static const Evaluation nil(0.0);
 
         // this assumes that the capillary pressure is monotonically decreasing
@@ -205,8 +204,6 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (Sw <= params.krnSpline().xMin())
             return Evaluation(params.krwSpline().yFirst());
         if (Sw >= params.krnSpline().xMax())
@@ -218,7 +215,6 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
         static const Evaluation nil(0.0);
 
         if (krw <= params.krwSpline().yFirst())
@@ -247,8 +243,6 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (Sw <= params.krnSpline().xMin())
             return Evaluation(params.krnSpline().yFirst());
         if (Sw >= params.krnSpline().xMax())
@@ -260,7 +254,6 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
         static const Evaluation nil(0.0);
 
         if (krn >= params.krnSpline().yFirst())

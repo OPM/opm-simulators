@@ -106,11 +106,8 @@ public:
      *           ought to be calculated
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(values);
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The capillaryPressures(fs) method is not yet implemented");
     }
@@ -126,11 +123,8 @@ public:
      *           ought to be calculated
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(values);
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The pcnw(fs) method is not yet implemented");
     }
@@ -147,10 +141,8 @@ public:
      *         Genuchten, linear...)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The pcnw(fs) method is not yet implemented");
     }
@@ -175,11 +167,8 @@ public:
      * \brief The saturation-capillary pressure curves.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    static void saturations(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(values);
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The saturations(fs) method is not yet implemented");
     }
@@ -189,19 +178,15 @@ public:
      *        the rest of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params, const FluidState &fs)
+    static Evaluation Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The Sw(fs) method is not yet implemented");
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pc*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(pc);
         OPM_THROW(NotAvailable,
                   "The twoPhaseSatSw(pc) method is not yet implemented");
     }
@@ -211,19 +196,15 @@ public:
      *        the rest of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fs)
+    static Evaluation Sn(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The Sn(pc) method is not yet implemented");
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pc*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(pc);
         OPM_THROW(NotAvailable,
                   "The twoPhaseSatSn(pc) method is not yet implemented");
     }
@@ -238,10 +219,8 @@ public:
      *
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fs)
+    static Evaluation krw(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The krw(fs) method is not yet implemented");
     }
@@ -266,10 +245,8 @@ public:
      * \brief The relative permeability of the non-wetting phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fs)
+    static Evaluation krn(const Params& /*params*/, const FluidState& /*fluidState*/)
     {
-        static_cast<void>(params);
-        static_cast<void>(fs);
         OPM_THROW(NotAvailable,
                   "The krn(fs) method is not yet implemented");
     }

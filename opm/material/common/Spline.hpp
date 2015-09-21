@@ -28,6 +28,7 @@
 #include <opm/material/common/TridiagonalMatrix.hpp>
 #include <opm/material/common/PolynomialUtils.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <ostream>
 #include <vector>
@@ -988,7 +989,7 @@ public:
      * In the corner case that the spline is constant within the given
      * interval, this method returns 3.
      */
-    int monotonic(Scalar x0, Scalar x1, bool extrapolate=false) const
+    int monotonic(Scalar x0, Scalar x1, OPM_UNUSED bool extrapolate = false) const
     {
         assert(x0 != x1);
 
@@ -1000,7 +1001,6 @@ public:
 
         int r = 3;
         if (x0 < xMin()) {
-            static_cast<void>(extrapolate);
             assert(extrapolate);
             Scalar m = evalDerivative_(xMin(), /*segmentIdx=*/0);
             if (std::abs(m) < 1e-20)
