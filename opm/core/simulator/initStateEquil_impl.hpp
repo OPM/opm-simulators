@@ -337,7 +337,7 @@ namespace Opm
                   const Region&               reg   ,
                   const std::array<double,2>& span  ,
                   const double                grav  ,
-                  const double                po_woc,
+                  double&                     po_woc,
                   const CellRange&            cells ,
                   std::vector<double>&        press )
             {
@@ -350,8 +350,15 @@ namespace Opm
                 const double T = 273.15 + 20; // standard temperature for now
                 ODE drho(T, reg.densityCalculator(), pu.num_phases, wix, grav);
 
-                const double z0 = reg.zwoc();
-                const double p0 = po_woc - reg.pcow_woc(); // Pcow = Po - Pw
+                double z0;
+                double p0;
+                if (reg.datum() > reg.zwoc()) {//Datum in water zone
+                    z0 = reg.datum();
+                    p0 = reg.pressure();
+                } else {
+                    z0 = reg.zwoc();
+                    p0 = po_woc - reg.pcow_woc(); // Water pressure at contact
+                }
 
                 std::array<double,2> up   = {{ z0, span[0] }};
                 std::array<double,2> down = {{ z0, span[1] }};
@@ -366,6 +373,11 @@ namespace Opm
                 };
 
                 assign(G, wpress, z0, cells, press);
+
+                if (reg.datum() > reg.zwoc()) {
+                    // Return oil pressure at contact
+                    po_woc = wpress[0](reg.zwoc()) + reg.pcow_woc();
+                }
             }
 
             template <class Grid,
@@ -395,8 +407,18 @@ namespace Opm
                          reg.dissolutionCalculator(),
                          pu.num_phases, oix, gix, grav);
 
-                const double z0 = reg.datum();
-                const double p0 = reg.pressure();
+                double z0;
+                double p0;
+                if (reg.datum() > reg.zwoc()) {//Datum in water zone, po_woc given
+                    z0 = reg.zwoc();
+                    p0 = po_woc;
+                } else if (reg.datum() < reg.zgoc()) {//Datum in gas zone, po_goc given
+                    z0 = reg.zgoc();
+                    p0 = po_goc;
+                } else { //Datum in oil zone
+                    z0 = reg.datum();
+                    p0 = reg.pressure();
+                }
 
                 std::array<double,2> up   = {{ z0, span[0] }};
                 std::array<double,2> down = {{ z0, span[1] }};
@@ -421,7 +443,6 @@ namespace Opm
                 if      (z0 > goc) { po_goc = opress[0](goc); } // GOC above datum
                 else if (z0 < goc) { po_goc = opress[1](goc); } // GOC below datum
                 else               { po_goc = p0;             } // GOC *at*  datum
-
             }
 
             template <class Grid,
@@ -432,7 +453,7 @@ namespace Opm
                 const Region&               reg   ,
                 const std::array<double,2>& span  ,
                 const double                grav  ,
-                const double                po_goc,
+                double&                     po_goc,
                 const CellRange&            cells ,
                 std::vector<double>&        press )
             {
@@ -451,8 +472,15 @@ namespace Opm
                          reg.evaporationCalculator(),
                          pu.num_phases, gix, oix, grav);
 
-                const double z0 = reg.zgoc();
-                const double p0 = po_goc + reg.pcgo_goc(); // Pcog = Pg - Po
+                double z0;
+                double p0;
+                if (reg.datum() < reg.zgoc()) {//Datum in gas zone
+                    z0 = reg.datum();
+                    p0 = reg.pressure();
+                } else {
+                    z0 = reg.zgoc();
+                    p0 = po_goc + reg.pcgo_goc(); // Gas pressure at contact
+                }
 
                 std::array<double,2> up   = {{ z0, span[0] }};
                 std::array<double,2> down = {{ z0, span[1] }};
@@ -467,6 +495,11 @@ namespace Opm
                 };
 
                 assign(G, gpress, z0, cells, press);
+
+                if (reg.datum() < reg.zgoc()) {
+                    // Return oil pressure at contact
+                    po_goc = gpress[1](reg.zgoc()) - reg.pcgo_goc();
+                }
             }
         } // namespace PhasePressure
 
@@ -483,23 +516,69 @@ namespace Opm
         {
             const PhaseUsage& pu = reg.phaseUsage();
 
-            double po_woc = -1, po_goc = -1;
-            if (PhaseUsed::oil(pu)) {
-                const int oix = PhaseIndex::oil(pu);
-                PhasePressure::oil(G, reg, span, grav, cells,
-                                   press[ oix ], po_woc, po_goc);
-            }
+            if (reg.datum() > reg.zwoc()) { // Datum in water zone
+                double po_woc = -1;
+                double po_goc = -1;
 
-            if (PhaseUsed::water(pu)) {
-                const int wix = PhaseIndex::water(pu);
-                PhasePressure::water(G, reg, span, grav, po_woc,
-                                     cells, press[ wix ]);
-            }
+                if (PhaseUsed::water(pu)) {
+                    const int wix = PhaseIndex::water(pu);
+                    PhasePressure::water(G, reg, span, grav, po_woc,
+                                         cells, press[ wix ]);
+                }
 
-            if (PhaseUsed::gas(pu)) {
-                const int gix = PhaseIndex::gas(pu);
-                PhasePressure::gas(G, reg, span, grav, po_goc,
-                                   cells, press[ gix ]);
+                if (PhaseUsed::oil(pu)) {
+                    const int oix = PhaseIndex::oil(pu);
+                    PhasePressure::oil(G, reg, span, grav, cells,
+                                       press[ oix ], po_woc, po_goc);
+                }
+
+                if (PhaseUsed::gas(pu)) {
+                    const int gix = PhaseIndex::gas(pu);
+                    PhasePressure::gas(G, reg, span, grav, po_goc,
+                                       cells, press[ gix ]);
+                }
+            } else if (reg.datum() < reg.zgoc()) { // Datum in gas zone
+                double po_woc = -1;
+                double po_goc = -1;
+
+                if (PhaseUsed::gas(pu)) {
+                    const int gix = PhaseIndex::gas(pu);
+                    PhasePressure::gas(G, reg, span, grav, po_goc,
+                                       cells, press[ gix ]);
+                }
+
+                if (PhaseUsed::oil(pu)) {
+                    const int oix = PhaseIndex::oil(pu);
+                    PhasePressure::oil(G, reg, span, grav, cells,
+                                       press[ oix ], po_woc, po_goc);
+                }
+
+                if (PhaseUsed::water(pu)) {
+                    const int wix = PhaseIndex::water(pu);
+                    PhasePressure::water(G, reg, span, grav, po_woc,
+                                         cells, press[ wix ]);
+                }
+            } else { // Datum in oil zone
+                double po_woc = -1;
+                double po_goc = -1;
+
+                if (PhaseUsed::oil(pu)) {
+                    const int oix = PhaseIndex::oil(pu);
+                    PhasePressure::oil(G, reg, span, grav, cells,
+                                       press[ oix ], po_woc, po_goc);
+                }
+
+                if (PhaseUsed::water(pu)) {
+                    const int wix = PhaseIndex::water(pu);
+                    PhasePressure::water(G, reg, span, grav, po_woc,
+                                         cells, press[ wix ]);
+                }
+
+                if (PhaseUsed::gas(pu)) {
+                    const int gix = PhaseIndex::gas(pu);
+                    PhasePressure::gas(G, reg, span, grav, po_goc,
+                                       cells, press[ gix ]);
+                }
             }
         }
     } // namespace Details
@@ -564,13 +643,11 @@ namespace Opm
                     }
                 }
             }
-
             const int np = reg.phaseUsage().num_phases;
 
             typedef std::vector<double> pval;
             std::vector<pval> press(np, pval(ncell, 0.0));
 
-            const double z0   = reg.datum();
             const double zwoc = reg.zwoc ();
             const double zgoc = reg.zgoc ();
 
@@ -578,12 +655,7 @@ namespace Opm
             span[0] = std::min(span[0],zgoc);
             span[1] = std::max(span[1],zwoc);
 
-            if (! ((zgoc > z0) || (z0 > zwoc))) {
-                // Datum depth in oil zone  (zgoc <= z0 <= zwoc)
-                Details::equilibrateOWG(G, reg, grav, span, cells, press);
-            } else {
-                OPM_THROW(std::runtime_error, "Cannot initialise: the datum depth must be in the oil zone.");
-            }
+            Details::equilibrateOWG(G, reg, grav, span, cells, press);
 
             return press;
         }
@@ -609,12 +681,6 @@ namespace Opm
                          const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures)
         {
-            const double z0   = reg.datum();
-            const double zwoc = reg.zwoc ();
-            const double zgoc = reg.zgoc ();
-            if ((zgoc > z0) || (z0 > zwoc)) {
-                OPM_THROW(std::runtime_error, "Cannot initialise: the datum depth must be in the oil zone.");
-            }
             if (!reg.phaseUsage().phase_used[BlackoilPhases::Liquid]) {
                 OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
             }
@@ -641,7 +707,7 @@ namespace Opm
                         const double cellDepth  =  UgGridHelpers::cellCentroidCoordinate(G,
                                                                                          cell,
                                                                                          nd-1);
-                        sw = satFromDepth(props,cellDepth,zwoc,waterpos,cell,false);
+                        sw = satFromDepth(props,cellDepth,reg.zwoc(),waterpos,cell,false);
                         phase_saturations[waterpos][local_index] = sw;
                     }
                     else{
@@ -663,7 +729,7 @@ namespace Opm
                         const double cellDepth  = UgGridHelpers::cellCentroidCoordinate(G,
                                                                                         cell,
                                                                                         nd-1);
-                        sg = satFromDepth(props,cellDepth,zgoc,gaspos,cell,true);
+                        sg = satFromDepth(props,cellDepth,reg.zgoc(),gaspos,cell,true);
                         phase_saturations[gaspos][local_index] = sg;
                     }
                     else{
