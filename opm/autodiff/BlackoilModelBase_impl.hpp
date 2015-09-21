@@ -633,7 +633,7 @@ namespace detail {
             vars0.push_back(qs);
 
             // for the pressure of the segments
-            const V pseg = Eigen::Map<const V>(& xw.segPressures()[0], xw.segPressures().size());
+            const V pseg = Eigen::Map<const V>(& xw.segPress()[0], xw.segPress().size());
             vars0.push_back(pseg);
         }
         else
@@ -677,7 +677,7 @@ namespace detail {
 
 
             // Initial pressures
-            const V seg_pressures = Eigen::Map<const V>(& xw.segPressures()[0], nseg);
+            const V seg_pressures = Eigen::Map<const V>(& xw.segPress()[0], nseg);
             vars0.push_back(seg_pressures);
         }
         else
@@ -1089,7 +1089,7 @@ namespace detail {
 
         const int nperf_nonsegmented = well_cells_non_segmented.size();
 
-        const V perf_press = Eigen::Map<const V>(xw.perfPressures().data(), nperf);
+        const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
         // const V perf_press_nonsegmented = subset(perf_press, well_cells_non_segmented_idx);
 
         V avg_press = perf_press * 0.0;
@@ -1947,7 +1947,7 @@ namespace detail {
         // TODO: now it is so necesary to have a gobal wellsMultiSegment class to store some global information.
         const int np = numPhases();
         const int nw = wellsMultiSegment().size();
-        const int nperf = xw.perfPressures().size();
+        const int nperf = xw.perfPress().size();
 
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {

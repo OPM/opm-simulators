@@ -321,13 +321,13 @@ namespace Opm
                             // perf_pressures_
                             for (int i = 0; i < num_perf_this_well; ++i) {
                                 // p
-                                perf_pressures_[this_start_perforation + i] = prevState.perfPressures()[old_start_perforation + i];
+                                perf_pressures_[this_start_perforation + i] = prevState.perfPress()[old_start_perforation + i];
                             }
 
                             // seg_pressures_
                             for (int i = 0; i < num_seg_this_well; ++i) {
                                 // p
-                                seg_pressures_[this_start_segment + i] = prevState.segPressures()[old_start_segment + i];
+                                seg_pressures_[this_start_segment + i] = prevState.segPress()[old_start_segment + i];
                             }
                             // current controls
                         }
@@ -380,11 +380,11 @@ namespace Opm
         std::vector<double>& segPhaseRates() { return seg_phaserates_; }
         const std::vector<double>& segPhaseRates() const { return seg_phaserates_; }
 
-        std::vector<double>& segPressures() { return seg_pressures_; }
-        const std::vector<double>& segPressures() const { return seg_pressures_; }
+        std::vector<double>& segPress() { return seg_pressures_; }
+        const std::vector<double>& segPress() const { return seg_pressures_; }
 
-        std::vector<double>& perfPressures() { return perf_pressures_; }
-        const std::vector<double>& perfPressures() const { return perf_pressures_; }
+        std::vector<double>& perfPress() { return perf_pressures_; }
+        const std::vector<double>& perfPress() const { return perf_pressures_; }
 
         std::vector<double>& perfPhaseRates() { return perf_phaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perf_phaserates_; }
