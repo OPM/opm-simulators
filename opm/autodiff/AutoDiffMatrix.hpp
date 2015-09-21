@@ -35,6 +35,11 @@
 namespace Opm
 {
 
+    /**
+     * AutoDiffMatrix is a wrapper class that optimizes matrix operations.
+     * Internally, an AutoDiffMatrix can be either Zero, Identity, Diagonal,
+     * or Sparse, and we utilize this to perform faster matrix operations.
+     */
     class AutoDiffMatrix
     {
     public:
@@ -42,6 +47,9 @@ namespace Opm
         typedef Eigen::SparseMatrix<double> SparseRep;
 
 
+        /**
+         * Creates an empty zero matrix
+         */
         AutoDiffMatrix()
             : type_(Zero),
               rows_(0),
@@ -52,7 +60,9 @@ namespace Opm
         }
 
 
-
+        /**
+         * Creates a zero matrix with num_rows x num_cols entries
+         */
         AutoDiffMatrix(const int num_rows, const int num_cols)
             : type_(Zero),
               rows_(num_rows),
@@ -78,6 +88,9 @@ namespace Opm
 
 
 
+        /**
+         * Creates a diagonal matrix from an Eigen diagonal matrix
+         */
         explicit AutoDiffMatrix(const Eigen::DiagonalMatrix<double, Eigen::Dynamic>& d)
             : type_(Diagonal),
               rows_(d.rows()),
@@ -90,6 +103,9 @@ namespace Opm
 
 
 
+        /**
+         * Creates a sparse matrix from an Eigen sparse matrix
+         */
         explicit AutoDiffMatrix(const Eigen::SparseMatrix<double>& s)
             : type_(Sparse),
               rows_(s.rows()),
@@ -137,6 +153,12 @@ namespace Opm
 
 
 
+        /**
+         * Adds two AutoDiffMatrices. Internally, this function optimizes
+         * the addition operation based on the structure of the matrix, e.g.,
+         * adding two zero matrices will obviously yield a zero matrix, and
+         * so on.
+         */
         AutoDiffMatrix operator+(const AutoDiffMatrix& rhs) const
         {
             assert(rows_ == rhs.rows_);
@@ -188,6 +210,16 @@ namespace Opm
             }
         }
 
+
+
+
+
+
+        /**
+         * Multiplies two AutoDiffMatrices. Internally, this function optimizes
+         * the multiplication operation based on the structure of the matrix, e.g.,
+         * multiplying M with a zero matrix will obviously yield a zero matrix.
+         */
         AutoDiffMatrix operator*(const AutoDiffMatrix& rhs) const
         {
             assert(cols_ == rhs.rows_);
@@ -255,6 +287,11 @@ namespace Opm
 
 
 
+        /**
+         * Multiplies an AutoDiffMatrix with a scalar. Optimizes internally
+         * by exploiting that e.g., an identity matrix multiplied by a scalar x
+         * yields a diagonal matrix with x the diagonal.
+         */
         AutoDiffMatrix operator*(const double rhs) const
         {
             switch (type_) {
@@ -291,6 +328,11 @@ namespace Opm
 
 
 
+        /**
+         * Divides an AutoDiffMatrix by a scalar. Optimizes internally
+         * by exploiting that e.g., an identity matrix divided by a scalar x
+         * yields a diagonal matrix with 1/x on the diagonal.
+         */
         AutoDiffMatrix operator/(const double rhs) const
         {
             switch (type_) {
@@ -327,6 +369,11 @@ namespace Opm
 
 
 
+        /**
+         * Multiplies an AutoDiffMatrix with a vector. Optimizes internally
+         * by exploiting that e.g., an identity matrix multiplied by a vector
+         * yields the vector itself.
+         */
         Eigen::VectorXd operator*(const Eigen::VectorXd& rhs) const
         {
             assert(cols_ == rhs.size());
@@ -351,7 +398,7 @@ namespace Opm
 
 
 
-
+        // Add identity to identity
         static AutoDiffMatrix addII(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Identity);
@@ -364,6 +411,7 @@ namespace Opm
             return retval;
         }
 
+        // Add diagonal to identity
         static AutoDiffMatrix addDI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             static_cast<void>(rhs); // Silence release-mode warning.
@@ -376,6 +424,7 @@ namespace Opm
             return retval;
         }
 
+        // Add diagonal to diagonal
         static AutoDiffMatrix addDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Diagonal);
@@ -387,6 +436,7 @@ namespace Opm
             return retval;
         }
 
+        // Add sparse to identity
         static AutoDiffMatrix addSI(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             static_cast<void>(rhs); // Silence release-mode warning.
@@ -397,6 +447,7 @@ namespace Opm
             return retval;
         }
 
+        // Add sparse to diagonal
         static AutoDiffMatrix addSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Sparse);
@@ -406,6 +457,7 @@ namespace Opm
             return retval;
         }
 
+        // Add sparse to sparse
         static AutoDiffMatrix addSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Sparse);
@@ -418,7 +470,7 @@ namespace Opm
 
 
 
-
+        // Multiply diagonal with diagonal
         static AutoDiffMatrix mulDD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Diagonal);
@@ -430,6 +482,7 @@ namespace Opm
             return retval;
         }
 
+        // Multiply diagonal with sparse
         static AutoDiffMatrix mulDS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Diagonal);
@@ -442,6 +495,7 @@ namespace Opm
             return retval;
         }
 
+        // Multiply sparse with diagonal
         static AutoDiffMatrix mulSD(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Sparse);
@@ -454,6 +508,7 @@ namespace Opm
             return retval;
         }
 
+        // Multiply sparse with sparse
         static AutoDiffMatrix mulSS(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs)
         {
             assert(lhs.type_ == Sparse);
@@ -467,6 +522,13 @@ namespace Opm
         }
 
 
+
+
+        /**
+         * Converts the AutoDiffMatrix to an Eigen SparseMatrix.This might be
+         * an expensive operation to perform for e.g., an identity matrix or a
+         * diagonal matrix.
+         */
         template<class Scalar, int Options, class Index>
         void toSparse(Eigen::SparseMatrix<Scalar, Options, Index>& s) const
         {
@@ -487,16 +549,33 @@ namespace Opm
         }
 
 
+
+        /**
+         * Returns number of rows in the matrix
+         */
         int rows() const
         {
             return rows_;
         }
 
+
+
+        /**
+         * Returns number of columns in the matrix
+         */
         int cols() const
         {
             return cols_;
         }
 
+
+
+        /**
+         * Returns number of non-zero elements in the matrix. Optimizes internally
+         * by exploiting that e.g., an n*n identity matrix has n non-zeros.
+         * Note that an n*n diagonal matrix is defined to have n non-zeros, even though
+         * several diagonal elements might be 0.0.
+         */
         int nonZeros() const
         {
             switch (type_) {
@@ -514,6 +593,11 @@ namespace Opm
         }
 
 
+
+
+        /**
+         * Returns element (row, col) in the matrix
+         */
         double coeff(const int row, const int col) const
         {
             switch (type_) {
@@ -547,12 +631,57 @@ namespace Opm
 
     private:
         enum AudoDiffMatrixType { Zero, Identity, Diagonal, Sparse };
-        AudoDiffMatrixType type_;
-        int rows_;
-        int cols_;
-        DiagRep diag_;
-        SparseRep sparse_;
 
+        AudoDiffMatrixType type_;  //<  Type of matrix
+        int rows_;                 //<  Number of rows
+        int cols_;                 //<  Number of columns
+        DiagRep diag_;             //<  Diagonal representation (only if type==Diagonal)
+        SparseRep sparse_;         //<  Sparse representation (only if type==Sparse)
+
+        /**
+         * Returns the sparse representation of this matrix. Note that this might
+         * be an expensive operation to perform if the internal structure is not
+         * sparse.
+         */
+        const Sparse& getSparse() const {
+            if (type_ != S) {
+                /**
+                 * If we are not a sparse matrix, our internal variable sparse_
+                 * is undefined, and hence changing it so that it happens to be
+                 * a sparse representation of our true data does not change our
+                 * true data, and hence justifies that we do not really violate
+                 * the const qualifier.
+                 */
+                Sparse& mutable_sparse = const_cast<Sparse&>(sparse_);
+                toSparse(mutable_sparse);
+            }
+            return sparse_;
+        }
+
+
+
+        /**
+         * Constructor which sets all members
+         */
+        AutoDiffMatrix(MatrixType type, int rows, int cols,
+                Diag diag=Diag(), Sparse sparse=Sparse())
+            : type_(type),
+              rows_(rows),
+              cols_(cols),
+              diag_(diag),
+              sparse_(sparse)
+        {
+        }
+
+
+
+
+
+        /**
+         * Creates a sparse diagonal matrix from d.
+         * Typical use is to convert a standard vector to an
+         * Eigen sparse matrix.
+         */
         template <class V>
         static inline
         SparseRep
@@ -574,19 +703,27 @@ namespace Opm
 
 
 
-
+    /**
+     * Utility function to lessen code changes required elsewhere.
+     */
     inline void fastSparseProduct(const AutoDiffMatrix& lhs, const AutoDiffMatrix& rhs, AutoDiffMatrix& res)
     {
         res = lhs * rhs;
     }
 
 
+    /**
+     * Utility function to lessen code changes required elsewhere.
+     */
     inline void fastSparseProduct(const Eigen::SparseMatrix<double>& lhs, const AutoDiffMatrix& rhs, AutoDiffMatrix& res)
     {
         res = AutoDiffMatrix(lhs) * rhs;
     }
 
 
+    /**
+     * Multiplies an Eigen sparse matrix with an AutoDiffMatrix.
+     */
     inline AutoDiffMatrix operator*(const Eigen::SparseMatrix<double>& lhs, const AutoDiffMatrix& rhs)
     {
         AutoDiffMatrix retval;

@@ -158,7 +158,7 @@ namespace Opm
             }
             // ... then set the one corrresponding to this variable to identity.
             assert(blocksizes[index] == num_elem);
-            jac[index] = M(M::IdentityMatrix, val.size());
+            jac[index] = M::createIdentity(val.size());
             return AutoDiffBlock(std::move(val), std::move(jac));
         }
 
