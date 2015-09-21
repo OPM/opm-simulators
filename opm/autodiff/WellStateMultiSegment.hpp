@@ -42,7 +42,7 @@ namespace Opm
     /// since we are avoiding to use the old wells structure
     /// it makes it might be a good idea not to relate this State to the WellState
     class WellStateMultiSegment
-        // : public WellState
+         : public WellState
     {
     public:
 
@@ -96,7 +96,7 @@ namespace Opm
             nperf_ = nperf_;
             nwells_ = nw;
 
-            well_rates_.resize(nw * np, 0.0);
+            wellrates_.resize(nw * np, 0.0);
 
             current_controls_.resize(nw);
             for(int iw = 0; iw < nw; ++iw) {
@@ -111,17 +111,17 @@ namespace Opm
             int start_segment = 0;
             int start_perforation = 0;
 
-            perf_phaserates_.clear();
-            perf_phaserates_.resize(nperf * np, 0.0);
+            perfphaserates_.clear();
+            perfphaserates_.resize(nperf * np, 0.0);
 
-            perf_pressures_.clear();
-            perf_pressures_.resize(nperf, -1.0e100);
+            perfpress_.clear();
+            perfpress_.resize(nperf, -1.0e100);
 
-            seg_phaserates_.clear();
-            seg_phaserates_.resize(nseg * np, 0.0);
+            segphaserates_.clear();
+            segphaserates_.resize(nseg * np, 0.0);
 
-            seg_pressures_.clear();
-            seg_pressures_.resize(nseg, -1.0e100);
+            segpress_.clear();
+            segpress_.resize(nseg, -1.0e100);
 
 
             for (int w = 0; w < nw; ++w) {
@@ -178,13 +178,13 @@ namespace Opm
                         const double rate_target = well_controls_get_current_target(ctrl);
                         const double * distr = well_controls_get_current_distr( ctrl );
                         for (int p = 0; p < np; ++p) {
-                            well_rates_[np * w + p] = rate_target * distr[p];
+                            wellrates_[np * w + p] = rate_target * distr[p];
                         }
                     } else {
                         const double small_rate = 1e-14;
                         const double sign = (wells[w].wellType() == INJECTOR) ? 1.0 : -1.0;
                         for (int p = 0; p < np; ++p) {
-                            well_rates_[np * w + p] = small_rate * sign;
+                            wellrates_[np * w + p] = small_rate * sign;
                         }
                     }
 
@@ -207,9 +207,9 @@ namespace Opm
                     int number_of_perforations = wellMapEntry.number_of_perforations;
                     for (int i = 0; i < number_of_perforations; ++i) {
                         for (int p = 0; p < np; ++p) {
-                            perf_phaserates_[np * (i + start_perforation) + p] = well_rates_[np * w + p] / double(number_of_perforations);
+                            perfphaserates_[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
                         }
-                        perf_pressures_[i + start_perforation] = state.pressure()[wells[w].wellCells()[i + start_perforation]];
+                        perfpress_[i + start_perforation] = state.pressure()[wells[w].wellCells()[i + start_perforation]];
                     }
 
                     // 5. Segment rates and pressures
@@ -220,10 +220,10 @@ namespace Opm
                     // well rates. Most importantly, the segment rates of the top segment is the same with the well rates
                     for (int i = 0; i < number_of_segments; ++i) {
                         /* for (int p = 0; p < np; ++p) {
-                            seg_phaserates_[np * (i + start_segment) + p] = 0.;
+                            segphaserates_[np * (i + start_segment) + p] = 0.;
                         } */
                         int first_perforation_segment = start_perforation + wellMapEntry.start_perforation_segment[i];
-                        seg_pressures_[i + start_segment] = perf_pressures_[first_perforation_segment];
+                        segpress_[i + start_segment] = perfpress_[first_perforation_segment];
                         // the segmnent pressure of the top segment should be the bhp
                     }
 
@@ -232,13 +232,13 @@ namespace Opm
                         // V v_perf_rates = V::Zero(number_of_perforations);
                         Eigen::VectorXd v_perf_rates(number_of_perforations);
                         for (int i = 0; i < number_of_perforations; ++i) {
-                            v_perf_rates[i] = perf_phaserates_[np * (i + start_perforation) + p];
+                            v_perf_rates[i] = perfphaserates_[np * (i + start_perforation) + p];
                         }
 
                         Eigen::VectorXd v_segment_rates = wells[w].wellOps().p2s_gather * v_perf_rates;
 
                         for (int i = 0; i < number_of_segments; ++i) {
-                            seg_phaserates_[np * (i + start_segment) + p] = v_segment_rates[i];
+                            segphaserates_[np * (i + start_segment) + p] = v_segment_rates[i];
                         }
                     }
                     // initialize the segmnet rates.
@@ -311,23 +311,23 @@ namespace Opm
 
                             // this is not good when the the well rates changed dramatically
                             for (int i = 0; i < num_seg_this_well * np; ++i) {
-                                seg_phaserates_[this_start_segment * np + i] = prevState.segPhaseRates()[old_start_segment * np + i];
+                                segphaserates_[this_start_segment * np + i] = prevState.segPhaseRates()[old_start_segment * np + i];
                             }
 
                             for (int i = 0; i < num_perf_this_well * np; ++i) {
-                                perf_phaserates_[this_start_perforation * np + i] = prevState.perfPhaseRates()[old_start_perforation * np + i];
+                                perfphaserates_[this_start_perforation * np + i] = prevState.perfPhaseRates()[old_start_perforation * np + i];
                             }
 
                             // perf_pressures_
                             for (int i = 0; i < num_perf_this_well; ++i) {
                                 // p
-                                perf_pressures_[this_start_perforation + i] = prevState.perfPress()[old_start_perforation + i];
+                                perfpress_[this_start_perforation + i] = prevState.perfPress()[old_start_perforation + i];
                             }
 
-                            // seg_pressures_
+                            // segpress_
                             for (int i = 0; i < num_seg_this_well; ++i) {
                                 // p
-                                seg_pressures_[this_start_segment + i] = prevState.segPress()[old_start_segment + i];
+                                segpress_[this_start_segment + i] = prevState.segPress()[old_start_segment + i];
                             }
                             // current controls
                         }
@@ -377,17 +377,17 @@ namespace Opm
                 } */
         }
 
-        std::vector<double>& segPhaseRates() { return seg_phaserates_; }
-        const std::vector<double>& segPhaseRates() const { return seg_phaserates_; }
+        std::vector<double>& segPhaseRates() { return segphaserates_; }
+        const std::vector<double>& segPhaseRates() const { return segphaserates_; }
 
-        std::vector<double>& segPress() { return seg_pressures_; }
-        const std::vector<double>& segPress() const { return seg_pressures_; }
+        std::vector<double>& segPress() { return segpress_; }
+        const std::vector<double>& segPress() const { return segpress_; }
 
-        std::vector<double>& perfPress() { return perf_pressures_; }
-        const std::vector<double>& perfPress() const { return perf_pressures_; }
+        std::vector<double>& perfPress() { return perfpress_; }
+        const std::vector<double>& perfPress() const { return perfpress_; }
 
-        std::vector<double>& perfPhaseRates() { return perf_phaserates_; }
-        const std::vector<double>& perfPhaseRates() const { return perf_phaserates_; }
+        std::vector<double>& perfPhaseRates() { return perfphaserates_; }
+        const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
@@ -395,8 +395,8 @@ namespace Opm
         std::vector<double>& thp() { return thp_; }
         const std::vector<double>& thp() const { return thp_; }
 
-        std::vector<double>& wellRates() { return well_rates_; }
-        const std::vector<double>& wellRates() const { return well_rates_; }
+        std::vector<double>& wellRates() { return wellrates_; }
+        const std::vector<double>& wellRates() const { return wellrates_; }
 
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
@@ -413,21 +413,23 @@ namespace Opm
     private:
         std::vector<double> bhp_;
         std::vector<double> thp_;
-        std::vector<double> well_rates_;
+        std::vector<double> wellrates_;
+        // std::vector<double> temperature_;
         // pressure for the segment nodes
-        std::vector<double> seg_pressures_;
+        std::vector<double> segpress_;
         // phase rates for the segments
-        std::vector<double> seg_phaserates_;
+        std::vector<double> segphaserates_;
         // phase rates for the completions
-        std::vector<double> perf_phaserates_;
+        std::vector<double> perfphaserates_;
         // pressure for the perforatins
-        std::vector<double> perf_pressures_;
+        std::vector<double> perfpress_;
         // TODO: MIGHT NOT USE THE FOLLOWING VARIABLES AT THE
         // fractions for each segments (W, O, G)
-        std::vector<double> seg_phasefrac_;
+        std::vector<double> segphasefrac_;
         // total flow rates for each segments, G_T
-        std::vector<double> seg_totalrate_;
+        std::vector<double> segtotalrate_;
         std::vector<int> current_controls_;
+
         WellMapType wellMap_;
 
         int nseg_;
