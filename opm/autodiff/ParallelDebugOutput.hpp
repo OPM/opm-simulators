@@ -304,6 +304,11 @@ namespace Opm
                 DistributeIndexMapping distIndexMapping( globalIndex_, otherGrid.globalCell(), localIndexMap_, indexMaps_ );
                 toIORankComm_.exchange( distIndexMapping );
             }
+            else // serial run
+            {
+                // copy global cartesian index
+                globalIndex_ = otherGrid.globalCell();
+            }
         }
 
         class PackUnPackSimulatorState : public P2PCommunicatorType::DataHandleInterface
