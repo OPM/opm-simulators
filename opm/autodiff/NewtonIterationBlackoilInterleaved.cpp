@@ -77,7 +77,9 @@ namespace Opm
     NewtonIterationBlackoilInterleaved::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
         // Build the vector of equations.
-        const int np = residual.material_balance_eq.size();
+        //const int np = residual.material_balance_eq.size();
+        //std::cout << "Num phases = " << residual.material_balance_eq.size() << std::endl;
+        assert( np == residual.material_balance_eq.size() );
         std::vector<ADB> eqs;
         eqs.reserve(np + 2);
         for (int phase = 0; phase < np; ++phase) {
@@ -102,6 +104,7 @@ namespace Opm
         }
 
         // Scale material balance equations.
+        assert( np == int(residual.matbalscale.size()) );
         for (int phase = 0; phase < np; ++phase) {
             eqs[phase] = eqs[phase] * residual.matbalscale[phase];
         }
@@ -134,9 +137,9 @@ namespace Opm
         const int size = istlA.N();
         Vector istlb(size);
         for (int i = 0; i < size; ++i) {
-            istlb[i][0] = b(i);
-            istlb[i][1] = b(size + i);
-            istlb[i][2] = b(2*size + i);
+            for( int phase = 0, idx = i; phase<np; ++phase, idx += size ) {
+                istlb[i][ phase ] = b(idx );
+            }
         }
 
         // System solution
@@ -181,9 +184,9 @@ namespace Opm
 
         // Copy solver output to dx.
         for (int i = 0; i < size; ++i) {
-            dx(i)          = x[i][0];
-            dx(size + i)   = x[i][1];
-            dx(2*size + i) = x[i][2];
+            for( int phase = 0, idx = i; phase<np; ++phase, idx += size ) {
+                dx( idx ) = x[i][phase];
+            }
         }
 
         if ( hasWells ) {
@@ -202,7 +205,8 @@ namespace Opm
     void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
                                                                    Mat& istlA) const
     {
-        const int np = eqs.size();
+        //const int np = eqs.size();
+        assert( np == eqs.size() );
 
         // Find sparsity structure as union of basic block sparsity structures,
         // corresponding to the jacobians with respect to pressure.
@@ -221,7 +225,7 @@ namespace Opm
         Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
-        assert(np == 3);
+        // assert(np == 3);
         istlA.setSize(s.rows(), s.cols(), s.nonZeros());
         istlA.setBuildMode(Mat::row_wise);
         const int* ia = s.outerIndexPtr();
