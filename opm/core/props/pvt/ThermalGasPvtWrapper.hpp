@@ -102,8 +102,14 @@ namespace Opm
                     // pressure dependence of gas. (This does not make much sense, but it
                     // seems to be what the documentation for the GASVISCT keyword in the
                     // RM says.)
+
+
                     int regionIdx = getPvtRegionIndex_(pvtRegionIdx, i);
-                    double muGasvisct = (*gasvisctTables_)[regionIdx].evaluate(gasvisctColumnName_, T[i]);
+                    double muGasvisct;
+                    {
+                        const GasvisctTable& gasvisctTable = gasvisctTables_->getTable<GasvisctTable>(regionIdx);
+                        muGasvisct = gasvisctTable.evaluate(gasvisctColumnName_, T[i]);
+                    }
 
                     output_mu[i] = muGasvisct;
                     output_dmudp[i] = 0.0;
@@ -136,7 +142,11 @@ namespace Opm
                     // seems to be what the documentation for the GASVISCT keyword in the
                     // RM says.)
                     int regionIdx = getPvtRegionIndex_(pvtRegionIdx, i);
-                    double muGasvisct = (*gasvisctTables_)[regionIdx].evaluate(gasvisctColumnName_, T[i]);
+                    double muGasvisct;
+                    {
+                        const GasvisctTable& gasvisctTable = gasvisctTables_->getTable<GasvisctTable>(regionIdx);
+                        muGasvisct = gasvisctTable.evaluate(gasvisctColumnName_, T[i]);
+                    }
 
                     output_mu[i] = muGasvisct;
                     output_dmudp[i] = 0.0;
@@ -297,7 +307,7 @@ namespace Opm
 
         // The PVT properties needed for temperature dependence of the viscosity. We need
         // to store one value per PVT region.
-        const std::vector<Opm::GasvisctTable>* gasvisctTables_;
+        const TableContainer* gasvisctTables_;
         std::string gasvisctColumnName_;
         int gasCompIdx_;
 

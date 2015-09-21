@@ -46,12 +46,13 @@ namespace Opm
         const auto tables = eclipseState->getTableManager();
         const auto& rocktabTables = tables->getRocktabTables();
         if (rocktabTables.size() > 0) {
+            const auto& rocktabTable = rocktabTables.getTable<RocktabTable>(0);
             if (rocktabTables.size() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
 
-            p_ = rocktabTables[0].getPressureColumn();
-            poromult_ = rocktabTables[0].getPoreVolumeMultiplierColumn();
-            transmult_ =  rocktabTables[0].getTransmissibilityMultiplierColumn();
+            p_ = rocktabTable.getPressureColumn();
+            poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
+            transmult_ =  rocktabTable.getTransmissibilityMultiplierColumn();
         } else if (deck->hasKeyword("ROCK")) {
             Opm::DeckKeywordConstPtr rockKeyword = deck->getKeyword("ROCK");
             if (rockKeyword->size() != 1) {
