@@ -288,15 +288,17 @@ namespace Opm
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
                     if (deck->hasKeyword("DISGAS")) {                    
-                        const std::vector<RsvdTable>& rsvdTables = tables->getRsvdTables();
+                        const TableContainer& rsvdTables = tables->getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
+                            const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
                                 if (rsvdTables.size() > 0 && size_t(rec[i].live_oil_table_index) <= rsvdTables.size()) { 
+                                    
                                     rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
                                                                                            cell,
-                                                                                           rsvdTables[i].getDepthColumn(),
-                                                                                           rsvdTables[i].getRsColumn()));
+                                                                                           rsvdTable.getDepthColumn(),
+                                                                                           rsvdTable.getRsColumn()));
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
                                 }
@@ -320,15 +322,16 @@ namespace Opm
 
                     rv_func_.reserve(rec.size());
                     if (deck->hasKeyword("VAPOIL")) {                    
-                        const std::vector<RvvdTable>& rvvdTables = tables->getRvvdTables();
+                        const TableContainer& rvvdTables = tables->getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (rvvdTables.size() > 0 && size_t(rec[i].wet_gas_table_index) <= rvvdTables.size()) { 
+                                    const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
                                     rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props,
                                                                                            cell,
-                                                                                           rvvdTables[i].getDepthColumn(),
-                                                                                           rvvdTables[i].getRvColumn()));
+                                                                                           rvvdTable.getDepthColumn(),
+                                                                                           rvvdTable.getRvColumn()));
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
                                 }
