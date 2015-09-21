@@ -74,9 +74,9 @@ operator ==(const Eigen::SparseMatrix<double>& A,
 BOOST_AUTO_TEST_CASE(Initialization)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
     d1 << 0.2, 1.2, 13.4;
@@ -93,9 +93,9 @@ BOOST_AUTO_TEST_CASE(Initialization)
 BOOST_AUTO_TEST_CASE(EigenConversion)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
     d1 << 0.2, 1.2, 13.4;
@@ -128,10 +128,10 @@ BOOST_AUTO_TEST_CASE(EigenConversion)
 BOOST_AUTO_TEST_CASE(AdditionOps)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
     Sp zs(3,3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
     Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
@@ -176,10 +176,10 @@ BOOST_AUTO_TEST_CASE(AdditionOps)
 BOOST_AUTO_TEST_CASE(MultOps)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
     Sp zs(3,3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
     Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
@@ -267,10 +267,10 @@ BOOST_AUTO_TEST_CASE(MultOps)
 BOOST_AUTO_TEST_CASE(MultOpsDouble)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
     Sp zs(3,3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
     Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
@@ -307,10 +307,10 @@ BOOST_AUTO_TEST_CASE(MultOpsDouble)
 BOOST_AUTO_TEST_CASE(DivOpsDouble)
 {
     // Setup.
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
     Sp zs(3,3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
     Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
@@ -345,10 +345,10 @@ BOOST_AUTO_TEST_CASE(DivOpsDouble)
 
 BOOST_AUTO_TEST_CASE(MultVectorXd)
 {
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
     Sp zs(3,3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
     Sp is(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Identity(3,3).sparseView());
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
@@ -398,9 +398,9 @@ BOOST_AUTO_TEST_CASE(Coeff)
 
 BOOST_AUTO_TEST_CASE(nonZeros)
 {
-    Mat z = Mat(AutoDiffMatrix::ZeroMatrix, 3);
+    Mat z = Mat(3, 3);
 
-    Mat i = Mat(AutoDiffMatrix::IdentityMatrix, 3);
+    Mat i = Mat::createIdentity(3);
 
     Eigen::Array<double, Eigen::Dynamic, 1> d1(3);
     d1 << 0.2, 1.2, 13.4;

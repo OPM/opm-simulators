@@ -74,16 +74,13 @@ namespace Opm
 
 
 
-        enum CreationType { ZeroMatrix, IdentityMatrix };
 
-
-        AutoDiffMatrix(const CreationType t, const int num_rows)
-            : type_(t == ZeroMatrix ? Zero : Identity),
-              rows_(num_rows),
-              cols_(num_rows),
-              diag_(),
-              sparse_()
+        /**
+         * Creates an identity matrix with num_rows_cols x num_rows_cols entries
+         */
+        static AutoDiffMatrix createIdentity(const int num_rows_cols)
         {
+            return AutoDiffMatrix(Identity, num_rows_cols, num_rows_cols);
         }
 
 
