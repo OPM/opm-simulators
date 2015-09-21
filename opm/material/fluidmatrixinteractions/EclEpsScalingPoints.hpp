@@ -183,12 +183,12 @@ struct EclEpsScalingPointsInfo
     {
         // TODO: support for the SOF2/SOF3 keyword family
         auto tables = eclState->getTableManager();
-        const std::vector<SwofTable>& swofTables = tables->getSwofTables();
-        const std::vector<SgofTable>& sgofTables = tables->getSgofTables();
-        const std::vector<SlgofTable>& slgofTables = tables->getSlgofTables();
-        const std::vector<SwfnTable>& swfnTables = tables->getSwfnTables();
-        const std::vector<SgfnTable>& sgfnTables = tables->getSgfnTables();
-        const std::vector<Sof3Table>& sof3Tables = tables->getSof3Tables();
+        const TableContainer&  swofTables = tables->getSwofTables();
+        const TableContainer&  sgofTables = tables->getSgofTables();
+        const TableContainer& slgofTables = tables->getSlgofTables();
+        const TableContainer&  swfnTables = tables->getSwfnTables();
+        const TableContainer&  sgfnTables = tables->getSgfnTables();
+        const TableContainer&  sof3Tables = tables->getSof3Tables();
 
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
@@ -199,10 +199,10 @@ struct EclEpsScalingPointsInfo
             Swu = 0.0;
             Swcr = 0.0;
             if (!sgofTables.empty())
-                extractUnscaledSgof_(sgofTables[satRegionIdx]);
+                extractUnscaledSgof_(sgofTables.getTable<SgofTable>(satRegionIdx));
             else {
                 assert(!slgofTables.empty());
-                extractUnscaledSlgof_(slgofTables[satRegionIdx]);
+                extractUnscaledSlgof_(slgofTables.getTable<SlgofTable>(satRegionIdx));
             }
             return;
         }
@@ -211,7 +211,7 @@ struct EclEpsScalingPointsInfo
             Sgl = 0.0;
             Sgu = 0.0;
             Sgcr = 0.0;
-            extractUnscaledSwof_(swofTables[satRegionIdx]);
+            extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
             return;
         }
 
@@ -224,26 +224,26 @@ struct EclEpsScalingPointsInfo
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
         if (family1) {
-            extractUnscaledSwof_(swofTables[satRegionIdx]);
+            extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
 
             if (!sgofTables.empty()) {
                 // gas-oil parameters are specified using the SGOF keyword
-                extractUnscaledSgof_(sgofTables[satRegionIdx]);
+                extractUnscaledSgof_(sgofTables.getTable<SgofTable>(satRegionIdx));
             }
             else {
                 // gas-oil parameters are specified using the SLGOF keyword
                 assert(!slgofTables.empty());
 
-                extractUnscaledSlgof_(slgofTables[satRegionIdx]);
+                extractUnscaledSlgof_(slgofTables.getTable<SlgofTable>(satRegionIdx));
             }
         }
         else if (family2) {
-            extractUnscaledSwfn_(swfnTables[satRegionIdx]);
-            extractUnscaledSgfn_(sgfnTables[satRegionIdx]);
-            extractUnscaledSof3_(sof3Tables[satRegionIdx]);
+            extractUnscaledSwfn_(swfnTables.getTable<SwfnTable>(satRegionIdx));
+            extractUnscaledSgfn_(sgfnTables.getTable<SgfnTable>(satRegionIdx));
+            extractUnscaledSof3_(sof3Tables.getTable<Sof3Table>(satRegionIdx));
 
             // some safety checks mandated by the ECL documentation
-            assert(std::abs(Sowu - (1 - swfnTables[satRegionIdx].getSwColumn().front())) < 1e-30);
+            assert(std::abs(Sowu - (1 - swfnTables.getTable<SwfnTable>(satRegionIdx).getSwColumn().front())) < 1e-30);
             assert(std::abs(maxKrw - maxKrg) < 1e-30);
         }
         else {

@@ -88,7 +88,7 @@ public:
             // explicitly in the deck.
             setMolarMasses(regionIdx, MO, MG, MW);
 
-            const auto& pvdgTable = pvdgTables[regionIdx];
+            const auto& pvdgTable = pvdgTables.getTable<PvdgTable>(regionIdx);
 
             // say 99.97% of all time: "premature optimization is the root of all
             // evil". Eclipse does this "optimization" for apparently no good reason!

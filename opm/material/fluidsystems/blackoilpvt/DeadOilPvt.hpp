@@ -71,7 +71,7 @@ public:
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
 
-            const auto& pvdoTable = pvdoTables[regionIdx];
+            const auto& pvdoTable = pvdoTables.getTable<PvdoTable>(regionIdx);
 
             const auto& BColumn(pvdoTable.getFormationFactorColumn());
             std::vector<Scalar> invBColumn(BColumn.size());
