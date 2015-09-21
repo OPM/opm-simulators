@@ -155,6 +155,7 @@ namespace Opm
                     globalPosition_.insert( std::make_pair( globalIndex[ index ], index ) );
                 }
 
+                // on I/O rank we need to create a mapping from local to global
                 if( ! indexMaps_.empty() )
                 {
                     // for the ioRank create a localIndex to index in global state map
@@ -164,7 +165,7 @@ namespace Opm
                     for( size_t i=0; i<localSize; ++i )
                     {
                         const int id = distributedGlobalIndex_[ localIndexMap_[ i ] ];
-                        indexMap[ i ] = id ;
+                        indexMap[ i ] = globalPosition_[ id ] ;
 #ifndef NDEBUG
                         assert( checkPosition_.find( id ) == checkPosition_.end() );
                         checkPosition_.insert( id );
@@ -424,6 +425,7 @@ namespace Opm
                 for( unsigned int i=0; i<size; ++i )
                 {
                     const unsigned int index = localIndexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
                     buffer.write( vector[ index ] );
                 }
             }
@@ -440,6 +442,7 @@ namespace Opm
                 for( unsigned int i=0; i<size; ++i )
                 {
                     const unsigned int index = indexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
                     buffer.read( vector[ index ] );
                 }
             }
