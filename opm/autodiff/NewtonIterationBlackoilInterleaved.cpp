@@ -218,24 +218,27 @@ namespace Opm
         const int np = eqs.size();
         // Find sparsity structure as union of basic block sparsity structures,
         // corresponding to the jacobians with respect to pressure.
-        // Use addition to get to the union structure.
-        AutoDiffMatrix::SparseRep structure = eqs[0].derivative()[0].getSparse();
+        // Use our custom PointOneOp to get to the union structure.
+        // Note that we only iterate over the pressure derivatives on purpose.
+        Eigen::SparseMatrix<double, Eigen::ColMajor> col_major = eqs[0].derivative()[0].getSparse();
         detail::PointOneOp<double> point_one;
         for (int phase = 1; phase < np; ++phase) {
             const AutoDiffMatrix::SparseRep& mat = eqs[phase].derivative()[0].getSparse();
-            structure = structure.binaryExpr(mat, point_one);
+            col_major = col_major.binaryExpr(mat, point_one);
         }
-        Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
 
-        const int size = s.rows();
-        assert(size == s.cols());
+        // Automatically convert the column major structure to a row-major structure
+        Eigen::SparseMatrix<double, Eigen::RowMajor> row_major = col_major;
+
+        const int size = row_major.rows();
+        assert(size == row_major.cols());
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
         assert(np == 3);
-        istlA.setSize(s.rows(), s.cols(), s.nonZeros());
+        istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
         istlA.setBuildMode(Mat::row_wise);
-        const int* ia = s.outerIndexPtr();
-        const int* ja = s.innerIndexPtr();
+        const int* ia = row_major.outerIndexPtr();
+        const int* ja = row_major.innerIndexPtr();
         for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
             const int ri = row.index();
             for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
@@ -251,7 +254,17 @@ namespace Opm
             }
         }
 
-        // Go through all jacobians, insert in correct spot
+        /**
+         * Go through all jacobians, and insert in correct spot
+         *
+         * The straight forward way to do this would be to run through each
+         * element in the output matrix, and set all block entries by gathering
+         * from all "input matrices" (derivatives).
+         *
+         * A faster alternative is to instead run through each "input matrix" and
+         * insert its elements in the correct spot in the output matrix.
+         *
+         */
         for (int col = 0; col < size; ++col) {
             for (int p1 = 0; p1 < np; ++p1) {
                 for (int p2 = 0; p2 < np; ++p2) {
