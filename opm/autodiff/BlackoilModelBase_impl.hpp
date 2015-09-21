@@ -1545,7 +1545,7 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            computeWellConnectionPressures(state, well_state);
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
     }
