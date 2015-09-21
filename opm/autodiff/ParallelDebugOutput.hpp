@@ -236,6 +236,7 @@ namespace Opm
                     globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
                     // TODO init well state
 
+                    /*
                     // Create wells and well state.
                     WellsManager wells_manager(eclipseState,
                                                0,
@@ -247,8 +248,10 @@ namespace Opm
                                                Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
                                                0,
                                                false);
+
                     const Wells* wells = wells_manager.c_wells();
                     globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
+                    */
 
                     // copy global cartesian index
                     globalIndex_ = globalGrid.globalCell();
@@ -378,7 +381,7 @@ namespace Opm
                 }
 
                 // write all data from local well state to buffer
-                writeWells( buffer );
+                // writeWells( buffer );
             }
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
@@ -400,7 +403,7 @@ namespace Opm
                 }
 
                 // read well data from buffer
-                readWells( buffer );
+                // readWells( buffer );
             }
 
             // unpack all data associated with link
