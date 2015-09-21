@@ -55,7 +55,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
     auto tables = eclState->getTableManager();
     // pvt
-    const auto& pvdsTables = tables->getPvdsTables();
+    const TableContainer& pvdsTables = tables->getPvdsTables();
     if (!pvdsTables.empty()) {
 
         int numRegions = pvdsTables.size();
@@ -65,7 +65,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         inverseBmu_.resize(numRegions);
 
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            const Opm::PvdsTable& pvdsTable = pvdsTables[regionIdx];
+            const Opm::PvdsTable& pvdsTable = pvdsTables.getTable<PvdsTable>(regionIdx);
 
             // Copy data
             const std::vector<double>& press = pvdsTable.getPressureColumn();
@@ -91,7 +91,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
     }
 
-    const auto& ssfnTables = tables->getSsfnTables();
+    const TableContainer& ssfnTables = tables->getSsfnTables();
     // relative permeabilty multiplier
     if (!ssfnTables.empty()) {
 
@@ -104,7 +104,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         krg_.resize(numRegions);
         krs_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            const Opm::SsfnTable& ssfnTable = ssfnTables[regionIdx];
+            const Opm::SsfnTable& ssfnTable = ssfnTables.getTable<SsfnTable>(regionIdx);
 
             // Copy data
             const std::vector<double>& solventFraction = ssfnTable.getSolventFractionColumn();
