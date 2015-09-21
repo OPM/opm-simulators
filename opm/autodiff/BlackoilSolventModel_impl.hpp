@@ -286,6 +286,142 @@ namespace Opm {
         }
     }
 
+    template <class Grid>
+    void BlackoilSolventModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
+                                                                        const WellState& xw)
+    {
+        if( ! Base::localWellsActive() ) return ;
+
+        using namespace Opm::AutoDiffGrid;
+        // 1. Compute properties required by computeConnectionPressureDelta().
+        //    Note that some of the complexity of this part is due to the function
+        //    taking std::vector<double> arguments, and not Eigen objects.
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const int nw = wells().number_of_wells;
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+
+        // Compute the average pressure in each well block
+        const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
+        V avg_press = perf_press*0;
+        for (int w = 0; w < nw; ++w) {
+            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                const double p_above = perf == wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
+                const double p_avg = (perf_press[perf] + p_above)/2;
+                avg_press[perf] = p_avg;
+            }
+        }
+
+        // Use cell values for the temperature as the wells don't knows its temperature yet.
+        const ADB perf_temp = subset(state.temperature, well_cells);
+
+        // Surface density.
+        const PhaseUsage& pu = fluid_.phaseUsage();
+        //std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
+        DataBlock surf_dens(nperf, pu.num_phases);
+        for (int phase = 0; phase < pu.num_phases; ++ phase) {
+            surf_dens.col(phase) = V::Constant(nperf, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
+        }
+
+        // Compute b, rsmax, rvmax values for perforations.
+        // Evaluate the properties using average well block pressures
+        // and cell values for rs, rv, phase condition and temperature.
+        const ADB avg_press_ad = ADB::constant(avg_press);
+        std::vector<PhasePresence> perf_cond(nperf);
+        const std::vector<PhasePresence>& pc = phaseCondition();
+        for (int perf = 0; perf < nperf; ++perf) {
+            perf_cond[perf] = pc[well_cells[perf]];
+        }
+
+        DataBlock b(nperf, pu.num_phases);
+        std::vector<double> rsmax_perf(nperf, 0.0);
+        std::vector<double> rvmax_perf(nperf, 0.0);
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
+        }
+        assert(active_[Oil]);
+        const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB perf_rs = subset(state.rs, well_cells);
+            const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
+            const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
+            rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB perf_rv = subset(state.rv, well_cells);
+            V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+
+            if (has_solvent_) {
+                const V bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
+                // A weighted sum of the b-factors of gas and solvent are used.
+                const int nc = Opm::AutoDiffGrid::numCells(grid_);
+
+                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+                const ADB zero = ADB::constant(V::Zero(nc));
+                const ADB& ss = state.solvent_saturation;
+                const ADB& sg = (active_[ Gas ]
+                                 ? state.saturation[ pu.phase_pos[ Gas ] ]
+                                 : zero);
+
+                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+                V F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells).value();
+
+                const int nw = wells().number_of_wells;
+                V injectedSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
+
+                V isProducer = V::Zero(nperf);
+                V ones = V::Constant(nperf,1.0);
+                for (int w = 0; w < nw; ++w) {
+                    if(wells().type[w] == PRODUCER) {
+                        for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                            isProducer[perf] = 1;
+                        }
+                    }
+                }
+                F_solvent = isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction;
+
+                bg = bg * (ones - F_solvent);
+                bg = bg + F_solvent * bs;
+
+                const V& rhog = surf_dens.col(pu.phase_pos[BlackoilPhases::Vapour]);
+                const V& rhos = solvent_props_.solventSurfaceDensity(well_cells);
+                surf_dens.col(pu.phase_pos[BlackoilPhases::Vapour]) = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
+            }
+            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
+
+            const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
+            rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
+        }
+
+        // b and surf_dens_perf is row major, so can just copy data.
+        std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);        
+        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf * pu.num_phases);
+
+        // Extract well connection depths.
+        const V depth = cellCentroidsZToEigen(grid_);
+        const V pdepth = subset(depth, well_cells);
+        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+
+        // Gravity
+        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
+
+        // 2. Compute densities
+        std::vector<double> cd =
+                WellDensitySegmented::computeConnectionDensities(
+                        wells(), xw, fluid_.phaseUsage(),
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        // 3. Compute pressure deltas
+        std::vector<double> cdp =
+                WellDensitySegmented::computeConnectionPressureDelta(
+                        wells(), perf_depth, cd, grav);
+
+        // 4. Store the results
+        Base::well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf);
+        Base::well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
+    }
+
 
 
 

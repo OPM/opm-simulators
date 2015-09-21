@@ -195,6 +195,10 @@ namespace Opm {
                                            const SolutionState& state,
                                            WellState& xw);
 
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellState& xw);
+
+
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,
