@@ -198,6 +198,7 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
+        void updateEquationsScaling();
 
         void
         computeMassFlux(const int               actph ,

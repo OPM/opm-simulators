@@ -98,6 +98,9 @@ namespace Opm {
             if (has_vapoil_) {
                 OPM_THROW(std::runtime_error, "Solvent option only works with dead gas\n");
             }
+
+            residual_.matbalscale.resize(fluid_.numPhases() + 1, 0.0031); // use the same as gas
+
         }
     }
 
@@ -224,9 +227,18 @@ namespace Opm {
 
     }
 
-
-
-
+    template <class Grid>
+    void
+    BlackoilSolventModel<Grid>::updateEquationsScaling()
+    {
+        Base::updateEquationsScaling();
+        assert(MaxNumPhases + 1 == resdual.matbalscale.size());
+        if (has_solvent_) {
+            const ADB& temp_b = rq_[solvent_pos_].b;
+            ADB::V B = 1. / temp_b.value();
+            residual_.matbalscale[solvent_pos_] = B.mean();
+        }
+    }
 
     template <class Grid>
     void BlackoilSolventModel<Grid>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,

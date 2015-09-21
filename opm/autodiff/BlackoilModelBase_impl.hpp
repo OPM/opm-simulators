@@ -948,7 +948,7 @@ namespace detail {
 
 
         if (param_.update_equations_scaling_) {
-            updateEquationsScaling();
+            asImpl().updateEquationsScaling();
         }
 
     }
