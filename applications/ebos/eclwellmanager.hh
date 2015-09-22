@@ -683,8 +683,8 @@ protected:
         auto deckSchedule = eclStatePtr->getSchedule();
         auto eclGrid = eclStatePtr->getEclipseGrid();
 
-        assert( eclGrid->getNX() == simulator_.gridManager().cartesianDimensions()[ 0 ] );
-        assert( eclGrid->getNY() == simulator_.gridManager().cartesianDimensions()[ 1 ] );
+        assert((int) eclGrid->getNX() == simulator_.gridManager().cartesianDimensions()[0]);
+        assert((int) eclGrid->getNY() == simulator_.gridManager().cartesianDimensions()[1]);
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
@@ -708,9 +708,11 @@ protected:
                 cartesianCoordinate[ 0 ] = completion->getI();
                 cartesianCoordinate[ 1 ] = completion->getJ();
                 cartesianCoordinate[ 2 ] = completion->getK();
-                const int cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
-                assert( cartIdx == (completion->getI() + completion->getJ()*eclGrid->getNX()
-                                      + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
+                unsigned cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
+                assert(cartIdx ==
+                       (completion->getI()
+                        + completion->getJ()*eclGrid->getNX()
+                        + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
 
                 // in this code we only support each cell to be part of at most a single
                 // well. TODO (?) change this?

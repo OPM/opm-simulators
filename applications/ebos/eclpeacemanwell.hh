@@ -237,6 +237,32 @@ public:
     EclPeacemanWell(const Simulator &simulator)
         : simulator_(simulator)
     {
+        // set the initial status of the well
+        wellType_ = Undefined;
+        wellStatus_ = Shut;
+        controlMode_ = BottomHolePressure;
+
+        wellTotalVolume_ = 0.0;
+
+        bhpLimit_ = 0.0;
+        thpLimit_ = 0.0;
+
+        targetBottomHolePressure_ = 0.0;
+        actualBottomHolePressure_ = 0.0;
+        maximumSurfaceRate_ = 0.0;
+        maximumReservoirRate_ = 0.0;
+
+        actualWeightedSurfaceRate_ = 0.0;
+        actualWeightedResvRate_ = 0.0;
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            actualSurfaceRates_[phaseIdx] = 0.0;
+            actualResvRates_[phaseIdx] = 0.0;
+
+            volumetricWeight_[phaseIdx] = 0.0;
+        }
+
+        refDepth_ = 0.0;
+
         // set the composition of the injected fluids based. If
         // somebody is stupid enough to inject oil, we assume he wants
         // to loose his fortune on dry oil...
@@ -249,6 +275,8 @@ public:
 
         // set the temperature to 25 deg C, just so that it is set
         injectionFluidState_.setTemperature(273.15 + 25);
+
+        injectedPhaseIdx_ = oilPhaseIdx;
     }
 
     /*!
@@ -1439,6 +1467,20 @@ protected:
     // the number of times beginIteration*() was called for the current time step
     int iterationIdx_;
 
+    // the type of the well (injector, producer or undefined)
+    WellType wellType_;
+
+    // Specifies whether the well is currently open, closed or shut. The difference
+    // between "closed" and "shut" is that for the former, the well is assumed to be
+    // closed above the reservoir so that cross-flow within the well is possible while
+    // the well is completely separated from the reservoir if it is shut. (i.e., no
+    // crossflow is possible in this case.)
+    WellStatus wellStatus_;
+
+    // specifies the quantities which are controlled for (i.e., which
+    // should be assumed to be externally specified and which should
+    // be computed based on those)
+    ControlMode controlMode_;
 
     // the sum of the total volumes of all the degrees of freedoms that interact with the well
     Scalar wellTotalVolume_;
@@ -1446,14 +1488,6 @@ protected:
     // The assumed bottom hole and tubing head pressures as specified by the user
     Scalar bhpLimit_;
     Scalar thpLimit_;
-
-    // specifies the quantities which are controlled for (i.e., which
-    // should be assumed to be externally specified and which should
-    // be computed based on those)
-    ControlMode controlMode_;
-
-    // the type of the well (injector, producer or undefined)
-    WellType wellType_;
 
     // The bottom hole pressure to be targeted by the well model. This may be computed
     // from the tubing head pressure (if the control mode is TubingHeadPressure), or it may be
@@ -1484,15 +1518,12 @@ protected:
     Scalar actualWeightedResvRate_;
     std::array<Scalar, numPhases> actualResvRates_;
 
-    // Specifies whether the well is currently open, closed or shut. The difference
-    // between "closed" and "shut" is that for the former, the well is assumed to be
-    // closed above the reservoir so that cross-flow within the well is possible while
-    // the well is completely separated from the reservoir if it is shut. (i.e., no
-    // crossflow is possible in this case.)
-    WellStatus wellStatus_;
-
     // The relative weight of the volumetric rate of each fluid
     Scalar volumetricWeight_[numPhases];
+
+    // the reference depth for the bottom hole pressure. if not specified otherwise, this
+    // is the position of the _highest_ DOF in the well.
+    Scalar refDepth_;
 
     // The thermodynamic state of the fluid which gets injected
     //
@@ -1502,10 +1533,6 @@ protected:
     mutable FluidState injectionFluidState_;
 
     int injectedPhaseIdx_;
-
-    // the reference depth for the bottom hole pressure. if not specified otherwise, this
-    // is the position of the _highest_ DOF in the well.
-    Scalar refDepth_;
 };
 } // namespace Ewoms
 
