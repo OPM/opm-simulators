@@ -178,6 +178,63 @@ namespace Opm {
         using Base::wells;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multi_segment_; }
+
+        SolutionState
+        variableState(const ReservoirState& x,
+                      const WellState& xw) const {};
+
+
+        void updateWellControls(WellState& xw) const {};
+
+        void updateWellState(const V& dwells,
+                             WellState& well_state) {};
+
+        std::vector<V>
+        variableStateInitials(const ReservoirState& x,
+                              const WellState& xw) const {};
+
+        void
+        variableWellStateInitials(const WellState& xw,
+                                  std::vector<V>& vars0) const {};
+
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellState& xw) {};
+
+        void
+        computeWellFlux(const SolutionState& state,
+                        const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
+                        V& aliveWells,
+                        std::vector<ADB>& cq_s);
+
+        void
+        solveWellEq(const std::vector<ADB>& mob_perfcells,
+                    const std::vector<ADB>& b_perfcells,
+                    SolutionState& state,
+                    WellState& well_state);
+
+        void
+        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                         const SolutionState& state,
+                                         WellState& xw) {};
+
+        void
+        addWellFluxEq(const std::vector<ADB>& cq_s,
+                      const SolutionState& state) {};
+
+        void
+        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                           const SolutionState& state,
+                                           const WellState& xw) {};
+
+        void
+        addWellControlEq(const SolutionState& state,
+                         const WellState& xw,
+                         const V& aliveWells) {};
+
+        std::vector<int>
+        variableWellStateIndices() const {};
+
 /*
 
         const Grid&         grid_;
@@ -209,52 +266,6 @@ namespace Opm {
         V isRv_;
         V isSg_;
 
-        // For the non-segmented well, it should be the density with AVG or SEG way.
-        // while usually SEG way
-        V well_perforation_densities_; //Density of each well perforation
-
-        // ADB version, when using AVG way, the calculation of the density and hydrostatic head
-        // is implicit
-        ADB well_perforation_densities_adb_;
-
-        // Diff to the pressure of the related segment.
-        // When the well is a usual well, the bhp will be the pressure of the top segment
-        // For mutlti-segmented wells, only AVG is allowed.
-        // For non-segmented wells, typically SEG is used. AVG way might not have been
-        // implemented yet.
-
-        // Diff to bhp for each well perforation. only for usual wells.
-        // For segmented wells, they are zeros.
-        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
-
-        // ADB version. Eventually, only ADB version will be kept.
-        ADB well_perforation_pressure_diffs_adb_;
-
-        // Pressure correction due to the different depth of the perforation
-        // and the cell center of the grid block
-        // For the non-segmented wells, since the perforation are forced to be
-        // at the center of the grid cell, it should be ZERO.
-        // It should only apply to the mutli-segmented wells.
-        V well_perforation_pressure_cell_diffs_;
-        ADB well_perforation_pressure_cell_diffs_adb_;
-
-        // Pressure correction due to the depth differennce between segment depth and perforation depth.
-        // TODO: It should be able to be merge as a part of the perforation_pressure_diffs_.
-        ADB well_perforations_segment_pressure_diffs_;
-
-        // the average of the fluid densities in the grid block
-        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
-        // and the cell center of the grid block
-        V well_perforation_cell_densities_;
-        ADB well_perforation_cell_densities_adb_;
-
-        V well_perforatoin_cell_pressure_diffs_;
-
-        LinearisedBlackoilResidual residual_;
-
-        /// \brief Whether we print something to std::cout
-        bool terminal_output_;
-
         std::vector<int>         primalVariable_;
         V pvdt_;
 
@@ -283,39 +294,12 @@ namespace Opm {
         void
         makeConstantState(SolutionState& state) const;
 
-        SolutionState
-        variableState(const ReservoirState& x,
-                      const WellState& xw) const;
-
-        SolutionState
-        variableState(const ReservoirState& x,
-                      const WellStateMultiSegment& xw) const;
-
-        std::vector<V>
-        variableStateInitials(const ReservoirState& x,
-                              const WellState& xw) const;
-        std::vector<V>
-        variableStateInitials(const ReservoirState& x,
-                              const WellStateMultiSegment& xw) const;
         void
         variableReservoirStateInitials(const ReservoirState& x,
                                        std::vector<V>& vars0) const;
-        void
-        variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const;
-
-        void variableWellStateInitials(const WellStateMultiSegment& xw,
-                                       std::vector<V>& vars0) const;
-
-        void
-        variableWellState(const WellStateMultiSegment& xw,
-                                  std::vector<V>& vars0) const;
 
         std::vector<int>
         variableStateIndices() const;
-
-        std::vector<int>
-        variableWellStateIndices() const;
 
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
@@ -331,73 +315,12 @@ namespace Opm {
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
-
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellStateMultiSegment& xw);
 
         void
         assembleMassBalanceEq(const SolutionState& state);
 
-        void
-        solveWellEq(const std::vector<ADB>& mob_perfcells,
-                    const std::vector<ADB>& b_perfcells,
-                    SolutionState& state,
-                    WellState& well_state);
-
-        void
-        computeWellFlux(const SolutionState& state,
-                        const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        V& aliveWells,
-                        std::vector<ADB>& cq_s);
-
-        void
-        computeWellFlux(const MultiSegmentBlackoilSolutionState& state,
-                        const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        V& aliveWells,
-                        std::vector<ADB>& cq_s);
-        void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         const SolutionState& state,
-                                         WellState& xw);
-
-        void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         const MultiSegmentBlackoilSolutionState& state,
-                                         WellStateMultiSegment& xw);
-
-        void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state);
-
-        void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const MultiSegmentBlackoilSolutionState& state);
-
-        void
-        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
-                                           const SolutionState& state,
-                                           const WellState& xw);
-
-        void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
-
-        void
-        addWellControlEq(const MultiSegmentBlackoilSolutionState& state,
-                         const WellStateMultiSegment& xw,
-                         const V& aliveWells);
 
 
-        void updateWellControls(WellState& xw) const;
-        void updateWellControls(WellStateMultiSegment& xw) const;
-
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
 
         bool getWellConvergence(const int iteration);
 
