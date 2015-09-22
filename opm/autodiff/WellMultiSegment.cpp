@@ -257,8 +257,9 @@ namespace Opm
         p2s.reserve(m_number_of_perforations_);
 
         for(int s = 0; s < (int)m_number_of_segments_; ++s) {
-            int temp_nperf = m_segment_perforations_.size();
-            assert(temp_nperf > 0);
+            int temp_nperf = m_segment_perforations_[s].size();
+            // some segment may not have any perforation
+            assert(temp_nperf >= 0);
             for (int perf = 0; perf < temp_nperf; ++perf) {
                 const int index_perf = m_segment_perforations_[s][perf];
                 s2p.push_back(Tri(index_perf, s, 1.0));
