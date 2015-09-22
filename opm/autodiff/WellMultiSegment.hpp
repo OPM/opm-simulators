@@ -163,8 +163,8 @@ namespace Opm
         WellOps m_wops_;
     };
 
-    typedef std::shared_ptr<WellMultiSegment> WellMutliSegmentPtr;
-    typedef std::shared_ptr<const WellMultiSegment> WellMutliSegmentConstPtr;
+    typedef std::shared_ptr<WellMultiSegment> WellMultiSegmentPtr;
+    typedef std::shared_ptr<const WellMultiSegment> WellMultiSegmentConstPtr;
 
 } // namespace Opm
 

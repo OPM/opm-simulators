@@ -133,9 +133,6 @@ namespace Opm {
         // while usually SEG way
         using Base::well_perforation_densities_; //Density of each well perforation
 
-        // ADB version, when using AVG way, the calculation of the density and hydrostatic head
-        // is implicit
-        ADB well_perforation_densities_adb_;
 
         // Diff to the pressure of the related segment.
         // When the well is a usual well, the bhp will be the pressure of the top segment
@@ -146,6 +143,10 @@ namespace Opm {
         // Diff to bhp for each well perforation. only for usual wells.
         // For segmented wells, they are zeros.
         using Base::well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+
+        // ADB version of the densities, when using AVG way, the calculation of the density and hydrostatic head
+        // is implicit
+        ADB well_perforation_densities_adb_;
 
         // ADB version. Eventually, only ADB version will be kept.
         ADB well_perforation_pressure_diffs_adb_;
@@ -169,6 +170,14 @@ namespace Opm {
         ADB well_perforation_cell_densities_adb_;
 
         V well_perforatoin_cell_pressure_diffs_;
+
+        const std::vector<WellMultiSegmentConstPtr> wells_multi_segment_;
+
+        // return wells object
+        // TODO: remove this wells structure
+        using Base::wells;
+
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multi_segment_; }
 /*
 
         const Grid&         grid_;
@@ -178,7 +187,6 @@ namespace Opm {
         const Wells*                    wells_;
         // FOR TEMPORARY
         // SHOUlD BE A REFERENCE
-        const std::vector<WellMultiSegment> wells_multi_segment_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -271,9 +279,6 @@ namespace Opm {
         // return true if wells are available on this process
         bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
 
-        // return wells object
-        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
-        const std::vector<WellMultiSegment>& wellsMultiSegment() const { return wells_multi_segment_; }
 
         void
         makeConstantState(SolutionState& state) const;

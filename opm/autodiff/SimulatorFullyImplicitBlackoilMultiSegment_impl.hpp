@@ -84,7 +84,7 @@ namespace Opm
             // well_state.init(wells, state, prev_well_state);
 
             const std::vector<WellConstPtr>& wells_ecl = eclipse_state_->getSchedule()->getWells(timer.currentStepNum());
-            std::vector<WellMutliSegmentConstPtr> wells_multisegment(wells_ecl.size());
+            std::vector<WellMultiSegmentConstPtr> wells_multisegment(wells_ecl.size());
             // wells_multisegment.resize(wells_ecl.size());
             for (size_t i = 0; i < wells_multisegment.size(); ++i) {
                 wells_multisegment[i].reset(new WellMultiSegment(wells_ecl[i], timer.currentStepNum(), wells));

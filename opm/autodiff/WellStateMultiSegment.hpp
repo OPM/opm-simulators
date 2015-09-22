@@ -69,7 +69,7 @@ namespace Opm
         /// and perfPhaseRates() fields, depending on controls
         /// the PrevState here must be the same with State
         template <class State, class PrevState>
-        void init(const std::vector<WellMutliSegmentConstPtr>& wells, const State& state, const PrevState& prevState)
+        void init(const std::vector<WellMultiSegmentConstPtr>& wells, const State& state, const PrevState& prevState)
         {
             const int nw = wells.size();
             if (nw == 0) {
