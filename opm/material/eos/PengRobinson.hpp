@@ -114,7 +114,7 @@ public:
         // Newton-Raphson method
         for (unsigned i = 0; i < 5; ++i) {
             // calculate the molar densities
-            OPM_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
+            OPM_OPTIM_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
             assert(numSol == 3);
 
             Scalar f = fugacityDifference_(params, T, pVap, Vm[0], Vm[2]);
@@ -339,7 +339,7 @@ protected:
             // epsilon was added to the temperature. (this is case
             // rarely happens, though)
             const Scalar eps = - 1e-11;
-            bool OPM_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
+            bool OPM_OPTIM_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
             assert(std::isfinite(maxVm));
             Scalar fStar = maxVm - minVm;

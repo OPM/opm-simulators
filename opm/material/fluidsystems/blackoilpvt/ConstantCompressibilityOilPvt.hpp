@@ -25,10 +25,6 @@
 #ifndef OPM_CONSTANT_COMPRESSIBILITY_OIL_PVT_HPP
 #define OPM_CONSTANT_COMPRESSIBILITY_OIL_PVT_HPP
 
-#include "OilPvtInterface.hpp"
-
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-
 #include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
@@ -39,75 +35,101 @@
 #endif
 
 namespace Opm {
+template <class Scalar>
+class GasPvtMultiplexer;
 
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phase
  *        without dissolved gas and constant compressibility/"viscosibility".
  */
-template <class Scalar, class Evaluation = Scalar>
-class ConstantCompressibilityOilPvt  : public OilPvtInterfaceTemplateWrapper<Scalar,
-                                                                             Evaluation,
-                                                                             ConstantCompressibilityOilPvt<Scalar, Evaluation> >
+template <class Scalar>
+class ConstantCompressibilityOilPvt
 {
-    friend class OilPvtInterfaceTemplateWrapper<Scalar,
-                                                Evaluation,
-                                                ConstantCompressibilityOilPvt<Scalar, Evaluation> >;
-
-    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
+    typedef Opm::GasPvtMultiplexer<Scalar> GasPvtMultiplexer;
 
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
-    static const int oilPhaseIdx = BlackOilFluidSystem::oilPhaseIdx;
-    static const int gasPhaseIdx = BlackOilFluidSystem::gasPhaseIdx;
-    static const int waterPhaseIdx = BlackOilFluidSystem::waterPhaseIdx;
-
-    static const int oilCompIdx = BlackOilFluidSystem::oilCompIdx;
-    static const int gasCompIdx = BlackOilFluidSystem::gasCompIdx;
-    static const int waterCompIdx = BlackOilFluidSystem::waterCompIdx;
-
 public:
-    void setNumRegions(int numRegions)
+#if HAVE_OPM_PARSER
+    /*!
+     * \brief Sets the pressure-dependent oil viscosity and density
+     *        using the Eclipse PVCDO keyword.
+     */
+    /*!
+     * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
+     */
+    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr /*eclState*/)
     {
+        DeckKeywordConstPtr pvcdoKeyword = deck->getKeyword("PVCDO");
+        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+
+        assert(pvcdoKeyword->size() == densityKeyword->size());
+
+        size_t numRegions = pvcdoKeyword->size();
+        setNumRegions(numRegions);
+
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+            Scalar rhoRefO = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+            Scalar rhoRefG = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
+            Scalar rhoRefW = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+
+            setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
+
+            auto pvcdoRecord = pvcdoKeyword->getRecord(regionIdx);
+            oilReferencePressure_[regionIdx] =
+                pvcdoRecord->getItem("P_REF")->getSIDouble(0);
+            oilReferenceFormationVolumeFactor_[regionIdx] =
+                pvcdoRecord->getItem("OIL_VOL_FACTOR")->getSIDouble(0);
+            oilCompressibility_[regionIdx] =
+                pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0);
+            oilViscosity_[regionIdx] =
+                pvcdoRecord->getItem("OIL_VISCOSITY")->getSIDouble(0);
+            oilViscosibility_[regionIdx] =
+                pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0);
+        }
+    }
+#endif
+
+    void setNumRegions(size_t numRegions)
+    {
+        oilReferenceDensity_.resize(numRegions);
         oilReferencePressure_.resize(numRegions);
         oilReferenceFormationVolumeFactor_.resize(numRegions);
         oilCompressibility_.resize(numRegions);
         oilViscosity_.resize(numRegions);
         oilViscosibility_.resize(numRegions);
 
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
             setReferenceFormationVolumeFactor(regionIdx, 1.0);
-            setReferencePressure(regionIdx, BlackOilFluidSystem::surfacePressure);
+            setReferencePressure(regionIdx, 1.03125);
         }
     }
 
-#if HAVE_OPM_PARSER
     /*!
-     * \brief Sets the pressure-dependent oil viscosity and density
-     *        using the Eclipse PVCDO keyword.
+     * \brief Initialize the reference densities of all fluids for a given PVT region
      */
-    void setPvcdo(int regionIdx, DeckKeywordConstPtr pvcdoKeyword)
+    void setReferenceDensities(unsigned regionIdx,
+                               Scalar rhoRefOil,
+                               Scalar /*rhoRefGas*/,
+                               Scalar /*rhoRefWater*/)
     {
-        assert(static_cast<int>(pvcdoKeyword->size()) >= regionIdx);
-
-        auto pvcdoRecord = pvcdoKeyword->getRecord(regionIdx);
-        oilReferencePressure_[regionIdx] =
-            pvcdoRecord->getItem("P_REF")->getSIDouble(0);
-        oilReferenceFormationVolumeFactor_[regionIdx] =
-            pvcdoRecord->getItem("OIL_VOL_FACTOR")->getSIDouble(0);
-        oilCompressibility_[regionIdx] =
-            pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0);
-        oilViscosity_[regionIdx] =
-            pvcdoRecord->getItem("OIL_VISCOSITY")->getSIDouble(0);
-        oilViscosibility_[regionIdx] =
-            pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0);
+        oilReferenceDensity_[regionIdx] = rhoRefOil;
     }
-#endif
+
+    /*!
+     * \brief Initialize the reference densities of all fluids for a given PVT region
+     */
+    void setMolarMasses(unsigned /*regionIdx*/,
+                        Scalar /*MOil*/,
+                        Scalar /*MGas*/,
+                        Scalar /*MWater*/)
+    { }
 
     /*!
      * \brief Set the viscosity and "viscosibility" of the oil phase.
      */
-    void setViscosity(int regionIdx, Scalar muo, Scalar oilViscosibility = 0.0)
+    void setViscosity(unsigned regionIdx, Scalar muo, Scalar oilViscosibility = 0.0)
     {
         oilViscosity_[regionIdx] = muo;
         oilViscosibility_[regionIdx] = oilViscosibility;
@@ -116,51 +138,50 @@ public:
     /*!
      * \brief Set the compressibility of the oil phase.
      */
-    void setCompressibility(int regionIdx, Scalar oilCompressibility)
+    void setCompressibility(unsigned regionIdx, Scalar oilCompressibility)
     { oilCompressibility_[regionIdx] = oilCompressibility; }
 
     /*!
      * \brief Set the oil reference pressure [Pa]
      */
-    void setReferencePressure(int regionIdx, Scalar p)
+    void setReferencePressure(unsigned regionIdx, Scalar p)
     { oilReferencePressure_[regionIdx] = p; }
 
     /*!
      * \brief Set the oil reference formation volume factor [-]
      */
-    void setReferenceFormationVolumeFactor(int regionIdx, Scalar BoRef)
+    void setReferenceFormationVolumeFactor(unsigned regionIdx, Scalar BoRef)
     { oilReferenceFormationVolumeFactor_[regionIdx] = BoRef; }
 
     /*!
      * \brief Set the oil "viscosibility" [1/ (Pa s)]
      */
-    void setViscosibility(int regionIdx, Scalar muComp)
+    void setViscosibility(unsigned regionIdx, Scalar muComp)
     { oilViscosibility_[regionIdx] = muComp; }
 
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd()
+    void initEnd(const GasPvtMultiplexer */*gasPvt*/)
     { }
 
-private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval viscosity_(int regionIdx,
-                       const LhsEval& temperature,
-                       const LhsEval& pressure,
-                       const LhsEval& XoG) const
+    template <class Evaluation>
+        Evaluation viscosity(unsigned regionIdx,
+                             const Evaluation& temperature,
+                             const Evaluation& pressure,
+                             const Evaluation& XoG) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        const LhsEval& Bo = formationVolumeFactor_(regionIdx, temperature, pressure, XoG);
+        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
-        const LhsEval& Y =
+        const Evaluation& Y =
             (oilCompressibility_[regionIdx] - oilViscosibility_[regionIdx])
             * (pressure - pRef);
         return BoMuoRef/((1 + Y*(1 + Y/2))*Bo);
@@ -169,29 +190,29 @@ private:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval density_(int regionIdx,
-                     const LhsEval& temperature,
-                     const LhsEval& pressure,
-                     const LhsEval& XoG) const
+    template <class Evaluation>
+        Evaluation density(unsigned regionIdx,
+                           const Evaluation& temperature,
+                           const Evaluation& pressure,
+                           const Evaluation& XoG) const
     {
-        const LhsEval& Bo = formationVolumeFactor_(regionIdx, temperature, pressure, XoG);
-        Scalar rhooRef = BlackOilFluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
+        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        Scalar rhooRef = oilReferenceDensity_[regionIdx];
         return rhooRef/Bo;
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    template <class LhsEval>
-    LhsEval formationVolumeFactor_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& pressure,
-                                   const LhsEval& XoG) const
+    template <class Evaluation>
+        Evaluation formationVolumeFactor(unsigned regionIdx,
+                                         const Evaluation& /*temperature*/,
+                                         const Evaluation& pressure,
+                                         const Evaluation& /*XoG*/) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
-        const LhsEval& X = oilCompressibility_[regionIdx]*(pressure - pRef);
+        const Evaluation& X = oilCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BoRef = oilReferenceFormationVolumeFactor_[regionIdx];
         return BoRef/(1 + X*(1 + X/2));
@@ -201,42 +222,45 @@ private:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval fugacityCoefficient_(int regionIdx,
-                                 const LhsEval& temperature,
-                                 const LhsEval& pressure,
-                                 int compIdx) const
+    template <class Evaluation>
+        Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
+                                          const Evaluation& /*temperature*/,
+                                          const Evaluation& pressure) const
     {
         // set the oil component fugacity coefficient in oil phase
         // arbitrarily. we use some pseudo-realistic value for the vapor
         // pressure to ease physical interpretation of the results
-        const LhsEval& phi_oO = 20e3/pressure;
+        return 20e3/pressure;
+    }
 
-        if (compIdx == BlackOilFluidSystem::oilCompIdx)
-            return phi_oO;
-        else if (compIdx == BlackOilFluidSystem::oilCompIdx)
-            // assume that the affinity of the oil component to the
-            // oil phase is one million times smaller than that of the
-            // oil component
-            return 1e8*phi_oO;
+    template <class Evaluation>
+        Evaluation fugacityCoefficientWater(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure) const
+    {
+        // assume that the affinity of the water component to the oil phase is many orders
+        // of magnitude smaller than that of the oil component
+        return 1e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
+    }
 
-        assert(compIdx == BlackOilFluidSystem::gasCompIdx);
-        // gas is immiscible with dead oil as well...
-        return 1.01e8*phi_oO;
+    template <class Evaluation>
+        Evaluation fugacityCoefficientGas(unsigned regionIdx,
+                                          const Evaluation& temperature,
+                                          const Evaluation& pressure) const
+    {
+        // assume that the affinity of the gas component to the oil phase is many orders
+        // of magnitude smaller than that of the oil component
+        return 1.01e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
     }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
-    template <class LhsEval>
-    LhsEval gasDissolutionFactor_(int regionIdx,
-                                  const LhsEval& temperature,
-                                  const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-
-        return Toolbox::createConstant(0.0); /* this is dead oil! */
-    }
+    template <class Evaluation>
+        Evaluation gasDissolutionFactor(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dead oil! */ }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
@@ -244,37 +268,26 @@ private:
      *
      * \param XoG The mass fraction of the gas component in the oil phase [-]
      */
-    template <class LhsEval>
-    LhsEval oilSaturationPressure_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& XoG) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
+    template <class Evaluation>
+        Evaluation oilSaturationPressure(unsigned /*regionIdx*/,
+                                         const Evaluation& /*temperature*/,
+                                         const Evaluation& /*XoG*/) const
+    { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
-        return Toolbox::createConstant(0.0); /* this is dead oil, so there isn't any meaningful saturation pressure! */
-    }
+    template <class Evaluation>
+        Evaluation saturatedOilGasMassFraction(unsigned /*regionIdx*/,
+                                               const Evaluation& /*temperature*/,
+                                               const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dead oil! */ }
 
-    template <class LhsEval>
-    LhsEval saturatedOilGasMassFraction_(int regionIdx,
-                                         const LhsEval& temperature,
-                                         const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-
-        return Toolbox::createConstant(0.0); /* this is dead oil! */
-    }
-
-    template <class LhsEval>
-    LhsEval saturatedOilGasMoleFraction_(int regionIdx,
-                                         const LhsEval& temperature,
-                                         const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-
-        return Toolbox::createConstant(0.0); /* this is dead oil! */
-    }
+    template <class Evaluation>
+        Evaluation saturatedOilGasMoleFraction(unsigned /*regionIdx*/,
+                                               const Evaluation& /*temperature*/,
+                                               const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dead oil! */ }
 
 private:
+    std::vector<Scalar> oilReferenceDensity_;
     std::vector<Scalar> oilReferencePressure_;
     std::vector<Scalar> oilReferenceFormationVolumeFactor_;
     std::vector<Scalar> oilCompressibility_;

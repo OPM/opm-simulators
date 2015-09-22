@@ -34,4 +34,12 @@
 #define OPM_UNUSED __attribute__((unused))
 #endif
 
+#ifdef NDEBUG
+#define OPM_DEBUG_UNUSED
+#define OPM_OPTIM_UNUSED OPM_UNUSED
+#else
+#define OPM_DEBUG_UNUSED OPM_UNUSED
+#define OPM_OPTIM_UNUSED
+#endif
+
 #endif

@@ -140,7 +140,7 @@ public:
      * position of the x value between the i-th and the (i+1)-th
      * sample point.
       */
-    Scalar xToI(Scalar x, OPM_UNUSED bool extrapolate = false) const
+    Scalar xToI(Scalar x, OPM_OPTIM_UNUSED bool extrapolate = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
@@ -181,7 +181,7 @@ public:
      * position of the y value between the j-th and the (j+1)-th
      * sample point.
      */
-    Scalar yToJ(size_t i, Scalar y, OPM_UNUSED bool extrapolate = false) const
+    Scalar yToJ(size_t i, Scalar y, OPM_OPTIM_UNUSED bool extrapolate = false) const
     {
         assert(0 <= i && i < numX());
         const auto &colSamplePoints = samples_.at(i);
@@ -292,7 +292,9 @@ public:
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
         Evaluation alpha = Evaluation::createConstant(xToI(x.value, extrapolate));
-        int i = std::max(0, std::min<int>(numX() - 2, static_cast<int>(alpha.value)));
+        unsigned i = static_cast<unsigned>(
+            std::max<int>(0, std::min<int>(static_cast<int>(numX() - 2),
+                                           static_cast<int>(alpha.value))));
         alpha -= i;
 
         Evaluation beta1;
@@ -301,8 +303,12 @@ public:
         beta1.value = yToJ(i, y.value, extrapolate);
         beta2.value = yToJ(i + 1, y.value, extrapolate);
 
-        int j1 = std::max(0, std::min<int>(numY(i) - 2, static_cast<int>(beta1.value)));
-        int j2 = std::max(0, std::min<int>(numY(i + 1) - 2, static_cast<int>(beta2.value)));
+        unsigned j1 = static_cast<unsigned>(
+            std::max(0, std::min<int>(static_cast<int>(numY(i) - 2),
+                                      static_cast<int>(beta1.value))));
+        unsigned j2 = static_cast<unsigned>(
+            std::max(0, std::min<int>(static_cast<int>(numY(i + 1) - 2),
+                                      static_cast<int>(beta2.value))));
 
         beta1.value -= j1;
         beta2.value -= j2;
@@ -363,7 +369,7 @@ public:
      *
      * Returns the i index of that line.
      */
-    size_t appendSamplePoint(unsigned i, Scalar y, Scalar value)
+    size_t appendSamplePoint(size_t i, Scalar y, Scalar value)
     {
         assert(0 <= i && i < numX());
 

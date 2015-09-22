@@ -689,7 +689,7 @@ public:
         setNumSamples_(points.size());
         typename XYContainer::const_iterator it = points.begin();
         typename XYContainer::const_iterator endIt = points.end();
-        for (int i = 0; it != endIt; ++i, ++it) {
+        for (unsigned i = 0; it != endIt; ++i, ++it) {
             xPos_[i] = std::get<0>(*it);
             yPos_[i] = std::get<1>(*it);
         }
@@ -989,7 +989,7 @@ public:
      * In the corner case that the spline is constant within the given
      * interval, this method returns 3.
      */
-    int monotonic(Scalar x0, Scalar x1, OPM_UNUSED bool extrapolate = false) const
+    int monotonic(Scalar x0, Scalar x1, OPM_OPTIM_UNUSED bool extrapolate = false) const
     {
         assert(std::abs(x0 - x1) > 1e-30);
 
