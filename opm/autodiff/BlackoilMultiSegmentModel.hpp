@@ -86,24 +86,13 @@ namespace Opm {
                           const bool has_vapoil,
                           const bool terminal_output);
 
-        /// \brief Set threshold pressures that prevent or reduce flow.
-        /// This prevents flow across faces if the potential
-        /// difference is less than the threshold. If the potential
-        /// difference is greater, the threshold value is subtracted
-        /// before calculating flow. This is treated symmetrically, so
-        /// flow is prevented or reduced in both directions equally.
-        /// \param[in]  threshold_pressures_by_face   array of size equal to the number of faces
-        ///                                   of the grid passed in the constructor.
-        /* void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
-        oafafd
-
         /// Called once before each time step.
         /// \param[in] dt                     time step size
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         void prepareStep(const double dt,
                          ReservoirState& reservoir_state,
-                         WellState& well_state);
+                         WellState& well_state) {};
 
         /// Called once after each time step.
         /// In this class, this function does nothing.
@@ -112,7 +101,8 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void afterStep(const double dt,
                        ReservoirState& reservoir_state,
-                       WellState& well_state);
+                       WellState& well_state) {};
+
 
         /// Assemble the residual and Jacobian of the nonlinear system.
         /// \param[in]      reservoir_state   reservoir state variables
@@ -120,27 +110,8 @@ namespace Opm {
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
-                      const bool initial_assembly);
+                      const bool initial_assembly) {};
 
-        void assemble(const ReservoirState& reservoir_state,
-                      WellStateMultiSegment& well_state,
-                      const bool initial_assembly);
-
-        /// \brief Compute the residual norms of the mass balance for each phase,
-        /// the well flux, and the well equation.
-        /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residual of the well flux and the well equation.
-        std::vector<double> computeResidualNorms() const;
-
-        /// The size (number of unknowns) of the nonlinear system of equations.
-        int sizeNonLinear() const;
-
-        /// Number of linear iterations used in last call to solveJacobianSystem().
-        int linearIterationsLastSolve() const;
-
-        /// Solve the Jacobian system Jx = r where J is the Jacobian and
-        /// r is the residual.
-        V solveJacobianSystem() const;
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -148,26 +119,11 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void updateState(const V& dx,
                          ReservoirState& reservoir_state,
-                         WellState& well_state);
-
-        /// Return true if output to cout is wanted.
-        bool terminalOutputEnabled() const;
-
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const double dt, const int iteration);
-
-        /// The number of active phases in the model.
-        int numPhases() const;
-
-        /// Update the scaling factors for mass balance equations
-        void updateEquationsScaling();
+                         WellState& well_state) {};
 
     protected:
 
-        // ---------  Types and enums  ---------
+     /*   // ---------  Types and enums  ---------
 
         typedef Eigen::Array<double,
                              Eigen::Dynamic,
