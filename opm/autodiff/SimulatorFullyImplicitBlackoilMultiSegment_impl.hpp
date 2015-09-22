@@ -24,6 +24,34 @@ namespace Opm
 {
 
     template <class GridT>
+    auto SimulatorFullyImplicitBlackoilMultiSegment<GridT>::
+    createSolver(const Wells* wells, std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
+        -> std::unique_ptr<Solver>
+    {
+        typedef typename Traits::Model Model;
+
+        auto model = std::unique_ptr<Model>(new Model(model_param_,
+                                                      grid_,
+                                                      props_,
+                                                      geo_,
+                                                      rock_comp_props_,
+                                                      wells,
+                                                      solver_,
+                                                      eclipse_state_,
+                                                      has_disgas_,
+                                                      has_vapoil_,
+                                                      terminal_output_,
+                                                      wells_multisegment));
+
+        if (!Base::threshold_pressures_by_face_.empty()) {
+            model->setThresholdPressures(Base::threshold_pressures_by_face_);
+        }
+
+        return std::unique_ptr<ThisType::Solver>(new Solver(Base::solver_param_, std::move(model)));
+
+    }
+
+    template <class GridT>
     SimulatorReport SimulatorFullyImplicitBlackoilMultiSegment<GridT>::run(SimulatorTimer& timer,
                                                                            ReservoirState& state)
     {
@@ -115,7 +143,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = Base::asImpl().createSolver(wells);
+            auto solver = createSolver(wells, wells_multisegment);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge

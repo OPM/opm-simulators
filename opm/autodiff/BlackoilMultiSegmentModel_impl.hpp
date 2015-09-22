@@ -72,7 +72,8 @@ namespace Opm {
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
                   const bool has_vapoil,
-                  const bool terminal_output)
+                  const bool terminal_output,
+                  const std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
           // not all will be necessary eventually
@@ -81,62 +82,10 @@ namespace Opm {
         , well_perforation_pressure_cell_diffs_adb_(ADB::null())
         , well_perforation_cell_densities_adb_(ADB::null())
         , well_perforations_segment_pressure_diffs_(ADB::null())
+        , wells_multisegment_(wells_multisegment)
         {
 
         }
-          /*  grid_  (grid)
-        , fluid_ (fluid)
-        , geo_   (geo)
-        , rock_comp_props_(rock_comp_props)
-        , wells_ (wells_arg)
-        , vfp_properties_(eclState->getTableManager()->getVFPInjTables(), eclState->getTableManager()->getVFPProdTables())
-        , linsolver_ (linsolver)
-        , active_(detail::activePhases(fluid.phaseUsage()))
-        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
-        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid, eclState)
-        , wops_  (wells_)
-        , has_disgas_(has_disgas)
-        , has_vapoil_(has_vapoil)
-        , param_( param )
-        , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases())
-        , phaseCondition_(AutoDiffGrid::numCells(grid))
-        , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
-        , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
-        , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
-        // , well_perforation_densities_adb_(ADB::null())
-        // , well_perforation_pressure_diffs_adb_(ADB::null())
-        // , well_perforation_pressure_cell_diffs_adb_(ADB::null())
-        // , well_perforation_cell_densities_adb_(ADB::null())
-        // , well_perforations_segment_pressure_diffs_(ADB::null())
-        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
-                        ADB::null(),
-                        ADB::null(),
-                        { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
-        , terminal_output_ (terminal_output)
-    {
-#if HAVE_MPI
-        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-        {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-            if ( terminal_output_ ) {
-                // Only rank 0 does print to std::cout if terminal_output is enabled
-                terminal_output_ = (info.communicator().rank()==0);
-            }
-            int local_number_of_wells = wells_->number_of_wells;
-            int global_number_of_wells = info.communicator().sum(local_number_of_wells);
-            wells_active_ = ( global_number_of_wells > 0 );
-        }else
-        {
-            wells_active_ = (wells_->number_of_wells > 0 );
-        }
-#else
-        wells_active_ = (wells_->number_of_wells > 0 );
-#endif
-    } */
-
 
 
 

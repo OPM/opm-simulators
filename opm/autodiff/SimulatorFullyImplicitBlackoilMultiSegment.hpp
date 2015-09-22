@@ -54,6 +54,7 @@ class SimulatorFullyImplicitBlackoilMultiSegment
     typedef SimulatorTraits<ThisType> Traits;
     typedef typename Traits::ReservoirState ReservoirState;
     typedef typename Traits::WellState WellState;
+    typedef typename Traits::Solver Solver;
 public:
     // forward the constructor to the base class
     SimulatorFullyImplicitBlackoilMultiSegment(const parameter::ParameterGroup& param,
@@ -72,10 +73,14 @@ public:
            eclipse_state, output_writer, threshold_pressures_by_face)
     {}
 
+
     SimulatorReport run(SimulatorTimer& timer,
                         ReservoirState& state);
 
 protected:
+
+    std::unique_ptr<Solver> createSolver(const Wells* wells, std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+
     using Base::output_writer_;
     using Base::param_;
     using Base::solver_;
@@ -85,6 +90,11 @@ protected:
     using Base::props_;
     using Base::is_parallel_run_;
     using Base::allcells_;
+    using Base::model_param_;
+    using Base::geo_;
+    using Base::rock_comp_props_;
+    using Base::has_disgas_;
+    using Base::has_vapoil_;
 };
 
 } // namespace Opm

@@ -84,7 +84,8 @@ namespace Opm {
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
                           const bool has_vapoil,
-                          const bool terminal_output);
+                          const bool terminal_output,
+                          const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size
@@ -171,13 +172,13 @@ namespace Opm {
 
         V well_perforatoin_cell_pressure_diffs_;
 
-        const std::vector<WellMultiSegmentConstPtr> wells_multi_segment_;
+        const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         // return wells object
         // TODO: remove this wells structure
         using Base::wells;
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multi_segment_; }
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
         SolutionState
         variableState(const ReservoirState& x,
@@ -455,8 +456,8 @@ namespace Opm {
     };
 
     /// Providing types by template specialisation of ModelTraits for BlackoilMultiSegmentModel.
-    template <class Grid>
-    struct ModelTraits< BlackoilMultiSegmentModel<Grid> >
+    template <class GridT>
+    struct ModelTraits< BlackoilMultiSegmentModel<GridT> >
     {
         typedef BlackoilState ReservoirState;
         typedef WellStateMultiSegment WellState;
