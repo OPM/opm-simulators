@@ -74,7 +74,14 @@ namespace Opm {
                   const bool has_vapoil,
                   const bool terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
-               eclState, has_disgas, has_vapoil, terminal_output) {
+               eclState, has_disgas, has_vapoil, terminal_output)
+          // not all will be necessary eventually
+        , well_perforation_densities_adb_(ADB::null())
+        , well_perforation_pressure_diffs_adb_(ADB::null())
+        , well_perforation_pressure_cell_diffs_adb_(ADB::null())
+        , well_perforation_cell_densities_adb_(ADB::null())
+        , well_perforations_segment_pressure_diffs_(ADB::null())
+        {
 
         }
           /*  grid_  (grid)

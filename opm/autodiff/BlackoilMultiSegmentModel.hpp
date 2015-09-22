@@ -122,30 +122,54 @@ namespace Opm {
                          WellState& well_state) {};
 
     protected:
-
-     /*   // ---------  Types and enums  ---------
-
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
-
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
-
-        struct WellOps {
-            WellOps(const Wells* wells);
-            Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-            Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-        };
-
+     /*
+        // ---------  Types and enums  ---------
+        // using Base::DataBlock;
+        // using Base::ReservoirResidualQuant;
+     */
         // ---------  Data members  ---------
+
+        // For the non-segmented well, it should be the density with AVG or SEG way.
+        // while usually SEG way
+        using Base::well_perforation_densities_; //Density of each well perforation
+
+        // ADB version, when using AVG way, the calculation of the density and hydrostatic head
+        // is implicit
+        ADB well_perforation_densities_adb_;
+
+        // Diff to the pressure of the related segment.
+        // When the well is a usual well, the bhp will be the pressure of the top segment
+        // For mutlti-segmented wells, only AVG is allowed.
+        // For non-segmented wells, typically SEG is used. AVG way might not have been
+        // implemented yet.
+
+        // Diff to bhp for each well perforation. only for usual wells.
+        // For segmented wells, they are zeros.
+        using Base::well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+
+        // ADB version. Eventually, only ADB version will be kept.
+        ADB well_perforation_pressure_diffs_adb_;
+
+        // Pressure correction due to the different depth of the perforation
+        // and the cell center of the grid block
+        // For the non-segmented wells, since the perforation are forced to be
+        // at the center of the grid cell, it should be ZERO.
+        // It should only apply to the mutli-segmented wells.
+        V well_perforation_pressure_cell_diffs_;
+        ADB well_perforation_pressure_cell_diffs_adb_;
+
+        // Pressure correction due to the depth differennce between segment depth and perforation depth.
+        // TODO: It should be able to be merge as a part of the perforation_pressure_diffs_.
+        ADB well_perforations_segment_pressure_diffs_;
+
+        // the average of the fluid densities in the grid block
+        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
+        // and the cell center of the grid block
+        V well_perforation_cell_densities_;
+        ADB well_perforation_cell_densities_adb_;
+
+        V well_perforatoin_cell_pressure_diffs_;
+/*
 
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
@@ -163,7 +187,6 @@ namespace Opm {
         const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
-        const WellOps                   wops_;
         const bool has_disgas_;
         const bool has_vapoil_;
 
