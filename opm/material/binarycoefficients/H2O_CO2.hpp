@@ -86,7 +86,7 @@ public:
      * \brief Diffusion coefficent [m^2/s] for molecular CO2 in liquid water.
      */
     template <class Scalar, class Evaluation = Scalar>
-    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     { OPM_THROW(std::runtime_error, "Not implemented: Binary liquid diffusion coefficients of CO2 and CH4"); }
 };
 

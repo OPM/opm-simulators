@@ -25,6 +25,13 @@
  */
 #include "config.h"
 
+// for testing the "!=" and "==" operators, we need to disable the -Wfloat-equal to
+// prevent clang from producing a warning with -Weverything
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif
+
 #include <iostream>
 #include <array>
 #include <cmath>
@@ -63,57 +70,57 @@ void testOperators()
     // test the non-inplace operators
     {
         Eval a = xEval + yEval;
-        if (a.value != x + y)
+        if (std::abs(a.value - (x + y)) > 1e-10)
             throw std::logic_error("oops: operator+");
 
         Eval b = xEval + c;
-        if (b.value != x + c)
+        if (std::abs(b.value - (x + c)) > 1e-10)
             throw std::logic_error("oops: operator+");
 
         Eval d = xEval + cEval;
-        if (d.value != x + c)
+        if (std::abs(d.value - (x + c)) > 1e-10)
             throw std::logic_error("oops: operator+");
     }
 
     {
         Eval a = xEval - yEval;
-        if (a.value != x - y)
+        if (std::abs(a.value - (x - y)) > 1e-10)
             throw std::logic_error("oops: operator-");
 
         Eval b = xEval - c;
-        if (b.value != x - c)
+        if (std::abs(b.value - (x - c)) > 1e-10)
             throw std::logic_error("oops: operator-");
 
         Eval d = xEval - cEval;
-        if (d.value != x - c)
+        if (std::abs(d.value - (x - c)) > 1e-10)
             throw std::logic_error("oops: operator-");
     }
 
     {
         Eval a = xEval*yEval;
-        if (a.value != x*y)
+        if (std::abs(a.value - (x*y)) > 1e-10)
             throw std::logic_error("oops: operator*");
 
         Eval b = xEval*c;
-        if (b.value != x*c)
+        if (std::abs(b.value - (x*c)) > 1e-10)
             throw std::logic_error("oops: operator*");
 
         Eval d = xEval*cEval;
-        if (d.value != x*c)
+        if (std::abs(d.value - (x*c)) > 1e-10)
             throw std::logic_error("oops: operator*");
     }
 
     {
         Eval a = xEval/yEval;
-        if (a.value != x/y)
+        if (std::abs(a.value - (x/y)) > 1e-10)
             throw std::logic_error("oops: operator/");
 
         Eval b = xEval/c;
-        if (b.value != x/c)
+        if (std::abs(b.value - (x/c)) > 1e-10)
             throw std::logic_error("oops: operator/");
 
         Eval d = xEval/cEval;
-        if (d.value != x/c)
+        if (std::abs(d.value - (x/c)) > 1e-10)
             throw std::logic_error("oops: operator/");
     }
 
@@ -121,68 +128,68 @@ void testOperators()
     {
         Eval a = xEval;
         a += yEval;
-        if (a.value != x + y)
+        if (std::abs(a.value - (x + y)) > 1e-10)
             throw std::logic_error("oops: operator+");
 
         Eval b = xEval;
         b += c;
-        if (b.value != x + c)
+        if (std::abs(b.value - (x + c)) > 1e-10)
             throw std::logic_error("oops: operator+");
 
         Eval d = xEval;
         d += cEval;
-        if (d.value != x + c)
+        if (std::abs(d.value - (x + c)) > 1e-10)
             throw std::logic_error("oops: operator+");
     }
 
     {
         Eval a = xEval;
         a -= yEval;
-        if (a.value != x - y)
+        if (std::abs(a.value - (x - y)) > 1e-10)
             throw std::logic_error("oops: operator-");
 
         Eval b = xEval;
         b -= c;
-        if (b.value != x - c)
+        if (std::abs(b.value - (x - c)) > 1e-10)
             throw std::logic_error("oops: operator-");
 
         Eval d = xEval;
         d -= cEval;
-        if (d.value != x - c)
+        if (std::abs(d.value - (x - c)) > 1e-10)
             throw std::logic_error("oops: operator-");
     }
 
     {
         Eval a = xEval;
         a *= yEval;
-        if (a.value != x*y)
+        if (std::abs(a.value - (x*y)) > 1e-10)
             throw std::logic_error("oops: operator*");
 
         Eval b = xEval;
         b *= c;
-        if (b.value != x*c)
+        if (std::abs(b.value - (x*c)) > 1e-10)
             throw std::logic_error("oops: operator*");
 
         Eval d = xEval;
         d *= cEval;
-        if (d.value != x*c)
+        if (std::abs(d.value - (x*c)) > 1e-10)
             throw std::logic_error("oops: operator*");
     }
 
     {
         Eval a = xEval;
         a /= yEval;
-        if (a.value != x/y)
+        if (std::abs(a.value - (x/y)) > 1e-10)
             throw std::logic_error("oops: operator/");
 
         Eval b = xEval;
         b /= c;
-        if (b.value != x/c)
+        if (std::abs(b.value - (x/c)) > 1e-10)
             throw std::logic_error("oops: operator/");
 
         Eval d = xEval;
         d /= cEval;
-        if (d.value != x/c)
+        if (std::abs(d.value - (x/c)) > 1e-10)
             throw std::logic_error("oops: operator/");
     }
 
@@ -444,6 +451,10 @@ void testAtan2()
         }
     }
 }
+
+// prototypes
+double myScalarMin(double a, double b);
+double myScalarMax(double a, double b);
 
 double myScalarMin(double a, double b)
 { return std::min(a, b); }

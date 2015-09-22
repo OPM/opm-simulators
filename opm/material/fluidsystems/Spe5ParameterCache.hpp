@@ -62,7 +62,7 @@ public:
 
     Spe5ParameterCache()
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             VmUpToDate_[phaseIdx] = false;
             Valgrind::SetUndefined(Vm_[phaseIdx]);
         }
@@ -71,7 +71,7 @@ public:
     //! \copydoc ParameterCacheBase::updatePhase
     template <class FluidState>
     void updatePhase(const FluidState &fluidState,
-                     int phaseIdx,
+                     unsigned phaseIdx,
                      int exceptQuantities = ParentType::None)
     {
         updateEosParams(fluidState, phaseIdx, exceptQuantities);
@@ -88,8 +88,8 @@ public:
     //! \copydoc ParameterCacheBase::updateSingleMoleFraction
     template <class FluidState>
     void updateSingleMoleFraction(const FluidState &fluidState,
-                                  int phaseIdx,
-                                  int compIdx)
+                                  unsigned phaseIdx,
+                                  unsigned compIdx)
     {
         if (phaseIdx == oilPhaseIdx)
             oilPhaseParams_.updateSingleMoleFraction(fluidState, compIdx);
@@ -105,7 +105,7 @@ public:
      *
      * \param phaseIdx The fluid phase of interest
      */
-    Scalar a(int phaseIdx) const
+    Scalar a(unsigned phaseIdx) const
     {
         switch (phaseIdx)
         {
@@ -123,7 +123,7 @@ public:
      *
      * \param phaseIdx The fluid phase of interest
      */
-    Scalar b(int phaseIdx) const
+    Scalar b(unsigned phaseIdx) const
     {
         switch (phaseIdx)
         {
@@ -144,7 +144,7 @@ public:
      * \param phaseIdx The fluid phase of interest
      * \param compIdx The component phase of interest
      */
-    Scalar aPure(int phaseIdx, int compIdx) const
+    Scalar aPure(unsigned phaseIdx, unsigned compIdx) const
     {
         switch (phaseIdx)
         {
@@ -164,7 +164,7 @@ public:
      * \param phaseIdx The fluid phase of interest
      * \param compIdx The component phase of interest
      */
-    Scalar bPure(int phaseIdx, int compIdx) const
+    Scalar bPure(unsigned phaseIdx, unsigned compIdx) const
     {
         switch (phaseIdx)
         {
@@ -182,7 +182,7 @@ public:
      *
      * \param phaseIdx The fluid phase of interest
      */
-    Scalar molarVolume(int phaseIdx) const
+    Scalar molarVolume(unsigned phaseIdx) const
     { assert(VmUpToDate_[phaseIdx]); return Vm_[phaseIdx]; }
 
 
@@ -210,7 +210,7 @@ public:
      */
     template <class FluidState>
     void updateEosParams(const FluidState &fluidState,
-                         int phaseIdx,
+                         unsigned phaseIdx,
                          int exceptQuantities = ParentType::None)
     {
         if (!(exceptQuantities & ParentType::Temperature))
@@ -237,7 +237,7 @@ protected:
      * This usually means the parameters for the pure components.
      */
     template <class FluidState>
-    void updatePure_(const FluidState &fluidState, int phaseIdx)
+    void updatePure_(const FluidState &fluidState, unsigned phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -258,7 +258,7 @@ protected:
      * Here, the mixing rule kicks in.
      */
     template <class FluidState>
-    void updateMix_(const FluidState &fluidState, int phaseIdx)
+    void updateMix_(const FluidState &fluidState, unsigned phaseIdx)
     {
         Valgrind::CheckDefined(fluidState.averageMolarMass(phaseIdx));
         switch (phaseIdx)
@@ -276,7 +276,7 @@ protected:
 
     template <class FluidState>
     void updateMolarVolume_(const FluidState &fluidState,
-                            int phaseIdx)
+                            unsigned phaseIdx)
     {
         VmUpToDate_[phaseIdx] = true;
 
@@ -294,6 +294,7 @@ protected:
                                                  *this,
                                                  phaseIdx,
                                                  /*isGasPhase=*/true);
+            break;
         }
         case oilPhaseIdx: {
             // calculate molar volumes for the given composition. although
@@ -307,6 +308,7 @@ protected:
                                                  phaseIdx,
                                                  /*isGasPhase=*/false);
 
+            break;
         }
         case waterPhaseIdx: {
             // Density of water in the stock tank (i.e. atmospheric
@@ -321,6 +323,7 @@ protected:
 
             // convert water density [kg/m^3] to molar volume [m^3/mol]
             Vm_[waterPhaseIdx] = fluidState.averageMolarMass(waterPhaseIdx)/waterDensity;
+            break;
         };
         };
     }

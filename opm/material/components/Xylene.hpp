@@ -112,7 +112,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation spHeatCapLiquidPhase(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation spHeatCapLiquidPhase(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         Evaluation CH3,C6H5,H;
         // after Reid et al. : Missenard group contrib. method (s. example 5-8)
@@ -181,7 +181,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation heatVap(Evaluation temperature,
-                              const Evaluation& pressure)
+                              const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -248,7 +248,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation molarLiquidDensity(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation molarLiquidDensity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -293,7 +293,7 @@ public:
      * \copydoc Component::gasViscosity
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -314,7 +314,7 @@ public:
      * \copydoc Component::liquidViscosity
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 

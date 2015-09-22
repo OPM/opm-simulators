@@ -103,7 +103,7 @@ public:
      *        pressure differences.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fluidState)
+    static void saturations(Container &/*values*/, const Params &/*params*/, const FluidState &/*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: saturations()"); }
 
     /*!
@@ -167,11 +167,11 @@ public:
      * \brief The saturation-capillary pressure curve
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params, const FluidState &fluidState)
+    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: Sw()"); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
+    static Evaluation twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*pC*/)
     { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!

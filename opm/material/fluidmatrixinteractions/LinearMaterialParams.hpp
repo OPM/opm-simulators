@@ -50,7 +50,7 @@ public:
      */
     LinearMaterialParams()
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             setPcMinSat(phaseIdx, 0.0);
             setPcMaxSat(phaseIdx, 0.0);
         }
@@ -76,7 +76,7 @@ public:
      *
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
-    Scalar pcMinSat(int phaseIdx) const
+    Scalar pcMinSat(unsigned phaseIdx) const
     { assertFinalized_();return pcMinSat_[phaseIdx]; }
 
     /*!
@@ -84,7 +84,7 @@ public:
      *
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
-    void setPcMinSat(int phaseIdx, Scalar val)
+    void setPcMinSat(unsigned phaseIdx, Scalar val)
     { pcMinSat_[phaseIdx] = val; }
 
     /*!
@@ -92,7 +92,7 @@ public:
      *
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
-    Scalar pcMaxSat(int phaseIdx) const
+    Scalar pcMaxSat(unsigned phaseIdx) const
     { assertFinalized_(); return pcMaxSat_[phaseIdx]; }
 
     /*!
@@ -100,7 +100,7 @@ public:
      *
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
-    void setPcMaxSat(int phaseIdx, Scalar val)
+    void setPcMaxSat(unsigned phaseIdx, Scalar val)
     { pcMaxSat_[phaseIdx] = val; }
 
 private:

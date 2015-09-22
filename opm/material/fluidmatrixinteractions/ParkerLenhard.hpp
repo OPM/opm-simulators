@@ -354,7 +354,7 @@ public:
      *        the phase saturations.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    static void saturations(Container &/*values*/, const Params &/*params*/, const FluidState &/*fs*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::saturations()"); }
 
     /*!
@@ -426,11 +426,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params, const FluidState &fs)
+    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fs*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::Sw()"); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*pc*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
 
     /*!
@@ -442,7 +442,7 @@ public:
     { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSn(const Params &/*params*/, const Evaluation& /*pc*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
 
     /*!

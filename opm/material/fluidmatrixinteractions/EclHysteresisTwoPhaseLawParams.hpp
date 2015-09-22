@@ -151,14 +151,14 @@ public:
      *        drainage curve (MDC) to imbibition happend on the capillary pressure curve.
      */
     void setPcSwMdc(Scalar value)
-    { pcSwMdc_ = value; };
+    { pcSwMdc_ = value; }
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
      *        drainage curve to imbibition happend on the capillary pressure curve.
      */
     Scalar pcSwMdc() const
-    { return pcSwMdc_; };
+    { return pcSwMdc_; }
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
@@ -184,7 +184,7 @@ public:
      *        non-wetting phase.
      */
     void setKrnSwMdc(Scalar value)
-    { krnSwMdc_ = value; };
+    { krnSwMdc_ = value; }
 
     /*!
      * \brief Set the saturation of the wetting phase where the last switch from the main
@@ -192,7 +192,7 @@ public:
      *        non-wetting phase.
      */
     Scalar krnSwMdc() const
-    { return krnSwMdc_; };
+    { return krnSwMdc_; }
 
     /*!
      * \brief Sets the saturation value which must be added if krw is calculated using

@@ -52,25 +52,25 @@ public:
     /*!
      * \brief The density of a fluid phase [kg/m^3]
      */
-    const Scalar& density(int phaseIdx) const
+    const Scalar& density(unsigned phaseIdx) const
     { return density_[phaseIdx]; }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
-    Scalar molarDensity(int phaseIdx) const
+    Scalar molarDensity(unsigned phaseIdx) const
     { return density_[phaseIdx]/asImp_().averageMolarMass(phaseIdx); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
-    Scalar molarVolume(int phaseIdx) const
+    Scalar molarVolume(unsigned phaseIdx) const
     { return 1/molarDensity(phaseIdx); }
 
     /*!
      * \brief Set the density of a phase [kg/m^3]
      */
-    void setDensity(int phaseIdx, const Scalar&  value)
+    void setDensity(unsigned phaseIdx, const Scalar&  value)
     { density_[phaseIdx] = value; }
 
     /*!
@@ -82,7 +82,7 @@ public:
     {
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             density_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.density(phaseIdx));
         }
     }

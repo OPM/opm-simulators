@@ -99,7 +99,7 @@ public:
      * Vol. 12, No. 1, pp. 111-115, 1967
      */
     template <class Evaluation>
-    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         const double Texp = 273.15 + 25; // [K]
         const double Dexp = 2.01e-9; // [m^2/s]

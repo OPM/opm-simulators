@@ -55,8 +55,8 @@ public:
       * \brief Constructor where the tabulation parameters are already
       *        provided.
       */
-    UniformTabulated2DFunction(Scalar xMin, Scalar xMax, int m,
-                               Scalar yMin, Scalar yMax, int n)
+    UniformTabulated2DFunction(Scalar xMin, Scalar xMax, unsigned m,
+                               Scalar yMin, Scalar yMax, unsigned n)
     {
         resize(xMin, xMax, m, yMin, yMax, n);
     }
@@ -64,8 +64,8 @@ public:
     /*!
      * \brief Resize the tabulation to a new range.
      */
-    void resize(Scalar xMin, Scalar xMax, int m,
-                Scalar yMin, Scalar yMax, int n)
+    void resize(Scalar xMin, Scalar xMax, unsigned m,
+                Scalar yMin, Scalar yMax, unsigned n)
     {
         samples_.resize(m*n);
 
@@ -106,19 +106,19 @@ public:
     /*!
      * \brief Returns the number of sampling points in X direction.
      */
-    int numX() const
+    unsigned numX() const
     { return m_; }
 
     /*!
      * \brief Returns the number of sampling points in Y direction.
      */
-    int numY() const
+    unsigned numY() const
     { return n_; }
 
     /*!
      * \brief Return the position on the x-axis of the i-th interval.
      */
-    Scalar iToX(int i) const
+    Scalar iToX(unsigned i) const
     {
         assert(0 <= i && i < numX());
 
@@ -128,7 +128,7 @@ public:
     /*!
      * \brief Return the position on the y-axis of the j-th interval.
       */
-    Scalar jToY(int j) const
+    Scalar jToY(unsigned j) const
     {
         assert(0 <= j && j < numY());
 
@@ -196,8 +196,10 @@ public:
         Evaluation alpha = xToI(x);
         Evaluation beta = yToJ(y);
 
-        int i = std::max(0, std::min<int>(numX() - 2, Toolbox::value(alpha)));
-        int j = std::max(0, std::min<int>(numY() - 2, Toolbox::value(beta)));
+        unsigned i = std::max(0U, std::min(static_cast<unsigned>(numX()) - 2,
+                                           static_cast<unsigned>(Toolbox::value(alpha))));
+        unsigned j = std::max(0U, std::min(static_cast<unsigned>(numY()) - 2,
+                                           static_cast<unsigned>(Toolbox::value(beta))));
 
         alpha -= i;
         beta -= j;
@@ -213,7 +215,7 @@ public:
      *         intersection of the \f$i\f$-th interval of the x-Axis
      *         and the \f$j\f$-th of the y-Axis.
      */
-    Scalar getSamplePoint(int i, int j) const
+    Scalar getSamplePoint(unsigned i, unsigned j) const
     {
         assert(0 <= i && i < m_);
         assert(0 <= j && j < n_);
@@ -226,7 +228,7 @@ public:
      *        intersection of the \f$i\f$-th interval of the x-Axis
      *        and the \f$j\f$-th of the y-Axis.
      */
-    void setSamplePoint(int i, int j, Scalar value)
+    void setSamplePoint(unsigned i, unsigned j, Scalar value)
     {
         assert(0 <= i && i < m_);
         assert(0 <= j && j < n_);
@@ -241,10 +243,10 @@ private:
     std::vector<Scalar> samples_;
 
     // the number of sample points in x direction
-    int m_;
+    unsigned m_;
 
     // the number of sample points in y direction
-    int n_;
+    unsigned n_;
 
     // the range of the tabulation on the x axis
     Scalar xMin_;

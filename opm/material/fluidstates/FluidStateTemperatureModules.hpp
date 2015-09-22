@@ -54,13 +54,13 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(unsigned phaseIdx) const
     { return temperature_[phaseIdx]; }
 
     /*!
      * \brief Set the temperature of a phase [-]
      */
-    void setTemperature(int phaseIdx, Scalar value)
+    void setTemperature(unsigned phaseIdx, Scalar value)
     { temperature_[phaseIdx] = value; }
 
     /*!
@@ -70,7 +70,7 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             temperature_[phaseIdx] = fs.temperature(phaseIdx);
         }
     }
@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(int /* phaseIdx */) const
+    Scalar temperature(unsigned /*phaseIdx*/) const
     { return temperature_; }
 
     /*!
@@ -130,7 +130,7 @@ public:
 
 #ifndef NDEBUG
         typedef Opm::MathToolbox<Scalar> Toolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             assert(std::abs(FsToolbox::value(fs.temperature(phaseIdx))
                             - Toolbox::value(temperature_)) < 1e-30);
         }
@@ -168,7 +168,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(int /* phaseIdx */) const
+    Scalar temperature(unsigned /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Temperature is not provided by this fluid state"); }
 
     /*!

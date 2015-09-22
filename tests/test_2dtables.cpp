@@ -36,6 +36,11 @@
 
 typedef double Scalar;
 
+// prototypes
+Scalar testFn1(Scalar x, Scalar y);
+Scalar testFn2(Scalar x, Scalar y);
+Scalar testFn3(Scalar x, Scalar y);
+
 Scalar testFn1(Scalar x, Scalar /* y */)
 { return x; }
 
@@ -51,18 +56,18 @@ createUniformTabulatedFunction(Fn &f)
 {
     Scalar xMin = -2.0;
     Scalar xMax = 3.0;
-    Scalar m = 50;
+    unsigned m = 50;
 
     Scalar yMin = -1/2.0;
     Scalar yMax = 1/3.0;
-    Scalar n = 40;
+    unsigned n = 40;
 
     auto tab = std::make_shared<Opm::UniformTabulated2DFunction<Scalar>>(
         xMin, xMax, m,
         yMin, yMax, n);
-    for (int i = 0; i < m; ++i) {
+    for (unsigned i = 0; i < m; ++i) {
         Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
-        for (int j = 0; j < n; ++j) {
+        for (unsigned j = 0; j < n; ++j) {
             Scalar y = yMin + Scalar(j)/(n - 1) * (yMax - yMin);
             tab->setSamplePoint(i, j, f(x, y));
         }
@@ -77,17 +82,17 @@ createUniformXTabulatedFunction(Fn &f)
 {
     Scalar xMin = -2.0;
     Scalar xMax = 3.0;
-    Scalar m = 50;
+    unsigned m = 50;
 
     Scalar yMin = -1/2.0;
     Scalar yMax = 1/3.0;
-    Scalar n = 40;
+    unsigned n = 40;
 
     auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
-    for (int i = 0; i < m; ++i) {
+    for (unsigned i = 0; i < m; ++i) {
         Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
         tab->appendXPos(x);
-        for (int j = 0; j < n; ++j) {
+        for (unsigned j = 0; j < n; ++j) {
             Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
             tab->appendSamplePoint(i, y, f(x, y));
         }
@@ -107,7 +112,7 @@ createUniformXTabulatedFunction2(Fn &f)
 
 
     auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
-    for (int i = 0; i < m; ++i) {
+    for (unsigned i = 0; i < m; ++i) {
         Scalar x = xMin + Scalar(i)/(m - 1) * (xMax - xMin);
         tab->appendXPos(x);
 
@@ -115,7 +120,7 @@ createUniformXTabulatedFunction2(Fn &f)
         Scalar yMin = - (x + 1);
         Scalar yMax = (x + 1);
 
-        for (int j = 0; j < n; ++j) {
+        for (unsigned j = 0; j < n; ++j) {
             Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
             tab->appendSamplePoint(i, y, f(x, y));
         }
@@ -128,21 +133,21 @@ template <class Fn, class Table>
 bool compareTableWithAnalyticFn(const Table &table,
                                 Scalar xMin,
                                 Scalar xMax,
-                                int numX,
+                                unsigned numX,
 
                                 Scalar yMin,
                                 Scalar yMax,
-                                int numY,
+                                unsigned numY,
 
                                 Fn &f,
                                 Scalar tolerance = 1e-8)
 {
     // make sure that the tabulated function evaluates to the same thing as the analytic
     // one (modulo tolerance)
-    for (int i = 1; i <= numX; ++i) {
+    for (unsigned i = 1; i <= numX; ++i) {
         Scalar x = xMin + Scalar(i)/numX*(xMax - xMin);
 
-        for (int j = 0; j < numY; ++j) {
+        for (unsigned j = 0; j < numY; ++j) {
             Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
             if (std::abs(table->eval(x, y) - f(x, y)) > tolerance) {
                 std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y) << " != " << f(x,y) << "\n";
@@ -174,7 +179,7 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    for (int i = 0; i < uTable->numX(); ++i) {
+    for (unsigned i = 0; i < uTable->numX(); ++i) {
         if (std::abs(uTable->yMin() - uXTable->yMin(i)) > 1e-8) {
             std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMin() != uXTable->yMin("<<i<<"): " << uTable->yMin() << " != " << uXTable->yMin(i) << "\n";
             return false;
@@ -192,13 +197,13 @@ bool compareTables(const UniformTablePtr uTable,
     }
 
     // make sure that the x and y values are identical
-    for (int i = 0; i < uTable->numX(); ++i) {
+    for (unsigned i = 0; i < uTable->numX(); ++i) {
         if (std::abs(uTable->iToX(i) - uXTable->iToX(i)) > 1e-8) {
             std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->iToX("<<i<<") != uXTable->iToX("<<i<<"): " << uTable->iToX(i) << " != " << uXTable->iToX(i) << "\n";
             return false;
         }
 
-        for (int j = 0; j < uTable->numY(); ++j) {
+        for (unsigned j = 0; j < uTable->numY(); ++j) {
             if (std::abs(uTable->jToY(j) - uXTable->jToY(i, j)) > 1e-8) {
                 std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->jToY("<<j<<") != uXTable->jToY("<<i<<","<<j<<"): " << uTable->jToY(i) << " != " << uXTable->jToY(i, j) << "\n";
                 return false;
@@ -303,8 +308,8 @@ bool compareTables(const UniformTablePtr uTable,
 
     // make sure that the function values at the sampling points are identical and that
     // they correspond to the analytic function
-    int m2 = uTable->numX()*5;
-    int n2 = uTable->numY()*5;
+    unsigned m2 = uTable->numX()*5;
+    unsigned n2 = uTable->numY()*5;
     if (!compareTableWithAnalyticFn(uTable,
                                     xMin, xMax, m2,
                                     yMin, yMax, n2,

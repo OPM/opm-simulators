@@ -106,7 +106,7 @@ public:
     template <class FluidState, class ParameterCache>
     static void solve(FluidState &fluidState,
                       ParameterCache &paramCache,
-                      int refPhaseIdx,
+                      unsigned refPhaseIdx,
                       bool setViscosity,
                       bool setEnthalpy)
     {
@@ -133,7 +133,7 @@ public:
                                                            refPhaseIdx));
 
         // compute the fugacities of all components in the reference phase
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             fluidState.setFugacityCoefficient(refPhaseIdx,
                                               compIdx,
                                               FluidSystem::fugacityCoefficient(fluidState,
@@ -143,12 +143,12 @@ public:
         }
 
         // compute all quantities for the non-reference phases
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (phaseIdx == refPhaseIdx)
                 continue; // reference phase is already calculated
 
             ComponentVector fugVec;
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const auto& fug = fluidState.fugacity(refPhaseIdx, compIdx);
                 fugVec[compIdx] = FsToolbox::template toLhs<Evaluation>(fug);
             }

@@ -326,7 +326,7 @@ public:
      *   "Equations of State for basin geofluids"
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 

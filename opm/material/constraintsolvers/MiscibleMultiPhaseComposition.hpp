@@ -52,7 +52,7 @@ public:
     MMPCAuxConstraint()
     {}
 
-    MMPCAuxConstraint(int phaseIdx, int compIdx, Scalar value)
+    MMPCAuxConstraint(unsigned phaseIdx, unsigned compIdx, Scalar value)
         : phaseIdx_(phaseIdx)
         , compIdx_(compIdx)
         , value_(value)
@@ -61,7 +61,7 @@ public:
     /*!
      * \brief Specify the auxiliary constraint.
      */
-    void set(int phaseIdx, int compIdx, Scalar value)
+    void set(unsigned phaseIdx, unsigned compIdx, Scalar value)
     {
         phaseIdx_ = phaseIdx;
         compIdx_ = compIdx;
@@ -72,14 +72,14 @@ public:
      * \brief Returns the index of the fluid phase for which the
      *        auxiliary constraint is specified.
      */
-    int phaseIdx() const
+    unsigned phaseIdx() const
     { return phaseIdx_; }
 
     /*!
      * \brief Returns the index of the component for which the
      *        auxiliary constraint is specified.
      */
-    int compIdx() const
+    unsigned compIdx() const
     { return compIdx_; }
 
     /*!
@@ -90,8 +90,8 @@ public:
     { return value_; }
 
 private:
-    int phaseIdx_;
-    int compIdx_;
+    unsigned phaseIdx_;
+    unsigned compIdx_;
     Scalar value_;
 };
 
@@ -160,7 +160,7 @@ public:
                       ParameterCache &paramCache,
                       int phasePresence,
                       const MMPCAuxConstraint<Evaluation> *auxConstraints,
-                      int numAuxConstraints,
+                      unsigned numAuxConstraints,
                       bool setViscosity,
                       bool setInternalEnergy)
     {
@@ -173,19 +173,19 @@ public:
         // assume ideal mixtures of all fluids. TODO: relax this
         // (requires solving a non-linear system of equations, i.e. using
         // newton method.)
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             assert(FluidSystem::isIdealMixture(phaseIdx));
         }
 #endif
 
         // compute all fugacity coefficients
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             paramCache.updatePhase(fluidState, phaseIdx);
 
             // since we assume ideal mixtures, the fugacity
             // coefficients of the components cannot depend on
             // composition, i.e. the parameters in the cache are valid
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 Evaluation fugCoeff = FsToolbox::template toLhs<Evaluation>(
                     FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx));
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
@@ -201,15 +201,15 @@ public:
 
         // assemble the equations expressing the fact that the
         // fugacities of each component are equal in all phases
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             const Evaluation& entryCol1 =
                 fluidState.fugacityCoefficient(/*phaseIdx=*/0, compIdx)
                 *fluidState.pressure(/*phaseIdx=*/0);
-            int col1Idx = compIdx;
+            unsigned col1Idx = compIdx;
 
-            for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-                int rowIdx = (phaseIdx - 1)*numComponents + compIdx;
-                int col2Idx = phaseIdx*numComponents + compIdx;
+            for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
+                unsigned rowIdx = (phaseIdx - 1)*numComponents + compIdx;
+                unsigned col2Idx = phaseIdx*numComponents + compIdx;
 
                 const Evaluation& entryCol2 =
                     fluidState.fugacityCoefficient(phaseIdx, compIdx)
@@ -223,17 +223,17 @@ public:
         // assemble the equations expressing the assumption that the
         // sum of all mole fractions in each phase must be 1 for the
         // phases present.
-        int presentPhases = 0;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        unsigned presentPhases = 0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!(phasePresence & (1 << phaseIdx)))
                 continue;
 
-            int rowIdx = numComponents*(numPhases - 1) + presentPhases;
+            unsigned rowIdx = numComponents*(numPhases - 1) + presentPhases;
             presentPhases += 1;
 
             b[rowIdx] = Toolbox::createConstant(1.0);
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                int colIdx = phaseIdx*numComponents + compIdx;
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                unsigned colIdx = phaseIdx*numComponents + compIdx;
 
                 M[rowIdx][colIdx] = Toolbox::createConstant(1.0);
             }
@@ -242,11 +242,11 @@ public:
         assert(presentPhases + numAuxConstraints == numComponents);
 
         // incorperate the auxiliary equations, i.e., the explicitly given mole fractions
-        for (int auxEqIdx = 0; auxEqIdx < numAuxConstraints; ++auxEqIdx) {
-            int rowIdx = numComponents*(numPhases - 1) + presentPhases + auxEqIdx;
+        for (unsigned auxEqIdx = 0; auxEqIdx < numAuxConstraints; ++auxEqIdx) {
+            unsigned rowIdx = numComponents*(numPhases - 1) + presentPhases + auxEqIdx;
             b[rowIdx] = auxConstraints[auxEqIdx].value();
 
-            int colIdx = auxConstraints[auxEqIdx].phaseIdx()*numComponents + auxConstraints[auxEqIdx].compIdx();
+            unsigned colIdx = auxConstraints[auxEqIdx].phaseIdx()*numComponents + auxConstraints[auxEqIdx].compIdx();
             M[rowIdx][colIdx] = 1.0;
         }
 
@@ -266,9 +266,9 @@ public:
 
         // set all mole fractions and the additional quantities in
         // the fluid state
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-                int rowIdx = phaseIdx*numComponents + compIdx;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                unsigned rowIdx = phaseIdx*numComponents + compIdx;
                 fluidState.setMoleFraction(phaseIdx, compIdx, x[rowIdx]);
             }
             paramCache.updateComposition(fluidState, phaseIdx);

@@ -141,12 +141,12 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation heatVap(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation heatVap(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        temperature = Toolbox::min(temperature, criticalTemperature()); // regularization
-        temperature = Toolbox::max(temperature, 0.0); // regularization
+        Evaluation T = Toolbox::min(temperature, criticalTemperature()); // regularization
+        T = Toolbox::max(T, 0.0); // regularization
 
         const Scalar T_crit = criticalTemperature();
         const Scalar Tr1 = boilingTemperature()/criticalTemperature();
@@ -159,7 +159,7 @@ public:
             / (1.07 - Tr1); /* [J/mol] */
 
         /* Variation with temp according to Watson relation eq 7-12.1*/
-        const Evaluation& Tr2 = temperature/criticalTemperature();
+        const Evaluation& Tr2 = T/criticalTemperature();
         const Scalar n = 0.375;
         const Evaluation& DH_vap = DH_v_boil * Toolbox::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
@@ -199,7 +199,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     { return molarLiquidDensity_(temperature)*molarMass(); }
 
     /*!
@@ -228,7 +228,7 @@ public:
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure, bool regularize=true)
+    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& /*pressure*/, bool /*regularize*/=true)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -256,7 +256,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -280,7 +280,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidHeatCapacity(const Evaluation& temperature,
-                                     const Evaluation& pressure)
+                                         const Evaluation& /*pressure*/)
     {
         /* according Reid et al. : Missenard group contrib. method (s. example 5-8) */
         /* Mesitylen: C9H12  : 3* CH3 ; 1* C6H5 (phenyl-ring) ; -2* H (this was to much!) */

@@ -82,7 +82,7 @@ public:
     typedef Opm::H2O<Scalar> H2O;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(int phaseIdx)
+    static const char *phaseName(unsigned phaseIdx)
     {
         static const char *name[] = {
             "gas",
@@ -95,7 +95,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static bool isLiquid(int phaseIdx)
+    static bool isLiquid(unsigned phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gasPhaseIdx;
@@ -106,21 +106,21 @@ public:
      *
      * In the SPE-5 problems all fluids are compressible...
      */
-    static bool isCompressible(int phaseIdx)
+    static bool isCompressible(unsigned /*phaseIdx*/)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return true;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(unsigned /*phaseIdx*/)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return false; // gas is not ideal here!
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(unsigned phaseIdx)
     {
         // always use the reference oil for the fugacity coefficents,
         // so they cannot be dependent on composition and they the
@@ -144,7 +144,7 @@ public:
     static const int C20Idx = 6; //!< Index of the C20 component
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(int compIdx)
+    static const char *componentName(unsigned compIdx)
     {
         static const char *name[] = {
             H2O::name(),
@@ -161,7 +161,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static Scalar molarMass(int compIdx)
+    static Scalar molarMass(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -184,7 +184,7 @@ public:
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -207,7 +207,7 @@ public:
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -230,7 +230,7 @@ public:
     /*!
      * \brief Molar volume of a component at the critical point [m^3/mol].
      */
-    static Scalar criticalMolarVolume(int compIdx)
+    static Scalar criticalMolarVolume(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -253,7 +253,7 @@ public:
     /*!
      * \brief The acentric factor of a component [].
      */
-    static Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -278,10 +278,10 @@ public:
      *
      * The values are given by the SPE5 paper.
      */
-    static Scalar interactionCoefficient(int comp1Idx, int comp2Idx)
+    static Scalar interactionCoefficient(unsigned comp1Idx, unsigned comp2Idx)
     {
-        int i = std::min(comp1Idx, comp2Idx);
-        int j = std::max(comp1Idx, comp2Idx);
+        unsigned i = std::min(comp1Idx, comp2Idx);
+        unsigned j = std::max(comp1Idx, comp2Idx);
         if (i == C1Idx && (j == C15Idx || j == C20Idx))
             return 0.05;
         else if (i == C3Idx && (j == C15Idx || j == C20Idx))
@@ -318,7 +318,7 @@ public:
         Scalar minB = 1e100, maxB = -1e100;
 
         prParams.updatePure(minT, minP);
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             minA = std::min(prParams.pureParams(compIdx).a(), minA);
             maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
             minB = std::min(prParams.pureParams(compIdx).b(), minB);
@@ -326,7 +326,7 @@ public:
         };
 
         prParams.updatePure(maxT, minP);
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             minA = std::min(prParams.pureParams(compIdx).a(), minA);
             maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
             minB = std::min(prParams.pureParams(compIdx).b(), minB);
@@ -334,7 +334,7 @@ public:
         };
 
         prParams.updatePure(minT, maxP);
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             minA = std::min(prParams.pureParams(compIdx).a(), minA);
             maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
             minB = std::min(prParams.pureParams(compIdx).b(), minB);
@@ -342,7 +342,7 @@ public:
         };
 
         prParams.updatePure(maxT, maxP);
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             minA = std::min(prParams.pureParams(compIdx).a(), minA);
             maxA = std::max(prParams.pureParams(compIdx).a(), maxA);
             minB = std::min(prParams.pureParams(compIdx).b(), minB);
@@ -357,7 +357,7 @@ public:
     template <class FluidState, class Evaluation = Scalar>
     static Scalar density(const FluidState &fluidState,
                           const ParameterCache &paramCache,
-                          int phaseIdx)
+                          unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
         static_assert(std::is_same<Evaluation, Scalar>::value,
@@ -368,9 +368,9 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class Evaluation = Scalar>
-    static Scalar viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+    static Scalar viscosity(const FluidState &/*fluidState*/,
+                            const ParameterCache &/*paramCache*/,
+                            unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         static_assert(std::is_same<Evaluation, Scalar>::value,
@@ -396,8 +396,8 @@ public:
     template <class FluidState, class Evaluation = Scalar>
     static Scalar fugacityCoefficient(const FluidState &fluidState,
                                       const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+                                      unsigned phaseIdx,
+                                      unsigned compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
@@ -418,7 +418,7 @@ public:
     }
 
 protected:
-    static Scalar henryCoeffWater_(int compIdx, Scalar temperature)
+    static Scalar henryCoeffWater_(unsigned compIdx, Scalar temperature)
     {
         // use henry's law for the solutes and the vapor pressure for
         // the solvent.

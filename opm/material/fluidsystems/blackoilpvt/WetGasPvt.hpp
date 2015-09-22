@@ -65,7 +65,7 @@ class WetGasPvt
     static const int waterCompIdx = BlackOilFluidSystem::waterCompIdx;
 
 public:
-    void setNumRegions(int numRegions)
+    void setNumRegions(unsigned numRegions)
     {
         inverseGasB_.resize(numRegions);
         inverseGasBMu_.resize(numRegions);
@@ -79,7 +79,7 @@ public:
      *
      * \param samplePoints A container of (x,y) values.
      */
-    void setSaturatedGasOilVaporizationFactor(int regionIdx, const SamplingPoints &samplePoints)
+    void setSaturatedGasOilVaporizationFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
     { oilVaporizationFactorTable_[regionIdx].setContainerOfTuples(samplePoints); }
 
     /*!
@@ -91,7 +91,7 @@ public:
      * only depends on pressure) while the dependence on the oil mass fraction is
      * guesstimated...
      */
-    void setSaturatedGasFormationVolumeFactor(int regionIdx, const SamplingPoints &samplePoints)
+    void setSaturatedGasFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
         auto& invGasB = inverseGasB_[regionIdx];
 
@@ -151,7 +151,7 @@ public:
      * factor. Also note, that the order of the arguments needs to be \f$(R_s, p_o)\f$
      * and not the other way around.
      */
-    void setInverseGasFormationVolumeFactor(int regionIdx, const TabulatedTwoDFunction& invBg)
+    void setInverseGasFormationVolumeFactor(unsigned regionIdx, const TabulatedTwoDFunction& invBg)
     { inverseGasB_[regionIdx] = invBg; }
 
     /*!
@@ -159,7 +159,7 @@ public:
      *
      * This is a function of \f$(R_s, p_o)\f$...
      */
-    void setGasViscosity(int regionIdx, const TabulatedTwoDFunction& mug)
+    void setGasViscosity(unsigned regionIdx, const TabulatedTwoDFunction& mug)
     { gasMu_[regionIdx] = mug; }
 
     /*!
@@ -169,7 +169,7 @@ public:
      * requires the viscosity of oil-saturated gas (which only depends on pressure) while
      * there is assumed to be no dependence on the gas mass fraction...
      */
-    void setSaturatedGasViscosity(int regionIdx, const SamplingPoints &samplePoints  )
+    void setSaturatedGasViscosity(unsigned regionIdx, const SamplingPoints &samplePoints  )
     {
         auto& oilVaporizationFactor = oilVaporizationFactorTable_[regionIdx];
 
@@ -205,7 +205,7 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
-    void setPvtgTable(int regionIdx, const PvtgTable &pvtgTable)
+    void setPvtgTable(unsigned regionIdx, const PvtgTable &pvtgTable)
     {
         const auto saturatedTable = pvtgTable.getOuterTable();
         assert(saturatedTable->numRows() > 1);
@@ -219,7 +219,7 @@ public:
                                           saturatedTable->getOilSolubilityColumn());
 
         // extract the table for the gas dissolution and the oil formation volume factors
-        for (int outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
+        for (size_t outerIdx = 0; outerIdx < static_cast<int>(saturatedTable->numRows()); ++ outerIdx) {
             Scalar pg = saturatedTable->getPressureColumn()[outerIdx];
 
             invGasB.appendXPos(pg);
@@ -229,8 +229,8 @@ public:
             assert(gasMu.numX() == outerIdx + 1);
 
             const auto underSaturatedTable = pvtgTable.getInnerTable(outerIdx);
-            int numRows = underSaturatedTable->numRows();
-            for (int innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
+            unsigned numRows = underSaturatedTable->numRows();
+            for (size_t innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
                 Scalar Rv = underSaturatedTable->getOilSolubilityColumn()[innerIdx];
                 Scalar Bg = underSaturatedTable->getGasFormationFactorColumn()[innerIdx];
                 Scalar mug = underSaturatedTable->getGasViscosityColumn()[innerIdx];
@@ -241,7 +241,7 @@ public:
         }
 
         // make sure to have at least two sample points per mole fraction
-        for (int xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
+        for (size_t xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
             // a single sample point is definitely needed
             assert(invGasB.numY(xIdx) > 0);
 
@@ -253,7 +253,7 @@ public:
             // find the master table which will be used as a template to extend the
             // current line. We define master table as the first table which has values
             // for undersaturated gas...
-            int masterTableIdx = xIdx + 1;
+            unsigned masterTableIdx = xIdx + 1;
             for (; masterTableIdx < static_cast<int>(pvtgTable.getOuterTable()->numRows());
                  ++masterTableIdx)
             {
@@ -272,7 +272,7 @@ public:
             // master table.
             const auto masterTable = pvtgTable.getInnerTable(masterTableIdx);
             const auto curTable = pvtgTable.getInnerTable(xIdx);
-            for (int newRowIdx = 1;
+            for (size_t newRowIdx = 1;
                  newRowIdx < static_cast<int>(masterTable->numRows());
                  ++ newRowIdx)
             {
@@ -305,8 +305,8 @@ public:
     void initEnd()
     {
         // calculate the final 2D functions which are used for interpolation.
-        int numRegions = gasMu_.size();
-        for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+        unsigned numRegions = gasMu_.size();
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate the table which stores the inverse of the product of the gas
             // formation volume factor and the gas viscosity
             const auto& gasMu = gasMu_[regionIdx];
@@ -315,13 +315,13 @@ public:
 
             auto& invGasBMu = inverseGasBMu_[regionIdx];
 
-            for (int pIdx = 0; pIdx < gasMu.numX(); ++pIdx) {
+            for (size_t pIdx = 0; pIdx < gasMu.numX(); ++pIdx) {
                 invGasBMu.appendXPos(gasMu.xAt(pIdx));
 
                 assert(gasMu.numY(pIdx) == invGasB.numY(pIdx));
 
-                int numPressures = gasMu.numY(pIdx);
-                for (int rvIdx = 0; rvIdx < numPressures; ++rvIdx)
+                size_t numPressures = gasMu.numY(pIdx);
+                for (size_t rvIdx = 0; rvIdx < numPressures; ++rvIdx)
                     invGasBMu.appendSamplePoint(pIdx,
                                                 gasMu.yAt(pIdx, rvIdx),
                                                 invGasB.valueAt(pIdx, rvIdx)*
@@ -337,7 +337,7 @@ private:
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class LhsEval>
-    LhsEval viscosity_(int regionIdx,
+    LhsEval viscosity_(unsigned regionIdx,
                        const LhsEval& temperature,
                        const LhsEval& pressure,
                        const LhsEval& XgO) const
@@ -357,7 +357,7 @@ private:
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
     template <class LhsEval>
-    LhsEval density_(int regionIdx,
+    LhsEval density_(unsigned regionIdx,
                      const LhsEval& temperature,
                      const LhsEval& pressure,
                      const LhsEval& XgO) const
@@ -382,7 +382,7 @@ private:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class LhsEval>
-    LhsEval formationVolumeFactor_(int regionIdx,
+    LhsEval formationVolumeFactor_(unsigned regionIdx,
                                    const LhsEval& temperature,
                                    const LhsEval& pressure,
                                    const LhsEval& XgO) const
@@ -400,10 +400,10 @@ private:
      *        a set of parameters.
      */
     template <class LhsEval>
-    LhsEval fugacityCoefficient_(int regionIdx,
+    LhsEval fugacityCoefficient_(unsigned regionIdx,
                                  const LhsEval& temperature,
                                  const LhsEval& pressure,
-                                 int compIdx) const
+                                 unsigned compIdx) const
     {
         typedef Opm::MathToolbox<LhsEval> Toolbox;
 
@@ -442,7 +442,7 @@ private:
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class LhsEval>
-    LhsEval oilVaporizationFactor_(int regionIdx,
+    LhsEval oilVaporizationFactor_(unsigned regionIdx,
                                    const LhsEval& temperature,
                                    const LhsEval& pressure) const
     { return oilVaporizationFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
@@ -454,7 +454,7 @@ private:
      * \param XgO The mass fraction of the oil component in the gas phase [-]
      */
     template <class LhsEval>
-    LhsEval gasSaturationPressure_(int regionIdx,
+    LhsEval gasSaturationPressure_(unsigned regionIdx,
                                    const LhsEval& temperature,
                                    const LhsEval& XgO) const
     {
@@ -467,7 +467,7 @@ private:
         // Newton method to do the remaining work. If the initial
         // value is good, this should only take two to three
         // iterations...
-        for (int i = 0; i < 20; ++i) {
+        for (unsigned i = 0; i < 20; ++i) {
             const LhsEval& f = saturatedGasOilMassFraction_(regionIdx, temperature, pSat) - XgO;
             const LhsEval& fPrime = ((saturatedGasOilMassFraction_(regionIdx, temperature, pSat + eps) - XgO) - f)/eps;
 
@@ -482,7 +482,7 @@ private:
     }
 
     template <class LhsEval>
-    LhsEval saturatedGasOilMassFraction_(int regionIdx,
+    LhsEval saturatedGasOilMassFraction_(unsigned regionIdx,
                                          const LhsEval& temperature,
                                          const LhsEval& pressure) const
     {
@@ -501,7 +501,7 @@ private:
     }
 
     template <class LhsEval>
-    LhsEval saturatedGasOilMoleFraction_(int regionIdx,
+    LhsEval saturatedGasOilMoleFraction_(unsigned regionIdx,
                                          const LhsEval& temperature,
                                          const LhsEval& pressure) const
     {
@@ -518,7 +518,7 @@ private:
     }
 
 private:
-    void updateSaturationPressureSpline_(int regionIdx)
+    void updateSaturationPressureSpline_(unsigned regionIdx)
     {
         auto& oilVaporizationFactor = oilVaporizationFactorTable_[regionIdx];
 
@@ -529,7 +529,7 @@ private:
 
         SamplingPoints pSatSamplePoints;
         Scalar XgO = 0;
-        for (int i=0; i <= n; ++ i) {
+        for (size_t i = 0; i <= n; ++ i) {
             Scalar pSat = oilVaporizationFactor.xMin() + i*delta;
             XgO = saturatedGasOilMassFraction_(regionIdx, /*temperature=*/Scalar(1e100), pSat);
 

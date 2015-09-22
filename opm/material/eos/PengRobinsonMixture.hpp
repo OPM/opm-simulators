@@ -63,7 +63,7 @@ public:
     template <class MutableParams, class FluidState>
     static int computeMolarVolumes(Scalar *Vm,
                                    const MutableParams &params,
-                                   int phaseIdx,
+                                   unsigned phaseIdx,
                                    const FluidState &fs)
     {
         return PengRobinson::computeMolarVolumes(Vm, params, phaseIdx, fs);
@@ -89,8 +89,8 @@ public:
     template <class FluidState, class Params>
     static Scalar computeFugacityCoefficient(const FluidState &fs,
                                              const Params &params,
-                                             int phaseIdx,
-                                             int compIdx)
+                                             unsigned phaseIdx,
+                                             unsigned compIdx)
     {
         // note that we normalize the component mole fractions, so
         // that their sum is 100%. This increases numerical stability
@@ -111,11 +111,11 @@ public:
 
         // calculate delta_i (see: Reid, p. 145)
         Scalar sumMoleFractions = 0.0;
-        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx)
+        for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx)
             sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
         Scalar deltai = 2*std::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         Scalar tmp = 0;
-        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
+        for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
                 fs.moleFraction(phaseIdx, compJIdx)
                 / sumMoleFractions

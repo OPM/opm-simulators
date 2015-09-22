@@ -26,8 +26,8 @@
 #define OPM_PIECEWISE_LINEAR_TWO_PHASE_MATERIAL_PARAMS_HPP
 
 #include <vector>
-
 #include <cassert>
+#include <cstddef>
 
 namespace Opm {
 /*!
@@ -113,7 +113,7 @@ public:
     {
         assert(SwValues.size() == values.size());
 
-        int n = SwValues.size();
+        size_t n = SwValues.size();
         SwPcwnSamples_.resize(n);
         pcwnSamples_.resize(n);
 
@@ -141,7 +141,7 @@ public:
     {
         assert(SwValues.size() == values.size());
 
-        int n = SwValues.size();
+        size_t n = SwValues.size();
         SwKrwSamples_.resize(n);
         krwSamples_.resize(n);
 
@@ -169,7 +169,7 @@ public:
     {
         assert(SwValues.size() == values.size());
 
-        int n = SwValues.size();
+        size_t n = SwValues.size();
         SwKrnSamples_.resize(n);
         krnSamples_.resize(n);
 
@@ -195,7 +195,7 @@ private:
                  origSampleIdx < swValues.size() / 2;
                  ++ origSampleIdx)
             {
-                unsigned newSampleIdx = swValues.size() - origSampleIdx - 1;
+                size_t newSampleIdx = swValues.size() - origSampleIdx - 1;
 
                 std::swap(swValues[origSampleIdx], swValues[newSampleIdx]);
                 std::swap(values[origSampleIdx], values[newSampleIdx]);

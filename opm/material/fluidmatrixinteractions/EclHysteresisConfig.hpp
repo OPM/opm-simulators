@@ -56,13 +56,13 @@ public:
      * \brief Specify whether hysteresis is enabled or not.
      */
     void setEnableHysteresis(bool yesno)
-    { enableHysteresis_ = yesno; };
+    { enableHysteresis_ = yesno; }
 
     /*!
      * \brief Returns whether hysteresis is enabled.
      */
     bool enableHysteresis() const
-    { return enableHysteresis_; };
+    { return enableHysteresis_; }
 
     /*!
      * \brief Set the type of the hysteresis model which is used for capillary pressure.
@@ -71,7 +71,7 @@ public:
      * 0: use the Killough model for capillary pressure hysteresis
      */
     void setPcHysteresisModel(int value)
-    { pcHysteresisModel_ = value; };
+    { pcHysteresisModel_ = value; }
 
     /*!
      * \brief Return the type of the hysteresis model which is used for capillary pressure.
@@ -80,7 +80,7 @@ public:
      * 0: use the Killough model for capillary pressure hysteresis
      */
     int pcHysteresisModel() const
-    { return pcHysteresisModel_; };
+    { return pcHysteresisModel_; }
 
     /*!
      * \brief Set the type of the hysteresis model which is used for relative permeability.
@@ -89,7 +89,7 @@ public:
      * 0: use the Carlson model for relative permeability hysteresis
      */
     void setKrHysteresisModel(int value)
-    { krHysteresisModel_ = value; };
+    { krHysteresisModel_ = value; }
 
     /*!
      * \brief Return the type of the hysteresis model which is used for relative permeability.
@@ -98,7 +98,7 @@ public:
      * 0: use the Carlson model for relative permeability hysteresis
      */
     int krHysteresisModel() const
-    { return krHysteresisModel_; };
+    { return krHysteresisModel_; }
 
 #if HAVE_OPM_PARSER
     /*!

@@ -49,7 +49,7 @@ public:
     enum { size = numVars };
 
     Evaluation()
-    {};
+    {}
 
     // copy other function evaluation
     Evaluation(const Evaluation& other)
@@ -57,7 +57,7 @@ public:
         // copy evaluated function value and derivatives
         value = other.value;
         std::copy(other.derivatives.begin(), other.derivatives.end(), derivatives.begin());
-    };
+    }
 
     // create an evaluation which represents a constant function
     //
@@ -67,10 +67,10 @@ public:
     {
         value = c;
         std::fill(derivatives.begin(), derivatives.end(), 0.0);
-    };
+    }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
-    static Evaluation createVariable(Scalar value, int varPos)
+    static Evaluation createVariable(Scalar value, unsigned varPos)
     {
         // The variable position must be in represented by the given variable descriptor
         assert(0 <= varPos && varPos < size);
@@ -111,7 +111,7 @@ public:
     {
         // value and derivatives are added
         this->value += other.value;
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             this->derivatives[varIdx] += other.derivatives[varIdx];
 
         return *this;
@@ -129,7 +129,7 @@ public:
     {
         // value and derivatives are subtracted
         this->value -= other.value;
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             this->derivatives[varIdx] -= other.derivatives[varIdx];
 
         return *this;
@@ -150,7 +150,7 @@ public:
         Scalar u = this->value;
         Scalar v = other.value;
         this->value *= v;
-        for (int varIdx= 0; varIdx < size; ++varIdx) {
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
             Scalar uPrime = this->derivatives[varIdx];
             Scalar vPrime = other.derivatives[varIdx];
 
@@ -164,7 +164,7 @@ public:
     {
         // values and derivatives are multiplied
         this->value *= other;
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             this->derivatives[varIdx] *= other;
 
         return *this;
@@ -177,7 +177,7 @@ public:
         Scalar u = this->value;
         Scalar v = other.value;
         this->value /= v;
-        for (int varIdx= 0; varIdx < size; ++varIdx) {
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
             Scalar uPrime = this->derivatives[varIdx];
             Scalar vPrime = other.derivatives[varIdx];
 
@@ -192,7 +192,7 @@ public:
         // values and derivatives are divided
         other = 1.0/other;
         this->value *= other;
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             this->derivatives[varIdx] *= other;
 
         return *this;
@@ -231,7 +231,7 @@ public:
     {
         Evaluation result;
         result.value = -this->value;
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             result.derivatives[varIdx] = - this->derivatives[varIdx];
 
         return result;
@@ -288,7 +288,7 @@ public:
         if (this->value != other.value)
             return false;
 
-        for (int varIdx= 0; varIdx < size; ++varIdx)
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx)
             if (this->derivatives[varIdx] != other.derivatives[varIdx])
                 return false;
 
@@ -301,7 +301,7 @@ public:
         if (std::abs(value_diff) > tolerance && std::abs(value_diff)/tolerance > 1.0)
             return false;
 
-        for (int varIdx= 0; varIdx < size; ++varIdx) {
+        for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
             Scalar deriv_diff = other.derivatives[varIdx] - this->derivatives[varIdx];
             if (std::abs(deriv_diff) > tolerance && std::abs(deriv_diff)/tolerance > 1.0)
                 return false;
@@ -378,7 +378,7 @@ Evaluation<Scalar, VarSetTag, numVars> operator-(const ScalarA& a, const Evaluat
     Evaluation<Scalar, VarSetTag, numVars> result;
 
     result.value = a - b.value;
-    for (int varIdx= 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.derivatives[varIdx] = - b.derivatives[varIdx];
 
     return result;
@@ -393,7 +393,7 @@ Evaluation<Scalar, VarSetTag, numVars> operator/(const ScalarA& a, const Evaluat
 
     // outer derivative
     Scalar df_dg = - a/(b.value*b.value);
-    for (int varIdx= 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.derivatives[varIdx] = df_dg*b.derivatives[varIdx];
 
     return result;
@@ -405,7 +405,7 @@ Evaluation<Scalar, VarSetTag, numVars> operator*(const ScalarA& a, const Evaluat
     Evaluation<Scalar, VarSetTag, numVars> result;
 
     result.value = a*b.value;
-    for (int varIdx= 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.derivatives[varIdx] = a*b.derivatives[varIdx];
 
     return result;

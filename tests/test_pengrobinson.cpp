@@ -80,7 +80,7 @@ Scalar computeSumxg(FluidState &resultFluidState,
 
     // add a bit of additional gas components
     ComponentVector totalMolarities;
-    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx)
+    for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx)
         totalMolarities =
             prestineFluidState.molarity(oilPhaseIdx, compIdx)
             + additionalGas*gasFluidState.moleFraction(gasPhaseIdx, compIdx);
@@ -90,7 +90,7 @@ Scalar computeSumxg(FluidState &resultFluidState,
     Flash::solve(resultFluidState, totalMolarities);
 
     Scalar sumxg = 0;
-    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
+    for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
         sumxg += resultFluidState.moleFraction(gasPhaseIdx, compIdx);
 
     return sumxg;
@@ -105,7 +105,7 @@ void makeOilSaturated(FluidState &fluidState, const FluidState &gasFluidState)
     prestineFluidState.assign(fluidState);
 
     Scalar sumxg = 0;
-    for (int compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
+    for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++compIdx)
         sumxg += fluidState.moleFraction(gasPhaseIdx, compIdx);
 
     // Newton method
@@ -132,7 +132,7 @@ void makeOilSaturated(FluidState &fluidState, const FluidState &gasFluidState)
 }
 
 template <class FluidSystem, class FluidState>
-void guessInitial(FluidState &fluidState, int phaseIdx)
+void guessInitial(FluidState &fluidState, unsigned phaseIdx)
 {
     if (phaseIdx == FluidSystem::gasPhaseIdx) {
         fluidState.setMoleFraction(phaseIdx, FluidSystem::H2OIdx, 0.0);
@@ -179,7 +179,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
 
     // set the parameters for the capillary pressure law
     MaterialLawParams matParams;
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         matParams.setPcMinSat(phaseIdx, 0.0);
         matParams.setPcMaxSat(phaseIdx, 0.0);
     }
@@ -189,13 +189,13 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     surfaceFluidState.setTemperature(273.15 + 20);
 
     ComponentVector molarities;
-    for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+    for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
         molarities[compIdx] = reservoirFluidState.molarity(oilPhaseIdx, compIdx);
 
     if (guessInitial) {
         // we start at a fluid state with reservoir oil.
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
                 surfaceFluidState.setMoleFraction(phaseIdx,
                                                   compIdx,
                                                   reservoirFluidState.moleFraction(phaseIdx, compIdx));
@@ -285,7 +285,7 @@ void printResult(const RawTable& rawTable,
     std::cout << "};\n";
 }
 
-int main(int argc, char** argv)
+int main(int /*argc*/, char** /*argv*/)
 {
     typedef double Scalar;
     typedef Opm::FluidSystems::Spe5<Scalar> FluidSystem;
@@ -328,7 +328,7 @@ int main(int argc, char** argv)
 
     // set the parameters for the capillary pressure law
     MaterialLawParams matParams;
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         matParams.setPcMinSat(phaseIdx, 0.0);
         matParams.setPcMaxSat(phaseIdx, 0.0);
     }
@@ -365,7 +365,7 @@ int main(int argc, char** argv)
     //makeOilSaturated<Scalar, FluidSystem>(fluidState, gasFluidState);
 
     // set the saturations and pressures of the other phases
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         if (phaseIdx != oilPhaseIdx) {
             fluidState.setSaturation(phaseIdx, 0.0);
             fluidState.setPressure(phaseIdx, fluidState.pressure(oilPhaseIdx));
@@ -387,7 +387,7 @@ int main(int argc, char** argv)
     // Calculate the total molarities of the components
     ////////////
     ComponentVector totalMolarities;
-    for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+    for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
         totalMolarities[compIdx] = fluidState.saturation(oilPhaseIdx)*fluidState.molarity(oilPhaseIdx, compIdx);
 
     ////////////

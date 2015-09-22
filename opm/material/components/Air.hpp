@@ -135,7 +135,7 @@ public:
      *
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -160,7 +160,7 @@ public:
 
     // simpler method, from old constrelAir.hh
     template <class Evaluation>
-    static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -183,7 +183,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         return 1005*(temperature - 273.15);
     }
@@ -220,8 +220,8 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasThermalConductivity(const Evaluation& temperature,
-                                             const Evaluation& pressure)
+    static Evaluation gasThermalConductivity(const Evaluation& /*temperature*/,
+                                             const Evaluation& /*pressure*/)
     {
         // Isobaric Properties for Nitrogen in: NIST Standard
         // see http://webbook.nist.gov/chemistry/fluid/
@@ -250,7 +250,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasHeatCapacity(const Evaluation& temperature,
-                                      const Evaluation& pressure)
+                                      const Evaluation& /*pressure*/)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 

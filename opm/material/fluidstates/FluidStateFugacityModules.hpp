@@ -55,19 +55,19 @@ public:
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    const Scalar& fugacityCoefficient(int phaseIdx, int compIdx) const
+    const Scalar& fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return fugacityCoefficient_[phaseIdx][compIdx]; }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    Scalar fugacity(int phaseIdx, int compIdx) const
+    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
     { return asImp_().pressure(phaseIdx)*fugacityCoefficient_[phaseIdx][compIdx]*asImp_().moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief Set the fugacity of a component in a phase []
      */
-    void setFugacityCoefficient(int phaseIdx, int compIdx, const Scalar& value)
+    void setFugacityCoefficient(unsigned phaseIdx, unsigned compIdx, const Scalar& value)
     { fugacityCoefficient_[phaseIdx][compIdx] = value; }
 
     /*!
@@ -77,8 +77,8 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 fugacityCoefficient_[phaseIdx][compIdx] = fs.fugacityCoefficient(phaseIdx, compIdx);
             }
         }
@@ -124,19 +124,19 @@ public:
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
+    Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return (phaseIdx == compIdx)?fugacityCoefficient_[phaseIdx]:std::numeric_limits<Scalar>::infinity(); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    Scalar fugacity(int phaseIdx, int compIdx) const
+    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
     { return asImp_().pressure(phaseIdx)*fugacityCoefficient(phaseIdx, compIdx)*asImp_().moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief Set the fugacity of a component in a phase []
      */
-    void setFugacityCoefficient(int phaseIdx, const Scalar& value)
+    void setFugacityCoefficient(unsigned phaseIdx, const Scalar& value)
     { fugacityCoefficient_[phaseIdx] = value; }
 
     /*!
@@ -146,7 +146,7 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fugacityCoefficient_[phaseIdx] = fs.fugacityCoefficient(phaseIdx, /*compIdx=*/phaseIdx);
         }
     }

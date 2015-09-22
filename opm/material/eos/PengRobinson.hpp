@@ -60,8 +60,8 @@ class PengRobinson
     { }
 
 public:
-    static void  init(Scalar aMin, Scalar aMax, int na,
-                      Scalar bMin, Scalar bMax, int nb)
+    static void  init(Scalar /*aMin*/, Scalar /*aMax*/, unsigned /*na*/,
+                      Scalar /*bMin*/, Scalar /*bMax*/, unsigned /*nb*/)
     {
 /*
         // resize the tabulation for the critical points
@@ -70,11 +70,11 @@ public:
         criticalMolarVolume_.resize(aMin, aMax, na, bMin, bMax, nb);
 
         Scalar VmCrit, pCrit, TCrit;
-        for (int i = 0; i < na; ++i) {
+        for (unsigned i = 0; i < na; ++i) {
             Scalar a = criticalTemperature_.iToX(i);
             assert(std::abs(criticalTemperature_.xToI(criticalTemperature_.iToX(i)) - i) < 1e-10);
 
-            for (int j = 0; j < nb; ++j) {
+            for (unsigned j = 0; j < nb; ++j) {
                 Scalar b = criticalTemperature_.jToY(j);
                 assert(std::abs(criticalTemperature_.yToJ(criticalTemperature_.jToY(j)) - j) < 1e-10);
 
@@ -112,7 +112,7 @@ public:
         Scalar pVap = ambroseWalton_(params, T);
 
         // Newton-Raphson method
-        for (int i = 0; i < 5; ++i) {
+        for (unsigned i = 0; i < 5; ++i) {
             // calculate the molar densities
             OPM_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
             assert(numSol == 3);
@@ -141,7 +141,7 @@ public:
     template <class FluidState, class Params>
     static Scalar computeMolarVolume(const FluidState &fs,
                                      Params &params,
-                                     int phaseIdx,
+                                     unsigned phaseIdx,
                                      bool isGasPhase)
     {
         Valgrind::CheckDefined(fs.temperature(phaseIdx));
@@ -156,7 +156,7 @@ public:
         Scalar a = params.a(phaseIdx); // "attractive factor"
         Scalar b = params.b(phaseIdx); // "co-volume"
 
-        if (!std::isfinite(a) || a == 0)
+        if (!std::isfinite(a) || std::abs(a) < 1e-30)
             return std::numeric_limits<Scalar>::quiet_NaN();
         if (!std::isfinite(b) || b <= 0)
             return std::numeric_limits<Scalar>::quiet_NaN();
@@ -274,9 +274,9 @@ public:
 protected:
     template <class FluidState, class Params>
     static void handleCriticalFluid_(Scalar &Vm,
-                                     const FluidState &fs,
+                                     const FluidState &/*fs*/,
                                      const Params &params,
-                                     int phaseIdx,
+                                     unsigned phaseIdx,
                                      bool isGasPhase)
     {
         Scalar Tcrit, pcrit, Vcrit;
@@ -310,7 +310,7 @@ protected:
         // first, we need to find an isotherm where the EOS exhibits
         // a maximum and a minimum
         Scalar Tmin = 250; // [K]
-        for (int i = 0; i < 30; ++i) {
+        for (unsigned i = 0; i < 30; ++i) {
             bool hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, Tmin);
             if (hasExtrema)
                 break;
@@ -321,8 +321,8 @@ protected:
 
         // Newton's method: Start at minimum temperature and minimize
         // the "gap" between the extrema of the EOS
-        int iMax = 100;
-        for (int i = 0; i < iMax; ++i) {
+        unsigned iMax = 100;
+        for (unsigned i = 0; i < iMax; ++i) {
             // calculate function we would like to minimize
             Scalar f = maxVm - minVm;
 
@@ -363,7 +363,7 @@ protected:
 
             // line search (we have to make sure that both extrema
             // still exist after the update)
-            for (int j = 0; ; ++j) {
+            for (unsigned j = 0; ; ++j) {
                 if (j >= 20) {
                     if (f < 1e-8) {
                         Tcrit = T;
@@ -393,8 +393,8 @@ protected:
     // which are larger than the covolume of the phase
     static bool findExtrema_(Scalar &Vmin,
                              Scalar &Vmax,
-                             Scalar &pMin,
-                             Scalar &pMax,
+                             Scalar &/*pMin*/,
+                             Scalar &/*pMax*/,
                              Scalar a,
                              Scalar b,
                              Scalar T)
@@ -425,7 +425,7 @@ protected:
         // above the covolume
         Scalar V = b*1.1;
         Scalar delta = 1.0;
-        for (int i = 0; std::abs(delta) > 1e-12; ++i) {
+        for (unsigned i = 0; std::abs(delta) > 1e-12; ++i) {
             Scalar f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
             Scalar fPrime = a4 + V*(2*a3 + V*(3*a2 + V*4*a1));
 
@@ -486,7 +486,7 @@ protected:
      * Appl. Chem., 61, 1395-1403, 1989
      */
     template <class Params>
-    static Scalar ambroseWalton_(const Params &params, Scalar T)
+    static Scalar ambroseWalton_(const Params &/*params*/, Scalar T)
     {
         typedef typename Params::Component Component;
 

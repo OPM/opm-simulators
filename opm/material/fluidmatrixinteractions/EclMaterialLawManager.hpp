@@ -117,16 +117,16 @@ public:
     {
         compressedToCartesianElemIdx_ = compressedToCartesianElemIdx;
         // get the number of saturation regions and the number of cells in the deck
-        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        int numCompressedElems = compressedToCartesianElemIdx.size();
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        size_t numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
         satnumRegionIdx_.resize(numCompressedElems);
         if (eclState->hasIntGridProperty("SATNUM")) {
             const auto& satnumRawData = eclState->getIntGridProperty("SATNUM")->getData();
-            for (int elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-                int cartesianElemIdx = compressedToCartesianElemIdx_[elemIdx];
+            for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
                 satnumRegionIdx_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
             }
         }
@@ -138,7 +138,7 @@ public:
         readGlobalThreePhaseOptions_(deck);
 
         unscaledEpsInfo_.resize(numSatRegions);
-        for (int satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx)
+        for (unsigned satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx)
             unscaledEpsInfo_[satnumRegionIdx].extractUnscaled(deck, eclState, satnumRegionIdx);
 
         if (!hasElementSpecificParameters())
@@ -155,7 +155,7 @@ public:
      * that the capillary pressure given depends on the particuars of how the simulator
      * calculates its initial condition.
      */
-    Scalar applySwatinit(int elemIdx,
+    Scalar applySwatinit(unsigned elemIdx,
                          Scalar pcow,
                          Scalar Sw)
     {
@@ -207,7 +207,7 @@ public:
     bool hasElementSpecificParameters() const
     { return enableEndPointScaling() || enableHysteresis(); }
 
-    MaterialLawParams& materialLawParams(int elemIdx)
+    MaterialLawParams& materialLawParams(unsigned elemIdx)
     {
         if (hasElementSpecificParameters()) {
             assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
@@ -217,7 +217,7 @@ public:
             return *materialLawParams_[satnumRegionIdx_[elemIdx]];
     }
 
-    const MaterialLawParams& materialLawParams(int elemIdx) const
+    const MaterialLawParams& materialLawParams(unsigned elemIdx) const
     {
         if (hasElementSpecificParameters()) {
             assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
@@ -228,7 +228,7 @@ public:
     }
 
     template <class FluidState>
-    void updateHysteresis(const FluidState& fluidState, int elemIdx)
+    void updateHysteresis(const FluidState& fluidState, unsigned elemIdx)
     {
         if (!enableHysteresis())
             return;
@@ -237,7 +237,7 @@ public:
         MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
     }
 
-    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(int elemIdx) const
+    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(unsigned elemIdx) const
     {
         if (hasElementSpecificParameters())
             return *oilWaterScaledEpsInfoDrainage_[elemIdx];
@@ -323,8 +323,8 @@ private:
 
     void initNonElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        unsigned numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        unsigned numCompressedElems = compressedToCartesianElemIdx_.size();;
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx_.size());
 
         GasOilEffectiveParamVector gasOilEffectiveParamVector(numSatRegions);
         OilWaterEffectiveParamVector oilWaterEffectiveParamVector(numSatRegions);
@@ -332,7 +332,7 @@ private:
         OilWaterParamVector oilWaterParams(numSatRegions);
         MaterialLawParamsVector satRegionParams(numSatRegions);
         EclEpsScalingPointsInfo<Scalar> dummyInfo;
-        for (size_t satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
+        for (unsigned satnumRegionIdx = 0; satnumRegionIdx < numSatRegions; ++satnumRegionIdx) {
             // the parameters for the effective two-phase matererial laws
             readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satnumRegionIdx);
             readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satnumRegionIdx);
@@ -381,15 +381,15 @@ private:
 
         materialLawParams_.resize(numCompressedElems);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
+            unsigned satnumRegionIdx = static_cast<unsigned>(satnumRegionIdx_[elemIdx]);
             materialLawParams_[elemIdx] = satRegionParams[satnumRegionIdx];
         }
     }
 
     void initElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        unsigned numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        unsigned numCompressedElems = compressedToCartesianElemIdx_.size();;
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx_.size());
 
         // read the end point scaling configuration. this needs to be done only once per
         // deck.
@@ -480,7 +480,7 @@ private:
         const auto& imbnumData = eclState->getIntGridProperty("IMBNUM")->getData();
         assert(numCompressedElems == satnumRegionIdx_.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
+            unsigned satnumRegionIdx = static_cast<unsigned>(satnumRegionIdx_[elemIdx]);
 
             gasOilParams[elemIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
             oilWaterParams[elemIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
@@ -510,7 +510,7 @@ private:
                                                            EclOilWaterSystem);
 
             if (enableHysteresis()) {
-                int imbRegionIdx = imbnumData[elemIdx] - 1;
+                unsigned imbRegionIdx = static_cast<unsigned>(imbnumData[elemIdx]) - 1;
 
                 auto gasOilImbParamsHyst = std::make_shared<GasOilEpsTwoPhaseParams>();
                 gasOilImbParamsHyst->setConfig(gasOilConfig);
@@ -542,7 +542,7 @@ private:
         materialLawParams_.resize(numCompressedElems);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
-            int satnumRegionIdx = satnumRegionIdx_[elemIdx];
+            unsigned satnumRegionIdx = static_cast<unsigned>(satnumRegionIdx_[elemIdx]);
 
             initThreePhaseParams_(deck,
                                   eclState,
@@ -601,7 +601,7 @@ private:
     void readGasOilEffectiveParameters_(Container& dest,
                                         Opm::DeckConstPtr deck,
                                         Opm::EclipseStateConstPtr eclState,
-                                        int satnumRegionIdx)
+                                        unsigned satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
@@ -664,7 +664,9 @@ private:
                                                   tableManager->getSgfnTables()[satnumRegionIdx]);
             break;
         }
-        default:
+
+        //default:
+        case noFamily:
             throw std::domain_error("No valid saturation keyword family specified");
 
         }
@@ -728,7 +730,7 @@ private:
     void readOilWaterEffectiveParameters_(Container& dest,
                                           Opm::DeckConstPtr deck,
                                           Opm::EclipseStateConstPtr eclState,
-                                          int satnumRegionIdx)
+                                          unsigned satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
@@ -789,7 +791,9 @@ private:
             effParams.finalize();
             break;
         }
-        default:
+
+        case noFamily:
+        //default:
             throw std::domain_error("No valid saturation keyword family specified");
 
         }
@@ -801,7 +805,7 @@ private:
                                    std::shared_ptr<EclEpsConfig> config,
                                    Opm::DeckConstPtr /* deck */,
                                    Opm::EclipseStateConstPtr /* eclState */,
-                                   int satnumRegionIdx)
+                                   unsigned satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         dest[satnumRegionIdx]->init(unscaledEpsInfo_[satnumRegionIdx], *config, EclGasOilSystem);
@@ -812,7 +816,7 @@ private:
                                      std::shared_ptr<EclEpsConfig> config,
                                      Opm::DeckConstPtr /* deck */,
                                      Opm::EclipseStateConstPtr /* eclState */,
-                                     int satnumRegionIdx)
+                                     unsigned satnumRegionIdx)
     {
         dest[satnumRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         dest[satnumRegionIdx]->init(unscaledEpsInfo_[satnumRegionIdx], *config, EclOilWaterSystem);
@@ -823,10 +827,10 @@ private:
                                  PointsContainer& destPoints,
                                  std::shared_ptr<EclEpsConfig> config,
                                  const EclEpsGridProperties& epsGridProperties,
-                                 int elemIdx)
+                                 unsigned elemIdx)
     {
-        int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
-        int satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
+        unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
+        unsigned satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
@@ -840,10 +844,10 @@ private:
                                    PointsContainer& destPoints,
                                    std::shared_ptr<EclEpsConfig> config,
                                    const EclEpsGridProperties& epsGridProperties,
-                                   int elemIdx)
+                                   unsigned elemIdx)
     {
-        int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
-        int satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
+        unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
+        unsigned satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);;
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
@@ -855,7 +859,7 @@ private:
     void initThreePhaseParams_(Opm::DeckConstPtr deck,
                                Opm::EclipseStateConstPtr /* eclState */,
                                MaterialLawParams& materialParams,
-                               int satnumIdx,
+                               unsigned satnumIdx,
                                const EclEpsScalingPointsInfo<Scalar>& epsInfo,
                                std::shared_ptr<OilWaterTwoPhaseHystParams> oilWaterParams,
                                std::shared_ptr<GasOilTwoPhaseHystParams> gasOilParams)
@@ -910,7 +914,7 @@ private:
         }
     }
 
-    EclEpsScalingPoints<Scalar>& getOilWaterScaledEpsPointsDrainage_(int elemIdx)
+    EclEpsScalingPoints<Scalar>& getOilWaterScaledEpsPointsDrainage_(unsigned elemIdx)
     {
         auto& materialParams = *materialLawParams_[elemIdx];
         switch (materialParams.approach()) {

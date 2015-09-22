@@ -59,28 +59,13 @@ namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
 } }
 
-// include the MPI header if available
-#if HAVE_MPI
-#include <mpi.h>
-#endif // HAVE_MPI
-
-class MyMpiHelper
-{
-public:
-    MyMpiHelper(int &argc, char **&argv)
-    {
-#if HAVE_MPI
-        MPI_Init(&argc, &argv);
-#endif // HAVE_MPI
-    };
-
-    ~MyMpiHelper()
-    {
-#if HAVE_MPI
-        MPI_Finalize();
-#endif // HAVE_MPI
-    };
-};
+// include dune's MPI helper header
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
+#include <dune/common/parallel/mpihelper.hh>
+#else
+#include <dune/common/mpihelper.hh>
+#endif
 
 // check the API of all fluid states
 template <class Scalar>
@@ -232,7 +217,7 @@ int main(int argc, char **argv)
     typedef double Scalar;
     typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
 
-    MyMpiHelper mpiHelper(argc, argv);
+    Dune::MPIHelper::instance(argc, argv);
 
     // ensure that all fluid states are API-compliant
     testAllFluidStates<Scalar>();

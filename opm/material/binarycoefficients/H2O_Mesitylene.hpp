@@ -47,7 +47,7 @@ public:
      *  Sanders1999 Henry collection
      */
     template <class Evaluation>
-    static Evaluation henry(const Evaluation& temperature)
+    static Evaluation henry(const Evaluation& /*temperature*/)
     {
         // after Sanders
         double sanderH = 1.7e-1; // [M/atm]
@@ -103,7 +103,7 @@ public:
      * \brief Diffusion coefficent [m^2/s] for mesitylene in liquid water.
      */
     template <class Evaluation>
-    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
         // This is just an order of magnitude estimate. Please improve!
         return 1e-9;

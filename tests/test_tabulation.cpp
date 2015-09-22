@@ -32,6 +32,7 @@
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
 
+extern bool success;
 bool success;
 
 template <class Scalar>
@@ -52,11 +53,11 @@ int main()
 
     Scalar tempMin = 274.15;
     Scalar tempMax = 622.15;
-    int nTemp = static_cast<int>(tempMax - tempMin) * 6/8;
+    unsigned nTemp = static_cast<unsigned>(tempMax - tempMin) * 6/8;
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
-    int nPress = 200;
+    unsigned nPress = 200;
 
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
@@ -64,12 +65,12 @@ int main()
 
     std::cout << "Checking tabulation\n";
     success = true;
-    int m = nTemp*3;
-    int n = nPress*3;
-    for (int i = 0; i < m; ++i) {
+    unsigned m = nTemp*3;
+    unsigned n = nPress*3;
+    for (unsigned i = 0; i < m; ++i) {
         Scalar T = tempMin + (tempMax - tempMin)*Scalar(i)/m;
 
-        if (i % std::max(1, m/1000) == 0) {
+        if (i % std::max<unsigned>(1, m/1000) == 0) {
             std::cout << Scalar(i)/m*100 << "% done        \r";
             std::cout.flush();
         }
@@ -78,7 +79,7 @@ int main()
                TabulatedH2O::vaporPressure(T),
                IapwsH2O::vaporPressure(T),
                1e-3);
-        for (int j = 0; j < n; ++j) {
+        for (unsigned j = 0; j < n; ++j) {
             Scalar p = pMin + (pMax - pMin)*Scalar(j)/n;
             if (p < IapwsH2O::vaporPressure(T) * 1.001) {
                 Scalar tol = 1e-3;

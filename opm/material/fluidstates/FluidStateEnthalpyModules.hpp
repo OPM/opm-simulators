@@ -51,19 +51,19 @@ public:
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    const Scalar& enthalpy(int phaseIdx) const
+    const Scalar& enthalpy(unsigned phaseIdx) const
     { return enthalpy_[phaseIdx]; }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    Scalar internalEnergy(int phaseIdx) const
+    Scalar internalEnergy(unsigned phaseIdx) const
     { return enthalpy_[phaseIdx] - asImp_().pressure(phaseIdx)/asImp_().density(phaseIdx); }
 
     /*!
      * \brief Set the specific enthalpy of a phase [J/kg]
      */
-    void setEnthalpy(int phaseIdx, const Scalar& value)
+    void setEnthalpy(unsigned phaseIdx, const Scalar& value)
     { enthalpy_[phaseIdx] = value; }
 
     /*!
@@ -75,7 +75,7 @@ public:
     {
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             enthalpy_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.enthalpy(phaseIdx));
         }
     }

@@ -52,13 +52,13 @@ public:
     /*!
      * \brief The saturation of a fluid phase [-]
      */
-    const Scalar& saturation(int phaseIdx) const
+    const Scalar& saturation(unsigned phaseIdx) const
     { return saturation_[phaseIdx]; }
 
     /*!
      * \brief Set the saturation of a phase [-]
      */
-    void setSaturation(int phaseIdx, const Scalar& value)
+    void setSaturation(unsigned phaseIdx, const Scalar& value)
     { saturation_[phaseIdx] = value; }
 
     /*!
@@ -70,7 +70,7 @@ public:
     {
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             saturation_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.saturation(phaseIdx));
         }
     }

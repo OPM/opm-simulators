@@ -52,13 +52,13 @@ public:
     /*!
      * \brief The viscosity of a fluid phase [-]
      */
-    Scalar viscosity(int phaseIdx) const
+    Scalar viscosity(unsigned phaseIdx) const
     { return viscosity_[phaseIdx]; }
 
     /*!
      * \brief Set the dynamic viscosity of a phase [Pa s]
      */
-    void setViscosity(int phaseIdx, Scalar value)
+    void setViscosity(unsigned phaseIdx, Scalar value)
     { viscosity_[phaseIdx] = value; }
 
     /*!
@@ -70,7 +70,7 @@ public:
     {
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             viscosity_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.viscosity(phaseIdx));
         }
     }

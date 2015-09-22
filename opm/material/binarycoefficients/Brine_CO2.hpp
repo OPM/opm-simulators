@@ -72,12 +72,10 @@ public:
      * \param pressure the phase pressure [Pa]
      */
     template <class Evaluation>
-    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         //Diffusion coefficient of CO2 in the brine phase
-        return Toolbox::createConstant(2e-9);
+        return 2e-9;
     }
 
     /*!

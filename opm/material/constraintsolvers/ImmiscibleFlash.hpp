@@ -87,15 +87,15 @@ public:
      */
     template <class FluidState>
     static void guessInitial(FluidState &fluidState,
-                             ParameterCache &paramCache,
+                             ParameterCache &/*paramCache*/,
                              const ComponentVector &globalMolarities)
     {
         // the sum of all molarities
         Scalar sumMoles = 0;
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
             sumMoles += globalMolarities[compIdx];
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 2e5);
 
@@ -122,7 +122,7 @@ public:
         // Check if all fluid phases are incompressible
         /////////////////////////
         bool allIncompressible = true;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::isCompressible(phaseIdx)) {
                 allIncompressible = false;
                 break;
@@ -131,7 +131,7 @@ public:
 
         if (allIncompressible) {
             paramCache.updateAll(fluidState);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
@@ -212,7 +212,7 @@ public:
         /*
         printFluidState_(fluidState);
         std::cout << "globalMolarities: ";
-        for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
             std::cout << globalMolarities[compIdx] << " ";
         std::cout << "\n";
         */
@@ -229,24 +229,24 @@ protected:
     static void printFluidState_(const FluidState &fs)
     {
         std::cout << "saturations: ";
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.saturation(phaseIdx) << " ";
         std::cout << "\n";
 
         std::cout << "pressures: ";
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.pressure(phaseIdx) << " ";
         std::cout << "\n";
 
         std::cout << "densities: ";
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             std::cout << fs.density(phaseIdx) << " ";
         std::cout << "\n";
 
         std::cout << "global component molarities: ";
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
             Scalar sum = 0;
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 sum += fs.saturation(phaseIdx)*fs.molarity(phaseIdx, compIdx);
             }
             std::cout << sum << " ";
@@ -275,7 +275,7 @@ protected:
         Valgrind::CheckDefined(b);
 
         // assemble jacobian matrix
-        for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
+        for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             ////////
             // approximately calculate partial derivatives of the
             // fugacity defect of all components in regard to the mole
@@ -294,7 +294,7 @@ protected:
             tmp -= b;
             tmp /= eps;
             // store derivative in jacobian matrix
-            for (int eqIdx = 0; eqIdx < numEq; ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
                 J[eqIdx][pvIdx] = tmp[eqIdx];
 
             // fluid state and parameter cache to their original values
@@ -308,12 +308,12 @@ protected:
 
     template <class FluidState>
     static void calculateDefect_(Vector &b,
-                                 const FluidState &fluidStateEval,
+                                 const FluidState &/*fluidStateEval*/,
                                  const FluidState &fluidState,
                                  const ComponentVector &globalMolarities)
     {
         // global molarities are given
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             b[phaseIdx] =
                 fluidState.saturation(phaseIdx)
                 * fluidState.molarity(phaseIdx, /*compIdx=*/phaseIdx);
@@ -329,7 +329,7 @@ protected:
                           const Vector &deltaX)
     {
         Scalar relError = 0;
-        for (int pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
+        for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
             Scalar tmp = getQuantity_(fluidState, pvIdx);
             Scalar delta = deltaX[pvIdx];
 
@@ -362,13 +362,13 @@ protected:
         // calculate the saturation of the last phase as a function of
         // the other saturations
         Scalar sumSat = 0.0;
-        for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             sumSat += fluidState.saturation(phaseIdx);
 
         if (sumSat > 1.0) {
             // make sure that the last saturation does not become
             // negative
-            for (int phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             {
                 Scalar S = fluidState.saturation(phaseIdx);
                 fluidState.setSaturation(phaseIdx, S/sumSat);
@@ -384,7 +384,7 @@ protected:
         // solved for.)
         ComponentVector pC;
         MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-        for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
             fluidState.setPressure(phaseIdx,
                                    fluidState.pressure(0)
                                    + (pC[phaseIdx] - pC[0]));
@@ -393,33 +393,33 @@ protected:
         paramCache.updateAll(fluidState, /*except=*/ParameterCache::Temperature|ParameterCache::Composition);
 
         // update all densities
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
             fluidState.setDensity(phaseIdx, rho);
         }
     }
 
-    static bool isPressureIdx_(int pvIdx)
+    static bool isPressureIdx_(unsigned pvIdx)
     { return pvIdx == 0; }
 
-    static bool isSaturationIdx_(int pvIdx)
+    static bool isSaturationIdx_(unsigned pvIdx)
     { return 1 <= pvIdx && pvIdx < numPhases; }
 
     // retrieves a quantity from the fluid state
     template <class FluidState>
-    static Scalar getQuantity_(const FluidState &fs, int pvIdx)
+    static Scalar getQuantity_(const FluidState &fs, unsigned pvIdx)
     {
         assert(pvIdx < numEq);
 
         // first pressure
         if (pvIdx < 1) {
-            int phaseIdx = 0;
+            unsigned phaseIdx = 0;
             return fs.pressure(phaseIdx);
         }
         // saturations
         else {
             assert(pvIdx < numPhases);
-            int phaseIdx = pvIdx - 1;
+            unsigned phaseIdx = pvIdx - 1;
             return fs.saturation(phaseIdx);
         }
     }
@@ -429,7 +429,7 @@ protected:
     static void setQuantity_(FluidState &fs,
                              ParameterCache &paramCache,
                              const typename MaterialLaw::Params &matParams,
-                             int pvIdx,
+                             unsigned pvIdx,
                              Scalar value)
     {
         assert(0 <= pvIdx && pvIdx < numEq);
@@ -440,12 +440,12 @@ protected:
 
             // set all pressures. here we assume that the capillary
             // pressure does not depend on absolute pressure.
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fs.setPressure(phaseIdx, fs.pressure(phaseIdx) + delta);
             paramCache.updateAllPressures(fs);
 
             // update all densities
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
             }
@@ -466,14 +466,14 @@ protected:
             // law
             ComponentVector pC;
             MaterialLaw::capillaryPressures(pC, matParams, fs);
-            for (int phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
                 fs.setPressure(phaseIdx,
                                fs.pressure(0)
                                + (pC[phaseIdx] - pC[0]));
             paramCache.updateAllPressures(fs);
 
             // update all densities
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
             }
@@ -482,19 +482,19 @@ protected:
 
     // set a quantity in the fluid state
     template <class FluidState>
-    static void setQuantityRaw_(FluidState &fs, int pvIdx, Scalar value)
+    static void setQuantityRaw_(FluidState &fs, unsigned pvIdx, Scalar value)
     {
         assert(pvIdx < numEq);
 
         // first pressure
         if (pvIdx < 1) {
-            int phaseIdx = 0;
+            unsigned phaseIdx = 0;
             fs.setPressure(phaseIdx, value);
         }
         // saturations
         else {
             assert(pvIdx < numPhases);
-            int phaseIdx = pvIdx - 1;
+            unsigned phaseIdx = pvIdx - 1;
 
             // make sure that the first M-1 saturations does not get
             // negative
@@ -504,7 +504,7 @@ protected:
     }
 
     template <class FluidState>
-    static Scalar quantityWeight_(const FluidState &fs, int pvIdx)
+    static Scalar quantityWeight_(const FluidState &/*fs*/, unsigned pvIdx)
     {
         // first pressure
         if (pvIdx < 1)
