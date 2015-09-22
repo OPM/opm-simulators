@@ -69,21 +69,21 @@ namespace Opm
         /// and perfPhaseRates() fields, depending on controls
         /// the PrevState here must be the same with State
         template <class State, class PrevState>
-        void init(const std::vector<WellMultiSegment>& wells, const State& state, const PrevState& prevState)
+        void init(const std::vector<WellMutliSegmentConstPtr>& wells, const State& state, const PrevState& prevState)
         {
             const int nw = wells.size();
             if (nw == 0) {
                 return;
             }
 
-            const int np = wells[0].numberOfPhases(); // number of the phases
+            const int np = wells[0]->numberOfPhases(); // number of the phases
 
             int nperf = 0; // the number of the perforations
             int nseg = 0; // the nubmer of the segments
 
             for (int iw = 0; iw < nw; ++iw) {
-                nperf += wells[iw].numberOfPerforations();
-                nseg += wells[iw].numberOfSegments();
+                nperf += wells[iw]->numberOfPerforations();
+                nseg += wells[iw]->numberOfSegments();
             }
 
             bhp_.resize(nw);
@@ -100,12 +100,12 @@ namespace Opm
 
             current_controls_.resize(nw);
             for(int iw = 0; iw < nw; ++iw) {
-                current_controls_[iw] = well_controls_get_current(wells[iw].wellControls());
+                current_controls_[iw] = well_controls_get_current(wells[iw]->wellControls());
             }
 
             for (int iw = 0; iw < nw; ++iw) {
-                assert((wells[i].wellType() == INJECTOR) || (wells[i].wellType() == PRODUCER));
-                const WellControls* ctrl = wells[iw].wellControls();
+                assert((wells[i]->wellType() == INJECTOR) || (wells[i]->wellType() == PRODUCER));
+                const WellControls* ctrl = wells[iw]->wellControls();
             }
 
             int start_segment = 0;
@@ -125,17 +125,17 @@ namespace Opm
 
 
             for (int w = 0; w < nw; ++w) {
-                assert((wells[w].wellType() == INJECTOR) || (wells[w].wellType() == PRODUCER));
-                const WellControls* ctrl = wells[w].wellControls();
+                assert((wells[w]->wellType() == INJECTOR) || (wells[w]->wellType() == PRODUCER));
+                const WellControls* ctrl = wells[w]->wellControls();
 
-                std::string well_name(wells[w].name());
+                std::string well_name(wells[w]->name());
                 // Initialize the wellMap_ here
                 MapentryType& wellMapEntry = wellMap_[well_name];
                 wellMapEntry.well_number = w;
                 wellMapEntry.start_segment = start_segment;
-                wellMapEntry.number_of_segments = wells[w].numberOfSegments();
+                wellMapEntry.number_of_segments = wells[w]->numberOfSegments();
                 wellMapEntry.start_perforation = start_perforation;
-                wellMapEntry.number_of_perforations = wells[w].numberOfPerforations();
+                wellMapEntry.number_of_perforations = wells[w]->numberOfPerforations();
 
                 int start_perforation_segment = 0;
                 wellMapEntry.start_perforation_segment.resize(wellMapEntry.number_of_segments);
@@ -143,7 +143,7 @@ namespace Opm
 
                 for (int i = 0; i < wellMapEntry.number_of_segments; ++i) {
                     wellMapEntry.start_perforation_segment[i] = start_perforation_segment;
-                    wellMapEntry.number_of_perforations_segment[i] = wells[w].segmentPerforations()[i].size();
+                    wellMapEntry.number_of_perforations_segment[i] = wells[w]->segmentPerforations()[i].size();
                     start_perforation_segment += wellMapEntry.number_of_perforations_segment[i];
                 }
                 assert(start_perforation_segment == wellMapEntry.number_of_perforations);
@@ -156,7 +156,7 @@ namespace Opm
                     if (well_controls_get_current_type(ctrl) == BHP) {
                         bhp_[w] = well_controls_get_current_target(ctrl);
                     } else {
-                        const int first_cell = wells[0].wellCells()[0];
+                        const int first_cell = wells[0]->wellCells()[0];
                         bhp_[w] = state.pressure()[first_cell];
                     }
                     // 3. Thp: assign thp equal to thp control, if applicable,
@@ -182,7 +182,7 @@ namespace Opm
                         }
                     } else {
                         const double small_rate = 1e-14;
-                        const double sign = (wells[w].wellType() == INJECTOR) ? 1.0 : -1.0;
+                        const double sign = (wells[w]->wellType() == INJECTOR) ? 1.0 : -1.0;
                         for (int p = 0; p < np; ++p) {
                             wellrates_[np * w + p] = small_rate * sign;
                         }
@@ -192,8 +192,8 @@ namespace Opm
                     if (well_controls_get_current_type(ctrl) == BHP) {
                         bhp_[w] = well_controls_get_current_target(ctrl);
                     } else {
-                        const int first_cell = wells[0].wellCells()[0];
-                        const double safety_factor = (wells[w].wellType() == INJECTOR) ? 1.01 : 0.99;
+                        const int first_cell = wells[0]->wellCells()[0];
+                        const double safety_factor = (wells[w]->wellType() == INJECTOR) ? 1.01 : 0.99;
                         bhp_[w] = safety_factor* state.pressure()[first_cell];
                     }
                     // 3. Thp:
@@ -209,7 +209,7 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
                         }
-                        perfpress_[i + start_perforation] = state.pressure()[wells[w].wellCells()[i + start_perforation]];
+                        perfpress_[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i + start_perforation]];
                     }
 
                     // 5. Segment rates and pressures
@@ -235,7 +235,7 @@ namespace Opm
                             v_perf_rates[i] = perfphaserates_[np * (i + start_perforation) + p];
                         }
 
-                        Eigen::VectorXd v_segment_rates = wells[w].wellOps().p2s_gather * v_perf_rates;
+                        Eigen::VectorXd v_segment_rates = wells[w]->wellOps().p2s_gather * v_perf_rates;
 
                         for (int i = 0; i < number_of_segments; ++i) {
                             segphaserates_[np * (i + start_segment) + p] = v_segment_rates[i];
@@ -262,7 +262,7 @@ namespace Opm
             // and also used for initial values.
             current_controls_.resize(nw);
             for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells[w].wellControls());
+                current_controls_[w] = well_controls_get_current(wells[w]->wellControls());
             }
 
             // initialize wells that have been there before
@@ -270,11 +270,11 @@ namespace Opm
             if ( !(prevState.wellMap().empty()) )
             {
                 typedef typename WellMapType::const_iterator const_iterator;
-                const_iterator end_old = prevState.WellMap().end;
-                const_iterator end_this = wellMap().end;
+                const_iterator end_old = prevState.wellMap().end();
+                const_iterator end_this = wellMap().end();
 
                 for (int w = 0; w < nw; ++w) {
-                    std::string well_name(wells[w].name());
+                    std::string well_name(wells[w]->name());
                     const_iterator it_old = prevState.wellMap().find(well_name);
                     const_iterator it_this = wellMap().find(well_name);
 
