@@ -368,10 +368,13 @@ public:
     {
         wellManager_.beginTimeStep();
 
-        // the initial condition, we need to write before the time step has finished.
-        if (this->simulator().episodeIndex() == 0)
-            // write the summary information after each time step
+        // this is a little hack to write the initial condition, which we need to do
+        // before the first time step has finished.
+        static bool initialWritten = false;
+        if (this->simulator().episodeIndex() == 0 && !initialWritten) {
             summaryWriter_.write(wellManager_, /*isInitial=*/true);
+            initialWritten = true;
+        }
     }
 
     /*!
