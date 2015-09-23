@@ -143,6 +143,7 @@ namespace Opm {
         using Base::fluid_;
         using Base::terminal_output_;
         using Base::grid_;
+        using Base::canph_;
 
 
         // Diff to the pressure of the related segment.
@@ -189,6 +190,10 @@ namespace Opm {
         using Base::wells;
         using Base::updatePrimalVariableFromState;
         using Base::wellsActive;
+        using Base::phaseCondition;
+        using Base::fluidRvSat;
+        using Base::fluidRsSat;
+        using Base::fluidDensity;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
@@ -203,9 +208,8 @@ namespace Opm {
         variableWellStateInitials(const WellState& xw,
                                   std::vector<V>& vars0) const;
 
-        using Base::computeWellConnectionPressures;
-        /* void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw) {}; */
+        void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellState& xw);
 
         /* void
         computeWellFlux(const SolutionState& state,

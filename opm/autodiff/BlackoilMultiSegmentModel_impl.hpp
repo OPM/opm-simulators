@@ -177,9 +177,11 @@ namespace Opm {
 
 
 
-    /* template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
-                                                                        const WellState& xw)
+    // TODO: This is just a WIP version
+    // TODO: To be fxied to handle the situation with both usual wells and mutli-segment wells.
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
+                                                                         const WellState& xw)
     {
         if( ! wellsActive() ) return ;
 
@@ -202,9 +204,9 @@ namespace Opm {
         well_cells_non_segmented.reserve(nperf);
         well_cells.reserve(nperf);
         for (int i = 0; i < nw; ++i) {
-            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i].wellCells();
+            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
             const int n_current = well_cells.size();
-            if (wellsMultiSegment()[i].isMultiSegmented()) {
+            if (wellsMultiSegment()[i]->isMultiSegmented()) {
                 for (int j = 0; j < temp_well_cells.size(); ++j) {
                     well_cells_segmented_idx.push_back(j + n_current);
                 }
@@ -220,7 +222,7 @@ namespace Opm {
 
         // compute the average of the fluid densites in the well blocks.
         // the average is weighted according to the fluid relative permeabilities.
-        const std::vector<ADB> kr_adb = asImpl().computeRelPerm(state);
+        const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
         size_t temp_size = kr_adb.size();
         std::vector<V> perf_kr;
         for(size_t i = 0; i < temp_size; ++i) {
@@ -257,7 +259,7 @@ namespace Opm {
         // TODO: rho_avg_perf is actually the well_perforation_cell_densities_;
         well_perforation_cell_densities_ = Eigen::Map<const V>(rho_avg_perf.data(), nperf);
         // TODO: just for the current cases
-        well_perforation_densities_ = V(nperf, 0.);
+        well_perforation_densities_ = V::Zero(nperf);
 
         // For the non-segmented wells
 
@@ -276,7 +278,7 @@ namespace Opm {
 
         // TODO: the following part should be modified to fit the plan for only the non-segmented wells
 
-        const int nperf_nonsegmented = well_cells_non_segmented.size();
+        // const int nperf_nonsegmented = well_cells_non_segmented.size();
 
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
         // const V perf_press_nonsegmented = subset(perf_press, well_cells_non_segmented_idx);
@@ -288,12 +290,12 @@ namespace Opm {
         // If it is not the top perforation, then average with the perforation above it().
         // TODO: Make sure the order of the perforation are not changed, comparing with the old wells structure.
         for (int w = 0; w < nw; ++w) {
-            if (wells[w].isMultiSegmented()) {
+            if (wellsMultiSegment()[w]->isMultiSegmented()) {
                 // maybe we should give some reasonable values to prevent the following calculations fail
                 continue;
             }
 
-            std::string well_name(wells[w].name());
+            std::string well_name(wellsMultiSegment()[w]->name());
             typedef typename WellStateMultiSegment::WellMapType::const_iterator const_iterator;
             const_iterator it_well = xw.wellMap().find(well_name);
             assert(it_well != xw.wellMap().end());
@@ -380,13 +382,13 @@ namespace Opm {
         // If we need to consider the rs and rv for all the segments,  the process will be similar with the above.
         // Are they actually zero for the current cases?
         // TODO
-        well_perforations_segment_pressure_diffs_ = ADB::constant(V(xw.numberOfPerforations(), 0.0));
-        well_perforation_pressure_cell_diffs_ = V(xw.numberOfPerforations(), 0.0);
+        well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numberOfPerforations()));
+        well_perforation_pressure_cell_diffs_ = V::Zero(xw.numberOfPerforations());
     }
 
 
 
-*/
+
 
 
 
