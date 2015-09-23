@@ -115,7 +115,6 @@ public:
                       Opm::EclipseStateConstPtr eclState,
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
-        compressedToCartesianElemIdx_ = compressedToCartesianElemIdx;
         // get the number of saturation regions and the number of cells in the deck
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
         size_t numCompressedElems = compressedToCartesianElemIdx.size();
@@ -126,7 +125,7 @@ public:
         if (eclState->hasIntGridProperty("SATNUM")) {
             const auto& satnumRawData = eclState->getIntGridProperty("SATNUM")->getData();
             for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
+                unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
                 satnumRegionIdx_[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
             }
         }
@@ -142,9 +141,10 @@ public:
             unscaledEpsInfo_[satnumRegionIdx].extractUnscaled(deck, eclState, satnumRegionIdx);
 
         if (!hasElementSpecificParameters())
-            initNonElemSpecific_(deck, eclState);
+            initNonElemSpecific_(deck, eclState,
+                                 compressedToCartesianElemIdx.size());
         else
-            initElemSpecific_(deck, eclState);
+            initElemSpecific_(deck, eclState, compressedToCartesianElemIdx);
     }
 
     /*!
@@ -321,10 +321,10 @@ private:
         }
     }
 
-    void initNonElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initNonElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState,
+                              unsigned numCompressedElems)
     {
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
-        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx_.size());
 
         GasOilEffectiveParamVector gasOilEffectiveParamVector(numSatRegions);
         OilWaterEffectiveParamVector oilWaterEffectiveParamVector(numSatRegions);
@@ -386,10 +386,11 @@ private:
         }
     }
 
-    void initElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initElemSpecific_(DeckConstPtr deck, EclipseStateConstPtr eclState,
+                           const std::vector<int>& compressedToCartesianElemIdx)
     {
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
-        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx_.size());
+        unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
 
         // read the end point scaling configuration. this needs to be done only once per
         // deck.
@@ -441,28 +442,33 @@ private:
         if (enableHysteresis())
             epsImbGridProperties.initFromDeck(deck, eclState, /*imbibition=*/true);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
+            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
             readGasOilScaledPoints_(gasOilScaledInfoVector,
                                     gasOilScaledPointsVector,
                                     gasOilConfig,
                                     epsGridProperties,
-                                    elemIdx);
+                                    elemIdx,
+                                    cartElemIdx);
             readOilWaterScaledPoints_(oilWaterScaledEpsInfoDrainage_,
                                       oilWaterScaledEpsPointsDrainage,
                                       oilWaterConfig,
                                       epsGridProperties,
-                                      elemIdx);
+                                      elemIdx,
+                                      cartElemIdx);
 
             if (enableHysteresis()) {
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
                                         epsImbGridProperties,
-                                        elemIdx);
+                                        elemIdx,
+                                        cartElemIdx);
                 readOilWaterScaledPoints_(oilWaterScaledImbInfoVector,
                                           oilWaterScaledImbPointsVector,
                                           oilWaterConfig,
                                           epsImbGridProperties,
-                                          elemIdx);
+                                          elemIdx,
+                                          cartElemIdx);
             }
         }
 
@@ -827,9 +833,9 @@ private:
                                  PointsContainer& destPoints,
                                  std::shared_ptr<EclEpsConfig> config,
                                  const EclEpsGridProperties& epsGridProperties,
-                                 unsigned elemIdx)
+                                 unsigned elemIdx,
+                                 unsigned cartElemIdx)
     {
-        unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
         unsigned satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);
@@ -844,12 +850,12 @@ private:
                                    PointsContainer& destPoints,
                                    std::shared_ptr<EclEpsConfig> config,
                                    const EclEpsGridProperties& epsGridProperties,
-                                   unsigned elemIdx)
+                                   unsigned elemIdx,
+                                   unsigned cartElemIdx)
     {
-        unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx_[elemIdx]);
         unsigned satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
-        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);;
+        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -954,7 +960,6 @@ private:
 
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
 
-    std::vector<int> compressedToCartesianElemIdx_;
     std::vector<int> satnumRegionIdx_;
 };
 } // namespace Opm
