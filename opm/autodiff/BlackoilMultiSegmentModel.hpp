@@ -243,6 +243,9 @@ namespace Opm {
         std::vector<int>
         variableWellStateIndices() const {};
 
+        void
+        makeConstantState(SolutionState& state) const;
+
 /*
 
         const Grid&         grid_;
@@ -299,8 +302,6 @@ namespace Opm {
         bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
 
 
-        void
-        makeConstantState(SolutionState& state) const;
 
         void
         variableReservoirStateInitials(const ReservoirState& x,

@@ -111,36 +111,20 @@ namespace Opm {
 
 
 
-/*     template <class Grid, class Implementation>
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::makeConstantState(SolutionState& state) const
+    BlackoilMultiSegmentModel<Grid>::makeConstantState(SolutionState& state) const
     {
-        // HACK: throw away the derivatives. this may not be the most
-        // performant way to do things, but it will make the state
-        // automatically consistent with variableState() (and doing
-        // things automatically is all the rage in this module ;)
-        state.pressure = ADB::constant(state.pressure.value());
-        state.temperature = ADB::constant(state.temperature.value());
-        state.rs = ADB::constant(state.rs.value());
-        state.rv = ADB::constant(state.rv.value());
-        const int num_phases = state.saturation.size();
-        for (int phaseIdx = 0; phaseIdx < num_phases; ++ phaseIdx) {
-            state.saturation[phaseIdx] = ADB::constant(state.saturation[phaseIdx].value());
-        }
-        state.qs = ADB::constant(state.qs.value());
-        state.bhp = ADB::constant(state.bhp.value());
-        assert(state.canonical_phase_pressures.size() == static_cast<std::size_t>(Opm::BlackoilPhases::MaxNumPhases));
-        for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
-            ADB& pp = state.canonical_phase_pressures[canphase];
-            pp = ADB::constant(pp.value());
-        }
+        Base::makeConstantState(state);
+        state.segp  = ADB::constant(state.segp.value());
+        state.segqs = ADB::constant(state.segqs.value());
     }
 
 
 
 
 
-    template <class Grid, class Implementation>
+/*    template <class Grid, class Implementation>
     typename BlackoilModelBase<Grid, Implementation>::SolutionState
     BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
                                                            const WellState&     xw) const
