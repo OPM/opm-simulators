@@ -210,7 +210,7 @@ public:
     MaterialLawParams& materialLawParams(unsigned elemIdx)
     {
         if (hasElementSpecificParameters()) {
-            assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
+            assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
             return *materialLawParams_[elemIdx];
         }
         else
