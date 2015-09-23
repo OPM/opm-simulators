@@ -124,46 +124,9 @@ namespace Opm {
 
 
 
-/*    template <class Grid, class Implementation>
-    typename BlackoilModelBase<Grid, Implementation>::SolutionState
-    BlackoilModelBase<Grid, Implementation>::variableState(const ReservoirState& x,
-                                                           const WellState&     xw) const
-    {
-        std::vector<V> vars0 = asImpl().variableStateInitials(x, xw);
-        std::vector<ADB> vars = ADB::variables(vars0);
-        return asImpl().variableStateExtractVars(x, asImpl().variableStateIndices(), vars);
-    }
-
-
-
-
-
-
-
-
-    BlackoilModelBase<Grid, Implementation>::variableStateInitials(const ReservoirState& x,
-                                                                   const WellState&     xw) const
-    {
-        assert(active_[ Oil ]);
-
-        const int np = x.numPhases();
-
-        std::vector<V> vars0;
-        // p, Sw and Rs, Rv or Sg is used as primary depending on solution conditions
-        // and bhp and Q for the wells
-        vars0.reserve(np + 1);
-        variableReservoirStateInitials(x, vars0);
-        variableWellStateInitials(xw, vars0);
-        return vars0;
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::variableWellStateInitials(const WellState& xw, std::vector<V>& vars0) const
+    BlackoilMultiSegmentModel<Grid>::variableWellStateInitials(const WellState& xw, std::vector<V>& vars0) const
     {
         // Initial well rates
         if ( wellsMultiSegment().size() > 0 )
@@ -174,12 +137,13 @@ namespace Opm {
 
             // The transpose() below switches the ordering of the segment rates
             const DataBlock segrates = Eigen::Map<const DataBlock>(& xw.segPhaseRates()[0], nseg, np).transpose();
-            const V qs = Eigen::Map<const V>(segrates.data(), nseg * np);
-            vars0.push_back(qs);
+            // segment phase rates in surface volume
+            const V segqs = Eigen::Map<const V>(segrates.data(), nseg * np);
+            vars0.push_back(segqs);
 
             // for the pressure of the segments
-            const V pseg = Eigen::Map<const V>(& xw.segPress()[0], xw.segPress().size());
-            vars0.push_back(pseg);
+            const V segp = Eigen::Map<const V>(& xw.segPress()[0], xw.segPress().size());
+            vars0.push_back(segp);
         }
         else
         {
@@ -192,8 +156,7 @@ namespace Opm {
 
 
 
-
-
+/*
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::

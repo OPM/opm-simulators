@@ -203,7 +203,7 @@ namespace Opm {
 
         void
         variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const {};
+                                  std::vector<V>& vars0) const;
 
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw) {};
