@@ -823,20 +823,19 @@ namespace Opm {
 */
 
 
-/*
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::updateWellControls(WellState& xw) const
     {
         if( ! wellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
-        const int np = wellsMultiSegment()[0].numberOfPhases();
+        const int np = wellsMultiSegment()[0]->numberOfPhases();
         const int nw = wellsMultiSegment().size();
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wellsMultiSegment()[w].wellControls();
+            const WellControls* wc = wellsMultiSegment()[w]->wellControls();
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
@@ -855,7 +854,7 @@ namespace Opm {
                 }
                 if (detail::constraintBroken(
                         xw.bhp(), xw.thp(), xw.wellRates(),
-                        w, np, wellsMultiSegment()[w].wellType(), wc, ctrl_index)) {
+                        w, np, wellsMultiSegment()[w]->wellType(), wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -865,7 +864,7 @@ namespace Opm {
                 // Constraint number ctrl_index was broken, switch to it.
                 if (terminal_output_)
                 {
-                    std::cout << "Switching control mode for well " << wellsMultiSegment()[w].name()
+                    std::cout << "Switching control mode for well " << wellsMultiSegment()[w]->name()
                               << " from " << modestring[well_controls_iget_type(wc, current)]
                               << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 }
@@ -886,7 +885,7 @@ namespace Opm {
                 break;
 
             case THP: {
-                double aqua = 0.0;
+                /* double aqua = 0.0;
                 double liquid = 0.0;
                 double vapour = 0.0;
 
@@ -905,9 +904,10 @@ namespace Opm {
                 const double& alq    = well_controls_iget_alq(wc, current);
 
                 //Set *BHP* target by calculating bhp from THP
-                const WellType& well_type = wells().type[w];
+                const WellType& well_type = wellsMultiSegment()[w]->wellType;
 
                 if (well_type == INJECTOR) {
+                    // TODO: this needs to be updated
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
                             well_perforation_densities_, gravity);
@@ -915,6 +915,7 @@ namespace Opm {
                     xw.bhp()[w] = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
+                    // TODO: this needs to be updated
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
                             well_perforation_densities_, gravity);
@@ -924,7 +925,8 @@ namespace Opm {
                 else {
                     OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                 }
-                break;
+                break; */
+                OPM_THROW(std::runtime_error, "THP control is not implemented for multi-sgement wells yet!!");
             }
 
             case RESERVOIR_RATE:
@@ -945,8 +947,6 @@ namespace Opm {
 
         }
     }
-
-*/
 
 
 /*

@@ -140,6 +140,9 @@ namespace Opm {
         using Base::geo_;
         using Base::active_;
         using Base::rq_;
+        using Base::fluid_;
+        using Base::terminal_output_;
+        using Base::grid_;
 
 
         // Diff to the pressure of the related segment.
@@ -189,8 +192,8 @@ namespace Opm {
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
-        using Base::updateWellControls;
-        // void updateWellControls(WellState& xw) const {};
+        void updateWellControls(WellState& xw) const;
+
         using Base::variableState;
 
         // void updateWellState(const V& dwells,
