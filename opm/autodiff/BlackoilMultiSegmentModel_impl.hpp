@@ -479,7 +479,7 @@ namespace Opm {
         // the perforation flux here are different
         // it is related to the segment location
         computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        // asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         // asImpl().addWellFluxEq(cq_s, state);
         // asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // addWellControlEq(state, well_state, aliveWells);
@@ -753,12 +753,10 @@ namespace Opm {
 
 
 
-/*
-
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                                                                   const SolutionState& state,
-                                                                                   WellState& xw)
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                                                           const SolutionState& state,
+                                                                           WellState& xw)
     {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         // TODO: now it is so necesary to have a gobal wellsMultiSegment class to store some global information.
@@ -778,14 +776,7 @@ namespace Opm {
         // TODO: update the perforation pressures.
         // it should be based on the segment pressures
         // Then it makes it necessary to update the segment pressures and phase rates.
-
     }
-
-
-*/
-
-
-
 
 
 /*

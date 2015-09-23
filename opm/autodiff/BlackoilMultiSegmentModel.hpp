@@ -219,10 +219,10 @@ namespace Opm {
                         V& aliveWells,
                         std::vector<ADB>& cq_s);
 
-        /* void
+        void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
-                                         WellState& xw) {}; */
+                                         WellState& xw);
 
         /* void
         addWellFluxEq(const std::vector<ADB>& cq_s,
