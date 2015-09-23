@@ -92,114 +92,114 @@ public:
     void restrictToPhase(int phaseIdx)
     { restrictPhaseIdx_ = phaseIdx; }
 
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(unsigned phaseIdx) const
     {
         assert(allowTemperature_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::temperature(phaseIdx);
         return 1e100;
     }
 
-    Scalar pressure(int phaseIdx) const
+    Scalar pressure(unsigned phaseIdx) const
     {
         assert(allowPressure_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::pressure(phaseIdx);
         return 1e100;
     }
 
-    Scalar moleFraction(int phaseIdx, int compIdx) const
+    Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         assert(allowComposition_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::moleFraction(phaseIdx, compIdx);
         return 1e100;
     }
 
-    Scalar massFraction(int phaseIdx, int compIdx) const
+    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         assert(allowComposition_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::massFraction(phaseIdx, compIdx);
         return 1e100;
     }
 
-    Scalar averageMolarMass(int phaseIdx) const
+    Scalar averageMolarMass(unsigned phaseIdx) const
     {
         assert(allowComposition_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::averageMolarMass(phaseIdx);
         return 1e100;
     }
 
-    Scalar molarity(int phaseIdx, int compIdx) const
+    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
     {
         assert(allowDensity_ && allowComposition_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::molarity(phaseIdx, compIdx);
         return 1e100;
     }
 
-    Scalar molarDensity(int phaseIdx) const
+    Scalar molarDensity(unsigned phaseIdx) const
     {
         assert(allowDensity_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::molarDensity(phaseIdx);
         return 1e100;
     }
 
-    Scalar molarVolume(int phaseIdx) const
+    Scalar molarVolume(unsigned phaseIdx) const
     {
         assert(allowDensity_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::molarVolume(phaseIdx);
         return 1e100;
     }
 
-    Scalar density(int phaseIdx) const
+    Scalar density(unsigned phaseIdx) const
     {
         assert(allowDensity_);
-        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == phaseIdx);
+        assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
         OPM_UNUSED Scalar tmp = BaseFluidState::density(phaseIdx);
         return 1e100;
     }
 
-    Scalar saturation(int phaseIdx) const
+    Scalar saturation(unsigned phaseIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp =  BaseFluidState::saturation(phaseIdx);
         return 1e100;
     }
 
-    Scalar fugacity(int phaseIdx, int compIdx) const
+    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp = BaseFluidState::fugacity(phaseIdx, compIdx);
         return 1e100;
     }
 
-    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
+    Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp = BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
         return 1e100;
     }
 
-    Scalar enthalpy(int phaseIdx) const
+    Scalar enthalpy(unsigned phaseIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp = BaseFluidState::enthalpy(phaseIdx);
         return 1e100;
     }
 
-    Scalar internalEnergy(int phaseIdx) const
+    Scalar internalEnergy(unsigned phaseIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp = BaseFluidState::internalEnergy(phaseIdx);
         return 1e100;
     }
 
-    Scalar viscosity(int phaseIdx) const
+    Scalar viscosity(unsigned phaseIdx) const
     {
         assert(false);
         OPM_UNUSED Scalar tmp = BaseFluidState::viscosity(phaseIdx);
@@ -280,8 +280,8 @@ void checkFluidSystem()
     try { paramCache.updateAll(fs, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
     try { paramCache.updateAllPressures(fs); } catch (...) {};
 
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-        fs.restrictToPhase(phaseIdx);
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        fs.restrictToPhase(static_cast<int>(phaseIdx));
         try { paramCache.updatePhase(fs, phaseIdx); } catch (...) {};
         try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::None); } catch (...) {};
         try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
@@ -298,8 +298,8 @@ void checkFluidSystem()
 
     // actually check the fluid system API
     try { FluidSystem::init(); } catch (...) {};
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        fs.restrictToPhase(phaseIdx);
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        fs.restrictToPhase(static_cast<int>(phaseIdx));
         fs.allowPressure(FluidSystem::isCompressible(phaseIdx));
         fs.allowComposition(true);
         fs.allowDensity(false);
@@ -322,7 +322,7 @@ void checkFluidSystem()
         try { scalarVal = FluidSystem::template heatCapacity<FluidState, Scalar>(fs, paramCache, phaseIdx); } catch (...) {};
         try { scalarVal = FluidSystem::template thermalConductivity<FluidState, Scalar>(fs, paramCache, phaseIdx); } catch (...) {};
 
-        for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             fs.allowComposition(!FluidSystem::isIdealMixture(phaseIdx));
             try { auto OPM_UNUSED tmpVal = FluidSystem::fugacityCoefficient(fs, paramCache, phaseIdx, compIdx); static_assert(std::is_same<decltype(tmpVal), RhsEval>::value, "The default return value must be the scalar used by the fluid state!"); } catch (...) {};
             try { val = FluidSystem::template fugacityCoefficient<FluidState, LhsEval>(fs, paramCache, phaseIdx, compIdx); } catch (...) {};
@@ -335,14 +335,14 @@ void checkFluidSystem()
     }
 
     // test for phaseName(), isLiquid() and isIdealGas()
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         std::string OPM_UNUSED name = FluidSystem::phaseName(phaseIdx);
         bool OPM_UNUSED bVal = FluidSystem::isLiquid(phaseIdx);
         bVal = FluidSystem::isIdealGas(phaseIdx);
     }
 
     // test for molarMass() and componentName()
-    for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+    for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
         val = FluidSystem::molarMass(compIdx);
         std::string OPM_UNUSED name = FluidSystem::componentName(compIdx);
     }

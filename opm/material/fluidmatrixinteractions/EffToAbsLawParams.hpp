@@ -48,7 +48,7 @@ public:
     EffToAbsLawParams()
         : EffLawParams()
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             residualSaturation_[phaseIdx] = 0.0;
 
 #ifndef NDEBUG
@@ -63,7 +63,7 @@ public:
     void finalize()
     {
         sumResidualSaturations_ = 0.0;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             sumResidualSaturations_ += residualSaturation_[phaseIdx];
 
         EffLawParams::finalize();
@@ -76,7 +76,7 @@ public:
     /*!
      * \brief Return the residual saturation of a phase.
      */
-    Scalar residualSaturation(int phaseIdx) const
+    Scalar residualSaturation(unsigned phaseIdx) const
     { assertFinalized_(); return residualSaturation_[phaseIdx]; }
 
     /*!
@@ -88,7 +88,7 @@ public:
     /*!
      * \brief Set the residual saturation of a phase.
      */
-    void setResidualSaturation(int phaseIdx, Scalar value)
+    void setResidualSaturation(unsigned phaseIdx, Scalar value)
     { residualSaturation_[phaseIdx] = value; }
 
 private:

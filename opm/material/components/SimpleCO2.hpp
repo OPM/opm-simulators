@@ -101,7 +101,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& pressure)
+                                  const Evaluation& /*pressure*/)
     { return 571.3e3 + (temperature - 298.15)*0.85e3; }
 
     /*!
@@ -109,7 +109,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
-                                     const Evaluation& pressure)
+                                     const Evaluation& /*pressure*/)
     { return (temperature - 298.15)*5e3; }
 
     /*!
@@ -144,7 +144,7 @@ public:
      * edition, McGraw-Hill, 1987, pp 396-397, 667
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         const Scalar Tc = criticalTemperature();
         const Scalar Vc = 93.9; // critical specific volume [cm^3/mol]

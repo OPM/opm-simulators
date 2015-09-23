@@ -35,7 +35,7 @@ namespace Opm {
  * \ingroup Components
  * \brief Abstract base class of a pure chemical species.
  *
- * \tparam Scalar The type used for scalar values
+ * \tparam ScalarT The type used for scalar values
  * \tparam Implementation Necessary for static polymorphism
  */
 template <class ScalarT, class Implementation>

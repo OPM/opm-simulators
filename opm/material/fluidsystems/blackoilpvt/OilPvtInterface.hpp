@@ -44,14 +44,16 @@ template <class Scalar, class Evaluation = Scalar>
 class OilPvtInterface
 {
 public:
+    virtual ~OilPvtInterface() {}
+
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    virtual Evaluation viscosity(int regionIdx,
+    virtual Evaluation viscosity(unsigned regionIdx,
                                  const Evaluation& temperature,
                                  const Evaluation& pressure,
                                  const Evaluation& XoG) const = 0;
-    virtual Scalar viscosity(int regionIdx,
+    virtual Scalar viscosity(unsigned regionIdx,
                              Scalar temperature,
                              Scalar pressure,
                              Scalar XoG) const = 0;
@@ -59,11 +61,11 @@ public:
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    virtual Evaluation formationVolumeFactor(int regionIdx,
+    virtual Evaluation formationVolumeFactor(unsigned regionIdx,
                                              const Evaluation& temperature,
                                              const Evaluation& pressure,
                                              const Evaluation& XoG) const = 0;
-    virtual Scalar formationVolumeFactor(int regionIdx,
+    virtual Scalar formationVolumeFactor(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar pressure,
                                          Scalar XoG) const = 0;
@@ -71,11 +73,11 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    virtual Evaluation density(int regionIdx,
+    virtual Evaluation density(unsigned regionIdx,
                                const Evaluation& temperature,
                                const Evaluation& pressure,
                                const Evaluation& XoG) const = 0;
-    virtual Scalar density(int regionIdx,
+    virtual Scalar density(unsigned regionIdx,
                            Scalar temperature,
                            Scalar pressure,
                            Scalar XoG) const = 0;
@@ -84,22 +86,22 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    virtual Evaluation fugacityCoefficient(int regionIdx,
+    virtual Evaluation fugacityCoefficient(unsigned regionIdx,
                                            const Evaluation& temperature,
                                            const Evaluation& pressure,
-                                           int compIdx) const = 0;
-    virtual Scalar fugacityCoefficient(int regionIdx,
+                                           unsigned compIdx) const = 0;
+    virtual Scalar fugacityCoefficient(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure,
-                                       int compIdx) const = 0;
+                                       unsigned compIdx) const = 0;
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of saturated oil.
      */
-    virtual Evaluation gasDissolutionFactor(int regionIdx,
+    virtual Evaluation gasDissolutionFactor(unsigned regionIdx,
                                             const Evaluation& temperature,
                                             const Evaluation& pressure) const = 0;
-    virtual Scalar gasDissolutionFactor(int regionIdx,
+    virtual Scalar gasDissolutionFactor(unsigned regionIdx,
                                         Scalar temperature,
                                         Scalar pressure) const = 0;
 
@@ -110,10 +112,10 @@ public:
      * Calling this method only makes sense for live oil. All other implementations of
      * the black-oil PVT interface will just throw an exception...
      */
-    virtual Evaluation oilSaturationPressure(int regionIdx,
+    virtual Evaluation oilSaturationPressure(unsigned regionIdx,
                                              const Evaluation& temperature,
                                              const Evaluation& XoG) const = 0;
-    virtual Scalar oilSaturationPressure(int regionIdx,
+    virtual Scalar oilSaturationPressure(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar XoG) const = 0;
 
@@ -124,10 +126,10 @@ public:
      * Calling this method only makes sense for oil. For all other phases an exception
      * will be thrown...
      */
-    virtual Evaluation saturatedOilGasMassFraction(int regionIdx,
+    virtual Evaluation saturatedOilGasMassFraction(unsigned regionIdx,
                                                    const Evaluation& temperature,
                                                    const Evaluation& pressure) const = 0;
-    virtual Scalar saturatedOilGasMassFraction(int regionIdx,
+    virtual Scalar saturatedOilGasMassFraction(unsigned regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
 
@@ -138,10 +140,10 @@ public:
      * Calling this method only makes sense for oil. For all other phases an exception
      * will be thrown...
      */
-    virtual Evaluation saturatedOilGasMoleFraction(int regionIdx,
+    virtual Evaluation saturatedOilGasMoleFraction(unsigned regionIdx,
                                                    const Evaluation& temperature,
                                                    const Evaluation& pressure) const = 0;
-    virtual Scalar saturatedOilGasMoleFraction(int regionIdx,
+    virtual Scalar saturatedOilGasMoleFraction(unsigned regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
 };
@@ -155,7 +157,7 @@ public:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    virtual Scalar viscosity(int regionIdx,
+    virtual Scalar viscosity(unsigned regionIdx,
                              Scalar temperature,
                              Scalar pressure,
                              Scalar XoG) const = 0;
@@ -163,7 +165,7 @@ public:
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    virtual Scalar formationVolumeFactor(int regionIdx,
+    virtual Scalar formationVolumeFactor(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar pressure,
                                          Scalar XoG) const = 0;
@@ -171,7 +173,7 @@ public:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    virtual Scalar density(int regionIdx,
+    virtual Scalar density(unsigned regionIdx,
                            Scalar temperature,
                            Scalar pressure,
                            Scalar XoG) const = 0;
@@ -180,15 +182,15 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    virtual Scalar fugacityCoefficient(int regionIdx,
+    virtual Scalar fugacityCoefficient(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure,
-                                       int compIdx) const = 0;
+                                       unsigned compIdx) const = 0;
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of saturated oil.
      */
-    virtual Scalar gasDissolutionFactor(int regionIdx,
+    virtual Scalar gasDissolutionFactor(unsigned regionIdx,
                                         Scalar temperature,
                                         Scalar pressure) const = 0;
 
@@ -199,7 +201,7 @@ public:
      * Calling this method only makes sense for live oil. All other implementations of
      * the black-oil PVT interface will just throw an exception...
      */
-    virtual Scalar oilSaturationPressure(int regionIdx,
+    virtual Scalar oilSaturationPressure(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar XoG) const = 0;
 
@@ -210,7 +212,7 @@ public:
      * Calling this method only makes sense for oil. For all other phases an exception
      * will be thrown...
      */
-    virtual Scalar saturatedOilGasMassFraction(int regionIdx,
+    virtual Scalar saturatedOilGasMassFraction(unsigned regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
 
@@ -221,7 +223,7 @@ public:
      * Calling this method only makes sense for oil. For all other phases an exception
      * will be thrown...
      */
-    virtual Scalar saturatedOilGasMoleFraction(int regionIdx,
+    virtual Scalar saturatedOilGasMoleFraction(unsigned regionIdx,
                                                Scalar temperature,
                                                Scalar pressure) const = 0;
 };
@@ -232,82 +234,82 @@ template <class Scalar, class Evaluation, class Implementation>
 class OilPvtInterfaceTemplateWrapper
     : public OilPvtInterface<Scalar, Evaluation>
 {
-    Evaluation viscosity(int regionIdx,
+    Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
                          const Evaluation& XoG) const OPM_FINAL
     { return asImp_().template viscosity_<Evaluation>(regionIdx, temperature, pressure, XoG); }
-    Scalar viscosity(int regionIdx,
+    Scalar viscosity(unsigned regionIdx,
                      Scalar temperature,
                      Scalar pressure,
                      Scalar XoG) const OPM_FINAL
     { return asImp_().template viscosity_<Scalar>(regionIdx, temperature, pressure, XoG); }
 
-    Evaluation formationVolumeFactor(int regionIdx,
+    Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& pressure,
                                      const Evaluation& XoG) const OPM_FINAL
     { return asImp_().template formationVolumeFactor_<Evaluation>(regionIdx, temperature, pressure, XoG); }
-    Scalar formationVolumeFactor(int regionIdx,
+    Scalar formationVolumeFactor(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar pressure,
                                  Scalar XoG) const OPM_FINAL
     { return asImp_().template formationVolumeFactor_<Scalar>(regionIdx, temperature, pressure, XoG); }
 
-    Evaluation density(int regionIdx,
+    Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
                        const Evaluation& XoG) const OPM_FINAL
     { return asImp_().template density_<Evaluation>(regionIdx, temperature, pressure, XoG); }
-    Scalar density(int regionIdx,
+    Scalar density(unsigned regionIdx,
                    Scalar temperature,
                    Scalar pressure,
                    Scalar XoG) const OPM_FINAL
     { return asImp_().template density_<Scalar>(regionIdx, temperature, pressure, XoG); }
 
-    Evaluation fugacityCoefficient(int regionIdx,
+    Evaluation fugacityCoefficient(unsigned regionIdx,
                                    const Evaluation& temperature,
                                    const Evaluation& pressure,
-                                   int compIdx) const OPM_FINAL
+                                   unsigned compIdx) const OPM_FINAL
     { return asImp_().template fugacityCoefficient_<Evaluation>(regionIdx, temperature, pressure, compIdx); }
-    Scalar fugacityCoefficient(int regionIdx,
+    Scalar fugacityCoefficient(unsigned regionIdx,
                                Scalar temperature,
                                Scalar pressure,
-                               int compIdx) const OPM_FINAL
+                               unsigned compIdx) const OPM_FINAL
     { return asImp_().template fugacityCoefficient_<Scalar>(regionIdx, temperature, pressure, compIdx); }
 
-    Evaluation gasDissolutionFactor(int regionIdx,
+    Evaluation gasDissolutionFactor(unsigned regionIdx,
                                     const Evaluation& temperature,
                                     const Evaluation& pressure) const OPM_FINAL
     { return asImp_().template gasDissolutionFactor_<Evaluation>(regionIdx, temperature, pressure); }
-    Scalar gasDissolutionFactor(int regionIdx,
+    Scalar gasDissolutionFactor(unsigned regionIdx,
                                 Scalar temperature,
                                 Scalar pressure) const OPM_FINAL
     { return asImp_().template gasDissolutionFactor_<Scalar>(regionIdx, temperature, pressure); }
 
-    Evaluation oilSaturationPressure(int regionIdx,
+    Evaluation oilSaturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& XoG) const OPM_FINAL
     { return asImp_().template oilSaturationPressure_<Evaluation>(regionIdx, temperature, XoG); }
-    Scalar oilSaturationPressure(int regionIdx,
+    Scalar oilSaturationPressure(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar XoG) const OPM_FINAL
     { return asImp_().template oilSaturationPressure_<Scalar>(regionIdx, temperature, XoG); }
 
-    Evaluation saturatedOilGasMassFraction(int regionIdx,
+    Evaluation saturatedOilGasMassFraction(unsigned regionIdx,
                                            const Evaluation& temperature,
                                            const Evaluation& pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMassFraction_<Evaluation>(regionIdx, temperature, pressure); }
-    Scalar saturatedOilGasMassFraction(int regionIdx,
+    Scalar saturatedOilGasMassFraction(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMassFraction_<Scalar>(regionIdx, temperature, pressure); }
 
-    Evaluation saturatedOilGasMoleFraction(int regionIdx,
+    Evaluation saturatedOilGasMoleFraction(unsigned regionIdx,
                                            const Evaluation& temperature,
                                            const Evaluation& pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMoleFraction_<Evaluation>(regionIdx, temperature, pressure); }
-    Scalar saturatedOilGasMoleFraction(int regionIdx,
+    Scalar saturatedOilGasMoleFraction(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMoleFraction_<Scalar>(regionIdx, temperature, pressure); }
@@ -321,39 +323,39 @@ template <class Scalar, class Implementation>
 class OilPvtInterfaceTemplateWrapper<Scalar, Scalar, Implementation>
     : public OilPvtInterface<Scalar, Scalar>
 {
-    Scalar viscosity(int regionIdx,
+    Scalar viscosity(unsigned regionIdx,
                      Scalar temperature,
                      Scalar pressure,
                      Scalar XoG) const OPM_FINAL
     { return asImp_().template viscosity_<Scalar>(regionIdx, temperature, pressure, XoG); }
-    Scalar formationVolumeFactor(int regionIdx,
+    Scalar formationVolumeFactor(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar pressure,
                                  Scalar XoG) const OPM_FINAL
     { return asImp_().template formationVolumeFactor_<Scalar>(regionIdx, temperature, pressure, XoG); }
-    Scalar density(int regionIdx,
+    Scalar density(unsigned regionIdx,
                    Scalar temperature,
                    Scalar pressure,
                    Scalar XoG) const OPM_FINAL
     { return asImp_().template density_<Scalar>(regionIdx, temperature, pressure, XoG); }
-    Scalar fugacityCoefficient(int regionIdx,
+    Scalar fugacityCoefficient(unsigned regionIdx,
                                Scalar temperature,
                                Scalar pressure,
-                               int compIdx) const OPM_FINAL
+                               unsigned compIdx) const OPM_FINAL
     { return asImp_().template fugacityCoefficient_<Scalar>(regionIdx, temperature, pressure, compIdx); }
-    Scalar gasDissolutionFactor(int regionIdx,
+    Scalar gasDissolutionFactor(unsigned regionIdx,
                                 Scalar temperature,
                                 Scalar pressure) const OPM_FINAL
     { return asImp_().template gasDissolutionFactor_<Scalar>(regionIdx, temperature, pressure); }
-    Scalar oilSaturationPressure(int regionIdx,
+    Scalar oilSaturationPressure(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar XoG) const OPM_FINAL
     { return asImp_().template oilSaturationPressure_<Scalar>(regionIdx, temperature, XoG); }
-    Scalar saturatedOilGasMassFraction(int regionIdx,
+    Scalar saturatedOilGasMassFraction(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMassFraction_<Scalar>(regionIdx, temperature, pressure); }
-    Scalar saturatedOilGasMoleFraction(int regionIdx,
+    Scalar saturatedOilGasMoleFraction(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure) const OPM_FINAL
     { return asImp_().template saturatedOilGasMoleFraction_<Scalar>(regionIdx, temperature, pressure); }

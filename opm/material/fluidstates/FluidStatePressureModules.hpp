@@ -51,14 +51,14 @@ public:
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    const Scalar& pressure(int phaseIdx) const
+    const Scalar& pressure(unsigned phaseIdx) const
     { return pressure_[phaseIdx]; }
 
 
     /*!
      * \brief Set the pressure of a phase [Pa]
      */
-    void setPressure(int phaseIdx, const Scalar& value)
+    void setPressure(unsigned phaseIdx, const Scalar& value)
     { pressure_[phaseIdx] = value; }
 
     /*!
@@ -70,7 +70,7 @@ public:
     {
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             pressure_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.pressure(phaseIdx));
         }
     }

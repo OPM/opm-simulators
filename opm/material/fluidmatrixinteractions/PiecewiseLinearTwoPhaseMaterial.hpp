@@ -238,7 +238,7 @@ private:
         if (x >= xValues.back())
             return yValues.back();
 
-        int segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -263,7 +263,7 @@ private:
         if (x <= xValues.back())
             return yValues.back();
 
-        int segIdx = findSegmentIndexDescending_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndexDescending_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -283,12 +283,12 @@ private:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        if (Toolbox::value(x) < xValues.front())
+        if (Toolbox::value(x) <= xValues.front())
             return Toolbox::createConstant(0.0);
-        if (Toolbox::value(x) > xValues.back())
+        if (Toolbox::value(x) >= xValues.back())
             return Toolbox::createConstant(0.0);
 
-        int segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -299,19 +299,19 @@ private:
         return Toolbox::createConstant((y1 - y0)/(x1 - x0));
     }
 
-    static int findSegmentIndex_(const ValueVector &xValues, Scalar x)
+    static size_t findSegmentIndex_(const ValueVector &xValues, Scalar x)
     {
-        int n = xValues.size() - 1;
-        assert(n >= 1); // we need at least two sampling points!
-        if (xValues[n] < x)
+        assert(xValues.size() > 1); // we need at least two sampling points!
+        size_t n = xValues.size() - 1;
+        if (xValues.back() <= x)
             return n - 1;
-        else if (xValues[0] > x)
+        else if (x <= xValues.front())
             return 0;
 
         // bisection
-        int lowIdx = 0, highIdx = n;
+        size_t lowIdx = 0, highIdx = n;
         while (lowIdx + 1 < highIdx) {
-            int curIdx = (lowIdx + highIdx)/2;
+            size_t curIdx = (lowIdx + highIdx)/2;
             if (xValues[curIdx] < x)
                 lowIdx = curIdx;
             else
@@ -321,19 +321,19 @@ private:
         return lowIdx;
     }
 
-    static int findSegmentIndexDescending_(const ValueVector &xValues, Scalar x)
+    static size_t findSegmentIndexDescending_(const ValueVector &xValues, Scalar x)
     {
-        int n = xValues.size() - 1;
-        assert(n >= 1); // we need at least two sampling points!
-        if (xValues[n] >= x)
-            return n - 1;
-        else if (xValues[0] <= x)
+        assert(xValues.size() > 1); // we need at least two sampling points!
+        size_t n = xValues.size() - 1;
+        if (x <= xValues.back())
+            return n;
+        else if (xValues.front() <= x)
             return 0;
 
         // bisection
-        int lowIdx = 0, highIdx = n;
+        size_t lowIdx = 0, highIdx = n;
         while (lowIdx + 1 < highIdx) {
-            int curIdx = (lowIdx + highIdx)/2;
+            size_t curIdx = (lowIdx + highIdx)/2;
             if (xValues[curIdx] >= x)
                 lowIdx = curIdx;
             else

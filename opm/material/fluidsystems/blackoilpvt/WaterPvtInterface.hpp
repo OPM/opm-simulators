@@ -44,33 +44,35 @@ template <class Scalar, class Evaluation = Scalar>
 class WaterPvtInterface
 {
 public:
+    virtual ~WaterPvtInterface() {}
+
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    virtual Evaluation viscosity(int regionIdx,
+    virtual Evaluation viscosity(unsigned regionIdx,
                                  const Evaluation& temperature,
                                  const Evaluation& pressure) const = 0;
-    virtual Scalar viscosity(int regionIdx,
+    virtual Scalar viscosity(unsigned regionIdx,
                              Scalar temperature,
                              Scalar pressure) const = 0;
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    virtual Evaluation formationVolumeFactor(int regionIdx,
+    virtual Evaluation formationVolumeFactor(unsigned regionIdx,
                                              const Evaluation& temperature,
                                              const Evaluation& pressure) const = 0;
-    virtual Scalar formationVolumeFactor(int regionIdx,
+    virtual Scalar formationVolumeFactor(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar pressure) const = 0;
 
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    virtual Evaluation density(int regionIdx,
+    virtual Evaluation density(unsigned regionIdx,
                                const Evaluation& temperature,
                                const Evaluation& pressure) const = 0;
-    virtual Scalar density(int regionIdx,
+    virtual Scalar density(unsigned regionIdx,
                            Scalar temperature,
                            Scalar pressure) const = 0;
 
@@ -78,34 +80,34 @@ public:
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    virtual Evaluation fugacityCoefficient(int regionIdx,
+    virtual Evaluation fugacityCoefficient(unsigned regionIdx,
                                            const Evaluation& temperature,
                                            const Evaluation& pressure,
-                                           int compIdx) const = 0;
-    virtual Scalar fugacityCoefficient(int regionIdx,
+                                           unsigned compIdx) const = 0;
+    virtual Scalar fugacityCoefficient(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure,
-                                       int compIdx) const = 0;
+                                       unsigned compIdx) const = 0;
 };
 
 template <class Scalar>
 class WaterPvtInterface<Scalar, Scalar>
 {
 public:
-    virtual Scalar viscosity(int regionIdx,
+    virtual Scalar viscosity(unsigned regionIdx,
                              Scalar temperature,
                              Scalar pressure) const = 0;
 
-    virtual Scalar formationVolumeFactor(int regionIdx,
+    virtual Scalar formationVolumeFactor(unsigned regionIdx,
                                          Scalar temperature,
                                          Scalar pressure) const = 0;
-    virtual Scalar density(int regionIdx,
+    virtual Scalar density(unsigned regionIdx,
                            Scalar temperature,
                            Scalar pressure) const = 0;
-    virtual Scalar fugacityCoefficient(int regionIdx,
+    virtual Scalar fugacityCoefficient(unsigned regionIdx,
                                        Scalar temperature,
                                        Scalar pressure,
-                                       int compIdx) const = 0;
+                                       unsigned compIdx) const = 0;
 };
 
 template <class Scalar, class Evaluation, class Implementation>
@@ -115,42 +117,42 @@ class WaterPvtInterfaceTemplateWrapper : public WaterPvtInterface<Scalar, Evalua
     { return *static_cast<const Implementation*>(this); }
 
 public:
-    Evaluation viscosity(int regionIdx,
+    Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure) const OPM_FINAL
     { return asImp_().viscosity_(regionIdx, temperature, pressure); }
-    Scalar viscosity(int regionIdx,
+    Scalar viscosity(unsigned regionIdx,
                      Scalar temperature,
                      Scalar pressure) const OPM_FINAL
     { return asImp_().viscosity_(regionIdx, temperature, pressure); }
 
-    Evaluation formationVolumeFactor(int regionIdx,
+    Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& pressure) const OPM_FINAL
     { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure); }
-    Scalar formationVolumeFactor(int regionIdx,
+    Scalar formationVolumeFactor(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar pressure) const OPM_FINAL
     { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure); }
 
-    Evaluation density(int regionIdx,
+    Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure) const OPM_FINAL
     { return asImp_().density_(regionIdx, temperature, pressure); }
-    Scalar density(int regionIdx,
+    Scalar density(unsigned regionIdx,
                    Scalar temperature,
                    Scalar pressure) const OPM_FINAL
     { return asImp_().density_(regionIdx, temperature, pressure); }
 
-    Evaluation fugacityCoefficient(int regionIdx,
+    Evaluation fugacityCoefficient(unsigned regionIdx,
                                    const Evaluation& temperature,
                                    const Evaluation& pressure,
-                                   int compIdx) const OPM_FINAL
+                                   unsigned compIdx) const OPM_FINAL
     { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); }
-    Scalar fugacityCoefficient(int regionIdx,
+    Scalar fugacityCoefficient(unsigned regionIdx,
                                Scalar temperature,
                                Scalar pressure,
-                               int compIdx) const OPM_FINAL
+                               unsigned compIdx) const OPM_FINAL
     { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); }
 };
 
@@ -162,25 +164,25 @@ class WaterPvtInterfaceTemplateWrapper<Scalar, Scalar, Implementation>
     { return *static_cast<const Implementation*>(this); }
 
 public:
-    Scalar viscosity(int regionIdx,
+    Scalar viscosity(unsigned regionIdx,
                      Scalar temperature,
                      Scalar pressure) const OPM_FINAL
     { return asImp_().viscosity_(regionIdx, temperature, pressure); }
 
-    Scalar formationVolumeFactor(int regionIdx,
+    Scalar formationVolumeFactor(unsigned regionIdx,
                                  Scalar temperature,
                                  Scalar pressure) const OPM_FINAL
     { return asImp_().formationVolumeFactor_(regionIdx, temperature, pressure); }
 
-    Scalar density(int regionIdx,
+    Scalar density(unsigned regionIdx,
                    Scalar temperature,
                    Scalar pressure) const OPM_FINAL
     { return asImp_().density_(regionIdx, temperature, pressure); }
 
-    Scalar fugacityCoefficient(int regionIdx,
+    Scalar fugacityCoefficient(unsigned regionIdx,
                                Scalar temperature,
                                Scalar pressure,
-                               int compIdx) const OPM_FINAL
+                               unsigned compIdx) const OPM_FINAL
     { return asImp_().fugacityCoefficient_(regionIdx, temperature, pressure, compIdx); }
 };
 

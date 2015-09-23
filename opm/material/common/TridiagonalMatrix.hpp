@@ -51,7 +51,7 @@ class TridiagonalMatrix
         TridiagRow_(TridiagonalMatrix &m, size_t rowIdx)
             : matrix_(m)
             , rowIdx_(rowIdx)
-        {};
+        {}
 
         Scalar &operator[](size_t colIdx)
         { return matrix_.at(rowIdx_, colIdx); }
@@ -109,22 +109,22 @@ public:
     typedef TridiagRow_ iterator;
     typedef TridiagRow_ const_iterator;
 
-    explicit TridiagonalMatrix(int numRows = 0)
+    explicit TridiagonalMatrix(size_t numRows = 0)
     {
         resize(numRows);
-    };
+    }
 
-    TridiagonalMatrix(int numRows, Scalar value)
+    TridiagonalMatrix(size_t numRows, Scalar value)
     {
         resize(numRows);
         this->operator=(value);
-    };
+    }
 
     /*!
      * \brief Copy constructor.
      */
     TridiagonalMatrix(const TridiagonalMatrix &source)
-    { *this = source; };
+    { *this = source; }
 
     /*!
      * \brief Return the number of rows/columns of the matrix.
@@ -171,7 +171,7 @@ public:
                 return diag_[0][n - 1];
         }
 
-        int diagIdx = 1 + colIdx - rowIdx;
+        size_t diagIdx = 1 + colIdx - rowIdx;
         // make sure that the requested column is in range
         assert(0 <= diagIdx && diagIdx < 3);
         return diag_[diagIdx][colIdx];
@@ -711,7 +711,7 @@ public:
     template <class XVector, class BVector>
     void solve(XVector &x, const BVector &b) const
     {
-        if (size() > 2 && diag_[2][0] != 0)
+        if (size() > 2 && std::abs(diag_[2][0]) < 1e-30)
             solveWithUpperRight_(x, b);
         else
             solveWithoutUpperRight_(x, b);
@@ -793,8 +793,9 @@ private:
 
         // backward elimination
         x[n - 1] = bStar[n - 1]/mainDiag[n-1];
-        for (int i = n - 2; i >= 0; --i) {
-            x[i] = (bStar[i] - x[i + 1]*upperDiag[i+1] - x[n-1]*lastColumn[i])/mainDiag[i];
+        for (int i = static_cast<int>(n) - 2; i >= 0; --i) {
+            unsigned iu = static_cast<unsigned>(i);
+            x[iu] = (bStar[iu] - x[iu + 1]*upperDiag[iu+1] - x[n-1]*lastColumn[iu])/mainDiag[iu];
         }
     }
 
@@ -831,8 +832,9 @@ private:
 
         // backward elimination
         x[n - 1] = bStar[n - 1]/mainDiag[n-1];
-        for (int i = n - 2; i >= 0; --i) {
-            x[i] = (bStar[i] - x[i + 1]*upperDiag[i+1])/mainDiag[i];
+        for (int i = static_cast<int>(n) - 2; i >= 0; --i) {
+            unsigned iu = static_cast<unsigned>(i);
+            x[iu] = (bStar[iu] - x[iu + 1]*upperDiag[iu+1])/mainDiag[iu];
         }
     }
 

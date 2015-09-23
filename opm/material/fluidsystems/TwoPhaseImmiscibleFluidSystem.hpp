@@ -79,7 +79,7 @@ public:
     static const int nonWettingPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(int phaseIdx)
+    static const char *phaseName(unsigned phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -91,7 +91,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static bool isLiquid(int phaseIdx)
+    static bool isLiquid(unsigned phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return
@@ -101,7 +101,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static bool isCompressible(int phaseIdx)
+    static bool isCompressible(unsigned phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -112,7 +112,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(unsigned phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -124,7 +124,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(unsigned /*phaseIdx*/)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -145,7 +145,7 @@ public:
     static const int nonWettingCompIdx = 1;
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(int compIdx)
+    static const char *componentName(unsigned compIdx)
     {
         assert(0 <= compIdx && compIdx < numComponents);
 
@@ -155,7 +155,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static Scalar molarMass(int compIdx)
+    static Scalar molarMass(unsigned compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
 
@@ -169,7 +169,7 @@ public:
     /*!
      * \brief Critical temperature of a component [K].
      */
-    static Scalar criticalTemperature(int compIdx)
+    static Scalar criticalTemperature(unsigned compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide
@@ -182,7 +182,7 @@ public:
     /*!
      * \brief Critical pressure of a component [Pa].
      */
-    static Scalar criticalPressure(int compIdx)
+    static Scalar criticalPressure(unsigned compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide
@@ -195,7 +195,7 @@ public:
     /*!
      * \brief The acentric factor of a component [].
      */
-    static Scalar acentricFactor(int compIdx)
+    static Scalar acentricFactor(unsigned compIdx)
     {
         //assert(0 <= compIdx && compIdx < numComponents);
         // let the fluids decide
@@ -220,8 +220,8 @@ public:
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+                           const ParameterCache &/*paramCache*/,
+                           unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -237,8 +237,8 @@ public:
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache &paramCache,
-                             int phaseIdx)
+                             const ParameterCache &/*paramCache*/,
+                             unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -253,10 +253,10 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
+    static LhsEval fugacityCoefficient(const FluidState &/*fluidState*/,
+                                       const ParameterCache &/*paramCache*/,
+                                       unsigned phaseIdx,
+                                       unsigned compIdx)
     {
         typedef MathToolbox<LhsEval> LhsToolbox;
 
@@ -275,8 +275,8 @@ public:
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval enthalpy(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+                            const ParameterCache &/*paramCache*/,
+                            unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -292,8 +292,8 @@ public:
     //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval thermalConductivity(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx)
+                                       const ParameterCache &/*paramCache*/,
+                                       unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -309,8 +309,8 @@ public:
     //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval heatCapacity(const FluidState &fluidState,
-                                const ParameterCache &paramCache,
-                                int phaseIdx)
+                                const ParameterCache &/*paramCache*/,
+                                unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 

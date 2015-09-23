@@ -107,7 +107,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Scalar dpi_dp(const Evaluation& pressure)
+    static Scalar dpi_dp(const Evaluation& /*pressure*/)
     { return 1.0 / 1e6; }
 
     /*!
@@ -117,7 +117,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation dp_dpi(const Evaluation& pressure)
+    static Evaluation dp_dpi(const Evaluation& /*pressure*/)
     { return 1e6; }
 
     /*!

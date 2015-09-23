@@ -29,6 +29,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ErrorMacros.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <iostream>
 #include <vector>
@@ -71,49 +72,49 @@ public:
     /*!
      * \brief Returns the value of the X coordinate of the sampling points.
      */
-    Scalar xAt(int i) const
+    Scalar xAt(size_t i) const
     { return xPos_[i]; }
 
     /*!
      * \brief Returns the value of the Y coordinate of a sampling point.
      */
-    Scalar yAt(int i, int j) const
+    Scalar yAt(size_t i, size_t j) const
     { return std::get<1>(samples_[i][j]); }
 
     /*!
      * \brief Returns the value of a sampling point.
      */
-    Scalar valueAt(int i, int j) const
+    Scalar valueAt(size_t i, size_t j) const
     { return std::get<2>(samples_[i][j]); }
 
     /*!
      * \brief Returns the number of sampling points in X direction.
      */
-    int numX() const
+    size_t numX() const
     { return xPos_.size(); }
 
     /*!
      * \brief Returns the minimum of the Y coordinate of the sampling points for a given column.
      */
-    Scalar yMin(int i) const
+    Scalar yMin(size_t i) const
     { return std::get<1>(samples_.at(i).front()); }
 
     /*!
      * \brief Returns the maximum of the Y coordinate of the sampling points for a given column.
      */
-    Scalar yMax(int i) const
+    Scalar yMax(size_t i) const
     { return std::get<1>(samples_.at(i).back()); }
 
     /*!
      * \brief Returns the number of sampling points in Y direction a given column.
      */
-    int numY(int i) const
+    size_t numY(size_t i) const
     { return samples_.at(i).size(); }
 
     /*!
      * \brief Return the position on the x-axis of the i-th interval.
      */
-    Scalar iToX(int i) const
+    Scalar iToX(size_t i) const
     {
         assert(0 <= i && i < numX());
 
@@ -123,7 +124,7 @@ public:
     /*!
      * \brief Return the position on the y-axis of the j-th interval.
       */
-    Scalar jToY(int i, int j) const
+    Scalar jToY(size_t i, size_t j) const
     {
         assert(0 <= i && i < numX());
         assert(0 <= j && size_t(j) < samples_[i].size());
@@ -139,14 +140,14 @@ public:
      * position of the x value between the i-th and the (i+1)-th
      * sample point.
       */
-    Scalar xToI(Scalar x, bool extrapolate = false) const
+    Scalar xToI(Scalar x, OPM_UNUSED bool extrapolate = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
         // we need at least two sampling points!
         assert(xPos_.size() >= 2);
 
-        int segmentIdx;
+        size_t segmentIdx;
         if (x <= xPos_[1])
             segmentIdx = 0;
         else if (x >= xPos_[xPos_.size() - 2])
@@ -154,9 +155,9 @@ public:
         else {
             // bisection
             segmentIdx = 1;
-            int upperIdx = xPos_.size() - 2;
+            size_t upperIdx = xPos_.size() - 2;
             while (segmentIdx + 1 < upperIdx) {
-                int pivotIdx = (segmentIdx + upperIdx) / 2;
+                size_t pivotIdx = (segmentIdx + upperIdx) / 2;
                 if (x < xPos_[pivotIdx])
                     upperIdx = pivotIdx;
                 else
@@ -180,7 +181,7 @@ public:
      * position of the y value between the j-th and the (j+1)-th
      * sample point.
      */
-    Scalar yToJ(int i, Scalar y, bool extrapolate = false) const
+    Scalar yToJ(size_t i, Scalar y, OPM_UNUSED bool extrapolate = false) const
     {
         assert(0 <= i && i < numX());
         const auto &colSamplePoints = samples_.at(i);
@@ -191,9 +192,9 @@ public:
         Scalar y2;
 
         // interval halving
-        int lowerIdx = 0;
-        int upperIdx = int(colSamplePoints.size()) - 1;
-        int pivotIdx = (lowerIdx + upperIdx) / 2;
+        size_t lowerIdx = 0;
+        size_t upperIdx = colSamplePoints.size() - 1;
+        size_t pivotIdx = (lowerIdx + upperIdx) / 2;
         while (lowerIdx + 1 < upperIdx) {
             if (y < std::get<1>(colSamplePoints[pivotIdx]))
                 upperIdx = pivotIdx;
@@ -206,7 +207,7 @@ public:
         y2 = std::get<1>(colSamplePoints[lowerIdx + 1]);
 
         assert(y1 <= y || (extrapolate && lowerIdx == 0));
-        assert(y <= y2 || (extrapolate && lowerIdx == int(colSamplePoints.size()) - 2));
+        assert(y <= y2 || (extrapolate && lowerIdx == colSamplePoints.size() - 2));
 
         return lowerIdx + (y - y1)/(y2 - y1);
     }
@@ -220,8 +221,8 @@ public:
             return false;
 
         Scalar i = xToI(x, /*extrapolate=*/false);
-        const auto &col1SamplePoints = samples_.at(int(i));
-        const auto &col2SamplePoints = samples_.at(int(i));
+        const auto &col1SamplePoints = samples_.at(unsigned(i));
+        const auto &col2SamplePoints = samples_.at(unsigned(i));
         Scalar alpha = i - int(i);
 
         Scalar yMin =
@@ -254,14 +255,14 @@ public:
 #endif
 
         Scalar alpha = xToI(x, extrapolate);
-        int i = std::max(0, std::min(numX() - 2, static_cast<int>(alpha)));
+        size_t i = std::max<size_t>(0, std::min(numX() - 2, static_cast<size_t>(alpha)));
         alpha -= i;
 
         Scalar beta1 = yToJ(i, y, extrapolate);
         Scalar beta2 = yToJ(i + 1, y, extrapolate);
 
-        int j1 = std::max(0, std::min(numY(i) - 2, static_cast<int>(beta1)));
-        int j2 = std::max(0, std::min(numY(i + 1) - 2, static_cast<int>(beta2)));
+        size_t j1 = std::max<size_t>(0, std::min(numY(i) - 2, static_cast<size_t>(beta1)));
+        size_t j2 = std::max<size_t>(0, std::min(numY(i + 1) - 2, static_cast<size_t>(beta2)));
 
         beta1 -= j1;
         beta2 -= j2;
@@ -291,7 +292,7 @@ public:
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
         Evaluation alpha = Evaluation::createConstant(xToI(x.value, extrapolate));
-        int i = std::max(0, std::min(numX() - 2, static_cast<int>(alpha.value)));
+        int i = std::max(0, std::min<int>(numX() - 2, static_cast<int>(alpha.value)));
         alpha -= i;
 
         Evaluation beta1;
@@ -300,8 +301,8 @@ public:
         beta1.value = yToJ(i, y.value, extrapolate);
         beta2.value = yToJ(i + 1, y.value, extrapolate);
 
-        int j1 = std::max(0, std::min(numY(i) - 2, static_cast<int>(beta1.value)));
-        int j2 = std::max(0, std::min(numY(i + 1) - 2, static_cast<int>(beta2.value)));
+        int j1 = std::max(0, std::min<int>(numY(i) - 2, static_cast<int>(beta1.value)));
+        int j2 = std::max(0, std::min<int>(numY(i + 1) - 2, static_cast<int>(beta2.value)));
 
         beta1.value -= j1;
         beta2.value -= j2;
@@ -362,7 +363,7 @@ public:
      *
      * Returns the i index of that line.
      */
-    size_t appendSamplePoint(int i, Scalar y, Scalar value)
+    size_t appendSamplePoint(unsigned i, Scalar y, Scalar value)
     {
         assert(0 <= i && i < numX());
 

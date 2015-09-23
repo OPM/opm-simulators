@@ -50,7 +50,7 @@ namespace Opm
  * Evaluation of Miscible Flood Simulators, Ninth SPE Symposium on
  * Reservoir Simulation, 1987
  */
-template <class Scalar, class FluidSystem, int phaseIdx, bool useSpe5Relations=false>
+template <class Scalar, class FluidSystem, unsigned phaseIdx, bool useSpe5Relations=false>
 class PengRobinsonParamsMixture
     : public PengRobinsonParams<Scalar>
 {
@@ -88,7 +88,7 @@ public:
         //
         // See: R. Reid, et al.: The Properties of Gases and Liquids,
         // 4th edition, McGraw-Hill, 1987, p. 43
-        for (int i = 0; i < numComponents; ++i) {
+        for (unsigned i = 0; i < numComponents; ++i) {
             Scalar pc = FluidSystem::criticalPressure(i);
             Scalar omega = FluidSystem::acentricFactor(i);
             Scalar Tr = temperature/FluidSystem::criticalTemperature(i);
@@ -133,7 +133,7 @@ public:
     void updateMix(const FluidState &fs)
     {
         Scalar sumx = 0.0;
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
             sumx += fs.moleFraction(phaseIdx, compIdx);
         sumx = std::max(1e-10, sumx);
 
@@ -143,11 +143,11 @@ public:
         // 4th edition, McGraw-Hill, 1987, p. 82
         Scalar a = 0;
         Scalar b = 0;
-        for (int compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
+        for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
             Scalar xi = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compIIdx)));
             Valgrind::CheckDefined(xi);
 
-            for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
+            for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
                 Scalar xj = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compJIdx)));
                 Valgrind::CheckDefined(xj);
 
@@ -181,7 +181,7 @@ public:
      */
     template <class FluidState>
     void updateSingleMoleFraction(const FluidState &fs,
-                                  int compIdx)
+                                  unsigned /*compIdx*/)
     {
         updateMix(fs);
     }
@@ -189,13 +189,13 @@ public:
     /*!
      * \brief Return the Peng-Robinson parameters of a pure substance,
      */
-    const PureParams &pureParams(int compIdx) const
+    const PureParams &pureParams(unsigned compIdx) const
     { return pureParams_[compIdx]; }
 
     /*!
      * \brief Returns the Peng-Robinson parameters for a pure component.
      */
-    const PureParams &operator[](int compIdx) const
+    const PureParams &operator[](unsigned compIdx) const
     {
         assert(0 <= compIdx && compIdx < numComponents);
         return pureParams_[compIdx];
@@ -208,7 +208,7 @@ public:
     void checkDefined() const
     {
 #ifndef NDEBUG
-        for (int i = 0; i < numComponents; ++i)
+        for (unsigned i = 0; i < numComponents; ++i)
             pureParams_[i].checkDefined();
 
         Valgrind::CheckDefined(this->a());
@@ -222,8 +222,8 @@ protected:
 private:
     void updateACache_()
     {
-        for (int compIIdx = 0; compIIdx < numComponents; ++ compIIdx) {
-            for (int compJIdx = 0; compJIdx < numComponents; ++ compJIdx) {
+        for (unsigned compIIdx = 0; compIIdx < numComponents; ++ compIIdx) {
+            for (unsigned compJIdx = 0; compJIdx < numComponents; ++ compJIdx) {
                 // interaction coefficient as given in SPE5
                 Scalar Psi = FluidSystem::interactionCoefficient(compIIdx, compJIdx);
 
@@ -238,7 +238,7 @@ private:
     Scalar aCache_[numComponents][numComponents];
 };
 
-template <class Scalar, class FluidSystem, int phaseIdx, bool useSpe5Relations>
+template <class Scalar, class FluidSystem, unsigned phaseIdx, bool useSpe5Relations>
 const Scalar PengRobinsonParamsMixture<Scalar, FluidSystem, phaseIdx, useSpe5Relations>::R = Opm::Constants<Scalar>::R;
 
 } // namespace Opm

@@ -60,13 +60,13 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    const Scalar&  moleFraction(int phaseIdx, int compIdx) const
+    const Scalar&  moleFraction(unsigned phaseIdx, unsigned compIdx) const
     { return moleFraction_[phaseIdx][compIdx]; }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFraction(int phaseIdx, int compIdx) const
+    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         typedef Opm::MathToolbox<Scalar> Toolbox;
 
@@ -85,7 +85,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    const Scalar&  averageMolarMass(int phaseIdx) const
+    const Scalar&  averageMolarMass(unsigned phaseIdx) const
     { return averageMolarMass_[phaseIdx]; }
 
     /*!
@@ -97,7 +97,7 @@ public:
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
-    Scalar molarity(int phaseIdx, int compIdx) const
+    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
     { return asImp_().molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
 
     /*!
@@ -105,7 +105,7 @@ public:
      *        and update the average molar mass [kg/mol] according
      *        to the current composition of the phase
      */
-    void setMoleFraction(int phaseIdx, int compIdx, const Scalar&  value)
+    void setMoleFraction(unsigned phaseIdx, unsigned compIdx, const Scalar&  value)
     {
         Valgrind::CheckDefined(value);
         Valgrind::SetUndefined(sumMoleFractions_[phaseIdx]);
@@ -117,7 +117,7 @@ public:
         // re-calculate the mean molar mass
         sumMoleFractions_[phaseIdx] = 0.0;
         averageMolarMass_[phaseIdx] = 0.0;
-        for (int compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
+        for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compJIdx];
             averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compJIdx]*FluidSystem::molarMass(compJIdx);
         }
@@ -133,10 +133,10 @@ public:
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             averageMolarMass_[phaseIdx] = 0;
             sumMoleFractions_[phaseIdx] = 0;
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] =
                     FsToolbox::template toLhs<Scalar>(fs.moleFraction(phaseIdx, compIdx));
 
@@ -192,13 +192,13 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFraction(int phaseIdx, int compIdx) const
+    Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
     { return (phaseIdx == compIdx)?1.0:0.0; }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFraction(int phaseIdx, int compIdx) const
+    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     { return (phaseIdx == compIdx)?1.0:0.0; }
 
     /*!
@@ -209,7 +209,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    Scalar averageMolarMass(int phaseIdx) const
+    Scalar averageMolarMass(unsigned phaseIdx) const
     { return FluidSystem::molarMass(/*compIdx=*/phaseIdx); }
 
     /*!
@@ -221,7 +221,7 @@ public:
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
-    Scalar molarity(int phaseIdx, int compIdx) const
+    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
     { return asImp_().molarDensity(phaseIdx)*moleFraction(phaseIdx, compIdx); }
 
     /*!

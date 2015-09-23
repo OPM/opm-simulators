@@ -111,7 +111,7 @@ public:
      *
      * \param pressure temperature of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar dpi_dp(Scalar pressure)
+    static Scalar dpi_dp(Scalar /*pressure*/)
     { return 1.0 / 16.53e6; }
 
     /*!
@@ -120,7 +120,7 @@ public:
      *
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
-    static Scalar dp_dpi(Scalar pressure)
+    static Scalar dp_dpi(Scalar /*pressure*/)
     { return 16.53e6; }
 
     /*!

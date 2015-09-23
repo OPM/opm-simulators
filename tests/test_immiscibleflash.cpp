@@ -49,7 +49,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
 
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         Scalar error;
 
         // check the pressures
@@ -70,7 +70,7 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
                       << " error=" << error << "\n";
 
         // check the compositions
-        for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+        for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
             if (std::abs(error) > 1e-6)
                 std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": "
@@ -92,8 +92,8 @@ void checkImmiscibleFlash(const FluidState &fsRef,
     // calculate the total amount of stuff in the reference fluid
     // phase
     ComponentVector globalMolarities(0.0);
-    for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+    for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             globalMolarities[compIdx] +=
                 fsRef.saturation(phaseIdx)*fsRef.molarity(phaseIdx, compIdx);
         }
@@ -118,12 +118,12 @@ void checkImmiscibleFlash(const FluidState &fsRef,
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>
 void completeReferenceFluidState(FluidState &fs,
                                  typename MaterialLaw::Params &matParams,
-                                 int refPhaseIdx)
+                                 unsigned refPhaseIdx)
 {
     enum { numPhases = FluidSystem::numPhases };
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
 
-    int otherPhaseIdx = 1 - refPhaseIdx;
+    unsigned otherPhaseIdx = 1 - refPhaseIdx;
 
     // calculate the other saturation
     fs.setSaturation(otherPhaseIdx, 1.0 - fs.saturation(refPhaseIdx));
@@ -138,7 +138,7 @@ void completeReferenceFluidState(FluidState &fs,
     // set all phase densities
     typename FluidSystem::ParameterCache paramCache;
     paramCache.updateAll(fs);
-    for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
         fs.setDensity(phaseIdx, rho);
     }
@@ -169,11 +169,11 @@ int main()
     // initialize the tables of the fluid system
     Scalar Tmin = T - 1.0;
     Scalar Tmax = T + 1.0;
-    int nT = 3;
+    unsigned nT = 3;
 
     Scalar pmin = 0.0;
     Scalar pmax = 1.25 * 2e6;
-    int np = 100;
+    unsigned np = 100;
 
     FluidSystem::init(Tmin, Tmax, nT, pmin, pmax, np);
 

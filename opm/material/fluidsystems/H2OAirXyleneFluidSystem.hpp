@@ -89,18 +89,18 @@ public:
     { }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static bool isLiquid(int phaseIdx)
+    static bool isLiquid(unsigned phaseIdx)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gasPhaseIdx;
     }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(unsigned phaseIdx)
     { return phaseIdx == gasPhaseIdx && H2O::gasIsIdeal() && Air::gasIsIdeal() && NAPL::gasIsIdeal(); }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(unsigned /*phaseIdx*/)
     {
         //assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -111,7 +111,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static bool isCompressible(int phaseIdx)
+    static bool isCompressible(unsigned phaseIdx)
     {
         return
             (phaseIdx == gasPhaseIdx)
@@ -125,7 +125,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(int phaseIdx)
+    static const char *phaseName(unsigned phaseIdx)
     {
         switch (phaseIdx) {
         case waterPhaseIdx: return "water";
@@ -136,7 +136,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(int compIdx)
+    static const char *componentName(unsigned compIdx)
     {
         switch (compIdx) {
         case H2OIdx: return H2O::name();
@@ -147,7 +147,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static Scalar molarMass(int compIdx)
+    static Scalar molarMass(unsigned compIdx)
     {
         return
             (compIdx == H2OIdx)
@@ -165,8 +165,8 @@ public:
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          int phaseIdx)
+                           const ParameterCache &/*paramCache*/,
+                           unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -208,8 +208,8 @@ public:
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval viscosity(const FluidState &fluidState,
-                            const ParameterCache &paramCache,
-                            int phaseIdx)
+                             const ParameterCache &/*paramCache*/,
+                             unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -272,9 +272,9 @@ public:
     //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval diffusionCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
+                                        const ParameterCache &/*paramCache*/,
+                                        unsigned phaseIdx,
+                                        unsigned compIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -293,8 +293,8 @@ public:
             if (compIdx==NAPLIdx) return (1.- xgw)/(xga/diffAW + xgc/diffWC);
             else if (compIdx==H2OIdx) return (1.- xgc)/(xgw/diffWC + xga/diffAC);
             else if (compIdx==airIdx) OPM_THROW(std::logic_error,
-                                                 "Diffusivity of air in the gas phase "
-                                                 "is constraint by sum of diffusive fluxes = 0 !\n");
+                                                "Diffusivity of air in the gas phase "
+                                                "is constraint by sum of diffusive fluxes = 0 !\n");
         } else if (phaseIdx==waterPhaseIdx){
             Scalar diffACl = 1.e-9; // BinaryCoeff::Air_Xylene::liquidDiffCoeff(temperature, pressure);
             Scalar diffWCl = 1.e-9; // BinaryCoeff::H2O_Xylene::liquidDiffCoeff(temperature, pressure);
@@ -311,14 +311,14 @@ public:
                 return (1.- xwc)/(xww/diffWCl + xwa/diffACl);
             case H2OIdx:
                 OPM_THROW(std::logic_error,
-                           "Diffusivity of water in the water phase "
-                           "is constraint by sum of diffusive fluxes = 0 !\n");
+                          "Diffusivity of water in the water phase "
+                          "is constraint by sum of diffusive fluxes = 0 !\n");
             };
         } else if (phaseIdx==naplPhaseIdx) {
 
             OPM_THROW(std::logic_error,
-                       "Diffusion coefficients of "
-                       "substances in liquid phase are undefined!\n");
+                      "Diffusion coefficients of "
+                      "substances in liquid phase are undefined!\n");
         }
         return 0;
     }
@@ -326,9 +326,9 @@ public:
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      int phaseIdx,
-                                      int compIdx)
+                                       const ParameterCache &/*paramCache*/,
+                                       unsigned phaseIdx,
+                                       unsigned compIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -371,8 +371,8 @@ public:
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval enthalpy(const FluidState &fluidState,
-                           const ParameterCache &paramCache,
-                           int phaseIdx)
+                            const ParameterCache &/*paramCache*/,
+                            unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 

@@ -82,19 +82,19 @@ public:
     /*!
      * \brief Returns the saturation of a phase []
      */
-    Scalar saturation(int phaseIdx) const
+    Scalar saturation(unsigned phaseIdx) const
     { return fs_->saturation(phaseIdx); }
 
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFraction(int phaseIdx, int compIdx) const
+    Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
     { return fs_->moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFraction(int phaseIdx, int compIdx) const
+    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     { return fs_->massFraction(phaseIdx, compIdx); }
 
     /*!
@@ -105,7 +105,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    Scalar averageMolarMass(int phaseIdx) const
+    Scalar averageMolarMass(unsigned phaseIdx) const
     { return fs_->averageMolarMass(phaseIdx); }
 
     /*!
@@ -117,67 +117,67 @@ public:
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
-    Scalar molarity(int phaseIdx, int compIdx) const
+    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
     { return fs_->molarity(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    Scalar fugacity(int phaseIdx, int compIdx) const
+    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
     { return fs_->fugacity(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    Scalar fugacityCoefficient(int phaseIdx, int compIdx) const
+    Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
     { return fs_->fugacityCoefficient(phaseIdx, compIdx); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
-    Scalar molarVolume(int phaseIdx) const
+    Scalar molarVolume(unsigned phaseIdx) const
     { return fs_->molarVolume(phaseIdx); }
 
     /*!
      * \brief The mass density of a fluid phase [kg/m^3]
      */
-    Scalar density(int phaseIdx) const
+    Scalar density(unsigned phaseIdx) const
     { return fs_->density(phaseIdx); }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
-    Scalar molarDensity(int phaseIdx) const
+    Scalar molarDensity(unsigned phaseIdx) const
     { return fs_->molarDensity(phaseIdx); }
 
     /*!
      * \brief The temperature of a fluid phase [K]
      */
-    Scalar temperature(int phaseIdx) const
+    Scalar temperature(int /*phaseIdx*/) const
     { return temperature_; }
 
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    Scalar pressure(int phaseIdx) const
+    Scalar pressure(unsigned phaseIdx) const
     { return fs_->pressure(phaseIdx); }
 
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    Scalar enthalpy(int phaseIdx) const
+    Scalar enthalpy(unsigned phaseIdx) const
     { return fs_->enthalpy(phaseIdx); }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    Scalar internalEnergy(int phaseIdx) const
+    Scalar internalEnergy(unsigned phaseIdx) const
     { return fs_->internalEnergy(phaseIdx); }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
      */
-    Scalar viscosity(int phaseIdx) const
+    Scalar viscosity(unsigned phaseIdx) const
     { return fs_->viscosity(phaseIdx); }
 
 

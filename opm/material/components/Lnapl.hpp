@@ -60,7 +60,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     { return 890; }
 
     /*!
@@ -70,7 +70,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     { return 8e-3; }
 };
 

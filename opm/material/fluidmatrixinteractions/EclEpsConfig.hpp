@@ -68,63 +68,63 @@ public:
      * \brief Specify whether saturation scaling is enabled.
      */
     void setEnableSatScaling(bool yesno)
-    { enableSatScaling_ = yesno; };
+    { enableSatScaling_ = yesno; }
 
     /*!
      * \brief Returns whether saturation scaling is enabled.
      */
     bool enableSatScaling() const
-    { return enableSatScaling_; };
+    { return enableSatScaling_; }
 
     /*!
      * \brief Specify whether three point saturation scaling is enabled for the relative
      *        permeabilities.
      */
     void setEnableThreePointKrSatScaling(bool yesno)
-    { enableThreePointKrSatScaling_ = yesno; };
+    { enableThreePointKrSatScaling_ = yesno; }
 
     /*!
      * \brief Returns whether three point saturation scaling is enabled for the relative
      *        permeabilities.
      */
     bool enableThreePointKrSatScaling() const
-    { return enableThreePointKrSatScaling_; };
+    { return enableThreePointKrSatScaling_; }
 
     /*!
      * \brief Specify whether relative permeability scaling is enabled for the wetting phase.
      */
     void setEnableKrwScaling(bool yesno)
-    { enableKrwScaling_ = yesno; };
+    { enableKrwScaling_ = yesno; }
 
     /*!
      * \brief Returns whether relative permeability scaling is enabled for the wetting phase.
      */
     bool enableKrwScaling() const
-    { return enableKrwScaling_; };
+    { return enableKrwScaling_; }
 
     /*!
      * \brief Specify whether relative permeability scaling is enabled for the non-wetting phase.
      */
     void setEnableKrnScaling(bool yesno)
-    { enableKrnScaling_ = yesno; };
+    { enableKrnScaling_ = yesno; }
 
     /*!
      * \brief Returns whether relative permeability scaling is enabled for the non-wetting phase.
      */
     bool enableKrnScaling() const
-    { return enableKrnScaling_; };
+    { return enableKrnScaling_; }
 
     /*!
      * \brief Specify whether capillary pressure scaling is enabled.
      */
     void setEnablePcScaling(bool yesno)
-    { enablePcScaling_ = yesno; };
+    { enablePcScaling_ = yesno; }
 
     /*!
      * \brief Returns whether capillary pressure scaling is enabled.
      */
     bool enablePcScaling() const
-    { return enablePcScaling_; };
+    { return enablePcScaling_; }
 
 #if HAVE_OPM_PARSER
     /*!

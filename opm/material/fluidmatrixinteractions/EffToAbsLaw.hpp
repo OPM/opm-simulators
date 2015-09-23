@@ -117,7 +117,7 @@ public:
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -143,7 +143,7 @@ public:
         typedef Opm::SaturationOverlayFluidState<FluidState> OverlayFluidState;
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -174,7 +174,7 @@ public:
                       "number of phases!");
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -200,7 +200,7 @@ public:
     static void saturations(Container &values, const Params &params, const FluidState &fs)
     {
         EffLaw::template saturations<Container, FluidState>(values, params, fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             values[phaseIdx] = absoluteSaturation(params, values[phaseIdx], phaseIdx);
         }
     }
@@ -279,7 +279,7 @@ public:
                       "number of phases!");
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -307,7 +307,7 @@ public:
                       "number of phases!");
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -338,7 +338,7 @@ public:
                       "number of phases!");
 
         OverlayFluidState overlayFs(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             overlayFs.setSaturation(phaseIdx,
                                     effectiveSaturation(params,
                                                         fs.saturation(phaseIdx),
@@ -352,14 +352,14 @@ public:
      * \brief Convert an absolute saturation to an effective one.
      */
     template <class Evaluation>
-    static Evaluation effectiveSaturation(const Params &params, const Evaluation& S, int phaseIdx)
+    static Evaluation effectiveSaturation(const Params &params, const Evaluation& S, unsigned phaseIdx)
     { return (S - params.residualSaturation(phaseIdx))/(1.0 - params.sumResidualSaturations()); }
 
     /*!
      * \brief Convert an effective saturation to an absolute one.
      */
     template <class Evaluation>
-    static Evaluation absoluteSaturation(const Params &params, const Evaluation& S, int phaseIdx)
+    static Evaluation absoluteSaturation(const Params &params, const Evaluation& S, unsigned phaseIdx)
     { return S*(1.0 - params.sumResidualSaturations()) + params.residualSaturation(phaseIdx); }
 
 private:
@@ -371,7 +371,7 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Derivative of the effective saturation w.r.t. the absolute saturation.
      */
-    static Scalar dSeff_dSabs_(const Params &params, int phaseIdx)
+    static Scalar dSeff_dSabs_(const Params &params, int /*phaseIdx*/)
     { return 1.0/(1 - params.sumResidualSaturations()); }
 
     /*!
@@ -382,7 +382,7 @@ private:
      *                  is constructed accordingly. Afterwards the values are set there, too.
      * \return          Derivative of the absolute saturation w.r.t. the effective saturation.
      */
-    static Scalar dSabs_dSeff_(const Params &params, int phaseIdx)
+    static Scalar dSabs_dSeff_(const Params &params, int /*phaseIdx*/)
     { return 1 - params.sumResidualSaturations(); }
 };
 } // namespace Opm

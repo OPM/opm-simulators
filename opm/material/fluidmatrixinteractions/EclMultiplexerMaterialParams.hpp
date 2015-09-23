@@ -79,6 +79,15 @@ public:
 #endif
     }
 
+    EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& /*other*/)
+    {
+        realParams_ = 0;
+
+#ifndef NDEBUG
+        finalized_ = false;
+#endif
+    }
+
     ~EclMultiplexerMaterialParams()
     {
         switch (approach()) {

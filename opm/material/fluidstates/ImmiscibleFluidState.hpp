@@ -64,9 +64,6 @@ class ImmiscibleFluidState<Scalar, FluidSystem, true>
 public:
     ImmiscibleFluidState()
     {}
-
-    ImmiscibleFluidState(const ImmiscibleFluidState &fs)
-    { memcpy(this, &fs, sizeof(fs)); }
 };
 
 // specialization for the enthalpy disabled case
@@ -87,9 +84,6 @@ class ImmiscibleFluidState<Scalar, FluidSystem, false>
 public:
     ImmiscibleFluidState()
     {}
-
-    ImmiscibleFluidState(const ImmiscibleFluidState &fs)
-    { memcpy(this, &fs, sizeof(fs)); }
 };
 } // namespace Opm
 

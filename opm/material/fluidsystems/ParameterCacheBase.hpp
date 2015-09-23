@@ -63,9 +63,9 @@ public:
      * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.
      */
     template <class FluidState>
-    void updateAll(const FluidState &fluidState, int exceptQuantities = None)
+    void updateAll(const FluidState &fluidState, int /*exceptQuantities*/ = None)
     {
-        for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             asImp_().updatePhase(fluidState, phaseIdx);
     }
 
@@ -94,7 +94,7 @@ public:
     template <class FluidState>
     void updateAllTemperatures(const FluidState &fluidState)
     {
-        for (int phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < FluidState::numPhases; ++phaseIdx)
             asImp_().updatePhase(fluidState, phaseIdx);
     }
 
@@ -107,7 +107,7 @@ public:
      * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.
      */
     template <class FluidState>
-    void updatePhase(const FluidState &fluidState, int phaseIdx, int exceptQuantities = None)
+    void updatePhase(const FluidState& /*fluidState*/, unsigned /*phaseIdx*/, int /*exceptQuantities*/ = None)
     {}
 
     /*!
@@ -122,7 +122,7 @@ public:
      * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updateTemperature(const FluidState &fluidState, int phaseIdx)
+    void updateTemperature(const FluidState &fluidState, unsigned phaseIdx)
     {
         asImp_().updatePhase(fluidState, phaseIdx);
     }
@@ -139,7 +139,7 @@ public:
      * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updatePressure(const FluidState &fluidState, int phaseIdx)
+    void updatePressure(const FluidState &fluidState, unsigned phaseIdx)
     {
         asImp_().updatePhase(fluidState, phaseIdx);
     }
@@ -156,7 +156,7 @@ public:
      * \param phaseIdx The index of the fluid phase of interest.
      */
     template <class FluidState>
-    void updateComposition(const FluidState &fluidState, int phaseIdx)
+    void updateComposition(const FluidState &fluidState, unsigned phaseIdx)
     {
         asImp_().updatePhase(fluidState, phaseIdx, /*except=*/Temperature | Pressure);
     }
@@ -176,8 +176,8 @@ public:
      */
     template <class FluidState>
     void updateSingleMoleFraction(const FluidState &fluidState,
-                                  int phaseIdx,
-                                  int compIdx)
+                                  unsigned phaseIdx,
+                                  unsigned /*compIdx*/)
     {
         asImp_().updateComposition(fluidState, phaseIdx);
     }

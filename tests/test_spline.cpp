@@ -54,8 +54,8 @@ void testCommon(const Spline &sp,
     static double eps = 1e-10;
     static double epsFD = 1e-7;
 
-    int n = sp.numSamples();
-    for (int i = 0; i < n; ++i) {
+    size_t n = sp.numSamples();
+    for (size_t i = 0; i < n; ++i) {
         // sure that we hit all sampling points
         double y0 = (i>0)?sp.eval(x[i]-eps):y[0];
         double y1 = sp.eval(x[i]);
@@ -80,8 +80,8 @@ void testCommon(const Spline &sp,
     }
 
     // make sure the derivatives are consistent with the curve
-    int np = 3*n;
-    for (int i = 0; i < np; ++i) {
+    size_t np = 3*n;
+    for (size_t i = 0; i < np; ++i) {
         double xval = sp.xMin() + (sp.xMax() - sp.xMin())*i/np;
 
         // first derivative
@@ -133,7 +133,7 @@ void testFull(const Spline &sp,
     testCommon(sp, x, y);
 
     static double eps = 1e-5;
-    int n = sp.numSamples();
+    size_t n = sp.numSamples();
 
     // make sure the derivative at both end points is correct
     double d0 = sp.evalDerivative(x[0]);
@@ -157,7 +157,7 @@ void testNatural(const Spline &sp,
     testCommon(sp, x, y);
 
     static double eps = 1e-5;
-    int n = sp.numSamples();
+    size_t n = sp.numSamples();
 
     // make sure the second derivatives at both end points are 0
     double d0 = sp.evalDerivative(x[0]);
@@ -185,9 +185,9 @@ void testMonotonic(const Spline &sp,
     // test the common properties of splines
     testCommon(sp, x, y);
 
-    int n = sp.numSamples();
+    size_t n = sp.numSamples();
 
-    for (int i = 0; i < n - 1; ++ i) {
+    for (size_t i = 0; i < n - 1; ++ i) {
         // make sure that the spline is monotonic for each interval
         // between sampling points
         if (!sp.monotonic(x[i], x[i + 1]))
@@ -215,7 +215,7 @@ void testMonotonic(const Spline &sp,
         OPM_THROW(std::runtime_error,
                   "Spline says it is not monotonic on right side where it should be");
 
-    for (int i = 0; i < n - 2; ++ i) {
+    for (size_t i = 0; i < n - 2; ++ i) {
         // make sure that the spline says that it is non-monotonic for
         // if extrema are within the queried interval
         if (sp.monotonic((x[i] + x[i + 1])/2, (x[i + 1] + x[i + 2])/2))
@@ -224,6 +224,9 @@ void testMonotonic(const Spline &sp,
                       << i << " where it should not be");
     }
 }
+
+// function prototype to prevent some compilers producing a warning
+void testAll();
 
 void testAll()
 {
@@ -268,7 +271,7 @@ void testAll()
     // full spline
     { Opm::Spline<double> sp(x[0], x[1], y[0], y[1], m0, m1); sp.set(x[0],x[1],y[0],y[1],m0, m1); testFull(sp, x, y, m0, m1); };
     { Opm::Spline<double> sp(2, x, y, m0, m1); sp.setXYArrays(2, x, y, m0, m1); testFull(sp, x, y, m0, m1);  };
-    { Opm::Spline<double> sp(2, points, m0, m1); sp.setArrayOfPoints(2, points, m0, m1); testFull(sp, x, y, m0, m1); };
+    { Opm::Spline<double> sp(static_cast<size_t>(2), points, m0, m1); sp.setArrayOfPoints(2, points, m0, m1); testFull(sp, x, y, m0, m1); };
 
     /////////
     // test variable length splines
@@ -292,6 +295,9 @@ void testAll()
     { Opm::Spline<double> sp; sp.setContainerOfTuples(pointsInitList); testNatural(sp, x, y); };
 #endif
 }
+
+// function prototype to prevent some compilers producing a warning
+void plot();
 
 void plot()
 {

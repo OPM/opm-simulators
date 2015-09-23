@@ -59,25 +59,25 @@ public:
     class ParameterCache : public Opm::NullParameterCache
     {
     public:
-        ParameterCache(int regionIdx=0)
+        ParameterCache(int /*regionIdx*/=0)
         { regionIdx_ = 0; }
 
         /*!
          * \brief Return the index of the region which should be used to determine the
          *        thermodynamic properties
          */
-        int regionIndex() const
+        unsigned regionIndex() const
         { return regionIdx_; }
 
         /*!
          * \brief Set the index of the region which should be used to determine the
          *        thermodynamic properties
          */
-        void setRegionIndex(int val)
+        void setRegionIndex(unsigned val)
         { regionIdx_ = val; }
 
     private:
-        int regionIdx_;
+        unsigned regionIdx_;
     };
 
     /****************************************
@@ -185,7 +185,7 @@ public:
     static void setReferenceDensities(Scalar rhoOil,
                                       Scalar rhoWater,
                                       Scalar rhoGas,
-                                      int regionIdx)
+                                      unsigned regionIdx)
     {
         referenceDensity_[regionIdx][oilPhaseIdx] = rhoOil;
         referenceDensity_[regionIdx][waterPhaseIdx] = rhoWater;
@@ -198,8 +198,8 @@ public:
     static void initEnd()
     {
         // calculate the final 2D functions which are used for interpolation.
-        int numRegions = molarMass_.size();
-        for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+        unsigned numRegions = molarMass_.size();
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate molar masses
 
             // water is simple: 18 g/mol
@@ -218,7 +218,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(const int phaseIdx)
+    static const char *phaseName(const unsigned phaseIdx)
     {
         static const char *name[] = { "water", "oil", "gas" };
 
@@ -227,7 +227,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static bool isLiquid(const int phaseIdx)
+    static bool isLiquid(const unsigned phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gasPhaseIdx;
@@ -248,7 +248,7 @@ public:
     static const int gasCompIdx = 2;
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(int compIdx)
+    static const char *componentName(unsigned compIdx)
     {
         static const char *name[] = { "Oil", "Water", "Gas" };
 
@@ -257,11 +257,11 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::molarMass
-    static Scalar molarMass(int compIdx, int regionIdx = 0)
+    static Scalar molarMass(unsigned compIdx, unsigned regionIdx = 0)
     { return molarMass_[regionIdx][compIdx]; }
 
     //! \copydoc BaseFluidSystem::isIdealMixture
-    static bool isIdealMixture(int phaseIdx)
+    static bool isIdealMixture(unsigned /*phaseIdx*/)
     {
         // fugacity coefficients are only pressure dependent -> we
         // have an ideal mixture
@@ -269,11 +269,11 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isCompressible
-    static bool isCompressible(int phaseIdx)
+    static bool isCompressible(unsigned /*phaseIdx*/)
     { return true; /* all phases are compressible */ }
 
     //! \copydoc BaseFluidSystem::isIdealGas
-    static bool isIdealGas(int phaseIdx)
+    static bool isIdealGas(unsigned /*phaseIdx*/)
     { return false; }
 
     /****************************************
@@ -283,7 +283,7 @@ public:
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval density(const FluidState &fluidState,
                            ParameterCache &paramCache,
-                           const int phaseIdx)
+                           const unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
 
@@ -292,7 +292,7 @@ public:
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        int regionIdx = paramCache.regionIndex();
+        unsigned regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
         case waterPhaseIdx: return waterDensity<LhsEval>(T, p, regionIdx);
@@ -313,8 +313,8 @@ public:
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval fugacityCoefficient(const FluidState &fluidState,
                                        const ParameterCache &paramCache,
-                                       int phaseIdx,
-                                       int compIdx)
+                                       unsigned phaseIdx,
+                                       unsigned compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
@@ -323,7 +323,7 @@ public:
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        int regionIdx = paramCache.regionIndex();
+        unsigned regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
         case waterPhaseIdx: return fugCoefficientInWater<LhsEval>(compIdx, T, p, regionIdx);
@@ -338,7 +338,7 @@ public:
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval viscosity(const FluidState &fluidState,
                              const ParameterCache &paramCache,
-                             int phaseIdx)
+                             unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
 
@@ -346,7 +346,7 @@ public:
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        int regionIdx = paramCache.regionIndex();
+        unsigned regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
@@ -387,7 +387,7 @@ public:
      *
      * \copydoc Doxygen::phaseIdxParam
      */
-    static Scalar referenceDensity(int phaseIdx, int regionIdx)
+    static Scalar referenceDensity(unsigned phaseIdx, unsigned regionIdx)
     { return referenceDensity_[regionIdx][phaseIdx]; }
 
     /*!
@@ -398,7 +398,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedOilFormationVolumeFactor(const LhsEval& temperature,
                                                      const LhsEval& pressure,
-                                                     int regionIdx)
+                                                     unsigned regionIdx)
     {
         Valgrind::CheckDefined(pressure);
 
@@ -414,7 +414,7 @@ public:
     template <class LhsEval>
     static LhsEval waterFormationVolumeFactor(const LhsEval& temperature,
                                               const LhsEval& pressure,
-                                              int regionIdx)
+                                              unsigned regionIdx)
     { return waterPvt_->formationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -425,7 +425,7 @@ public:
     template <class LhsEval>
     static LhsEval gasDissolutionFactor(const LhsEval& temperature,
                                         const LhsEval& pressure,
-                                        int regionIdx)
+                                        unsigned regionIdx)
     { return oilPvt_->gasDissolutionFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -436,7 +436,7 @@ public:
     template <class LhsEval>
     static LhsEval oilVaporizationFactor(const LhsEval& temperature,
                                          const LhsEval& pressure,
-                                         int regionIdx)
+                                         unsigned regionIdx)
     { return gasPvt_->oilVaporizationFactor(regionIdx, temperature, pressure); }
 
     /*!
@@ -446,10 +446,10 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     template <class LhsEval>
-    static LhsEval fugCoefficientInWater(int compIdx,
+    static LhsEval fugCoefficientInWater(unsigned compIdx,
                                          const LhsEval& temperature,
                                          const LhsEval& pressure,
-                                         int regionIdx)
+                                         unsigned regionIdx)
     { return waterPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -459,10 +459,10 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     template <class LhsEval>
-    static LhsEval fugCoefficientInGas(int compIdx,
+    static LhsEval fugCoefficientInGas(unsigned compIdx,
                                        const LhsEval& temperature,
                                        const LhsEval& pressure,
-                                       int regionIdx)
+                                       unsigned regionIdx)
     { return gasPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -472,10 +472,10 @@ public:
      * \param pressure The pressure of interest [Pa]
      */
     template <class LhsEval>
-    static LhsEval fugCoefficientInOil(int compIdx,
+    static LhsEval fugCoefficientInOil(unsigned compIdx,
                                        const LhsEval& temperature,
                                        const LhsEval& pressure,
-                                       int regionIdx)
+                                       unsigned regionIdx)
     { return oilPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
 
     /*!
@@ -487,7 +487,7 @@ public:
     template <class LhsEval>
     static LhsEval oilSaturationPressure(const LhsEval& temperature,
                                          const LhsEval& XoG,
-                                         int regionIdx)
+                                         unsigned regionIdx)
     { return oilPvt_->oilSaturationPressure(regionIdx, temperature, XoG); }
 
     /*!
@@ -496,7 +496,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedOilGasMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
-                                               int regionIdx)
+                                               unsigned regionIdx)
     { return oilPvt_->saturatedOilGasMassFraction(regionIdx, temperature, pressure); }
 
     /*!
@@ -505,7 +505,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedOilGasMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
-                                               int regionIdx)
+                                               unsigned regionIdx)
     { return oilPvt_->saturatedOilGasMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
@@ -514,7 +514,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedGasOilMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
-                                               int regionIdx)
+                                               unsigned regionIdx)
     { return gasPvt_->saturatedGasOilMassFraction(regionIdx, temperature, pressure); }
 
     /*!
@@ -523,7 +523,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedGasOilMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
-                                               int regionIdx)
+                                               unsigned regionIdx)
     { return gasPvt_->saturatedGasOilMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
@@ -534,7 +534,7 @@ public:
     static LhsEval oilFormationVolumeFactor(const LhsEval& temperature,
                                             const LhsEval& pressure,
                                             const LhsEval& XoG,
-                                            int regionIdx)
+                                            unsigned regionIdx)
     { return oilPvt_->formationVolumeFactor(regionIdx, temperature, pressure, XoG); }
 
     /*!
@@ -544,7 +544,7 @@ public:
     static LhsEval oilDensity(const LhsEval& temperature,
                               const LhsEval& pressure,
                               const LhsEval& XoG,
-                              int regionIdx)
+                              unsigned regionIdx)
     { return oilPvt_->density(regionIdx, temperature, pressure, XoG); }
 
     /*!
@@ -553,7 +553,7 @@ public:
     template <class LhsEval>
     static LhsEval saturatedOilDensity(const LhsEval& temperature,
                                        const LhsEval& pressure,
-                                       int regionIdx)
+                                       unsigned regionIdx)
     {
         // mass fraction of gas-saturated oil
         const LhsEval& XoG = saturatedOilGasMassFraction(temperature, pressure, regionIdx);
@@ -567,7 +567,7 @@ public:
     static LhsEval gasFormationVolumeFactor(const LhsEval& temperature,
                                             const LhsEval& pressure,
                                             const LhsEval& XgO,
-                                            int regionIdx)
+                                            unsigned regionIdx)
     { return gasPvt_->formationVolumeFactor(regionIdx, temperature, pressure, XgO); }
 
     /*!
@@ -577,7 +577,7 @@ public:
     static LhsEval gasDensity(const LhsEval& temperature,
                               const LhsEval& pressure,
                               const LhsEval& XgO,
-                              int regionIdx)
+                              unsigned regionIdx)
     { return gasPvt_->density(regionIdx, temperature, pressure, XgO); }
 
     /*!
@@ -586,7 +586,7 @@ public:
     template <class LhsEval>
     static LhsEval waterDensity(const LhsEval& temperature,
                                 const LhsEval& pressure,
-                                int regionIdx)
+                                unsigned regionIdx)
     { return waterPvt_->density(regionIdx, temperature, pressure); }
 
 private:

@@ -50,7 +50,8 @@ int invertLinearPolynomial(SolContainer &sol,
                            Scalar a,
                            Scalar b)
 {
-    if (a == 0.0)
+    typedef MathToolbox<Scalar> Toolbox;
+    if (std::abs(Toolbox::value(a)) < 1e-30)
         return 0;
 
     sol[0] = -b/a;
@@ -82,7 +83,7 @@ int invertQuadraticPolynomial(SolContainer &sol,
     typedef MathToolbox<Scalar> Toolbox;
 
     // check for a line
-    if (a == 0.0)
+    if (std::abs(Toolbox::value(a)) < 1e-30)
         return invertLinearPolynomial(sol, b, c);
 
     // discriminant
@@ -118,7 +119,7 @@ void invertCubicPolynomialPostProcess_(SolContainer &sol,
         Scalar fOld = d + x*(c + x*(b + x*a));
 
         Scalar fPrime = c + x*(2*b + x*3*a);
-        if (fPrime == 0.0)
+        if (std::abs(Toolbox::value(fPrime)) < 1e-30)
             continue;
         x -= fOld/fPrime;
 
@@ -156,7 +157,7 @@ int invertCubicPolynomial(SolContainer *sol,
     typedef MathToolbox<Scalar> Toolbox;
 
     // reduces to a quadratic polynomial
-    if (a == 0)
+    if (std::abs(Toolbox::value(a)) < 1e-30)
         return invertQuadraticPolynomial(sol, b, c, d);
 
     // normalize the polynomial
@@ -169,7 +170,7 @@ int invertCubicPolynomial(SolContainer *sol,
     Scalar p = c - b*b/3;
     Scalar q = d + (2*b*b*b - 9*b*c)/27;
 
-    if (p != 0.0 && q != 0.0) {
+    if (std::abs(Toolbox::value(p)) > 1e-30 && std::abs(Toolbox::value(q)) > 1e-30) {
         // At this point
         //
         // t^3 + p*t + q = 0
@@ -279,12 +280,12 @@ int invertCubicPolynomial(SolContainer *sol,
     }
     // Handle some (pretty unlikely) special cases required to avoid
     // divisions by zero in the code above...
-    else if (p == 0.0 && q == 0.0) {
+    else if (std::abs(Toolbox::value(p)) < 1e-30 && std::abs(Toolbox::value(q)) < 1e-30) {
         // t^3 = 0, i.e. triple root at t = 0
         sol[0] = sol[1] = sol[2] = 0.0 - b/3;
         return 3;
     }
-    else if (p == 0.0 && q != 0.0) {
+    else if (std::abs(Toolbox::value(p)) < 1e-30 && std::abs(Toolbox::value(q)) > 1e-30) {
         // t^3 + q = 0,
         //
         // i. e. single real root at t=curt(q)
@@ -296,7 +297,7 @@ int invertCubicPolynomial(SolContainer *sol,
         return 1;
     }
 
-    assert(p != 0.0 && q == 0.0);
+    assert(std::abs(Toolbox::value(p)) > 1e-30 && std::abs(Toolbox::value(q)) > 1e-30);
 
     // t^3 + p*t = 0 = t*(t^2 + p),
     //

@@ -85,11 +85,9 @@ public:
      * \param T temperature of component in \f$\mathrm{[K]}\f$
      */
     template <class Evaluation>
-    static Evaluation vaporPressure(const Evaluation& T)
+    static Evaluation vaporPressure(const Evaluation& /*T*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::createConstant(3900); // [Pa] (at 20C)
+        return 3900; // [Pa] (at 20C)
     }
 
     /*!
@@ -99,7 +97,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasDensity(Evaluation temperature, Evaluation pressure)
+    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
         return IdealGas<Scalar>::density(Evaluation(molarMass()),
                                          temperature,
@@ -113,11 +111,9 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(Evaluation temperature, Evaluation pressure)
+    static Evaluation liquidDensity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::createConstant(1460.0); // [kg/m^3]
+        return 1460.0; // [kg/m^3]
     }
 
     /*!
@@ -127,11 +123,9 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(Evaluation temperature, Evaluation pressure)
+    static Evaluation liquidViscosity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::createConstant(5.7e-4); // [Pa s]
+        return 5.7e-4; // [Pa s]
     }
 
     /*!
@@ -141,7 +135,7 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidEnthalpy(Evaluation temperature, Evaluation pressure)
+    static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         return 120.0/molarMass() * temperature; // [J/kg]
     }
@@ -155,11 +149,9 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidThermalConductivity(Evaluation temperature, Evaluation pressure)
+    static Evaluation liquidThermalConductivity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::createConstant(0.3);
+        return 0.3;
     }
 };
 

@@ -160,7 +160,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& pressure)
+                                  const Evaluation& /*pressure*/)
     { return 1976*(temperature - 293.15) + 2.45e6; }
 
     /*!
@@ -171,7 +171,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
-                                     const Evaluation& pressure)
+                                     const Evaluation& /*pressure*/)
     { return 4180*(temperature - 293.15); }
 
     /*!
@@ -219,11 +219,10 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidThermalConductivity(const Evaluation& temperature,
-                                                const Evaluation& pressure)
+    static Evaluation liquidThermalConductivity(const Evaluation& /*temperature*/,
+                                                const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        return Toolbox::createConstant(0.578078); // conductivity of liquid water [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+        return 0.578078; // conductivity of liquid water [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
     }
 
     /*!
@@ -233,11 +232,10 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasThermalConductivity(const Evaluation& temperature,
-                                             const Evaluation& pressure)
+    static Evaluation gasThermalConductivity(const Evaluation& /*temperature*/,
+                                             const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        return Toolbox::createConstant(0.028224); // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
+        return 0.028224; // conductivity of steam [W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8°C
     }
 
     /*!
@@ -273,10 +271,9 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        return Toolbox::createConstant(1000);
+        return 1000;
     }
 
     /*!
@@ -286,7 +283,7 @@ public:
      * \param density density of component in \f$\mathrm{[kg/m^3]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidPressure(const Evaluation& temperature, const Evaluation& density)
+    static Evaluation liquidPressure(const Evaluation& /*temperature*/, const Evaluation& /*density*/)
     {
         OPM_THROW(std::logic_error,
                   "The liquid pressure is undefined for incompressible fluids");
@@ -300,11 +297,10 @@ public:
      * \param regularize defines, if the functions is regularized or not, set to true by default
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(const Evaluation& temperature,
-                                   const Evaluation& pressure)
+    static Evaluation gasViscosity(const Evaluation& /*temperature*/,
+                                   const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        return Toolbox::createConstant(1e-05);
+        return 1e-05;
     }
 
     /*!
@@ -314,10 +310,9 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        return Toolbox::createConstant(1e-03);
+        return 1e-03;
     }
 };
 

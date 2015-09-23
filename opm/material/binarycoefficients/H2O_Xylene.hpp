@@ -46,7 +46,7 @@ public:
      */
 
     template <class Evaluation>
-    static Evaluation henry(const Evaluation& temperature)
+    static Evaluation henry(const Evaluation& /*temperature*/)
     {
         // after Sanders
         double sanderH = 1.5e-1;    //[M/atm]
@@ -102,7 +102,7 @@ public:
      * \todo
      */
     template <class Evaluation>
-    static Evaluation liquidDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDiffCoeff(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
     {
         return 1.e-9;  // This is just an order of magnitude. Please improve it!
     }

@@ -565,14 +565,23 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, Toolbox::value(alphaT)));
+        size_t iT =
+            std::max<size_t>(0,
+                             std::min<size_t>(nTemp_ - 2,
+                                              static_cast<size_t>(Toolbox::value(alphaT))));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressLiquidIdx_(p, iT);
         Evaluation alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP1)));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP2)));
+        size_t iP1 =
+            std::max<size_t>(0,
+                             std::min<size_t>(nPress_ - 2,
+                                              static_cast<size_t>(Toolbox::value(alphaP1))));
+        size_t iP2 =
+            std::max<size_t>(0,
+                             std::min<size_t>(nPress_ - 2,
+                                              static_cast<size_t>(Toolbox::value(alphaP2))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -607,13 +616,21 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, Toolbox::value(alphaT)));
+        size_t iT =
+            std::max<size_t>(0,
+                             std::min<size_t>(nTemp_ - 2,
+                                              static_cast<size_t>(Toolbox::value(alphaT))));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressGasIdx_(p, iT);
         Evaluation alphaP2 = pressGasIdx_(p, iT + 1);
-        unsigned iP1 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP1)));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nPress_ - 2, Toolbox::value(alphaP2)));
+        size_t iP1 =
+            std::max<size_t>(0, std::min<size_t>(nPress_ - 2,
+                                           static_cast<size_t>(Toolbox::value(alphaP1))));
+        size_t iP2 =
+            std::max<size_t>(0,
+                             std::min<size_t>(nPress_ - 2,
+                                              static_cast<size_t>(Toolbox::value(alphaP2))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -692,7 +709,7 @@ private:
 
     // returns the index of an entry in a pressure field
     template <class Evaluation>
-    static Evaluation pressLiquidIdx_(const Evaluation& pressure, unsigned tempIdx)
+    static Evaluation pressLiquidIdx_(const Evaluation& pressure, size_t tempIdx)
     {
         Scalar plMin = minLiquidPressure_(tempIdx);
         Scalar plMax = maxLiquidPressure_(tempIdx);
@@ -702,7 +719,7 @@ private:
 
     // returns the index of an entry in a temperature field
     template <class Evaluation>
-    static Evaluation pressGasIdx_(const Evaluation& pressure, unsigned tempIdx)
+    static Evaluation pressGasIdx_(const Evaluation& pressure, size_t tempIdx)
     {
         Scalar pgMin = minGasPressure_(tempIdx);
         Scalar pgMax = maxGasPressure_(tempIdx);
@@ -712,7 +729,7 @@ private:
 
     // returns the index of an entry in a density field
     template <class Evaluation>
-    static Evaluation densityLiquidIdx_(const Evaluation& density, unsigned tempIdx)
+    static Evaluation densityLiquidIdx_(const Evaluation& density, size_t tempIdx)
     {
         Scalar densityMin = minLiquidDensity_(tempIdx);
         Scalar densityMax = maxLiquidDensity_(tempIdx);
@@ -721,7 +738,7 @@ private:
 
     // returns the index of an entry in a density field
     template <class Evaluation>
-    static Evaluation densityGasIdx_(const Evaluation& density, unsigned tempIdx)
+    static Evaluation densityGasIdx_(const Evaluation& density, size_t tempIdx)
     {
         Scalar densityMin = minGasDensity_(tempIdx);
         Scalar densityMax = maxGasDensity_(tempIdx);
@@ -730,7 +747,7 @@ private:
 
     // returns the minimum tabulized liquid pressure at a given
     // temperature index
-    static Scalar minLiquidPressure_(int tempIdx)
+    static Scalar minLiquidPressure_(size_t tempIdx)
     {
         if (!useVaporPressure)
             return pressMin_;
@@ -740,7 +757,7 @@ private:
 
     // returns the maximum tabulized liquid pressure at a given
     // temperature index
-    static Scalar maxLiquidPressure_(int tempIdx)
+    static Scalar maxLiquidPressure_(size_t tempIdx)
     {
         if (!useVaporPressure)
             return pressMax_;
@@ -750,7 +767,7 @@ private:
 
     // returns the minumum tabulized gas pressure at a given
     // temperature index
-    static Scalar minGasPressure_(int tempIdx)
+    static Scalar minGasPressure_(size_t tempIdx)
     {
         if (!useVaporPressure)
             return pressMin_;
@@ -760,7 +777,7 @@ private:
 
     // returns the maximum tabulized gas pressure at a given
     // temperature index
-    static Scalar maxGasPressure_(int tempIdx)
+    static Scalar maxGasPressure_(size_t tempIdx)
     {
         if (!useVaporPressure)
             return pressMax_;
@@ -771,22 +788,22 @@ private:
 
     // returns the minimum tabulized liquid density at a given
     // temperature index
-    static Scalar minLiquidDensity_(int tempIdx)
+    static Scalar minLiquidDensity_(size_t tempIdx)
     { return minLiquidDensity__[tempIdx]; }
 
     // returns the maximum tabulized liquid density at a given
     // temperature index
-    static Scalar maxLiquidDensity_(int tempIdx)
+    static Scalar maxLiquidDensity_(size_t tempIdx)
     { return maxLiquidDensity__[tempIdx]; }
 
     // returns the minumum tabulized gas density at a given
     // temperature index
-    static Scalar minGasDensity_(int tempIdx)
+    static Scalar minGasDensity_(size_t tempIdx)
     { return minGasDensity__[tempIdx]; }
 
     // returns the maximum tabulized gas density at a given
     // temperature index
-    static Scalar maxGasDensity_(int tempIdx)
+    static Scalar maxGasDensity_(size_t tempIdx)
     { return maxGasDensity__[tempIdx]; }
 
     // 1D fields with the temperature as degree of freedom

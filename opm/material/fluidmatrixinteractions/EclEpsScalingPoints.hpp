@@ -179,7 +179,7 @@ struct EclEpsScalingPointsInfo
      */
     void extractUnscaled(Opm::DeckConstPtr deck,
                          Opm::EclipseStateConstPtr eclState,
-                         int satRegionIdx)
+                         unsigned satRegionIdx)
     {
         // TODO: support for the SOF2/SOF3 keyword family
         auto tables = eclState->getTableManager();
@@ -243,8 +243,8 @@ struct EclEpsScalingPointsInfo
             extractUnscaledSof3_(sof3Tables[satRegionIdx]);
 
             // some safety checks mandated by the ECL documentation
-            assert(Sowu == 1 - swfnTables[satRegionIdx].getSwColumn().front());
-            assert(maxKrw == maxKrg);
+            assert(std::abs(Sowu - (1 - swfnTables[satRegionIdx].getSwColumn().front())) < 1e-30);
+            assert(std::abs(maxKrw - maxKrg) < 1e-30);
 
         }
         else {
@@ -259,7 +259,7 @@ struct EclEpsScalingPointsInfo
      *
      * I.e., the values which are "seen" by the physical model.
      */
-    void extractScaled(const EclEpsGridProperties& epsProperties, int cartesianCellIdx)
+    void extractScaled(const EclEpsGridProperties& epsProperties, unsigned cartesianCellIdx)
     {
         // overwrite the unscaled values with the values for the cell if it is
         // explicitly specified by the corresponding keyword.
@@ -304,10 +304,10 @@ private:
         }
 
         // critical oil saturation of gas-oil system
-        for (int rowIdx = sgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-            if (sgofTable.getKrogColumn()[rowIdx] > 0) {
-                assert(rowIdx < (int) sgofTable.numRows() - 1);
-                Sogcr = 1.0 - sgofTable.getSgColumn()[rowIdx + 1];
+        for (int rowIdx = static_cast<int>(sgofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
+            if (sgofTable.getKrogColumn()[static_cast<size_t>(rowIdx)] > 0) {
+                assert(rowIdx < static_cast<int>(sgofTable.numRows()) - 1);
+                Sogcr = 1.0 - sgofTable.getSgColumn()[static_cast<unsigned>(rowIdx) + 1];
                 break;
             };
         }
@@ -333,16 +333,16 @@ private:
         Sogu = slgofTable.getSlColumn().back();
 
         // critical gas saturation
-        for (int rowIdx = slgofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-            if (slgofTable.getKrgColumn()[rowIdx] > 0) {
-                assert(rowIdx < (int) slgofTable.numRows() - 1);
-                Sgcr = 1 - slgofTable.getSlColumn()[rowIdx + 1];
+        for (int rowIdx = static_cast<int>(slgofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
+            if (slgofTable.getKrgColumn()[static_cast<size_t>(rowIdx)] > 0) {
+                assert(rowIdx < static_cast<int>(slgofTable.numRows()) - 1);
+                Sgcr = 1 - slgofTable.getSlColumn()[static_cast<unsigned>(rowIdx) + 1];
                 break;
             };
         }
 
         // critical oil saturation of gas-oil system
-        for (unsigned rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
             if (slgofTable.getKrogColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Sogcr = slgofTable.getSlColumn()[rowIdx - 1];
@@ -369,7 +369,7 @@ private:
         Sowu = 1.0 - swofTable.getSwColumn().front();
 
         // critical water saturation
-        for (unsigned rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
+        for (size_t rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
             if (swofTable.getKrwColumn()[rowIdx] > 0) {
                 assert(rowIdx > 0);
                 Swcr = swofTable.getSwColumn()[rowIdx - 1];
@@ -378,10 +378,10 @@ private:
         }
 
         // critical oil saturation of oil-water system
-        for (int rowIdx = swofTable.numRows() - 1; rowIdx >= 0; -- rowIdx) {
-            if (swofTable.getKrowColumn()[rowIdx] > 0) {
-                assert(rowIdx < (int) swofTable.numRows() - 1);
-                Sowcr = 1.0 - swofTable.getSwColumn()[rowIdx + 1];
+        for (int rowIdx = static_cast<int>(swofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
+            if (swofTable.getKrowColumn()[static_cast<size_t>(rowIdx)] > 0) {
+                assert(rowIdx < static_cast<int>(swofTable.numRows()) - 1);
+                Sowcr = 1.0 - swofTable.getSwColumn()[static_cast<unsigned>(rowIdx) + 1];
                 break;
             };
         }
@@ -477,7 +477,7 @@ private:
 
     void extractGridPropertyValue_(Scalar& targetValue,
                                    const std::vector<double>* propData,
-                                   int cartesianCellIdx)
+                                   unsigned cartesianCellIdx)
     {
         if (!propData)
             return;
@@ -578,7 +578,7 @@ public:
     /*!
      * \brief Sets an saturation value for capillary pressure saturation scaling
      */
-    void setSaturationPcPoint(int pointIdx, Scalar value)
+    void setSaturationPcPoint(unsigned pointIdx, Scalar value)
     { saturationPcPoints_[pointIdx] = value; }
 
     /*!
@@ -590,7 +590,7 @@ public:
     /*!
      * \brief Sets an saturation value for wetting-phase relperm saturation scaling
      */
-    void setSaturationKrwPoint(int pointIdx, Scalar value)
+    void setSaturationKrwPoint(unsigned pointIdx, Scalar value)
     { saturationKrwPoints_[pointIdx] = value; }
 
     /*!
@@ -602,7 +602,7 @@ public:
     /*!
      * \brief Sets an saturation value for non-wetting phase relperm saturation scaling
      */
-    void setSaturationKrnPoint(int pointIdx, Scalar value)
+    void setSaturationKrnPoint(unsigned pointIdx, Scalar value)
     { saturationKrnPoints_[pointIdx] = value; }
 
     /*!
