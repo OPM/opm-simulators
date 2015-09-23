@@ -478,7 +478,7 @@ namespace Opm {
 
         // the perforation flux here are different
         // it is related to the segment location
-        // asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         // asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         // asImpl().addWellFluxEq(cq_s, state);
         // asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -510,11 +510,11 @@ namespace Opm {
 
 */
 
-/*
 
-    template <class Grid, class Implementation>
+
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::computeWellFlux(const SolutionState& state,
+    BlackoilMultiSegmentModel<Grid>::computeWellFlux(const SolutionState& state,
                                                              const std::vector<ADB>& ,
                                                              const std::vector<ADB>& ,
                                                              V& aliveWells,
@@ -534,7 +534,7 @@ namespace Opm {
         // At the moment, let us hanldle wells one by one.
         // For the moment, the major purpose of this function is to calculate all the perforation phase rates.
 
-        const int nw = wellsMultiSegment.size();
+        const int nw = wellsMultiSegment().size();
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         int start_perforation = 0;
@@ -546,7 +546,7 @@ namespace Opm {
         // temporary, no place to store the information about total perforations and segments
         int total_nperf = 0;
         for (int w = 0; w < nw; ++w) {
-            total_nperf += wellsMultiSegment()[w].numberOfPerforations();
+            total_nperf += wellsMultiSegment()[w]->numberOfPerforations();
         }
         const int np = numPhases();
 
@@ -555,12 +555,12 @@ namespace Opm {
         }
 
         for (int w = 0; w < nw; ++w) {
-            WellMultiSegment& well = wellsMultiSegment()[w];
-            const int nseg = well.numberOfSegments();
-            const int nperf = well.numberOfPerforations();
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
 
-            V Tw = Eigen::Map<const V>(well.wellIndex().data(), nperf);
-            const std::vector<int>& well_cells = well.wellCells();
+            V Tw = Eigen::Map<const V>(well->wellIndex().data(), nperf);
+            const std::vector<int>& well_cells = well->wellCells();
 
             // extract mob_perfcells and b_perfcells.
             std::vector<ADB> mob_perfcells(np, ADB::null());
@@ -576,13 +576,13 @@ namespace Opm {
             const ADB& rs_perfcells = subset(state.rs, well_cells);
             const ADB& rv_perfcells = subset(state.rv, well_cells);
 
-            const ADB& seg_pressures = subset(state.pseg, Span(nseg, 1, start_segment));
+            const ADB& seg_pressures = subset(state.segp, Span(nseg, 1, start_segment));
 
             ADB drawdown = ADB::null();
 
-            const ADB seg_pressures_perf = well.wellOps().s2p * seg_pressures;
+            const ADB seg_pressures_perf = well->wellOps().s2p * seg_pressures;
 
-            if (well.isMultiSegmented())
+            if (well->isMultiSegmented())
             {
                 // get H_nc
                 const ADB& h_nc = subset(well_perforations_segment_pressure_diffs_, Span(nperf, 1, start_perforation));
@@ -590,10 +590,10 @@ namespace Opm {
 
                 // V seg_pressures_perf = V::Zero(nperf);
                 // for (int i = 0; i < nseg; ++i) {
-                //     int temp_nperf = well.segmentPerforations()[i].size();
+                //     int temp_nperf = well->segmentPerforations()[i].size();
                 //     assert(temp_nperf > 0);
                 //     for (int j = 0; j < temp_nperf; ++j) {
-                //         int index_perf = well.segmentPerforations()[i][j];
+                //         int index_perf = well->segmentPerforations()[i][j];
                 //         assert(index_perf <= nperf);
                         // set the perforation pressure to be the segment pressure
                         // similiar to a scatter operation
@@ -609,7 +609,7 @@ namespace Opm {
             {
                 const V& cdp = subset(well_perforation_pressure_diffs_, Span(nperf, 1, start_perforation));
 
-                const ADB perf_pressures = well.wellOps().s2p * seg_pressures + cdp;
+                const ADB perf_pressures = well->wellOps().s2p * seg_pressures + cdp;
 
                 drawdown = p_perfcells - perf_pressures;
             }
@@ -672,15 +672,15 @@ namespace Opm {
            // TODO: involves one operations that are not valid now. (i.e. how to transverse from the leaves to the root,
            // TODO: although we can begin from the brutal force way)
 
-            const std::vector<double>& compi = well.compFrac();
+            const std::vector<double>& compi = well->compFrac();
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(V::Zero(nseg));
 
             for (int phase = 0; phase < np; ++phase) {
 
-                // const ADB& q_ps = well.wellOps().p2s * cq_ps[phase];
-                const ADB& q_ps = well.wellOps().p2s_gather * cq_ps[phase];
-                const int n_total_segments = state.pseg.size();
+                // const ADB& q_ps = well->wellOps().p2s * cq_ps[phase];
+                const ADB& q_ps = well->wellOps().p2s_gather * cq_ps[phase];
+                const int n_total_segments = state.segp.size();
                 const ADB& q_s = subset(state.qs, Span(nseg, 1, phase * n_total_segments + start_segment));
                 Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
 
@@ -709,12 +709,12 @@ namespace Opm {
             if (aliveWells[w] > 0.) {
                 for (int phase = 0; phase < np; ++phase) {
                     const int pos = pu.phase_pos[phase];
-                    cmix_s[phase] = well.wellOps().s2p * (wbq[phase] / wbqt);
+                    cmix_s[phase] = well->wellOps().s2p * (wbq[phase] / wbqt);
                 }
             } else {
                 for (int phase = 0; phase < np; ++phase) {
                     const int pos = pu.phase_pos[phase];
-                    cmix_s[phase] += compi[pos];
+                    cmix_s[phase] += ADB::constant(V::Zero(nperf) + compi[pos]);
                 }
             }
 
@@ -751,7 +751,7 @@ namespace Opm {
 
 
 
-*/
+
 
 /*
 

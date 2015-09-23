@@ -124,6 +124,7 @@ namespace Opm {
         /* void updateState(const V& dx,
                          ReservoirState& reservoir_state,
                          WellState& well_state) {}; */
+        using Base::numPhases;
 
     protected:
      /*
@@ -211,12 +212,12 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
-        /* void
+        void
         computeWellFlux(const SolutionState& state,
                         const std::vector<ADB>& mob_perfcells,
                         const std::vector<ADB>& b_perfcells,
                         V& aliveWells,
-                        std::vector<ADB>& cq_s); */
+                        std::vector<ADB>& cq_s);
 
         /* void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
