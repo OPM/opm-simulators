@@ -289,8 +289,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                      well_data[w].reference_bhp_depth,
                      w_num_perf,
                      comp_frac,
-                     & perf_cells  [0],
-                     & perf_prodind[0],
+                     perf_cells.data(),
+                     perf_prodind.data(),
                      well_names[w].c_str(),
                      w_);
 
