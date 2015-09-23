@@ -169,83 +169,10 @@ namespace Opm {
 
         // segment pressures
         state.segp = std::move(vars[indices[Bhp]]);
+
+        // TODO: should the bhp and qs also be updated?
+
     }
-
-
-    /* template <class Grid, class Implementation>
-    typename BlackoilModelBase<Grid, Implementation>::SolutionState
-    BlackoilModelBase<Grid, Implementation>::variableStateExtractVars(const ReservoirState& x,
-                                                                      const std::vector<int>& indices,
-                                                                      std::vector<ADB>& vars) const
-    {
-        //using namespace Opm::AutoDiffGrid;
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const Opm::PhaseUsage pu = fluid_.phaseUsage();
-
-        SolutionState state(fluid_.numPhases());
-
-        // Pressure.
-        state.pressure = std::move(vars[indices[Pressure]]);
-
-        // Temperature cannot be a variable at this time (only constant).
-        const V temp = Eigen::Map<const V>(& x.temperature()[0], x.temperature().size());
-        state.temperature = ADB::constant(temp);
-
-        // Saturations
-        {
-            ADB so = ADB::constant(V::Ones(nc, 1));
-
-            if (active_[ Water ]) {
-                state.saturation[pu.phase_pos[ Water ]] = std::move(vars[indices[Sw]]);
-                const ADB& sw = state.saturation[pu.phase_pos[ Water ]];
-                so -= sw;
-            }
-
-            if (active_[ Gas ]) {
-                // Define Sg Rs and Rv in terms of xvar.
-                // Xvar is only defined if gas phase is active
-                const ADB& xvar = vars[indices[Xvar]];
-                ADB& sg = state.saturation[ pu.phase_pos[ Gas ] ];
-                sg = isSg_*xvar + isRv_*so;
-                so -= sg;
-
-                if (active_[ Oil ]) {
-                    // RS and RV is only defined if both oil and gas phase are active.
-                    const ADB& sw = (active_[ Water ]
-                                             ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1)));
-                    state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
-                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
-                    if (has_disgas_) {
-                        state.rs = (1-isRs_)*rsSat + isRs_*xvar;
-                    } else {
-                        state.rs = rsSat;
-                    }
-                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
-                    if (has_vapoil_) {
-                        state.rv = (1-isRv_)*rvSat + isRv_*xvar;
-                    } else {
-                        state.rv = rvSat;
-                    }
-                }
-            }
-
-            if (active_[ Oil ]) {
-                // Note that so is never a primary variable.
-                state.saturation[pu.phase_pos[ Oil ]] = std::move(so);
-            }
-        }
-        // wells
-        variableStateExtractWellsVars(indices, vars, state);
-        return state;
-    }
-
-
-
-*/
-
-/*
-
 
 
 
@@ -459,7 +386,9 @@ namespace Opm {
 
 
 
+*/
 
+/*
 
     template <class Grid, class Implementation>
     void
@@ -554,9 +483,9 @@ namespace Opm {
         // addWellControlEq(state, well_state, aliveWells);
     }
 
+*/
 
-
-
+/*
 
     template <class Grid, class Implementation>
     void
@@ -577,9 +506,9 @@ namespace Opm {
         // }
     }
 
+*/
 
-
-
+/*
 
     template <class Grid, class Implementation>
     void
@@ -820,9 +749,9 @@ namespace Opm {
 
 
 
+*/
 
-
-
+/*
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
@@ -851,13 +780,13 @@ namespace Opm {
     }
 
 
+*/
 
 
 
 
 
-
-
+/*
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
                                                                 const SolutionState& state)
@@ -891,10 +820,10 @@ namespace Opm {
     }
 
 
+*/
 
 
-
-
+/*
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
@@ -1017,10 +946,10 @@ namespace Opm {
         }
     }
 
+*/
 
 
-
-
+/*
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::addWellControlEq(const SolutionState& state,
                                                                    const WellState& xw,
@@ -1196,9 +1125,9 @@ namespace Opm {
     }
 
 
+*/
 
-
-
+/*
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateState(const V& dx,
                                           ReservoirState& reservoir_state,
@@ -1417,11 +1346,11 @@ namespace Opm {
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable();
     }
+*/
 
 
 
-
-
+/*
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dwells,
@@ -1516,9 +1445,6 @@ namespace Opm {
             }
         }
     }
-
-
-
 
     */
 
