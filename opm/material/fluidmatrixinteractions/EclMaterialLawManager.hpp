@@ -825,8 +825,8 @@ private:
                                  const EclEpsGridProperties& epsGridProperties,
                                  int elemIdx)
     {
-        int satnumRegionIdx = (*epsGridProperties.satnum)[elemIdx] - 1; // ECL uses Fortran indices!
         int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
+        int satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
@@ -842,8 +842,8 @@ private:
                                    const EclEpsGridProperties& epsGridProperties,
                                    int elemIdx)
     {
-        int satnumRegionIdx = (*epsGridProperties.satnum)[elemIdx] - 1; // ECL uses Fortran indices!
         int cartElemIdx = compressedToCartesianElemIdx_[elemIdx];
+        int satnumRegionIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumRegionIdx]);;
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
