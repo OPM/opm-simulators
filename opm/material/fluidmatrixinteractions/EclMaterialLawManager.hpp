@@ -943,6 +943,8 @@ private:
             auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
             return realParams.oilWaterParams().drainageParams().scaledPoints();
         }
+        default:
+            OPM_THROW(std::logic_error, "Enum value for material approach unknown!");
         }
     }
 
