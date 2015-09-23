@@ -34,11 +34,13 @@ namespace Opm {
     struct BlackoilMultiSegmentSolutionState : public DefaultBlackoilSolutionState
     {
         explicit BlackoilMultiSegmentSolutionState(const int np)
-            : DefaultBlackoilSolutionState(np),
-              pseg( ADB::null())
+            : DefaultBlackoilSolutionState(np)
+            , segp  ( ADB::null())
+            , segqs ( ADB::null())
         {
         }
-        ADB pseg; // the segment pressures
+        ADB segp; // the segment pressures
+        ADB segqs; // the segment phase rate in surface volume
     };
 
     /// A model implementation for three-phase black oil with support
