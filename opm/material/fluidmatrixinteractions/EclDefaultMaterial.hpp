@@ -300,16 +300,22 @@ public:
         const Evaluation& kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
         const Evaluation& kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
 
-        Evaluation kro;
-        if (Toolbox::value(Sg) + Toolbox::value(Sw) - Swco < 1e-20)
-            kro = kro_ow; // avoid division by zero
-        else {
-            const auto& weightOilWater = (Sw - Swco)/(Sg + Sw - Swco);
-            const auto& weightGasOil = 1 - weightOilWater;
-            kro = weightOilWater*kro_ow + weightGasOil*kro_go;
-        }
+        // avoid the division by zero: chose a regularized kro which is used if Sw - Swco
+        // < epsilon/2 and interpolate between the oridinary and the regularized kro between
+        // epsilon and epsilon/2
+        const Scalar epsilon = 1e-5;
+        if (Toolbox::value(Sw_ow) - Swco < epsilon) {
+            Evaluation kro2 = (kro_ow + kro_go)/2;;
+            if (Toolbox::value(Sw_ow) - Swco > epsilon/2) {
+                Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
+                Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
+                return kro2*alpha + kro1*(1 - alpha);
+            }
 
-        return kro;
+            return kro2;
+        }
+        else
+            return (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
     }
 
     /*!
@@ -329,7 +335,7 @@ public:
         Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
 
         if (params.inconsistentHysteresisUpdate()) {
-            Sg = std::min(1.0, std::max(0.0, Sg));
+            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
             // NOTE: the saturations which are passed to update the hysteresis curves are
             // inconsistent with the ones used to calculate the relative permabilities. We do
             // it like this anyway because (a) the saturation functions of opm-core do it
@@ -344,8 +350,8 @@ public:
         }
         else {
             Scalar Swco = params.Swl();
-            Sw = std::min(1.0, std::max(0.0, Sw));
-            Sg = std::min(1.0, std::max(0.0, Sg));
+            Sw = std::min(Scalar(1.0), std::max(Scalar(0.0), Sw));
+            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
 
             Scalar Sw_ow = Sg + std::max(Swco, Sw);
             Scalar So_go = 1 + Sw_ow;
