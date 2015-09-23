@@ -388,11 +388,11 @@ namespace Opm {
 
 */
 
-/*
 
-    template <class Grid, class Implementation>
+
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::
+    BlackoilMultiSegmentModel<Grid>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
              const bool initial_assembly)
@@ -414,15 +414,15 @@ namespace Opm {
         updateWellControls(well_state);
 
         // Create the primary variables.
-        MultiSegmentBlackoilSolutionState state = asImpl().variableState(reservoir_state, well_state);
+        SolutionState state = variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
             // Create the (constant, derivativeless) initial state.
             SolutionState state0 = state;
-            asImpl().makeConstantState(state0);
+            makeConstantState(state0);
             // Compute initial accumulation contributions
             // and well connection pressures.
-            asImpl().computeAccum(state0, 0);
+            Base::computeAccum(state0, 0);
             computeWellConnectionPressures(state0, well_state);
         }
 
@@ -436,7 +436,7 @@ namespace Opm {
         // OPM_AD_DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
-        asImpl().assembleMassBalanceEq(state);
+        Base::assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
 
@@ -455,7 +455,7 @@ namespace Opm {
         std::vector<int> well_cells;
         well_cells.reserve(nperf);
         for (int i = 0; i < nw; ++i) {
-            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i].wellCells();
+            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
             well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
         }
 
@@ -483,7 +483,7 @@ namespace Opm {
         // addWellControlEq(state, well_state, aliveWells);
     }
 
-*/
+
 
 /*
 

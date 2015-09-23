@@ -114,16 +114,16 @@ namespace Opm {
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
-                      const bool initial_assembly) {};
+                      const bool initial_assembly);
 
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void updateState(const V& dx,
+        /* void updateState(const V& dx,
                          ReservoirState& reservoir_state,
-                         WellState& well_state) {};
+                         WellState& well_state) {}; */
 
     protected:
      /*
@@ -139,6 +139,7 @@ namespace Opm {
         using Base::pvdt_;
         using Base::geo_;
         using Base::active_;
+        using Base::rq_;
 
 
         // Diff to the pressure of the related segment.
@@ -184,61 +185,50 @@ namespace Opm {
         // TODO: remove this wells structure
         using Base::wells;
         using Base::updatePrimalVariableFromState;
+        using Base::wellsActive;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
-        SolutionState
-        variableState(const ReservoirState& x,
-                      const WellState& xw) const {};
+        using Base::updateWellControls;
+        // void updateWellControls(WellState& xw) const {};
+        using Base::variableState;
 
-
-        void updateWellControls(WellState& xw) const {};
-
-        void updateWellState(const V& dwells,
-                             WellState& well_state) {};
-
-        std::vector<V>
-        variableStateInitials(const ReservoirState& x,
-                              const WellState& xw) const {};
+        // void updateWellState(const V& dwells,
+        //                      WellState& well_state) {};
 
         void
         variableWellStateInitials(const WellState& xw,
                                   std::vector<V>& vars0) const;
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw) {};
+        using Base::computeWellConnectionPressures;
+        /* void computeWellConnectionPressures(const SolutionState& state,
+                                            const WellState& xw) {}; */
 
-        void
+        /* void
         computeWellFlux(const SolutionState& state,
                         const std::vector<ADB>& mob_perfcells,
                         const std::vector<ADB>& b_perfcells,
                         V& aliveWells,
-                        std::vector<ADB>& cq_s);
+                        std::vector<ADB>& cq_s); */
 
-        void
-        solveWellEq(const std::vector<ADB>& mob_perfcells,
-                    const std::vector<ADB>& b_perfcells,
-                    SolutionState& state,
-                    WellState& well_state);
-
-        void
+        /* void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
-                                         WellState& xw) {};
+                                         WellState& xw) {}; */
 
-        void
+        /* void
         addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state) {};
+                      const SolutionState& state) {}; */
 
-        void
+        /* void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
-                                           const WellState& xw) {};
+                                           const WellState& xw) {}; */
 
-        void
+        /* void
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
-                         const V& aliveWells) {};
+                         const V& aliveWells) {}; */
 
         void
         makeConstantState(SolutionState& state) const;
@@ -248,212 +238,6 @@ namespace Opm {
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
 
-
-/*
-
-        const Grid&         grid_;
-        const BlackoilPropsAdInterface& fluid_;
-        const DerivedGeology&           geo_;
-        const RockCompressibility*      rock_comp_props_;
-        const Wells*                    wells_;
-        // FOR TEMPORARY
-        // SHOUlD BE A REFERENCE
-        VFPProperties                   vfp_properties_;
-        const NewtonIterationBlackoilInterface&    linsolver_;
-        // For each canonical phase -> true if active
-        const std::vector<bool>         active_;
-        // Size = # active phases. Maps active -> canonical phase indices.
-        const std::vector<int>          canph_;
-        const std::vector<int>          cells_;  // All grid cells
-        HelperOps                       ops_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
-
-        ModelParameters                 param_;
-        bool use_threshold_pressure_;
-        bool wells_active_;
-        V threshold_pressures_by_interior_face_;
-
-        std::vector<ReservoirResidualQuant> rq_;
-        std::vector<PhasePresence> phaseCondition_;
-        V isRs_;
-        V isRv_;
-        V isSg_;
-
-        std::vector<int>         primalVariable_;
-        V pvdt_;
-
-        // ---------  Protected methods  ---------
-
-        /// Access the most-derived class used for
-        /// static polymorphism (CRTP).
-        Implementation& asImpl()
-        {
-            return static_cast<Implementation&>(*this);
-        }
-
-        /// Access the most-derived class used for
-        /// static polymorphism (CRTP).
-        const Implementation& asImpl() const
-        {
-            return static_cast<const Implementation&>(*this);
-        }
-
-        // return true if wells are available in the reservoir
-        bool wellsActive() const { return wells_active_; }
-        // return true if wells are available on this process
-        bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
-
-
-
-        void
-        variableReservoirStateInitials(const ReservoirState& x,
-                                       std::vector<V>& vars0) const;
-
-        std::vector<int>
-        variableStateIndices() const;
-
-
-        void
-        computeAccum(const SolutionState& state,
-                     const int            aix  );
-
-
-        void
-        assembleMassBalanceEq(const SolutionState& state);
-
-
-
-
-        bool getWellConvergence(const int iteration);
-
-        bool isVFPActive() const;
-
-        std::vector<ADB>
-        computePressures(const ADB& po,
-                         const ADB& sw,
-                         const ADB& so,
-                         const ADB& sg) const;
-
-        V
-        computeGasPressure(const V& po,
-                           const V& sw,
-                           const V& so,
-                           const V& sg) const;
-
-        std::vector<ADB>
-        computeRelPerm(const SolutionState& state) const;
-
-        void
-        computeMassFlux(const int               actph ,
-                        const V&                transi,
-                        const ADB&              kr    ,
-                        const ADB&              p     ,
-                        const SolutionState&    state );
-
-        void applyThresholdPressures(ADB& dp);
-
-        ADB
-        fluidViscosity(const int               phase,
-                       const ADB&              p    ,
-                       const ADB&              temp ,
-                       const ADB&              rs   ,
-                       const ADB&              rv   ,
-                       const std::vector<PhasePresence>& cond) const;
-
-        ADB
-        fluidReciprocFVF(const int               phase,
-                         const ADB&              p    ,
-                         const ADB&              temp ,
-                         const ADB&              rs   ,
-                         const ADB&              rv   ,
-                         const std::vector<PhasePresence>& cond) const;
-
-        ADB
-        fluidDensity(const int  phase,
-                     const ADB& b,
-                     const ADB& rs,
-                     const ADB& rv) const;
-
-        V
-        fluidRsSat(const V&                p,
-                   const V&                so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        fluidRsSat(const ADB&              p,
-                   const ADB&              so,
-                   const std::vector<int>& cells) const;
-
-        V
-        fluidRvSat(const V&                p,
-                   const V&                so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        fluidRvSat(const ADB&              p,
-                   const ADB&              so,
-                   const std::vector<int>& cells) const;
-
-        ADB
-        poroMult(const ADB& p) const;
-
-        ADB
-        transMult(const ADB& p) const;
-
-        const std::vector<PhasePresence>
-        phaseCondition() const {return phaseCondition_;}
-
-        void
-        classifyCondition(const ReservoirState& state);
-
-
-        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
-        /// be active to call this method.
-        void
-        updatePrimalVariableFromState(const ReservoirState& state);
-
-        /// Update the phaseCondition_ member based on the primalVariable_ member.
-        /// Also updates isRs_, isRv_ and isSg_;
-        void
-        updatePhaseCondFromPrimalVariable();
-
-        /// \brief Compute the reduction within the convergence check.
-        /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[in] tempV A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. tempV.col(i) contains the
-        ///                   values
-        ///                  for phase i.
-        /// \param[in] R     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
-        ///                   of R for the phase i.
-        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
-        ///                   maximum of tempV for the phase i.
-        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
-        ///                   of B for the phase i.
-        /// \param[out] maxNormWell The maximum of the well equations for each phase.
-        /// \param[in]  nc    The number of cells of the local grid.
-        /// \param[in]  nw    The number of wells on the local grid.
-        /// \return The total pore volume over all cells.
-        double
-        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
-                             std::array<double,MaxNumPhases>& R_sum,
-                             std::array<double,MaxNumPhases>& maxCoeff,
-                             std::array<double,MaxNumPhases>& B_avg,
-                             std::vector<double>& maxNormWell,
-                             int nc,
-                             int nw) const;
-
-        double dpMaxRel() const { return param_.dp_max_rel_; }
-        double dsMax() const { return param_.ds_max_; }
-        double drMaxRel() const { return param_.dr_max_rel_; }
-        double maxResidualAllowed() const { return param_.max_residual_allowed_; } */
 
     };
 
