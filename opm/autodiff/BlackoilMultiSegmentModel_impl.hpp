@@ -90,17 +90,19 @@ namespace Opm {
 
 
 
-/*     template <class Grid, class Implementation>
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::
+    BlackoilMultiSegmentModel<Grid>::
     prepareStep(const double dt,
                 ReservoirState& reservoir_state,
-                WellState&)
+                WellState& well_state)
     {
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
             updatePrimalVariableFromState(reservoir_state);
         }
+
+        //TODO: handle the volume related.
     }
 
 
@@ -109,7 +111,7 @@ namespace Opm {
 
 
 
-    template <class Grid, class Implementation>
+/*     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::makeConstantState(SolutionState& state) const
     {

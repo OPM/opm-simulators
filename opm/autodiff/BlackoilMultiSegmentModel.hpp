@@ -55,6 +55,7 @@ namespace Opm {
 
         typedef BlackoilModelBase<Grid, BlackoilMultiSegmentModel<Grid> > Base; // base class
         typedef typename Base::ReservoirState ReservoirState;
+        typedef typename Base::WellState WellState;
         typedef BlackoilMultiSegmentSolutionState SolutionState;
 
         // ---------  Public methods  ---------
@@ -93,7 +94,7 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void prepareStep(const double dt,
                          ReservoirState& reservoir_state,
-                         WellState& well_state) {};
+                         WellState& well_state);
 
         /// Called once after each time step.
         /// In this class, this function does nothing.
@@ -133,6 +134,9 @@ namespace Opm {
         // For the non-segmented well, it should be the density with AVG or SEG way.
         // while usually SEG way
         using Base::well_perforation_densities_; //Density of each well perforation
+        using Base::pvdt_;
+        using Base::geo_;
+        using Base::active_;
 
 
         // Diff to the pressure of the related segment.
@@ -177,6 +181,7 @@ namespace Opm {
         // return wells object
         // TODO: remove this wells structure
         using Base::wells;
+        using Base::updatePrimalVariableFromState;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
