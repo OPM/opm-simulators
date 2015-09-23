@@ -153,75 +153,23 @@ namespace Opm {
         }
     }
 
+    // TODO: using the original Qs for the segment rates for now.
+    // TODO: using the original Bhp for the segment pressures for now.
+    //
 
 
-
-/*
-    template <class Grid, class Implementation>
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::
-    variableWellState(const WellState& xw, std::vector<V>& vars0) const
+    BlackoilMultiSegmentModel<Grid>::variableStateExtractWellsVars(const std::vector<int>& indices,
+                                                                          std::vector<ADB>& vars,
+                                                                          SolutionState& state) const
     {
-        if ( wellsActive() )
-        {
-            //TODO: BEGIN WITH Q_o, Q_w, Q_g and P.
-            //TODO: THEN TESTING IF G_T, F_W, F_G and P WILL BE BETTER.
-            const int nw = wellsMultiSegment().size();
-            // number of segments
-            int nseg = 0;
-            int nperf = 0;
+        // segment phase rates in surface volume
+        state.segqs = std::move(vars[indices[Qs]]);
 
-            for (int i = 0; i < nw; ++i) {
-                nseg += wellsMultiSegment()[i].numberOfSegments();
-                nperf += wellsMultiSegment()[i].numberOfPerforations();
-            }
-
-            // number of phases
-            const int np = wellsMultiSegment()[0].numberOfPhases();
-
-            const DataBlock seg_rates = Eigen::Map<const DataBlock>(& xw.segPhaseRates()[0], nw, nseg).transpose();
-            const V qs = Eigen::Map<const V>(seg_rates.data(), nseg * np);
-            vars0.push_back(qs);
-
-
-            // Initial pressures
-            const V seg_pressures = Eigen::Map<const V>(& xw.segPress()[0], nseg);
-            vars0.push_back(seg_pressures);
-        }
-        else
-        {
-            vars0.push_back(V());
-            vars0.push_back(V());
-        }
-            // the number of the segments
-            // the number of the phases
-            // then the rate related functions
-            // then the pressure related functions
-            // the ordering will be interleaved way (4 X 4 block for each segment?) or
-            // Continous G_T, F_W, F_G and P
-
-            // The varaibles will be Q_o, Q_w, Q_g and P?
+        // segment pressures
+        state.segp = std::move(vars[indices[Bhp]]);
     }
-
-
-
-
-    template <class Grid, class Implementation>
-    std::vector<int>
-    BlackoilModelBase<Grid, Implementation>::variableWellStateIndices() const
-    {
-        // Black oil model standard is 5 equation.
-        // For the pure well solve, only the well equations are picked.
-        std::vector<int> indices(5, -1);
-        int next = 0;
-        indices[Qs] = next++;
-        indices[Bhp] = next++;
-        assert(next == 2);
-        return indices;
-    }
-
-
-*/
 
 
     /* template <class Grid, class Implementation>
@@ -297,16 +245,6 @@ namespace Opm {
 */
 
 /*
-    BlackoilModelBase<Grid, Implementation>::variableStateExtractWellsVars(const std::vector<int>& indices,
-                                                                          std::vector<ADB>& vars,
-                                                                          SolutionState& state) const
-    {
-        // Qs.
-        state.qs = std::move(vars[indices[Qs]]);
-
-        // Bhp.
-        state.bhp = std::move(vars[indices[Bhp]]);
-    } */
 
 
 

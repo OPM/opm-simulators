@@ -240,11 +240,14 @@ namespace Opm {
                          const WellState& xw,
                          const V& aliveWells) {};
 
-        std::vector<int>
-        variableWellStateIndices() const {};
-
         void
         makeConstantState(SolutionState& state) const;
+
+        void
+        variableStateExtractWellsVars(const std::vector<int>& indices,
+                                      std::vector<ADB>& vars,
+                                      SolutionState& state) const;
+
 
 /*
 
@@ -314,11 +317,6 @@ namespace Opm {
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,
                                  std::vector<ADB>& vars) const;
-
-        void
-        variableStateExtractWellsVars(const std::vector<int>& indices,
-                                      std::vector<ADB>& vars,
-                                      SolutionState& state) const;
 
         void
         computeAccum(const SolutionState& state,
