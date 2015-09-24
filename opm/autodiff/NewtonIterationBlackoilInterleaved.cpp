@@ -241,7 +241,8 @@ namespace Opm
         istlA.setBuildMode(Mat::row_wise);
         const int* ia = row_major.outerIndexPtr();
         const int* ja = row_major.innerIndexPtr();
-        for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
+        const Mat::CreateIterator istlEnd = istlA.createend();
+        for (Mat::CreateIterator row = istlA.createbegin(); row != istlEnd; ++row) {
             const int ri = row.index();
             for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
                 row.insert(ja[i]);
@@ -249,10 +250,11 @@ namespace Opm
         }
 
         // Set all blocks to zero.
-        for (int row = 0; row < size; ++row) {
-            for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
-                const int col = ja[col_ix];
-                istlA[row][col] = 0.0;
+        for (auto rowit = istlA.begin(), rowend = istlA.end(); rowit != rowend; ++ rowit )
+        {
+            for ( auto colit = rowit->begin(), colend = rowit->end(); colit != colend; ++colit )
+            {
+                *colit = 0.0;
             }
         }
 
