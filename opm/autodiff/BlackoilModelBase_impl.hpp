@@ -1236,6 +1236,14 @@ namespace detail {
         inline
         double computeHydrostaticCorrection(const Wells& wells, const int w, double vfp_ref_depth,
                                             const ADB::V& well_perforation_densities, const double gravity) {
+            if ( wells.well_connpos[w] == wells.well_connpos[w+1] )
+            {
+                // This is a well with no perforations.
+                // If this is the last well we would subscript over the
+                // bounds below.
+                // we assume well_perforation_densities to be 0
+                return 0;
+            }
             const double well_ref_depth = wells.depth_ref[w];
             const double dh = vfp_ref_depth - well_ref_depth;
             const int perf = wells.well_connpos[w];
