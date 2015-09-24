@@ -295,7 +295,7 @@ namespace Opm
         // p2w should be simple
 
         m_wops_.p2s_gather = M(m_number_of_segments_, m_number_of_perforations_);
-        m_wops_.p2s_gather = m_wops_.s2s_gather * m_wops_.s2p;
+        m_wops_.p2s_gather = m_wops_.s2s_gather * m_wops_.p2s;
 
         // s2s_gather
 
