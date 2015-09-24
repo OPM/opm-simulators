@@ -384,6 +384,7 @@ namespace Opm {
         // TODO
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numberOfPerforations()));
         well_perforation_pressure_cell_diffs_ = V::Zero(xw.numberOfPerforations());
+        well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numberOfPerforations());
     }
 
 
