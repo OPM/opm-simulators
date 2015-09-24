@@ -46,6 +46,7 @@ namespace Opm
     {
     public:
 
+        typedef WellStateFullyImplicitBlackoil Base;
         typedef WellMultiSegment::V V;
 
         // typedef std::array< int, 3 >  mapentry_t;
@@ -98,9 +99,9 @@ namespace Opm
 
             wellrates_.resize(nw * np, 0.0);
 
-            current_controls_.resize(nw);
+            currentControls().resize(nw);
             for(int iw = 0; iw < nw; ++iw) {
-                current_controls_[iw] = well_controls_get_current(wells[iw]->wellControls());
+                currentControls()[iw] = well_controls_get_current(wells[iw]->wellControls());
             }
 
             for (int iw = 0; iw < nw; ++iw) {
@@ -111,8 +112,8 @@ namespace Opm
             int start_segment = 0;
             int start_perforation = 0;
 
-            perfphaserates_.clear();
-            perfphaserates_.resize(nperf * np, 0.0);
+            perfPhaseRates().clear();
+            perfPhaseRates().resize(nperf * np, 0.0);
 
             perfpress_.clear();
             perfpress_.resize(nperf, -1.0e100);
@@ -207,7 +208,7 @@ namespace Opm
                     int number_of_perforations = wellMapEntry.number_of_perforations;
                     for (int i = 0; i < number_of_perforations; ++i) {
                         for (int p = 0; p < np; ++p) {
-                            perfphaserates_[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
+                            perfPhaseRates()[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
                         }
                         perfpress_[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i + start_perforation]];
                     }
@@ -232,7 +233,7 @@ namespace Opm
                         // V v_perf_rates = V::Zero(number_of_perforations);
                         Eigen::VectorXd v_perf_rates(number_of_perforations);
                         for (int i = 0; i < number_of_perforations; ++i) {
-                            v_perf_rates[i] = perfphaserates_[np * (i + start_perforation) + p];
+                            v_perf_rates[i] = perfPhaseRates()[np * (i + start_perforation) + p];
                         }
 
                         Eigen::VectorXd v_segment_rates = wells[w]->wellOps().p2s_gather * v_perf_rates;
@@ -260,9 +261,9 @@ namespace Opm
             // Initialize current_controls_.
             // The controls set in the Wells object are treated as defaults,
             // and also used for initial values.
-            current_controls_.resize(nw);
+            currentControls().resize(nw);
             for (int w = 0; w < nw; ++w) {
-                current_controls_[w] = well_controls_get_current(wells[w]->wellControls());
+                currentControls()[w] = well_controls_get_current(wells[w]->wellControls());
             }
 
             // initialize wells that have been there before
@@ -315,7 +316,7 @@ namespace Opm
                             }
 
                             for (int i = 0; i < num_perf_this_well * np; ++i) {
-                                perfphaserates_[this_start_perforation * np + i] = prevState.perfPhaseRates()[old_start_perforation * np + i];
+                                perfPhaseRates()[this_start_perforation * np + i] = prevState.perfPhaseRates()[old_start_perforation * np + i];
                             }
 
                             // perf_pressures_
@@ -386,8 +387,9 @@ namespace Opm
         std::vector<double>& perfPress() { return perfpress_; }
         const std::vector<double>& perfPress() const { return perfpress_; }
 
-        std::vector<double>& perfPhaseRates() { return perfphaserates_; }
-        const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
+        // std::vector<double>& perfPhaseRates() { return perfphaserates_; }
+        // const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
+        using Base::perfPhaseRates;
 
         std::vector<double>& bhp() { return bhp_; }
         const std::vector<double>& bhp() const { return bhp_; }
@@ -398,8 +400,9 @@ namespace Opm
         std::vector<double>& wellRates() { return wellrates_; }
         const std::vector<double>& wellRates() const { return wellrates_; }
 
-        std::vector<int>& currentControls() { return current_controls_; }
-        const std::vector<int>& currentControls() const { return current_controls_; }
+        // std::vector<int>& currentControls() { return current_controls_; }
+        // const std::vector<int>& currentControls() const { return current_controls_; }
+        using Base::currentControls;
 
         // wellrate should be the out segment rates for the top segments
 
@@ -420,7 +423,7 @@ namespace Opm
         // phase rates for the segments
         std::vector<double> segphaserates_;
         // phase rates for the completions
-        std::vector<double> perfphaserates_;
+        // std::vector<double> perfphaserates_;
         // pressure for the perforatins
         std::vector<double> perfpress_;
         // TODO: MIGHT NOT USE THE FOLLOWING VARIABLES AT THE
@@ -428,7 +431,7 @@ namespace Opm
         std::vector<double> segphasefrac_;
         // total flow rates for each segments, G_T
         std::vector<double> segtotalrate_;
-        std::vector<int> current_controls_;
+        // std::vector<int> current_controls_;
 
         WellMapType wellMap_;
 
