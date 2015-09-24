@@ -214,7 +214,7 @@ namespace Opm
 
     void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
                                                                    Mat& istlA) const
-   {
+    {
         const int np = eqs.size();
         // Find sparsity structure as union of basic block sparsity structures,
         // corresponding to the jacobians with respect to pressure.
