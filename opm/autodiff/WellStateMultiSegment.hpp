@@ -93,7 +93,7 @@ namespace Opm
             // TODO: making it better later
             np_ = np;
             nseg_ = nseg;
-            nperf_ = nperf_;
+            nperf_ = nperf;
             nwells_ = nw;
 
             wellrates_.resize(nw * np, 0.0);
