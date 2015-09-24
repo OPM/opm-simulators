@@ -481,7 +481,7 @@ namespace Opm {
         // it is related to the segment location
         computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        // asImpl().addWellFluxEq(cq_s, state);
+        addWellFluxEq(cq_s, state);
         // asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // addWellControlEq(state, well_state, aliveWells);
     }
@@ -780,21 +780,23 @@ namespace Opm {
     }
 
 
-/*
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
-                                                                const SolutionState& state)
+
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::addWellFluxEq(const std::vector<ADB>& cq_s,
+                                                        const SolutionState& state)
     {
         // the equations is for each segment
         const int np = numPhases();
         const int nw = wellsMultiSegment().size();
 
-        ADB qs = state.qs;
+        ADB segqs = state.segqs;
 
         const int nseg = state.pressure.size();
 
         for (int phase = 0; phase < np; ++phase) {
             for (int w = 0; w < nw; ++w) {
+                WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+
                 // the equation is
                 // /deta m_p_n - /sigma Q_pi - /sigma q_pj + Q_pn = 0
                 // Q_pn + /deta m_p_n - /sigma Q_pi - /sigma q_pj = 0
@@ -809,12 +811,13 @@ namespace Opm {
                 //    TODO:we can have a mapping for the inlet segments
                 // 3. for the third term, it is the inflow.
                 // 4. for the last term, it is the outlet rates, which are also unknowns
+
+                // For this version, we will ignore the wellbore volume effects
+                // In the DATA file, the well bore volumes are set to be zero already.
             }
         }
     }
 
-
-*/
 
 
     template <class Grid>
