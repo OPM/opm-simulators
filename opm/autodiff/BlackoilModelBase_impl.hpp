@@ -496,7 +496,7 @@ namespace detail {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        variableWellStateInitials(xw, vars0);
+        asImpl().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
@@ -681,7 +681,7 @@ namespace detail {
             }
         }
         // wells
-        variableStateExtractWellsVars(indices, vars, state);
+        asImpl().variableStateExtractWellsVars(indices, vars, state);
         return state;
     }
 

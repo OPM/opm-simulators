@@ -60,6 +60,8 @@ namespace Opm {
         typedef typename Base::WellState WellState;
         typedef BlackoilMultiSegmentSolutionState SolutionState;
 
+        friend Base;
+
         // ---------  Public methods  ---------
 
         /// Construct the model. It will retain references to the
