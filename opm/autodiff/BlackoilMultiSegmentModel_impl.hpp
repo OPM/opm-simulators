@@ -681,7 +681,7 @@ namespace Opm {
                 // const ADB& q_ps = well->wellOps().p2s * cq_ps[phase];
                 const ADB& q_ps = well->wellOps().p2s_gather * cq_ps[phase];
                 const int n_total_segments = state.segp.size();
-                const ADB& q_s = subset(state.qs, Span(nseg, 1, phase * n_total_segments + start_segment));
+                const ADB& q_s = subset(state.segqs, Span(nseg, 1, phase * n_total_segments + start_segment));
                 Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
 
                 const int pos = pu.phase_pos[phase];
