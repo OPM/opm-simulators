@@ -198,52 +198,87 @@ namespace Opm
 
 
 
+    namespace detail {
+        /**
+         * Simple binary operator that always returns 0.1
+         * It is used to get the sparsity pattern for our
+         * interleaved system, and is marginally faster than using
+         * operator+=.
+         */
+        template<typename Scalar> struct PointOneOp {
+            EIGEN_EMPTY_STRUCT_CTOR(PointOneOp)
+            Scalar operator()(const Scalar& a, const Scalar& b) const { return 0.1; }
+        };
+    }
+
 
     void NewtonIterationBlackoilInterleaved::formInterleavedSystem(const std::vector<ADB>& eqs,
                                                                    Mat& istlA) const
     {
         const int np = eqs.size();
-
         // Find sparsity structure as union of basic block sparsity structures,
         // corresponding to the jacobians with respect to pressure.
-        // Use addition to get to the union structure.
-        typedef Eigen::SparseMatrix<double> Sp;
-        Sp structure;
-        eqs[0].derivative()[0].toSparse(structure);
-        {
-            Sp s0;
-            for (int phase = 1; phase < np; ++phase) {
-                eqs[phase].derivative()[0].toSparse(s0);
-                structure += s0;
-            }
+        // Use our custom PointOneOp to get to the union structure.
+        // Note that we only iterate over the pressure derivatives on purpose.
+        Eigen::SparseMatrix<double, Eigen::ColMajor> col_major = eqs[0].derivative()[0].getSparse();
+        detail::PointOneOp<double> point_one;
+        for (int phase = 1; phase < np; ++phase) {
+            const AutoDiffMatrix::SparseRep& mat = eqs[phase].derivative()[0].getSparse();
+            col_major = col_major.binaryExpr(mat, point_one);
         }
 
-        Eigen::SparseMatrix<double, Eigen::RowMajor> s = structure;
+        // Automatically convert the column major structure to a row-major structure
+        Eigen::SparseMatrix<double, Eigen::RowMajor> row_major = col_major;
+
+        const int size = row_major.rows();
+        assert(size == row_major.cols());
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
         assert(np == 3);
-        istlA.setSize(s.rows(), s.cols(), s.nonZeros());
+        istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
         istlA.setBuildMode(Mat::row_wise);
-        const int* ia = s.outerIndexPtr();
-        const int* ja = s.innerIndexPtr();
+        const int* ia = row_major.outerIndexPtr();
+        const int* ja = row_major.innerIndexPtr();
         for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
-            int ri = row.index();
+            const int ri = row.index();
             for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
                 row.insert(ja[i]);
             }
         }
 
-        const int size = s.rows();
+        // Set all blocks to zero.
         for (int row = 0; row < size; ++row) {
             for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
                 const int col = ja[col_ix];
-                MatrixBlockType block;
-                for (int p1 = 0; p1 < np; ++p1) {
-                    for (int p2 = 0; p2 < np; ++p2) {
-                        block[p1][p2] = eqs[p1].derivative()[p2].coeff(row, col);
+                istlA[row][col] = 0.0;
+            }
+        }
+
+        /**
+         * Go through all jacobians, and insert in correct spot
+         *
+         * The straight forward way to do this would be to run through each
+         * element in the output matrix, and set all block entries by gathering
+         * from all "input matrices" (derivatives).
+         *
+         * A faster alternative is to instead run through each "input matrix" and
+         * insert its elements in the correct spot in the output matrix.
+         *
+         */
+        for (int col = 0; col < size; ++col) {
+            for (int p1 = 0; p1 < np; ++p1) {
+                for (int p2 = 0; p2 < np; ++p2) {
+                    // Note that that since these are CSC and not CSR matrices,
+                    // ja contains row numbers instead of column numbers.
+                    const AutoDiffMatrix::SparseRep& s = eqs[p1].derivative()[p2].getSparse();
+                    const int* ia = s.outerIndexPtr();
+                    const int* ja = s.innerIndexPtr();
+                    const double* sa = s.valuePtr();
+                    for (int elem_ix = ia[col]; elem_ix < ia[col + 1]; ++elem_ix) {
+                        const int row = ja[elem_ix];
+                        istlA[row][col][p1][p2] = sa[elem_ix];
                     }
                 }
-                istlA[row][col] = block;
             }
         }
     }
