@@ -147,6 +147,7 @@ namespace Opm {
         using Base::terminal_output_;
         using Base::grid_;
         using Base::canph_;
+        using Base::residual_;
 
 
         // Diff to the pressure of the related segment.

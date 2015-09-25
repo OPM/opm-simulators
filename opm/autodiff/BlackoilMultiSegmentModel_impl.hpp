@@ -788,15 +788,15 @@ namespace Opm {
         // the equations is for each segment
         const int np = numPhases();
         const int nw = wellsMultiSegment().size();
+        const int nseg_total = state.segp.size();
 
         ADB segqs = state.segqs;
 
-        const int nseg = state.pressure.size();
-
         for (int phase = 0; phase < np; ++phase) {
+            int start_segment = 0;
+            int start_perforation = 0;
             for (int w = 0; w < nw; ++w) {
                 WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-
                 // the equation is
                 // /deta m_p_n - /sigma Q_pi - /sigma q_pj + Q_pn = 0
                 // Q_pn + /deta m_p_n - /sigma Q_pi - /sigma q_pj = 0
@@ -814,8 +814,34 @@ namespace Opm {
 
                 // For this version, we will ignore the wellbore volume effects
                 // In the DATA file, the well bore volumes are set to be zero already.
+                // The equation is Q_pn - /sigma Q_pi - /sigma q_pj = 0;
+                const int nperf = well->numberOfPerforations();
+                const int nseg = well->numberOfSegments();
+
+                // perforate rates for this well
+                const ADB& cq_s_perf = subset(cq_s[phase], Span(nperf, 1, start_perforation));
+
+                // sum of the perforate rates to its related segment
+                const ADB& cq_s_seg = well->wellOps().p2s_gather * cq_s_perf;
+
+                const int start_position = start_segment + phase * nseg_total;
+                // the segment rates of this well
+                const ADB& segqs_well = subset(segqs, Span(nseg, 1, start_position));
+
+                if (well->isMultiSegmented()) {
+                    segqs -= superset(cq_s_seg + well->wellOps().s2s_outlet * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
+                }
+                else
+                {
+                    segqs -= superset(cq_s_seg, Span(1, 1, start_position), np * nseg_total);
+                }
+                start_segment += nseg;
+                start_perforation += nperf;
             }
+            assert(start_segment == nseg_total);
         }
+
+        residual_.well_flux_eq = segqs;
     }
 
 
