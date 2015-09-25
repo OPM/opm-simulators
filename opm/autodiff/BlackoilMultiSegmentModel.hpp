@@ -231,10 +231,10 @@ namespace Opm {
         addWellFluxEq(const std::vector<ADB>& cq_s,
                       const SolutionState& state);
 
-        /* void
+        void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
-                                           const WellState& xw) {}; */
+                                           const WellState& xw);
 
         /* void
         addWellControlEq(const SolutionState& state,

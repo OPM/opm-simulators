@@ -482,20 +482,41 @@ namespace Opm {
         computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         addWellFluxEq(cq_s, state);
-        // asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
+        addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // addWellControlEq(state, well_state, aliveWells);
     }
 
 
 
-/*
 
-    template <class Grid, class Implementation>
+
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
-                                                                                const SolutionState&,
-                                                                                const WellState&)
+    BlackoilMultiSegmentModel<Grid>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
+                                                                const SolutionState&,
+                                                                const WellState& xw)
     {
+        // For the version at the moment, it has to be done one well by one well
+        // later, we may need to develop a new wells class for optimization.
+        const int nw = wellsMultiSegment().size();
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int np = numPhases();
+        const int nperf = xw.numberOfPerforations();
+
+        std::vector<int> well_cells;
+
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            well_cells.insert(well_cells.end(), well->wellCells().begin(), well->wellCells().end());
+        }
+
+        assert(well_cells.size() == nperf);
+
+        for (int phase = 0; phase < np; ++phase) {
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
+        }
+
+
         // TODO: it must be done one by one?
         // or we develop a new Wells class?
         // Add well contributions to mass balance equations
@@ -509,7 +530,7 @@ namespace Opm {
         // }
     }
 
-*/
+
 
 
 
