@@ -206,7 +206,6 @@ namespace Opm {
         using Base::fluidRsSat;
         using Base::fluidDensity;
         using Base::updatePhaseCondFromPrimalVariable;
-        using Base::updateWellState;
         using Base::computeGasPressure;
         using Base::dpMaxRel;
         using Base::dsMax;
@@ -218,8 +217,8 @@ namespace Opm {
 
         using Base::variableState;
 
-        // void updateWellState(const V& dwells,
-        //                      WellState& well_state) {};
+        void updateWellState(const V& dwells,
+                             WellState& well_state);
 
         void
         variableWellStateInitials(const WellState& xw,

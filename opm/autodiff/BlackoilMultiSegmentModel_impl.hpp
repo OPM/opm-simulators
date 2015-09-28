@@ -1362,103 +1362,74 @@ namespace Opm {
 
 
 
-/*
-    template <class Grid, class Implementation>
+
+    template <class Grid>
     void
-    BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dwells,
-                                                             WellState& well_state)
+    BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
+                                             WellState& well_state)
     {
 
-        if( localWellsActive() )
+        if( !wellsMultiSegment().empty() )
         {
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
+            const int np = numPhases();
+            const int nw = wellsMultiSegment().size();
+            const int nseg_total = well_state.numberOfSegments();
 
             // Extract parts of dwells corresponding to each part.
             int varstart = 0;
-            const V dqs = subset(dwells, Span(np*nw, 1, varstart));
-            varstart += dqs.size();
-            const V dbhp = subset(dwells, Span(nw, 1, varstart));
-            varstart += dbhp.size();
+            const V dsegqs = subset(dwells, Span(np * nseg_total, 1, varstart));
+            varstart += dsegqs.size();
+            const V dsegp = subset(dwells, Span(nseg_total, 1, varstart));
+            varstart += dsegp.size();
             assert(varstart == dwells.size());
             const double dpmaxrel = dpMaxRel();
 
 
-            // Qs update.
-            // Since we need to update the wellrates, that are ordered by wells,
-            // from dqs which are ordered by phase, the simplest is to compute
-            // dwr, which is the data from dqs but ordered by wells.
-            const DataBlock wwr = Eigen::Map<const DataBlock>(dqs.data(), np, nw).transpose();
-            const V dwr = Eigen::Map<const V>(wwr.data(), nw*np);
-            const V wr_old = Eigen::Map<const V>(&well_state.wellRates()[0], nw*np);
-            const V wr = wr_old - dwr;
-            std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+            // segment phase rates update
+            // in dwells, the phase rates are ordered by phase.
+            // while in WellStateMultiSegment, the phase rates are ordered by segments
+            const DataBlock wsr = Eigen::Map<const DataBlock>(dsegqs.data(), np, nseg_total).transpose();
+            const V dwsr = Eigen::Map<const V>(wsr.data(), nseg_total * np);
+            const V wsr_old = Eigen::Map<const V>(&well_state.segPhaseRates()[0], nseg_total * np);
+            const V sr = wsr_old - dwsr;
+            std::copy(&sr[0], &sr[0] + sr.size(), well_state.segPhaseRates().begin());
+
+
+            // segment pressure updates
+            const V segp_old = Eigen::Map<const V>(&well_state.segPress()[0], nseg_total, 1);
+            // TODO: applying the pressure change limiter to all the segments, not sure if it is the correct thing to do
+            const V dsegp_limited = sign(dsegp) * dsegp.abs().min(segp_old.abs() * dpmaxrel);
+            const V segp = segp_old - dsegp_limited;
+
+
+            // update the well rates and bhps, which are not anymore primary vabriables.
+            // they are updated directly from the updated segment phase rates and segment pressures.
 
             // Bhp update.
-            const V bhp_old = Eigen::Map<const V>(&well_state.bhp()[0], nw, 1);
-            const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
-            const V bhp = bhp_old - dbhp_limited;
-            std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
+            V bhp = V::Zero(nw);
+            V wr = V::Zero(nw * np);
+            // it is better to use subset
 
-            //Get gravity for THP hydrostatic correction
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-
-            // Thp update
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            //Loop over all wells
-            for (int w=0; w<nw; ++w) {
-                const WellControls* wc = wells().ctrls[w];
-                const int nwc = well_controls_get_num(wc);
-                //Loop over all controls until we find a THP control
-                //that specifies what we need...
-                //Will only update THP for wells with THP control
-                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
-                    if (well_controls_iget_type(wc, ctrl_index) == THP) {
-                        double aqua = 0.0;
-                        double liquid = 0.0;
-                        double vapour = 0.0;
-
-                        if (active_[ Water ]) {
-                            aqua = wr[w*np + pu.phase_pos[ Water ] ];
-                        }
-                        if (active_[ Oil ]) {
-                            liquid = wr[w*np + pu.phase_pos[ Oil ] ];
-                        }
-                        if (active_[ Gas ]) {
-                            vapour = wr[w*np + pu.phase_pos[ Gas ] ];
-                        }
-
-                        double alq = well_controls_iget_alq(wc, ctrl_index);
-                        int table_id = well_controls_iget_vfp(wc, ctrl_index);
-
-                        const WellType& well_type = wells().type[w];
-                        if (well_type == INJECTOR) {
-                            double dp = detail::computeHydrostaticCorrection(
-                                    wells(), w, vfp_properties_.getInj()->getTable(table_id)->getDatumDepth(),
-                                    well_perforation_densities_, gravity);
-
-                            well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
-                        }
-                        else if (well_type == PRODUCER) {
-                            double dp = detail::computeHydrostaticCorrection(
-                                    wells(), w, vfp_properties_.getProd()->getTable(table_id)->getDatumDepth(),
-                                    well_perforation_densities_, gravity);
-
-                            well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
-                        }
-                        else {
-                            OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
-                        }
-
-                        //Assume only one THP control specified for each well
-                        break;
-                    }
+            int start_segment = 0;
+            for (int w = 0; w < nw; ++w) {
+                bhp[w] = well_state.segPress()[start_segment];
+                // insert can be faster
+                for (int p = 0; p < np; ++p) {
+                    wr[p + np * w] = well_state.segPhaseRates()[p + np * start_segment];
                 }
+
+                const int nseg = wellsMultiSegment()[w]->numberOfSegments();
+                start_segment += nseg;
             }
+
+            assert(start_segment == nseg_total);
+            std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
+            std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
+
+            // TODO: handling the THP control related.
         }
     }
 
-    */
 
 
 
