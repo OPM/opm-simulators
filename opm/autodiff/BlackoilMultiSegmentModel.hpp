@@ -236,10 +236,10 @@ namespace Opm {
                                            const SolutionState& state,
                                            const WellState& xw);
 
-        /* void
+        void
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
-                         const V& aliveWells) {}; */
+                         const V& aliveWells);
 
         void
         makeConstantState(SolutionState& state) const;

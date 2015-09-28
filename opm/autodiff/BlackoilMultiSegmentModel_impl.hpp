@@ -483,7 +483,7 @@ namespace Opm {
         updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         addWellFluxEq(cq_s, state);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        // addWellControlEq(state, well_state, aliveWells);
+        addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -993,62 +993,54 @@ namespace Opm {
     }
 
 
-/*
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::addWellControlEq(const SolutionState& state,
-                                                                   const WellState& xw,
-                                                                   const V& aliveWells)
+
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::addWellControlEq(const SolutionState& state,
+                                                           const WellState& xw,
+                                                           const V& aliveWells)
     {
         // the name of the function is a a little misleading.
         // Basically it is the function for the pressure equation.
         // And also, it work as the control equation when it is the segment
         if( wellsMultiSegment().empty() ) return;
 
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
+        const int np = numPhases();
+        const int nw = wellsMultiSegment().size();
+        const int nseg_total = xw.numberOfSegments();
 
-        ADB aqua   = ADB::constant(ADB::V::Zero(nw));
-        ADB liquid = ADB::constant(ADB::V::Zero(nw));
-        ADB vapour = ADB::constant(ADB::V::Zero(nw));
+        ADB aqua   = ADB::constant(ADB::V::Zero(nseg_total));
+        ADB liquid = ADB::constant(ADB::V::Zero(nseg_total));
+        ADB vapour = ADB::constant(ADB::V::Zero(nseg_total));
 
         if (active_[Water]) {
-            aqua += subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
+            aqua += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Aqua * nseg_total));
         }
         if (active_[Oil]) {
-            liquid += subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
+            liquid += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Liquid * nseg_total));
         }
         if (active_[Gas]) {
-            vapour += subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
+            vapour += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Vapour * nseg_total));
         }
 
-        //THP calculation variables
-        std::vector<int> inj_table_id(nw, -1);
-        std::vector<int> prod_table_id(nw, -1);
-        ADB::V thp_inj_target_v = ADB::V::Zero(nw);
-        ADB::V thp_prod_target_v = ADB::V::Zero(nw);
-        ADB::V alq_v = ADB::V::Zero(nw);
+        // THP control is not implemented for the moment.
 
-        //Hydrostatic correction variables
+        // Hydrostatic correction variables
         ADB::V rho_v = ADB::V::Zero(nw);
         ADB::V vfp_ref_depth_v = ADB::V::Zero(nw);
 
-        //Target vars
+        // Target vars
         ADB::V bhp_targets  = ADB::V::Zero(nw);
         ADB::V rate_targets = ADB::V::Zero(nw);
         Eigen::SparseMatrix<double>  rate_distr(nw, np*nw);
 
-        //Selection variables
+        // Selection variables
         std::vector<int> bhp_elems;
-        std::vector<int> thp_inj_elems;
-        std::vector<int> thp_prod_elems;
         std::vector<int> rate_elems;
-
-        int start_perforation = 0;
 
         //Run through all wells to calculate BHP/RATE targets
         //and gather info about current control
         for (int w = 0; w < nw; ++w) {
-            const struct WellControls* wc = wellsMultiSegment()[w].wellControls();
+            const struct WellControls* wc = wellsMultiSegment()[w]->wellControls();
 
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
@@ -1058,7 +1050,7 @@ namespace Opm {
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
             {
-                bhp_elems.push_back(w);
+                // bhp_elems.push_back(w);
                 bhp_targets(w)  = well_controls_iget_target(wc, current);
                 rate_targets(w) = -1e100;
             }
@@ -1066,44 +1058,14 @@ namespace Opm {
 
             case THP:
             {
-                // the first perforation?
-                const int perf = start_perforation;
-                rho_v[w] = well_perforation_densities_[perf];
-
-                const int table_id = well_controls_iget_vfp(wc, current);
-                const double target = well_controls_iget_target(wc, current);
-
-                const WellType& well_type = wellsMultiSegment()[w].wellType();
-                if (well_type == INJECTOR) {
-                    inj_table_id[w]  = table_id;
-                    thp_inj_target_v[w] = target;
-                    alq_v[w]     = -1e100;
-
-                    vfp_ref_depth_v[w] = vfp_properties_.getInj()->getTable(table_id)->getDatumDepth();
-
-                    thp_inj_elems.push_back(w);
-                }
-                else if (well_type == PRODUCER) {
-                    prod_table_id[w]  = table_id;
-                    thp_prod_target_v[w] = target;
-                    alq_v[w]      = well_controls_iget_alq(wc, current);
-
-                    vfp_ref_depth_v[w] =  vfp_properties_.getProd()->getTable(table_id)->getDatumDepth();
-
-                    thp_prod_elems.push_back(w);
-                }
-                else {
-                    OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER type well");
-                }
-                bhp_targets(w)  = -1e100;
-                rate_targets(w) = -1e100;
+                OPM_THROW(std::runtime_error, "THP control is not implemented for multi-sgement wells yet!!");
             }
             break;
 
             case RESERVOIR_RATE: // Intentional fall-through
             case SURFACE_RATE:
             {
-                rate_elems.push_back(w);
+                // rate_elems.push_back(w);
                 // RESERVOIR and SURFACE rates look the same, from a
                 // high-level point of view, in the system of
                 // simultaneous linear equations.
@@ -1119,35 +1081,40 @@ namespace Opm {
                 rate_targets(w) = well_controls_iget_target(wc, current);
             }
             break;
-            }
 
-            start_perforation += wellsMultiSegment()[w].numberOfPerforations();
+            }
         }
 
-        //Calculate BHP target from THP
-        const ADB thp_inj_target = ADB::constant(thp_inj_target_v);
-        const ADB thp_prod_target = ADB::constant(thp_prod_target_v);
-        const ADB alq = ADB::constant(alq_v);
-        const ADB bhp_from_thp_inj = vfp_properties_.getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
-        const ADB bhp_from_thp_prod = vfp_properties_.getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
 
-        //Perform hydrostatic correction to computed targets
-        double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB::V dp_v = detail::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, well_perforation_densities_, gravity);
-        const ADB dp = ADB::constant(dp_v);
-        const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
-        const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
+        // for each segment: 1, if the segment is the top segment, then control equation
+        //                   2, if the segment is not the top segment, then the pressure equation
 
-        // for each segments (we will have the pressure equations);
-        // so here will be another iteration over wells.
-        // for the top segments (we will have the control equations);
-        //Calculate residuals
-        //  const ADB thp_inj_residual = state.bhp - bhp_from_thp_inj + dp_inj;
+        // Calculate residuals
+        for (int w = 0; w < nw; ++w) {
+            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
+            for (int s = 0; s < nseg; ++s) {
+                // assuming the top segment always be the first one.
+                if (s==0) {
+
+                }
+                // Three types of the pressure loss calculation
+                // hydrostatic term depends of th density of the fluid mixture withn the segment,
+                // TODO: as the first version, wo do not consider the rs rv in the mass flow rate and
+                // fluid mixture density cacluation.
+                // the FVF is based on the segment pressure
+                // then the depth difference of the well segments
+                // surface unit
+                // frictional pressure drop
+                // acceleration pressure drop
+            }
+        }
+
+        // const ADB thp_inj_residual = state.bhp - bhp_from_thp_inj + dp_inj;
         // const ADB thp_prod_residual = state.bhp - bhp_from_thp_prod + dp_prod;
         // const ADB bhp_residual = state.bhp - bhp_targets;
         // const ADB rate_residual = rate_distr * state.qs - rate_targets;
 
-        //Select the right residual for each well
+        // Select the right residual for each well
         // residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, nw) +
         //         superset(subset(thp_inj_residual, thp_inj_elems), thp_inj_elems, nw) +
         //         superset(subset(thp_prod_residual, thp_prod_elems), thp_prod_elems, nw) +
@@ -1169,7 +1136,7 @@ namespace Opm {
     }
 
 
-*/
+
 
 /*
     template <class Grid, class Implementation>
