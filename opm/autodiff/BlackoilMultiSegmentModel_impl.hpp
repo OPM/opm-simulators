@@ -1434,6 +1434,123 @@ namespace Opm {
 
 
 
+
+
+    template <class Grid>
+    bool
+    BlackoilMultiSegmentModel<Grid>::getConvergence(const double dt, const int iteration)
+    {
+
+        const double tol_mb    = param_.tolerance_mb_;
+        const double tol_cnv   = param_.tolerance_cnv_;
+        const double tol_wells = param_.tolerance_wells_;
+
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int nw = wellsMultiSegment().size();
+        // no good way to store nseg?
+        int nseg_total = 0;
+        for (int w = 0; w < nw; ++w) {
+            nseg_total += wellsMultiSegment()[w]->numberOfSegments();
+        }
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+
+        const V pv = geo_.poreVolume();
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
+        std::array<double,MaxNumPhases> CNV                   = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
+        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
+        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
+        std::vector<double> maxNormWell(MaxNumPhases);
+
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            if (active_[idx]) {
+                const int pos    = pu.phase_pos[idx];
+                const ADB& tempB = rq_[pos].b;
+                B.col(idx)       = 1./tempB.value();
+                R.col(idx)       = residual_.material_balance_eq[idx].value();
+                tempV.col(idx)   = R.col(idx).abs()/pv;
+            }
+        }
+
+        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
+                                                  maxNormWell, nc, nseg_total);
+
+        bool converged_MB = true;
+        bool converged_CNV = true;
+        bool converged_Well = true;
+        // Finish computation
+        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        {
+            CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
+            mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
+            converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
+            converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
+            well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
+
+            converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+        }
+
+        const double residualWell     = detail::infinityNormWell(residual_.well_eq,
+                                                                 linsolver_.parallelInformation());
+        converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
+        const bool   converged        = converged_MB && converged_CNV && converged_Well;
+
+        // Residual in Pascal can have high values and still be ok.
+        const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
+
+        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
+        if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
+            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
+            std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
+            std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
+            std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
+            std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
+            std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
+            std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
+            std::isnan(residualWell) || residualWell > maxWellResidualAllowed )
+        {
+            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
+        }
+
+        if ( terminal_output_ )
+        {
+            // Only rank 0 does print to std::cout
+            if (iteration == 0) {
+                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)       CNVW       CNVO       CNVG   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
+            }
+            const std::streamsize oprec = std::cout.precision(3);
+            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
+            std::cout << std::setw(4) << iteration
+                      << std::setw(11) << mass_balance_residual[Water]
+                      << std::setw(11) << mass_balance_residual[Oil]
+                      << std::setw(11) << mass_balance_residual[Gas]
+                      << std::setw(11) << CNV[Water]
+                      << std::setw(11) << CNV[Oil]
+                      << std::setw(11) << CNV[Gas]
+                      << std::setw(11) << well_flux_residual[Water]
+                      << std::setw(11) << well_flux_residual[Oil]
+                      << std::setw(11) << well_flux_residual[Gas]
+                      << std::endl;
+            std::cout.precision(oprec);
+            std::cout.flags(oflags);
+        }
+        return converged;
+    }
+
+
+
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODELBASE_IMPL_HEADER_INCLUDED

@@ -119,6 +119,13 @@ namespace Opm {
                       const bool initial_assembly);
 
 
+        /// Compute convergence based on total mass balance (tol_mb) and maximum
+        /// residual mass balance (tol_cnv).
+        /// \param[in]   dt          timestep length
+        /// \param[in]   iteration   current iteration number
+        bool getConvergence(const double dt, const int iteration);
+
+
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
@@ -155,6 +162,8 @@ namespace Opm {
         using Base::has_vapoil_;
         using Base::primalVariable_;
         using Base::cells_;
+        using Base::param_;
+        using Base::linsolver_;
 
 
         // Diff to the pressure of the related segment.
@@ -210,12 +219,14 @@ namespace Opm {
         using Base::dpMaxRel;
         using Base::dsMax;
         using Base::drMaxRel;
+        using Base::convergenceReduction;
+        using Base::maxResidualAllowed;
+        using Base::variableState;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
         void updateWellControls(WellState& xw) const;
 
-        using Base::variableState;
 
         void updateWellState(const V& dwells,
                              WellState& well_state);
