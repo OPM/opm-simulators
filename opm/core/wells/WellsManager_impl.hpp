@@ -159,8 +159,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                         }
                         else
                         {
-                            OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                                      << k << " not found in grid (well = " << well->name() << ')');
+                            OPM_MESSAGE("****Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
+                                      << k << " not found in grid. The completion will be igored (well = "
+                                      << well->name() << ')');
                         }
                     }
                     else
