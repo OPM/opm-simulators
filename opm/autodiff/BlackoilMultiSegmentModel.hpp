@@ -123,9 +123,9 @@ namespace Opm {
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        /* void updateState(const V& dx,
+        void updateState(const V& dx,
                          ReservoirState& reservoir_state,
-                         WellState& well_state) {}; */
+                         WellState& well_state);
         using Base::numPhases;
 
     protected:
@@ -148,6 +148,13 @@ namespace Opm {
         using Base::grid_;
         using Base::canph_;
         using Base::residual_;
+        using Base::isSg_;
+        using Base::isRs_;
+        using Base::isRv_;
+        using Base::has_disgas_;
+        using Base::has_vapoil_;
+        using Base::primalVariable_;
+        using Base::cells_;
 
 
         // Diff to the pressure of the related segment.
@@ -198,6 +205,12 @@ namespace Opm {
         using Base::fluidRvSat;
         using Base::fluidRsSat;
         using Base::fluidDensity;
+        using Base::updatePhaseCondFromPrimalVariable;
+        using Base::updateWellState;
+        using Base::computeGasPressure;
+        using Base::dpMaxRel;
+        using Base::dsMax;
+        using Base::drMaxRel;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 

@@ -1138,16 +1138,16 @@ namespace Opm {
 
 
 
-/*
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updateState(const V& dx,
+
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::updateState(const V& dx,
                                           ReservoirState& reservoir_state,
                                           WellState& well_state)
     {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
         const int nc = numCells(grid_);
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
+        const int nw = wellsMultiSegment().size();
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
@@ -1162,7 +1162,8 @@ namespace Opm {
         varstart += dxvar.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span((np+1)*nw, 1, varstart));
+        const int nseg_total = well_state.numberOfSegments();
+        const V dwells = subset(dx, Span((np+1)*nseg_total, 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());
@@ -1357,7 +1358,7 @@ namespace Opm {
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable();
     }
-*/
+
 
 
 
