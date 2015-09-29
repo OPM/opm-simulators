@@ -797,6 +797,7 @@ namespace Opm {
 
         // TODO: update the perforation pressures.
         // it should be based on the segment pressures
+        // it should be done at least for the non-segmented wells
         // Then it makes it necessary to update the segment pressures and phase rates.
     }
 
