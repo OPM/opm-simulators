@@ -82,6 +82,7 @@ namespace Opm {
         , well_perforation_pressure_cell_diffs_adb_(ADB::null())
         , well_perforation_cell_densities_adb_(ADB::null())
         , well_perforations_segment_pressure_diffs_(ADB::null())
+        , well_segment_densities_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
 
@@ -480,6 +481,7 @@ namespace Opm {
         // the perforation flux here are different
         // it is related to the segment location
         computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        computeSegmentDensities(state, cq_s, b_perfcells, well_state);
         updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         addWellFluxEq(cq_s, state);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -1549,6 +1551,87 @@ namespace Opm {
         return converged;
     }
 
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state,
+                                                             const std::vector<ADB>& cq_s,
+                                                             const std::vector<ADB>& b_perf,
+                                                             const WellState& xw)
+    {
+        // how to calculate the formation valume factor for the segments is the most tricky part.
+        // ave_rho = (\sigma(rho_surf * Q_surf)) / (\sigma(rho_surf * B))
+        // how to calculate the rs and rv to obtain B
+        // should we relate the segments with different cells
+        // TODO: as the first solution, we calculate the rs and rv as the average rs and rv from the related perforations.
+        // Based on the current framework, it has to be done one well by one well
+        const int nw = xw.numberOfWells();
+        const int nseg_total = xw.numberOfSegments();
+        const int np = numPhases();
+
+        assert(np == b_perf.size());
+
+        well_segment_densities_ = ADB::constant(V::Zero(nseg_total)); // initialize to be zero
+
+        int start_segment = 0;
+        int start_perforation = 0;
+
+        // surface density
+        std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + np);
+
+        for (int w = 0; w < nw; ++w) {
+            // TODO: to check to make sure b_perf is B or 1/B
+            // TODO: now for non-segmented wells, we do not calculate the segment densities.
+            //       If the WELSPECS set the AVG, the density for the wellbore can be same with the segment density.
+            // TODO: which is one way to unify the implementation
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
+
+            if (well->isMultiSegmented()) {
+                // calculate the the formation volume factor.
+                // calcuate the rs and rv first
+                // at the moment, the rs and rv are the averaged rs and rv for the perforation cells related to the segment
+                std::vector<ADB> b_perf_well(np, ADB::null());
+                std::vector<ADB> cq_s_well(np, ADB::null());
+                std::vector<ADB> b_segment(np, ADB::null());
+
+                // accumlated phase rates for segments from the perforations
+                std::vector<ADB> q_ps(np, ADB::null());
+                std::vector<ADB> b_seg(np, ADB::null());
+                for (int p = 0; p < np; ++p) {
+                    cq_s_well[p] = subset(cq_s[p], Span(nperf, 1, start_perforation));
+                    b_perf_well[p] = subset(b_perf[p], Span(nperf, 1, start_perforation));
+
+                    q_ps[p] = well->wellOps().p2s_gather * cq_s_well[p];
+                    b_seg[p] = well->wellOps().p2s_average * b_perf_well[p];
+                }
+
+                ADB density = ADB::constant(V::Zero(nseg));
+
+                ADB temp_rho_q = ADB::constant(V::Zero(nseg));
+                ADB temp_volume_rate = ADB::constant(V::Zero(nseg));
+
+                for (int p = 0; p < np; ++p) {
+                    temp_rho_q += q_ps[p] * surf_dens[p];
+                    temp_volume_rate += q_ps[p] * b_seg[p];
+                }
+
+                density = temp_rho_q / temp_volume_rate;
+
+                well_segment_densities_ += superset(density, Span(nseg, 1, start_segment), nseg_total);
+                // formation factor volume B should be calculated based on the segment pressures
+                // how to handle rs and rv to calculate B
+                // ADB& seg_press = subset(state.segp, Span(nseg, 1, start_segment));
+
+            }
+            start_segment += nseg;
+            start_perforation += nperf;
+        }
+    }
 
 
 

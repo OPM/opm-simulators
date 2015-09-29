@@ -203,6 +203,10 @@ namespace Opm {
 
         V well_perforatoin_cell_pressure_diffs_;
 
+        // the density of the fluid mixture in the segments
+        // which is calculated in a implicit way
+        ADB well_segment_densities_;
+
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         // return wells object
@@ -271,6 +275,12 @@ namespace Opm {
         variableStateExtractWellsVars(const std::vector<int>& indices,
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
+
+        void
+        computeSegmentDensities(const SolutionState& state,
+                                const std::vector<ADB>& cq_s,
+                                const std::vector<ADB>& b_perfcells,
+                                const WellState& xw);
 
 
     };
