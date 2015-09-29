@@ -79,6 +79,7 @@ namespace Opm
         struct WellOps {
             M s2p;              // segment -> perf (scatter)
             M p2s;              // perf -> segment (gather)
+            M p2s_average;      // perf -> segment (avarage)
             // M w2p;              // well -> perf (scatter)
             // M p2w;              // perf - > well (gather)
                                 // but since only one well, so it is just an arrary

@@ -310,6 +310,22 @@ namespace Opm
         // s2outlet
         m_wops_.s2s_outlet = M(m_number_of_segments_, m_number_of_segments_);
         m_wops_.s2s_outlet.setFromTriplets(s2s_outlet.begin(), s2s_outlet.end());
+
+        m_wops_.p2s_average = M(m_number_of_segments_, m_number_of_perforations_);
+        std::vector<Tri> p2s_average;
+        p2s_average.reserve(m_number_of_segments_);
+
+        for (int s = 0; s < (int)m_number_of_segments_; ++s) {
+            const int nperf = m_segment_perforations_[s].size();
+            if (nperf > 0) {
+                p2s_average.push_back(Tri(s, s, 1.0/nperf));
+            }
+        }
+
+        // constructing the diagonal matrix to do the averaging for p2s
+        M temp_averaging_p2s = M(m_number_of_segments_, m_number_of_segments_);
+        temp_averaging_p2s.setFromTriplets(p2s_average.begin(), p2s_average.end());
+        m_wops_.p2s_average = temp_averaging_p2s * m_wops_.p2s;
     }
 
     const std::string& WellMultiSegment::name() const {
