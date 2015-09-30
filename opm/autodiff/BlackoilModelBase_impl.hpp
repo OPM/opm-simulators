@@ -2312,7 +2312,8 @@ namespace detail {
                                                                   int nc,
                                                                   int nw) const
     {
-        const int num_elems = B.cols();
+        const int np = asImpl().numPhases();
+        const int nm = asImpl().numMaterials();
 
         // Do the global reductions
 #if HAVE_MPI
@@ -2361,20 +2362,22 @@ namespace detail {
         else
 #endif
         {
-            B_avg.resize(num_elems);
-            maxCoeff.resize(num_elems);
-            R_sum.resize(num_elems);
-            maxNormWell.resize(num_elems);
-            for ( int idx = 0; idx < num_elems; ++idx )
+            B_avg.resize(nm);
+            maxCoeff.resize(nm);
+            R_sum.resize(nm);
+            maxNormWell.resize(np);
+            for ( int idx = 0; idx < nm; ++idx )
             {
                 B_avg[idx] = B.col(idx).sum()/nc;
                 maxCoeff[idx] = tempV.col(idx).maxCoeff();
                 R_sum[idx] = R.col(idx).sum();
 
-                maxNormWell[idx] = 0.0;
-                for ( int w = 0; w < nw; ++w )
-                {
-                    maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                assert(nm >= np);
+                if (idx < np) {
+                    maxNormWell[idx] = 0.0;
+                    for ( int w = 0; w < nw; ++w ) {
+                        maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    }
                 }
             }
             // Compute total pore volume
