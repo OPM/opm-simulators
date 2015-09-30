@@ -2458,7 +2458,6 @@ namespace detail {
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                // std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)       CNVW       CNVO       CNVG   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
                 std::cout << "\nIter";
                 for (int idx = 0; idx < np; ++idx) {
                     std::cout << "   MB(" << phaseName(idx).substr(0, 3) << ") ";
@@ -2508,10 +2507,9 @@ namespace detail {
         std::vector<double> R_sum(np);
         std::vector<double> B_avg(np);
         std::vector<double> maxCoeff(np);
-        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
         std::vector<double> maxNormWell(MaxNumPhases);
         for ( int idx = 0; idx < np; ++idx )
         {
@@ -2534,30 +2532,36 @@ namespace detail {
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
-        converged_Well  = converged_Well && (residualWell < Opm::unit::barsa);
-        const bool   converged        = converged_Well;
+        converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+        const bool converged = converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if (std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() )
-        {
-            OPM_THROW(Opm::NumericalProblem,"One of the well residuals is NaN or too large!");
+        for (int idx = 0; idx < np; ++idx) {
+            if (std::isnan(well_flux_residual[idx])) {
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName(idx));
+            }
+            if (well_flux_residual[idx] > maxResidualAllowed()) {
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName(idx));
+            }
         }
 
         if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
+                std::cout << "\nIter";
+                for (int idx = 0; idx < np; ++idx) {
+                    std::cout << "  W-FLUX(" << phaseName(idx).substr(0, 1) << ")";
+                }
+                std::cout << '\n';
             }
             const std::streamsize oprec = std::cout.precision(3);
             const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-            std::cout << std::setw(4) << iteration
-                      << std::setw(11) << well_flux_residual[Water]
-                      << std::setw(11) << well_flux_residual[Oil]
-                      << std::setw(11) << well_flux_residual[Gas]
-                      << std::endl;
+            std::cout << std::setw(4) << iteration;
+            for (int idx = 0; idx < np; ++idx) {
+                std::cout << std::setw(11) << well_flux_residual[idx];
+            }
+            std::cout << std::endl;
             std::cout.precision(oprec);
             std::cout.flags(oflags);
         }
