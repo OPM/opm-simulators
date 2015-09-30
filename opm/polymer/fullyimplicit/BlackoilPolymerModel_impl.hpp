@@ -110,6 +110,7 @@ namespace Opm {
             // If deck has polymer, residual_ should contain polymer equation.
             rq_.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
+            Base::material_name_.push_back("Polymer");
             assert(poly_pos_ == fluid_.numPhases());
         }
     }
@@ -454,7 +455,7 @@ namespace Opm {
 
 
 
-
+    /*
     template <class Grid>
     double
     BlackoilPolymerModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
@@ -537,7 +538,7 @@ namespace Opm {
             return geo_.poreVolume().sum();
         }
     }
-
+    */
 
     template <class Grid>
     void
@@ -629,7 +630,7 @@ namespace Opm {
 
 
 
-
+    /*
     template <class Grid>
     bool
     BlackoilPolymerModel<Grid>::getConvergence(const double dt, const int iteration)
@@ -742,6 +743,7 @@ namespace Opm {
         }
         return converged;
     }
+    */
 
     template <class Grid>
     ADB

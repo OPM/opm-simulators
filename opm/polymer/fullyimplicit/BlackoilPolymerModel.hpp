@@ -119,7 +119,7 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         /// \param[in]   dt          timestep length
         /// \param[in]   iteration   current iteration number
-        bool getConvergence(const double dt, const int iteration);
+        // bool getConvergence(const double dt, const int iteration);
 
         /// Assemble the residual and Jacobian of the nonlinear system.
         /// \param[in]      reservoir_state   reservoir state variables
@@ -275,16 +275,16 @@ namespace Opm {
         ///                   of B for the phase i.
         /// \param[in]  nc    The number of cells of the local grid.
         /// \return The total pore volume over all cells.
-        double
-        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
-                             std::array<double,MaxNumPhases+1>& R_sum,
-                             std::array<double,MaxNumPhases+1>& maxCoeff,
-                             std::array<double,MaxNumPhases+1>& B_avg,
-                             std::vector<double>& maxNormWell,
-                             int nc,
-                             int nw) const;
+        // double
+        // convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
+        //                      const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
+        //                      const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
+        //                      std::array<double,MaxNumPhases+1>& R_sum,
+        //                      std::array<double,MaxNumPhases+1>& maxCoeff,
+        //                      std::array<double,MaxNumPhases+1>& B_avg,
+        //                      std::vector<double>& maxNormWell,
+        //                      int nc,
+        //                      int nw) const;
 
         /// Computing the water velocity without shear-thinning for the cell faces.
         /// The water velocity will be used for shear-thinning calculation.
