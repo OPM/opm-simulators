@@ -172,10 +172,6 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::BlackoilOutputWriter outputWriter(cGrid,
-                                           param,
-                                           eclipseState,
-                                           pu );
 
     // Rock and fluid init
 
@@ -238,6 +234,11 @@ try
     }
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
+
+    Opm::BlackoilOutputWriter
+        outputWriter(cGrid, param, eclipseState, pu,
+                     new_props->permeability());
+
     SimulatorReport fullReport;
     // Create and run simulator.
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
