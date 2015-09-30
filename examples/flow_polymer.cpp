@@ -184,10 +184,6 @@ try
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
-    Opm::BlackoilOutputWriter outputWriter(cGrid,
-                                           param,
-                                           eclipseState,
-                                           pu );
 
     // Rock and fluid init
 
@@ -284,6 +280,10 @@ try
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
 
     std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, *grid->c_grid());
+
+    Opm::BlackoilOutputWriter
+        outputWriter(cGrid, param, eclipseState, pu,
+                     new_props->permeability());
 
     SimulatorFullyImplicitBlackoilPolymer<UnstructuredGrid>
         simulator(param,
