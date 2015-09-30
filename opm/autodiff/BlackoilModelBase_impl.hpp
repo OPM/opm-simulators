@@ -2384,7 +2384,7 @@ namespace detail {
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
-        const int np = numPhases();
+        const int np = asImpl().numPhases();
         assert(int(rq_.size()) == np);
 
         const V pv = geo_.poreVolume();
@@ -2501,7 +2501,7 @@ namespace detail {
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
-        const int np = numPhases();
+        const int np = asImpl().numPhases();
 
         const V pv = geo_.poreVolume();
         std::vector<double> R_sum(np);
