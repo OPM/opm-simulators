@@ -30,16 +30,6 @@
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
-	tests/test_fluidmatrixinteractions.cpp
-	tests/test_pengrobinson.cpp
-	tests/test_localad.cpp
-	tests/test_ncpflash.cpp
-	tests/test_spline.cpp
-	tests/test_tabulation.cpp
-	tests/test_2dtables.cpp
-	tests/test_components.cpp
-	tests/test_fluidsystems.cpp
-	tests/test_immiscibleflash.cpp
 	)
 
 # originally generated with the command:
