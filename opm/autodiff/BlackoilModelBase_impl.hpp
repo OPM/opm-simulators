@@ -179,7 +179,9 @@ namespace detail {
                         ADB::null(),
                         { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
         , terminal_output_ (terminal_output)
+        , phase_name_{ "Water", "Oil", "Gas" }
     {
+        assert(numPhases() == 3); // Due to the phase_name_ init above.
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -278,6 +280,19 @@ namespace detail {
     numPhases() const
     {
         return fluid_.numPhases();
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    const std::string&
+    BlackoilModelBase<Grid, Implementation>::
+    phaseName(int phase_index) const
+    {
+        assert(phase_index < numPhases());
+        return phase_name_[phase_index];
     }
 
 

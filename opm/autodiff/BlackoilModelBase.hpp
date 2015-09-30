@@ -208,6 +208,9 @@ namespace Opm {
         /// The number of active phases in the model.
         int numPhases() const;
 
+        /// The name of an active phase in the model.
+        const std::string& phaseName(int phase_index) const;
+
         /// Update the scaling factors for mass balance equations
         void updateEquationsScaling();
 
@@ -274,6 +277,7 @@ namespace Opm {
 
         std::vector<int>         primalVariable_;
         V pvdt_;
+        std::vector<std::string> phase_name_;
 
         // ---------  Protected methods  ---------
 
