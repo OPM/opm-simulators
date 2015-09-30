@@ -205,11 +205,17 @@ namespace Opm {
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const double dt, const int iteration);
 
-        /// The number of active phases in the model.
+        /// The number of active fluid phases in the model.
         int numPhases() const;
 
-        /// The name of an active phase in the model.
-        const std::string& phaseName(int phase_index) const;
+        /// The number of active materials in the model.
+        /// This should be equal to the number of material balance
+        /// equations.
+        int numMaterials() const;
+
+        /// The name of an active material in the model.
+        /// It is required that material_index < numMaterials().
+        const std::string& materialName(int material_index) const;
 
         /// Update the scaling factors for mass balance equations
         void updateEquationsScaling();
@@ -277,7 +283,7 @@ namespace Opm {
 
         std::vector<int>         primalVariable_;
         V pvdt_;
-        std::vector<std::string> phase_name_;
+        std::vector<std::string> material_name_;
 
         // ---------  Protected methods  ---------
 

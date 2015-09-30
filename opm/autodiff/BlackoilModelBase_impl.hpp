@@ -179,9 +179,9 @@ namespace detail {
                         ADB::null(),
                         { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
         , terminal_output_ (terminal_output)
-        , phase_name_{ "Water", "Oil", "Gas" }
+        , material_name_{ "Water", "Oil", "Gas" }
     {
-        assert(numPhases() == 3); // Due to the phase_name_ init above.
+        assert(numMaterials() == 3); // Due to the material_name_ init above.
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -279,7 +279,19 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::
     numPhases() const
     {
-        return phase_name_.size();
+        return fluid_.numPhases();
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    int
+    BlackoilModelBase<Grid, Implementation>::
+    numMaterials() const
+    {
+        return material_name_.size();
     }
 
 
@@ -289,10 +301,10 @@ namespace detail {
     template <class Grid, class Implementation>
     const std::string&
     BlackoilModelBase<Grid, Implementation>::
-    phaseName(int phase_index) const
+    materialName(int material_index) const
     {
-        assert(phase_index < numPhases());
-        return phase_name_[phase_index];
+        assert(material_index < numMaterials());
+        return material_name_[material_index];
     }
 
 
@@ -2385,21 +2397,22 @@ namespace detail {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const int np = asImpl().numPhases();
-        assert(int(rq_.size()) == np);
+        const int nm = asImpl().numMaterials();
+        assert(int(rq_.size()) == nm);
 
         const V pv = geo_.poreVolume();
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        std::vector<double> R_sum(np);
-        std::vector<double> B_avg(np);
-        std::vector<double> maxCoeff(np);
+        std::vector<double> R_sum(nm);
+        std::vector<double> B_avg(nm);
+        std::vector<double> maxCoeff(nm);
         std::vector<double> maxNormWell(np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, nm);
 
-        for ( int idx = 0; idx < np; ++idx )
+        for ( int idx = 0; idx < nm; ++idx )
         {
             const ADB& tempB = rq_[idx].b;
             B.col(idx)       = 1./tempB.value();
@@ -2411,23 +2424,27 @@ namespace detail {
                                                   R_sum, maxCoeff, B_avg, maxNormWell,
                                                   nc, nw);
 
-        std::vector<double> CNV(np);
-        std::vector<double> mass_balance_residual(np);
+        std::vector<double> CNV(nm);
+        std::vector<double> mass_balance_residual(nm);
         std::vector<double> well_flux_residual(np);
 
         bool converged_MB = true;
         bool converged_CNV = true;
         bool converged_Well = true;
         // Finish computation
-        for ( int idx = 0; idx < np; ++idx )
+        for ( int idx = 0; idx < nm; ++idx )
         {
             CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
             mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
-            well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
-
-            converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            // Well flux convergence is only for fluid phases, not other materials
+            // in our current implementation.
+            assert(nm >= np);
+            if (idx < np) {
+                well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
+                converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            }
         }
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
@@ -2438,16 +2455,16 @@ namespace detail {
         // Residual in Pascal can have high values and still be ok.
         const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
 
-        for (int idx = 0; idx < np; ++idx) {
+        for (int idx = 0; idx < nm; ++idx) {
             if (std::isnan(mass_balance_residual[idx])
                 || std::isnan(CNV[idx])
-                || std::isnan(well_flux_residual[idx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName(idx));
+                || (idx < np && std::isnan(well_flux_residual[idx]))) {
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
             }
             if (mass_balance_residual[idx] > maxResidualAllowed()
                 || CNV[idx] > maxResidualAllowed()
-                || well_flux_residual[idx] > maxResidualAllowed()) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName(idx));
+                || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
             }
         }
         if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
@@ -2459,24 +2476,24 @@ namespace detail {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
                 std::cout << "\nIter";
-                for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "   MB(" << phaseName(idx).substr(0, 3) << ") ";
+                for (int idx = 0; idx < nm; ++idx) {
+                    std::cout << "   MB(" << materialName(idx).substr(0, 3) << ") ";
+                }
+                for (int idx = 0; idx < nm; ++idx) {
+                    std::cout << "    CNV(" << materialName(idx).substr(0, 1) << ") ";
                 }
                 for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "    CNV(" << phaseName(idx).substr(0, 1) << ") ";
-                }
-                for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "  W-FLUX(" << phaseName(idx).substr(0, 1) << ")";
+                    std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
                 }
                 std::cout << '\n';
             }
             const std::streamsize oprec = std::cout.precision(3);
             const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
             std::cout << std::setw(4) << iteration;
-            for (int idx = 0; idx < np; ++idx) {
+            for (int idx = 0; idx < nm; ++idx) {
                 std::cout << std::setw(11) << mass_balance_residual[idx];
             }
-            for (int idx = 0; idx < np; ++idx) {
+            for (int idx = 0; idx < nm; ++idx) {
                 std::cout << std::setw(11) << CNV[idx];
             }
             for (int idx = 0; idx < np; ++idx) {
@@ -2502,16 +2519,17 @@ namespace detail {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const int np = asImpl().numPhases();
+        const int nm = asImpl().numMaterials();
 
         const V pv = geo_.poreVolume();
-        std::vector<double> R_sum(np);
-        std::vector<double> B_avg(np);
-        std::vector<double> maxCoeff(np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
-        std::vector<double> maxNormWell(MaxNumPhases);
-        for ( int idx = 0; idx < np; ++idx )
+        std::vector<double> R_sum(nm);
+        std::vector<double> B_avg(nm);
+        std::vector<double> maxCoeff(nm);
+        std::vector<double> maxNormWell(np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, nm);
+        for ( int idx = 0; idx < nm; ++idx )
         {
             const ADB& tempB = rq_[idx].b;
             B.col(idx)       = 1./tempB.value();
@@ -2538,10 +2556,10 @@ namespace detail {
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
         for (int idx = 0; idx < np; ++idx) {
             if (std::isnan(well_flux_residual[idx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName(idx));
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
             }
             if (well_flux_residual[idx] > maxResidualAllowed()) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName(idx));
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
             }
         }
 
@@ -2551,7 +2569,7 @@ namespace detail {
             if (iteration == 0) {
                 std::cout << "\nIter";
                 for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "  W-FLUX(" << phaseName(idx).substr(0, 1) << ")";
+                    std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
                 }
                 std::cout << '\n';
             }
