@@ -1039,11 +1039,18 @@ namespace Opm {
         Eigen::SparseMatrix<double>  rate_distr(nw, np*nw);
 
         // Selection variables
-        std::vector<int> bhp_elems;
-        std::vector<int> rate_elems;
+        // well selectors
+        std::vector<int> bhp_well_elems;
+        std::vector<int> rate_well_elems;
+        // segment selectors
+        std::vector<int> bhp_top_elems;
+        std::vector<int> rate_top_elems;
+        std::vector<int> rate_top_phase_elems;
+        std::vector<int> others_elems;
 
         //Run through all wells to calculate BHP/RATE targets
         //and gather info about current control
+        int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
             const struct WellControls* wc = wellsMultiSegment()[w]->wellControls();
 
@@ -1052,10 +1059,13 @@ namespace Opm {
             // is instead treated as a default.
             const int current = xw.currentControls()[w];
 
+            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
+
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
             {
-                // bhp_elems.push_back(w);
+                bhp_well_elems.push_back(w);
+                bhp_top_elems.push_back(start_segment);
                 bhp_targets(w)  = well_controls_iget_target(wc, current);
                 rate_targets(w) = -1e100;
             }
@@ -1070,7 +1080,11 @@ namespace Opm {
             case RESERVOIR_RATE: // Intentional fall-through
             case SURFACE_RATE:
             {
-                // rate_elems.push_back(w);
+                rate_well_elems.push_back(w);
+                rate_top_elems.push_back(start_segment);
+                for (int p = 0; p < np; ++p) {
+                    rate_top_phase_elems.push_back(start_segment + p * nseg_total);
+                }
                 // RESERVOIR and SURFACE rates look the same, from a
                 // high-level point of view, in the system of
                 // simultaneous linear equations.
@@ -1088,20 +1102,41 @@ namespace Opm {
             break;
 
             }
+
+            for (int i = 1; i < nseg; ++i) {
+                others_elems.push_back(i + start_segment);
+            }
+            start_segment += nseg;
         }
 
 
         // for each segment: 1, if the segment is the top segment, then control equation
         //                   2, if the segment is not the top segment, then the pressure equation
+        const ADB bhp_residual = subset(state.segp, bhp_top_elems) - subset(bhp_targets, bhp_well_elems);
+        const ADB rate_residual = rate_distr * subset(state.segqs, rate_top_phase_elems) - subset(rate_targets, rate_well_elems);
+
+        ADB others_residual = ADB::constant(V::Zero(nseg_total));
+        start_segment = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const int nseg = well->numberOfSegments();
+            ADB segp = subset(state.segqs, Span(nseg, 1, start_segment));
+            ADB well_residual = segp - well->wellOps().s2s_outlet * segp;
+            ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
+            others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
+            start_segment += nseg;
+        }
+
+        residual_.well_eq = superset(bhp_residual, bhp_top_elems, nseg_total) +
+                            superset(rate_residual, rate_top_elems, nseg_total) +
+                            others_residual;
+
 
         // Calculate residuals
-        for (int w = 0; w < nw; ++w) {
-            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
-            for (int s = 0; s < nseg; ++s) {
+        // for (int w = 0; w < nw; ++w) {
+        //     const int nseg = wellsMultiSegment()[w]->numberOfSegments();
+        //     for (int s = 0; s < nseg; ++s) {
                 // assuming the top segment always be the first one.
-                if (s==0) {
-
-                }
                 // Three types of the pressure loss calculation
                 // hydrostatic term depends of th density of the fluid mixture withn the segment,
                 // TODO: as the first version, wo do not consider the rs rv in the mass flow rate and
@@ -1111,8 +1146,8 @@ namespace Opm {
                 // surface unit
                 // frictional pressure drop
                 // acceleration pressure drop
-            }
-        }
+          //   }
+        // }
 
         // const ADB thp_inj_residual = state.bhp - bhp_from_thp_inj + dp_inj;
         // const ADB thp_prod_residual = state.bhp - bhp_from_thp_prod + dp_prod;
