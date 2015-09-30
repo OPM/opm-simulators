@@ -48,6 +48,7 @@ namespace Opm
         virtual const SimulatorState& globalReservoirState() const = 0 ;
         virtual const WellState& globalWellState() const = 0 ;
         virtual bool isIORank() const = 0;
+        virtual bool isParallel() const = 0;
         virtual int numCells() const = 0 ;
         virtual const int* globalCell() const = 0;
     };
@@ -64,7 +65,8 @@ namespace Opm
     public:
         ParallelDebugOutput ( const GridImpl& grid,
                               Opm::EclipseStateConstPtr /* eclipseState */,
-                              const int )
+                              const int,
+                              const double* )
             : grid_( grid ) {}
 
         // gather solution to rank 0 for EclipseWriter
@@ -79,6 +81,7 @@ namespace Opm
         virtual const SimulatorState& globalReservoirState() const { return *globalState_; }
         virtual const WellState& globalWellState() const { return *wellState_; }
         virtual bool isIORank () const { return true; }
+        virtual bool isParallel () const { return false; }
         virtual int numCells() const { return grid_.number_of_cells; }
         virtual const int* globalCell() const { return grid_.global_cell; }
     };
@@ -152,6 +155,7 @@ namespace Opm
                     globalPosition_.insert( std::make_pair( globalIndex[ index ], index ) );
                 }
 
+                // on I/O rank we need to create a mapping from local to global
                 if( ! indexMaps_.empty() )
                 {
                     // for the ioRank create a localIndex to index in global state map
@@ -161,7 +165,7 @@ namespace Opm
                     for( size_t i=0; i<localSize; ++i )
                     {
                         const int id = distributedGlobalIndex_[ localIndexMap_[ i ] ];
-                        indexMap[ i ] = id ;
+                        indexMap[ i ] = globalPosition_[ id ] ;
 #ifndef NDEBUG
                         assert( checkPosition_.find( id ) == checkPosition_.end() );
                         checkPosition_.insert( id );
@@ -216,89 +220,99 @@ namespace Opm
 
         ParallelDebugOutput( const Dune::CpGrid& otherGrid,
                              Opm::EclipseStateConstPtr eclipseState,
-                             const int numPhases )
+                             const int numPhases,
+                             const double* permeability )
             : toIORankComm_( otherGrid.comm() ),
               isIORank_( otherGrid.comm().rank() == ioRank )
         {
             const CollectiveCommunication& comm = otherGrid.comm();
-            std::set< int > send, recv;
-            // the I/O rank receives from all other ranks
-            if( isIORank() )
+            if( comm.size() > 1 )
             {
-                Dune::CpGrid globalGrid( otherGrid );
-                globalGrid.switchToGlobalView();
-
-                // initialize global state with correct sizes
-                globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
-                // TODO init well state
-
-                // Create wells and well state.
-                WellsManager wells_manager(eclipseState,
-                                           0,
-                                           Opm::UgGridHelpers::numCells( globalGrid ),
-                                           Opm::UgGridHelpers::globalCell( globalGrid ),
-                                           Opm::UgGridHelpers::cartDims( globalGrid ),
-                                           Opm::UgGridHelpers::dimensions( globalGrid ),
-                                           Opm::UgGridHelpers::cell2Faces( globalGrid ),
-                                           Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
-                                           0,
-                                           false);
-                const Wells* wells = wells_manager.c_wells();
-                globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
-
-                // copy global cartesian index
-                globalIndex_ = globalGrid.globalCell();
-
-                unsigned int count = 0;
-                auto gridView = globalGrid.leafGridView();
-                for( auto it = gridView.begin< 0 >(),
-                     end = gridView.end< 0 >(); it != end; ++it, ++count )
+                std::set< int > send, recv;
+                // the I/O rank receives from all other ranks
+                if( isIORank() )
                 {
-                }
-                assert( count == globalIndex_.size() );
+                    Dune::CpGrid globalGrid( otherGrid );
+                    globalGrid.switchToGlobalView();
 
-                for(int i=0; i<comm.size(); ++i)
-                {
-                    if( i != ioRank )
+                    // initialize global state with correct sizes
+                    globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
+                    // TODO init well state
+
+                    // Create wells and well state.
+                    WellsManager wells_manager(eclipseState,
+                                               0,
+                                               Opm::UgGridHelpers::numCells( globalGrid ),
+                                               Opm::UgGridHelpers::globalCell( globalGrid ),
+                                               Opm::UgGridHelpers::cartDims( globalGrid ),
+                                               Opm::UgGridHelpers::dimensions( globalGrid ),
+                                               Opm::UgGridHelpers::cell2Faces( globalGrid ),
+                                               Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
+                                               permeability,
+                                               false);
+
+                    const Wells* wells = wells_manager.c_wells();
+                    globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
+
+                    // copy global cartesian index
+                    globalIndex_ = globalGrid.globalCell();
+
+                    unsigned int count = 0;
+                    auto gridView = globalGrid.leafGridView();
+                    for( auto it = gridView.begin< 0 >(),
+                         end = gridView.end< 0 >(); it != end; ++it, ++count )
                     {
-                        recv.insert( i );
+                    }
+                    assert( count == globalIndex_.size() );
+
+                    for(int i=0; i<comm.size(); ++i)
+                    {
+                        if( i != ioRank )
+                        {
+                            recv.insert( i );
+                        }
                     }
                 }
-            }
-            else // all other simply send to the I/O rank
-            {
-                send.insert( ioRank );
-            }
-
-            localIndexMap_.clear();
-            localIndexMap_.reserve( otherGrid.size( 0 ) );
-
-            unsigned int index = 0;
-            auto localView = otherGrid.leafGridView();
-            for( auto it = localView.begin< 0 >(),
-                 end = localView.end< 0 >(); it != end; ++it, ++index )
-            {
-                const auto element = *it ;
-                // only store interior element for collection
-                if( element.partitionType() == Dune :: InteriorEntity )
+                else // all other simply send to the I/O rank
                 {
-                    localIndexMap_.push_back( index );
+                    send.insert( ioRank );
                 }
+
+                localIndexMap_.clear();
+                localIndexMap_.reserve( otherGrid.size( 0 ) );
+
+                unsigned int index = 0;
+                auto localView = otherGrid.leafGridView();
+                for( auto it = localView.begin< 0 >(),
+                     end = localView.end< 0 >(); it != end; ++it, ++index )
+                {
+                    const auto element = *it ;
+                    // only store interior element for collection
+                    if( element.partitionType() == Dune :: InteriorEntity )
+                    {
+                        localIndexMap_.push_back( index );
+                    }
+                }
+
+                // insert send and recv linkage to communicator
+                toIORankComm_.insertRequest( send, recv );
+
+                if( isIORank() )
+                {
+                    // need an index map for each rank
+                    indexMaps_.clear();
+                    indexMaps_.resize( comm.size() );
+                }
+
+                // distribute global id's to io rank for later association of dof's
+                DistributeIndexMapping distIndexMapping( globalIndex_, otherGrid.globalCell(), localIndexMap_, indexMaps_ );
+                toIORankComm_.exchange( distIndexMapping );
             }
-
-            // insert send and recv linkage to communicator
-            toIORankComm_.insertRequest( send, recv );
-
-            if( isIORank() )
+            else // serial run
             {
-                // need an index map for each rank
-                indexMaps_.clear();
-                indexMaps_.resize( comm.size() );
+                // copy global cartesian index
+                globalIndex_ = otherGrid.globalCell();
             }
-
-            // distribute global id's to io rank for later association of dof's
-            DistributeIndexMapping distIndexMapping( globalIndex_, otherGrid.globalCell(), localIndexMap_, indexMaps_ );
-            toIORankComm_.exchange( distIndexMapping );
         }
 
         class PackUnPackSimulatorState : public P2PCommunicatorType::DataHandleInterface
@@ -411,6 +425,7 @@ namespace Opm
                 for( unsigned int i=0; i<size; ++i )
                 {
                     const unsigned int index = localIndexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
                     buffer.write( vector[ index ] );
                 }
             }
@@ -427,6 +442,7 @@ namespace Opm
                 for( unsigned int i=0; i<size; ++i )
                 {
                     const unsigned int index = indexMap[ i ] * stride + offset;
+                    assert( index < vector.size() );
                     buffer.read( vector[ index ] );
                 }
             }
@@ -533,6 +549,11 @@ namespace Opm
             return isIORank_;
         }
 
+        bool isParallel() const
+        {
+            return toIORankComm_.size() > 1;
+        }
+
         int numCells () const { return globalIndex_.size(); }
         const int* globalCell () const
         {
@@ -545,7 +566,6 @@ namespace Opm
         IndexMapType                    globalIndex_;
         IndexMapType                    localIndexMap_;
         IndexMapStorageType             indexMaps_;
-        //BlackoilState                   globalReservoirState_;
         SimulatorState                  globalReservoirState_;
         // this needs to be revised
         WellStateFullyImplicitBlackoil  globalWellState_;
