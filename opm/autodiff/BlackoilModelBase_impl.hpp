@@ -279,7 +279,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::
     numPhases() const
     {
-        return fluid_.numPhases();
+        return phase_name_.size();
     }
 
 
