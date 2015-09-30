@@ -60,7 +60,7 @@ public:
      * \param y An array containing the \f$y\f$ values of the spline's sampling points
      */
     template <class ScalarArrayX, class ScalarArrayY>
-    Tabulated1DFunction(int nSamples,
+    Tabulated1DFunction(size_t nSamples,
                         const ScalarArrayX &x,
                         const ScalarArrayY &y,
                         bool sortInputs = false)
@@ -97,7 +97,7 @@ public:
      * This method takes C-style arrays (pointers) as arguments.
      */
     template <class ScalarArrayX, class ScalarArrayY>
-    void setXYArrays(int nSamples,
+    void setXYArrays(size_t nSamples,
                      const ScalarArrayX &x,
                      const ScalarArrayY &y,
                      bool sortInputs = false)
@@ -105,7 +105,7 @@ public:
         assert(nSamples > 1);
 
         resizeArrays_(nSamples);
-        for (int i = 0; i < nSamples; ++i) {
+        for (size_t i = 0; i < nSamples; ++i) {
             xValues_[i] = x[i];
             yValues_[i] = y[i];
         }
@@ -143,7 +143,7 @@ public:
      * \brief Set the sampling points for the piecewise linear function
      */
     template <class PointArray>
-    void setArrayOfPoints(int nSamples,
+    void setArrayOfPoints(size_t nSamples,
                           const PointArray &points,
                           bool sortInputs = false)
     {
@@ -152,7 +152,7 @@ public:
         assert(nSamples > 1);
 
         resizeArrays_(nSamples);
-        for (int i = 0; i < nSamples; ++i) {
+        for (size_t i = 0; i < nSamples; ++i) {
             xValues_[i] = points[i][0];
             yValues_[i] = points[i][1];
         }
@@ -202,7 +202,7 @@ public:
     /*!
      * \brief Returns the number of sampling points.
      */
-    int numSamples() const
+    size_t numSamples() const
     { return xValues_.size(); }
 
     /*!
@@ -220,13 +220,13 @@ public:
     /*!
      * \brief Return the x value of the a sample point with a given index.
      */
-    Scalar xAt(int i) const
+    Scalar xAt(size_t i) const
     { return xValues_[i]; }
 
     /*!
      * \brief Return the value of the a sample point with a given index.
      */
-    Scalar valueAt(int i) const
+    Scalar valueAt(size_t i) const
     { return yValues_[i]; }
 
     /*!
@@ -246,7 +246,7 @@ public:
      */
     Scalar eval(Scalar x, bool extrapolate=false) const
     {
-        int segIdx;
+        size_t segIdx;
         if (extrapolate && x < xValues_.front())
             segIdx = 0;
         else if (extrapolate && x > xValues_.back())
@@ -277,7 +277,7 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, bool extrapolate=false) const
     {
-        int segIdx;
+        size_t segIdx;
         if (extrapolate && x.value < xValues_.front())
             segIdx = 0;
         else if (extrapolate && x.value > xValues_.back())
@@ -314,7 +314,7 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalDerivative(Scalar x, bool extrapolate=false) const
+    Scalar evalDerivative(Scalar x, bool /*extrapolate*/=false) const
     {
         int segIdx = findSegmentIndex_(x);
 
@@ -335,7 +335,7 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalSecondDerivative(Scalar x, bool extrapolate=false) const
+    Scalar evalSecondDerivative(OPM_OPTIM_UNUSED Scalar x, OPM_OPTIM_UNUSED bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -355,7 +355,7 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalThirdDerivative(Scalar x, bool extrapolate=false) const
+    Scalar evalThirdDerivative(OPM_OPTIM_UNUSED Scalar x, OPM_OPTIM_UNUSED bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -369,7 +369,7 @@ public:
      * In the corner case that the function is constant within the given
      * interval, this method returns 3.
      */
-    int monotonic(Scalar x0, Scalar x1, bool extrapolate OPM_UNUSED = false) const
+    int monotonic(Scalar x0, Scalar x1, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(x0 != x1);
 
@@ -386,7 +386,7 @@ public:
             x0 = xMin();
         };
 
-        int i = findSegmentIndex_(x0);
+        size_t i = findSegmentIndex_(x0);
         if (xValues_[i + 1] >= x1) {
             // interval is fully contained within a single function
             // segment
@@ -485,7 +485,7 @@ public:
     }
 
 private:
-    int findSegmentIndex_(Scalar x) const
+    size_t findSegmentIndex_(Scalar x) const
     {
         // we need at least two sampling points!
         assert(xValues_.size() >= 2);
@@ -496,10 +496,10 @@ private:
             return xValues_.size() - 2;
         else {
             // bisection
-            int segmentIdx = 1;
-            int upperIdx = xValues_.size() - 2;
+            size_t segmentIdx = 1;
+            size_t upperIdx = xValues_.size() - 2;
             while (segmentIdx + 1 < upperIdx) {
-                int pivotIdx = (segmentIdx + upperIdx) / 2;
+                size_t pivotIdx = (segmentIdx + upperIdx) / 2;
                 if (x < xValues_[pivotIdx])
                     upperIdx = pivotIdx;
                 else
@@ -512,7 +512,7 @@ private:
         }
     }
 
-    Scalar evalDerivative_(Scalar x, int segIdx) const
+    Scalar evalDerivative_(OPM_UNUSED Scalar x, int segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -560,9 +560,9 @@ private:
     {
         ComparatorX_(const std::vector<Scalar> &x)
             : x_(x)
-        {};
+        {}
 
-        bool operator ()(int idxA, int idxB) const
+        bool operator ()(size_t idxA, size_t idxB) const
         { return x_.at(idxA) < x_.at(idxB); }
 
         const std::vector<Scalar> &x_;
@@ -573,11 +573,11 @@ private:
      */
     void sortInput_()
     {
-        int n = numSamples();
+        size_t n = numSamples();
 
         // create a vector containing 0...n-1
-        std::vector<int> idxVector(n);
-        for (int i = 0; i < n; ++i)
+        std::vector<unsigned> idxVector(n);
+        for (unsigned i = 0; i < n; ++i)
             idxVector[i] = i;
 
         // sort the indices according to the x values of the sample
@@ -602,8 +602,8 @@ private:
     void reverseSamplingPoints_()
     {
         // reverse the arrays
-        int n = numSamples();
-        for (int i = 0; i <= (n - 1)/2; ++i) {
+        size_t n = numSamples();
+        for (size_t i = 0; i <= (n - 1)/2; ++i) {
             std::swap(xValues_[i], xValues_[n - i - 1]);
             std::swap(yValues_[i], yValues_[n - i - 1]);
         }
@@ -612,7 +612,7 @@ private:
     /*!
      * \brief Resizes the internal vectors to store the sample points.
      */
-    void resizeArrays_(int nSamples)
+    void resizeArrays_(size_t nSamples)
     {
         xValues_.resize(nSamples);
         yValues_.resize(nSamples);

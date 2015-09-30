@@ -135,14 +135,11 @@ void testAllFluidStates()
 template <class Scalar, class Evaluation, class LhsEval = Evaluation>
 void testAllFluidSystems()
 {
-    typedef Opm::H2O<Scalar> H2O;
-    typedef Opm::N2<Scalar> N2;
-
-    typedef Opm::LiquidPhase<Scalar, H2O> Liquid;
-    typedef Opm::GasPhase<Scalar, N2> Gas;
+    typedef Opm::LiquidPhase<Scalar, Opm::H2O<Scalar>> Liquid;
+    typedef Opm::GasPhase<Scalar, Opm::N2<Scalar>> Gas;
 
     // black-oil
-    {   typedef Opm::FluidSystems::BlackOil<Scalar, Evaluation> FluidSystem;
+    {   typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
 
     // Brine -- CO2

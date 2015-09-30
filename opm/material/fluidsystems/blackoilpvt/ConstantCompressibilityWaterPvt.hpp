@@ -22,14 +22,9 @@
  * \file
  * \copydoc Opm::ConstantCompressibilityWaterPvt
  */
-#ifndef OPM_CONSTANT_COMPRESSIBILITY_WATER_HPP
-#define OPM_CONSTANT_COMPRESSIBILITY_WATER_HPP
+#ifndef OPM_CONSTANT_COMPRESSIBILITY_WATER_PVT_HPP
+#define OPM_CONSTANT_COMPRESSIBILITY_WATER_PVT_HPP
 
-#include "WaterPvtInterface.hpp"
-
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-
-#include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_OPM_PARSER
@@ -44,67 +39,84 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
  */
-template <class Scalar, class Evaluation = Scalar>
+template <class Scalar>
 class ConstantCompressibilityWaterPvt
-    : public WaterPvtInterfaceTemplateWrapper<Scalar, Evaluation, ConstantCompressibilityWaterPvt<Scalar, Evaluation> >
 {
-    friend class WaterPvtInterfaceTemplateWrapper<Scalar, Evaluation, ConstantCompressibilityWaterPvt<Scalar, Evaluation> >;
-
-    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
-
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
-    static const int oilPhaseIdx = BlackOilFluidSystem::oilPhaseIdx;
-    static const int gasPhaseIdx = BlackOilFluidSystem::gasPhaseIdx;
-    static const int waterPhaseIdx = BlackOilFluidSystem::waterPhaseIdx;
-
-    static const int oilCompIdx = BlackOilFluidSystem::oilCompIdx;
-    static const int gasCompIdx = BlackOilFluidSystem::gasCompIdx;
-    static const int waterCompIdx = BlackOilFluidSystem::waterCompIdx;
-
 public:
-    void setNumRegions(int numRegions)
+#if HAVE_OPM_PARSER
+    /*!
+     * \brief Sets the pressure-dependent water viscosity and density
+     *        using a table stemming from the Eclipse PVTW keyword.
+     */
+    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr /*eclState*/)
     {
+        DeckKeywordConstPtr pvtwKeyword = deck->getKeyword("PVTW");
+        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+
+        assert(pvtwKeyword->size() == densityKeyword->size());
+
+        size_t numRegions = pvtwKeyword->size();
+        setNumRegions(numRegions);
+
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+            auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
+            auto densityRecord = densityKeyword->getRecord(regionIdx);
+
+            waterReferenceDensity_[regionIdx] =
+                densityRecord->getItem("WATER")->getSIDouble(0);
+
+            waterReferencePressure_[regionIdx] =
+                pvtwRecord->getItem("P_REF")->getSIDouble(0);
+            waterReferenceFormationVolumeFactor_[regionIdx] =
+                pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
+            waterCompressibility_[regionIdx] =
+                pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
+            waterViscosity_[regionIdx] =
+                pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
+            waterViscosibility_[regionIdx] =
+                pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
+        }
+    }
+#endif
+
+    void setNumRegions(size_t numRegions)
+    {
+        waterReferenceDensity_.resize(numRegions);
         waterReferencePressure_.resize(numRegions);
         waterReferenceFormationVolumeFactor_.resize(numRegions);
         waterCompressibility_.resize(numRegions);
         waterViscosity_.resize(numRegions);
         waterViscosibility_.resize(numRegions);
 
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            setReferenceDensities(regionIdx, 650.0, 1.0, 1000.0);
             setReferenceFormationVolumeFactor(regionIdx, 1.0);
-            setReferencePressure(regionIdx, BlackOilFluidSystem::surfacePressure);
+            setReferencePressure(regionIdx, 1e5);
         }
     }
 
-#if HAVE_OPM_PARSER
     /*!
-     * \brief Sets the pressure-dependent water viscosity and density
-     *        using a table stemming from the Eclipse PVTW keyword.
+     * \brief Set the water reference density [kg / m^3]
      */
-    void setPvtw(int regionIdx, DeckKeywordConstPtr pvtwKeyword)
-    {
-        assert(static_cast<int>(pvtwKeyword->size()) >= regionIdx);
+    void setReferenceDensities(unsigned regionIdx,
+                               Scalar /*rhoRefOil*/,
+                               Scalar /*rhoRefGas*/,
+                               Scalar rhoRefWater)
+    { waterReferenceDensity_[regionIdx] = rhoRefWater; }
 
-        auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
-        waterReferencePressure_[regionIdx] =
-            pvtwRecord->getItem("P_REF")->getSIDouble(0);
-        waterReferenceFormationVolumeFactor_[regionIdx] =
-            pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
-        waterCompressibility_[regionIdx] =
-            pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
-        waterViscosity_[regionIdx] =
-            pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
-        waterViscosibility_[regionIdx] =
-            pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
-    }
-#endif
+    /*!
+     * \brief Set the water reference pressure [Pa]
+     */
+    void setReferencePressure(unsigned regionIdx, Scalar p)
+    { waterReferencePressure_[regionIdx] = p; }
 
     /*!
      * \brief Set the viscosity and "viscosibility" of the water phase.
      */
-    void setViscosity(int regionIdx, Scalar muw, Scalar waterViscosibility = 0.0)
+    void setViscosity(unsigned regionIdx, Scalar muw, Scalar waterViscosibility = 0.0)
     {
         waterViscosity_[regionIdx] = muw;
         waterViscosibility_[regionIdx] = waterViscosibility;
@@ -113,25 +125,19 @@ public:
     /*!
      * \brief Set the compressibility of the water phase.
      */
-    void setCompressibility(int regionIdx, Scalar waterCompressibility)
+    void setCompressibility(unsigned regionIdx, Scalar waterCompressibility)
     { waterCompressibility_[regionIdx] = waterCompressibility; }
-
-    /*!
-     * \brief Set the water reference pressure [Pa]
-     */
-    void setReferencePressure(int regionIdx, Scalar p)
-    { waterReferencePressure_[regionIdx] = p; }
 
     /*!
      * \brief Set the water reference formation volume factor [-]
      */
-    void setReferenceFormationVolumeFactor(int regionIdx, Scalar BwRef)
+    void setReferenceFormationVolumeFactor(unsigned regionIdx, Scalar BwRef)
     { waterReferenceFormationVolumeFactor_[regionIdx] = BwRef; }
 
     /*!
      * \brief Set the water "viscosibility" [1/ (Pa s)]
      */
-    void setViscosibility(int regionIdx, Scalar muComp)
+    void setViscosibility(unsigned regionIdx, Scalar muComp)
     { waterViscosibility_[regionIdx] = muComp; }
 
     /*!
@@ -140,23 +146,22 @@ public:
     void initEnd()
     { }
 
-private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval viscosity_(int regionIdx,
-                       const LhsEval& temperature,
-                       const LhsEval& pressure) const
+    template <class Evaluation>
+    Evaluation viscosity(unsigned regionIdx,
+                         const Evaluation& temperature,
+                         const Evaluation& pressure) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BwMuwRef = waterViscosity_[regionIdx]*waterReferenceFormationVolumeFactor_[regionIdx];
-        const LhsEval& Bw = formationVolumeFactor_(regionIdx, temperature, pressure);
+        const Evaluation& Bw = formationVolumeFactor(regionIdx, temperature, pressure);
 
         Scalar pRef = waterReferencePressure_[regionIdx];
-        const LhsEval& Y =
+        const Evaluation& Y =
             (waterCompressibility_[regionIdx] - waterViscosibility_[regionIdx])
             * (pressure - pRef);
         return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
@@ -165,27 +170,26 @@ private:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval density_(int regionIdx,
-                     const LhsEval& temperature,
-                     const LhsEval& pressure) const
+    template <class Evaluation>
+    Evaluation density(unsigned regionIdx,
+                       const Evaluation& temperature,
+                       const Evaluation& pressure) const
     {
-        const LhsEval& Bw = formationVolumeFactor_(regionIdx, temperature, pressure);
-        Scalar rhowRef = BlackOilFluidSystem::referenceDensity(waterPhaseIdx, regionIdx);
-        return rhowRef/Bw;
+        const Evaluation& Bw = formationVolumeFactor(regionIdx, temperature, pressure);
+        return waterReferenceDensity_[regionIdx]/Bw;
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    template <class LhsEval>
-    LhsEval formationVolumeFactor_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& pressure) const
+    template <class Evaluation>
+    Evaluation formationVolumeFactor(unsigned regionIdx,
+                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = waterReferencePressure_[regionIdx];
-        const LhsEval& X = waterCompressibility_[regionIdx]*(pressure - pRef);
+        const Evaluation& X = waterCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BwRef = waterReferenceFormationVolumeFactor_[regionIdx];
 
@@ -194,29 +198,61 @@ private:
     }
 
     /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
+     * \brief Returns the fugacity coefficient [Pa] of the oil component in the water
+     *        phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval fugacityCoefficient_(int regionIdx,
-                                 const LhsEval& temperature,
-                                 const LhsEval& pressure,
-                                 int compIdx) const
+    template <class Evaluation>
+    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
+                                      const Evaluation& /*temperature*/,
+                                      const Evaluation& pressure) const
     {
         // set the affinity of the gas and oil components to the water phase to be 10
-        // orders of magnitute smaller than that of the water component. for this we use
+        // orders of magnitude smaller than that of the water component. for this we use
         // a pseudo-realistic vapor pressure of water as a starting point. (we just set
         // it to 30 kPa to ease interpreting the results.)
         const Scalar pvWater = 30e3;
-        if (compIdx == BlackOilFluidSystem::oilCompIdx)
-            return 1e10*pvWater / pressure;
-        else if (compIdx == BlackOilFluidSystem::gasCompIdx)
-            return 1.01e10*pvWater / pressure;
+
+        return 1e10*pvWater / pressure;
+    }
+
+    /*!
+     * \brief Returns the fugacity coefficient [Pa] of the gas component in the water
+     *        phase given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation fugacityCoefficientGas(unsigned /*regionIdx*/,
+                                      const Evaluation& /*temperature*/,
+                                      const Evaluation& pressure) const
+    {
+        // set the affinity of the gas and oil components to the water phase to be 10
+        // orders of magnitude smaller than that of the water component. for this we use
+        // a pseudo-realistic vapor pressure of water as a starting point. (we just set
+        // it to 30 kPa to ease interpreting the results.)
+        const Scalar pvWater = 30e3;
+
+        return 1.01e10*pvWater / pressure;
+    }
+
+    /*!
+     * \brief Returns the fugacity coefficient [Pa] of the water component in the water
+     *        phase given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation fugacityCoefficientWater(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& pressure) const
+    {
+        // set the affinity of the gas and oil components to the water phase to be 10
+        // orders of magnitude smaller than that of the water component. for this we use
+        // a pseudo-realistic vapor pressure of water as a starting point. (we just set
+        // it to 30 kPa to ease interpreting the results.)
+        const Scalar pvWater = 30e3;
 
         return pvWater / pressure;
     }
 
 private:
+    std::vector<Scalar> waterReferenceDensity_;
     std::vector<Scalar> waterReferencePressure_;
     std::vector<Scalar> waterReferenceFormationVolumeFactor_;
     std::vector<Scalar> waterCompressibility_;

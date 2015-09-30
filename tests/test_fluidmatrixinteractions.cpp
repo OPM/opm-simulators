@@ -158,14 +158,14 @@ void testTwoPhaseApi()
         const FluidState fs;
         const typename MaterialLaw::Params params;
 
-        OPM_UNUSED Scalar v;
+        Scalar v;
         v = MaterialLaw::template pcnw<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template Sw<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template Sn<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template krw<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template krn<FluidState, Scalar>(params, fs);
 
-        OPM_UNUSED typename FluidState::Scalar vEval;
+        typename FluidState::Scalar vEval;
         vEval = MaterialLaw::pcnw(params, fs);
         vEval = MaterialLaw::Sw(params, fs);
         vEval = MaterialLaw::Sn(params, fs);
@@ -200,7 +200,7 @@ void testTwoPhaseSatApi()
         const typename MaterialLaw::Params params;
 
         Scalar Sw = 0;
-        OPM_UNUSED Scalar v;
+        Scalar v;
         v = MaterialLaw::twoPhaseSatPcnw(params, Sw);
         v = MaterialLaw::twoPhaseSatSw(params, Sw);
         v = MaterialLaw::twoPhaseSatSn(params, Sw);
@@ -208,7 +208,7 @@ void testTwoPhaseSatApi()
         v = MaterialLaw::twoPhaseSatKrn(params, Sw);
 
         typename FluidState::Scalar SwEval = 0;
-        OPM_UNUSED typename FluidState::Scalar vEval;
+        typename FluidState::Scalar vEval;
         vEval = MaterialLaw::twoPhaseSatPcnw(params, SwEval);
         vEval = MaterialLaw::twoPhaseSatSw(params, SwEval);
         vEval = MaterialLaw::twoPhaseSatSn(params, SwEval);
@@ -236,7 +236,7 @@ void testThreePhaseApi()
         const FluidState fs;
         const typename MaterialLaw::Params params;
 
-        OPM_UNUSED Scalar v;
+        Scalar v;
         v = MaterialLaw::template pcnw<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template Sw<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template Sn<FluidState, Scalar>(params, fs);
@@ -245,7 +245,7 @@ void testThreePhaseApi()
         v = MaterialLaw::template krn<FluidState, Scalar>(params, fs);
         v = MaterialLaw::template krg<FluidState, Scalar>(params, fs);
 
-        OPM_UNUSED typename FluidState::Scalar vEval;
+        typename FluidState::Scalar vEval;
         vEval = MaterialLaw::pcnw(params, fs);
         vEval = MaterialLaw::Sw(params, fs);
         vEval = MaterialLaw::Sn(params, fs);

@@ -25,9 +25,9 @@
 #ifndef OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 #define OPM_BLACK_OIL_FLUID_SYSTEM_HPP
 
-#include "blackoilpvt/OilPvtInterface.hpp"
-#include "blackoilpvt/GasPvtInterface.hpp"
-#include "blackoilpvt/WaterPvtInterface.hpp"
+#include "blackoilpvt/OilPvtMultiplexer.hpp"
+#include "blackoilpvt/GasPvtMultiplexer.hpp"
+#include "blackoilpvt/WaterPvtMultiplexer.hpp"
 
 #include <opm/material/fluidsystems/BaseFluidSystem.hpp>
 #include <opm/material/Constants.hpp>
@@ -47,12 +47,12 @@ namespace FluidSystems {
  * \brief A fluid system which uses the black-oil parameters
  *        to calculate termodynamically meaningful quantities.
  */
-template <class Scalar, class Evaluation = Scalar>
-class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar, Evaluation> >
+template <class Scalar>
+class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
-    typedef Opm::GasPvtInterface<Scalar, Evaluation> GasPvtInterface;
-    typedef Opm::OilPvtInterface<Scalar, Evaluation> OilPvtInterface;
-    typedef Opm::WaterPvtInterface<Scalar, Evaluation> WaterPvtInterface;
+    typedef Opm::GasPvtMultiplexer<Scalar> GasPvt;
+    typedef Opm::OilPvtMultiplexer<Scalar> OilPvt;
+    typedef Opm::WaterPvtMultiplexer<Scalar> WaterPvt;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
@@ -100,28 +100,44 @@ public:
     //! The temperature at the surface
     static const Scalar surfaceTemperature;
 
+#if HAVE_OPM_PARSER
     /*!
-     * \copydoc BaseFluidSystem::init
-     *
-     * \attention For this fluid system, this method just throws a
-     *            <tt>std::logic_error</tt> as there is no
-     *            way to generically calculate the required black oil
-     *            parameters. Instead of this method, use
-     * \code
-     * FluidSystem::initBegin();
-     * // set the black oil parameters
-     * FluidSystem::initEnd();
-     * \endcode
+     * \brief Initialize the fluid system using an ECL deck object
      */
-    static void init()
+    static void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        OPM_THROW(std::logic_error,
-                  "There is no generic init() method for this fluid system. The "
-                  << "black-oil fluid system must be initialized using:\n"
-                  << "    FluidSystem::initBegin()\n"
-                  << "    // set black oil parameters\n"
-                  << "    FluidSystem::initEnd()\n");
+        auto densityKeyword = deck->getKeyword("DENSITY");
+        size_t numRegions = densityKeyword->size();
+        initBegin(numRegions);
+
+        setEnableDissolvedGas(deck->hasKeyword("DISGAS"));
+        setEnableVaporizedOil(deck->hasKeyword("VAPOIL"));
+
+        // set the reference densities of all PVT regions
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            Opm::DeckRecordConstPtr densityRecord = densityKeyword->getRecord(regionIdx);
+            setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
+                                  densityRecord->getItem("WATER")->getSIDouble(0),
+                                  densityRecord->getItem("GAS")->getSIDouble(0),
+                                  regionIdx);
+        }
+
+        gasPvt_ = std::make_shared<GasPvt>();
+        gasPvt_->initFromDeck(deck, eclState);
+
+        oilPvt_ = std::make_shared<OilPvt>();
+        oilPvt_->initFromDeck(deck, eclState);
+
+        waterPvt_ = std::make_shared<WaterPvt>();
+        waterPvt_->initFromDeck(deck, eclState);
+
+        gasPvt_->initEnd(oilPvt_.get());
+        oilPvt_->initEnd(gasPvt_.get());
+        waterPvt_->initEnd();
+
+        initEnd();
     }
+#endif // HAVE_OPM_PARSER
 
     /*!
      * \brief Begin the initialization of the black oil fluid system.
@@ -131,7 +147,7 @@ public:
      * compressibility must be set. Before the fluid system can be used, initEnd() must
      * be called to finalize the initialization.
      */
-    static void initBegin(int numPvtRegions)
+    static void initBegin(size_t numPvtRegions)
     {
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
@@ -160,19 +176,19 @@ public:
     /*!
      * \brief Set the pressure-volume-saturation (PVT) relations for the gas phase.
      */
-    static void setGasPvt(std::shared_ptr<const GasPvtInterface> pvtObj)
+    static void setGasPvt(std::shared_ptr<GasPvt> pvtObj)
     { gasPvt_ = pvtObj; }
 
     /*!
      * \brief Set the pressure-volume-saturation (PVT) relations for the oil phase.
      */
-    static void setOilPvt(std::shared_ptr<const OilPvtInterface> pvtObj)
+    static void setOilPvt(std::shared_ptr<OilPvt> pvtObj)
     { oilPvt_ = pvtObj; }
 
     /*!
      * \brief Set the pressure-volume-saturation (PVT) relations for the water phase.
      */
-    static void setWaterPvt(std::shared_ptr<const WaterPvtInterface> pvtObj)
+    static void setWaterPvt(std::shared_ptr<WaterPvt> pvtObj)
     { waterPvt_ = pvtObj; }
 
     /*!
@@ -198,7 +214,7 @@ public:
     static void initEnd()
     {
         // calculate the final 2D functions which are used for interpolation.
-        unsigned numRegions = molarMass_.size();
+        size_t numRegions = molarMass_.size();
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate molar masses
 
@@ -450,7 +466,22 @@ public:
                                          const LhsEval& temperature,
                                          const LhsEval& pressure,
                                          unsigned regionIdx)
-    { return waterPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
+    {
+        switch (compIdx) {
+        case gasCompIdx:
+            return waterPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
+
+        case oilCompIdx:
+            return waterPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
+
+        case waterCompIdx:
+            return waterPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
+
+        default:
+            OPM_THROW(std::logic_error,
+                      "Invalid component index " << compIdx);
+        }
+    }
 
     /*!
      * \brief Returns the fugacity coefficient of a given component in the gas phase
@@ -463,7 +494,22 @@ public:
                                        const LhsEval& temperature,
                                        const LhsEval& pressure,
                                        unsigned regionIdx)
-    { return gasPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
+    {
+        switch (compIdx) {
+        case gasCompIdx:
+            return gasPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
+
+        case oilCompIdx:
+            return gasPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
+
+        case waterCompIdx:
+            return gasPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
+
+        default:
+            OPM_THROW(std::logic_error,
+                      "Invalid component index " << compIdx);
+        }
+    }
 
     /*!
      * \brief Returns the fugacity coefficient of a given component in the oil phase
@@ -476,7 +522,22 @@ public:
                                        const LhsEval& temperature,
                                        const LhsEval& pressure,
                                        unsigned regionIdx)
-    { return oilPvt_->fugacityCoefficient(regionIdx, temperature, pressure, compIdx); }
+    {
+        switch (compIdx) {
+        case gasCompIdx:
+            return oilPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
+
+        case oilCompIdx:
+            return oilPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
+
+        case waterCompIdx:
+            return oilPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
+
+        default:
+            OPM_THROW(std::logic_error,
+                      "Invalid component index " << compIdx);
+        }
+    }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
@@ -590,15 +651,15 @@ public:
     { return waterPvt_->density(regionIdx, temperature, pressure); }
 
 private:
-    static void resizeArrays_(int numRegions)
+    static void resizeArrays_(size_t numRegions)
     {
         molarMass_.resize(numRegions);
         referenceDensity_.resize(numRegions);
     }
 
-    static std::shared_ptr<const Opm::GasPvtInterface<Scalar, Evaluation> > gasPvt_;
-    static std::shared_ptr<const Opm::OilPvtInterface<Scalar, Evaluation> > oilPvt_;
-    static std::shared_ptr<const Opm::WaterPvtInterface<Scalar, Evaluation> > waterPvt_;
+    static std::shared_ptr<GasPvt> gasPvt_;
+    static std::shared_ptr<OilPvt> oilPvt_;
+    static std::shared_ptr<WaterPvt> waterPvt_;
 
     static bool enableDissolvedGas_;
     static bool enableVaporizedOil_;
@@ -610,39 +671,39 @@ private:
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
 };
 
-template <class Scalar, class Evaluation>
+template <class Scalar>
 const Scalar
-BlackOil<Scalar, Evaluation>::surfaceTemperature = 273.15 + 15.56; // [K]
+BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
 
-template <class Scalar, class Evaluation>
+template <class Scalar>
 const Scalar
-BlackOil<Scalar, Evaluation>::surfacePressure = 101325.0; // [Pa]
+BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
 
-template <class Scalar, class Evaluation>
-bool BlackOil<Scalar, Evaluation>::enableDissolvedGas_;
+template <class Scalar>
+bool BlackOil<Scalar>::enableDissolvedGas_;
 
-template <class Scalar, class Evaluation>
-bool BlackOil<Scalar, Evaluation>::enableVaporizedOil_;
+template <class Scalar>
+bool BlackOil<Scalar>::enableVaporizedOil_;
 
-template <class Scalar, class Evaluation>
-std::shared_ptr<const OilPvtInterface<Scalar, Evaluation> >
-BlackOil<Scalar, Evaluation>::oilPvt_;
+template <class Scalar>
+std::shared_ptr<OilPvtMultiplexer<Scalar> >
+BlackOil<Scalar>::oilPvt_;
 
-template <class Scalar, class Evaluation>
-std::shared_ptr<const GasPvtInterface<Scalar, Evaluation> >
-BlackOil<Scalar, Evaluation>::gasPvt_;
+template <class Scalar>
+std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> >
+BlackOil<Scalar>::gasPvt_;
 
-template <class Scalar, class Evaluation>
-std::shared_ptr<const WaterPvtInterface<Scalar, Evaluation> >
-BlackOil<Scalar, Evaluation>::waterPvt_;
+template <class Scalar>
+std::shared_ptr<WaterPvtMultiplexer<Scalar> >
+BlackOil<Scalar>::waterPvt_;
 
-template <class Scalar, class Evaluation>
+template <class Scalar>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar, Evaluation>::referenceDensity_;
+BlackOil<Scalar>::referenceDensity_;
 
-template <class Scalar, class Evaluation>
+template <class Scalar>
 std::vector<std::array<Scalar, 3> >
-BlackOil<Scalar, Evaluation>::molarMass_;
+BlackOil<Scalar>::molarMass_;
 }} // namespace Opm, FluidSystems
 
 #endif

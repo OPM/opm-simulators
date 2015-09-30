@@ -25,77 +25,121 @@
 #ifndef OPM_DRY_GAS_PVT_HPP
 #define OPM_DRY_GAS_PVT_HPP
 
-#include "GasPvtInterface.hpp"
+#include <opm/material/Constants.hpp>
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-
-#include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_OPM_PARSER
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
+#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #endif
 
 #include <vector>
 
 namespace Opm {
 
+template <class Scalar>
+class OilPvtMultiplexer;
+
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
  */
-template <class Scalar, class Evaluation = Scalar>
+template <class Scalar>
 class DryGasPvt
-    : public GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, DryGasPvt<Scalar, Evaluation> >
 {
-    friend class GasPvtInterfaceTemplateWrapper<Scalar, Evaluation, DryGasPvt<Scalar, Evaluation> >;
-
-    typedef FluidSystems::BlackOil<Scalar, Evaluation> BlackOilFluidSystem;
-
+    typedef Opm::OilPvtMultiplexer<Scalar> OilPvtMultiplexer;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
-    static const int oilPhaseIdx = BlackOilFluidSystem::oilPhaseIdx;
-    static const int gasPhaseIdx = BlackOilFluidSystem::gasPhaseIdx;
-    static const int waterPhaseIdx = BlackOilFluidSystem::waterPhaseIdx;
-
-    static const int oilCompIdx = BlackOilFluidSystem::oilCompIdx;
-    static const int gasCompIdx = BlackOilFluidSystem::gasCompIdx;
-    static const int waterCompIdx = BlackOilFluidSystem::waterCompIdx;
-
 public:
-    void setNumRegions(int numRegions)
+#if HAVE_OPM_PARSER
+    /*!
+     * \brief Initialize the parameters for dry gas using an ECL deck.
+     *
+     * This method assumes that the deck features valid DENSITY and PVDG keywords.
+     */
+    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
+        const auto& pvdgTables = eclState->getTableManager()->getPvdgTables();
+        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+
+        assert(pvdgTables.size() == densityKeyword->size());
+
+        size_t numRegions = pvdgTables.size();
+        setNumRegions(numRegions);
+
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+            Scalar rhoRefO = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+            Scalar rhoRefG = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
+            Scalar rhoRefW = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+
+            setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
+
+            // determine the molar masses of the components
+            Scalar p = 1.01325e5; // surface pressure, [Pa]
+            Scalar T = 273.15 + 15.56; // surface temperature, [K]
+            Scalar MO = 175e-3; // [kg/mol]
+            Scalar MG = Opm::Constants<Scalar>::R*T*rhoRefG / p; // [kg/mol], consequence of the ideal gas law
+            Scalar MW = 18.0e-3; // [kg/mol]
+            // TODO (?): the molar mass of the components can possibly specified
+            // explicitly in the deck.
+            setMolarMasses(regionIdx, MO, MG, MW);
+
+            const auto& pvdgTable = pvdgTables[regionIdx];
+
+            // say 99.97% of all time: "premature optimization is the root of all
+            // evil". Eclipse does this "optimization" for apparently no good reason!
+            std::vector<Scalar> invB(pvdgTable.numRows());
+            const auto& Bg = pvdgTable.getFormationFactorColumn();
+            for (unsigned i = 0; i < Bg.size(); ++ i) {
+                invB[i] = 1.0/Bg[i];
+            }
+
+            size_t numSamples = invB.size();
+            inverseGasB_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), invB);
+            gasMu_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), pvdgTable.getViscosityColumn());
+        }
+    }
+#endif
+
+    void setNumRegions(size_t numRegions)
+    {
+        gasReferenceDensity_.resize(numRegions);
         inverseGasB_.resize(numRegions);
         inverseGasBMu_.resize(numRegions);
         gasMu_.resize(numRegions);
     }
 
-#if HAVE_OPM_PARSER
-    void setPvdgTable(int regionIdx, const PvdgTable& pvdgTable)
+
+    /*!
+     * \brief Initialize the reference densities of all fluids for a given PVT region
+     */
+    void setReferenceDensities(unsigned regionIdx,
+                               Scalar /*rhoRefOil*/,
+                               Scalar rhoRefGas,
+                               Scalar /*rhoRefWater*/)
     {
-        int numSamples = pvdgTable.numRows();
-        assert(numSamples > 1);
-
-        // say 99.97% of all time: "premature optimization is the root of all
-        // evil". Eclipse does it this way for no good reason!
-        std::vector<Scalar> invB(pvdgTable.numRows());
-        const auto& Bg = pvdgTable.getFormationFactorColumn();
-        for (unsigned i = 0; i < Bg.size(); ++ i) {
-            invB[i] = 1.0/Bg[i];
-        }
-
-        inverseGasB_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), invB);
-        gasMu_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), pvdgTable.getViscosityColumn());
+        gasReferenceDensity_[regionIdx] = rhoRefGas;
     }
-#endif
+
+    /*!
+     * \brief Initialize the reference densities of all fluids for a given PVT region
+     */
+    void setMolarMasses(unsigned /*regionIdx*/,
+                        Scalar /*MOil*/,
+                        Scalar /*MGas*/,
+                        Scalar /*MWater*/)
+    { }
 
     /*!
      * \brief Initialize the viscosity of the gas phase.
      *
      * This is a function of \f$(p_g)\f$...
      */
-    void setGasViscosity(int regionIdx, const TabulatedOneDFunction& mug)
+    void setGasViscosity(unsigned regionIdx, const TabulatedOneDFunction& mug)
     { gasMu_[regionIdx] = mug; }
 
     /*!
@@ -103,7 +147,7 @@ public:
      *
      * \param samplePoints A container of \f$(p_g, B_g)\f$ values
      */
-    void setGasFormationVolumeFactor(int regionIdx, const SamplingPoints &samplePoints)
+    void setGasFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
         SamplingPoints tmp(samplePoints);
         auto it = tmp.begin();
@@ -118,11 +162,13 @@ public:
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd()
+    void initEnd(const OilPvtMultiplexer *oilPvt)
     {
+        oilPvt_ = oilPvt;
+
         // calculate the final 2D functions which are used for interpolation.
-        int numRegions = gasMu_.size();
-        for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
+        size_t numRegions = gasMu_.size();
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate the table which stores the inverse of the product of the gas
             // formation volume factor and the gas viscosity
             const auto& gasMu = gasMu_[regionIdx];
@@ -131,7 +177,7 @@ public:
 
             std::vector<Scalar> pressureValues(gasMu.numSamples());
             std::vector<Scalar> invGasBMuValues(gasMu.numSamples());
-            for (int pIdx = 0; pIdx < gasMu.numSamples(); ++pIdx) {
+            for (unsigned pIdx = 0; pIdx < gasMu.numSamples(); ++pIdx) {
                 pressureValues[pIdx] = invGasB.xAt(pIdx);
                 invGasBMuValues[pIdx] = invGasB.valueAt(pIdx) * (1.0/gasMu.valueAt(pIdx));
             }
@@ -140,18 +186,17 @@ public:
         }
     }
 
-private:
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval viscosity_(int regionIdx,
-                       const LhsEval& temperature,
-                       const LhsEval& pressure,
-                       const LhsEval& XgO) const
+    template <class Evaluation>
+    Evaluation viscosity(unsigned regionIdx,
+                         const Evaluation& /*temperature*/,
+                         const Evaluation& pressure,
+                         const Evaluation& /*XgO*/) const
     {
-        const LhsEval& invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
-        const LhsEval& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
+        const Evaluation& invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
+        const Evaluation& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
 
         return invBg/invMugBg;
     }
@@ -159,44 +204,59 @@ private:
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval density_(int regionIdx,
-                     const LhsEval& temperature,
-                     const LhsEval& pressure,
-                     const LhsEval& XgO) const
+    template <class Evaluation>
+    Evaluation density(unsigned regionIdx,
+                       const Evaluation& temperature,
+                       const Evaluation& pressure,
+                       const Evaluation& XgO) const
     {
         // gas formation volume factor at reservoir pressure
-        const LhsEval& Bg = formationVolumeFactor_(regionIdx, temperature, pressure, XgO);
-        return BlackOilFluidSystem::referenceDensity(gasPhaseIdx, regionIdx)/Bg;
+        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, XgO);
+        return gasReferenceDensity_[regionIdx]/Bg;
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
-    template <class LhsEval>
-    LhsEval formationVolumeFactor_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& pressure,
-                                   const LhsEval& XgO) const
+    template <class Evaluation>
+    Evaluation formationVolumeFactor(unsigned regionIdx,
+                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& pressure,
+                                     const Evaluation& /*XgO*/) const
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
      *        a set of parameters.
      */
-    template <class LhsEval>
-    LhsEval fugacityCoefficient_(int regionIdx,
-                                 const LhsEval& temperature,
-                                 const LhsEval& pressure,
-                                 int compIdx) const
+    template <class Evaluation>
+    Evaluation fugacityCoefficientGas(unsigned /*regionIdx*/,
+                                      const Evaluation& /*temperature*/,
+                                      const Evaluation& /*pressure*/) const
     {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-
         // make the gas component more affine to the gas phase than the other components
-        if (compIdx == BlackOilFluidSystem::gasCompIdx)
-            return Toolbox::createConstant(1.0);
-        return Toolbox::createConstant(1e6);
+        return 1.0;
     }
+
+    /*!
+     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
+     *        a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
+                                      const Evaluation& /*temperature*/,
+                                      const Evaluation& /*pressure*/) const
+    { return 1.0e6; }
+
+    /*!
+     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
+     *        a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation fugacityCoefficientWater(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
+    { return 1.1e6; }
 
     /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]
@@ -204,46 +264,37 @@ private:
      *
      * \param XgO The mass fraction of the oil component in the gas phase [-]
      */
-    template <class LhsEval>
-    LhsEval gasSaturationPressure_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& XgO) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-        return Toolbox::createConstant(0.0);  // this is dry gas!
-    }
+    template <class Evaluation>
+    Evaluation gasSaturationPressure(unsigned /*regionIdx*/,
+                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& /*XgO*/) const
+    { return 0.0; /* this is dry gas! */ }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
-    template <class LhsEval>
-    LhsEval oilVaporizationFactor_(int regionIdx,
-                                   const LhsEval& temperature,
-                                   const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-        return Toolbox::createConstant(0.0);  // this is dry gas!
-    }
+    template <class Evaluation>
+    Evaluation oilVaporizationFactor(unsigned /*regionIdx*/,
+                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dry gas! */ }
 
-    template <class LhsEval>
-    LhsEval saturatedGasOilMassFraction_(int regionIdx,
-                                         const LhsEval& temperature,
-                                         const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-        return Toolbox::createConstant(0.0);  // this is dry gas!
-    }
+    template <class Evaluation>
+    Evaluation saturatedGasOilMassFraction(unsigned /*regionIdx*/,
+                                           const Evaluation& /*temperature*/,
+                                           const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dry gas! */ }
 
-    template <class LhsEval>
-    LhsEval saturatedGasOilMoleFraction_(int regionIdx,
-                                         const LhsEval& temperature,
-                                         const LhsEval& pressure) const
-    {
-        typedef Opm::MathToolbox<LhsEval> Toolbox;
-        return Toolbox::createConstant(0.0);  // this is dry gas!
-    }
+    template <class Evaluation>
+    Evaluation saturatedGasOilMoleFraction(unsigned /*regionIdx*/,
+                                           const Evaluation& /*temperature*/,
+                                           const Evaluation& /*pressure*/) const
+    { return 0.0; /* this is dry gas! */ }
 
 private:
+    const OilPvtMultiplexer *oilPvt_;
+
+    std::vector<Scalar> gasReferenceDensity_;
     std::vector<TabulatedOneDFunction> inverseGasB_;
     std::vector<TabulatedOneDFunction> gasMu_;
     std::vector<TabulatedOneDFunction> inverseGasBMu_;

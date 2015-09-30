@@ -222,7 +222,7 @@ public:
         MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
     }
 
-    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(unsigned elemIdx) const
+    const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(size_t elemIdx) const
     {
         return *oilWaterScaledEpsInfoDrainage_[elemIdx];
     }
@@ -360,7 +360,7 @@ private:
         if (enableHysteresis())
             epsImbGridProperties.initFromDeck(deck, eclState, /*imbibition=*/true);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            int cartElemIdx = compressedToCartesianElemIdx[elemIdx];
+            unsigned cartElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
             readGasOilScaledPoints_(gasOilScaledInfoVector,
                                     gasOilScaledPointsVector,
                                     gasOilConfig,
@@ -754,7 +754,7 @@ private:
                                  unsigned elemIdx,
                                  unsigned cartElemIdx)
     {
-        unsigned satnumIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
+        unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);
@@ -771,7 +771,7 @@ private:
                                    unsigned elemIdx,
                                    unsigned cartElemIdx)
     {
-        unsigned satnumIdx = (*epsGridProperties.satnum)[cartElemIdx] - 1; // ECL uses Fortran indices!
+        unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
         destInfo[elemIdx]->extractScaled(epsGridProperties, cartElemIdx);

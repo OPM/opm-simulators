@@ -245,7 +245,6 @@ struct EclEpsScalingPointsInfo
             // some safety checks mandated by the ECL documentation
             assert(std::abs(Sowu - (1 - swfnTables[satRegionIdx].getSwColumn().front())) < 1e-30);
             assert(std::abs(maxKrw - maxKrg) < 1e-30);
-
         }
         else {
             throw std::domain_error("No valid saturation keyword family specified");
