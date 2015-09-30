@@ -2275,16 +2275,18 @@ namespace detail {
 
     template <class Grid, class Implementation>
     double
-    BlackoilModelBase<Grid, Implementation>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
-                                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
-                                              const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
-                                              std::array<double,MaxNumPhases>& R_sum,
-                                              std::array<double,MaxNumPhases>& maxCoeff,
-                                              std::array<double,MaxNumPhases>& B_avg,
-                                              std::vector<double>& maxNormWell,
-                                              int nc,
-                                              int nw) const
+    BlackoilModelBase<Grid, Implementation>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& B,
+                                                                  const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& tempV,
+                                                                  const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& R,
+                                                                  std::vector<double>& R_sum,
+                                                                  std::vector<double>& maxCoeff,
+                                                                  std::vector<double>& B_avg,
+                                                                  std::vector<double>& maxNormWell,
+                                                                  int nc,
+                                                                  int nw) const
     {
+        const int num_elems = B.cols();
+
         // Do the global reductions
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -2332,21 +2334,20 @@ namespace detail {
         else
 #endif
         {
-            for ( int idx=0; idx<MaxNumPhases; ++idx )
+            B_avg.resize(num_elems);
+            maxCoeff.resize(num_elems);
+            R_sum.resize(num_elems);
+            maxNormWell.resize(num_elems);
+            for ( int idx = 0; idx < num_elems; ++idx )
             {
-                if (active_[idx]) {
-                    B_avg[idx] = B.col(idx).sum()/nc;
-                    maxCoeff[idx]=tempV.col(idx).maxCoeff();
-                    R_sum[idx] = R.col(idx).sum();
-                }
-                else
-                {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
-                }
+                B_avg[idx] = B.col(idx).sum()/nc;
+                maxCoeff[idx] = tempV.col(idx).maxCoeff();
+                R_sum[idx] = R.col(idx).sum();
+
                 maxNormWell[idx] = 0.0;
-                for ( int w=0; w<nw; ++w )
+                for ( int w = 0; w < nw; ++w )
                 {
-                    maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                    maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
                 }
             }
             // Compute total pore volume
@@ -2368,43 +2369,42 @@ namespace detail {
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int np = fluid_.numPhases();
+        assert(int(rq_.size()) == np);
 
         const V pv = geo_.poreVolume();
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        std::array<double,MaxNumPhases> CNV                   = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
-        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
-        std::vector<double> maxNormWell(MaxNumPhases);
+        std::vector<double> R_sum(np);
+        std::vector<double> B_avg(np);
+        std::vector<double> maxCoeff(np);
+        std::vector<double> maxNormWell(np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
 
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < np; ++idx )
         {
-            if (active_[idx]) {
-                const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
-                B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-            }
+            const ADB& tempB = rq_[idx].b;
+            B.col(idx)       = 1./tempB.value();
+            R.col(idx)       = residual_.material_balance_eq[idx].value();
+            tempV.col(idx)   = R.col(idx).abs()/pv;
         }
 
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
-                                                  maxNormWell, nc, nw);
+        const double pvSum = convergenceReduction(B, tempV, R,
+                                                  R_sum, maxCoeff, B_avg, maxNormWell,
+                                                  nc, nw);
+
+        std::vector<double> CNV(np);
+        std::vector<double> mass_balance_residual(np);
+        std::vector<double> well_flux_residual(np);
 
         bool converged_MB = true;
         bool converged_CNV = true;
         bool converged_Well = true;
         // Finish computation
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < np; ++idx )
         {
             CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
             mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
@@ -2417,8 +2417,8 @@ namespace detail {
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
-        converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
-        const bool   converged        = converged_MB && converged_CNV && converged_Well;
+        converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+        const bool converged = converged_MB && converged_CNV && converged_Well;
 
         // Residual in Pascal can have high values and still be ok.
         const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
@@ -2475,34 +2475,31 @@ namespace detail {
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int nw = localWellsActive() ? wells().number_of_wells : 0;
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int np = fluid_.numPhases();
 
         const V pv = geo_.poreVolume();
-        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
+        std::vector<double> R_sum(np);
+        std::vector<double> B_avg(np);
+        std::vector<double> maxCoeff(np);
         std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
         Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
         std::vector<double> maxNormWell(MaxNumPhases);
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < np; ++idx )
         {
-            if (active_[idx]) {
-                const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
-                B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-            }
+            const ADB& tempB = rq_[idx].b;
+            B.col(idx)       = 1./tempB.value();
+            R.col(idx)       = residual_.material_balance_eq[idx].value();
+            tempV.col(idx)   = R.col(idx).abs()/pv;
         }
 
         convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc, nw);
 
+        std::vector<double> well_flux_residual(np);
         bool converged_Well = true;
         // Finish computation
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < np; ++idx )
         {
             well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
             converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
