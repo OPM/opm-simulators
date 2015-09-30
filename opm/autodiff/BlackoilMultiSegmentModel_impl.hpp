@@ -1016,13 +1016,13 @@ namespace Opm {
         ADB vapour = ADB::constant(ADB::V::Zero(nseg_total));
 
         if (active_[Water]) {
-            aqua += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Aqua * nseg_total));
+            aqua += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Aqua * nseg_total));
         }
         if (active_[Oil]) {
-            liquid += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Liquid * nseg_total));
+            liquid += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Liquid * nseg_total));
         }
         if (active_[Gas]) {
-            vapour += subset(state.qs, Span(nseg_total, 1, BlackoilPhases::Vapour * nseg_total));
+            vapour += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Vapour * nseg_total));
         }
 
         // THP control is not implemented for the moment.
