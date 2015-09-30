@@ -194,11 +194,13 @@ namespace Opm {
         const int nw = xw.numberOfWells();
 
         // the well cells for multisegment wells and non-segmented wells should be counted seperatedly
+        // indexing should be put in WellState
         std::vector<int> well_cells;
         std::vector<int> well_cells_segmented_idx;
         std::vector<int> well_cells_non_segmented_idx;
         std::vector<int> well_cells_segmented;
         std::vector<int> well_cells_non_segmented;
+
         well_cells_segmented_idx.reserve(nperf);
         well_cells_non_segmented_idx.reserve(nperf);
         well_cells_segmented.reserve(nperf);
@@ -231,8 +233,10 @@ namespace Opm {
             const V kr_phase = kr_phase_adb.value();
             perf_kr.push_back(kr_phase);
         }
+
         // compute the averaged density for the well block
         // TODO: for the non-segmented wells, they should be set to zero
+        // TODO: for the moment, they are still calculated, while not used later.
         for (int i = 0; i < nperf; ++i) {
             double sum_kr = 0.;
             int np = perf_kr.size(); // make sure it is 3
@@ -375,8 +379,6 @@ namespace Opm {
         well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
 
         // TODO: A temporary approach. We calculate all the densities and pressure difference for all the perforations.
-
-
         // For the segmented wells, the h_nc;
         // Firstly, we need to compute the segmented densities first.
         // It must be implicit. So it must be ADB variable.

@@ -178,10 +178,10 @@ namespace Opm {
 
         // ADB version of the densities, when using AVG way, the calculation of the density and hydrostatic head
         // is implicit
-        ADB well_perforation_densities_adb_;
+        ADB well_perforation_densities_adb_; // TODO: NOT NEEDED
 
         // ADB version. Eventually, only ADB version will be kept.
-        ADB well_perforation_pressure_diffs_adb_;
+        ADB well_perforation_pressure_diffs_adb_; // TODO: NOT NEEDED
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
@@ -189,7 +189,7 @@ namespace Opm {
         // at the center of the grid cell, it should be ZERO.
         // It should only apply to the mutli-segmented wells.
         V well_perforation_pressure_cell_diffs_;
-        ADB well_perforation_pressure_cell_diffs_adb_;
+        ADB well_perforation_pressure_cell_diffs_adb_; // TODO: NOT NEEDED
 
         // Pressure correction due to the depth differennce between segment depth and perforation depth.
         // TODO: It should be able to be merge as a part of the perforation_pressure_diffs_.
@@ -199,12 +199,12 @@ namespace Opm {
         // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
         // and the cell center of the grid block
         V well_perforation_cell_densities_;
-        ADB well_perforation_cell_densities_adb_;
+        ADB well_perforation_cell_densities_adb_; // TODO: NOT NEEDED
 
         V well_perforatoin_cell_pressure_diffs_;
 
         // the density of the fluid mixture in the segments
-        // which is calculated in a implicit way
+        // which is calculated in an implicit way
         ADB well_segment_densities_;
 
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
