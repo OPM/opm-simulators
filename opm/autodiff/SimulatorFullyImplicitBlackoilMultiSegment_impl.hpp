@@ -117,13 +117,76 @@ namespace Opm
             for (size_t i = 0; i < wells_multisegment.size(); ++i) {
                 wells_multisegment[i].reset(new WellMultiSegment(wells_ecl[i], timer.currentStepNum(), wells));
             }
+
             // for DEBUGGING OUTPUT
+            if (int debug = 1) {
             std::cout << " the number of the wells from EclipseState " << wells_ecl.size() << std::endl;
             for (size_t i = 0; i < wells_ecl.size(); ++i) {
                 std::cout << " well name " << wells_ecl[i]->name() << std::endl;
                 std::cout << " segment wells " << wells_ecl[i]->isMultiSegment() << std::endl;
             }
+
+            std::cout << " output all the well information for debugging " << std::endl;
+
+            int nw = wells_multisegment.size();
+            for (int w = 0; w < nw; ++w) {
+                WellMultiSegmentConstPtr well = wells_multisegment[w];
+                std::cout << " well name " << well->name() << std::endl;
+                std::cout << " is mutli-segmented ? : " << well->isMultiSegmented() << std::endl;
+                std::cout << " number of segments : " << well->numberOfSegments() << std::endl;
+                std::cout << " number of perforations : " << well->numberOfPerforations() << std::endl;
+
+                std::cout << " beginning outputing segment informations " << std::endl;
+                int nseg = well->numberOfSegments();
+                for (int s = 0; s < well->numberOfSegments(); ++s) {
+                    std::cout << "    segment number : " << s << std::endl;
+                    int n_perf_segment = well->segmentPerforations()[s].size();
+                    std::cout << "    number of perforations for this segment " << n_perf_segment << std::endl;
+                    std::cout << "    the depth of the segment " << well->segmentDepth()[s] << std::endl;
+                    std::cout << "    the length of the segment " << well->segmentLength()[s] << std::endl;
+                    std::cout << "    the volume of the segment " << well->segmentVolume()[s] << std::endl;
+                    std::cout << "    the roughness of the segment " << well->segmentRoughness()[s] << std::endl;
+                    std::cout << "    the cross area of the segment " << well->segmentCrossArea()[s] << std::endl;
+                    std::cout << "    its outletSegment " << well->outletSegment()[s] << std::endl;
+                    std::cout << "    the number of the inlet segments " << well->inletSegments()[s].size() << std::endl;
+                    std::cout << "    its inlet segments are  ";
+                    for (int inlet = 0; inlet < well->inletSegments()[s].size(); ++inlet) {
+                        std::cout << well->inletSegments()[s][inlet] << " ";
+                    }
+                    std::cout << std::endl;
+                    std::cout << "    its perforations infromations " << std::endl;
+                    for (int perf = 0; perf < n_perf_segment; ++perf) {
+                        int perf_number = well->segmentPerforations()[s][perf];
+                        std::cout << "      perforation " << perf_number;
+                        std::cout << "   peforation depth " << well->perfDepth()[perf_number] << std::endl;;
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << " output all the mapping informations " << std::endl;
+                std::cout << " matrix s2p " << std::endl;
+                std::cout << well->wellOps().s2p << std::endl;
+
+
+                std::cout << " maxtrix p2s " << std::endl;
+                std::cout << well->wellOps().p2s << std::endl;
+
+                std::cout << " matrix p2s_average " << std::endl;
+                std::cout << well->wellOps().p2s_average << std::endl;
+
+                std::cout << " maxtrix s2s_gather " << std::endl;
+                std::cout << well->wellOps().s2s_gather << std::endl;
+
+                std::cout << " maxtrix p2s_gather " << std::endl;
+                std::cout << well->wellOps().p2s_gather << std::endl;
+
+                std::cout << " s2s_outlet " << std::endl;
+                std::cout << well->wellOps().s2s_outlet << std::endl;
+
+                std::cout << " output well information for well " << well->name() << " done!!!! " << std::endl;
+            }
             std::cin.ignore();
+            }
+
 
             well_state.init(wells_multisegment, state, prev_well_state);
 
