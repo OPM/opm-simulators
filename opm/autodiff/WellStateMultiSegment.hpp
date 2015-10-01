@@ -258,6 +258,9 @@ namespace Opm
 
             }
 
+            // assert(start_perforation == total_perforation);
+            // assert(start_segment == total_segment);
+
             // Initialize current_controls_.
             // The controls set in the Wells object are treated as defaults,
             // and also used for initial values.
@@ -340,16 +343,6 @@ namespace Opm
                             // for pressure it is not that trival
                         // }
 
-/*         typedef struct {
-            int well_number;
-            int start_segment;
-            int number_of_segments;
-            int start_perforation;
-            int number_of_perforations;
-            std::vector<int> start_perforation_segment; // the starting position of perforation inside the segment
-            std::vector<int> number_of_perforations_segment; // the numbers for perforations for the segments
-        } MapentryType; */
-
                         // peforation rates
                         // segment rates
                         // It really depends on if the structures on the segments and perforations are changed.
@@ -360,22 +353,9 @@ namespace Opm
                         // for the perforation rates, it is Okay to calculate by deviding the well rates by the perforation numbers.
                         // Then the segment rates are calculated based on the perforation rates and the well rates.
                         // The segment rates of top segments should be the same with the well rates.
-
-
                     }
                 }
-
-
             }
-            // TODO: maybe we should store the values of np, nw, nseg, nperf for the states for later use.
-            // assert(start_perforation == total_perforation);
-            // assert(start_segment == total_segment);
-               /*  if (well_controls_well_is_stopped(ctrl)) {
-                    // shut well: all the rates are zero.
-                } else {
-                    // Initialize the phase rates for each perforation by deviding the well rates by the number of perofrations
-                    // Then using the perf rates to initialize the rates for the segments
-                } */
         }
 
         std::vector<double>& segPhaseRates() { return segphaserates_; }
