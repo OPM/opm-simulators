@@ -87,7 +87,7 @@ static const char* fam1DeckString =
     "0.78	0.000005625		0.0001	0\n"
     "0.84	6.69421487603306E-006	0	0\n"
     "0.91	8.05914256198347E-006	0	0\n"
-    "1	0.00001			0	0 /\n"
+    "1	    0.984 			0	0 /\n"
     "\n"
     "\n"
     "SGOF\n"
@@ -158,7 +158,7 @@ static const char* fam2DeckString =
     "0.78	0.000005625		0\n"
     "0.84	6.69421487603306E-006	0\n"
     "0.91	8.05914256198347E-006	0\n"
-    "1	0.00001			0 /\n"
+    "1	0.984			0 /\n"
     "\n"
     "\n"
     "SGFN\n"
@@ -248,14 +248,6 @@ int main()
         if (materialLawManager.enableHysteresis())
             OPM_THROW(std::logic_error,
                       "Discrepancy between the deck and the EclMaterialLawManager");
-
-        const auto& elem0OwScalingParams = materialLawManager.oilWaterScaledEpsInfoDrainage(0);
-        for (size_t elemIdx = 0; elemIdx < n; ++ elemIdx) {
-            const auto& owScalingParams = materialLawManager.oilWaterScaledEpsInfoDrainage(elemIdx);
-            if (&owScalingParams != &elem0OwScalingParams)
-                OPM_THROW(std::logic_error,
-                          "Discrepancy between the deck and the EclMaterialLawManager");
-        }
 
         const auto fam2Deck = parser.parseString(fam2DeckString, parseMode);
         const auto fam2EclState = std::make_shared<Opm::EclipseState>(fam2Deck, parseMode);
