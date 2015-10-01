@@ -376,6 +376,10 @@ namespace Opm
         return m_outlet_segment_;
     }
 
+    const std::vector<std::vector<int>>& WellMultiSegment::inletSegments() const {
+        return m_inlet_segments_;
+    }
+
     const std::vector<double>& WellMultiSegment::segmentLength() const {
         return m_segment_length_;
     }
