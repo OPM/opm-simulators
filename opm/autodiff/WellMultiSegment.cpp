@@ -51,6 +51,8 @@ namespace Opm
             m_segment_depth_.resize(m_number_of_segments_);
             m_segment_internal_diameter_.resize(m_number_of_segments_);
             m_segment_roughness_.resize(m_number_of_segments_);
+            // TODO: the cross area needs to be calculated.
+            m_segment_cross_area_.resize(m_number_of_segments_, 0.);
             m_segment_volume_.resize(m_number_of_segments_);
             m_segment_perforations_.resize(m_number_of_segments_);
             // what is the point to do this?
@@ -159,17 +161,18 @@ namespace Opm
             m_comp_pressure_drop_ = WellSegment::H__;
             m_multiphase_model_ = WellSegment::HO;
 
-            m_outlet_segment_.resize(m_number_of_segments_);
-            m_segment_length_.resize(m_number_of_segments_);
-            m_segment_depth_.resize(m_number_of_segments_);
-            m_segment_internal_diameter_.resize(m_number_of_segments_);
-            m_segment_roughness_.resize(m_number_of_segments_);
-            m_segment_volume_.resize(m_number_of_segments_);
+            m_outlet_segment_.resize(m_number_of_segments_, -1);
+            m_segment_length_.resize(m_number_of_segments_, 0.);
+            // TODP: should set to be the bhp reference depth
+            m_segment_depth_.resize(m_number_of_segments_, 0.);
+            m_segment_internal_diameter_.resize(m_number_of_segments_, 0.);
+            m_segment_roughness_.resize(m_number_of_segments_, 0.);
+            m_segment_cross_area_.resize(m_number_of_segments_, 0.);
+            m_segment_volume_.resize(m_number_of_segments_, 0.);
             m_segment_perforations_.resize(m_number_of_segments_);
 
                 // now the segment for top segment is 0, then its outlet segment will be -1
                 // it is also the flag to indicate the top segment
-            m_outlet_segment_[0] = -1;
             // TODO: decide the following quantities later.
             // m_segment_length_[i] = (*segment_set)[i]->length();
             // m_segment_depth_[i] = (*segment_set)[i]->depth();
@@ -208,14 +211,15 @@ namespace Opm
             }
 
             // TODO: not sure if we need the perf_depth_.
-            // m_perf_depth_.resize(m_number_of_perforations_);
+            m_perf_depth_.resize(m_number_of_perforations_, 0.);
             m_segment_perforations_[0].resize(m_number_of_perforations_);
 
             for (size_t i = 0; i < m_number_of_perforations_; ++i) {
                 m_segment_perforations_[0][i] = i;
+                m_perf_depth_[i] = completion_set->get(i)->getCenterDepth();
             }
 
-            m_inlet_segments_.resize(1);
+            m_inlet_segments_.resize(m_number_of_segments_);
 
             // std::cin.ignore();
 
