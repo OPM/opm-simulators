@@ -292,18 +292,12 @@ namespace Opm
             }
             int temp_s = s;
             while (m_outlet_segment_[temp_s] >=0) {
-                s2s_gather.push_back(Tri(m_outlet_segment_[temp_s], temp_s, 1.0));
+                s2s_gather.push_back(Tri(m_outlet_segment_[temp_s], s, 1.0));
                 temp_s = m_outlet_segment_[temp_s];
             }
         }
 
-        M temp_s2s_gather(m_number_of_segments_, m_number_of_segments_);
-        M inverse_s2s_gather(m_number_of_segments_, m_number_of_segments_);
-
-        temp_s2s_gather.setFromTriplets(s2s_gather.begin(), s2s_gather.end());
-        inverse_s2s_gather = temp_s2s_gather.cwiseInverse();
-
-        m_wops_.s2s_gather = temp_s2s_gather.cwiseProduct(inverse_s2s_gather);
+        m_wops_.s2s_gather.setFromTriplets(s2s_gather.begin(), s2s_gather.end());
         // p2w should be simple
 
         m_wops_.p2s_gather = M(m_number_of_segments_, m_number_of_perforations_);
