@@ -274,6 +274,9 @@ namespace Opm
             // order can change so the mapping is based on the well names
             if ( !(prevState.wellMap().empty()) )
             {
+                std::cout << "copying from the previous state ! " << std::endl;
+                std::cin.ignore();
+
                 typedef typename WellMapType::const_iterator const_iterator;
                 const_iterator end_old = prevState.wellMap().end();
                 const_iterator end_this = wellMap().end();
@@ -404,6 +407,22 @@ namespace Opm
                         std::cout << " " << perfPhaseRates()[np * i + p];
                     }
                     std::cout << std::endl;
+                }
+            }
+
+            std::cout << " output all the information from the wellMap " << std::endl;
+
+            for (WellMapType::const_iterator iter = wellMap().begin(); iter != wellMap().end(); ++iter) {
+                std::cout << " well name : " << iter->first << std::endl;
+                const MapentryType &wellmapInfo = iter->second;
+                std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
+                          << " number of segment : " << wellmapInfo.number_of_segments << std::endl;
+                std::cout << " start perforation : " << wellmapInfo.start_perforation << " number of perforations : " << wellmapInfo.number_of_perforations << std::endl;
+                const int nseg = wellmapInfo.number_of_segments;
+                std::cout << "    start performation ofr each segment and number of perforation that each segment has" << std::endl;
+                for (int i = 0; i < nseg; ++i) {
+                    std::cout << " segment " << i << " start perforation " << wellmapInfo.start_perforation_segment[i]
+                              << " number of perforations " << wellmapInfo.number_of_perforations_segment[i] << std::endl;
                 }
             }
             std::cout << " output the well state right after intialization is DONE! " << std::endl;
