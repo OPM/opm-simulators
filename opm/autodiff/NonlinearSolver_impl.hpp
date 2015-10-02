@@ -81,57 +81,27 @@ namespace Opm
         // Do model-specific once-per-step calculations.
         model_->prepareStep(dt, reservoir_state, well_state);
 
-        // For each iteration we store in a vector the norms of the residual of
-        // the mass balance for each active phase, the well flux and the well equations.
-        std::vector<std::vector<double>> residual_norms_history;
+        int iteration = 0;
 
-        // Assemble residual and Jacobian, store residual norms.
-        model_->assemble(reservoir_state, well_state, true);
-        residual_norms_history.push_back(model_->computeResidualNorms());
+        // Let the model do one nonlinear iteration.
 
         // Set up for main solver loop.
-        double omega = 1.0;
-        int iteration = 0;
-        bool converged = model_->getConvergence(dt, iteration);
-        const int sizeNonLinear = model_->sizeNonLinear();
-        V dxOld = V::Zero(sizeNonLinear);
-        bool isOscillate = false;
-        bool isStagnate = false;
-        const enum RelaxType relaxtype = relaxType();
         int linIters = 0;
+        bool converged = false;
 
         // ----------  Main nonlinear solver loop  ----------
-        while ( (!converged && (iteration < maxIter())) || (minIter() > iteration)) {
-            // Compute the update to the primary variables.
-            V dx = model_->solveJacobianSystem();
-
-            // Store number of linear iterations used.
-            linIters += model_->linearIterationsLastSolve();
-
-            // Stabilize the nonlinear update.
-            detectOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
-            if (isOscillate) {
-                omega -= relaxIncrement();
-                omega = std::max(omega, relaxMax());
-                if (model_->terminalOutputEnabled()) {
-                    std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
-                }
+        do {
+            IterationReport report = model_->nonlinearIteration(iteration, dt, *this, reservoir_state, well_state);
+            if (report.failed) {
+                OPM_THROW(Opm::NumericalProblem, "Failed to complete a nonlinear iteration.");
             }
-            stabilizeNonlinearUpdate(dx, dxOld, omega, relaxtype);
-
-            // Apply the update, the model may apply model-dependent
-            // limitations and chopping of the update.
-            model_->updateState(dx, reservoir_state, well_state);
-
-            // Assemble residual and Jacobian, store residual norms.
-            model_->assemble(reservoir_state, well_state, false);
-            residual_norms_history.push_back(model_->computeResidualNorms());
-
-            // increase iteration counter
+            if (report.converged) {
+                assert(report.linear_iterations == 0);
+                converged = true;
+            }
+            linIters += report.linear_iterations;
             ++iteration;
-
-            converged = model_->getConvergence(dt, iteration);
-        }
+        } while ( (!converged && (iteration <= maxIter())) || (minIter() > iteration));
 
         if (!converged) {
             if (model_->terminalOutputEnabled()) {
@@ -141,7 +111,7 @@ namespace Opm
         }
 
         linearIterations_ += linIters;
-        nonlinearIterations_ += iteration;
+        nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
 
@@ -199,7 +169,7 @@ namespace Opm
     template <class PhysicalModel>
     void
     NonlinearSolver<PhysicalModel>::detectOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                       const int it, const double relaxRelTol_arg,
+                                                       const int it,
                                                        bool& oscillate, bool& stagnate) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
@@ -222,7 +192,7 @@ namespace Opm
             const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
             const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 
-            oscillatePhase += (d1 < relaxRelTol_arg) && (relaxRelTol_arg < d2);
+            oscillatePhase += (d1 < relaxRelTol()) && (relaxRelTol() < d2);
 
             // Process is 'stagnate' unless at least one phase
             // exhibits significant residual change.
@@ -235,8 +205,7 @@ namespace Opm
 
     template <class PhysicalModel>
     void
-    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega,
-                                                             const RelaxType relax_type) const
+    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const
     {
         // The dxOld is updated with dx.
         // If omega is equal to 1., no relaxtion will be appiled.
@@ -244,7 +213,7 @@ namespace Opm
         const V tempDxOld = dxOld;
         dxOld = dx;
 
-        switch (relax_type) {
+        switch (relaxType()) {
             case DAMPEN:
                 if (omega == 1.) {
                     return;

@@ -76,6 +76,17 @@ namespace Opm {
 
 
 
+    /// Class used for reporting the outcome of a nonlinearIteration() call.
+    struct IterationReport
+    {
+        bool failed;
+        bool converged;
+        int linear_iterations;
+    };
+
+
+
+
     /// Traits to encapsulate the types used by classes using or
     /// extending this model. Forward declared here, must be
     /// specialised for each concrete model class.
@@ -154,6 +165,22 @@ namespace Opm {
         void prepareStep(const double dt,
                          ReservoirState& reservoir_state,
                          WellState& well_state);
+
+        /// Called once per nonlinear iteration.
+        /// This model will perform a Newton-Raphson update, changing reservoir_state
+        /// and well_state. It will also use the nonlinear_solver to do relaxation of
+        /// updates if necessary.
+        /// \param[in] iteration              should be 0 for the first call of a new timestep
+        /// \param[in] dt                     time step size
+        /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        template <class NonlinearSolverType>
+        IterationReport nonlinearIteration(const int iteration,
+                                           const double dt,
+                                           NonlinearSolverType& nonlinear_solver,
+                                           ReservoirState& reservoir_state,
+                                           WellState& well_state);
 
         /// Called once after each time step.
         /// In this class, this function does nothing.
@@ -290,6 +317,9 @@ namespace Opm {
         std::vector<int>         primalVariable_;
         V pvdt_;
         std::vector<std::string> material_name_;
+        std::vector<std::vector<double>> residual_norms_history_;
+        double current_relaxation_;
+        V dx_old_;
 
         // ---------  Protected methods  ---------
 

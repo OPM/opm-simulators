@@ -180,6 +180,7 @@ namespace detail {
                         { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
         , terminal_output_ (terminal_output)
         , material_name_{ "Water", "Oil", "Gas" }
+        , current_relaxation_(1.0)
     {
         assert(numMaterials() == 3); // Due to the material_name_ init above.
 #if HAVE_MPI
@@ -221,6 +222,56 @@ namespace detail {
         if (active_[Gas]) {
             updatePrimalVariableFromState(reservoir_state);
         }
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    template <class NonlinearSolverType>
+    IterationReport
+    BlackoilModelBase<Grid, Implementation>::
+    nonlinearIteration(const int iteration,
+                       const double dt,
+                       NonlinearSolverType& nonlinear_solver,
+                       ReservoirState& reservoir_state,
+                       WellState& well_state)
+    {
+        if (iteration == 0) {
+            // For each iteration we store in a vector the norms of the residual of
+            // the mass balance for each active phase, the well flux and the well equations.
+            residual_norms_history_.clear();
+            current_relaxation_ = 1.0;
+            dx_old_ = V::Zero(sizeNonLinear());
+        }
+        assemble(reservoir_state, well_state, iteration == 0);
+        residual_norms_history_.push_back(computeResidualNorms());
+        const bool converged = getConvergence(dt, iteration);
+        if (!converged) {
+            V dx = solveJacobianSystem();
+
+            // Stabilize the nonlinear update.
+            bool isOscillate = false;
+            bool isStagnate = false;
+            nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
+            if (isOscillate) {
+                current_relaxation_ -= nonlinear_solver.relaxIncrement();
+                current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
+                if (terminalOutputEnabled()) {
+                    std::cout << " Oscillating behavior detected: Relaxation set to "
+                              << current_relaxation_ << std::endl;
+                }
+            }
+            nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
+
+            // Apply the update, applying model-dependent
+            // limitations and chopping of the update.
+            updateState(dx, reservoir_state, well_state);
+        }
+        const bool failed = false; // Not needed in this model.
+        const int linear_iters = converged ? 0 : linearIterationsLastSolve();
+        return IterationReport{ failed, converged, linear_iters };
     }
 
 

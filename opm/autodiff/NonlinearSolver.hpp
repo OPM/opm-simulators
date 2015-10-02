@@ -97,8 +97,21 @@ namespace Opm {
         /// Number of linear solver iterations used in the last call to step().
         unsigned int linearIterationsLastStep() const;
 
-        /// return reference to physical model
+        /// Reference to physical model.
         const PhysicalModel& model() const;
+
+        /// Detect oscillation or stagnation in a given residual history.
+        void detectOscillations(const std::vector<std::vector<double>>& residual_history,
+                                const int it, bool& oscillate, bool& stagnate) const;
+
+        /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
+        void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const;
+
+        /// The greatest relaxation factor (i.e. smallest factor) allowed.
+        double relaxMax() const          { return param_.relax_max_; }
+
+        /// The step-change size for the relaxation factor.
+        double relaxIncrement() const    { return param_.relax_increment_; }
 
     private:
         // ---------  Data members  ---------
@@ -111,15 +124,9 @@ namespace Opm {
 
         // ---------  Private methods  ---------
         enum RelaxType relaxType() const { return param_.relax_type_; }
-        double relaxMax() const          { return param_.relax_max_; }
-        double relaxIncrement() const    { return param_.relax_increment_; }
         double relaxRelTol() const       { return param_.relax_rel_tol_; }
         double maxIter() const           { return param_.max_iter_; }
         double minIter() const           { return param_.min_iter_; }
-        void detectOscillations(const std::vector<std::vector<double>>& residual_history,
-                                const int it, const double relaxRelTol,
-                                bool& oscillate, bool& stagnate) const;
-        void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
     };
 } // namespace Opm
 
