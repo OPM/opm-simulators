@@ -32,11 +32,6 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/dgf.hh>
-#endif
-
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
@@ -69,7 +64,6 @@ NEW_PROP_TAG(GridGlobalRefinements);
 
 // set the Grid and GridManager properties
 SET_TYPE_PROP(LensGridManager, Grid, Dune::YaspGrid<2>);
-//SET_TYPE_PROP(LensGridManager, Grid, Dune::ALUGrid< 2, 2, Dune::cube, Dune::nonconforming > );
 
 SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
 } // namespace Properties
