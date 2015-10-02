@@ -356,6 +356,57 @@ namespace Opm
                     }
                 }
             }
+
+            if (int debug = 1) {
+                std::cout << " output all the well state informations after initialization " << std::endl;
+                const int np = numberOfPhases();
+                const int nw = numberOfWells();
+                const int nperf_total = numberOfPerforations();
+                const int nseg_total = numberOfSegments();
+
+                std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
+                std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
+
+                std::cout << " bhps : " << std::endl;
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << bhp()[i] << std::endl;
+                }
+
+                std::cout << " thps : " << std::endl;
+
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << thp()[i] << std::endl;
+                }
+
+                std::cout << " well rates " << std::endl;
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << i;
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << wellRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+
+                std::cout << " segment pressures and segment phase rates : " << std::endl;
+                for (int i = 0; i < nseg_total; ++i) {
+                    std::cout << i << " " << segPress()[i];
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << segPhaseRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+
+                std::cout << " perf pressures and pref phase rates : " << std::endl;
+                for (int i = 0; i < nperf_total; ++i) {
+                    std::cout << i << " " << perfPress()[i];
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << perfPhaseRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+            }
+            std::cout << " output the well state right after intialization is DONE! " << std::endl;
+            std::cin.ignore();
         }
 
         std::vector<double>& segPhaseRates() { return segphaserates_; }
