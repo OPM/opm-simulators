@@ -202,14 +202,24 @@ public:
 
     MaterialLawParams& materialLawParams(unsigned elemIdx)
     {
-        assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
-        return *materialLawParams_[elemIdx];
+        return *materialLawParamsPointer(elemIdx);
     }
 
     const MaterialLawParams& materialLawParams(unsigned elemIdx) const
     {
-        assert(0 <= elemIdx && elemIdx < (int) materialLawParams_.size());
-        return *materialLawParams_[elemIdx];
+        return *materialLawParamsPointer(elemIdx);
+    }
+
+    std::shared_ptr<MaterialLawParams>& materialLawParamsPointer(unsigned elemIdx)
+    {
+        assert(0 <= elemIdx && elemIdx <  materialLawParams_.size());
+        return materialLawParams_[elemIdx];
+    }
+
+    const std::shared_ptr<MaterialLawParams>& materialLawParamsPointer(unsigned elemIdx) const
+    {
+        assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
+        return materialLawParams_[elemIdx];
     }
 
     template <class FluidState>
@@ -227,6 +237,15 @@ public:
         return *oilWaterScaledEpsInfoDrainage_[elemIdx];
     }
 
+    const std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointer(unsigned elemIdx) const
+    {
+        return oilWaterScaledEpsInfoDrainage_[elemIdx];
+    }
+
+    std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointer(unsigned elemIdx)
+    {
+        return oilWaterScaledEpsInfoDrainage_[elemIdx];
+    }
 private:
     void readGlobalEpsOptions_(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState)
     {
