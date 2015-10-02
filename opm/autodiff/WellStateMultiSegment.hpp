@@ -89,6 +89,7 @@ namespace Opm
 
             bhp_.resize(nw);
             thp_.resize(nw);
+            temperature_.resize(nw, 273.15 + 20); // standard temperature for now
 
             // deciding to add the following variables temporarily
             // TODO: making it better later
@@ -431,6 +432,10 @@ namespace Opm
         std::vector<double>& wellRates() { return wellrates_; }
         const std::vector<double>& wellRates() const { return wellrates_; }
 
+        // One temperature per well.
+        std::vector<double>& temperature() { return temperature_; };
+        const std::vector<double>& temperature() const { return temperature_; }
+
         // std::vector<int>& currentControls() { return current_controls_; }
         // const std::vector<int>& currentControls() const { return current_controls_; }
         using Base::currentControls;
@@ -448,7 +453,7 @@ namespace Opm
         std::vector<double> bhp_;
         std::vector<double> thp_;
         std::vector<double> wellrates_;
-        // std::vector<double> temperature_;
+        std::vector<double> temperature_;
         // pressure for the segment nodes
         std::vector<double> segpress_;
         // phase rates for the segments
