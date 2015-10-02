@@ -86,7 +86,7 @@ namespace Opm {
              PolymerBlackoilState& 		state ,
              WellStateFullyImplicitBlackoilPolymer& wstate);
 
-        int newtonIterations() const;
+        int nonlinearIterations() const;
         int linearIterations() const;
 
         /// Not used by this class except to satisfy interface requirements.
