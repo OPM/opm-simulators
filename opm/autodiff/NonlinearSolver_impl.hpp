@@ -20,31 +20,33 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_NEWTONSOLVER_IMPL_HEADER_INCLUDED
-#define OPM_NEWTONSOLVER_IMPL_HEADER_INCLUDED
+#ifndef OPM_NONLINEARSOLVER_IMPL_HEADER_INCLUDED
+#define OPM_NONLINEARSOLVER_IMPL_HEADER_INCLUDED
 
-#include <opm/autodiff/NewtonSolver.hpp>
+#include <opm/autodiff/NonlinearSolver.hpp>
 
 namespace Opm
 {
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::NewtonSolver(const SolverParameters& param,
-                                              std::unique_ptr<PhysicalModel> model)
+    NonlinearSolver<PhysicalModel>::NonlinearSolver(const SolverParameters& param,
+                                                    std::unique_ptr<PhysicalModel> model)
         : param_(param),
           model_(std::move(model)),
-          newtonIterations_(0),
-          linearIterations_(0)
+          nonlinearIterations_(0),
+          linearIterations_(0),
+          nonlinearIterationsLast_(0),
+          linearIterationsLast_(0)
     {
     }
 
     template <class PhysicalModel>
-    unsigned int NewtonSolver<PhysicalModel>::newtonIterations () const
+    unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterations() const
     {
-        return newtonIterations_;
+        return nonlinearIterations_;
     }
 
     template <class PhysicalModel>
-    unsigned int NewtonSolver<PhysicalModel>::linearIterations () const
+    unsigned int NonlinearSolver<PhysicalModel>::linearIterations() const
     {
         return linearIterations_;
     }
@@ -57,8 +59,21 @@ namespace Opm
     }
 
     template <class PhysicalModel>
+    unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterationsLastStep() const
+    {
+        return nonlinearIterationsLast_;
+    }
+
+    template <class PhysicalModel>
+    unsigned int NonlinearSolver<PhysicalModel>::linearIterationsLastStep() const
+    {
+        return linearIterationsLast_;
+    }
+
+
+    template <class PhysicalModel>
     int
-    NewtonSolver<PhysicalModel>::
+    NonlinearSolver<PhysicalModel>::
     step(const double dt,
          ReservoirState& reservoir_state,
          WellState& well_state)
@@ -74,7 +89,7 @@ namespace Opm
         model_->assemble(reservoir_state, well_state, true);
         residual_norms_history.push_back(model_->computeResidualNorms());
 
-        // Set up for main Newton loop.
+        // Set up for main solver loop.
         double omega = 1.0;
         int iteration = 0;
         bool converged = model_->getConvergence(dt, iteration);
@@ -85,16 +100,16 @@ namespace Opm
         const enum RelaxType relaxtype = relaxType();
         int linIters = 0;
 
-        // ----------  Main Newton loop  ----------
+        // ----------  Main nonlinear solver loop  ----------
         while ( (!converged && (iteration < maxIter())) || (minIter() > iteration)) {
-            // Compute the Newton update to the primary variables.
+            // Compute the update to the primary variables.
             V dx = model_->solveJacobianSystem();
 
             // Store number of linear iterations used.
             linIters += model_->linearIterationsLastSolve();
 
-            // Stabilize the Newton update.
-            detectNewtonOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
+            // Stabilize the nonlinear update.
+            detectOscillations(residual_norms_history, iteration, relaxRelTol(), isOscillate, isStagnate);
             if (isOscillate) {
                 omega -= relaxIncrement();
                 omega = std::max(omega, relaxMax());
@@ -102,7 +117,7 @@ namespace Opm
                     std::cout << " Oscillating behavior detected: Relaxation set to " << omega << std::endl;
                 }
             }
-            stabilizeNewton(dx, dxOld, omega, relaxtype);
+            stabilizeNonlinearUpdate(dx, dxOld, omega, relaxtype);
 
             // Apply the update, the model may apply model-dependent
             // limitations and chopping of the update.
@@ -126,9 +141,9 @@ namespace Opm
         }
 
         linearIterations_ += linIters;
-        newtonIterations_ += iteration;
+        nonlinearIterations_ += iteration;
         linearIterationsLast_ = linIters;
-        newtonIterationsLast_ = iteration;
+        nonlinearIterationsLast_ = iteration;
 
         // Do model-specific post-step actions.
         model_->afterStep(dt, reservoir_state, well_state);
@@ -139,7 +154,7 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    void NewtonSolver<PhysicalModel>::SolverParameters::
+    void NonlinearSolver<PhysicalModel>::SolverParameters::
     reset()
     {
         // default values for the solver parameters
@@ -152,7 +167,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::SolverParameters::
+    NonlinearSolver<PhysicalModel>::SolverParameters::
     SolverParameters()
     {
         // set default values
@@ -160,7 +175,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    NewtonSolver<PhysicalModel>::SolverParameters::
+    NonlinearSolver<PhysicalModel>::SolverParameters::
     SolverParameters( const parameter::ParameterGroup& param )
     {
         // set default values
@@ -183,9 +198,9 @@ namespace Opm
 
     template <class PhysicalModel>
     void
-    NewtonSolver<PhysicalModel>::detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                                          const int it, const double relaxRelTol_arg,
-                                                          bool& oscillate, bool& stagnate) const
+    NonlinearSolver<PhysicalModel>::detectOscillations(const std::vector<std::vector<double>>& residual_history,
+                                                       const int it, const double relaxRelTol_arg,
+                                                       bool& oscillate, bool& stagnate) const
     {
         // The detection of oscillation in two primary variable results in the report of the detection
         // of oscillation for the solver.
@@ -220,8 +235,8 @@ namespace Opm
 
     template <class PhysicalModel>
     void
-    NewtonSolver<PhysicalModel>::stabilizeNewton(V& dx, V& dxOld, const double omega,
-                                                 const RelaxType relax_type) const
+    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega,
+                                                             const RelaxType relax_type) const
     {
         // The dxOld is updated with dx.
         // If omega is equal to 1., no relaxtion will be appiled.

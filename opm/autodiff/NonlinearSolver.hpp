@@ -18,8 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_NEWTONSOLVER_HEADER_INCLUDED
-#define OPM_NEWTONSOLVER_HEADER_INCLUDED
+#ifndef OPM_NONLINEARSOLVER_HEADER_INCLUDED
+#define OPM_NONLINEARSOLVER_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -28,9 +28,10 @@
 namespace Opm {
 
 
-    /// A Newton solver class suitable for general fully-implicit models.
+    /// A nonlinear solver class suitable for general fully-implicit models,
+    /// as well as pressure, transport and sequential models.
     template <class PhysicalModel>
-    class NewtonSolver
+    class NonlinearSolver
     {
     public:
         // ---------  Types and enums  ---------
@@ -38,18 +39,18 @@ namespace Opm {
         typedef ADB::V V;
         typedef ADB::M M;
 
-        // The Newton relaxation scheme type
+        // Available relaxation scheme types.
         enum RelaxType { DAMPEN, SOR };
 
-        // Solver parameters controlling nonlinear Newton process.
+        // Solver parameters controlling nonlinear process.
         struct SolverParameters
         {
             enum RelaxType relax_type_;
             double         relax_max_;
             double         relax_increment_;
             double         relax_rel_tol_;
-            int            max_iter_; // max newton iterations
-            int            min_iter_; // min newton iterations
+            int            max_iter_; // max nonlinear iterations
+            int            min_iter_; // min nonlinear iterations
 
             explicit SolverParameters( const parameter::ParameterGroup& param );
             SolverParameters();
@@ -66,11 +67,11 @@ namespace Opm {
         /// Construct solver for a given model.
         ///
         /// The model is a std::unique_ptr because the object to which model points to is
-        /// not allowed to be deleted as long as the NewtonSolver object exists.
+        /// not allowed to be deleted as long as the NonlinearSolver object exists.
         ///
-        /// \param[in]      param   parameters controlling nonlinear Newton process
+        /// \param[in]      param   parameters controlling nonlinear process
         /// \param[in, out] model   physical simulation model.
-        explicit NewtonSolver(const SolverParameters& param,
+        explicit NonlinearSolver(const SolverParameters& param,
                               std::unique_ptr<PhysicalModel> model);
 
         /// Take a single forward step, after which the states will be modified
@@ -84,14 +85,14 @@ namespace Opm {
              ReservoirState& reservoir_state,
              WellState& well_state);
 
-        /// Number of Newton iterations used in all calls to step().
-        unsigned int newtonIterations() const;
+        /// Number of nonlinear solver iterations used in all calls to step().
+        unsigned int nonlinearIterations() const;
 
         /// Number of linear solver iterations used in all calls to step().
         unsigned int linearIterations() const;
 
-        /// Number of linear solver iterations used in the last call to step().
-        unsigned int newtonIterationsLastStep() const;
+        /// Number of nonlinear solver iterations used in the last call to step().
+        unsigned int nonlinearIterationsLastStep() const;
 
         /// Number of linear solver iterations used in the last call to step().
         unsigned int linearIterationsLastStep() const;
@@ -103,9 +104,9 @@ namespace Opm {
         // ---------  Data members  ---------
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
-        unsigned int newtonIterations_;
+        unsigned int nonlinearIterations_;
         unsigned int linearIterations_;
-        unsigned int newtonIterationsLast_;
+        unsigned int nonlinearIterationsLast_;
         unsigned int linearIterationsLast_;
 
         // ---------  Private methods  ---------
@@ -115,13 +116,13 @@ namespace Opm {
         double relaxRelTol() const       { return param_.relax_rel_tol_; }
         double maxIter() const           { return param_.max_iter_; }
         double minIter() const           { return param_.min_iter_; }
-        void detectNewtonOscillations(const std::vector<std::vector<double>>& residual_history,
-                                      const int it, const double relaxRelTol,
-                                      bool& oscillate, bool& stagnate) const;
-        void stabilizeNewton(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
+        void detectOscillations(const std::vector<std::vector<double>>& residual_history,
+                                const int it, const double relaxRelTol,
+                                bool& oscillate, bool& stagnate) const;
+        void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega, const RelaxType relax_type) const;
     };
 } // namespace Opm
 
-#include "NewtonSolver_impl.hpp"
+#include "NonlinearSolver_impl.hpp"
 
-#endif // OPM_NEWTONSOLVER_HEADER_INCLUDED
+#endif // OPM_NONLINEARSOLVER_HEADER_INCLUDED

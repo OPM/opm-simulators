@@ -32,7 +32,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/RateConverter.hpp>
-#include <opm/autodiff/NewtonSolver.hpp>
+#include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 
 #include <opm/core/grid.h>
@@ -88,7 +88,7 @@ namespace Opm
         typedef BlackoilOutputWriter OutputWriter;
         typedef GridT Grid;
         typedef BlackoilSolventModel<Grid> Model;
-        typedef NewtonSolver<Model> Solver;
+        typedef NonlinearSolver<Model> Solver;
     };
 
     /// Class collecting all necessary components for a blackoil simulation with polymer

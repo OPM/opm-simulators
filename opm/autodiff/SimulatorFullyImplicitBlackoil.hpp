@@ -1,5 +1,5 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
@@ -21,9 +21,8 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include "SimulatorBase.hpp"
-
-#include "NewtonSolver.hpp"
+#include <opm/autodiff/SimulatorBase.hpp>
+#include <opm/autodiff/NonlinearSolver.hpp>
 
 namespace Opm {
 
@@ -38,7 +37,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
     typedef BlackoilOutputWriter OutputWriter;
     typedef GridT Grid;
     typedef BlackoilModel<Grid> Model;
-    typedef NewtonSolver<Model> Solver;
+    typedef NonlinearSolver<Model> Solver;
 };
 
 /// a simulator for the blackoil model
