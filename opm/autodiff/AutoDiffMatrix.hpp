@@ -611,6 +611,15 @@ namespace Opm
             }
         }
 
+
+
+
+
+        /**
+         * Returns the sparse representation of this matrix. Note that this might
+         * be an expensive operation to perform if the internal structure is not
+         * sparse.
+         */
         const SparseRep& getSparse() const {
             if (type_ != Sparse) {
                 /**
@@ -626,6 +635,7 @@ namespace Opm
             return sparse_;
         }
 
+
     private:
         enum AudoDiffMatrixType { Zero, Identity, Diagonal, Sparse };
 
@@ -635,33 +645,13 @@ namespace Opm
         DiagRep diag_;             //<  Diagonal representation (only if type==Diagonal)
         SparseRep sparse_;         //<  Sparse representation (only if type==Sparse)
 
-        /**
-         * Returns the sparse representation of this matrix. Note that this might
-         * be an expensive operation to perform if the internal structure is not
-         * sparse.
-         */
-        const Sparse& getSparse() const {
-            if (type_ != S) {
-                /**
-                 * If we are not a sparse matrix, our internal variable sparse_
-                 * is undefined, and hence changing it so that it happens to be
-                 * a sparse representation of our true data does not change our
-                 * true data, and hence justifies that we do not really violate
-                 * the const qualifier.
-                 */
-                Sparse& mutable_sparse = const_cast<Sparse&>(sparse_);
-                toSparse(mutable_sparse);
-            }
-            return sparse_;
-        }
-
 
 
         /**
          * Constructor which sets all members
          */
-        AutoDiffMatrix(MatrixType type, int rows, int cols,
-                Diag diag=Diag(), Sparse sparse=Sparse())
+        AutoDiffMatrix(AudoDiffMatrixType type, int rows, int cols,
+                DiagRep diag=DiagRep(), SparseRep sparse=SparseRep())
             : type_(type),
               rows_(rows),
               cols_(cols),
