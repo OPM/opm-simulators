@@ -142,8 +142,12 @@ namespace Opm
                 double muRef = pvtwViscosity_[tableIdx]/(1.0 + x + 0.5*x*x);
 
                 // compute the viscosity deviation due to temperature
-                double muWatvisct = (*watvisctTables_)[tableIdx].evaluate("Viscosity", T[i]);
-                double alpha = muWatvisct/muRef;
+                double alpha;
+                {
+                    const WatvisctTable& watVisctTable = watvisctTables_->getTable<WatvisctTable>(tableIdx);
+                    double muWatvisct = watVisctTable.evaluate("Viscosity", T[i]);
+                    alpha = muWatvisct/muRef;
+                }
 
                 output_mu[i] *= alpha;
                 output_dmudp[i] *= alpha;
@@ -179,9 +183,12 @@ namespace Opm
                 double muRef = pvtwViscosity_[tableIdx]/(1.0 + x + 0.5*x*x);
 
                 // compute the viscosity deviation due to temperature
-                double muWatvisct = (*watvisctTables_)[tableIdx].evaluate("Viscosity", T[i]);
-                double alpha = muWatvisct/muRef;
-
+                double alpha;
+                {
+                    const WatvisctTable& watVisctTable = watvisctTables_->getTable<WatvisctTable>(tableIdx);
+                    double muWatvisct = watVisctTable.evaluate("Viscosity", T[i]);
+                    alpha = muWatvisct/muRef;
+                }
                 output_mu[i] *= alpha;
                 output_dmudp[i] *= alpha;
                 output_dmudr[i] *= alpha;
@@ -382,7 +389,7 @@ namespace Opm
         std::vector<double> pvtwViscosity_;
         std::vector<double> pvtwViscosibility_;
 
-        const std::vector<Opm::WatvisctTable>* watvisctTables_;
+        const TableContainer* watvisctTables_;
     };
 
 }

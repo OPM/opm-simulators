@@ -147,8 +147,12 @@ namespace Opm
                 double muRef = muRef_[regionIdx];
 
                 // compute the viscosity deviation due to temperature
-                double muOilvisct = (*oilvisctTables_)[regionIdx].evaluate("Viscosity", T[i]);
-                double alpha = muOilvisct/muRef;
+                double alpha;
+                {
+                    const OilvisctTable& oilvisctTable = oilvisctTables_->getTable<OilvisctTable>(regionIdx);
+                    double muOilvisct = oilvisctTable.evaluate("Viscosity", T[i]);
+                    alpha = muOilvisct/muRef;
+                }
 
                 output_mu[i] *= alpha;
                 output_dmudp[i] *= alpha;
@@ -183,9 +187,12 @@ namespace Opm
                 double muRef = muRef_[regionIdx];
 
                 // compute the viscosity deviation due to temperature
-                double muOilvisct = (*oilvisctTables_)[regionIdx].evaluate("Viscosity", T[i]);
-                double alpha = muOilvisct/muRef;
-
+                double alpha;
+                {
+                    const OilvisctTable& oilvisctTable = oilvisctTables_->getTable<OilvisctTable>(regionIdx);
+                    double muOilvisct = oilvisctTable.evaluate("Viscosity", T[i]);
+                    alpha = muOilvisct/muRef;
+                }
                 output_mu[i] *= alpha;
                 output_dmudp[i] *= alpha;
                 output_dmudr[i] *= alpha;
@@ -367,7 +374,7 @@ namespace Opm
         std::vector<double> viscrefRs_;
         std::vector<double> muRef_;
 
-        const std::vector<Opm::OilvisctTable>* oilvisctTables_;
+        const TableContainer* oilvisctTables_;
 
         // The PVT properties needed for temperature dependence of the density. This is
         // specified as one value per EOS in the manual, but we unconditionally use the
