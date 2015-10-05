@@ -98,8 +98,7 @@ namespace Opm
     {
         // compute solvent inflow
         const int nw = wells->number_of_wells;
-        std::vector<double> perfcells_fraction(wells->well_connpos[nw]);
-        std::fill(perfcells_fraction.begin(), perfcells_fraction.end(), 0.0);
+        std::vector<double> perfcells_fraction(wells->well_connpos[nw], 0.0);
 
         if (deck_->hasKeyword("WSOLVENT")) {
 
