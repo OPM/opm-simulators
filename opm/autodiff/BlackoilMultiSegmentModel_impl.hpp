@@ -294,9 +294,12 @@ namespace Opm {
         // If it is the top perforation, then average with the bhp().
         // If it is not the top perforation, then average with the perforation above it().
         // TODO: Make sure the order of the perforation are not changed, comparing with the old wells structure.
+        int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
+            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
             if (wellsMultiSegment()[w]->isMultiSegmented()) {
                 // maybe we should give some reasonable values to prevent the following calculations fail
+                start_segment += nseg;
                 continue;
             }
 
@@ -309,10 +312,12 @@ namespace Opm {
             const int start_perforation = (*it_well).second.start_perforation;
             const int end_perforation = start_perforation + (*it_well).second.number_of_perforations;
             for (int perf = start_perforation; perf < end_perforation; ++perf) {
-                const double p_above = perf == start_perforation ? state.bhp.value()[w] : perf_press[perf - 1];
+                const double p_above = perf == start_perforation ? state.segp.value()[start_segment] : perf_press[perf - 1];
                 const double p_avg = (perf_press[perf] + p_above)/2;
                 avg_press[perf] = p_avg;
             }
+            // std::cout << " the bhp value is " << state.segp.value()[start_segment];
+            start_segment += nseg;
         }
 
 
