@@ -290,11 +290,10 @@ namespace Opm
                     if (deck->hasKeyword("DISGAS")) {                    
                         const TableContainer& rsvdTables = tables->getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
-                            const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (rec[i].live_oil_table_index > 0) {
                                 if (rsvdTables.size() > 0 && size_t(rec[i].live_oil_table_index) <= rsvdTables.size()) { 
-                                    
+                                    const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
                                     rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
                                                                                            cell,
                                                                                            rsvdTable.getDepthColumn(),
