@@ -913,8 +913,11 @@ namespace Opm {
                     break;
                 }
             }
-            std::cout << " xw.bhp() is " << xw.bhp()[w] << std::endl;
-            std::cout << " ctrl_index " << ctrl_index << " nwc " << nwc << std::endl;
+
+            if (int debug = 0) {
+                std::cout << " xw.bhp() is " << xw.bhp()[w] << std::endl;
+                std::cout << " ctrl_index " << ctrl_index << " nwc " << nwc << std::endl;
+            }
 
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
@@ -1114,6 +1117,38 @@ namespace Opm {
                 others_elems.push_back(i + start_segment);
             }
             start_segment += nseg;
+        }
+
+        if (int debug = 0) {
+            std::cout << "output bhp_targets " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << i << "     " <<  bhp_targets(i) << std::endl;
+            }
+            std::cout << " bhp_well_elems " << std::endl;
+            std::cout << " the size of bhp_well_elems is " << bhp_well_elems.size() << std::endl;
+            for (int i = 0; i < bhp_well_elems.size(); ++i) {
+                std::cout << " bhp_well_elems " << i << "   is " << bhp_well_elems[i] << std::endl;
+            }
+            std::cout << " rate_well_elems " << std::endl;
+            std::cout << " the size of rate_well_elems is " << rate_well_elems.size() << std::endl;
+            for (int i = 0; i < rate_well_elems.size(); ++i) {
+                std::cout << " rate_well_elems " << i << " is " << rate_well_elems[i] << std::endl;
+            }
+            std::cout << " bhp_top_elems " << std::endl;
+            std::cout << " the size of bhp_top_elems is " << bhp_top_elems.size() << std::endl;
+            for (int i = 0; i < bhp_top_elems.size(); ++i) {
+                std::cout << " bhp_top_elems " << i << "   is " << bhp_top_elems[i] << std::endl;
+            }
+            std::cout << " rate_top_elems " << std::endl;
+            std::cout << " the size of the rate_top_elems " << rate_top_elems.size() << std::endl;
+            for (int i = 0; i < rate_top_elems.size(); ++i) {
+                std::cout << " rate_top_elems " << i << "   is " << rate_top_elems[i] << std::endl;
+            }
+            std::cout << " the others_elems " << std::endl;
+            std::cout << " the size of others_elems is " << others_elems.size() << std::endl;
+            for(int i = 0; i < others_elems.size(); ++i) {
+                std::cout << "others_elems " << i << "   is " << others_elems[i] << std::endl;
+            }
         }
 
 
@@ -1476,7 +1511,7 @@ namespace Opm {
             // TODO: handling the THP control related.
         }
 
-            if (int debug = 1) {
+            if (int debug = 0) {
                 std::cout << " output all the well state informations after updateWellState()" << std::endl;
                 const int np = well_state.numberOfPhases();
                 const int nw = well_state.numberOfWells();

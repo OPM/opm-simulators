@@ -119,7 +119,7 @@ namespace Opm
             }
 
             // for DEBUGGING OUTPUT
-            if (int debug = 1) {
+            if (int debug = 0) {
             std::cout << " the number of the wells from EclipseState " << wells_ecl.size() << std::endl;
             for (size_t i = 0; i < wells_ecl.size(); ++i) {
                 std::cout << " well name " << wells_ecl[i]->name() << std::endl;
