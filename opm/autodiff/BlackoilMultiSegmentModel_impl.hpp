@@ -913,6 +913,8 @@ namespace Opm {
                     break;
                 }
             }
+            std::cout << " xw.bhp() is " << xw.bhp()[w] << std::endl;
+            std::cout << " ctrl_index " << ctrl_index << " nwc " << nwc << std::endl;
 
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
@@ -1473,6 +1475,57 @@ namespace Opm {
 
             // TODO: handling the THP control related.
         }
+
+            if (int debug = 1) {
+                std::cout << " output all the well state informations after updateWellState()" << std::endl;
+                const int np = well_state.numberOfPhases();
+                const int nw = well_state.numberOfWells();
+                const int nperf_total = well_state.numberOfPerforations();
+                const int nseg_total = well_state.numberOfSegments();
+
+                std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
+                std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
+
+                std::cout << " bhps : " << std::endl;
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << well_state.bhp()[i] << std::endl;
+                }
+
+                std::cout << " thps : " << std::endl;
+
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << well_state.thp()[i] << std::endl;
+                }
+
+                std::cout << " well rates " << std::endl;
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << i;
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << well_state.wellRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+
+                std::cout << " segment pressures and segment phase rates : " << std::endl;
+                for (int i = 0; i < nseg_total; ++i) {
+                    std::cout << i << " " << well_state.segPress()[i];
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << well_state.segPhaseRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+
+                std::cout << " perf pressures and pref phase rates : " << std::endl;
+                for (int i = 0; i < nperf_total; ++i) {
+                    std::cout << i << " " << well_state.perfPress()[i];
+                    for (int p = 0; p < np; ++p) {
+                        std::cout << " " << well_state.perfPhaseRates()[np * i + p];
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << " output all the well state informations after updateWellState() DONE!!!!" << std::endl;
+            }
+
     }
 
 
