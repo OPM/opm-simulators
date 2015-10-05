@@ -232,7 +232,7 @@ namespace Opm {
     BlackoilSolventModel<Grid>::updateEquationsScaling()
     {
         Base::updateEquationsScaling();
-        assert(MaxNumPhases + 1 == resdual.matbalscale.size());
+        assert(MaxNumPhases + 1 == residual_.matbalscale.size());
         if (has_solvent_) {
             const ADB& temp_b = rq_[solvent_pos_].b;
             ADB::V B = 1. / temp_b.value();
