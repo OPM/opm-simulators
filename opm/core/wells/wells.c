@@ -85,6 +85,7 @@ wells_allocate(int nwells, struct Wells *W)
     void *type, *depth_ref, *comp_frac;
     void *well_connpos;
     void *ctrls, *name;
+    bool *allow_cf;
 
     np = W->number_of_phases;
 
@@ -93,6 +94,7 @@ wells_allocate(int nwells, struct Wells *W)
     comp_frac = realloc(W->comp_frac, np * nwells * sizeof *W->comp_frac);
     ctrls     = realloc(W->ctrls    ,  1 * nwells * sizeof *W->ctrls);
     name      = realloc(W->name     ,  1 * nwells * sizeof *W->name);
+    allow_cf  = realloc(W->allow_cf ,  1 * nwells * sizeof *W->allow_cf);
 
     well_connpos = realloc(W->well_connpos,
                            (nwells + 1) * sizeof *W->well_connpos);
@@ -104,8 +106,9 @@ wells_allocate(int nwells, struct Wells *W)
     if (well_connpos != NULL) { W->well_connpos = well_connpos; ok++; }
     if (ctrls        != NULL) { W->ctrls        = ctrls       ; ok++; }
     if (name         != NULL) { W->name         = name        ; ok++; }
+    if (allow_cf     != NULL) { W->allow_cf     = allow_cf    ; ok++; }
 
-    return ok == 6;
+    return ok == 7;
 }
 
 
@@ -143,6 +146,7 @@ initialise_new_wells(int nwells, struct Wells *W)
         W->type     [w]        = PRODUCER;
         W->depth_ref[w]        = -1.0;
         W->name     [w]        = NULL;
+        W->allow_cf [w]        = false;
 
         for (p = 0; p < W->number_of_phases; ++p) {
             W->comp_frac[W->number_of_phases*w + p] = 0.0;
@@ -274,6 +278,7 @@ create_wells(int nphases, int nwells, int nperf)
 
         W->ctrls           = NULL;
         W->name            = NULL;
+        W->allow_cf        = false;
 
         W->data            = create_well_mgmt();
 
@@ -326,6 +331,7 @@ destroy_wells(struct Wells *W)
         free(W->comp_frac);
         free(W->depth_ref);
         free(W->type);
+        free(W->allow_cf);
     }
 
     free(W);
@@ -358,6 +364,7 @@ add_well(enum WellType  type     ,
          const int     *cells    ,
          const double  *WI       , /* Well index per perf (or NULL) */
          const char    *name     , /* Well name (or NULL) */
+         bool           allow_cf ,
          struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
@@ -398,6 +405,7 @@ add_well(enum WellType  type     ,
     if (ok) {
         W->type     [nw] = type     ;
         W->depth_ref[nw] = depth_ref;
+        W->allow_cf [nw] = allow_cf;
 
         if (name != NULL) {
              /* May return NULL, but that's fine for the current
@@ -503,7 +511,7 @@ clone_wells(const struct Wells *W)
                 comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
-                              comp_frac, cells, WI, W->name[ w ], newWells);
+                              comp_frac, cells, WI, W->name[ w ], W->allow_cf[ w ],  newWells);
 
                 if (ok) {
                     ok = (ctrl = well_controls_clone(W->ctrls[w])) != NULL;
@@ -579,6 +587,11 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
             are_equal = false;
             if (verbose)
                 printf("Well controls are different for well[%d]:%s \n",i,W1->name[i]);
+        }
+        if (W1->allow_cf[i] != W2->allow_cf[i]) {
+            are_equal = false;
+            if (verbose)
+                printf("Well->allow_cf[%d] different %d %d \n",i , W1->type[i] , W2->type[i] );
         }
     }
 
