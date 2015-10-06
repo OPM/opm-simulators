@@ -37,10 +37,10 @@
 #include <boost/filesystem.hpp>
 
 #ifdef HAVE_DUNE_CORNERPOINT
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/version.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 #endif
 namespace Opm
 {
