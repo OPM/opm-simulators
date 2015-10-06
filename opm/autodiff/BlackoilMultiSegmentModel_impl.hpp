@@ -363,8 +363,15 @@ namespace Opm {
         const V depth = cellCentroidsZToEigen(grid_);
         const V pdepth = subset(depth, well_cells);
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+
         // Surface density.
-        std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
+        DataBlock surf_dens(nperf, pu.num_phases);
+        for (int phase = 0; phase < pu.num_phases; ++ phase) {
+            surf_dens.col(phase) = V::Constant(nperf, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
+        }
+
+        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf * pu.num_phases);
+
         // Gravity
         double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
@@ -372,7 +379,7 @@ namespace Opm {
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
                         wells(), xw, fluid_.phaseUsage(),
-                        b_perf, rsmax_perf, rvmax_perf, surf_dens);
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
@@ -1579,102 +1586,115 @@ namespace Opm {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        // const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const int nw = wellsMultiSegment().size();
         // no good way to store nseg?
         int nseg_total = 0;
         for (int w = 0; w < nw; ++w) {
             nseg_total += wellsMultiSegment()[w]->numberOfSegments();
         }
-
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int np = numPhases();
+        const int nm = numMaterials();
+        assert(int(rq_.size()) == nm);
 
         const V pv = geo_.poreVolume();
 
-        const std::vector<PhasePresence> cond = phaseCondition();
+        std::vector<double> R_sum(nm);
+        std::vector<double> B_avg(nm);
+        std::vector<double> maxCoeff(nm);
+        std::vector<double> maxNormWell(np);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, nm);
+        Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, nm);
 
-        std::array<double,MaxNumPhases> CNV                   = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> R_sum                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> B_avg                 = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> maxCoeff              = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> mass_balance_residual = {{0., 0., 0.}};
-        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
-        std::size_t cols = MaxNumPhases; // needed to pass the correct type to Eigen
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> B(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> R(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases> tempV(nc, cols);
-        std::vector<double> maxNormWell(MaxNumPhases);
-
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < nm; ++idx )
         {
-            if (active_[idx]) {
-                const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
-                B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-            }
+            const ADB& tempB = rq_[idx].b;
+            B.col(idx)       = 1./tempB.value();
+            R.col(idx)       = residual_.material_balance_eq[idx].value();
+            tempV.col(idx)   = R.col(idx).abs()/pv;
         }
 
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
-                                                  maxNormWell, nc, nseg_total);
+        const double pvSum = convergenceReduction(B, tempV, R,
+                                                  R_sum, maxCoeff, B_avg, maxNormWell,
+                                                  nc, nseg_total);
+
+        std::vector<double> CNV(nm);
+        std::vector<double> mass_balance_residual(nm);
+        std::vector<double> well_flux_residual(np);
 
         bool converged_MB = true;
         bool converged_CNV = true;
         bool converged_Well = true;
         // Finish computation
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
+        for ( int idx = 0; idx < nm; ++idx )
         {
             CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
             mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
             converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
             converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
-            well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
-
-            converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            // Well flux convergence is only for fluid phases, not other materials
+            // in our current implementation.
+            assert(nm >= np);
+            if (idx < np) {
+                well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
+                converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
+            }
         }
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
-        converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
-        const bool   converged        = converged_MB && converged_CNV && converged_Well;
+        converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+        const bool converged = converged_MB && converged_CNV && converged_Well;
 
         // Residual in Pascal can have high values and still be ok.
         const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
 
-        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if ( std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
-            std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
-            std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
-            std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
-            std::isnan(residualWell) || residualWell > maxWellResidualAllowed )
-        {
-            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
+        for (int idx = 0; idx < nm; ++idx) {
+            if (std::isnan(mass_balance_residual[idx])
+                || std::isnan(CNV[idx])
+                || (idx < np && std::isnan(well_flux_residual[idx]))) {
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
+            }
+            if (mass_balance_residual[idx] > maxResidualAllowed()
+                || CNV[idx] > maxResidualAllowed()
+                || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
+            }
+        }
+        if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
+            OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
         }
 
         if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)       CNVW       CNVO       CNVG   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
+                std::cout << "\nIter";
+                for (int idx = 0; idx < nm; ++idx) {
+                    std::cout << "   MB(" << materialName(idx).substr(0, 3) << ") ";
+                }
+                for (int idx = 0; idx < nm; ++idx) {
+                    std::cout << "    CNV(" << materialName(idx).substr(0, 1) << ") ";
+                }
+                for (int idx = 0; idx < np; ++idx) {
+                    std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
+                }
+                std::cout << '\n';
             }
             const std::streamsize oprec = std::cout.precision(3);
             const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-            std::cout << std::setw(4) << iteration
-                      << std::setw(11) << mass_balance_residual[Water]
-                      << std::setw(11) << mass_balance_residual[Oil]
-                      << std::setw(11) << mass_balance_residual[Gas]
-                      << std::setw(11) << CNV[Water]
-                      << std::setw(11) << CNV[Oil]
-                      << std::setw(11) << CNV[Gas]
-                      << std::setw(11) << well_flux_residual[Water]
-                      << std::setw(11) << well_flux_residual[Oil]
-                      << std::setw(11) << well_flux_residual[Gas]
-                      << std::endl;
+            std::cout << std::setw(4) << iteration;
+            for (int idx = 0; idx < nm; ++idx) {
+                std::cout << std::setw(11) << mass_balance_residual[idx];
+            }
+            for (int idx = 0; idx < nm; ++idx) {
+                std::cout << std::setw(11) << CNV[idx];
+            }
+            for (int idx = 0; idx < np; ++idx) {
+                std::cout << std::setw(11) << well_flux_residual[idx];
+            }
+            std::cout << std::endl;
             std::cout.precision(oprec);
             std::cout.flags(oflags);
         }

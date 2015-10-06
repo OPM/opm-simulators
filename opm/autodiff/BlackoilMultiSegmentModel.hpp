@@ -134,6 +134,8 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
         using Base::numPhases;
+        using Base::numMaterials;
+        using Base::materialName;
 
     protected:
      /*
