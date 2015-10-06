@@ -1086,6 +1086,9 @@ namespace Opm {
                 bhp_top_elems.push_back(start_segment);
                 bhp_targets(w)  = well_controls_iget_target(wc, current);
                 rate_targets(w) = -1e100;
+                for (int p = 0; p < np; ++p) {
+                    rate_top_phase_elems.push_back(start_segment + p * nseg_total);
+                }
             }
             break;
 
@@ -1157,13 +1160,15 @@ namespace Opm {
             for(int i = 0; i < others_elems.size(); ++i) {
                 std::cout << "others_elems " << i << "   is " << others_elems[i] << std::endl;
             }
+
+            std::cin.ignore();
         }
 
 
         // for each segment: 1, if the segment is the top segment, then control equation
         //                   2, if the segment is not the top segment, then the pressure equation
         const ADB bhp_residual = subset(state.segp, bhp_top_elems) - subset(bhp_targets, bhp_well_elems);
-        const ADB rate_residual = rate_distr * subset(state.segqs, rate_top_phase_elems) - subset(rate_targets, rate_well_elems);
+        const ADB rate_residual = subset(rate_distr * subset(state.segqs, rate_top_phase_elems) - rate_targets, rate_well_elems);
 
         ADB others_residual = ADB::constant(V::Zero(nseg_total));
         start_segment = 0;
