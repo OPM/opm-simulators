@@ -36,87 +36,89 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                                                      const int number_of_cells,
                                                      const int* global_cell)
 {
-    // retrieve the cell specific PVT table index from the deck
-    // and using the grid...
-    extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
+    if (deck->hasKeyword("SOLVENT")) {
+        // retrieve the cell specific PVT table index from the deck
+        // and using the grid...
+        extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
 
-    // surface densities
-    if (deck->hasKeyword("SDENSITY")) {
-        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("SDENSITY");
-        int numRegions = densityKeyword->size();
-        solvent_surface_densities_.resize(numRegions);
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            solvent_surface_densities_[regionIdx]
-                    = densityKeyword->getRecord(regionIdx)->getItem("SOLVENT_DENSITY")->getSIDouble(0);
+        // surface densities
+        if (deck->hasKeyword("SDENSITY")) {
+            Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("SDENSITY");
+            int numRegions = densityKeyword->size();
+            solvent_surface_densities_.resize(numRegions);
+            for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                solvent_surface_densities_[regionIdx]
+                        = densityKeyword->getRecord(regionIdx)->getItem("SOLVENT_DENSITY")->getSIDouble(0);
+            }
+        } else {
+            OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
         }
-    } else {
-        OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
-    }
 
-    auto tables = eclState->getTableManager();
-    // pvt
-    const TableContainer& pvdsTables = tables->getPvdsTables();
-    if (!pvdsTables.empty()) {
+        auto tables = eclState->getTableManager();
+        // pvt
+        const TableContainer& pvdsTables = tables->getPvdsTables();
+        if (!pvdsTables.empty()) {
 
-        int numRegions = pvdsTables.size();
-        // resize the attributes of the object
-        b_.resize(numRegions);
-        viscosity_.resize(numRegions);
-        inverseBmu_.resize(numRegions);
+            int numRegions = pvdsTables.size();
+            // resize the attributes of the object
+            b_.resize(numRegions);
+            viscosity_.resize(numRegions);
+            inverseBmu_.resize(numRegions);
 
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            const Opm::PvdsTable& pvdsTable = pvdsTables.getTable<PvdsTable>(regionIdx);
+            for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                const Opm::PvdsTable& pvdsTable = pvdsTables.getTable<PvdsTable>(regionIdx);
 
-            // Copy data
-            const std::vector<double>& press = pvdsTable.getPressureColumn();
-            const std::vector<double>& b = pvdsTable.getFormationFactorColumn();
-            const std::vector<double>& visc = pvdsTable.getViscosityColumn();
+                // Copy data
+                const std::vector<double>& press = pvdsTable.getPressureColumn();
+                const std::vector<double>& b = pvdsTable.getFormationFactorColumn();
+                const std::vector<double>& visc = pvdsTable.getViscosityColumn();
 
-            const int sz = b.size();
-            std::vector<double> inverseB(sz);
-            for (int i = 0; i < sz; ++i) {
-                inverseB[i] = 1.0 / b[i];
+                const int sz = b.size();
+                std::vector<double> inverseB(sz);
+                for (int i = 0; i < sz; ++i) {
+                    inverseB[i] = 1.0 / b[i];
+                }
+
+                std::vector<double> inverseBmu(sz);
+                for (int i = 0; i < sz; ++i) {
+                    inverseBmu[i] = 1.0 / (b[i] * visc[i]);
+                }
+
+                b_[regionIdx] = NonuniformTableLinear<double>(press, inverseB);
+                viscosity_[regionIdx] = NonuniformTableLinear<double>(press, visc);
+                inverseBmu_[regionIdx] = NonuniformTableLinear<double>(press, inverseBmu);
+            }
+        } else {
+            OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
+        }
+
+        const TableContainer& ssfnTables = tables->getSsfnTables();
+        // relative permeabilty multiplier
+        if (!ssfnTables.empty()) {
+
+            int numRegions = pvdsTables.size();
+
+            if(numRegions > 1) {
+                OPM_THROW(std::runtime_error, "Only single table saturation function supported for SSFN");
+            }
+            // resize the attributes of the object
+            krg_.resize(numRegions);
+            krs_.resize(numRegions);
+            for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                const Opm::SsfnTable& ssfnTable = ssfnTables.getTable<SsfnTable>(regionIdx);
+
+                // Copy data
+                const std::vector<double>& solventFraction = ssfnTable.getSolventFractionColumn();
+                const std::vector<double>& krg = ssfnTable.getGasRelPermMultiplierColumn();
+                const std::vector<double>& krs = ssfnTable.getSolventRelPermMultiplierColumn();
+
+                krg_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krg);
+                krs_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krs);
             }
 
-            std::vector<double> inverseBmu(sz);
-            for (int i = 0; i < sz; ++i) {
-                inverseBmu[i] = 1.0 / (b[i] * visc[i]);
-            }
-
-            b_[regionIdx] = NonuniformTableLinear<double>(press, inverseB);
-            viscosity_[regionIdx] = NonuniformTableLinear<double>(press, visc);
-            inverseBmu_[regionIdx] = NonuniformTableLinear<double>(press, inverseBmu);
+        } else {
+            OPM_THROW(std::runtime_error, "SSFN must be specified in SOLVENT runs\n");
         }
-    } else {
-        OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
-    }
-
-    const TableContainer& ssfnTables = tables->getSsfnTables();
-    // relative permeabilty multiplier
-    if (!ssfnTables.empty()) {
-
-        int numRegions = pvdsTables.size();
-
-        if(numRegions > 1) {
-            OPM_THROW(std::runtime_error, "Only single table saturation function supported for SSFN");
-        }
-        // resize the attributes of the object
-        krg_.resize(numRegions);
-        krs_.resize(numRegions);
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            const Opm::SsfnTable& ssfnTable = ssfnTables.getTable<SsfnTable>(regionIdx);
-
-            // Copy data
-            const std::vector<double>& solventFraction = ssfnTable.getSolventFractionColumn();
-            const std::vector<double>& krg = ssfnTable.getGasRelPermMultiplierColumn();
-            const std::vector<double>& krs = ssfnTable.getSolventRelPermMultiplierColumn();
-
-            krg_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krg);
-            krs_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krs);
-        }
-
-    } else {
-        OPM_THROW(std::runtime_error, "SSFN must be specified in SOLVENT runs\n");
     }
 }
 

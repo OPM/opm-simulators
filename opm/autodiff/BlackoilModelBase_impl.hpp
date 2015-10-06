@@ -777,8 +777,15 @@ namespace detail {
         const V depth = cellCentroidsZToEigen(grid_);
         const V pdepth = subset(depth, well_cells);
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+
         // Surface density.
-        std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
+        DataBlock surf_dens(nperf, pu.num_phases);
+        for (int phase = 0; phase < pu.num_phases; ++ phase) {
+            surf_dens.col(phase) = V::Constant(nperf, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
+        }
+
+        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf * pu.num_phases);
+
         // Gravity
         double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
@@ -786,7 +793,7 @@ namespace detail {
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
                         wells(), xw, fluid_.phaseUsage(),
-                        b_perf, rsmax_perf, rvmax_perf, surf_dens);
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
@@ -941,7 +948,7 @@ namespace detail {
 
 
         if (param_.update_equations_scaling_) {
-            updateEquationsScaling();
+            asImpl().updateEquationsScaling();
         }
 
     }
@@ -1538,7 +1545,7 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            computeWellConnectionPressures(state, well_state);
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
     }

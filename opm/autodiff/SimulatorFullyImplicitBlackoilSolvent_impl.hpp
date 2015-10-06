@@ -97,9 +97,10 @@ namespace Opm
 			       const Wells* wells)
     {
         // compute solvent inflow
+        const int nw = wells->number_of_wells;
+        std::vector<double> perfcells_fraction(wells->well_connpos[nw], 0.0);
+
         if (deck_->hasKeyword("WSOLVENT")) {
-            const int nw = wells->number_of_wells;
-            std::vector<double> perfcells_fraction(wells->well_connpos[nw]);
 
             size_t currentStep = timer.currentStepNum();
             ScheduleConstPtr schedule = BaseType::eclipse_state_->getSchedule();
@@ -135,10 +136,9 @@ namespace Opm
                     }
                 }
             }
-            well_state.solventFraction() = perfcells_fraction;
         }
+        well_state.solventFraction() = perfcells_fraction;
     }
-
 
 } // namespace Opm
 

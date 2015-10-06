@@ -36,7 +36,7 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
                                                       const std::vector<double>& b_perf,
                                                       const std::vector<double>& rsmax_perf,
                                                       const std::vector<double>& rvmax_perf,
-                                                      const std::vector<double>& surf_dens)
+                                                      const std::vector<double>& surf_dens_perf)
 {
     // Verify that we have consistent input.
     const int np = wells.number_of_phases;
@@ -45,8 +45,8 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     if (wells.number_of_phases != phase_usage.num_phases) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. phase_usage.");
     }
-    if (surf_dens.size() != size_t(wells.number_of_phases)) {
-        OPM_THROW(std::logic_error, "Inconsistent input: surf_dens vs. phase_usage.");
+    if (nperf*np != int(surf_dens_perf.size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. surf_dens.");
     }
     if (nperf*np != int(wstate.perfPhaseRates().size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. wstate.");
@@ -94,6 +94,7 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
     std::vector<double> mix(np);
     std::vector<double> x(np);
+    std::vector<double> surf_dens(np);
     std::vector<double> dens(nperf);
     for (int w = 0; w < nw; ++w) {
         for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w+1]; ++perf) {
@@ -130,6 +131,10 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
             for (int phase = 0; phase < np; ++phase) {
                 volrat += x[phase] / b_perf[perf*np + phase];
             }
+            for (int phase = 0; phase < np; ++phase) {
+                surf_dens[phase] = surf_dens_perf[perf*np + phase];
+            }
+
             // Compute segment density.
             dens[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
         }
