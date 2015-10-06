@@ -20,7 +20,7 @@
 #ifndef OPM_DUNEISTLTESTHELPERS_HEADER
 #define OPM_DUNEISTLTESTHELPERS_HEADER
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 // MPI header
 #if HAVE_MPI
@@ -43,7 +43,7 @@
 #include <dune/common/parallel/remoteindices.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <tuple>
 
