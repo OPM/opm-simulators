@@ -29,13 +29,13 @@
 
 #if HAVE_MPI && HAVE_DUNE_ISTL
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <mpi.h>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/interface.hh>
 #include <dune/common/parallel/communicator.hh>
 #include <dune/common/enumset.hh>
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <algorithm>
 #include <functional>
