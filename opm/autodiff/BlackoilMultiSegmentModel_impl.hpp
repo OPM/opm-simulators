@@ -80,8 +80,8 @@ namespace Opm {
         , well_perforation_densities_adb_(ADB::null())
         , well_perforation_pressure_diffs_adb_(ADB::null())
         , well_perforation_pressure_cell_diffs_adb_(ADB::null())
-        , well_perforation_cell_densities_adb_(ADB::null())
         , well_perforations_segment_pressure_diffs_(ADB::null())
+        , well_perforation_cell_densities_adb_(ADB::null())
         , well_segment_densities_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
@@ -746,7 +746,8 @@ namespace Opm {
             std::vector<ADB> cmix_s(np, ADB::constant(V::Zero(nperf)));
             if (aliveWells[w] > 0.) {
                 for (int phase = 0; phase < np; ++phase) {
-                    const int pos = pu.phase_pos[phase];
+                    // const int pos = pu.phase_pos[phase];
+                    // TODO: make sure wheter phase or pos be required here.
                     cmix_s[phase] = well->wellOps().s2p * (wbq[phase] / wbqt);
                 }
             } else {
@@ -799,7 +800,7 @@ namespace Opm {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         // TODO: now it is so necesary to have a gobal wellsMultiSegment class to store some global information.
         const int np = numPhases();
-        const int nw = wellsMultiSegment().size();
+        // const int nw = wellsMultiSegment().size();
         const int nperf = xw.perfPress().size();
 
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
@@ -894,7 +895,7 @@ namespace Opm {
         // switch control to first broken constraint.
         const int np = wellsMultiSegment()[0]->numberOfPhases();
         const int nw = wellsMultiSegment().size();
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        // const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wellsMultiSegment()[w]->wellControls();
             // The current control in the well state overrides
@@ -938,8 +939,8 @@ namespace Opm {
                 current = xw.currentControls()[w];
             }
 
-            //Get gravity for THP hydrostatic corrrection
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+            // Get gravity for THP hydrostatic corrrection
+            // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
 
             // Updating well state and primary variables.
             // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -1236,7 +1237,6 @@ namespace Opm {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
         const int nc = numCells(grid_);
-        const int nw = wellsMultiSegment().size();
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);

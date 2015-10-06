@@ -137,7 +137,6 @@ namespace Opm
                 std::cout << " number of perforations : " << well->numberOfPerforations() << std::endl;
 
                 std::cout << " beginning outputing segment informations " << std::endl;
-                int nseg = well->numberOfSegments();
                 for (int s = 0; s < well->numberOfSegments(); ++s) {
                     std::cout << "    segment number : " << s << std::endl;
                     int n_perf_segment = well->segmentPerforations()[s].size();
@@ -186,6 +185,7 @@ namespace Opm
             }
             std::cin.ignore();
             }
+            // DEBUGGING OUTPUT is DONE
 
 
             well_state.init(wells_multisegment, state, prev_well_state);

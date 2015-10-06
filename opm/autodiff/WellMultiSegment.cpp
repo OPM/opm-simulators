@@ -58,7 +58,7 @@ namespace Opm
             // what is the point to do this?
 
             // we change the ID to location now for easier use later.
-            for (size_t i = 0; i < m_number_of_segments_; ++i) {
+            for (int i = 0; i < m_number_of_segments_; ++i) {
                 // now the segment for top segment is 0, then its outlet segment will be -1
                 // it is also the flag to indicate the top segment
                 m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
@@ -109,7 +109,7 @@ namespace Opm
             std::vector<double> temp_perf_depth;
             temp_perf_depth.resize(m_number_of_perforations_);
 
-            for (size_t i = 0; i < completion_set->size(); ++i) {
+            for (int i = 0; i < (int)completion_set->size(); ++i) {
                 int i_segment = completion_set->get(i)->getSegmentNumber();
                 // convert the original segment id to be the current segment id,
                 // which is the location in the array.
@@ -126,8 +126,8 @@ namespace Opm
             m_perf_depth_.resize(m_number_of_perforations_);
 
             int perf_count = 0;
-            for (size_t is = 0; is < m_number_of_segments_; ++is) {
-                for (size_t iperf = 0; iperf < m_segment_perforations_[is].size(); ++iperf) {
+            for (int is = 0; is < m_number_of_segments_; ++is) {
+                for (int iperf = 0; iperf < (int)m_segment_perforations_[is].size(); ++iperf) {
                     int perf_number = m_segment_perforations_[is][iperf];
                     m_well_cell_[perf_count] = temp_well_cell[perf_number];
                     m_well_index_[perf_count] = temp_well_index[perf_number];
@@ -140,7 +140,7 @@ namespace Opm
             assert(perf_count == m_number_of_perforations_);
 
             // update m_inlet_segments_
-            for (size_t is = 0; is < m_number_of_segments_; ++is) {
+            for (int is = 0; is < m_number_of_segments_; ++is) {
                 const int index_outlet = m_outlet_segment_[is];
                 m_inlet_segments_[index_outlet].push_back(is);
             }
@@ -214,7 +214,7 @@ namespace Opm
             m_perf_depth_.resize(m_number_of_perforations_, 0.);
             m_segment_perforations_[0].resize(m_number_of_perforations_);
 
-            for (size_t i = 0; i < m_number_of_perforations_; ++i) {
+            for (int i = 0; i < m_number_of_perforations_; ++i) {
                 m_segment_perforations_[0][i] = i;
                 m_perf_depth_[i] = completion_set->get(i)->getCenterDepth();
             }
@@ -342,11 +342,11 @@ namespace Opm
         return m_well_controls_;
     }
 
-    const size_t WellMultiSegment::numberOfPerforations() const {
+    const int WellMultiSegment::numberOfPerforations() const {
         return m_number_of_perforations_;
     }
 
-    const size_t WellMultiSegment::numberOfSegments() const {
+    const int WellMultiSegment::numberOfSegments() const {
         return m_number_of_segments_;
     }
 
@@ -354,7 +354,7 @@ namespace Opm
         return m_comp_frac_;
     }
 
-    const size_t WellMultiSegment::numberOfPhases() const {
+    const int WellMultiSegment::numberOfPhases() const {
         return m_number_of_phases_;
     }
 

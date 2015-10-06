@@ -106,8 +106,7 @@ namespace Opm
             }
 
             for (int iw = 0; iw < nw; ++iw) {
-                assert((wells[i]->wellType() == INJECTOR) || (wells[i]->wellType() == PRODUCER));
-                const WellControls* ctrl = wells[iw]->wellControls();
+                assert((wells[iw]->wellType() == INJECTOR) || (wells[iw]->wellType() == PRODUCER));
             }
 
             int start_segment = 0;
@@ -363,8 +362,6 @@ namespace Opm
 
             if (int debug = 0) {
                 std::cout << " output all the well state informations after initialization " << std::endl;
-                const int np = numberOfPhases();
-                const int nw = numberOfWells();
                 const int nperf_total = numberOfPerforations();
                 const int nseg_total = numberOfSegments();
 
@@ -417,9 +414,9 @@ namespace Opm
                     std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
                               << " number of segment : " << wellmapInfo.number_of_segments << std::endl;
                     std::cout << " start perforation : " << wellmapInfo.start_perforation << " number of perforations : " << wellmapInfo.number_of_perforations << std::endl;
-                    const int nseg = wellmapInfo.number_of_segments;
+                    const int nseg_well = wellmapInfo.number_of_segments;
                     std::cout << "    start performation ofr each segment and number of perforation that each segment has" << std::endl;
-                    for (int i = 0; i < nseg; ++i) {
+                    for (int i = 0; i < nseg_well; ++i) {
                         std::cout << " segment " << i << " start perforation " << wellmapInfo.start_perforation_segment[i]
                                   << " number of perforations " << wellmapInfo.number_of_perforations_segment[i] << std::endl;
                     }

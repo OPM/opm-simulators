@@ -55,13 +55,13 @@ namespace Opm
 
         const std::string& name() const;
         const bool isMultiSegmented() const;
-        const size_t numberOfPerforations() const;
-        const size_t numberOfSegments() const;
+        const int numberOfPerforations() const;
+        const int numberOfSegments() const;
 
         const struct WellControls* wellControls() const;
         const std::vector<double>& compFrac() const;
 
-        const size_t numberOfPhases() const;
+        const int numberOfPhases() const;
 
         const enum WellType wellType() const;
         const std::vector<double>& wellIndex() const;
@@ -109,7 +109,7 @@ namespace Opm
         // INJECTOR or PRODUCER
         enum WellType m_well_type_;
         // number of phases
-        size_t m_number_of_phases_;
+        int m_number_of_phases_;
         // component fractions for each well
         std::vector<double> m_comp_frac_;
         // controls for this well
@@ -121,9 +121,9 @@ namespace Opm
         // multi-phase flow model
         WellSegment::MultiPhaseModelEnum m_multiphase_model_;
         // number of perforation for this well
-        size_t m_number_of_perforations_;
+        int m_number_of_perforations_;
         // number of segments for this well
-        size_t m_number_of_segments_;
+        int m_number_of_segments_;
         // well index for each completion
         std::vector<double> m_well_index_;
         // depth for each completion // form the keyword COMPSEGS?
