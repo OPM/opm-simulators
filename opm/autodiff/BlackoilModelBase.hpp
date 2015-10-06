@@ -205,8 +205,17 @@ namespace Opm {
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const double dt, const int iteration);
 
-        /// The number of active phases in the model.
+        /// The number of active fluid phases in the model.
         int numPhases() const;
+
+        /// The number of active materials in the model.
+        /// This should be equal to the number of material balance
+        /// equations.
+        int numMaterials() const;
+
+        /// The name of an active material in the model.
+        /// It is required that material_index < numMaterials().
+        const std::string& materialName(int material_index) const;
 
         /// Update the scaling factors for mass balance equations
         void updateEquationsScaling();
@@ -274,6 +283,7 @@ namespace Opm {
 
         std::vector<int>         primalVariable_;
         V pvdt_;
+        std::vector<std::string> material_name_;
 
         // ---------  Protected methods  ---------
 
@@ -493,12 +503,12 @@ namespace Opm {
         /// \param[in]  nw    The number of wells on the local grid.
         /// \return The total pore volume over all cells.
         double
-        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& B,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& tempV,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases>& R,
-                             std::array<double,MaxNumPhases>& R_sum,
-                             std::array<double,MaxNumPhases>& maxCoeff,
-                             std::array<double,MaxNumPhases>& B_avg,
+        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& B,
+                             const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& tempV,
+                             const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& R,
+                             std::vector<double>& R_sum,
+                             std::vector<double>& maxCoeff,
+                             std::vector<double>& B_avg,
                              std::vector<double>& maxNormWell,
                              int nc,
                              int nw) const;
