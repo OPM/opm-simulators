@@ -319,8 +319,9 @@ try
         const double well_index = 1;
         std::stringstream well_name;
         well_name << "well" << i;
+        bool allowCrossFlow = true;
         add_well(PRODUCER, 0, 1, NULL, &well_cells, &well_index,
-                 well_name.str().c_str(), wells);
+                 well_name.str().c_str(), allowCrossFlow, wells);
     }
     /// \internal[well cells]
     /// \endinternal
