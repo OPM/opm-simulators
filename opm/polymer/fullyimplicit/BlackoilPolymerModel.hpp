@@ -115,12 +115,6 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const double dt, const int iteration);
-
         /// Assemble the residual and Jacobian of the nonlinear system.
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
@@ -255,36 +249,6 @@ namespace Opm {
 
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
-
-        /// \brief Compute the reduction within the convergence check.
-        /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[in] tempV A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. tempV.col(i) contains the
-        ///                   values
-        ///                  for phase i.
-        /// \param[in] R     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
-        ///                   of R for the phase i.
-        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
-        ///                   maximum of tempV for the phase i.
-        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
-        ///                   of B for the phase i.
-        /// \param[in]  nc    The number of cells of the local grid.
-        /// \return The total pore volume over all cells.
-        double
-        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
-                             const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
-                             std::array<double,MaxNumPhases+1>& R_sum,
-                             std::array<double,MaxNumPhases+1>& maxCoeff,
-                             std::array<double,MaxNumPhases+1>& B_avg,
-                             std::vector<double>& maxNormWell,
-                             int nc,
-                             int nw) const;
 
         /// Computing the water velocity without shear-thinning for the cell faces.
         /// The water velocity will be used for shear-thinning calculation.

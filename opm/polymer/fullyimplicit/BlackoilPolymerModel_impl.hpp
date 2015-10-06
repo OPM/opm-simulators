@@ -110,6 +110,7 @@ namespace Opm {
             // If deck has polymer, residual_ should contain polymer equation.
             rq_.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
+            Base::material_name_.push_back("Polymer");
             assert(poly_pos_ == fluid_.numPhases());
         }
     }
@@ -454,91 +455,6 @@ namespace Opm {
 
 
 
-
-    template <class Grid>
-    double
-    BlackoilPolymerModel<Grid>::convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& B,
-                                                     const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& tempV,
-                                                     const Eigen::Array<double, Eigen::Dynamic, MaxNumPhases+1>& R,
-                                                     std::array<double,MaxNumPhases+1>& R_sum,
-                                                     std::array<double,MaxNumPhases+1>& maxCoeff,
-                                                     std::array<double,MaxNumPhases+1>& B_avg,
-                                                     std::vector<double>& maxNormWell,
-                                                     int nc,
-                                                     int nw) const
-    {
-        // Do the global reductions
-#if HAVE_MPI
-        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-        {
-            const ParallelISTLInformation& info =
-                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-
-            // Compute the global number of cells and porevolume
-            std::vector<int> v(nc, 1);
-            auto nc_and_pv = std::tuple<int, double>(0, 0.0);
-            auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
-                                                        Opm::Reduction::makeGlobalSumFunctor<double>());
-            auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
-            info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
-
-            for ( int idx=0; idx<MaxNumPhases+1; ++idx )
-            {
-                if ((idx == MaxNumPhases && has_polymer_) || active_[idx]) { // Dealing with polymer *or* an active phase.
-                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
-                    auto containers = std::make_tuple(B.col(idx),
-                                                      tempV.col(idx),
-                                                      R.col(idx));
-                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
-                    info.computeReduction(containers, operators, values);
-                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
-                    maxCoeff[idx]    = std::get<1>(values);
-                    R_sum[idx]       = std::get<2>(values);
-                    if (idx != MaxNumPhases) { // We do not compute a well flux residual for polymer.
-                        maxNormWell[idx] = 0.0;
-                        for ( int w=0; w<nw; ++w ) {
-                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-                        }
-                    }
-                }
-                else
-                {
-                    maxNormWell[idx] = R_sum[idx] = B_avg[idx] = maxCoeff[idx] = 0.0;
-                }
-            }
-            info.communicator().max(&maxNormWell[0], MaxNumPhases+1);
-            // Compute pore volume
-            return std::get<1>(nc_and_pv);
-        }
-        else
-#endif
-        {
-            for ( int idx=0; idx<MaxNumPhases+1; ++idx )
-            {
-                if ((idx == MaxNumPhases && has_polymer_) || active_[idx]) { // Dealing with polymer *or* an active phase.
-                    B_avg[idx] = B.col(idx).sum()/nc;
-                    maxCoeff[idx] = tempV.col(idx).maxCoeff();
-                    R_sum[idx] = R.col(idx).sum();
-                }
-                else
-                {
-                    R_sum[idx] = B_avg[idx] = maxCoeff[idx] =0.0;
-                }
-                if (idx != MaxNumPhases) { // We do not compute a well flux residual for polymer.
-                    maxNormWell[idx] = 0.0;
-                    for ( int w=0; w<nw; ++w ) {
-                        maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-                    }
-                }
-            }
-            // Compute total pore volume
-            return geo_.poreVolume().sum();
-        }
-    }
-
-
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
@@ -631,124 +547,14 @@ namespace Opm {
 
 
     template <class Grid>
-    bool
-    BlackoilPolymerModel<Grid>::getConvergence(const double dt, const int iteration)
-    {
-        const double tol_mb    = param_.tolerance_mb_;
-        const double tol_cnv   = param_.tolerance_cnv_;
-        const double tol_wells = param_.tolerance_wells_;
-
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = wellsActive() ? wells().number_of_wells : 0;
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-
-        const V pv = geo_.poreVolume();
-
-        const std::vector<PhasePresence> cond = phaseCondition();
-
-        std::array<double,MaxNumPhases+1> CNV                   = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases+1> R_sum                 = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases+1> B_avg                 = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases+1> maxCoeff              = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases+1> mass_balance_residual = {{0., 0., 0., 0.}};
-        std::array<double,MaxNumPhases> well_flux_residual    = {{0., 0., 0.}};
-        std::size_t cols = MaxNumPhases+1; // needed to pass the correct type to Eigen
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases+1> B(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases+1> R(nc, cols);
-        Eigen::Array<V::Scalar, Eigen::Dynamic, MaxNumPhases+1> tempV(nc, cols);
-        std::vector<double> maxNormWell(MaxNumPhases);
-
-        for ( int idx=0; idx<MaxNumPhases; ++idx )
-        {
-            if (active_[idx]) {
-                const int pos    = pu.phase_pos[idx];
-                const ADB& tempB = rq_[pos].b;
-                B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-            }
-        }
-        if (has_polymer_) {
-            const ADB& tempB = rq_[poly_pos_].b;
-            B.col(MaxNumPhases) = 1. / tempB.value();
-            R.col(MaxNumPhases) = residual_.material_balance_eq[poly_pos_].value();
-            tempV.col(MaxNumPhases) = R.col(MaxNumPhases).abs()/pv;
-        }
-
-        const double pvSum = convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg,
-                                                  maxNormWell, nc, nw);
-
-        bool converged_MB = true;
-        bool converged_CNV = true;
-        bool converged_Well = true;
-        // Finish computation
-        for ( int idx=0; idx<MaxNumPhases+1; ++idx )
-        {
-            CNV[idx]                   = B_avg[idx] * dt * maxCoeff[idx];
-            mass_balance_residual[idx] = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
-            converged_MB               = converged_MB && (mass_balance_residual[idx] < tol_mb);
-            converged_CNV              = converged_CNV && (CNV[idx] < tol_cnv);
-            if (idx != MaxNumPhases) { // No well flux residual for polymer.
-                well_flux_residual[idx]    = B_avg[idx] * dt * maxNormWell[idx];
-                converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
-            }
-        }
-
-        const double residualWell     = detail::infinityNormWell(residual_.well_eq,
-                                                                 linsolver_.parallelInformation());
-        converged_Well   = converged_Well && (residualWell < Opm::unit::barsa);
-        const bool   converged        = converged_MB && converged_CNV && converged_Well;
-
-        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        if (std::isnan(mass_balance_residual[Water]) || mass_balance_residual[Water] > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[Oil])   || mass_balance_residual[Oil]   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[Gas])   || mass_balance_residual[Gas]   > maxResidualAllowed() ||
-            std::isnan(mass_balance_residual[MaxNumPhases])   || mass_balance_residual[MaxNumPhases]   > maxResidualAllowed() ||
-            std::isnan(CNV[Water]) || CNV[Water] > maxResidualAllowed() ||
-            std::isnan(CNV[Oil]) || CNV[Oil] > maxResidualAllowed() ||
-            std::isnan(CNV[Gas]) || CNV[Gas] > maxResidualAllowed() ||
-            std::isnan(CNV[MaxNumPhases]) || CNV[MaxNumPhases] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Water]) || well_flux_residual[Water] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Oil]) || well_flux_residual[Oil] > maxResidualAllowed() ||
-            std::isnan(well_flux_residual[Gas]) || well_flux_residual[Gas] > maxResidualAllowed() ||
-            std::isnan(residualWell)     || residualWell     > maxResidualAllowed() )
-        {
-            OPM_THROW(Opm::NumericalProblem,"One of the residuals is NaN or too large!");
-        }
-
-        if ( terminal_output_ )
-        {
-            // Only rank 0 does print to std::cout
-            if (iteration == 0) {
-                std::cout << "\nIter  MB(WATER)   MB(OIL)    MB(GAS)    MB(POLY)      CNVW       CNVO       CNVG       CNVP   W-FLUX(W)  W-FLUX(O)  W-FLUX(G)\n";
-            }
-            const std::streamsize oprec = std::cout.precision(3);
-            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-            std::cout << std::setw(4) << iteration
-                      << std::setw(11) << mass_balance_residual[Water]
-                      << std::setw(11) << mass_balance_residual[Oil]
-                      << std::setw(11) << mass_balance_residual[Gas]
-                      << std::setw(11) << mass_balance_residual[MaxNumPhases]
-                      << std::setw(11) << CNV[Water]
-                      << std::setw(11) << CNV[Oil]
-                      << std::setw(11) << CNV[Gas]
-                      << std::setw(11) << CNV[MaxNumPhases]
-                      << std::setw(11) << well_flux_residual[Water]
-                      << std::setw(11) << well_flux_residual[Oil]
-                      << std::setw(11) << well_flux_residual[Gas]
-                      << std::endl;
-            std::cout.precision(oprec);
-            std::cout.flags(oflags);
-        }
-        return converged;
-    }
-
-    template <class Grid>
     ADB
     BlackoilPolymerModel<Grid>::computeMc(const SolutionState& state) const
     {
         return polymer_props_ad_.polymerWaterVelocityRatio(state.concentration);
     }
+
+
+
 
     template<class Grid>
     void
@@ -863,6 +669,9 @@ namespace Opm {
         }
 
     }
+
+
+
 
     template<class Grid>
     void
