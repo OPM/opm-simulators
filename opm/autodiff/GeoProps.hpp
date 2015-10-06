@@ -28,7 +28,7 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
 
@@ -38,7 +38,7 @@
 #include <dune/grid/common/mcmgmapper.hh>
 #endif
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cstddef>
 

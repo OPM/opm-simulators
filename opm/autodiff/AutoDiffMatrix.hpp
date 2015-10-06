@@ -20,12 +20,12 @@
 #ifndef OPM_AUTODIFFMATRIX_HEADER_INCLUDED
 #define OPM_AUTODIFFMATRIX_HEADER_INCLUDED
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/utility/ErrorMacros.hpp>
 #include <opm/autodiff/fastSparseProduct.hpp>

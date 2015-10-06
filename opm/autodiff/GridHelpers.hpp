@@ -27,7 +27,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
@@ -38,7 +38,7 @@
 #include <dune/grid/polyhedralgrid.hh>
 #endif
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 
 namespace Opm

@@ -25,7 +25,7 @@
 #error This header must be included before any bcrsmatrix.hh is included (directly or indirectly)
 #endif
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
@@ -42,7 +42,7 @@
 #undef private
 #endif
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 namespace Opm
 {

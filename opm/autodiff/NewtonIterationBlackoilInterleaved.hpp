@@ -30,7 +30,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
@@ -39,7 +39,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/amg.hh>
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <memory>
 

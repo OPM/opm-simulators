@@ -31,13 +31,13 @@
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
 #else
 #include <Eigen/SparseLU>
 #endif
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 
 namespace Opm
