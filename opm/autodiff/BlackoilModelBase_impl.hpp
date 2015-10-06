@@ -1040,13 +1040,12 @@ namespace detail {
             else
                 selectProducingPerforations[c] = 1;
         }
-        bool banCrossFlow = true;
-        if (banCrossFlow)
-        {
-            const V numInjectingPerforations = (wops_.p2w * ADB::constant(selectInjectingPerforations)).value();
-            const V numProducingPerforations = (wops_.p2w * ADB::constant(selectProducingPerforations)).value();
 
-            for (int w = 0; w < nw; ++w) {
+        // Handle cross flow
+        const V numInjectingPerforations = (wops_.p2w * ADB::constant(selectInjectingPerforations)).value();
+        const V numProducingPerforations = (wops_.p2w * ADB::constant(selectProducingPerforations)).value();
+        for (int w = 0; w < nw; ++w) {
+            if (!wells().allow_cf[w]) {
                 for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
                     // Crossflow is not allowed; reverse flow is prevented.
                     // At least one of the perforation must be open in order to have a meeningful
@@ -1061,6 +1060,7 @@ namespace detail {
                 }
             }
         }
+
         // HANDLE FLOW INTO WELLBORE
         // compute phase volumetric rates at standard conditions
         std::vector<ADB> cq_ps(np, ADB::null());
