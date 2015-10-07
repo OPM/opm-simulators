@@ -370,7 +370,6 @@ namespace Opm {
                 // A weighted sum of the b-factors of gas and solvent are used.
                 const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
-                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
                 const ADB zero = ADB::constant(V::Zero(nc));
                 const ADB& ss = state.solvent_saturation;
                 const ADB& sg = (active_[ Gas ]
@@ -380,7 +379,6 @@ namespace Opm {
                 Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
                 V F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells).value();
 
-                const int nw = wells().number_of_wells;
                 V injectedSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
 
                 V isProducer = V::Zero(nperf);
@@ -637,7 +635,6 @@ namespace Opm {
             mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
 
             // A weighted sum of the b-factors of gas and solvent are used.
-            const int nperf = wells().well_connpos[wells().number_of_wells];
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -647,7 +644,6 @@ namespace Opm {
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
-            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
             V ones = V::Constant(nperf,1.0);
