@@ -410,6 +410,13 @@ namespace Opm {
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numberOfPerforations()));
         well_perforation_pressure_cell_diffs_ = V::Zero(xw.numberOfPerforations());
         well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numberOfPerforations());
+#if 0
+        std::cout << "well_perforation_densities_ " << std::endl;
+        std::cout << well_perforation_densities_ << std::endl;
+
+        std::cout << "well_perforation_pressure_diffs_ " << std::endl;
+        std::cout << well_perforation_pressure_diffs_ << std::endl;
+#endif
     }
 
 
@@ -1533,6 +1540,16 @@ namespace Opm {
             // TODO: applying the pressure change limiter to all the segments, not sure if it is the correct thing to do
             const V dsegp_limited = sign(dsegp) * dsegp.abs().min(segp_old.abs() * dpmaxrel);
             const V segp = segp_old - dsegp_limited;
+            std::copy(&segp[0], &segp[0] + segp.size(), well_state.segPress().begin());
+#if 0
+            std::cout << " output sr in updateWellState " << std::endl;
+            std::cout << sr << std::endl;
+            std::cin.ignore();
+
+            std::cout << " output bhp is updateWellState " << std::endl;
+            std::cout << segp << std::endl;
+            std::cin.ignore();
+#endif
 
 
             // update the well rates and bhps, which are not anymore primary vabriables.
