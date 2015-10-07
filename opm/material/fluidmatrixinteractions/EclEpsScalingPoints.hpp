@@ -242,9 +242,8 @@ struct EclEpsScalingPointsInfo
             extractUnscaledSgfn_(sgfnTables.getTable<SgfnTable>(satRegionIdx));
             extractUnscaledSof3_(sof3Tables.getTable<Sof3Table>(satRegionIdx));
 
-            // some safety checks mandated by the ECL documentation
+            // some consistency requirement mandated by the ECL documentation
             assert(std::abs(Sowu - (1 - swfnTables.getTable<SwfnTable>(satRegionIdx).getSwColumn().front())) < 1e-30);
-            assert(std::abs(maxKrw - maxKrg) < 1e-30);
         }
         else {
             throw std::domain_error("No valid saturation keyword family specified");
