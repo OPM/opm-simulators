@@ -32,6 +32,7 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <iostream>
 
 namespace Opm
 {
@@ -167,6 +168,42 @@ namespace Opm
                     }
                 }
             }
+#if 0
+            // Debugging output.
+            std::cout << " output all the well state informations after initialization " << std::endl;
+            const int nperf_total = nperf;
+
+            std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
+
+            std::cout << " bhps : " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << bhp()[i] << std::endl;
+            }
+
+            std::cout << " thps : " << std::endl;
+
+            for (int i = 0; i < nw; ++i) {
+                std::cout << thp()[i] << std::endl;
+            }
+
+            std::cout << " well rates " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << i;
+                for (int p = 0; p < np; ++p) {
+                    std::cout << " " << wellRates()[np * i + p];
+                }
+                std::cout << std::endl;
+            }
+
+            std::cout << " perf pressures and pref phase rates : " << std::endl;
+            for (int i = 0; i < nperf_total; ++i) {
+                std::cout << i << " " << perfPress()[i];
+                for (int p = 0; p < np; ++p) {
+                    std::cout << " " << perfPhaseRates()[np * i + p];
+                }
+                std::cout << std::endl;
+            }
+#endif
         }
 
         /// One rate per phase and well connection.

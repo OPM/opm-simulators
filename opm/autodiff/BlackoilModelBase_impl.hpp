@@ -870,6 +870,13 @@ namespace detail {
         // 4. Store the results
         well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf);
         well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
+#if 0
+        std::cout << "well_perforation_densities_ " << std::endl;
+        std::cout << well_perforation_densities_ << std::endl;
+
+        std::cout << "well_perforation_pressure_diffs_ " << std::endl;
+        std::cout << well_perforation_pressure_diffs_ << std::endl;
+#endif
     }
 
 
@@ -2191,6 +2198,15 @@ namespace detail {
             const V dbhp_limited = sign(dbhp) * dbhp.abs().min(bhp_old.abs()*dpmaxrel);
             const V bhp = bhp_old - dbhp_limited;
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
+#if 0
+            std::cout << " output wr in updateWellState " << std::endl;
+            std::cout << wr << std::endl;
+            std::cin.ignore();
+
+            std::cout << " output bhp is updateWellState " << std::endl;
+            std::cout << bhp << std::endl;
+            std::cin.ignore();
+#endif
 
             //Get gravity for THP hydrostatic correction
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));

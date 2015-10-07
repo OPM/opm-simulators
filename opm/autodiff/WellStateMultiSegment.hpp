@@ -428,7 +428,6 @@ namespace Opm
                 }
             }
             std::cout << " output the well state right after intialization is DONE! " << std::endl;
-            std::cin.ignore();
 #endif
         }
 
