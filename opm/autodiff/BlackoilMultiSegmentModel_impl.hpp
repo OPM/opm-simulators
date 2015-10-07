@@ -800,15 +800,41 @@ namespace Opm {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         // TODO: now it is so necesary to have a gobal wellsMultiSegment class to store some global information.
         const int np = numPhases();
-        // const int nw = wellsMultiSegment().size();
-        const int nperf = xw.perfPress().size();
+        const int nw = wellsMultiSegment().size();
+        const int nperf_total = xw.perfPress().size();
 
-        V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
+        V cq = superset(cq_s[0].value(), Span(nperf_total, np, 0), nperf_total * np);
         for (int phase = 1; phase < np; ++phase) {
-            cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
+            cq += superset(cq_s[phase].value(), Span(nperf_total, np, phase), nperf_total * np);
         }
-        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
+        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf_total * np);
 
+        // Update the perforation pressures for usual wells first to recover the resutls
+        // without mutlti segment wells.
+        // For segment wells, it has not been decided if we need th concept
+        // of preforation pressures
+        xw.perfPress().resize(nperf_total, -1.e100);
+
+        const V& cdp = well_perforation_pressure_diffs_;
+        int start_segment = 0;
+        int start_perforation = 0;
+        for (int i = 0; i < nw; ++i) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[i];
+            const int nperf = well->numberOfPerforations();
+            const int nseg = well->numberOfSegments();
+            if (well->isMultiSegmented()) {
+                start_segment += nseg;
+                start_perforation += nperf;
+                continue;
+            }
+            const V cdp_well = subset(cdp, Span(nperf, 1, start_perforation));
+            const ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
+            const V perfpressure = (well->wellOps().s2p * segp.value().matrix()).array() + cdp_well;
+            std::copy(perfpressure.data(), perfpressure.data() + nperf, &xw.perfPress()[start_perforation]);
+
+            start_segment += nseg;
+            start_perforation += nperf;
+        }
         // TODO: how to update segment pressures and segment rates?
         // or we do not need here?
 
