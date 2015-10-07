@@ -4,6 +4,7 @@
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
   Copyright 2015 Statoil AS
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -32,13 +33,6 @@
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
-#include <dune/istl/scalarproducts.hh>
-#include <dune/istl/operators.hh>
-#include <dune/istl/preconditioners.hh>
-#include <dune/istl/solvers.hh>
-#include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/paamg/amg.hh>
-
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <memory>
@@ -51,11 +45,6 @@ namespace Opm
     /// as a block-structured matrix (one block for all cell variables).
     class NewtonIterationBlackoilInterleaved : public NewtonIterationBlackoilInterface
     {
-        typedef Dune::FieldVector<double, 3   > VectorBlockType;
-        typedef Dune::FieldMatrix<double, 3, 3> MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType>        Mat;
-        typedef Dune::BlockVector<VectorBlockType>        Vector;
-
     public:
 
         /// Construct a system solver.
@@ -86,118 +75,13 @@ namespace Opm
         virtual const boost::any& parallelInformation() const;
 
     private:
+        template <int np>
+        SolutionVector computeNewtonIncrementImpl( const LinearisedBlackoilResidual& residual ) const;
 
-        /// \brief construct the CPR preconditioner and the solver.
-        /// \tparam P The type of the parallel information.
-        /// \param parallelInformation the information about the parallelization.
-        template<int category=Dune::SolverCategory::sequential, class O, class POrComm>
-        void constructPreconditionerAndSolve(O& opA,
-                                             Vector& x, Vector& istlb,
-                                             const POrComm& parallelInformation_arg,
-                                             Dune::InverseOperatorResult& result) const
-        {
-            // Construct scalar product.
-            typedef Dune::ScalarProductChooser<Vector, POrComm, category> ScalarProductChooser;
-            typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
-            SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
-
-            // Construct preconditioner.
-            auto precond = constructPrecond(opA, parallelInformation_arg);
-
-            // Communicate if parallel.
-            parallelInformation_arg.copyOwnerToAll(istlb, istlb);
-
-            // Solve.
-            solve(opA, x, istlb, *sp, *precond, result);
-        }
-
-
-        typedef Dune::SeqILU0<Mat, Vector, Vector> SeqPreconditioner;
-
-        template <class Operator>
-        std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
-        {
-            const double relax = 1.0;
-            std::unique_ptr<SeqPreconditioner>
-                precond(new SeqPreconditioner(opA.getmat(), relax));
-            return precond;
-        }
-
-#if HAVE_MPI
-        typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-        typedef Dune::BlockPreconditioner<Vector, Vector, Comm, SeqPreconditioner> ParPreconditioner;
-
-        template <class Operator>
-        std::unique_ptr<ParPreconditioner,
-                        AdditionalObjectDeleter<SeqPreconditioner> >
-        constructPrecond(Operator& opA, const Comm& comm) const
-        {
-            typedef AdditionalObjectDeleter<SeqPreconditioner> Deleter;
-            typedef std::unique_ptr<ParPreconditioner, Deleter> Pointer;
-            int ilu_setup_successful = 1;
-            std::string message;
-            const double relax = 1.0;
-            SeqPreconditioner* seq_precond = nullptr;
-            try {
-                seq_precond = new SeqPreconditioner(opA.getmat(),
-                                                   relax);
-            }
-            catch ( Dune::MatrixBlockError error )
-            {
-                message = error.what();
-                std::cerr<<"Exception occured on process " <<
-                    comm.communicator().rank() << " during " <<
-                    "setup of ILU0 preconditioner with message: " <<
-                    message<<std::endl;
-                ilu_setup_successful = 0;
-            }
-            // Check whether there was a problem on some process
-            if ( comm.communicator().min(ilu_setup_successful) == 0 )
-            {
-                if ( seq_precond ) // not null if constructor succeeded
-                {
-                    // prevent memory leak
-                    delete seq_precond;
-                }
-                throw Dune::MatrixBlockError();
-            }
-            return Pointer(new ParPreconditioner(*seq_precond, comm),
-                                  Deleter(*seq_precond));
-        }
-#endif
-
-        /// \brief Solve the system using the given preconditioner and scalar product.
-        template <class Operator, class ScalarProd, class Precond>
-        void solve(Operator& opA, Vector& x, Vector& istlb, ScalarProd& sp, Precond& precond, Dune::InverseOperatorResult& result) const
-        {
-            // TODO: Revise when linear solvers interface opm-core is done
-            // Construct linear solver.
-            // GMRes solver
-            if ( newton_use_gmres_ ) {
-                Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond,
-                          linear_solver_reduction_, linear_solver_restart_, linear_solver_maxiter_, linear_solver_verbosity_);
-                // Solve system.
-                linsolve.apply(x, istlb, result);
-            }
-            else { // BiCGstab solver
-                Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond,
-                          linear_solver_reduction_, linear_solver_maxiter_, linear_solver_verbosity_);
-                // Solve system.
-                linsolve.apply(x, istlb, result);
-            }
-        }
-
-        void formInterleavedSystem(const std::vector<LinearisedBlackoilResidual::ADB>& eqs,
-                                   Mat& istlA) const;
-
-        mutable int iterations_;
+        mutable std::vector< std::unique_ptr< NewtonIterationBlackoilInterface > > newtonIncrement_;
+        const parameter::ParameterGroup& param_;
         boost::any parallelInformation_;
-
-        const bool newton_use_gmres_;
-        const double linear_solver_reduction_;
-        const int    linear_solver_maxiter_;
-        const int    linear_solver_restart_;
-        const int    linear_solver_verbosity_;
+        mutable int iterations_;
     };
 
 } // namespace Opm
