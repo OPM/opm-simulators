@@ -795,7 +795,7 @@ namespace Opm {
 
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                                                           const SolutionState& /* state */,
+                                                                           const SolutionState& state,
                                                                            WellState& xw)
     {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
