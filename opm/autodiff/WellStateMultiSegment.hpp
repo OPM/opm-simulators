@@ -89,6 +89,7 @@ namespace Opm
 
             bhp_.resize(nw);
             thp_.resize(nw);
+            top_segment_loc_.resize(nw);
             temperature_.resize(nw, 273.15 + 20); // standard temperature for now
 
             // deciding to add the following variables temporarily
@@ -137,6 +138,8 @@ namespace Opm
                 wellMapEntry.number_of_segments = wells[w]->numberOfSegments();
                 wellMapEntry.start_perforation = start_perforation;
                 wellMapEntry.number_of_perforations = wells[w]->numberOfPerforations();
+
+                top_segment_loc_[w] = start_segment;
 
                 int start_perforation_segment = 0;
                 wellMapEntry.start_perforation_segment.resize(wellMapEntry.number_of_segments);
@@ -406,6 +409,11 @@ namespace Opm
                     std::cout << std::endl;
                 }
 
+                std::cout << " locations of the top segments : " << std::endl;
+                for (int i = 0; i < nw; ++i) {
+                    std::cout << i << "  " << top_segment_loc_[i] << std::endl;
+                }
+
                 std::cout << " output all the information from the wellMap " << std::endl;
 
                 for (WellMapType::const_iterator iter = wellMap().begin(); iter != wellMap().end(); ++iter) {
@@ -484,6 +492,11 @@ namespace Opm
         // total flow rates for each segments, G_T
         std::vector<double> segtotalrate_;
         // std::vector<int> current_controls_;
+
+        // the location of the top segments within the whole segment list
+        // it is better in the Wells class if we have a class instead of
+        // using a vector for all the wells
+        std::vector<int> top_segment_loc_;
 
         WellMapType wellMap_;
 
