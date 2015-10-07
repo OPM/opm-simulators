@@ -24,13 +24,14 @@
 #include <config.h>
 
 #include <opm/autodiff/DuneMatrix.hpp>
-
+#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/core/utility/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
 #include <dune/istl/preconditioners.hh>
@@ -38,7 +39,6 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/amg.hh>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
 #else

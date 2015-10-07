@@ -27,13 +27,7 @@
 
 
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
-
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
-
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <memory>
 
