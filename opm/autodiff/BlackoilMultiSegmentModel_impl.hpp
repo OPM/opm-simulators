@@ -536,6 +536,7 @@ namespace Opm {
 
         // TODO: it must be done one by one?
         // or we develop a new Wells class?
+        static_cast<void>(nperf);
         // Add well contributions to mass balance equations
         // const int nc = Opm::AutoDiffGrid::numCells(grid_);
         // const int nw = wells().number_of_wells;

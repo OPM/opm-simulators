@@ -281,14 +281,13 @@ namespace Opm
 
                 typedef typename WellMapType::const_iterator const_iterator;
                 const_iterator end_old = prevState.wellMap().end();
-                const_iterator end_this = wellMap().end();
 
                 for (int w = 0; w < nw; ++w) {
                     std::string well_name(wells[w]->name());
                     const_iterator it_old = prevState.wellMap().find(well_name);
                     const_iterator it_this = wellMap().find(well_name);
 
-                    assert(it_this != end_this); // the current well must be present in the current well map
+                    assert(it_this != wellMap().end()); // the current well must be present in the current well map
 
                     if (it_old != end_old) {
                         const int oldIndex = (*it_old).second.well_number;
