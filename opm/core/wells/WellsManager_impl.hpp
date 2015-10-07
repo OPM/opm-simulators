@@ -248,11 +248,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                 else
                     wd.type = PRODUCER;
 
-                if (well->getAllowCrossFlow()) {
-                    wd.allowCrossFlow = true;
-                } else {
-                    wd.allowCrossFlow = false;
-                }
+                wd.allowCrossFlow = well->getAllowCrossFlow();
                 well_data.push_back(wd);
             }
         }
