@@ -444,11 +444,6 @@ namespace Opm
 
 
 
-    /// Solve the linear system Ax = b, with A being the
-    /// combined derivative matrix of the residual and b
-    /// being the residual itself.
-    /// \param[in] residual   residual object containing A and b.
-    /// \return               the solution x
     NewtonIterationBlackoilInterleaved::SolutionVector
     NewtonIterationBlackoilInterleaved::computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
     {
@@ -473,11 +468,6 @@ namespace Opm
     }
 
 
-    /// Solve the linear system Ax = b, with A being the
-    /// combined derivative matrix of the residual and b
-    /// being the residual itself.
-    /// \param[in] residual   residual object containing A and b.
-    /// \return               the solution x
     template <int np>
     NewtonIterationBlackoilInterleaved::SolutionVector
     NewtonIterationBlackoilInterleaved::computeNewtonIncrementImpl(const LinearisedBlackoilResidual& residual) const
