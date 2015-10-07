@@ -994,6 +994,7 @@ namespace Opm {
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
                 xw.bhp()[w] = target;
+                xw.segPress()[xw.topSegmentLoc()[w]] = target;
                 break;
 
             case THP: {
@@ -1051,7 +1052,8 @@ namespace Opm {
             case SURFACE_RATE:
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.0) {
-                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                        xw.wellRates()[np * w + phase] = target * distr[phase];
+                        xw.segPhaseRates()[np * xw.topSegmentLoc()[w] + phase] = target * distr[phase];
                     }
                 }
                 break;
