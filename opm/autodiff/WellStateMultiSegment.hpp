@@ -460,6 +460,8 @@ namespace Opm
         std::vector<double>& temperature() { return temperature_; };
         const std::vector<double>& temperature() const { return temperature_; }
 
+        const std::vector<int>& topSegmentLoc() const { return top_segment_loc_; };
+
         // std::vector<int>& currentControls() { return current_controls_; }
         // const std::vector<int>& currentControls() const { return current_controls_; }
         using Base::currentControls;
