@@ -321,6 +321,15 @@ namespace Opm {
             start_segment += nseg;
         }
 
+#if 0
+        std::cout << " state.segp " << std::endl;
+        std::cout << state.segp.value() << std::endl;
+        std::cout << " perf_press " << std::endl;
+        std::cout << perf_press << std::endl;
+        std::cout << " avg_press " << std::endl;
+        std::cout << avg_press << std::endl;
+#endif
+
 
         // Use cell values for the temperature as the wells don't knows its temperature yet.
         const ADB perf_temp = subset(state.temperature, well_cells);

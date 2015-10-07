@@ -213,7 +213,7 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             perfPhaseRates()[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
                         }
-                        perfpress_[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i + start_perforation]];
+                        perfpress_[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i]];
                     }
 
                     // 5. Segment rates and pressures
@@ -222,7 +222,8 @@ namespace Opm
                     // when under bhp control.
                     // the seg_rates will related to the sum of the perforation rates, and also trying to keep consistent with the
                     // well rates. Most importantly, the segment rates of the top segment is the same with the well rates
-                    for (int i = 0; i < number_of_segments; ++i) {
+                    segpress_[start_segment] = bhp_[w];
+                    for (int i = 1; i < number_of_segments; ++i) {
                         /* for (int p = 0; p < np; ++p) {
                             segphaserates_[np * (i + start_segment) + p] = 0.;
                         } */

@@ -791,6 +791,16 @@ namespace detail {
             }
         }
 
+#if 0
+        std::cout << " state.bhp " << std::endl;
+        std::cout << state.bhp.value() << std::endl;
+        std::cout << " perf_press " << std::endl;
+        std::cout << perf_press << std::endl;
+        std::cout << " avg_press " << std::endl;
+        std::cout << avg_press << std::endl;
+#endif
+
+
         // Use cell values for the temperature as the wells don't knows its temperature yet.
         const ADB perf_temp = subset(state.temperature, well_cells);
 
