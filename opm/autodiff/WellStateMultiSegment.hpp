@@ -277,9 +277,6 @@ namespace Opm
             // order can change so the mapping is based on the well names
             if ( !(prevState.wellMap().empty()) )
             {
-                std::cout << "copying from the previous state ! " << std::endl;
-                std::cin.ignore();
-
                 typedef typename WellMapType::const_iterator const_iterator;
                 const_iterator end_old = prevState.wellMap().end();
 
@@ -303,8 +300,8 @@ namespace Opm
                             wellRates()[ idx ] = prevState.wellRates()[ oldidx ];
                         }
 
-                        const int num_perf_old_well = (*it_old).second.number_of_perforations;
                         const int num_seg_old_well = (*it_old).second.number_of_segments;
+                        const int num_perf_old_well = (*it_old).second.number_of_perforations;
 
                         const int num_seg_this_well = (*it_this).second.number_of_segments;
                         const int num_perf_this_well = (*it_this).second.number_of_perforations;
@@ -312,7 +309,7 @@ namespace Opm
                         // determing if the structure of the wells has been changed by comparing the number of segments and perforations
                         // may not be very safe.
                         // The strategy HAS to be changed later with experiments and analysis
-                        if ((num_perf_old_well == num_seg_old_well) && (num_seg_old_well == num_seg_this_well)) {
+                        if ((num_perf_old_well == num_perf_this_well) && (num_seg_old_well == num_seg_this_well)) {
                             const int old_start_perforation = (*it_old).second.start_perforation;
                             const int old_start_segment = (*it_old).second.start_segment;
 
