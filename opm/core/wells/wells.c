@@ -85,7 +85,7 @@ wells_allocate(int nwells, struct Wells *W)
     void *type, *depth_ref, *comp_frac;
     void *well_connpos;
     void *ctrls, *name;
-    bool *allow_cf;
+    void *allow_cf;
 
     np = W->number_of_phases;
 
@@ -146,7 +146,7 @@ initialise_new_wells(int nwells, struct Wells *W)
         W->type     [w]        = PRODUCER;
         W->depth_ref[w]        = -1.0;
         W->name     [w]        = NULL;
-        W->allow_cf [w]        = false;
+        W->allow_cf [w]        = 1;
 
         for (p = 0; p < W->number_of_phases; ++p) {
             W->comp_frac[W->number_of_phases*w + p] = 0.0;
@@ -278,7 +278,7 @@ create_wells(int nphases, int nwells, int nperf)
 
         W->ctrls           = NULL;
         W->name            = NULL;
-        W->allow_cf        = false;
+        W->allow_cf        = NULL;
 
         W->data            = create_well_mgmt();
 
@@ -364,7 +364,7 @@ add_well(enum WellType  type     ,
          const int     *cells    ,
          const double  *WI       , /* Well index per perf (or NULL) */
          const char    *name     , /* Well name (or NULL) */
-         bool           allow_cf ,
+         int            allow_cf ,
          struct Wells  *W        )
 /* ---------------------------------------------------------------------- */
 {
