@@ -363,75 +363,76 @@ namespace Opm
                 }
             }
 
-            if (int debug = 0) {
-                std::cout << " output all the well state informations after initialization " << std::endl;
-                const int nperf_total = numberOfPerforations();
-                const int nseg_total = numberOfSegments();
+#if 0
+            // Debugging output.
+            std::cout << " output all the well state informations after initialization " << std::endl;
+            const int nperf_total = numberOfPerforations();
+            const int nseg_total = numberOfSegments();
 
-                std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
-                std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
+            std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
+            std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
 
-                std::cout << " bhps : " << std::endl;
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << bhp()[i] << std::endl;
-                }
-
-                std::cout << " thps : " << std::endl;
-
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << thp()[i] << std::endl;
-                }
-
-                std::cout << " well rates " << std::endl;
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << i;
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << wellRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-
-                std::cout << " segment pressures and segment phase rates : " << std::endl;
-                for (int i = 0; i < nseg_total; ++i) {
-                    std::cout << i << " " << segPress()[i];
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << segPhaseRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-
-                std::cout << " perf pressures and pref phase rates : " << std::endl;
-                for (int i = 0; i < nperf_total; ++i) {
-                    std::cout << i << " " << perfPress()[i];
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << perfPhaseRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-
-                std::cout << " locations of the top segments : " << std::endl;
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << i << "  " << top_segment_loc_[i] << std::endl;
-                }
-
-                std::cout << " output all the information from the wellMap " << std::endl;
-
-                for (WellMapType::const_iterator iter = wellMap().begin(); iter != wellMap().end(); ++iter) {
-                    std::cout << " well name : " << iter->first << std::endl;
-                    const MapentryType &wellmapInfo = iter->second;
-                    std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
-                              << " number of segment : " << wellmapInfo.number_of_segments << std::endl;
-                    std::cout << " start perforation : " << wellmapInfo.start_perforation << " number of perforations : " << wellmapInfo.number_of_perforations << std::endl;
-                    const int nseg_well = wellmapInfo.number_of_segments;
-                    std::cout << "    start performation ofr each segment and number of perforation that each segment has" << std::endl;
-                    for (int i = 0; i < nseg_well; ++i) {
-                        std::cout << " segment " << i << " start perforation " << wellmapInfo.start_perforation_segment[i]
-                                  << " number of perforations " << wellmapInfo.number_of_perforations_segment[i] << std::endl;
-                    }
-                }
-                std::cout << " output the well state right after intialization is DONE! " << std::endl;
-                std::cin.ignore();
+            std::cout << " bhps : " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << bhp()[i] << std::endl;
             }
+
+            std::cout << " thps : " << std::endl;
+
+            for (int i = 0; i < nw; ++i) {
+                std::cout << thp()[i] << std::endl;
+            }
+
+            std::cout << " well rates " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << i;
+                for (int p = 0; p < np; ++p) {
+                    std::cout << " " << wellRates()[np * i + p];
+                }
+                std::cout << std::endl;
+            }
+
+            std::cout << " segment pressures and segment phase rates : " << std::endl;
+            for (int i = 0; i < nseg_total; ++i) {
+                std::cout << i << " " << segPress()[i];
+                for (int p = 0; p < np; ++p) {
+                    std::cout << " " << segPhaseRates()[np * i + p];
+                }
+                std::cout << std::endl;
+            }
+
+            std::cout << " perf pressures and pref phase rates : " << std::endl;
+            for (int i = 0; i < nperf_total; ++i) {
+                std::cout << i << " " << perfPress()[i];
+                for (int p = 0; p < np; ++p) {
+                    std::cout << " " << perfPhaseRates()[np * i + p];
+                }
+                std::cout << std::endl;
+            }
+
+            std::cout << " locations of the top segments : " << std::endl;
+            for (int i = 0; i < nw; ++i) {
+                std::cout << i << "  " << top_segment_loc_[i] << std::endl;
+            }
+
+            std::cout << " output all the information from the wellMap " << std::endl;
+
+            for (WellMapType::const_iterator iter = wellMap().begin(); iter != wellMap().end(); ++iter) {
+                std::cout << " well name : " << iter->first << std::endl;
+                const MapentryType &wellmapInfo = iter->second;
+                std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
+                          << " number of segment : " << wellmapInfo.number_of_segments << std::endl;
+                std::cout << " start perforation : " << wellmapInfo.start_perforation << " number of perforations : " << wellmapInfo.number_of_perforations << std::endl;
+                const int nseg_well = wellmapInfo.number_of_segments;
+                std::cout << "    start performation ofr each segment and number of perforation that each segment has" << std::endl;
+                for (int i = 0; i < nseg_well; ++i) {
+                    std::cout << " segment " << i << " start perforation " << wellmapInfo.start_perforation_segment[i]
+                              << " number of perforations " << wellmapInfo.number_of_perforations_segment[i] << std::endl;
+                }
+            }
+            std::cout << " output the well state right after intialization is DONE! " << std::endl;
+            std::cin.ignore();
+#endif
         }
 
         std::vector<double>& segPhaseRates() { return segphaserates_; }
@@ -471,10 +472,11 @@ namespace Opm
         const WellMapType& wellMap() const { return wellMap_; }
         WellMapType& wellMap() { return wellMap_; }
 
-        const int numberOfPhases() const { return np_; }
-        const int numberOfSegments() const { return nseg_; }
-        const int numberOfPerforations() const { return nperf_; }
-        const int numberOfWells() const { return nwells_; }
+        int numberOfPhases() const { return np_; }
+        int numberOfSegments() const { return nseg_; }
+        int numberOfPerforations() const { return nperf_; }
+        int numberOfWells() const { return nwells_; }
+
     private:
         std::vector<double> bhp_;
         std::vector<double> thp_;

@@ -96,7 +96,7 @@ namespace Opm {
     BlackoilMultiSegmentModel<Grid>::
     prepareStep(const double dt,
                 ReservoirState& reservoir_state,
-                WellState& well_state)
+                WellState& /* well_state */)
     {
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
@@ -208,14 +208,15 @@ namespace Opm {
         well_cells.reserve(nperf);
         for (int i = 0; i < nw; ++i) {
             const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
+            const int num_cells_this_well = temp_well_cells.size();
             const int n_current = well_cells.size();
             if (wellsMultiSegment()[i]->isMultiSegmented()) {
-                for (int j = 0; j < temp_well_cells.size(); ++j) {
+                for (int j = 0; j < num_cells_this_well; ++j) {
                     well_cells_segmented_idx.push_back(j + n_current);
                 }
                 well_cells_segmented.insert(well_cells_segmented.end(), temp_well_cells.begin(), temp_well_cells.end());
             } else {
-                for (int j = 0; j < temp_well_cells.size(); ++j) {
+                for (int j = 0; j < num_cells_this_well; ++j) {
                     well_cells_non_segmented_idx.push_back(j + n_current);
                 }
                 well_cells_non_segmented.insert(well_cells_non_segmented.end(), temp_well_cells.begin(), temp_well_cells.end());
@@ -477,7 +478,7 @@ namespace Opm {
             well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
         }
 
-        assert(nperf == well_cells.size());
+        assert(nperf == int(well_cells.size()));
 
         std::vector<ADB> mob_perfcells(np, ADB::null());
         std::vector<ADB> b_perfcells(np, ADB::null());
@@ -526,7 +527,7 @@ namespace Opm {
             well_cells.insert(well_cells.end(), well->wellCells().begin(), well->wellCells().end());
         }
 
-        assert(well_cells.size() == nperf);
+        assert(int(well_cells.size()) == nperf);
 
         for (int phase = 0; phase < np; ++phase) {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
@@ -794,7 +795,7 @@ namespace Opm {
 
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                                                           const SolutionState& state,
+                                                                           const SolutionState& /* state */,
                                                                            WellState& xw)
     {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
@@ -948,10 +949,11 @@ namespace Opm {
                 }
             }
 
-            if (int debug = 0) {
-                std::cout << " xw.bhp() is " << xw.bhp()[w] << std::endl;
-                std::cout << " ctrl_index " << ctrl_index << " nwc " << nwc << std::endl;
-            }
+#if 0
+            // Debug output
+            std::cout << " xw.bhp() is " << xw.bhp()[w] << std::endl;
+            std::cout << " ctrl_index " << ctrl_index << " nwc " << nwc << std::endl;
+#endif
 
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
@@ -1046,7 +1048,7 @@ namespace Opm {
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::addWellControlEq(const SolutionState& state,
                                                            const WellState& xw,
-                                                           const V& aliveWells)
+                                                           const V& /* aliveWells */)
     {
         // the name of the function is a a little misleading.
         // Basically it is the function for the pressure equation.
@@ -1156,39 +1158,40 @@ namespace Opm {
             start_segment += nseg;
         }
 
-        if (int debug = 0) {
-            std::cout << "output bhp_targets " << std::endl;
-            for (int i = 0; i < nw; ++i) {
-                std::cout << i << "     " <<  bhp_targets(i) << std::endl;
-            }
-            std::cout << " bhp_well_elems " << std::endl;
-            std::cout << " the size of bhp_well_elems is " << bhp_well_elems.size() << std::endl;
-            for (int i = 0; i < bhp_well_elems.size(); ++i) {
-                std::cout << " bhp_well_elems " << i << "   is " << bhp_well_elems[i] << std::endl;
-            }
-            std::cout << " rate_well_elems " << std::endl;
-            std::cout << " the size of rate_well_elems is " << rate_well_elems.size() << std::endl;
-            for (int i = 0; i < rate_well_elems.size(); ++i) {
-                std::cout << " rate_well_elems " << i << " is " << rate_well_elems[i] << std::endl;
-            }
-            std::cout << " bhp_top_elems " << std::endl;
-            std::cout << " the size of bhp_top_elems is " << bhp_top_elems.size() << std::endl;
-            for (int i = 0; i < bhp_top_elems.size(); ++i) {
-                std::cout << " bhp_top_elems " << i << "   is " << bhp_top_elems[i] << std::endl;
-            }
-            std::cout << " rate_top_elems " << std::endl;
-            std::cout << " the size of the rate_top_elems " << rate_top_elems.size() << std::endl;
-            for (int i = 0; i < rate_top_elems.size(); ++i) {
-                std::cout << " rate_top_elems " << i << "   is " << rate_top_elems[i] << std::endl;
-            }
-            std::cout << " the others_elems " << std::endl;
-            std::cout << " the size of others_elems is " << others_elems.size() << std::endl;
-            for(int i = 0; i < others_elems.size(); ++i) {
-                std::cout << "others_elems " << i << "   is " << others_elems[i] << std::endl;
-            }
-
-            std::cin.ignore();
+#if 0
+        // Debug output.
+        std::cout << "output bhp_targets " << std::endl;
+        for (int i = 0; i < nw; ++i) {
+            std::cout << i << "     " <<  bhp_targets(i) << std::endl;
         }
+        std::cout << " bhp_well_elems " << std::endl;
+        std::cout << " the size of bhp_well_elems is " << bhp_well_elems.size() << std::endl;
+        for (size_t i = 0; i < bhp_well_elems.size(); ++i) {
+            std::cout << " bhp_well_elems " << i << "   is " << bhp_well_elems[i] << std::endl;
+        }
+        std::cout << " rate_well_elems " << std::endl;
+        std::cout << " the size of rate_well_elems is " << rate_well_elems.size() << std::endl;
+        for (size_t i = 0; i < rate_well_elems.size(); ++i) {
+            std::cout << " rate_well_elems " << i << " is " << rate_well_elems[i] << std::endl;
+        }
+        std::cout << " bhp_top_elems " << std::endl;
+        std::cout << " the size of bhp_top_elems is " << bhp_top_elems.size() << std::endl;
+        for (size_t i = 0; i < bhp_top_elems.size(); ++i) {
+            std::cout << " bhp_top_elems " << i << "   is " << bhp_top_elems[i] << std::endl;
+        }
+        std::cout << " rate_top_elems " << std::endl;
+        std::cout << " the size of the rate_top_elems " << rate_top_elems.size() << std::endl;
+        for (size_t i = 0; i < rate_top_elems.size(); ++i) {
+            std::cout << " rate_top_elems " << i << "   is " << rate_top_elems[i] << std::endl;
+        }
+        std::cout << " the others_elems " << std::endl;
+        std::cout << " the size of others_elems is " << others_elems.size() << std::endl;
+        for(size_t i = 0; i < others_elems.size(); ++i) {
+            std::cout << "others_elems " << i << "   is " << others_elems[i] << std::endl;
+        }
+
+        std::cin.ignore();
+#endif
 
 
         // for each segment: 1, if the segment is the top segment, then control equation
@@ -1486,10 +1489,10 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
-                                             WellState& well_state)
+                                                     WellState& well_state)
     {
 
-        if( !wellsMultiSegment().empty() )
+        if (!wellsMultiSegment().empty())
         {
             const int np = numPhases();
             const int nw = wellsMultiSegment().size();
@@ -1549,56 +1552,56 @@ namespace Opm {
             // TODO: handling the THP control related.
         }
 
-            if (int debug = 0) {
-                std::cout << " output all the well state informations after updateWellState()" << std::endl;
-                const int np = well_state.numberOfPhases();
-                const int nw = well_state.numberOfWells();
-                const int nperf_total = well_state.numberOfPerforations();
-                const int nseg_total = well_state.numberOfSegments();
+#if 0
+        // Debug output.
+        std::cout << " output all the well state informations after updateWellState()" << std::endl;
+        const int np = well_state.numberOfPhases();
+        const int nw = well_state.numberOfWells();
+        const int nperf_total = well_state.numberOfPerforations();
+        const int nseg_total = well_state.numberOfSegments();
 
-                std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
-                std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
+        std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
+        std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
 
-                std::cout << " bhps : " << std::endl;
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << well_state.bhp()[i] << std::endl;
-                }
+        std::cout << " bhps : " << std::endl;
+        for (int i = 0; i < nw; ++i) {
+            std::cout << well_state.bhp()[i] << std::endl;
+        }
 
-                std::cout << " thps : " << std::endl;
+        std::cout << " thps : " << std::endl;
 
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << well_state.thp()[i] << std::endl;
-                }
+        for (int i = 0; i < nw; ++i) {
+            std::cout << well_state.thp()[i] << std::endl;
+        }
 
-                std::cout << " well rates " << std::endl;
-                for (int i = 0; i < nw; ++i) {
-                    std::cout << i;
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << well_state.wellRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-
-                std::cout << " segment pressures and segment phase rates : " << std::endl;
-                for (int i = 0; i < nseg_total; ++i) {
-                    std::cout << i << " " << well_state.segPress()[i];
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << well_state.segPhaseRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-
-                std::cout << " perf pressures and pref phase rates : " << std::endl;
-                for (int i = 0; i < nperf_total; ++i) {
-                    std::cout << i << " " << well_state.perfPress()[i];
-                    for (int p = 0; p < np; ++p) {
-                        std::cout << " " << well_state.perfPhaseRates()[np * i + p];
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << " output all the well state informations after updateWellState() DONE!!!!" << std::endl;
+        std::cout << " well rates " << std::endl;
+        for (int i = 0; i < nw; ++i) {
+            std::cout << i;
+            for (int p = 0; p < np; ++p) {
+                std::cout << " " << well_state.wellRates()[np * i + p];
             }
+            std::cout << std::endl;
+        }
 
+        std::cout << " segment pressures and segment phase rates : " << std::endl;
+        for (int i = 0; i < nseg_total; ++i) {
+            std::cout << i << " " << well_state.segPress()[i];
+            for (int p = 0; p < np; ++p) {
+                std::cout << " " << well_state.segPhaseRates()[np * i + p];
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << " perf pressures and pref phase rates : " << std::endl;
+        for (int i = 0; i < nperf_total; ++i) {
+            std::cout << i << " " << well_state.perfPress()[i];
+            for (int p = 0; p < np; ++p) {
+                std::cout << " " << well_state.perfPhaseRates()[np * i + p];
+            }
+            std::cout << std::endl;
+        }
+        std::cout << " output all the well state informations after updateWellState() DONE!!!!" << std::endl;
+#endif
     }
 
 
@@ -1738,7 +1741,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state,
+    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& /* state */,
                                                              const std::vector<ADB>& cq_s,
                                                              const std::vector<ADB>& b_perf,
                                                              const WellState& xw)
@@ -1753,7 +1756,7 @@ namespace Opm {
         const int nseg_total = xw.numberOfSegments();
         const int np = numPhases();
 
-        assert(np == b_perf.size());
+        assert(np == int(b_perf.size()));
 
         well_segment_densities_ = ADB::constant(V::Zero(nseg_total)); // initialize to be zero
 

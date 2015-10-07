@@ -118,8 +118,8 @@ namespace Opm
                 wells_multisegment[i].reset(new WellMultiSegment(wells_ecl[i], timer.currentStepNum(), wells));
             }
 
+#if 0
             // for DEBUGGING OUTPUT
-            if (int debug = 0) {
             std::cout << " the number of the wells from EclipseState " << wells_ecl.size() << std::endl;
             for (size_t i = 0; i < wells_ecl.size(); ++i) {
                 std::cout << " well name " << wells_ecl[i]->name() << std::endl;
@@ -184,7 +184,7 @@ namespace Opm
                 std::cout << " output well information for well " << well->name() << " done!!!! " << std::endl;
             }
             std::cin.ignore();
-            }
+#endif
             // DEBUGGING OUTPUT is DONE
 
 

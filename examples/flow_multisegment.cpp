@@ -27,7 +27,7 @@
 
 #include <dune/common/version.hh>
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpihelper.hh>
@@ -43,7 +43,7 @@
 #undef USE_DUNE_CORNERPOINTGRID
 #endif
 
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/pressure/FlowBCManager.hpp>
 

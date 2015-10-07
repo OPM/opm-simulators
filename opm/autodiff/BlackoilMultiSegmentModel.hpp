@@ -100,15 +100,6 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
-        /// Called once after each time step.
-        /// In this class, this function does nothing.
-        /// \param[in] dt                     time step size
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void afterStep(const double dt,
-                       ReservoirState& reservoir_state,
-                       WellState& well_state) {};
-
 
         /// Assemble the residual and Jacobian of the nonlinear system.
         /// \param[in]      reservoir_state   reservoir state variables

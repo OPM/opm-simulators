@@ -21,10 +21,10 @@
 #define OPM_WELLMULTISEGMENT_HEADER_INCLUDED
 
 
-#include <opm/core/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <opm/core/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
@@ -54,16 +54,16 @@ namespace Opm
         WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells);
 
         const std::string& name() const;
-        const bool isMultiSegmented() const;
-        const int numberOfPerforations() const;
-        const int numberOfSegments() const;
+        bool isMultiSegmented() const;
+        int numberOfPerforations() const;
+        int numberOfSegments() const;
 
-        const struct WellControls* wellControls() const;
+        const WellControls* wellControls() const;
         const std::vector<double>& compFrac() const;
 
-        const int numberOfPhases() const;
+        int numberOfPhases() const;
 
-        const enum WellType wellType() const;
+        WellType wellType() const;
         const std::vector<double>& wellIndex() const;
         const std::vector<double>& perfDepth() const;
         const std::vector<int>& wellCells() const;

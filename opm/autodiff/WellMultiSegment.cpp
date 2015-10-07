@@ -330,23 +330,23 @@ namespace Opm
         return m_well_name_;
     }
 
-    const bool WellMultiSegment::isMultiSegmented() const {
+    bool WellMultiSegment::isMultiSegmented() const {
         return m_is_multi_segment_;
     }
 
-    const enum WellType WellMultiSegment::wellType() const {
+    WellType WellMultiSegment::wellType() const {
         return m_well_type_;
     }
 
-    const struct WellControls* WellMultiSegment::wellControls() const {
+    const WellControls* WellMultiSegment::wellControls() const {
         return m_well_controls_;
     }
 
-    const int WellMultiSegment::numberOfPerforations() const {
+    int WellMultiSegment::numberOfPerforations() const {
         return m_number_of_perforations_;
     }
 
-    const int WellMultiSegment::numberOfSegments() const {
+    int WellMultiSegment::numberOfSegments() const {
         return m_number_of_segments_;
     }
 
@@ -354,7 +354,7 @@ namespace Opm
         return m_comp_frac_;
     }
 
-    const int WellMultiSegment::numberOfPhases() const {
+    int WellMultiSegment::numberOfPhases() const {
         return m_number_of_phases_;
     }
 
