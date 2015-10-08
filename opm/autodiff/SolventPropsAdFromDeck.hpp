@@ -31,7 +31,7 @@
 
 #include <cmath>
 #include <vector>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {

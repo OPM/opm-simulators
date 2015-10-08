@@ -22,7 +22,7 @@
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/autodiff/VFPHelpers.hpp>

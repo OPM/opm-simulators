@@ -27,7 +27,7 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/fastSparseProduct.hpp>
 #include <vector>
 

@@ -26,7 +26,7 @@
 #include <opm/autodiff/BlackoilSolventModel.hpp>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
