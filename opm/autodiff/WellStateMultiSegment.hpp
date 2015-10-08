@@ -196,7 +196,7 @@ namespace Opm
                     if (well_controls_get_current_type(ctrl) == BHP) {
                         bhp_[w] = well_controls_get_current_target(ctrl);
                     } else {
-                        const int first_cell = wells[0]->wellCells()[0];
+                        const int first_cell = wells[w]->wellCells()[0];
                         const double safety_factor = (wells[w]->wellType() == INJECTOR) ? 1.01 : 0.99;
                         bhp_[w] = safety_factor* state.pressure()[first_cell];
                     }
