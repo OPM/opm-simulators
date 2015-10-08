@@ -1376,7 +1376,7 @@ protected:
                 return bhp;
         }
 
-        OPM_THROW(Opm::NumericalIssue,
+        OPM_THROW(Opm::NumericalProblem,
                   "Could not determine the bottom hole pressure of well '" << name()
                   << "' within 20 iterations.");
     }

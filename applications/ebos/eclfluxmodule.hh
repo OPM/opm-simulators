@@ -121,7 +121,7 @@ public:
      */
     const DimMatrix& intrinsicPermeability() const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
@@ -133,7 +133,7 @@ public:
      */
     const EvalDimVector& potentialGrad(int phaseIdx) const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit potential gradients");
     }
 
@@ -145,7 +145,7 @@ public:
      */
     const EvalDimVector& filterVelocity(int phaseIdx) const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit filter velocities");
     }
 
