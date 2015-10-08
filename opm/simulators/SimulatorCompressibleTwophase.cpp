@@ -23,7 +23,7 @@
 
 #include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/core/pressure/CompressibleTpfa.hpp>
 

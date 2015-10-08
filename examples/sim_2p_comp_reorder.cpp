@@ -27,7 +27,7 @@
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/initState.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
