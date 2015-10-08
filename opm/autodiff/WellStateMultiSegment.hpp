@@ -336,7 +336,14 @@ namespace Opm
                                 // p
                                 segpress_[this_start_segment + i] = prevState.segPress()[old_start_segment + i];
                             }
+
                             // current controls
+                            const int old_control_index = prevState.currentControls()[ oldIndex ];
+                            if (old_control_index < well_controls_get_num(wells[w]->wellControls())) {
+                                // If the set of controls have changed, this may not be identical
+                                // to the last control, but it must be a valid control.
+                                currentControls()[ newIndex ] = old_control_index;
+                            }
                         }
 
                         // else {
