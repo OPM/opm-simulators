@@ -21,7 +21,7 @@
 #include "config.h"
 #include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

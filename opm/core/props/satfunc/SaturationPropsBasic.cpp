@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <opm/core/props/satfunc/SaturationPropsBasic.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <iostream>
 
 namespace Opm

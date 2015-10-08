@@ -23,7 +23,7 @@
 #include <opm/core/flowdiagnostics/TofDiscGalReorder.hpp>
 #include <opm/core/flowdiagnostics/DGBasis.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/SparseTable.hpp>
 #include <opm/core/utility/VelocityInterpolation.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>

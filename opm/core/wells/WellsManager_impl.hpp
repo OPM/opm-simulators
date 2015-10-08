@@ -1,7 +1,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
 
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
 
 #include <algorithm>

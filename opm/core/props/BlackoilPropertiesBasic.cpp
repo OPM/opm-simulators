@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <iostream>
 
 namespace Opm

@@ -23,7 +23,7 @@
 
 
 #include <opm/core/grid.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <boost/any.hpp>
 #include <exception>
 

@@ -20,7 +20,7 @@
 #define OPM_THERMAL_GAS_PVT_WRAPPER_HPP
 
 #include <opm/core/props/pvt/PvtInterface.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 

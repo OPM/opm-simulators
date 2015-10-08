@@ -21,7 +21,7 @@
 #define OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED
 
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>

@@ -22,7 +22,7 @@
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 

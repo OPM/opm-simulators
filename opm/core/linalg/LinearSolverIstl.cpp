@@ -24,7 +24,7 @@
 
 #include <opm/core/linalg/LinearSolverIstl.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 // Silence compatibility warning from DUNE headers since we don't use
 // the deprecated member anyway (in this compilation unit)

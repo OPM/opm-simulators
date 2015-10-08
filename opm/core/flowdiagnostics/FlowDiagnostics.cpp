@@ -20,7 +20,7 @@
 #include <opm/core/flowdiagnostics/FlowDiagnostics.hpp>
 #include <opm/core/wells.h>
 
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <algorithm>
 #include <numeric>
 

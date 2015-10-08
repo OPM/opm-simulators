@@ -26,7 +26,7 @@
 #include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>

@@ -26,7 +26,7 @@
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/simulator/BlackoilState.hpp>

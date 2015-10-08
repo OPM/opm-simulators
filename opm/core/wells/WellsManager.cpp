@@ -24,7 +24,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 

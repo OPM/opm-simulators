@@ -22,7 +22,7 @@
 #include <opm/core/props/IncompPropertiesFromDeck.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <iostream>
 
 namespace Opm

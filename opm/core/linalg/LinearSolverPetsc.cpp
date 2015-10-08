@@ -24,7 +24,7 @@
 #include <unordered_map>
 #define PETSC_CLANGUAGE_CXX 1 //enable CHKERRXX macro.
 #include <petsc.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {

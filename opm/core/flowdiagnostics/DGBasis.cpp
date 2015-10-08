@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/core/flowdiagnostics/DGBasis.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <numeric>
 
 namespace Opm

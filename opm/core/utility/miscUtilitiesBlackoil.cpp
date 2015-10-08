@@ -28,7 +28,7 @@
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
 #include <algorithm>
