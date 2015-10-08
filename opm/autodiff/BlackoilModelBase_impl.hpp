@@ -1051,7 +1051,6 @@ namespace detail {
                     // At least one of the perforation must be open in order to have a meeningful
                     // equation to solve. For the special case where all perforations have reverse flow,
                     // and the target rate is non-zero all of the perforations are keept open.
-                    // TODO: Handle the case where all perfororations have reverse flow and the rate is zero
                     if (wells().type[w] == INJECTOR && numInjectingPerforations[w] > 0) {
                         selectProducingPerforations[perf] = 0.0;
                     } else if (wells().type[w] == PRODUCER && numProducingPerforations[w] > 0 ){
