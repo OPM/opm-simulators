@@ -24,7 +24,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/simulator/TimeStepControl.hpp>
 
