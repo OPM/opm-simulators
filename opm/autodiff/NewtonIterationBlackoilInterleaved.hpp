@@ -29,6 +29,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <array>
 #include <memory>
 
 namespace Opm
@@ -69,10 +70,10 @@ namespace Opm
         virtual const boost::any& parallelInformation() const;
 
     private:
-        template <int np>
-        SolutionVector computeNewtonIncrementImpl( const LinearisedBlackoilResidual& residual ) const;
+        // max number of equations supported, increase if necessary
+        static const int maxNumberEquations_ = 6 ;
 
-        mutable std::vector< std::unique_ptr< NewtonIterationBlackoilInterface > > newtonIncrement_;
+        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_ > newtonIncrement_;
         const parameter::ParameterGroup& param_;
         boost::any parallelInformation_;
         mutable int iterations_;

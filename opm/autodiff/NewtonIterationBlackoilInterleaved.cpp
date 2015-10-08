@@ -435,13 +435,56 @@ namespace Opm
     /// Construct a system solver.
     NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
                                                                            const boost::any& parallelInformation_arg)
-      : newtonIncrement_( 6 ),
+      : newtonIncrement_(),
         param_( param ),
         parallelInformation_(parallelInformation_arg),
         iterations_( 0 )
     {
     }
 
+    namespace detail {
+
+        template< int NP >
+        struct NewtonIncrement
+        {
+            template <class NewtonIncVector>
+            static const NewtonIterationBlackoilInterface&
+            get( NewtonIncVector& newtonIncrements,
+                 const parameter::ParameterGroup& param,
+                 const boost::any& parallelInformation,
+                 const int np )
+            {
+                if( np == NP )
+                {
+                    assert( np < int(newtonIncrements.size()) );
+                    // create NewtonIncrement with fixed np
+                    if( ! newtonIncrements[ NP ] )
+                        newtonIncrements[ NP ].reset( new NewtonIterationBlackoilInterleavedImpl< NP >( param, parallelInformation ) );
+                    return *(newtonIncrements[ NP ]);
+                }
+                else
+                {
+                    return NewtonIncrement< NP-1 >::get(newtonIncrements, param, parallelInformation, np );
+                }
+            }
+        };
+
+        template<>
+        struct NewtonIncrement< 1 >
+        {
+            template <class NewtonIncVector>
+            static const NewtonIterationBlackoilInterface&
+            get( NewtonIncVector& newtonIncrements,
+                 const parameter::ParameterGroup& param,
+                 const boost::any& parallelInformation,
+                 const int np )
+            {
+                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = " << np);
+                return *(newtonIncrements[ 0 ]);
+            }
+        };
+
+    } // end namespace detail
 
 
     NewtonIterationBlackoilInterleaved::SolutionVector
@@ -449,41 +492,18 @@ namespace Opm
     {
         // get np and call appropriate template method
         const int np = residual.material_balance_eq.size();
-        switch( np )
-        {
-            case 2:
-                return computeNewtonIncrementImpl< 2 >( residual );
-            case 3:
-                return computeNewtonIncrementImpl< 3 >( residual );
-            case 4:
-                return computeNewtonIncrementImpl< 4 >( residual );
-            case 5:
-                return computeNewtonIncrementImpl< 5 >( residual );
-            case 6:
-                return computeNewtonIncrementImpl< 6 >( residual );
-            default:
-                OPM_THROW(std::runtime_error,"computeNewtonIncrement: number of variables not supported yet. Consult the code to add a case for np = " << np);
-                return SolutionVector();
-        }
-    }
-
-
-    template <int np>
-    NewtonIterationBlackoilInterleaved::SolutionVector
-    NewtonIterationBlackoilInterleaved::computeNewtonIncrementImpl(const LinearisedBlackoilResidual& residual) const
-    {
-        assert( np < int(newtonIncrement_.size()) );
-        // create NewtonIncrement with fixed np
-        if( ! newtonIncrement_[ np ] )
-            newtonIncrement_[ np ].reset( new NewtonIterationBlackoilInterleavedImpl< np >( param_, parallelInformation_ ) );
+        // maxNumberEquations_ denotes the currently maximal number of equations
+        // covered, this is mostly to reduce compile time. Adjust accordingly to cover
+        // more cases
+        const NewtonIterationBlackoilInterface& newtonIncrement =
+            detail::NewtonIncrement< maxNumberEquations_ > :: get( newtonIncrement_, param_, parallelInformation_, np );
 
         // compute newton increment
-        SolutionVector dx = newtonIncrement_[ np ]->computeNewtonIncrement( residual );
+        SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );
         // get number of linear iterations
-        iterations_ = newtonIncrement_[ np ]->iterations();
-        return dx;
+        iterations_ = newtonIncrement.iterations();
+        return std::move(dx);
     }
-
 
     const boost::any& NewtonIterationBlackoilInterleaved::parallelInformation() const
     {
