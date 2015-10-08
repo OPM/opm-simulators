@@ -207,7 +207,7 @@ namespace Opm
          */
         template<typename Scalar> struct PointOneOp {
             EIGEN_EMPTY_STRUCT_CTOR(PointOneOp)
-            Scalar operator()(const Scalar&, const Scalar&) const { return 0.1; }
+            Scalar operator()(const Scalar& a, const Scalar& b) const { return 0.1; }
         };
     }
 
@@ -234,25 +234,23 @@ namespace Opm
         assert(size == row_major.cols());
 
         // Create ISTL matrix with interleaved rows and columns (block structured).
-        {
-            assert(np == 3);
-            istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
-            istlA.setBuildMode(Mat::row_wise);
-            const int* ia = row_major.outerIndexPtr();
-            const int* ja = row_major.innerIndexPtr();
-            for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
-                const int ri = row.index();
-                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
-                    row.insert(ja[i]);
-                }
+        assert(np == 3);
+        istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
+        istlA.setBuildMode(Mat::row_wise);
+        const int* ia = row_major.outerIndexPtr();
+        const int* ja = row_major.innerIndexPtr();
+        for (Mat::CreateIterator row = istlA.createbegin(); row != istlA.createend(); ++row) {
+            const int ri = row.index();
+            for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                row.insert(ja[i]);
             }
+        }
 
-            // Set all blocks to zero.
-            for (int row = 0; row < size; ++row) {
-                for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
-                    const int col = ja[col_ix];
-                    istlA[row][col] = 0.0;
-                }
+        // Set all blocks to zero.
+        for (int row = 0; row < size; ++row) {
+            for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
+                const int col = ja[col_ix];
+                istlA[row][col] = 0.0;
             }
         }
 
