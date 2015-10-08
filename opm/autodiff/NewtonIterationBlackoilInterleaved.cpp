@@ -65,7 +65,7 @@ namespace Opm
          */
         template<typename Scalar> struct PointOneOp {
             EIGEN_EMPTY_STRUCT_CTOR(PointOneOp)
-            Scalar operator()(const Scalar& a, const Scalar& b) const { return 0.1; }
+            Scalar operator()(const Scalar&, const Scalar&) const { return 0.1; }
         };
     }
 
@@ -239,24 +239,25 @@ namespace Opm
             const int size = row_major.rows();
             assert(size == row_major.cols());
 
-            // Create ISTL matrix with interleaved rows and columns (block structured).
-            istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
-            istlA.setBuildMode(Mat::row_wise);
-            const int* ia = row_major.outerIndexPtr();
-            const int* ja = row_major.innerIndexPtr();
-            const typename Mat::CreateIterator endrow = istlA.createend();
-            for (typename Mat::CreateIterator row = istlA.createbegin(); row != endrow; ++row) {
-                const int ri = row.index();
-                for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
-                    row.insert(ja[i]);
+            {
+                // Create ISTL matrix with interleaved rows and columns (block structured).
+                istlA.setSize(row_major.rows(), row_major.cols(), row_major.nonZeros());
+                istlA.setBuildMode(Mat::row_wise);
+                const int* ia = row_major.outerIndexPtr();
+                const int* ja = row_major.innerIndexPtr();
+                const typename Mat::CreateIterator endrow = istlA.createend();
+                for (typename Mat::CreateIterator row = istlA.createbegin(); row != endrow; ++row) {
+                    const int ri = row.index();
+                    for (int i = ia[ri]; i < ia[ri + 1]; ++i) {
+                        row.insert(ja[i]);
+                    }
                 }
             }
 
             // Set all blocks to zero.
-            for (int row = 0; row < size; ++row) {
-                for (int col_ix = ia[row]; col_ix < ia[row + 1]; ++col_ix) {
-                    const int col = ja[col_ix];
-                    istlA[row][col] = 0.0;
+            for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
+                for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
+                    *col = 0.0;
                 }
             }
 
@@ -272,15 +273,15 @@ namespace Opm
              * insert its elements in the correct spot in the output matrix.
              *
              */
-            for (int col = 0; col < size; ++col) {
-                for (int p1 = 0; p1 < np; ++p1) {
-                    for (int p2 = 0; p2 < np; ++p2) {
-                        // Note that that since these are CSC and not CSR matrices,
-                        // ja contains row numbers instead of column numbers.
-                        const AutoDiffMatrix::SparseRep& s = eqs[p1].derivative()[p2].getSparse();
-                        const int* ia = s.outerIndexPtr();
-                        const int* ja = s.innerIndexPtr();
-                        const double* sa = s.valuePtr();
+            for (int p1 = 0; p1 < np; ++p1) {
+                for (int p2 = 0; p2 < np; ++p2) {
+                    // Note that that since these are CSC and not CSR matrices,
+                    // ja contains row numbers instead of column numbers.
+                    const AutoDiffMatrix::SparseRep& s = eqs[p1].derivative()[p2].getSparse();
+                    const int* ia = s.outerIndexPtr();
+                    const int* ja = s.innerIndexPtr();
+                    const double* sa = s.valuePtr();
+                    for (int col = 0; col < size; ++col) {
                         for (int elem_ix = ia[col]; elem_ix < ia[col + 1]; ++elem_ix) {
                             const int row = ja[elem_ix];
                             istlA[row][col][p1][p2] = sa[elem_ix];
