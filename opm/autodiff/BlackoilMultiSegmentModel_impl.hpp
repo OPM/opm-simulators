@@ -1135,7 +1135,7 @@ namespace Opm {
                 bhp_targets(w)  = well_controls_iget_target(wc, current);
                 rate_targets(w) = -1e100;
                 for (int p = 0; p < np; ++p) {
-                    rate_top_phase_elems.push_back(start_segment + p * nseg_total);
+                    rate_top_phase_elems.push_back(np * start_segment + p);
                 }
             }
             break;
@@ -1152,7 +1152,7 @@ namespace Opm {
                 rate_well_elems.push_back(w);
                 rate_top_elems.push_back(start_segment);
                 for (int p = 0; p < np; ++p) {
-                    rate_top_phase_elems.push_back(start_segment + p * nseg_total);
+                    rate_top_phase_elems.push_back(np * start_segment + p);
                 }
                 // RESERVOIR and SURFACE rates look the same, from a
                 // high-level point of view, in the system of
@@ -1218,6 +1218,7 @@ namespace Opm {
         //                   2, if the segment is not the top segment, then the pressure equation
         const ADB bhp_residual = subset(state.segp, bhp_top_elems) - subset(bhp_targets, bhp_well_elems);
         const ADB rate_residual = subset(rate_distr * subset(state.segqs, rate_top_phase_elems) - rate_targets, rate_well_elems);
+        // const ADB rate_residual = subset(rate_distr * state.segqs - rate_targets, rate_well_elems);
 
         ADB others_residual = ADB::constant(V::Zero(nseg_total));
         start_segment = 0;
