@@ -1068,7 +1068,7 @@ namespace Opm {
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::addWellControlEq(const SolutionState& state,
                                                            const WellState& xw,
-                                                           const V& /* aliveWells */)
+                                                           const V& aliveWells)
     {
         // the name of the function is a a little misleading.
         // Basically it is the function for the pressure equation.
@@ -1232,10 +1232,34 @@ namespace Opm {
             start_segment += nseg;
         }
 
-        residual_.well_eq = superset(bhp_residual, bhp_top_elems, nseg_total) +
+        //       all the control equations
+        // TODO: can be optimized better
+        ADB well_eq_topsegment = subset(superset(bhp_residual, bhp_top_elems, nseg_total) +
+                                        superset(rate_residual, rate_top_elems, nseg_total), xw.topSegmentLoc());
+
+        // For wells that are dead (not flowing), and therefore not communicating
+        // with the reservoir, we set the equation to be equal to the well's total
+        // flow. This will be a solution only if the target rate is also zero.
+        Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
+        for (int w = 0; w < nw; ++w) {
+            for (int phase = 0; phase < np; ++phase) {
+                rate_summer.insert(w, phase*nw + w) = 1.0;
+            }
+        }
+        Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
+        // TODO: Here only handles the wells, or the top segments
+        // should we also handle some non-alive non-top segments?
+        // should we introduce the cocept of non-alive segments?
+        // At the moment, we only handle the control equations
+        well_eq_topsegment = alive_selector.select(well_eq_topsegment, rate_summer * subset(state.segqs, rate_top_phase_elems));
+
+        /* residual_.well_eq = superset(bhp_residual, bhp_top_elems, nseg_total) +
                             superset(rate_residual, rate_top_elems, nseg_total) +
+                            superset(others_residual, others_elems, nseg_total); */
+        residual_.well_eq = superset(well_eq_topsegment, xw.topSegmentLoc(), nseg_total) +
                             others_residual;
 
+        // OPM_AD_DUMP(residual_.well_eq);
 
         // Calculate residuals
         // for (int w = 0; w < nw; ++w) {
