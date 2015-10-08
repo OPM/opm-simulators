@@ -434,6 +434,7 @@ namespace Opm {
     {
         using namespace Opm::AutoDiffGrid;
 
+        // TODO include VFP effect.
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
