@@ -31,8 +31,8 @@
 #include <cassert>
 #include <iostream>
 
-#include <opm/material/common/Exceptions.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 
@@ -587,13 +587,13 @@ private:
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
-            OPM_THROW(NumericalIssue, "Temperature out of range: "
+            OPM_THROW(NumericalProblem, "Temperature out of range: "
                       << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
-            OPM_THROW(NumericalIssue, "First liquid pressure out of range: "
+            OPM_THROW(NumericalProblem, "First liquid pressure out of range: "
                       << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T)) << ", " << maxLiquidPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
-            OPM_THROW(NumericalIssue, "Second liquid pressure out of range: "
+            OPM_THROW(NumericalProblem, "Second liquid pressure out of range: "
                       << "p=" << p << " range: [" << minLiquidPressure_(tempIdx_(T) + 1) << ", " << maxLiquidPressure_(tempIdx_(T) + 1) << "]");
 #endif
 
@@ -636,13 +636,13 @@ private:
 
 #if 0 && !defined NDEBUG
         if(!(0 <= alphaT && alphaT <= 1.0))
-            OPM_THROW(NumericalIssue, "Temperature out of range: "
+            OPM_THROW(NumericalProblem, "Temperature out of range: "
                       << "T=" << T << " range: [" << tempMin_ << ", " << tempMax_ << "]");
         if(!(0 <= alphaP1 && alphaP1 <= 1.0))
-            OPM_THROW(NumericalIssue, "First gas pressure out of range: "
+            OPM_THROW(NumericalProblem, "First gas pressure out of range: "
                       << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T)) << ", " << maxGasPressure_(tempIdx_(T)) << "]");
         if(!(0 <= alphaP2 && alphaP2 <= 1.0))
-            OPM_THROW(NumericalIssue, "Second gas pressure out of range: "
+            OPM_THROW(NumericalProblem, "Second gas pressure out of range: "
                       << "p=" << p << " range: [" << minGasPressure_(tempIdx_(T) + 1) << ", " << maxGasPressure_(tempIdx_(T) + 1) << "]");
 #endif
 

@@ -31,8 +31,8 @@
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/material/common/Means.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
@@ -206,7 +206,7 @@ public:
                 std::cout << "J: " << J << "\n";
                 */
 
-                throw Opm::NumericalIssue(e.what());
+                throw Opm::NumericalProblem(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -247,7 +247,7 @@ public:
         std::cout << "\n";
         */
 
-        OPM_THROW(NumericalIssue,
+        OPM_THROW(NumericalProblem,
                   "Flash calculation failed."
                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                   << fluidState.temperature(/*phaseIdx=*/0));

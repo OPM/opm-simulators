@@ -371,7 +371,7 @@ protected:
                         Vcrit = (maxVm + minVm)/2;
                         return;
                     }
-                    OPM_THROW(NumericalIssue,
+                    OPM_THROW(NumericalProblem,
                                "Could not determine the critical point for a=" << a << ", b=" << b);
                 }
 

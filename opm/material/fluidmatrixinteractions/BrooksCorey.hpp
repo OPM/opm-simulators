@@ -30,8 +30,8 @@
 #include "BrooksCoreyParams.hpp"
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -316,7 +316,7 @@ public:
                 return Sw;
         }
 
-        OPM_THROW(NumericalIssue,
+        OPM_THROW(NumericalProblem,
                   "Couldn't invert the Brooks-Corey non-wetting phase"
                   " relperm within 20 iterations");
     }

@@ -31,8 +31,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <limits>
@@ -139,7 +139,7 @@ public:
             x = Toolbox::createConstant(0.0);
             try { J.solve(x, b); }
             catch (Dune::FMatrixError e)
-            { throw Opm::NumericalIssue(e.what()); }
+            { throw Opm::NumericalProblem(e.what()); }
 
             //std::cout << "original delta: " << x << "\n";
 
@@ -173,7 +173,7 @@ public:
             }
         }
 
-        OPM_THROW(Opm::NumericalIssue,
+        OPM_THROW(Opm::NumericalProblem,
                   "Calculating the " << FluidSystem::phaseName(phaseIdx)
                   << "Phase composition failed. Initial {x} = {"
                   << xInit

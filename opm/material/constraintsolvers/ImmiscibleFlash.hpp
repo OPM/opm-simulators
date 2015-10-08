@@ -25,8 +25,8 @@
 #ifndef OPM_IMMISCIBLE_FLASH_HPP
 #define OPM_IMMISCIBLE_FLASH_HPP
 
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
@@ -177,7 +177,7 @@ public:
                 std::cout << "b: " << b << "\n";
                 */
 
-                throw Opm::NumericalIssue(e.what());
+                throw Opm::NumericalProblem(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -217,7 +217,7 @@ public:
         std::cout << "\n";
         */
 
-        OPM_THROW(Opm::NumericalIssue,
+        OPM_THROW(Opm::NumericalProblem,
                   "Flash calculation failed."
                   " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
                   << fluidState.temperature(/*phaseIdx=*/0));
