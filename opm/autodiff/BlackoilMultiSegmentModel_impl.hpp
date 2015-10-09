@@ -133,8 +133,8 @@ namespace Opm {
         if ( wellsMultiSegment().size() > 0 )
         {
             // Need to reshuffle well segment rates, from phase running fastest
-            const int nseg = xw.numberOfSegments();
-            const int np = xw.numberOfPhases();
+            const int nseg = xw.numSegments();
+            const int np = xw.numPhases();
 
             // The transpose() below switches the ordering of the segment rates
             const DataBlock segrates = Eigen::Map<const DataBlock>(& xw.segPhaseRates()[0], nseg, np).transpose();
@@ -190,8 +190,8 @@ namespace Opm {
         // 1. Compute properties required by computeConnectionPressureDelta().
         //    Note that some of the complexity of this part is due to the function
         //    taking std::vector<double> arguments, and not Eigen objects.
-        const int nperf = xw.numberOfPerforations();
-        const int nw = xw.numberOfWells();
+        const int nperf = xw.numPerforations();
+        const int nw = xw.numWells();
 
         // the well cells for multisegment wells and non-segmented wells should be counted seperatedly
         // indexing should be put in WellState
@@ -305,9 +305,9 @@ namespace Opm {
             }
 
             std::string well_name(wellsMultiSegment()[w]->name());
-            typedef typename WellStateMultiSegment::WellMapType::const_iterator const_iterator;
-            const_iterator it_well = xw.wellMap().find(well_name);
-            assert(it_well != xw.wellMap().end());
+            typedef typename WellStateMultiSegment::SegmentedWellMapType::const_iterator const_iterator;
+            const_iterator it_well = xw.segmentedWellMap().find(well_name);
+            assert(it_well != xw.segmentedWellMap().end());
 
             // for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
             const int start_perforation = (*it_well).second.start_perforation;
@@ -407,9 +407,9 @@ namespace Opm {
         // If we need to consider the rs and rv for all the segments,  the process will be similar with the above.
         // Are they actually zero for the current cases?
         // TODO
-        well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numberOfPerforations()));
-        well_perforation_pressure_cell_diffs_ = V::Zero(xw.numberOfPerforations());
-        well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numberOfPerforations());
+        well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
+        well_perforation_pressure_cell_diffs_ = V::Zero(xw.numPerforations());
+        well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
 #if 0
         std::cout << "well_perforation_densities_ " << std::endl;
         std::cout << well_perforation_densities_ << std::endl;
@@ -482,12 +482,12 @@ namespace Opm {
 
         V aliveWells;
         // const int np = wells().number_of_phases;
-        const int np = well_state.numberOfPhases();
+        const int np = well_state.numPhases();
         std::vector<ADB> cq_s(np, ADB::null());
 
         // const int nw = wellsMultiSegment().size();
-        const int nw = well_state.numberOfWells();
-        const int nperf = well_state.numberOfPerforations();
+        const int nw = well_state.numWells();
+        const int nperf = well_state.numPerforations();
         std::vector<int> well_cells;
         well_cells.reserve(nperf);
         for (int i = 0; i < nw; ++i) {
@@ -535,7 +535,7 @@ namespace Opm {
         const int nw = wellsMultiSegment().size();
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = numPhases();
-        const int nperf = xw.numberOfPerforations();
+        const int nperf = xw.numPerforations();
 
         std::vector<int> well_cells;
 
@@ -1077,7 +1077,7 @@ namespace Opm {
 
         const int np = numPhases();
         const int nw = wellsMultiSegment().size();
-        const int nseg_total = xw.numberOfSegments();
+        const int nseg_total = xw.numSegments();
 
         ADB aqua   = ADB::constant(ADB::V::Zero(nseg_total));
         ADB liquid = ADB::constant(ADB::V::Zero(nseg_total));
@@ -1330,7 +1330,7 @@ namespace Opm {
         varstart += dxvar.size();
 
         // Extract well parts np phase rates + bhp
-        const int nseg_total = well_state.numberOfSegments();
+        const int nseg_total = well_state.numSegments();
         const V dwells = subset(dx, Span((np+1)*nseg_total, 1, varstart));
         varstart += dwells.size();
 
@@ -1541,7 +1541,7 @@ namespace Opm {
         {
             const int np = numPhases();
             const int nw = wellsMultiSegment().size();
-            const int nseg_total = well_state.numberOfSegments();
+            const int nseg_total = well_state.numSegments();
 
             // Extract parts of dwells corresponding to each part.
             int varstart = 0;
@@ -1610,10 +1610,10 @@ namespace Opm {
 #if 0
         // Debug output.
         std::cout << " output all the well state informations after updateWellState()" << std::endl;
-        const int np = well_state.numberOfPhases();
-        const int nw = well_state.numberOfWells();
-        const int nperf_total = well_state.numberOfPerforations();
-        const int nseg_total = well_state.numberOfSegments();
+        const int np = well_state.numPhases();
+        const int nw = well_state.numWells();
+        const int nperf_total = well_state.numPerforations();
+        const int nseg_total = well_state.numSegments();
 
         std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
         std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
@@ -1807,8 +1807,8 @@ namespace Opm {
         // should we relate the segments with different cells
         // TODO: as the first solution, we calculate the rs and rv as the average rs and rv from the related perforations.
         // Based on the current framework, it has to be done one well by one well
-        const int nw = xw.numberOfWells();
-        const int nseg_total = xw.numberOfSegments();
+        const int nw = xw.numWells();
+        const int nseg_total = xw.numSegments();
         const int np = numPhases();
 
         assert(np == int(b_perf.size()));

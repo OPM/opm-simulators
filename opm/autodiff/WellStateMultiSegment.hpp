@@ -49,9 +49,6 @@ namespace Opm
         typedef WellStateFullyImplicitBlackoil Base;
         typedef WellMultiSegment::V V;
 
-        // typedef std::array< int, 3 >  mapentry_t;
-        // typedef std::map< std::string, mapentry_t > WellMapType;
-        // this map needs to change a little bit?
         typedef struct {
             int well_number;
             int start_segment;
@@ -60,17 +57,17 @@ namespace Opm
             int number_of_perforations;
             std::vector<int> start_perforation_segment; // the starting position of perforation inside the segment
             std::vector<int> number_of_perforations_segment; // the numbers for perforations for the segments
-        } MapentryType;
+        } SegmentedMapentryType;
 
-        typedef std::map<std::string, MapentryType> WellMapType;
+        typedef std::map<std::string, SegmentedMapentryType> SegmentedWellMapType;
         // MAYNOT NEED THIS
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         /// the PrevState here must be the same with State
-        template <class State, class PrevState>
-        void init(const std::vector<WellMultiSegmentConstPtr>& wells, const State& state, const PrevState& prevState)
+        template <class ReservoirState, class PrevWellState>
+        void init(const std::vector<WellMultiSegmentConstPtr>& wells, const ReservoirState& state, const PrevWellState& prevState)
         {
             const int nw = wells.size();
             if (nw == 0) {
@@ -87,37 +84,15 @@ namespace Opm
                 nseg += wells[iw]->numberOfSegments();
             }
 
-            bhp_.resize(nw);
-            thp_.resize(nw);
             top_segment_loc_.resize(nw);
-            temperature_.resize(nw, 273.15 + 20); // standard temperature for now
 
             // deciding to add the following variables temporarily
             // TODO: making it better later
-            np_ = np;
             nseg_ = nseg;
             nperf_ = nperf;
-            nwells_ = nw;
-
-            wellrates_.resize(nw * np, 0.0);
-
-            currentControls().resize(nw);
-            for(int iw = 0; iw < nw; ++iw) {
-                currentControls()[iw] = well_controls_get_current(wells[iw]->wellControls());
-            }
-
-            for (int iw = 0; iw < nw; ++iw) {
-                assert((wells[iw]->wellType() == INJECTOR) || (wells[iw]->wellType() == PRODUCER));
-            }
 
             int start_segment = 0;
             int start_perforation = 0;
-
-            perfPhaseRates().clear();
-            perfPhaseRates().resize(nperf * np, 0.0);
-
-            perfpress_.clear();
-            perfpress_.resize(nperf, -1.0e100);
 
             segphaserates_.clear();
             segphaserates_.resize(nseg * np, 0.0);
@@ -132,7 +107,7 @@ namespace Opm
 
                 std::string well_name(wells[w]->name());
                 // Initialize the wellMap_ here
-                MapentryType& wellMapEntry = wellMap_[well_name];
+                SegmentedMapentryType& wellMapEntry = segmentedWellMap_[well_name];
                 wellMapEntry.well_number = w;
                 wellMapEntry.start_segment = start_segment;
                 wellMapEntry.number_of_segments = wells[w]->numberOfSegments();
@@ -158,17 +133,17 @@ namespace Opm
                     // 2. Bhp: assign bhp equal to bhp control, if applicable, otherwise
                     // assign equal to first perforation cell pressure.
                     if (well_controls_get_current_type(ctrl) == BHP) {
-                        bhp_[w] = well_controls_get_current_target(ctrl);
+                        bhp()[w] = well_controls_get_current_target(ctrl);
                     } else {
                         const int first_cell = wells[0]->wellCells()[0];
-                        bhp_[w] = state.pressure()[first_cell];
+                        bhp()[w] = state.pressure()[first_cell];
                     }
                     // 3. Thp: assign thp equal to thp control, if applicable,
                     // otherwise assign equal to bhp value.
                     if (well_controls_get_current_type(ctrl) == THP) {
-                        thp_[w] = well_controls_get_current_target( ctrl );
+                        thp()[w] = well_controls_get_current_target( ctrl );
                     } else {
-                        thp_[w] = bhp_[w];
+                        thp()[w] = bhp()[w];
                     }
                     // 4. Perforation pressures and phase rates
                     // 5. Segment pressures and phase rates
@@ -182,38 +157,38 @@ namespace Opm
                         const double rate_target = well_controls_get_current_target(ctrl);
                         const double * distr = well_controls_get_current_distr( ctrl );
                         for (int p = 0; p < np; ++p) {
-                            wellrates_[np * w + p] = rate_target * distr[p];
+                            wellRates()[np * w + p] = rate_target * distr[p];
                         }
                     } else {
                         const double small_rate = 1e-14;
                         const double sign = (wells[w]->wellType() == INJECTOR) ? 1.0 : -1.0;
                         for (int p = 0; p < np; ++p) {
-                            wellrates_[np * w + p] = small_rate * sign;
+                            wellRates()[np * w + p] = small_rate * sign;
                         }
                     }
 
                     // 2. Bhp:
                     if (well_controls_get_current_type(ctrl) == BHP) {
-                        bhp_[w] = well_controls_get_current_target(ctrl);
+                        bhp()[w] = well_controls_get_current_target(ctrl);
                     } else {
                         const int first_cell = wells[w]->wellCells()[0];
                         const double safety_factor = (wells[w]->wellType() == INJECTOR) ? 1.01 : 0.99;
-                        bhp_[w] = safety_factor* state.pressure()[first_cell];
+                        bhp()[w] = safety_factor* state.pressure()[first_cell];
                     }
                     // 3. Thp:
                     if (well_controls_get_current_type(ctrl) == THP) {
-                        thp_[w] = well_controls_get_current_target(ctrl);
+                        thp()[w] = well_controls_get_current_target(ctrl);
                     } else {
-                        thp_[w] = bhp_[w];
+                        thp()[w] = bhp()[w];
                     }
 
                     // 4. Perf rates and pressures
                     int number_of_perforations = wellMapEntry.number_of_perforations;
                     for (int i = 0; i < number_of_perforations; ++i) {
                         for (int p = 0; p < np; ++p) {
-                            perfPhaseRates()[np * (i + start_perforation) + p] = wellrates_[np * w + p] / double(number_of_perforations);
+                            perfPhaseRates()[np * (i + start_perforation) + p] = wellRates()[np * w + p] / double(number_of_perforations);
                         }
-                        perfpress_[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i]];
+                        perfPress()[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i]];
                     }
 
                     // 5. Segment rates and pressures
@@ -222,13 +197,13 @@ namespace Opm
                     // when under bhp control.
                     // the seg_rates will related to the sum of the perforation rates, and also trying to keep consistent with the
                     // well rates. Most importantly, the segment rates of the top segment is the same with the well rates
-                    segpress_[start_segment] = bhp_[w];
+                    segpress_[start_segment] = bhp()[w];
                     for (int i = 1; i < number_of_segments; ++i) {
                         /* for (int p = 0; p < np; ++p) {
                             segphaserates_[np * (i + start_segment) + p] = 0.;
                         } */
                         int first_perforation_segment = start_perforation + wellMapEntry.start_perforation_segment[i];
-                        segpress_[i + start_segment] = perfpress_[first_perforation_segment];
+                        segpress_[i + start_segment] = perfPress()[first_perforation_segment];
                         // the segmnent pressure of the top segment should be the bhp
                     }
 
@@ -275,17 +250,17 @@ namespace Opm
 
             // initialize wells that have been there before
             // order can change so the mapping is based on the well names
-            if ( !(prevState.wellMap().empty()) )
+            if ( !(prevState.segmentedWellMap().empty()) )
             {
-                typedef typename WellMapType::const_iterator const_iterator;
-                const_iterator end_old = prevState.wellMap().end();
+                typedef typename SegmentedWellMapType::const_iterator const_iterator;
+                const_iterator end_old = prevState.segmentedWellMap().end();
 
                 for (int w = 0; w < nw; ++w) {
                     std::string well_name(wells[w]->name());
-                    const_iterator it_old = prevState.wellMap().find(well_name);
-                    const_iterator it_this = wellMap().find(well_name);
+                    const_iterator it_old = prevState.segmentedWellMap().find(well_name);
+                    const_iterator it_this = segmentedWellMap().find(well_name);
 
-                    assert(it_this != wellMap().end()); // the current well must be present in the current well map
+                    assert(it_this != segmentedWellMap().end()); // the current well must be present in the current well map
 
                     if (it_old != end_old) {
                         const int oldIndex = (*it_old).second.well_number;
@@ -328,7 +303,7 @@ namespace Opm
                             // perf_pressures_
                             for (int i = 0; i < num_perf_this_well; ++i) {
                                 // p
-                                perfpress_[this_start_perforation + i] = prevState.perfPress()[old_start_perforation + i];
+                                perfPress()[this_start_perforation + i] = prevState.perfPress()[old_start_perforation + i];
                             }
 
                             // segpress_
@@ -370,8 +345,8 @@ namespace Opm
 #if 0
             // Debugging output.
             std::cout << " output all the well state informations after initialization " << std::endl;
-            const int nperf_total = numberOfPerforations();
-            const int nseg_total = numberOfSegments();
+            const int nperf_total = numPerforations();
+            const int nseg_total = numSegments();
 
             std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
             std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
@@ -419,9 +394,9 @@ namespace Opm
                 std::cout << i << "  " << top_segment_loc_[i] << std::endl;
             }
 
-            std::cout << " output all the information from the wellMap " << std::endl;
+            std::cout << " output all the information from the segmentedWellMap " << std::endl;
 
-            for (WellMapType::const_iterator iter = wellMap().begin(); iter != wellMap().end(); ++iter) {
+            for (auto iter = segmentedWellMap().begin(); iter != segmentedWellMap().end(); ++iter) {
                 std::cout << " well name : " << iter->first << std::endl;
                 const MapentryType &wellmapInfo = iter->second;
                 std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
@@ -438,80 +413,41 @@ namespace Opm
 #endif
         }
 
-        std::vector<double>& segPhaseRates() { return segphaserates_; }
-        const std::vector<double>& segPhaseRates() const { return segphaserates_; }
 
         std::vector<double>& segPress() { return segpress_; }
         const std::vector<double>& segPress() const { return segpress_; }
 
-        std::vector<double>& perfPress() { return perfpress_; }
-        const std::vector<double>& perfPress() const { return perfpress_; }
-
-        // std::vector<double>& perfPhaseRates() { return perfphaserates_; }
-        // const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
-        using Base::perfPhaseRates;
-
-        std::vector<double>& bhp() { return bhp_; }
-        const std::vector<double>& bhp() const { return bhp_; }
-
-        std::vector<double>& thp() { return thp_; }
-        const std::vector<double>& thp() const { return thp_; }
-
-        std::vector<double>& wellRates() { return wellrates_; }
-        const std::vector<double>& wellRates() const { return wellrates_; }
-
-        // One temperature per well.
-        std::vector<double>& temperature() { return temperature_; };
-        const std::vector<double>& temperature() const { return temperature_; }
+        std::vector<double>& segPhaseRates() { return segphaserates_; }
+        const std::vector<double>& segPhaseRates() const { return segphaserates_; }
 
         const std::vector<int>& topSegmentLoc() const { return top_segment_loc_; };
 
-        // std::vector<int>& currentControls() { return current_controls_; }
-        // const std::vector<int>& currentControls() const { return current_controls_; }
-        using Base::currentControls;
+        const SegmentedWellMapType& segmentedWellMap() const { return segmentedWellMap_; }
+        SegmentedWellMapType& segmentedWellMap() { return segmentedWellMap_; }
 
-        // wellrate should be the out segment rates for the top segments
-
-        const WellMapType& wellMap() const { return wellMap_; }
-        WellMapType& wellMap() { return wellMap_; }
-
-        int numberOfPhases() const { return np_; }
-        int numberOfSegments() const { return nseg_; }
-        int numberOfPerforations() const { return nperf_; }
-        int numberOfWells() const { return nwells_; }
+        int numSegments() const { return nseg_; }
+        int numPerforations() const { return nperf_; }
 
     private:
-        std::vector<double> bhp_;
-        std::vector<double> thp_;
-        std::vector<double> wellrates_;
-        std::vector<double> temperature_;
         // pressure for the segment nodes
         std::vector<double> segpress_;
         // phase rates for the segments
         std::vector<double> segphaserates_;
-        // phase rates for the completions
-        // std::vector<double> perfphaserates_;
-        // pressure for the perforatins
-        std::vector<double> perfpress_;
         // TODO: MIGHT NOT USE THE FOLLOWING VARIABLES AT THE
         // fractions for each segments (W, O, G)
         std::vector<double> segphasefrac_;
         // total flow rates for each segments, G_T
         std::vector<double> segtotalrate_;
-        // std::vector<int> current_controls_;
 
         // the location of the top segments within the whole segment list
         // it is better in the Wells class if we have a class instead of
         // using a vector for all the wells
         std::vector<int> top_segment_loc_;
 
-        WellMapType wellMap_;
+        SegmentedWellMapType segmentedWellMap_;
 
         int nseg_;
-        int np_;
         int nperf_;
-        int nwells_;
-
     };
 
 } // namespace Opm
