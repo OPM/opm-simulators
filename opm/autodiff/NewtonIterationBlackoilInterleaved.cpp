@@ -50,12 +50,6 @@
 namespace Opm
 {
 
-
-    typedef AutoDiffBlock<double> ADB;
-    typedef ADB::V V;
-    typedef ADB::M M;
-
-
     namespace detail {
         /**
          * Simple binary operator that always returns 0.1
@@ -77,8 +71,9 @@ namespace Opm
     template <int np>
     class NewtonIterationBlackoilInterleavedImpl : public NewtonIterationBlackoilInterface
     {
-        typedef Dune::FieldVector<double, np    >       VectorBlockType;
-        typedef Dune::FieldMatrix<double, np, np>       MatrixBlockType;
+        typedef double Scalar;
+        typedef Dune::FieldVector<Scalar, np    >       VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, np, np>       MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      Vector;
 
@@ -293,6 +288,9 @@ namespace Opm
         /// \return               the solution x
         SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
         {
+            typedef LinearisedBlackoilResidual::ADB  ADB;
+            typedef ADB::V   V;
+
             // Build the vector of equations.
             //const int np = residual.material_balance_eq.size();
             assert( np == int(residual.material_balance_eq.size()) );
