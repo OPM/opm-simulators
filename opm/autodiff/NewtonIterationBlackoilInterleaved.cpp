@@ -462,12 +462,12 @@ namespace Opm
         {
             template <class NewtonIncVector>
             static const NewtonIterationBlackoilInterface&
-            get( NewtonIncVector& newtonIncrements,
+            get( NewtonIncVector&,
                  const NewtonIterationBlackoilInterleavedParameters&,
                  const boost::any&,
-                 const int )
+                 const int np )
             {
-                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = 0");
+                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = " << np);
             }
         };
 
