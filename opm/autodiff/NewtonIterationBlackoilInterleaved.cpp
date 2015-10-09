@@ -85,25 +85,14 @@ namespace Opm
     public:
         typedef NewtonIterationBlackoilInterface :: SolutionVector  SolutionVector;
         /// Construct a system solver.
-        /// \param[in] param   parameters controlling the behaviour of
-        ///                    the preconditioning and choice of
-        ///                    linear solvers.
-        ///                    Parameters:
-        ///                        cpr_relax        (default 1.0) relaxation for the preconditioner
-        ///                        cpr_ilu_n        (default 0) use ILU(n) for preconditioning of the linear system
-        ///                        cpr_use_amg      (default false) if true, use AMG preconditioner for elliptic part
-        ///                        cpr_use_bicgstab (default true)  if true, use BiCGStab (else use CG) for elliptic part
+        /// \param[in] param   parameters controlling the behaviour of the linear solvers
         /// \param[in] parallelInformation In the case of a parallel run
-        ///                               with dune-istl the information about the parallelization.
-        NewtonIterationBlackoilInterleavedImpl(const parameter::ParameterGroup& param,
+         ///                               with dune-istl the information about the parallelization.
+        NewtonIterationBlackoilInterleavedImpl(const NewtonIterationBlackoilInterleavedParameters& param,
                                                const boost::any& parallelInformation_arg=boost::any())
         : iterations_( 0 ),
           parallelInformation_(parallelInformation_arg),
-          newton_use_gmres_( param.getDefault("newton_use_gmres", false ) ),
-          linear_solver_reduction_( param.getDefault("linear_solver_reduction", 1e-2 ) ),
-          linear_solver_maxiter_( param.getDefault("linear_solver_maxiter", 50 ) ),
-          linear_solver_restart_( param.getDefault("linear_solver_restart", 40 ) ),
-          linear_solver_verbosity_( param.getDefault("linear_solver_verbosity", 0 ))
+          parameters_( param )
         {
         }
 
@@ -204,15 +193,20 @@ namespace Opm
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
             // GMRes solver
-            if ( newton_use_gmres_ ) {
+            if ( parameters_.newton_use_gmres_ ) {
                 Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond,
-                          linear_solver_reduction_, linear_solver_restart_, linear_solver_maxiter_, linear_solver_verbosity_);
+                          parameters_.linear_solver_reduction_,
+                          parameters_.linear_solver_restart_,
+                          parameters_.linear_solver_maxiter_,
+                          parameters_.linear_solver_verbosity_);
                 // Solve system.
                 linsolve.apply(x, istlb, result);
             }
             else { // BiCGstab solver
                 Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond,
-                          linear_solver_reduction_, linear_solver_maxiter_, linear_solver_verbosity_);
+                          parameters_.linear_solver_reduction_,
+                          parameters_.linear_solver_maxiter_,
+                          parameters_.linear_solver_verbosity_);
                 // Solve system.
                 linsolve.apply(x, istlb, result);
             }
@@ -423,12 +417,7 @@ namespace Opm
         mutable int iterations_;
         boost::any parallelInformation_;
 
-        const bool newton_use_gmres_;
-        const double linear_solver_reduction_;
-        const int    linear_solver_maxiter_;
-        const int    linear_solver_restart_;
-        const int    linear_solver_verbosity_;
-
+        NewtonIterationBlackoilInterleavedParameters parameters_;
     }; // end NewtonIterationBlackoilInterleavedImpl
 
 
@@ -437,7 +426,7 @@ namespace Opm
     NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
                                                                            const boost::any& parallelInformation_arg)
       : newtonIncrement_(),
-        param_( param ),
+        parameters_( param ),
         parallelInformation_(parallelInformation_arg),
         iterations_( 0 )
     {
@@ -451,7 +440,7 @@ namespace Opm
             template <class NewtonIncVector>
             static const NewtonIterationBlackoilInterface&
             get( NewtonIncVector& newtonIncrements,
-                 const parameter::ParameterGroup& param,
+                 const NewtonIterationBlackoilInterleavedParameters& param,
                  const boost::any& parallelInformation,
                  const int np )
             {
@@ -471,17 +460,16 @@ namespace Opm
         };
 
         template<>
-        struct NewtonIncrement< 1 >
+        struct NewtonIncrement< 0 >
         {
             template <class NewtonIncVector>
             static const NewtonIterationBlackoilInterface&
             get( NewtonIncVector& newtonIncrements,
-                 const parameter::ParameterGroup& param,
-                 const boost::any& parallelInformation,
-                 const int np )
+                 const NewtonIterationBlackoilInterleavedParameters&,
+                 const boost::any&,
+                 const int )
             {
-                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = " << np);
-                return *(newtonIncrements[ 0 ]);
+                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = " << 0);
             }
         };
 
@@ -497,7 +485,7 @@ namespace Opm
         // covered, this is mostly to reduce compile time. Adjust accordingly to cover
         // more cases
         const NewtonIterationBlackoilInterface& newtonIncrement =
-            detail::NewtonIncrement< maxNumberEquations_ > :: get( newtonIncrement_, param_, parallelInformation_, np );
+            detail::NewtonIncrement< maxNumberEquations_ > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
 
         // compute newton increment
         SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );

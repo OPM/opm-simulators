@@ -34,6 +34,41 @@
 
 namespace Opm
 {
+    /// This class carries all parameters for the NewtonIterationBlackoilInterleaved class
+    struct NewtonIterationBlackoilInterleavedParameters
+    {
+        double linear_solver_reduction_;
+        int    linear_solver_maxiter_;
+        int    linear_solver_restart_;
+        int    linear_solver_verbosity_;
+        bool   newton_use_gmres_;
+
+        NewtonIterationBlackoilInterleavedParameters() { reset(); }
+        // read values from parameter class
+        NewtonIterationBlackoilInterleavedParameters( const parameter::ParameterGroup& param )
+        {
+            // set default parameters
+            reset();
+
+            // read parameters (using previsouly set default values)
+            newton_use_gmres_        = param.getDefault("newton_use_gmres", newton_use_gmres_ );
+            linear_solver_reduction_ = param.getDefault("linear_solver_reduction", linear_solver_reduction_ );
+            linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", linear_solver_maxiter_);
+            linear_solver_restart_   = param.getDefault("linear_solver_restart", linear_solver_restart_);
+            linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", linear_solver_verbosity_);
+        }
+
+        // set default values
+        void reset()
+        {
+            newton_use_gmres_        = false;
+            linear_solver_reduction_ = 1e-2;
+            linear_solver_maxiter_   = 50;
+            linear_solver_restart_   = 40;
+            linear_solver_verbosity_ = 0;
+        }
+    };
+
 
     /// This class solves the fully implicit black-oil system by
     /// solving the reduced system (after eliminating well variables)
@@ -73,8 +108,8 @@ namespace Opm
         // max number of equations supported, increase if necessary
         static const int maxNumberEquations_ = 6 ;
 
-        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_ > newtonIncrement_;
-        const parameter::ParameterGroup& param_;
+        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrement_;
+        NewtonIterationBlackoilInterleavedParameters parameters_;
         boost::any parallelInformation_;
         mutable int iterations_;
     };
