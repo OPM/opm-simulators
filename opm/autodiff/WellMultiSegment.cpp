@@ -281,6 +281,8 @@ namespace Opm
 
         std::vector<Tri> s2s_inlets;
         s2s_inlets.reserve(m_number_of_segments_);
+        std::vector<Tri> s2s_outlet;
+        s2s_outlet.reserve(m_number_of_segments_);
         // a brutal way first
         // will generate matrix with entries bigger than 1.0
         // Then we need to normalize all the values.
@@ -289,6 +291,7 @@ namespace Opm
             int s_outlet = m_outlet_segment_[s];
             if (s_outlet >=0) {
                 s2s_inlets.push_back(Tri(s_outlet, s, 1.0));
+                s2s_outlet.push_back(Tri(s, s_outlet, 1.0));
             }
             int temp_s = s;
             while (m_outlet_segment_[temp_s] >=0) {
@@ -308,6 +311,9 @@ namespace Opm
         // s2outlet
         m_wops_.s2s_inlets = M(m_number_of_segments_, m_number_of_segments_);
         m_wops_.s2s_inlets.setFromTriplets(s2s_inlets.begin(), s2s_inlets.end());
+
+        m_wops_.s2s_outlet = M(m_number_of_segments_, m_number_of_segments_);
+        m_wops_.s2s_outlet.setFromTriplets(s2s_outlet.begin(), s2s_outlet.end());
 
         m_wops_.p2s_average = M(m_number_of_segments_, m_number_of_perforations_);
         std::vector<Tri> p2s_average;

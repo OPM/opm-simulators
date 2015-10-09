@@ -181,6 +181,9 @@ namespace Opm
                 std::cout << " s2s_inlets " << std::endl;
                 std::cout << well->wellOps().s2s_inlets << std::endl;
 
+                std::cout << " s2s_outlet " << std::endl;
+                std::cout << well->wellOps().s2s_outlet << std::endl;
+
                 std::cout << " output well information for well " << well->name() << " done!!!! " << std::endl;
             }
             std::cin.ignore();

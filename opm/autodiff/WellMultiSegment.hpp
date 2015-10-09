@@ -89,7 +89,8 @@ namespace Opm
                                 // means the outlet segments will gather all the contribution
                                 // from all the inlet segments in a recurisive way
             M p2s_gather;       // perforation -> segment (in an accumative way)
-            M s2s_inlets;       // segment -> their inlet segments
+            M s2s_inlets;       // segment -> its inlet segments
+            M s2s_outlet;      // segment -> its outlet segment
         };
 
         const WellOps& wellOps() const;
