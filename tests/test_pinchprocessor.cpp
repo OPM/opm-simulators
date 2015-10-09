@@ -66,11 +66,11 @@ BOOST_AUTO_TEST_CASE(Processing)
     const double thickness = eclgrid->getPinchThresholdThickness();
     BOOST_CHECK_EQUAL(thickness, 0.001);
 
-    std::string transMode = eclgrid->getPinchoutOption();
-    BOOST_CHECK_EQUAL(transMode, "TOPBOT");
+    auto transMode = eclgrid->getPinchOption();
+    BOOST_CHECK_EQUAL(transMode, PinchMode::ModeEnum::TOPBOT);
 
-    std::string multzMode = eclgrid->getMultzOption();
-    BOOST_CHECK_EQUAL(multzMode, "TOP");
+    auto multzMode = eclgrid->getMultzOption();
+    BOOST_CHECK_EQUAL(multzMode, PinchMode::ModeEnum::TOP);
 
     PinchProcessor<Grid> pinch(minpv, thickness, transMode, multzMode);
     std::vector<int> actnum;
