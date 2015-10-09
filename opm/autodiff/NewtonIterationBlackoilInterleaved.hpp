@@ -78,16 +78,9 @@ namespace Opm
     public:
 
         /// Construct a system solver.
-        /// \param[in] param   parameters controlling the behaviour of
-        ///                    the preconditioning and choice of
-        ///                    linear solvers.
-        ///                    Parameters:
-        ///                        cpr_relax        (default 1.0) relaxation for the preconditioner
-        ///                        cpr_ilu_n        (default 0) use ILU(n) for preconditioning of the linear system
-        ///                        cpr_use_amg      (default false) if true, use AMG preconditioner for elliptic part
-        ///                        cpr_use_bicgstab (default true)  if true, use BiCGStab (else use CG) for elliptic part
+        /// \param[in] param   parameters controlling the behaviour of the linear solvers
         /// \param[in] parallelInformation In the case of a parallel run
-        ///                               with dune-istl the information about the parallelization.
+        ///                                with dune-istl the information about the parallelization.
         NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
                                            const boost::any& parallelInformation=boost::any());
 
