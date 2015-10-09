@@ -84,15 +84,35 @@ namespace Opm
                 nseg += wells[iw]->numberOfSegments();
             }
 
+            bhp().resize(nw);
+            thp().resize(nw);
             top_segment_loc_.resize(nw);
+            temperature().resize(nw, 273.15 + 20); // standard temperature for now
 
             // deciding to add the following variables temporarily
             // TODO: making it better later
             nseg_ = nseg;
             nperf_ = nperf;
 
+            wellRates().resize(nw * np, 0.0);
+
+            currentControls().resize(nw);
+            for(int iw = 0; iw < nw; ++iw) {
+                currentControls()[iw] = well_controls_get_current(wells[iw]->wellControls());
+            }
+
+            for (int iw = 0; iw < nw; ++iw) {
+                assert((wells[iw]->wellType() == INJECTOR) || (wells[iw]->wellType() == PRODUCER));
+            }
+
             int start_segment = 0;
             int start_perforation = 0;
+
+            perfPhaseRates().clear();
+            perfPhaseRates().resize(nperf * np, 0.0);
+
+            perfPress().clear();
+            perfPress().resize(nperf, -1.0e100);
 
             segphaserates_.clear();
             segphaserates_.resize(nseg * np, 0.0);
