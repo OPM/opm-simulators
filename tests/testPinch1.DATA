@@ -1,0 +1,281 @@
+---------------------------------------------------------------------------
+RUNSPEC
+---------------------------------------------------------------------------
+
+TITLE
+    MINPV and PINCH tests
+METRIC
+
+DIMENS
+   4      1      4      /
+
+OIL
+WATER
+GAS
+DISGAS
+VAPOIL
+
+EQLDIMS
+    1   100   10    1    1  /
+
+TABDIMS
+-- NTSFUN     NTPVT   NSSFUN   NPPVT   NTFIP   NRPVT
+   1           1       41      12       1      12 /
+
+WELLDIMS
+--    MAX       CONN              WELLS IN
+--   WELLS     PR WELL   GROUPS     GROUP
+    2            20                 1      2          /
+
+START
+  1 'JAN' 2014  /
+
+UNIFIN
+UNIFOUT
+
+-- Linear solver stack size
+NSTACK
+25 / -- Increased from 10 due to convergence problems
+
+-- Increase the allowable amount of problem prints
+MESSAGES
+-- LIM1 LIM2  LIM3   LIM4  LIM5 LIM6 STOP1 STOP2 STOP3 STOP4 STOP5 STOP6
+-- MESS COM   WARN   PROB  ERR  BUG  MESS   COM  WARN   PROB   ERR   BUG
+    2*      1000000 1000000  4*                 1000000 1000000   /
+
+
+---------------------------------------------------------------------------
+GRID
+---------------------------------------------------------------------------
+DXV
+    4*5 /
+DYV 
+    1*5 /
+DZV
+    4*5 /
+TOPS
+    4*1000 /
+/
+
+-- In this section, the geometry of the simulation grid and the rock
+-- permeabilities and porosities are defined.
+
+INIT
+
+--  ARRAY   VALUE     ------- BOX ------
+EQUALS
+--    DX      5   1 1 1 1 1 4 /
+--    DX      5   2 2 1 1 1 4 /
+--    DX      5   3 4 1 1 1 4 /
+--    DY      5   1 4 1 1 1 4 /
+--    DZ      5   1 4 1 1 1 4 /
+--    TOPS    1000  1  1  1  4  1  1  / top layer
+    PERMX   1000  1 4 1 1 1 4 /
+    PORO 0.3     1 1 1 1 1 4 /
+    PORO 0.0000001   2 2 1 1 2 3 /
+    PORO 0.3      2 2 1 1 1 1 /
+    PORO 0.3      2 2 1 1 4 4 /
+    PORO 0.3      3 4 1 1 1 4 /
+/
+
+EQUALS
+    MULTZ 0.1 1 4 1 1 1 1 /
+    MULTZ 0.2 1 4 1 1 2 3 /
+    MULTZ 0.05 1 4 1 1 4 4 /
+/
+COPY
+    'PERMX'    'PERMY'   /
+    'PERMX'    'PERMZ'   /
+/
+
+PINCH
+------- All default
+0.001 'GAP' 1* 'TOPBOT' /
+/
+
+MINPV
+------- All default
+0.001
+/
+RPTGRID
+ COORD=1 ZCORN=1 TRANX TRANY TRANZ ALLNNC PORV MINPV PINCH DZ NNC /
+
+--RPTINIT
+-- AREAX AREAY AREAZ MULTX MULTY MULTZ MULTX- MULTY- MULTZ- TRANX TRANY TRANZ NTG DZ /
+ 
+
+PROPS     ======
+
+PVTO
+--     Rs       Pbub       Bo        Vo
+         0          1.    1.0000     1.20  /
+        20         40.    1.0120     1.17  /
+        40         80.    1.0255     1.14  /
+        60        120.    1.0380     1.11  /
+        80        160.    1.0510     1.08  /
+       100        200.    1.0630     1.06  /
+       120        240.    1.0750     1.03  /
+       140        280.    1.0870     1.00  /
+       160        320.    1.0985      .98  /
+       180        360.    1.1100      .95  /
+       200        400.    1.1200      .94
+                  500.    1.1189      .94  /
+/
+
+PVTG
+--  Pg     Rv        Bg       Vg
+   100   0.0001       0.010      0.1
+         0.0          0.0104     0.1 /
+   200   0.0004       0.005      0.2
+         0.0          0.0054     0.2 /
+/
+
+
+SWOF
+0.1 0.0 1.0 0.9
+0.2 0.0 0.8 0.8
+0.3 0.1 0.6 0.7
+0.4 0.2 0.4 0.6
+0.7 0.5 0.1 0.3
+0.8 0.6 0.0 0.2
+0.9 0.7 0.0 0.1
+/
+
+SGOF
+0.0 0.0 1.0 0.2
+0.1 0.0 0.7 0.4
+0.2 0.1 0.6 0.6
+0.8 0.7 0.0 2.0
+0.9 1.0 0.0 2.1
+/
+
+PVTW
+--RefPres  Bw      Comp   Vw    Cv
+   1.      1.0   4.0E-5  0.96  0.0 /
+   
+
+ROCK
+--RefPres  Comp
+   1.   5.0E-5 /
+/
+
+DENSITY
+--   Oil          Water        G
+   1000       1000           0.82   /
+
+
+
+---------------------------------------------------------------------------
+REGIONS
+---------------------------------------------------------------------------
+
+EQUALS
+--            VAL        ------- BOX ------
+   SATNUM   1  /
+   PVTNUM   1  / 
+/
+
+
+---------------------------------------------------------------------------
+SOLUTION
+---------------------------------------------------------------------------
+
+-- The solution section defines the initial state of the solution 
+-- variables (phase pressures, saturations, and gas-oil ratios)
+
+-- Equilibration data specification
+--EQUIL
+-- DEPTH   PRES   OW CONTACT
+--  (m)    (bar)     (m)
+--   1000     210      1040 /
+
+-- Initial water saturation for each grid cell
+--EQUALS
+SWAT 
+    16*0.1 /
+SGAS
+    16*0.1 /
+
+PRESSURE 
+    16*200 /
+
+---------------------------------------------------------------------------
+SUMMARY
+---------------------------------------------------------------------------
+
+ALL
+
+
+
+-- This keyword requests that summary data be written to the Summary file 
+-- only at report times. The default, if the RPTONLY keyword is not 
+-- present (and it was not requested in a restart file), is to write the 
+-- summary information at every time step.
+-- Otherwise, the summary file may grow very large.
+RPTONLY
+
+
+
+---------------------------------------------------------------------------
+SCHEDULE
+---------------------------------------------------------------------------
+
+-- The schedule section defines the operations to be simulated
+
+-- Controls on output to the RESTART file
+RPTRST
+  BASIC=3  -- restart data written every FREQ time
+  FREQ=10  -- save every 10th report time
+  PCOW
+  TRANX
+  TRANY
+  TRANZ
+/
+
+WELSPECS
+--     WELL   GROUP      LOCATION     BHP    PI
+--     NAME   NAME      I        J   DEPTH  DEFN
+       PROD    'G'      1       1    1000  'OIL'  /
+       INJE    'G'      1        1    1000  'WATER'  /  
+/
+
+COMPDAT
+--     WELL     -LOCATION- OPEN/ SAT CONN  WELL
+--     NAME      I     J     K1       K2     SHUT  TAB  FACT   DIAM
+       PROD  4    1     1       1    'OPEN'  2*       0.1        /
+       INJE  1     1     1      1    'OPEN'  2*       0.1        / 
+/
+
+
+---------------------------------------------------------------------------
+-- CONTROL: PURE WATER INJECTION
+---------------------------------------------------------------------------
+
+
+WCONINJE
+--      WELL       INJ     OPEN/   CNTL     FLOW       FLOW      BHP
+--      NAME      TYPE     SHUT    MODE     RATE       LIMIT    LIMIT
+--                                        (m^3/day)  (m^3/day)  (bar)
+   INJE     'WATER'  'OPEN'  'RESV'     1*        1.0000e+00  1000000  /           
+/
+
+WCONPROD
+--      WELL     OPEN/  CNTL     OIL  WATER   GAS  LIQU   RES     BHP
+--      NAME     SHUT   MODE    RATE   RATE  RATE  RATE  RATE    LIMIT
+--                                                     (m^3/day)  (bar)
+   PROD    'OPEN'  'RESV'   4*                  1.0000e+00  /             
+/
+
+
+TSTEP
+  1
+/
+
+
+
+---------------------------------------------------------------------------
+END
+---------------------------------------------------------------------------
+
+
+
