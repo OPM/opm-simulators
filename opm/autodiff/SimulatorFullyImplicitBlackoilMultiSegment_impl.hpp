@@ -178,8 +178,8 @@ namespace Opm
                 std::cout << " maxtrix p2s_gather " << std::endl;
                 std::cout << well->wellOps().p2s_gather << std::endl;
 
-                std::cout << " s2s_outlet " << std::endl;
-                std::cout << well->wellOps().s2s_outlet << std::endl;
+                std::cout << " s2s_inlets " << std::endl;
+                std::cout << well->wellOps().s2s_inlets << std::endl;
 
                 std::cout << " output well information for well " << well->name() << " done!!!! " << std::endl;
             }

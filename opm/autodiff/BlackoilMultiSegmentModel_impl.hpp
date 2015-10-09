@@ -913,7 +913,7 @@ namespace Opm {
                 const ADB& segqs_well = subset(segqs, Span(nseg, 1, start_position));
 
                 if (well->isMultiSegmented()) {
-                    segqs -= superset(cq_s_seg + well->wellOps().s2s_outlet * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
+                    segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
                 }
                 else
                 {
@@ -1226,7 +1226,7 @@ namespace Opm {
             WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
             const int nseg = well->numberOfSegments();
             ADB segp = subset(state.segqs, Span(nseg, 1, start_segment));
-            ADB well_residual = segp - well->wellOps().s2s_outlet * segp;
+            ADB well_residual = segp - well->wellOps().s2s_inlets * segp;
             ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
             others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
             start_segment += nseg;
