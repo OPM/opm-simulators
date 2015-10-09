@@ -208,8 +208,12 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             perfPhaseRates()[np * (i + start_perforation) + p] = wellRates()[np * w + p] / double(number_of_perforations);
                         }
-                        const double safety_factor = (wells[w]->wellType() == INJECTOR) ? 1.01 : 0.99;
-                        perfPress()[i + start_perforation] = safety_factor * state.pressure()[wells[w]->wellCells()[i]];
+                        if (wells[w]->isMultiSegmented()) {
+                            const double safety_factor = (wells[w]->wellType() == INJECTOR) ? 1.01 : 0.99;
+                            perfPress()[i + start_perforation] = safety_factor * state.pressure()[wells[w]->wellCells()[i]];
+                        } else {
+                            perfPress()[i + start_perforation] = state.pressure()[wells[w]->wellCells()[i]];
+                        }
                     }
 
                     // 5. Segment rates and pressures
