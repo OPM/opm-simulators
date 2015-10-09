@@ -469,7 +469,7 @@ namespace Opm
                  const boost::any&,
                  const int )
             {
-                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = " << 0);
+                OPM_THROW(std::runtime_error,"NewtonIncrement::get: number of variables not supported yet. Adjust maxNumberEquations appropriately to cover np = 0");
             }
         };
 
