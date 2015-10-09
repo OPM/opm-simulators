@@ -140,7 +140,8 @@ namespace Opm
             assert(perf_count == m_number_of_perforations_);
 
             // update m_inlet_segments_
-            for (int is = 0; is < m_number_of_segments_; ++is) {
+            // top segment does not have a outlet segment
+            for (int is = 1; is < m_number_of_segments_; ++is) {
                 const int index_outlet = m_outlet_segment_[is];
                 m_inlet_segments_[index_outlet].push_back(is);
             }
