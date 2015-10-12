@@ -124,16 +124,40 @@ namespace Opm
             m_well_cell_.resize(m_number_of_perforations_);
             m_well_index_.resize(m_number_of_perforations_);
             m_perf_depth_.resize(m_number_of_perforations_);
+            m_segment_cell_.resize(m_number_of_segments_, -1);
 
             int perf_count = 0;
             for (int is = 0; is < m_number_of_segments_; ++is) {
-                for (int iperf = 0; iperf < (int)m_segment_perforations_[is].size(); ++iperf) {
-                    int perf_number = m_segment_perforations_[is][iperf];
-                    m_well_cell_[perf_count] = temp_well_cell[perf_number];
-                    m_well_index_[perf_count] = temp_well_index[perf_number];
-                    m_perf_depth_[perf_count] = temp_perf_depth[perf_number];
-                    m_segment_perforations_[is][iperf] = perf_count;
-                    ++perf_count;
+                // TODO: the grid cell related to a segment should be calculated based on the location
+                //       of the segment node.
+                //       As the current temporary solution, the grid cell related to a segment determined by the
+                //       first perforation cell related to the segment.
+                //       when no perforation is related to the segment, use it outlet segment's cell.
+                const int nperf = m_segment_perforations_[is].size();
+                if (nperf > 0) {
+                    const int first_perf_number = m_segment_perforations_[is][0];
+                    m_segment_cell_[is] = temp_well_cell[first_perf_number];
+                    for (int iperf = 0; iperf < nperf; ++iperf) {
+                        const int perf_number = m_segment_perforations_[is][iperf];
+                        m_well_cell_[perf_count] = temp_well_cell[perf_number];
+                        m_well_index_[perf_count] = temp_well_index[perf_number];
+                        m_perf_depth_[perf_count] = temp_perf_depth[perf_number];
+                        m_segment_perforations_[is][iperf] = perf_count;
+                        ++perf_count;
+                    }
+                } else {
+                    // using the cell of its outlet segment
+                    const int i_outlet_segment = m_outlet_segment_[is];
+                    if (i_outlet_segment < 0) {
+                        assert(is ==0); // it must be the top segment
+                        OPM_THROW(std::logic_error, "Top segment is not related to any perforation, its related cell must be calculated based the location of its segment node, which is not implemented yet \n");
+                    } else {
+                        if (m_well_cell_[i_outlet_segment] < 0) {
+                            OPM_THROW(std::logic_error, "The segment cell of its outlet segment is not determined yet, the current implementation does not support this \n");
+                        } else {
+                            m_segment_cell_[is] = m_segment_cell_[i_outlet_segment];
+                        }
+                    }
                 }
             }
 
@@ -209,6 +233,8 @@ namespace Opm
                     m_well_cell_.push_back(wells->well_cells[i]);
                     m_well_index_.push_back(wells->WI[i]);
                 }
+                m_segment_cell_.resize(1, -1);
+                m_segment_cell_[0] = m_well_cell_[0];
             }
 
             // TODO: not sure if we need the perf_depth_.
@@ -375,6 +401,10 @@ namespace Opm
 
     const std::vector<int>& WellMultiSegment::wellCells() const {
         return m_well_cell_;
+    }
+
+    const std::vector<int>& WellMultiSegment::segmentCells() const {
+        return m_segment_cell_;
     }
 
     const std::vector<int>& WellMultiSegment::outletSegment() const {

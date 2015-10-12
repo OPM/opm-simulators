@@ -67,6 +67,7 @@ namespace Opm
         const std::vector<double>& wellIndex() const;
         const std::vector<double>& perfDepth() const;
         const std::vector<int>& wellCells() const;
+        const std::vector<int>& segmentCells() const;
         const std::vector<int>& outletSegment() const;
         const std::vector<std::vector<int>>& inletSegments() const;
         const std::vector<double>& segmentLength() const;
@@ -131,6 +132,8 @@ namespace Opm
         std::vector<double> m_perf_depth_;
         // well cell for each completion
         std::vector<int> m_well_cell_;
+        // cell for each segment
+        std::vector<int> m_segment_cell_;
         // how to organize the segment structure here?
         // indicate the outlet segment for each segment
         // maybe here we can use the location in the vector
