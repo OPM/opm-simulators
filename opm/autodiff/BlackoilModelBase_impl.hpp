@@ -2513,11 +2513,12 @@ namespace detail {
                                                                   std::vector<double>& maxCoeff,
                                                                   std::vector<double>& B_avg,
                                                                   std::vector<double>& maxNormWell,
-                                                                  int nc,
-                                                                  int nw) const
+                                                                  int nc) const
     {
         const int np = asImpl().numPhases();
         const int nm = asImpl().numMaterials();
+        const int nw = residual_.well_flux_eq.size() / np;
+        assert(nw * np == int(residual_.well_flux_eq.size()));
 
         // Do the global reductions
 #if HAVE_MPI
@@ -2598,7 +2599,6 @@ namespace detail {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const int np = asImpl().numPhases();
         const int nm = asImpl().numMaterials();
         assert(int(rq_.size()) == nm);
@@ -2623,7 +2623,7 @@ namespace detail {
 
         const double pvSum = convergenceReduction(B, tempV, R,
                                                   R_sum, maxCoeff, B_avg, maxNormWell,
-                                                  nc, nw);
+                                                  nc);
 
         std::vector<double> CNV(nm);
         std::vector<double> mass_balance_residual(nm);
@@ -2718,7 +2718,6 @@ namespace detail {
         const double tol_wells = param_.tolerance_wells_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const int np = asImpl().numPhases();
         const int nm = asImpl().numMaterials();
 
@@ -2738,7 +2737,7 @@ namespace detail {
             tempV.col(idx)   = R.col(idx).abs()/pv;
         }
 
-        convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc, nw);
+        convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc);
 
         std::vector<double> well_flux_residual(np);
         bool converged_Well = true;

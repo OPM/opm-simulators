@@ -110,13 +110,6 @@ namespace Opm {
                       const bool initial_assembly);
 
 
-        /// Compute convergence based on total mass balance (tol_mb) and maximum
-        /// residual mass balance (tol_cnv).
-        /// \param[in]   dt          timestep length
-        /// \param[in]   iteration   current iteration number
-        bool getConvergence(const double dt, const int iteration);
-
-
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables

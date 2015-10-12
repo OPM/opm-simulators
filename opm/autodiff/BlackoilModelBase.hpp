@@ -534,9 +534,8 @@ namespace Opm {
         ///                   maximum of tempV for the phase i.
         /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
         ///                   of B for the phase i.
-        /// \param[out] maxNormWell The maximum of the well equations for each phase.
+        /// \param[out] maxNormWell The maximum of the well flux equations for each phase.
         /// \param[in]  nc    The number of cells of the local grid.
-        /// \param[in]  nw    The number of wells on the local grid.
         /// \return The total pore volume over all cells.
         double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& B,
@@ -546,8 +545,7 @@ namespace Opm {
                              std::vector<double>& maxCoeff,
                              std::vector<double>& B_avg,
                              std::vector<double>& maxNormWell,
-                             int nc,
-                             int nw) const;
+                             int nc) const;
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
