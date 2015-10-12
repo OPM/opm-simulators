@@ -44,8 +44,8 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
 namespace Opm

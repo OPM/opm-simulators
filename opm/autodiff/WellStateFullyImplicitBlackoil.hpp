@@ -24,7 +24,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <vector>
 #include <cassert>
 #include <string>

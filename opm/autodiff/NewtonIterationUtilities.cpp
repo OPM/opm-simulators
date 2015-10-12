@@ -22,7 +22,7 @@
 
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #if HAVE_UMFPACK

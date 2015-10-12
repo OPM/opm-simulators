@@ -20,7 +20,7 @@
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <numeric>
 #include <cmath>

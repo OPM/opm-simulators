@@ -28,7 +28,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>

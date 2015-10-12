@@ -25,7 +25,7 @@
 #include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/core/pressure/IncompTpfa.hpp>
 

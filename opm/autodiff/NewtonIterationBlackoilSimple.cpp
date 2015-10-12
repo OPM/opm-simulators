@@ -21,8 +21,8 @@
 
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
 namespace Opm

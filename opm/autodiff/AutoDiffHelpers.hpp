@@ -24,7 +24,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <iostream>

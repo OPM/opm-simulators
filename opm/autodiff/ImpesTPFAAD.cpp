@@ -24,8 +24,8 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 

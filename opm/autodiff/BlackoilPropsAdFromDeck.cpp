@@ -37,7 +37,7 @@
 #include <opm/core/props/pvt/ThermalWaterPvtWrapper.hpp>
 #include <opm/core/props/pvt/ThermalOilPvtWrapper.hpp>
 #include <opm/core/props/pvt/ThermalGasPvtWrapper.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>

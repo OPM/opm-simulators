@@ -22,7 +22,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 //#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
 

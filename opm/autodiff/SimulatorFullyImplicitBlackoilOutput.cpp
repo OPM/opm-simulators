@@ -23,7 +23,7 @@
 
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/core/io/vtk/writeVtkData.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 
