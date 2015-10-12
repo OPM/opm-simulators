@@ -1071,6 +1071,8 @@ namespace Opm {
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.0) {
                         xw.wellRates()[np * w + phase] = target * distr[phase];
+                        // TODO: consider changing all (not just top) segment rates
+                        // to make them consistent, it could perhaps improve convergence.
                         xw.segPhaseRates()[np * xw.topSegmentLoc()[w] + phase] = target * distr[phase];
                     }
                 }
