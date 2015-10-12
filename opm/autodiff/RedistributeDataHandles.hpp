@@ -34,10 +34,12 @@ namespace Opm
 
 template <class Grid>
 inline void distributeGridAndData( Grid& ,
+                                   Opm::DeckConstPtr deck ,
                                    EclipseStateConstPtr ,
                                    BlackoilState& ,
                                    BlackoilPropsAdFromDeck& ,
                                    DerivedGeology&,
+                                   std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>&,
                                    boost::any& ,
                                    const bool )
 {
@@ -327,10 +329,12 @@ private:
 
 inline
 void distributeGridAndData( Dune::CpGrid& grid,
+                            Opm::DeckConstPtr deck,
                             EclipseStateConstPtr eclipseState,
                             BlackoilState& state,
                             BlackoilPropsAdFromDeck& properties,
                             DerivedGeology& geology,
+                            std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>& material_law_manager,
                             boost::any& parallelInformation,
                             const bool useLocalPerm)
 {
@@ -342,8 +346,29 @@ void distributeGridAndData( Dune::CpGrid& grid,
     // distribute the grid and switch to the distributed view
     grid.loadBalance(eclipseState);
     grid.switchToDistributedView();
+    std::vector<int> compressedToCartesianIdx;
+    Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
+    typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
+    auto distributed_material_law_manager = std::make_shared<MaterialLawManager>();
+    distributed_material_law_manager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    // copy the values from the global to the local MaterialLawManager
+    // We should actually communicate these to be future proof. But that is
+    // really, really cumbersome for the underlying vector<shared_ptr>
+    // where the classes pointed to even have more shared_ptr stored in them.
+    typedef Dune::CpGrid::ParallelIndexSet IndexSet;
+    typedef IndexSet::IndexPair Pair;
+    const IndexSet& local_indices  = grid.getCellIndexSet();
+    for(auto index : local_indices)
+    {
+        distributed_material_law_manager->materialLawParamsPointer(index.local()) =
+            material_law_manager->materialLawParamsPointer(index.global());
 
-    BlackoilPropsAdFromDeck distributed_props(properties, grid.numCells());
+        distributed_material_law_manager->oilWaterScaledEpsInfoDrainagePointer(index.local()) =
+            material_law_manager->oilWaterScaledEpsInfoDrainagePointer(index.global());
+    }
+    BlackoilPropsAdFromDeck distributed_props(properties,
+                                              distributed_material_law_manager,
+                                              grid.numCells());
     distributed_state.init(grid.numCells(), grid.numFaces(), state.numPhases());
     // init does not resize surfacevol. Do it manually.
     distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
@@ -367,7 +392,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     properties           = distributed_props;
     geology              = distributed_geology;
     state                = distributed_state;
-
+    material_law_manager = distributed_material_law_manager;
     extractParallelGridInformationToISTL(grid, parallelInformation);
 }
 #endif

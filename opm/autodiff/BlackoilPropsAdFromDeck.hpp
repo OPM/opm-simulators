@@ -138,8 +138,11 @@ namespace Opm
         /// the correct size but the values will be undefined.
         ///
         /// \param props            The property object to copy from.
-        /// \paramm number_of_cells The number of cells of the subgrid.
+        /// \param materialLawManager The container for the material law parameter objects.
+        ///                           Initialized only for the subgrid
+        /// \param number_of_cells  The number of cells of the subgrid.
         BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
+                                std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const int number_of_cells);
 
 

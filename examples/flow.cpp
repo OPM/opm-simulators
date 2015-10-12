@@ -364,7 +364,7 @@ try
     // and initilialize new properties and states for it.
     if( mpi_size > 1 )
     {
-        Opm::distributeGridAndData( grid, eclipseState, state, new_props, geoprops, parallel_information, use_local_perm );
+        Opm::distributeGridAndData( grid, deck, eclipseState, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
     }
 
     // create output writer after grid is distributed, otherwise the parallel output

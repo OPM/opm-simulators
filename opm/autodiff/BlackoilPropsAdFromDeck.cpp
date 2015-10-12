@@ -118,6 +118,7 @@ namespace Opm
 
 /// Constructor for properties on a subgrid
 BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
+                                                 std::shared_ptr<MaterialLawManager> materialLawManager,
                                                  const int number_of_cells)
     : rock_(number_of_cells)
 {
@@ -129,7 +130,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
     }
 
-    materialLawManager_ = props.materialLawManager_;
+    materialLawManager_ = materialLawManager;
 
     // Copy properties that do not depend on the postion within the grid.
     satprops_         = props.satprops_;
