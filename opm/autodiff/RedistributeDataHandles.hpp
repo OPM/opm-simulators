@@ -316,9 +316,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
                             boost::any& parallelInformation,
                             const bool useLocalPerm)
 {
-    std::shared_ptr<DerivedGeology> distributed_geology;
     BlackoilState distributed_state;
-    std::shared_ptr<BlackoilPropsAdFromDeck> distributed_props;// = new_props;
 
     Dune::CpGrid global_grid ( grid );
     global_grid.switchToGlobalView();
@@ -327,7 +325,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     grid.loadBalance(eclipseState);
     grid.switchToDistributedView();
 
-    distributed_props = std::make_shared<BlackoilPropsAdFromDeck>(properties, grid.numCells());
+    BlackoilPropsAdFromDeck distributed_props(properties, grid.numCells());
     distributed_state.init(grid.numCells(), grid.numFaces(), state.numPhases());
     // init does not resize surfacevol. Do it manually.
     distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
@@ -335,22 +333,22 @@ void distributeGridAndData( Dune::CpGrid& grid,
     BlackoilStateDataHandle state_handle(global_grid, grid,
                                          state, distributed_state);
     BlackoilPropsDataHandle props_handle(properties,
-                                         *distributed_props);
+                                         distributed_props);
     grid.scatterData(state_handle);
     grid.scatterData(props_handle);
     // Create a distributed Geology. Some values will be updated using communication
     // below
-    distributed_geology.reset(new DerivedGeology(grid,
-                                                 *distributed_props, eclipseState,
-                                                 useLocalPerm, geology.gravity()));
+    DerivedGeology distributed_geology(grid,
+                                       distributed_props, eclipseState,
+                                       useLocalPerm, geology.gravity());
     GeologyDataHandle geo_handle(global_grid, grid,
-                                 geology, *distributed_geology);
+                                 geology, distributed_geology);
     grid.scatterData(geo_handle);
 
     // copy states
-    properties = *distributed_props;
-    geology    = *distributed_geology;
-    state      = distributed_state;
+    properties           = distributed_props;
+    geology              = distributed_geology;
+    state                = distributed_state;
 
     extractParallelGridInformationToISTL(grid, parallelInformation);
 }
