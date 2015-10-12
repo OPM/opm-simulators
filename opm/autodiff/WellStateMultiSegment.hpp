@@ -23,7 +23,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
