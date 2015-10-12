@@ -202,6 +202,8 @@ namespace Opm {
 
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
+        std::vector<int> top_well_segments_;
+
         // return wells object
         // TODO: remove this wells structure
         using Base::wells;
