@@ -33,7 +33,7 @@
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/polymer/polymerUtilities.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/wells.h>
 #include <iomanip>

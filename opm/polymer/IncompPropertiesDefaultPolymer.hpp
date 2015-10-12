@@ -22,7 +22,7 @@
 
 #include <opm/core/props/IncompPropertiesBasic.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <vector>
 

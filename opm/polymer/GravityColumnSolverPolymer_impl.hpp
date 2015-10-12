@@ -38,7 +38,7 @@
 
 #include <opm/polymer/GravityColumnSolverPolymer.hpp>
 #include <opm/core/linalg/blas_lapack.h>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <iterator>
 #include <iostream>
 #include <cmath>
