@@ -899,12 +899,12 @@ namespace detail {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            computeWellConnectionPressures(state0, well_state);
+            asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        updateWellControls(well_state);
+        asImpl().updateWellControls(well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -916,7 +916,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            computeWellConnectionPressures(state0, well_state);
+            asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -960,7 +960,7 @@ namespace detail {
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        addWellControlEq(state, well_state, aliveWells);
+        asImpl().addWellControlEq(state, well_state, aliveWells);
     }
 
 
@@ -1594,15 +1594,15 @@ namespace detail {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            variableWellStateInitials(well_state, vars0);
+            asImpl().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
-            variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
             asImpl().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().addWellFluxEq(cq_s, wellSolutionState);
-            addWellControlEq(wellSolutionState, well_state, aliveWells);
+            asImpl().addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = getWellConvergence(it);
 
             if (converged) {
@@ -1625,8 +1625,8 @@ namespace detail {
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
-                updateWellState(dx.array(), well_state);
-                updateWellControls(well_state);
+                asImpl().updateWellState(dx.array(), well_state);
+                asImpl().updateWellControls(well_state);
             }
         } while (it < 15);
 
@@ -2152,7 +2152,7 @@ namespace detail {
         }
 
 
-        updateWellState(dwells,well_state);
+        asImpl().updateWellState(dwells,well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable();
