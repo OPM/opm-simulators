@@ -23,7 +23,7 @@
 
 #include <opm/polymer/SimulatorCompressiblePolymer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/polymer/CompressibleTpfaPolymer.hpp>
 

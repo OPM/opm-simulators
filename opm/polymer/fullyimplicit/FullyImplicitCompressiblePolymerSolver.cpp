@@ -33,7 +33,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
 #include <cassert>
 #include <cmath>

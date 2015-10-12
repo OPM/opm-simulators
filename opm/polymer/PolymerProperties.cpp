@@ -24,8 +24,8 @@
 #include <cmath>
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
-#include <opm/core/utility/ErrorMacros.hpp>
-#include <opm/core/utility/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 namespace Opm
 {
