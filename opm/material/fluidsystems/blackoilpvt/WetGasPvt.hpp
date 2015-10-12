@@ -524,7 +524,7 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalIssue, "Could find the gas saturation pressure for X_g^O = " << XgO);
+        OPM_THROW(NumericalProblem, "Could find the gas saturation pressure for X_g^O = " << XgO);
     }
 
     template <class Evaluation>

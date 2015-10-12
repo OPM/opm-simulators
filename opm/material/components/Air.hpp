@@ -31,8 +31,8 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/IdealGas.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm {
 
@@ -165,7 +165,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         if(temperature < 273.15 || temperature > 660.) {
-            OPM_THROW(NumericalIssue,
+            OPM_THROW(NumericalProblem,
                       "Air: Temperature (" << temperature << "K) out of range");
         }
         return 1.496e-6*Toolbox::pow(temperature, 1.5)/(temperature + 120);

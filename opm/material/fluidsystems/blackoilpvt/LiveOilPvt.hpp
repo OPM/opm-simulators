@@ -530,7 +530,7 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalIssue, "Could find the oil saturation pressure for X_o^G = " << XoG);
+        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^G = " << XoG);
     }
 
     template <class Evaluation>

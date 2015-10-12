@@ -27,8 +27,8 @@
 
 #include "SplineTwoPhaseMaterialParams.hpp"
 
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <cmath>

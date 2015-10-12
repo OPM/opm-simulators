@@ -32,8 +32,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
 namespace Opm {
@@ -256,7 +256,7 @@ public:
             M.solve(x, b);
         }
         catch (const Dune::FMatrixError &e) {
-            OPM_THROW(NumericalIssue,
+            OPM_THROW(NumericalProblem,
                       "Numerical problem in MiscibleMultiPhaseComposition::solve(): " << e.what() << "; M="<<M);
         }
         catch (...) {

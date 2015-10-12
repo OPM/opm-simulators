@@ -27,8 +27,8 @@
 
 #include <opm/material/constraintsolvers/CompositionFromFugacities.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>

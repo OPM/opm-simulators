@@ -33,8 +33,8 @@
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Exceptions.hpp>
-#include <opm/material/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <algorithm>
 

@@ -25,8 +25,8 @@
 #ifndef OPM_TABULATED_1D_FUNCTION_HPP
 #define OPM_TABULATED_1D_FUNCTION_HPP
 
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #include <algorithm>

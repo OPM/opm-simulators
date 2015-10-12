@@ -29,8 +29,8 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #endif
 
-#include <opm/material/common/ErrorMacros.hpp>
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <string>
 #include <cassert>
