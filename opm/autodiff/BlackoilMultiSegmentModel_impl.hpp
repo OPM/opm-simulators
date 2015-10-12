@@ -459,24 +459,24 @@ namespace Opm {
         //     SolutionState state = asImpl().variableState(reservoir_state, well_state);
         //     SolutionState state0 = state;
         //     asImpl().makeConstantState(state0);
-        //     computeWellConnectionPressures(state0, well_state);
+        //     asImpl().computeWellConnectionPressures(state0, well_state);
         // }
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        updateWellControls(well_state);
+        asImpl().updateWellControls(well_state);
 
         // Create the primary variables.
-        SolutionState state = variableState(reservoir_state, well_state);
+        SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
         if (initial_assembly) {
             // Create the (constant, derivativeless) initial state.
             SolutionState state0 = state;
-            makeConstantState(state0);
+            asImpl().makeConstantState(state0);
             // Compute initial accumulation contributions
             // and well connection pressures.
-            Base::computeAccum(state0, 0);
-            computeWellConnectionPressures(state0, well_state);
+            asImpl().computeAccum(state0, 0);
+            asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -489,7 +489,7 @@ namespace Opm {
         // OPM_AD_DISKVAL(state.bhp);
 
         // -------- Mass balance equations --------
-        Base::assembleMassBalanceEq(state);
+        asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
 
@@ -529,12 +529,12 @@ namespace Opm {
 
         // the perforation flux here are different
         // it is related to the segment location
-        computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        computeSegmentDensities(state, cq_s, b_perfcells, well_state);
-        updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        addWellFluxEq(cq_s, state);
-        addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        addWellControlEq(state, well_state, aliveWells);
+        asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().computeSegmentDensities(state, cq_s, b_perfcells, well_state);
+        asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        asImpl().addWellFluxEq(cq_s, state);
+        asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
+        asImpl().addWellControlEq(state, well_state, aliveWells);
     }
 
 
