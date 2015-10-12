@@ -29,6 +29,8 @@
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
 #if HAVE_DUNE_ALUGRID
+// avoid reordering of macro elements, otherwise this problem won't work
+#define DISABLE_ALUGRID_SFC_ORDERING 1
 #include <dune/alugrid/grid.hh>
 #include <dune/grid/io/file/dgfparser/dgfalu.hh>
 #else
