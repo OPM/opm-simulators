@@ -179,21 +179,31 @@ static const char* fam2DeckString =
     "0.88	0.984	0 /\n"
     "\n"
     "SOF3\n"
-    "    0        0        0\n"
-    "    0.03     0        0\n"
-    "    0.18     0        0\n"
-    "    0.28     0.0001   0.0001\n"
-    "    0.38     0.001    0.001\n"
-    "    0.43     0.01     0.01\n"
-    "    0.48     0.021    0.021\n"
-    "    0.58     0.09     0.09\n"
-    "    0.63     0.2      0.2\n"
-    "    0.68     0.35     0.35\n"
-    "    0.76     0.7      0.7\n"
-    "    0.83     0.98     0.98\n"
-    "    0.86     0.997    0.997\n"
-    "    0.879    1        1\n"
-    "    0.88     1        1    /\n";
+    "    0        0        0 \n"
+    "    0.03     0        0 \n"
+    "    0.09     0        0 \n"
+    "    0.16     0	      0 \n"
+    "    0.18     1*       0 \n"
+    "    0.22     0.0001   1* \n"
+    "    0.28     0.001    0.0001 \n"
+    "    0.34     0.01     1* \n"
+    "    0.38     1*       0.001 \n"
+    "    0.40     0.021    1* \n"
+    "    0.43     1*       0.01 \n"
+    "    0.46     0.09     1* \n"
+    "    0.48     1*       0.021 \n"
+    "    0.52     0.2      1* \n"
+    "    0.58     0.35     0.09 \n"
+    "    0.63     1*       0.2 \n"
+    "    0.64     0.7      1* \n"
+    "    0.68     1*       0.35 \n"
+    "    0.70     0.98     1* \n"
+    "    0.76     0.997    0.7 \n"
+    "    0.83     1        0.98 \n"
+    "    0.86     1        0.997  \n"
+    "    0.879    1        1 \n"
+    "    0.88     1        1    /  \n"
+    "\n";
 
 
 int main()
@@ -295,9 +305,6 @@ int main()
                                                         fs);
 
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-#warning HACK: it seems like either the input deck or the code of the relperm relations is not yet identical between family 1 and family 2 for the SPE1 test case
-                        if (phaseIdx == oilPhaseIdx)
-                            continue;
 
                         if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
                             OPM_THROW(std::logic_error,
