@@ -1755,8 +1755,6 @@ namespace Opm {
         // using the segment pressure or the average pressure
         // using the segment pressure first
         const ADB segment_press = state.segp;
-        std::cout << " segment_press " << std::endl;
-        std::cout << segment_press.value() << std::endl;
 
         std::vector<PhasePresence> segment_cond(nseg_total);
         const std::vector<PhasePresence>& pc = phaseCondition();
@@ -1782,8 +1780,6 @@ namespace Opm {
                                                                       segment_cond, segment_cells);
             rsmax_seg = fluidRsSat(segment_press, segment_so, segment_cells);
         }
-        std::cout << " rsmax_seg " << std::endl;
-        std::cout << rsmax_seg.value() << std::endl;
 
         assert(active_[Gas]);
         if (pu.phase_used[BlackoilPhases::Vapour]) {
@@ -1793,6 +1789,13 @@ namespace Opm {
             // why rvmax depends on oil staturation also?
             rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
         }
+#if 1
+        std::cout << " segment_press " << std::endl;
+        std::cout << segment_press.value() << std::endl;
+
+        std::cout << " rsmax_seg " << std::endl;
+        std::cout << rsmax_seg.value() << std::endl;
+
         std::cout << " rvmax_seg " << std::endl;
         std::cout << rvmax_seg.value() << std::endl;
 
@@ -1800,6 +1803,7 @@ namespace Opm {
         for (int p = 0; p < b_seg.size(); ++p){
             std::cout << b_seg[p].value() << std::endl;
         }
+#endif
 
         // surface density
         std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + np);
@@ -1841,10 +1845,17 @@ namespace Opm {
 
         // There should be a better way to do this
         // mix are the component fraction under surface condition
-        Selector<double> non_zero_tot_rate(tot_surface_rate.value(), Selector<double>::GreaterZero);
+        Selector<double> non_zero_tot_rate(tot_surface_rate.value(), Selector<double>::NotEqualZero);
         for (int phase = 0; phase < np; ++phase) {
             mix[phase] = non_zero_tot_rate.select(segqs[phase] / tot_surface_rate, mix[phase]);
         }
+
+#if 1
+        std::cout << " mix " << std::endl;
+        for (int phase = 0; phase < np; ++phase) {
+            std::cout << mix[phase].value() << std::endl;
+        }
+#endif
 
         // calculate the phase fraction under reservoir condition
         std::vector<ADB> x(np, ADB::null());
@@ -1916,9 +1927,11 @@ namespace Opm {
 
         well_segment_densities_ = dens / volrat;
 
+#if 1
         std::cout << " output the well_segment_densities_ " << std::endl;
         std::cout << well_segment_densities_.value() << std::endl;
         std::cin.ignore();
+#endif
     }
 
 
