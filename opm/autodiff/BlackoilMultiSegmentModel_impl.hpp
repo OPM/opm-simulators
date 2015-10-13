@@ -370,8 +370,6 @@ namespace Opm {
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
         // and cell values for rs, rv, phase condition and temperature.
-        std::cout << " avg_press " << std::endl;
-        std::cout << avg_press << std::endl;
         const ADB avg_press_ad = ADB::constant(avg_press);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
@@ -445,9 +443,12 @@ namespace Opm {
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
         well_perforation_pressure_cell_diffs_ = V::Zero(xw.numPerforations());
         well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
+#if 0
+        std::cout << " avg_press " << std::endl;
+        std::cout << avg_press << std::endl;
+
         std::cout << "well_perforation_densities_ " << std::endl;
         std::cout << well_perforation_densities_ << std::endl;
-#if 0
 
         std::cout << "well_perforation_pressure_diffs_ " << std::endl;
         std::cout << well_perforation_pressure_diffs_ << std::endl;
@@ -1704,7 +1705,7 @@ namespace Opm {
             // why rvmax depends on oil staturation also?
             rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
         }
-#if 1
+#if 0
         std::cout << " segment_press " << std::endl;
         std::cout << segment_press.value() << std::endl;
 
@@ -1765,7 +1766,7 @@ namespace Opm {
             mix[phase] = non_zero_tot_rate.select(segqs[phase] / tot_surface_rate, mix[phase]);
         }
 
-#if 1
+#if 0
         std::cout << " mix " << std::endl;
         for (int phase = 0; phase < np; ++phase) {
             std::cout << mix[phase].value() << std::endl;
@@ -1842,10 +1843,9 @@ namespace Opm {
 
         well_segment_densities_ = dens / volrat;
 
-#if 1
+#if 0
         std::cout << " output the well_segment_densities_ " << std::endl;
         std::cout << well_segment_densities_.value() << std::endl;
-        std::cin.ignore();
 #endif
     }
 
@@ -1876,11 +1876,12 @@ namespace Opm {
         const double grav = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         const ADB grav_adb = ADB::constant(V::Constant(nseg_total, grav));
         well_segment_pressures_delta_ = segment_depth_delta * grav_adb * well_segment_densities_;
-#if 1
+#if 0
         std::cout << " segment_depth_delta " << std::endl;
         std::cout << segment_depth_delta << std::endl;
         std::cout << " well_segment_pressures_delta_ " << std::endl;
         std::cout << well_segment_pressures_delta_.value() << std::endl;
+        std::cin.ignore();
 #endif
     }
 

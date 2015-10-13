@@ -876,9 +876,9 @@ namespace detail {
 #if 0
         std::cout << "well_perforation_densities_ " << std::endl;
         std::cout << well_perforation_densities_ << std::endl;
-
         std::cout << "well_perforation_pressure_diffs_ " << std::endl;
         std::cout << well_perforation_pressure_diffs_ << std::endl;
+        std::cin.ignore();
 #endif
     }
 
