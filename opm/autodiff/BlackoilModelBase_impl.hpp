@@ -1065,7 +1065,7 @@ namespace detail {
     {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int np = wells().number_of_phases;
+        const int np = asImpl().numPhases();
         for (int phase = 0; phase < np; ++phase) {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase], wops_.well_cells, nc);
         }

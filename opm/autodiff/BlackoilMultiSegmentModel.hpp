@@ -131,6 +131,7 @@ namespace Opm {
 
         // For the non-segmented well, it should be the density with AVG or SEG way.
         // while usually SEG way
+        using Base::wops_; // Only for well_cells, the w2p and p2w members may have wrong perf order.
         using Base::well_perforation_densities_; //Density of each well perforation
         using Base::pvdt_;
         using Base::geo_;
@@ -246,11 +247,6 @@ namespace Opm {
         void
         addWellFluxEq(const std::vector<ADB>& cq_s,
                       const SolutionState& state);
-
-        void
-        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
-                                           const SolutionState& state,
-                                           const WellState& xw);
 
         void
         addWellControlEq(const SolutionState& state,

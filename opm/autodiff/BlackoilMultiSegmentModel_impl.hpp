@@ -85,7 +85,22 @@ namespace Opm {
         , well_segment_densities_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
-
+            // Modify the wops_.well_cell member, since the
+            // order of perforations is different for multi-segment
+            // wells, since the segments may have been reordered.
+            // It should already have the correct capacity, though.
+            // Note that we need the const_cast since wops_ is declared
+            // as a 'const WellOps'.
+            std::vector<int>& well_cells = const_cast<typename Base::WellOps&>(wops_).well_cells;
+            const size_t old_sz = well_cells.size();
+            well_cells.clear();
+            const int nw = wells_multisegment.size();
+            for (int i = 0; i < nw; ++i) {
+                const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
+                well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
+            }
+            assert(old_sz == well_cells.size());
+            static_cast<void>(old_sz); // Avoid warning in release mode.
         }
 
 
@@ -497,30 +512,9 @@ namespace Opm {
             return;
         }
 
-        V aliveWells;
-        // const int np = wells().number_of_phases;
-        const int np = well_state.numPhases();
-        std::vector<ADB> cq_s(np, ADB::null());
-
-        // const int nw = wellsMultiSegment().size();
-        const int nw = well_state.numWells();
-        const int nperf = well_state.numPerforations();
-        std::vector<int> well_cells;
-        well_cells.reserve(nperf);
-        for (int i = 0; i < nw; ++i) {
-            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
-            well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
-        }
-
-        assert(nperf == int(well_cells.size()));
-
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-        }
-
+        std::vector<ADB> mob_perfcells;
+        std::vector<ADB> b_perfcells;
+        asImpl().extractWellPerfProperties(mob_perfcells, b_perfcells);
         // TODO: it will be a good thing to try to solve welleq seperately every time
         // if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
@@ -529,57 +523,14 @@ namespace Opm {
 
         // the perforation flux here are different
         // it is related to the segment location
+        V aliveWells;
+        std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().computeSegmentDensities(state, cq_s, b_perfcells, well_state);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
-    }
-
-
-
-
-
-    template <class Grid>
-    void
-    BlackoilMultiSegmentModel<Grid>::addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
-                                                                const SolutionState&,
-                                                                const WellState& xw)
-    {
-        // For the version at the moment, it has to be done one well by one well
-        // later, we may need to develop a new wells class for optimization.
-        const int nw = wellsMultiSegment().size();
-        const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int np = numPhases();
-        const int nperf = xw.numPerforations();
-
-        std::vector<int> well_cells;
-
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            well_cells.insert(well_cells.end(), well->wellCells().begin(), well->wellCells().end());
-        }
-
-        assert(int(well_cells.size()) == nperf);
-
-        for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
-        }
-
-
-        // TODO: it must be done one by one?
-        // or we develop a new Wells class?
-        static_cast<void>(nperf);
-        // Add well contributions to mass balance equations
-        // const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        // const int nw = wells().number_of_wells;
-        // const int nperf = wells().well_connpos[nw];
-        // const int np = wells().number_of_phases;
-        // const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-        // for (int phase = 0; phase < np; ++phase) {
-        //     residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
-        // }
     }
 
 
@@ -624,6 +575,7 @@ namespace Opm {
         }
         const int np = numPhases();
 
+        cq_s.resize(np, ADB::null());
         for (int p = 0; p < np; ++p) {
             cq_s[p] = ADB::constant(V::Zero(total_nperf));
         }
