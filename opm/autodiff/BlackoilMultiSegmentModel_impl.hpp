@@ -83,6 +83,7 @@ namespace Opm {
         , well_perforations_segment_pressure_diffs_(ADB::null())
         , well_perforation_cell_densities_adb_(ADB::null())
         , well_segment_densities_(ADB::null())
+        , well_segment_pressures_delta_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
             // Modify the wops_.well_cell member, since the
@@ -528,7 +529,8 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().computeSegmentDensities(state);
+        asImpl().computeSegmentDensities(state, well_state);
+        asImpl().computeSegmentPressuresDelta(state);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -1199,6 +1201,7 @@ namespace Opm {
             const int nseg = well->numberOfSegments();
             ADB segp = subset(state.segqs, Span(nseg, 1, start_segment));
             ADB well_residual = segp - well->wellOps().s2s_outlet * segp;
+            // - subset(well_segment_pressures_delta_, Span(nseg, 1, start_segment));
             ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
             others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
             start_segment += nseg;
@@ -1847,6 +1850,39 @@ namespace Opm {
     }
 
 
+    template <class Grid>
+    void
+    BlackoilMultiSegmentModel<Grid>::computeSegmentPressuresDelta(const SolutionState& state)
+    {
+        const int nw = wellsMultiSegment().size();
+        const int nseg_total = state.segp.size();
+        // ADB well_segment_pressures_delta_;
+        // calculate the depth difference of the segments
+        // TODO: make it a member fo the new Wells class or WellState or the Model.
+        //       so that only do this once for each timestep.
+        V segment_depth_delta = V::Zero(nseg_total);
+        int start_segment = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const int nseg = well->numberOfSegments();
+            for (int s = 1; s < nseg; ++s) {
+                const int s_outlet = well->outletSegment()[s];
+                assert(s_outlet >= 0 && s_outlet < nseg);
+                segment_depth_delta[s + start_segment] = well->segmentDepth()[s_outlet] - well->segmentDepth()[s];
+            }
+            start_segment += nseg;
+        }
+
+        const double grav = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const ADB grav_adb = ADB::constant(V::Constant(nseg_total, grav));
+        well_segment_pressures_delta_ = segment_depth_delta * grav_adb * well_segment_densities_;
+#if 1
+        std::cout << " segment_depth_delta " << std::endl;
+        std::cout << segment_depth_delta << std::endl;
+        std::cout << " well_segment_pressures_delta_ " << std::endl;
+        std::cout << well_segment_pressures_delta_.value() << std::endl;
+#endif
+    }
 
 } // namespace Opm
 

@@ -194,6 +194,11 @@ namespace Opm {
         // which is calculated in an implicit way
         ADB well_segment_densities_;
 
+        // the hydrostatic pressure drop between segment nodes
+        // calculated with the above density of fluid mixtures
+        // for the top segment, they should always be zero for the moment.
+        ADB well_segment_pressures_delta_;
+
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         std::vector<int> top_well_segments_;
@@ -263,6 +268,9 @@ namespace Opm {
 
         void
         computeSegmentDensities(const SolutionState& state);
+
+        void
+        computeSegmentPressuresDelta(const SolutionState& state);
 
 
     };
