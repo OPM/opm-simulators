@@ -1840,8 +1840,8 @@ namespace Opm {
         ADB rs = ADB::constant(V::Zero(nseg_total));
         ADB rv = rs;
 
-        Selector<double> non_zero_mix_oilpos(mix[oilpos], Selector<double>::GreaterZero);
-        Selector<double> non_zero_mix_gaspos(mix[gaspos], Selector<double>::GreaterZero);
+        Selector<double> non_zero_mix_oilpos(mix[oilpos].value(), Selector<double>::GreaterZero);
+        Selector<double> non_zero_mix_gaspos(mix[gaspos].value(), Selector<double>::GreaterZero);
 
         // std::vector<double> big_values_vector(nseg_total, 1.e100);
 
