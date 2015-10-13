@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
+#include <array>
 #include <string>
 #include <iostream>
 #include <cassert>
