@@ -528,8 +528,7 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        // asImpl().computeSegmentDensities(state, cq_s, b_perfcells, well_state);
-        asImpl().computeSegmentDensities(state, well_state);
+        asImpl().computeSegmentDensities(state);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -1637,14 +1636,10 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state,
-                                                             const WellState& xw) //,
-                                                             // const std::vector<ADB>& /*b_seg*/,
-                                                             // const ADB& /*rsmax_seg*/,
-                                                             // const ADB& /*rvmax_seg*/)
+    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state)
     {
-        const int nw = xw.numWells();
-        const int nseg_total = xw.numSegments();
+        const int nw = wellsMultiSegment().size();
+        const int nseg_total = state.segp.size();
         const int np = numPhases();
 
         // although we will calculate segment density for non-segmented wells at the same time,
@@ -1665,7 +1660,7 @@ namespace Opm {
             const std::vector<int>& segment_cells_well = wellsMultiSegment()[w]->segmentCells();
             segment_cells.insert(segment_cells.end(), segment_cells_well.begin(), segment_cells_well.end());
         }
-        assert(segment_cells.size() == nseg_total);
+        assert(int(segment_cells.size()) == nseg_total);
 
         const ADB segment_temp = subset(state.temperature,segment_cells);
 
@@ -1717,7 +1712,7 @@ namespace Opm {
         std::cout << rvmax_seg.value() << std::endl;
 
         std::cout << " b_seg " << std::endl;
-        for (int p = 0; p < b_seg.size(); ++p){
+        for (size_t p = 0; p < b_seg.size(); ++p){
             std::cout << b_seg[p].value() << std::endl;
         }
 #endif
