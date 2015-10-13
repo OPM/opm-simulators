@@ -273,6 +273,7 @@ namespace Opm {
             WellOps(const Wells* wells);
             Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
             Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
+            std::vector<int> well_cells;                  // the set of perforated cells
         };
 
         // ---------  Data members  ---------

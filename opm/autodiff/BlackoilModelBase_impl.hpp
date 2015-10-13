@@ -407,7 +407,8 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::
     WellOps::WellOps(const Wells* wells)
       : w2p(),
-        p2w()
+        p2w(),
+        well_cells()
     {
         if( wells )
         {
@@ -432,6 +433,8 @@ namespace detail {
 
             w2p.setFromTriplets(scatter.begin(), scatter.end());
             p2w.setFromTriplets(gather .begin(), gather .end());
+
+            well_cells.assign(wells->well_cells, wells->well_cells + wells->well_connpos[wells->number_of_wells]);
         }
     }
 
@@ -778,7 +781,6 @@ namespace detail {
         //    taking std::vector<double> arguments, and not Eigen objects.
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const int nw = wells().number_of_wells;
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         // Compute the average pressure in each well block
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
@@ -800,6 +802,7 @@ namespace detail {
         std::cout << avg_press << std::endl;
 #endif
 
+        const std::vector<int>& well_cells = wops_.well_cells;
 
         // Use cell values for the temperature as the wells don't knows its temperature yet.
         const ADB perf_temp = subset(state.temperature, well_cells);
@@ -1062,12 +1065,9 @@ namespace detail {
     {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
         const int np = wells().number_of_phases;
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase], wops_.well_cells, nc);
         }
     }
 
@@ -1089,9 +1089,7 @@ namespace detail {
             return;
         } else {
             const int np = asImpl().numPhases();
-            const int nw = wells().number_of_wells;
-            const int nperf = wells().well_connpos[nw];
-            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+            const std::vector<int>& well_cells = wops_.well_cells;
             mob_perfcells.resize(np, ADB::null());
             b_perfcells.resize(np, ADB::null());
             for (int phase = 0; phase < np; ++phase) {
@@ -1121,7 +1119,7 @@ namespace detail {
         const int nperf = wells().well_connpos[nw];
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         V Tw = Eigen::Map<const V>(wells().WI, nperf);
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+        const std::vector<int>& well_cells = wops_.well_cells;
 
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = well_perforation_pressure_diffs_;
