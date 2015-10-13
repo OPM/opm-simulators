@@ -236,7 +236,7 @@ int main()
 
     {
         typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
-        typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
+        typedef MaterialLawManager::MaterialLaw MaterialLaw;
 
         const auto deck = parser.parseString(fam1DeckString, parseMode);
         const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseMode);
