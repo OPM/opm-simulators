@@ -94,7 +94,7 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
@@ -103,7 +103,7 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
@@ -112,7 +112,7 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the fugacity coefficient [-] of the oil component in the water phase given
@@ -122,7 +122,7 @@ public:
     Evaluation fugacityCoefficientOil(unsigned regionIdx,
                                       const Evaluation& temperature,
                                       const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientOil(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientOil(regionIdx, temperature, pressure)); return 0; }
     /*!
      * \brief Returns the fugacity coefficient [-] of the gas component in the water phase given
      *        a pressure and a temperature.
@@ -131,7 +131,7 @@ public:
     Evaluation fugacityCoefficientGas(unsigned regionIdx,
                                       const Evaluation& temperature,
                                       const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientGas(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientGas(regionIdx, temperature, pressure)); return 0; }
     /*!
      * \brief Returns the fugacity coefficient [-] of the water component in the water phase given
      *        a pressure and a temperature.
@@ -140,7 +140,7 @@ public:
     Evaluation fugacityCoefficientWater(unsigned regionIdx,
                                         const Evaluation& temperature,
                                         const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientWater(regionIdx, temperature, pressure)); }
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientWater(regionIdx, temperature, pressure)); return 0; }
 
     void setApproach(WaterPvtApproach waterPvtApproach)
     {
