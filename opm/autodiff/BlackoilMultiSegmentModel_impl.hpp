@@ -369,6 +369,8 @@ namespace Opm {
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
         // and cell values for rs, rv, phase condition and temperature.
+        std::cout << " avg_press " << std::endl;
+        std::cout << avg_press << std::endl;
         const ADB avg_press_ad = ADB::constant(avg_press);
         std::vector<PhasePresence> perf_cond(nperf);
         const std::vector<PhasePresence>& pc = phaseCondition();
@@ -442,9 +444,9 @@ namespace Opm {
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
         well_perforation_pressure_cell_diffs_ = V::Zero(xw.numPerforations());
         well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
-#if 0
         std::cout << "well_perforation_densities_ " << std::endl;
         std::cout << well_perforation_densities_ << std::endl;
+#if 0
 
         std::cout << "well_perforation_pressure_diffs_ " << std::endl;
         std::cout << well_perforation_pressure_diffs_ << std::endl;
@@ -526,7 +528,8 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().computeSegmentDensities(state, cq_s, b_perfcells, well_state);
+        // asImpl().computeSegmentDensities(state, cq_s, b_perfcells, well_state);
+        asImpl().computeSegmentDensities(state, well_state);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -1718,10 +1721,10 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state,
-                                                             const WellState& xw,
-                                                             const std::vector<ADB>& b_seg,
-                                                             const ADB& rsmax_seg,
-                                                             const ADB& rvmax_seg)
+                                                             const WellState& xw) //,
+                                                             // const std::vector<ADB>& /*b_seg*/,
+                                                             // const ADB& /*rsmax_seg*/,
+                                                             // const ADB& /*rvmax_seg*/)
     {
         const int nw = xw.numWells();
         const int nseg_total = xw.numSegments();
@@ -1735,10 +1738,71 @@ namespace Opm {
         // the density calculation of the mixtures can be the same, while it remains to be verified.
 
         // well_segment_densities_ = ADB::constant(V::Zero(nseg_total)); // initialize to be zero
+        // the grid cells associated with segments
+        // TODO: shoud be computed once and stored in WellState or global Wells structure or class.
+        std::vector<int> segment_cells;
+        segment_cells.reserve(nseg_total);
+        const PhaseUsage& pu = fluid_.phaseUsage();
+
+        for (int w = 0; w < nw; ++w) {
+            const std::vector<int>& segment_cells_well = wellsMultiSegment()[w]->segmentCells();
+            segment_cells.insert(segment_cells.end(), segment_cells_well.begin(), segment_cells_well.end());
+        }
+        assert(segment_cells.size() == nseg_total);
+
+        const ADB segment_temp = subset(state.temperature,segment_cells);
+
+        // using the segment pressure or the average pressure
+        // using the segment pressure first
+        const ADB segment_press = state.segp;
+        std::cout << " segment_press " << std::endl;
+        std::cout << segment_press.value() << std::endl;
+
+        std::vector<PhasePresence> segment_cond(nseg_total);
+        const std::vector<PhasePresence>& pc = phaseCondition();
+
+        for (int s = 0; s < nseg_total; ++s) {
+            segment_cond[s] = pc[segment_cells[s]];
+        }
+
+        std::vector<ADB> b_seg(np, ADB::null());
+        ADB rsmax_seg = ADB::null();
+        ADB rvmax_seg = ADB::null();
+
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            // phase pos or just 0 1 2
+            b_seg[pu.phase_pos[BlackoilPhases::Aqua]] = fluid_.bWat(segment_press, segment_temp, segment_cells);
+        }
+
+        assert(active_[Oil]);
+        const ADB segment_so = subset(state.saturation[pu.phase_pos[Oil]], segment_cells);
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB segment_rs = subset(state.rs, segment_cells);
+            b_seg[pu.phase_pos[BlackoilPhases::Liquid]] = fluid_.bOil(segment_press, segment_temp, segment_rs,
+                                                                      segment_cond, segment_cells);
+            rsmax_seg = fluidRsSat(segment_press, segment_so, segment_cells);
+        }
+        std::cout << " rsmax_seg " << std::endl;
+        std::cout << rsmax_seg.value() << std::endl;
+
+        assert(active_[Gas]);
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB segment_rv = subset(state.rv, segment_cells);
+            b_seg[pu.phase_pos[BlackoilPhases::Vapour]] = fluid_.bGas(segment_press, segment_temp, segment_rv,
+                                                                      segment_cond, segment_cells);
+            // why rvmax depends on oil staturation also?
+            rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
+        }
+        std::cout << " rvmax_seg " << std::endl;
+        std::cout << rvmax_seg.value() << std::endl;
+
+        std::cout << " b_seg " << std::endl;
+        for (int p = 0; p < b_seg.size(); ++p){
+            std::cout << b_seg[p].value() << std::endl;
+        }
 
         // surface density
         std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + np);
-        const PhaseUsage& pu = fluid_.phaseUsage();
         const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
         const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
 
@@ -1851,6 +1915,10 @@ namespace Opm {
         }
 
         well_segment_densities_ = dens / volrat;
+
+        std::cout << " output the well_segment_densities_ " << std::endl;
+        std::cout << well_segment_densities_.value() << std::endl;
+        std::cin.ignore();
     }
 
 
