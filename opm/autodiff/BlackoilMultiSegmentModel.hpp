@@ -263,12 +263,6 @@ namespace Opm {
 
         void
         computeSegmentDensities(const SolutionState& state,
-                                const std::vector<ADB>& cq_s,
-                                const std::vector<ADB>& b_perfcells,
-                                const WellState& xw);
-
-        void
-        computeSegmentDensities(const SolutionState& state,
                                 const WellState& xw); //,
                                 // const std::vector<ADB>& b_seg,
                                 // const ADB& rsmax_seg,
