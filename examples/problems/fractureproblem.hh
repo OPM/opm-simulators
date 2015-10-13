@@ -26,18 +26,21 @@
 #ifndef EWOMS_FRACTURE_PROBLEM_HH
 #define EWOMS_FRACTURE_PROBLEM_HH
 
-#include <ewoms/models/discretefracture/discretefracturemodel.hh>
 
 #if HAVE_DUNE_ALUGRID
 // avoid reordering of macro elements, otherwise this problem won't work
 #define DISABLE_ALUGRID_SFC_ORDERING 1
 #include <dune/alugrid/grid.hh>
+#include <dune/alugrid/dgf.hh>
+#elif HAVE_ALUGRID
+#include <dune/grid/alugrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfalu.hh>
 #else
-#include <dune/grid/alugrid.hh>
-#include <dune/alugrid/dgf.hh>
+#error "No ALUGrid found"
 #endif
 
+#include <ewoms/models/discretefracture/discretefracturemodel.hh>
+#include <ewoms/io/dgfgridmanager.hh>
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -48,7 +51,6 @@
 #include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
-#include <ewoms/io/artgridmanager.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
@@ -68,13 +70,13 @@ namespace Properties {
 // Create a type tag for the problem
 NEW_TYPE_TAG(FractureProblem, INHERITS_FROM(DiscreteFractureModel));
 
-// Set the GridManager property
-SET_TYPE_PROP(FractureProblem, GridManager, Ewoms::ArtGridManager<TypeTag>);
-
 // Set the grid type
 SET_TYPE_PROP(
     FractureProblem, Grid,
     Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
+
+// Set the GridManager property
+SET_TYPE_PROP(FractureProblem, GridManager, Ewoms::DgfGridManager<TypeTag>);
 
 // Set the problem property
 SET_TYPE_PROP(FractureProblem, Problem, Ewoms::FractureProblem<TypeTag>);
@@ -144,7 +146,7 @@ SET_BOOL_PROP(FractureProblem, EnableGravity, false);
 SET_BOOL_PROP(FractureProblem, EnableConstraints, true);
 
 // Set the default value for the file name of the grid
-SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art");
+SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art.dgf");
 
 // Set the default value for the end time
 SET_SCALAR_PROP(FractureProblem, EndTime, 3e3);
