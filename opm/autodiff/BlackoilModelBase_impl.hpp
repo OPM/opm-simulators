@@ -937,25 +937,15 @@ namespace detail {
             return;
         }
 
-        V aliveWells;
-        const int np = wells().number_of_phases;
-        std::vector<ADB> cq_s(np, ADB::null());
-
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-        }
+        std::vector<ADB> mob_perfcells;
+        std::vector<ADB> b_perfcells;
+        asImpl().extractWellPerfProperties(mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
-
+        V aliveWells;
+        std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
@@ -1080,6 +1070,38 @@ namespace detail {
             residual_.material_balance_eq[phase] -= superset(cq_s[phase], well_cells, nc);
         }
     }
+
+
+
+
+
+
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
+                                                                       std::vector<ADB>& b_perfcells)
+    {
+        // If we have wells, extract the mobilities and b-factors for
+        // the well-perforated cells.
+        if (!asImpl().localWellsActive()) {
+            mob_perfcells.clear();
+            b_perfcells.clear();
+            return;
+        } else {
+            const int np = asImpl().numPhases();
+            const int nw = wells().number_of_wells;
+            const int nperf = wells().well_connpos[nw];
+            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+            mob_perfcells.resize(np, ADB::null());
+            b_perfcells.resize(np, ADB::null());
+            for (int phase = 0; phase < np; ++phase) {
+                mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
+                b_perfcells[phase] = subset(rq_[phase].b, well_cells);
+            }
+        }
+    }
+
+
 
 
 
@@ -1217,6 +1239,7 @@ namespace detail {
         ADB cqt_is = cqt_i/volumeRatio;
 
         // connection phase volumerates at standard conditions
+        cq_s.resize(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
         }
