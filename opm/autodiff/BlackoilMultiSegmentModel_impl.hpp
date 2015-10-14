@@ -1649,56 +1649,47 @@ namespace Opm {
         // When the density calcuation for non-segmented wells are set to 'AVG', then
         // the density calculation of the mixtures can be the same, while it remains to be verified.
 
-        // well_segment_densities_ = ADB::constant(V::Zero(nseg_total)); // initialize to be zero
-        // the grid cells associated with segments
+        // The grid cells associated with segments.
         // TODO: shoud be computed once and stored in WellState or global Wells structure or class.
         std::vector<int> segment_cells;
         segment_cells.reserve(nseg_total);
-        const PhaseUsage& pu = fluid_.phaseUsage();
-
         for (int w = 0; w < nw; ++w) {
             const std::vector<int>& segment_cells_well = wellsMultiSegment()[w]->segmentCells();
             segment_cells.insert(segment_cells.end(), segment_cells_well.begin(), segment_cells_well.end());
         }
         assert(int(segment_cells.size()) == nseg_total);
 
-        const ADB segment_temp = subset(state.temperature,segment_cells);
-
+        const ADB segment_temp = subset(state.temperature, segment_cells);
         // using the segment pressure or the average pressure
         // using the segment pressure first
-        const ADB segment_press = state.segp;
+        const ADB& segment_press = state.segp;
 
+        // Compute PVT properties for segments.
         std::vector<PhasePresence> segment_cond(nseg_total);
         const std::vector<PhasePresence>& pc = phaseCondition();
-
         for (int s = 0; s < nseg_total; ++s) {
             segment_cond[s] = pc[segment_cells[s]];
         }
-
         std::vector<ADB> b_seg(np, ADB::null());
         ADB rsmax_seg = ADB::null();
         ADB rvmax_seg = ADB::null();
-
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            // phase pos or just 0 1 2
-            b_seg[pu.phase_pos[BlackoilPhases::Aqua]] = fluid_.bWat(segment_press, segment_temp, segment_cells);
+        const PhaseUsage& pu = fluid_.phaseUsage();
+        if (pu.phase_used[Water]) {
+            b_seg[pu.phase_pos[Water]] = fluid_.bWat(segment_press, segment_temp, segment_cells);
         }
-
         assert(active_[Oil]);
         const ADB segment_so = subset(state.saturation[pu.phase_pos[Oil]], segment_cells);
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
+        if (pu.phase_used[Oil]) {
             const ADB segment_rs = subset(state.rs, segment_cells);
-            b_seg[pu.phase_pos[BlackoilPhases::Liquid]] = fluid_.bOil(segment_press, segment_temp, segment_rs,
-                                                                      segment_cond, segment_cells);
+            b_seg[pu.phase_pos[Oil]] = fluid_.bOil(segment_press, segment_temp, segment_rs,
+                                                   segment_cond, segment_cells);
             rsmax_seg = fluidRsSat(segment_press, segment_so, segment_cells);
         }
-
         assert(active_[Gas]);
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (pu.phase_used[Gas]) {
             const ADB segment_rv = subset(state.rv, segment_cells);
-            b_seg[pu.phase_pos[BlackoilPhases::Vapour]] = fluid_.bGas(segment_press, segment_temp, segment_rv,
-                                                                      segment_cond, segment_cells);
-            // why rvmax depends on oil staturation also?
+            b_seg[pu.phase_pos[Gas]] = fluid_.bGas(segment_press, segment_temp, segment_rv,
+                                                   segment_cond, segment_cells);
             rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
         }
 #if 0
@@ -1717,15 +1708,12 @@ namespace Opm {
         }
 #endif
 
-        // surface density
+        // Surface density.
         std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + np);
-        const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
-        const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
 
+        // Extract segment flow by phase (segqs) and compute total surface rate.
         ADB tot_surface_rate = ADB::constant(V::Zero(nseg_total));
-
         std::vector<ADB> segqs(np, ADB::null());
-
         for (int phase = 0; phase < np; ++phase) {
             segqs[phase] = subset(state.segqs, Span(nseg_total, 1, phase * nseg_total));
             tot_surface_rate += segqs[phase];
@@ -1737,7 +1725,7 @@ namespace Opm {
         for (int w = 0; w < nw; ++w) {
             WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
             const int nseg = well->numberOfSegments();
-            const std::vector<double> comp_frac_well = well->compFrac();
+            const std::vector<double>& comp_frac_well = well->compFrac();
             for (int phase = 0; phase < np; ++phase) {
                 for (int s = 0; s < nseg; ++s) {
                     comp_frac[phase][s + start_segment] = comp_frac_well[phase];
@@ -1745,18 +1733,17 @@ namespace Opm {
             }
             start_segment += nseg;
         }
-
         assert(start_segment == nseg_total);
 
+        // Compute mix.
+        // 'mix' contains the component fractions under surface conditions.
         std::vector<ADB> mix(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             // initialize to be the compFrac for each well,
             // then update only the one with non-zero total volume rate
             mix[phase] = ADB::constant(Eigen::Map<V>(comp_frac[phase].data(), nseg_total));
         }
-
-        // There should be a better way to do this
-        // mix are the component fraction under surface condition
+        // There should be a better way to do this.
         Selector<double> non_zero_tot_rate(tot_surface_rate.value(), Selector<double>::NotEqualZero);
         for (int phase = 0; phase < np; ++phase) {
             mix[phase] = non_zero_tot_rate.select(segqs[phase] / tot_surface_rate, mix[phase]);
@@ -1769,30 +1756,19 @@ namespace Opm {
         }
 #endif
 
-        // calculate the phase fraction under reservoir condition
-        std::vector<ADB> x(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            x[phase] = mix[phase];
-        }
-
-        // both initialized to be zeros
+        // Calculate rs and rv.
         ADB rs = ADB::constant(V::Zero(nseg_total));
         ADB rv = rs;
-
+        const int gaspos = pu.phase_pos[Gas];
+        const int oilpos = pu.phase_pos[Oil];
         Selector<double> non_zero_mix_oilpos(mix[oilpos].value(), Selector<double>::GreaterZero);
         Selector<double> non_zero_mix_gaspos(mix[gaspos].value(), Selector<double>::GreaterZero);
-
-        // std::vector<double> big_values_vector(nseg_total, 1.e100);
-
-        ADB big_values = ADB::constant(V::Constant(nseg_total, 1.e100));
-
         // What is the better way to do this?
         // big values should not be necessary
+        ADB big_values = ADB::constant(V::Constant(nseg_total, 1.e100));
         ADB mix_gas_oil = non_zero_mix_oilpos.select(mix[gaspos] / mix[oilpos], big_values);
         ADB mix_oil_gas = non_zero_mix_gaspos.select(mix[oilpos] / mix[gaspos], big_values);
-
-        // (pu.phase_used[BlackoilPhases::Liquid]) -> rsmax_perf not empty
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
+        if (active_[Oil]) {
             V selectorUnderRsmax = V::Zero(nseg_total);
             V selectorAboveRsmax = V::Zero(nseg_total);
             for (int s = 0; s < nseg_total; ++s) {
@@ -1804,9 +1780,7 @@ namespace Opm {
             }
             rs = non_zero_mix_oilpos.select(selectorAboveRsmax * rsmax_seg + selectorUnderRsmax * mix_gas_oil, rs);
         }
-
-        // (pu.phase_used[BlackoilPhases::Vapour]) -> rvmax_perf not empty
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+        if (active_[Gas]) {
             V selectorUnderRvmax = V::Zero(nseg_total);
             V selectorAboveRvmax = V::Zero(nseg_total);
             for (int s = 0; s < nseg_total; ++s) {
@@ -1819,24 +1793,27 @@ namespace Opm {
             rv = non_zero_mix_gaspos.select(selectorAboveRvmax * rvmax_seg + selectorUnderRvmax * mix_oil_gas, rv);
         }
 
-        // Selector<double> non_zero_rs(rs, Selector<double>::GreaterZero);
-        // Selector<double> non_zero_rv(rv, Selector<double>::GreaterZero);
+        // Calculate the phase fraction under reservoir conditions.
+        std::vector<ADB> x(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            x[phase] = mix[phase];
+        }
+        if (active_[Gas] && active_[Oil]) {
+            x[gaspos] = (mix[gaspos] - mix[oilpos] * rs) / (V::Ones(nseg_total) - rs * rv);
+            x[oilpos] = (mix[oilpos] - mix[gaspos] * rv) / (V::Ones(nseg_total) - rs * rv);
+        }
 
-        x[gaspos] = (mix[gaspos] - mix[oilpos] * rs) / (V::Ones(nseg_total) - rs * rv);
-        x[oilpos] = (mix[oilpos] - mix[gaspos] * rv) / (V::Ones(nseg_total) - rs * rv);
-
+        // Compute total reservoir volume to surface volume ratio.
         ADB volrat = ADB::constant(V::Zero(nseg_total));
-
         for (int phase = 0; phase < np; ++phase) {
             volrat += x[phase] / b_seg[phase];
         }
 
-        // compute segment density
+        // Compute segment densities.
         ADB dens = ADB::constant(V::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
             dens += surf_dens[pu.phase_pos[phase]] * mix[phase];
         }
-
         well_segment_densities_ = dens / volrat;
 
 #if 0
