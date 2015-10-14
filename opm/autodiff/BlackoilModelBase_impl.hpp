@@ -2707,6 +2707,7 @@ namespace detail {
                 for (int idx = 0; idx < np; ++idx) {
                     std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
                 }
+                std::cout << "  WELL-CONT ";
                 std::cout << '\n';
             }
             const std::streamsize oprec = std::cout.precision(3);
@@ -2721,6 +2722,7 @@ namespace detail {
             for (int idx = 0; idx < np; ++idx) {
                 std::cout << std::setw(11) << well_flux_residual[idx];
             }
+            std::cout << std::setw(11) << residualWell;
             std::cout << std::endl;
             std::cout.precision(oprec);
             std::cout.flags(oflags);
