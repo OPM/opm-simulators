@@ -1197,8 +1197,8 @@ namespace Opm {
             WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
             const int nseg = well->numberOfSegments();
             ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
-            ADB well_residual = segp - well->wellOps().s2s_outlet * segp;
-            // - subset(well_segment_pressures_delta_, Span(nseg, 1, start_segment));
+            ADB well_residual = segp - well->wellOps().s2s_outlet * segp
+                                 + subset(well_segment_pressures_delta_, Span(nseg, 1, start_segment));
             ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
             others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
             start_segment += nseg;
