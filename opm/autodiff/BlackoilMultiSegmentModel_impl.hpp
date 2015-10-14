@@ -879,7 +879,7 @@ namespace Opm {
                 const ADB& cq_s_perf = subset(cq_s[phase], Span(nperf, 1, start_perforation));
 
                 // sum of the perforate rates to its related segment
-                const ADB& cq_s_seg = well->wellOps().p2s_gather * cq_s_perf;
+                const ADB& cq_s_seg = well->wellOps().p2s * cq_s_perf;
 
                 const int start_position = start_segment + phase * nseg_total;
                 // the segment rates of this well
