@@ -203,6 +203,10 @@ namespace Opm {
 
         std::vector<int> top_well_segments_;
 
+        // segment volume by dt (time step)
+        // to handle the volume effects of the segment
+        V segvdt_;
+
         // return wells object
         // TODO: remove this wells structure
         using Base::wells;

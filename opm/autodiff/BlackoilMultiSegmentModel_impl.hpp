@@ -122,6 +122,18 @@ namespace Opm {
         top_well_segments_ = well_state.topSegmentLoc();
 
         //TODO: handle the volume related.
+        // again, we need a global wells class
+        const int nw = wellsMultiSegment().size();
+        const int nseg_total = well_state.numSegments();
+        std::vector<double> segment_volume;
+        segment_volume.reserve(nseg_total);
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const std::vector<double>& segment_volume_well = well->segmentVolume();
+            segment_volume.insert(segment_volume.end(), segment_volume_well.begin(), segment_volume_well.end());
+        }
+        assert(int(segment_volume.size()) == nseg_total);
+        segvdt_ = Eigen::Map<V>(segment_volume.data(), nseg_total) / dt;
     }
 
 
