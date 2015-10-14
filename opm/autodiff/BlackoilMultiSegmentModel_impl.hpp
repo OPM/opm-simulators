@@ -516,6 +516,9 @@ namespace Opm {
             return;
         }
 
+        asImpl().computeSegmentDensities(state);
+        asImpl().computeSegmentPressuresDelta(state);
+
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
         asImpl().extractWellPerfProperties(mob_perfcells, b_perfcells);
@@ -530,8 +533,6 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().computeSegmentDensities(state, well_state);
-        asImpl().computeSegmentPressuresDelta(state);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
