@@ -885,13 +885,9 @@ namespace Opm {
                 // the segment rates of this well
                 const ADB& segqs_well = subset(segqs, Span(nseg, 1, start_position));
 
-                if (well->isMultiSegmented()) {
-                    segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
-                }
-                else
-                {
-                    segqs -= superset(cq_s_seg, Span(1, 1, start_position), np * nseg_total);
-                }
+                segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
+                // another form for non-segment wells, keep here for future reference
+                // segqs -= superset(cq_s_seg, Span(1, 1, start_position), np * nseg_total);
                 start_segment += nseg;
                 start_perforation += nperf;
             }
