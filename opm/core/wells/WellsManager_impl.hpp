@@ -247,6 +247,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     wd.type = INJECTOR;
                 else
                     wd.type = PRODUCER;
+
+                wd.allowCrossFlow = well->getAllowCrossFlow();
                 well_data.push_back(wd);
             }
         }
@@ -293,6 +295,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                      perf_cells.data(),
                      perf_prodind.data(),
                      well_names[w].c_str(),
+                     well_data[w].allowCrossFlow,
                      w_);
 
         if (!ok) {

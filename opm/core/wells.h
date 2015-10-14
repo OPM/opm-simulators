@@ -103,9 +103,16 @@ struct Wells
     char **name;
 
     /**
+     * Array of flags indicating whether crossflow is allowed or not
+     * if allow_cf[w] == 0 (false) then crossflow is not allowed in well w.
+     */
+    int *allow_cf;
+
+    /**
      * Internal management structure.
      */
     void *data;
+
 };
 
 
@@ -185,6 +192,7 @@ create_wells(int nphases, int nwells, int nperf);
  *                       ideally be track ordered.
  * \param[in] WI         Well production index per perforation, or NULL.
  * \param[in] name       Name of new well. NULL if no name.
+ * \param[in] allow_cf   Flag to determine whether crossflow is allowed or not.
  * \param[in,out] W      Existing set of wells to which new well will
  *                       be added.
  *
@@ -198,6 +206,7 @@ add_well(enum WellType  type     ,
          const int     *cells    ,
          const double  *WI       ,
          const char    *name     ,
+         int            allow_cf ,
          struct Wells  *W        );
 
 

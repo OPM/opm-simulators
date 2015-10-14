@@ -56,11 +56,11 @@ BOOST_AUTO_TEST_CASE(Construction)
         const double ifrac[] = { 1.0, 0.0 };
 
         const bool ok0 = add_well(INJECTOR, 0.0, 1, &ifrac[0], &cells[0],
-                                  &WI, "INJECTOR", W.get());
+                                  &WI, "INJECTOR", true, W.get());
 
         const double pfrac[] = { 0.0, 0.0 };
         const bool ok1 = add_well(PRODUCER, 0.0, 1, &pfrac[0], &cells[1],
-                                  &WI, "PRODUCER", W.get());
+                                  &WI, "PRODUCER", true, W.get());
 
         if (ok0 && ok1) {
             BOOST_CHECK_EQUAL(W->number_of_phases, nphases);
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(Controls)
         const double ifrac[] = { 1.0, 0.0 };
 
         const bool ok = add_well(INJECTOR, 0.0, nperfs, &ifrac[0], &cells[0],
-                                 &WI[0], "INJECTOR", W.get());
+                                 &WI[0], "INJECTOR", true, W.get());
 
         if (ok) {
             const double distr[] = { 1.0, 0.0 };
@@ -151,11 +151,11 @@ BOOST_AUTO_TEST_CASE(Copy)
         const double ifrac[] = { 1.0, 0.0 };
 
         const bool ok0 = add_well(INJECTOR, 0.0, 1, &ifrac[0], &cells[0],
-                                  &WI, "INJECTOR", W1.get());
+                                  &WI, "INJECTOR", true, W1.get());
 
         const double pfrac[] = { 0.0, 0.0 };
         const bool ok1 = add_well(PRODUCER, 0.0, 1, &pfrac[0], &cells[1],
-                                  &WI, "PRODUCER", W1.get());
+                                  &WI, "PRODUCER", true, W1.get());
 
         bool ok = ok0 && ok1;
         for (int w = 0; ok && (w < W1->number_of_wells); ++w) {

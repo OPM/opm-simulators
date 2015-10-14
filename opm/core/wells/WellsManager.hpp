@@ -38,6 +38,7 @@ namespace Opm
     struct WellData
     {
         WellType type;
+        bool allowCrossFlow;
         // WellControlType control;
         // double target;
         double reference_bhp_depth;
