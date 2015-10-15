@@ -463,32 +463,34 @@ namespace Opm
             }
         }
 
-        for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
-            WellControls* ctrl = wells->ctrls[w];
-            const bool is_producer = wells->type[w] == PRODUCER;
-            if (!is_producer && wells->name[w] != 0) {
-                WellMap::const_iterator i = wmap.find(wells->name[w]);
-                if (i != wmap.end()) {
-                    WellConstPtr wp = i->second;
-                    const WellInjectionProperties& injector = wp->getInjectionProperties(step);
-                    if (!injector.predictionMode) {
-                        //History matching WCONINJEH
-                        static const double invalid_alq = -std::numeric_limits<double>::max();
-                        static const int invalid_vfp = -std::numeric_limits<int>::max();
-                        // For WCONINJEH the BHP limit is set to a large number
-                        // or a value specified using WELTARG
-                        double bhp_limit = (injector.BHPLimit > 0) ? injector.BHPLimit : std::numeric_limits<double>::max();
-                        const int ok_bhp =
+        if( wells )
+        {
+            for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
+                WellControls* ctrl = wells->ctrls[w];
+                const bool is_producer = wells->type[w] == PRODUCER;
+                if (!is_producer && wells->name[w] != 0) {
+                    WellMap::const_iterator i = wmap.find(wells->name[w]);
+                    if (i != wmap.end()) {
+                        WellConstPtr wp = i->second;
+                        const WellInjectionProperties& injector = wp->getInjectionProperties(step);
+                        if (!injector.predictionMode) {
+                            //History matching WCONINJEH
+                            static const double invalid_alq = -std::numeric_limits<double>::max();
+                            static const int invalid_vfp = -std::numeric_limits<int>::max();
+                            // For WCONINJEH the BHP limit is set to a large number
+                            // or a value specified using WELTARG
+                            double bhp_limit = (injector.BHPLimit > 0) ? injector.BHPLimit : std::numeric_limits<double>::max();
+                            const int ok_bhp =
                                 well_controls_add_new(BHP, bhp_limit,
                                                       invalid_alq, invalid_vfp,
                                                       NULL, ctrl);
-                        if (!ok_bhp) {
-                            OPM_THROW(std::runtime_error, "Failed to add well control.");
+                            if (!ok_bhp) {
+                                OPM_THROW(std::runtime_error, "Failed to add well control.");
+                            }
                         }
                     }
                 }
             }
         }
-
     }
 } // namespace Opm

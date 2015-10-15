@@ -324,7 +324,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     global_grid.switchToGlobalView();
 
     // distribute the grid and switch to the distributed view
-    grid.loadBalance(eclipseState);
+    grid.loadBalance(eclipseState, 1);
     grid.switchToDistributedView();
 
     distributed_props = std::make_shared<BlackoilPropsAdFromDeck>(properties, grid.numCells());
