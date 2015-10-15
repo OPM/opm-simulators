@@ -456,7 +456,7 @@ namespace Opm {
         // TODO
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
         well_perforation_pressure_cell_diffs_ = V::Zero(xw.numPerforations());
-        well_perforatoin_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
+        well_perforation_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
 #if 0
         std::cout << " avg_press " << std::endl;
         std::cout << avg_press << std::endl;
@@ -638,7 +638,7 @@ namespace Opm {
             {
                 // get H_nc
                 const ADB& h_nc = subset(well_perforations_segment_pressure_diffs_, Span(nperf, 1, start_perforation));
-                const V& h_cj = subset(well_perforatoin_cell_pressure_diffs_, Span(nperf, 1, start_perforation));
+                const V& h_cj = subset(well_perforation_cell_pressure_diffs_, Span(nperf, 1, start_perforation));
 
                 // V seg_pressures_perf = V::Zero(nperf);
                 // for (int i = 0; i < nseg; ++i) {

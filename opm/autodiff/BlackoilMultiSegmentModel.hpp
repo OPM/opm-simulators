@@ -188,7 +188,7 @@ namespace Opm {
         V well_perforation_cell_densities_;
         ADB well_perforation_cell_densities_adb_; // TODO: NOT NEEDED
 
-        V well_perforatoin_cell_pressure_diffs_;
+        V well_perforation_cell_pressure_diffs_;
 
         // the density of the fluid mixture in the segments
         // which is calculated in an implicit way
