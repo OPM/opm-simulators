@@ -801,7 +801,6 @@ private:
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
-            realParams.setSowcr(epsInfo.Sowcr);
 
             if (deck->hasKeyword("STONE1EX")) {
                 Scalar eta =

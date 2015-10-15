@@ -39,15 +39,15 @@ namespace Opm {
  * Essentially, this class just stores the two parameter objects for
  * the twophase capillary pressure laws.
  */
-template<class Traits, class GasOilParamsT, class OilWaterParamsT>
+template<class Traits, class GasOilLawT, class OilWaterLawT>
 class EclStone1MaterialParams
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
 
 public:
-    typedef GasOilParamsT GasOilParams;
-    typedef OilWaterParamsT OilWaterParams;
+    typedef typename GasOilLawT::Params GasOilParams;
+    typedef typename OilWaterLawT::Params OilWaterParams;
 
     /*!
      * \brief The default constructor.
@@ -64,6 +64,8 @@ public:
      */
     void finalize()
     {
+        krocw_ = OilWaterLawT::twoPhaseSatKrn(*oilWaterParams_, Swl_);
+
 #ifndef NDEBUG
         finalized_ = true;
 #endif
@@ -126,28 +128,11 @@ public:
     { assertFinalized_(); return Swl_; }
 
     /*!
-     * \brief Set the critical saturation of oil in the water-oil system.
+     * \brief Return the oil relperm for the oil-water system at the connate water
+     *        saturation.
      */
-    void setSowcr(Scalar val)
-    { Sowcr_ = val; }
-
-    /*!
-     * \brief Return the critical saturation of oil in the water-oil system.
-     */
-    Scalar Sowcr() const
-    { assertFinalized_(); return Sowcr_; }
-
-    /*!
-     * \brief Set the critical saturation of oil in the oil-gas system.
-     */
-    void setSogcr(Scalar val)
-    { Sogcr_ = val; }
-
-    /*!
-     * \brief Return the critical saturation of oil in the oil-gas system.
-     */
-    Scalar Sogcr() const
-    { assertFinalized_(); return Sogcr_; }
+    Scalar krocw() const
+    { assertFinalized_(); return krocw_; }
 
     /*!
      * \brief Set the exponent of the extended Stone 1 model.
@@ -176,9 +161,8 @@ private:
     std::shared_ptr<OilWaterParams> oilWaterParams_;
 
     Scalar Swl_;
-    Scalar Sowcr_;
-    Scalar Sogcr_;
     Scalar eta_;
+    Scalar krocw_;
 };
 } // namespace Opm
 

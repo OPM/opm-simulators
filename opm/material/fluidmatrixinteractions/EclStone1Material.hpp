@@ -54,9 +54,7 @@ namespace Opm {
 template <class TraitsT,
           class GasOilMaterialLawT,
           class OilWaterMaterialLawT,
-          class ParamsT = EclStone1MaterialParams<TraitsT,
-                                                   typename GasOilMaterialLawT::Params,
-                                                   typename OilWaterMaterialLawT::Params> >
+          class ParamsT = EclStone1MaterialParams<TraitsT, GasOilMaterialLawT, OilWaterMaterialLawT> >
 class EclStone1Material : public TraitsT
 {
 public:
@@ -291,14 +289,16 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        // the Eclipse docu is inconsistent here: In some places the connate water
-        // saturation is represented by "Swl", in others "Swco" is used.
+        // the Eclipse docu is inconsistent with naming the variable of connate water: In
+        // some places the connate water saturation is represented by "Swl", in others
+        // "Swco" is used.
         Scalar Swco = params.Swl();
+
+        // oil relperm at connate water saturations (with Sg=0)
+        Scalar krocw = params.krocw();
 
         const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
         const Evaluation& Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
-
-        Scalar krocw = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Swco);
 
         Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
         Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Swco);
