@@ -1079,7 +1079,7 @@ namespace detail {
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                                                       std::vector<ADB>& b_perfcells)
+                                                                       std::vector<ADB>& b_perfcells) const
     {
         // If we have wells, extract the mobilities and b-factors for
         // the well-perforated cells.
@@ -1110,7 +1110,7 @@ namespace detail {
                                                              const std::vector<ADB>& mob_perfcells,
                                                              const std::vector<ADB>& b_perfcells,
                                                              V& aliveWells,
-                                                             std::vector<ADB>& cq_s)
+                                                             std::vector<ADB>& cq_s) const
     {
         if( ! localWellsActive() ) return ;
 
@@ -1258,7 +1258,7 @@ namespace detail {
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                                                                    const SolutionState& state,
-                                                                                   WellState& xw)
+                                                                                   WellState& xw) const
     {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         const int np = wells().number_of_phases;
