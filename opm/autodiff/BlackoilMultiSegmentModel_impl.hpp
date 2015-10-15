@@ -870,6 +870,13 @@ namespace Opm {
 
         ADB segqs = state.segqs;
 
+        // Gain of the surface volume of each component in the segment by dt
+        std::vector<ADB> segment_volume_change_dt(np, ADB::null());
+        for (int phase = 0; phase < np; ++phase) {
+            segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
+                                              segment_comp_surf_volume_initial_[phase];
+        }
+
         for (int phase = 0; phase < np; ++phase) {
             int start_segment = 0;
             int start_perforation = 0;
@@ -906,7 +913,10 @@ namespace Opm {
                 // the segment rates of this well
                 const ADB& segqs_well = subset(segqs, Span(nseg, 1, start_position));
 
-                segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well, Span(nseg, 1, start_position), np * nseg_total);
+                const ADB segment_volume_change_dt_well = subset(segment_volume_change_dt[phase],
+                                                          Span(nseg, 1, start_segment));
+                segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well + segment_volume_change_dt_well,
+                                  Span(nseg, 1, start_position), np * nseg_total);
                 // another form for non-segment wells, keep here for future reference
                 // segqs -= superset(cq_s_seg, Span(1, 1, start_position), np * nseg_total);
                 start_segment += nseg;
