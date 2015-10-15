@@ -84,6 +84,8 @@ namespace Opm {
         , well_perforation_cell_densities_adb_(ADB::null())
         , well_segment_densities_(ADB::null())
         , well_segment_pressures_delta_(ADB::null())
+        , segment_comp_surf_volume_initial_(fluid.numPhases())
+        , segment_comp_surf_volume_current_(fluid.numPhases(), ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
             // Modify the wops_.well_cell member, since the
@@ -507,6 +509,12 @@ namespace Opm {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
+            asImpl().computeSegmentDensitiesAndCompVolumeDt(state0);
+            const int np = numPhases();
+            assert(np == int(segment_comp_surf_volume_initial_.size()));
+            for (int phase = 0; phase < np; ++phase) {
+                segment_comp_surf_volume_initial_[phase] = segment_comp_surf_volume_current_[phase].value();
+            }
             asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
@@ -528,7 +536,7 @@ namespace Opm {
             return;
         }
 
-        asImpl().computeSegmentDensities(state);
+        asImpl().computeSegmentDensitiesAndCompVolumeDt(state);
         asImpl().computeSegmentPressuresDelta(state);
 
         std::vector<ADB> mob_perfcells;
@@ -1649,7 +1657,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::computeSegmentDensities(const SolutionState& state)
+    BlackoilMultiSegmentModel<Grid>::computeSegmentDensitiesAndCompVolumeDt(const SolutionState& state)
     {
         const int nw = wellsMultiSegment().size();
         const int nseg_total = state.segp.size();
@@ -1828,6 +1836,13 @@ namespace Opm {
             dens += surf_dens[pu.phase_pos[phase]] * mix[phase];
         }
         well_segment_densities_ = dens / volrat;
+
+        // Calculating the surface volume of each component in the segment
+        assert(np == int(segment_comp_surf_volume_current_.size()));
+        const ADB segment_surface_volume = segvdt_ / volrat;
+        for (int phase = 0; phase < np; ++phase) {
+            segment_comp_surf_volume_current_[phase] = segment_surface_volume * mix[phase];
+        }
 
 #if 0
         std::cout << " output the well_segment_densities_ " << std::endl;

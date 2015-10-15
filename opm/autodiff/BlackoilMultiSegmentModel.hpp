@@ -199,6 +199,12 @@ namespace Opm {
         // for the top segment, they should always be zero for the moment.
         ADB well_segment_pressures_delta_;
 
+        // the surface volume of components in the segments
+        // initial one at the beginning of the time step
+        std::vector<V>   segment_comp_surf_volume_initial_;
+        // the current one at the current iteration.
+        std::vector<ADB> segment_comp_surf_volume_current_;
+
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         std::vector<int> top_well_segments_;
@@ -270,8 +276,10 @@ namespace Opm {
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
 
+        // Calculate the density of the mixture in the segments
+        // And the surface volume of the components in the segments by dt
         void
-        computeSegmentDensities(const SolutionState& state);
+        computeSegmentDensitiesAndCompVolumeDt(const SolutionState& state);
 
         void
         computeSegmentPressuresDelta(const SolutionState& state);
