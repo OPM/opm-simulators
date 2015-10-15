@@ -252,12 +252,12 @@ namespace Opm {
                         const std::vector<ADB>& mob_perfcells,
                         const std::vector<ADB>& b_perfcells,
                         V& aliveWells,
-                        std::vector<ADB>& cq_s);
+                        std::vector<ADB>& cq_s) const;
 
         void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
-                                         WellState& xw);
+                                         WellState& xw) const;
 
         void
         addWellFluxEq(const std::vector<ADB>& cq_s,

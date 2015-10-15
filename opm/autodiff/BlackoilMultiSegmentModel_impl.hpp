@@ -566,10 +566,10 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::computeWellFlux(const SolutionState& state,
-                                                             const std::vector<ADB>& ,
-                                                             const std::vector<ADB>& ,
-                                                             V& aliveWells,
-                                                             std::vector<ADB>& cq_s)
+                                                     const std::vector<ADB>& /* mob_perfcells */,
+                                                     const std::vector<ADB>& /* b_perfcells */,
+                                                     V& aliveWells,
+                                                     std::vector<ADB>& cq_s) const
     {
         // if( ! wellsActive() ) return ;
         if (wellsMultiSegment().size() == 0) return;
@@ -808,7 +808,7 @@ namespace Opm {
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                                                            const SolutionState& state,
-                                                                           WellState& xw)
+                                                                           WellState& xw) const
     {
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         // TODO: now it is so necesary to have a gobal wellsMultiSegment class to store some global information.
