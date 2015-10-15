@@ -49,11 +49,12 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
     const double comp_frac_o[np] = { 0.0, 1.0, 0.0 };
     const int cells[nperf/2] = { 0, 1, 2, 3, 4 };
     const double WI[nperf/2] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
+    const bool allow_crossflow = true;
     std::shared_ptr<Wells> wells(create_wells(np, 2, nperf), destroy_wells);
     BOOST_REQUIRE(wells);
-    int ok = add_well(INJECTOR, ref_depth, nperf/2, comp_frac_w, cells, WI, "INJ", wells.get());
+    int ok = add_well(INJECTOR, ref_depth, nperf/2, comp_frac_w, cells, WI, "INJ", allow_crossflow, wells.get());
     BOOST_REQUIRE(ok);
-    ok = add_well(PRODUCER, ref_depth, nperf/2, comp_frac_o, cells, WI, "PROD", wells.get());
+    ok = add_well(PRODUCER, ref_depth, nperf/2, comp_frac_o, cells, WI, "PROD", allow_crossflow, wells.get());
     BOOST_REQUIRE(ok);
     std::vector<double> rates = { 1.0, 0.0, 0.0,
                                   1.0, 0.0, 0.0,
