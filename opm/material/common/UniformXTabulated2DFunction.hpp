@@ -85,8 +85,8 @@ public:
     /*!
      * \brief Returns the value of a sampling point.
      */
-    Scalar valueAt(size_t i, size_t j) const
-    { return std::get<2>(samples_[i][j]); }
+    Scalar valueAt(int i, int j) const
+    { return std::get<2>(samples_[static_cast<unsigned>(i)][static_cast<unsigned>(j)]); }
 
     /*!
      * \brief Returns the number of sampling points in X direction.
@@ -141,7 +141,8 @@ public:
      * position of the x value between the i-th and the (i+1)-th
      * sample point.
       */
-    Scalar xToI(Scalar x, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    template <class Evaluation>
+    Evaluation xToI(const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
@@ -182,7 +183,8 @@ public:
      * position of the y value between the j-th and the (j+1)-th
      * sample point.
      */
-    Scalar yToJ(size_t i, Scalar y, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    template <class Evaluation>
+    Evaluation yToJ(size_t i, const Evaluation& y, OPM_OPTIM_UNUSED bool extrapolate = false) const
     {
         assert(0 <= i && i < numX());
         const auto &colSamplePoints = samples_.at(i);
@@ -236,44 +238,6 @@ public:
 
         return yMin <= y && y <= yMax;
     }
-
-    /*!
-     * \brief Evaluate the function at a given (x,y) position.
-     *
-     * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalProblem exception is thrown.
-     */
-    Scalar eval(Scalar x, Scalar y, bool extrapolate = true) const
-    {
-#ifndef NDEBUG
-        if (!extrapolate && !applies(x,y))
-        {
-            OPM_THROW(NumericalProblem,
-                       "Attempt to get tabulated value for ("
-                       << x << ", " << y
-                       << ") on table");
-        };
-#endif
-
-        Scalar alpha = xToI(x, extrapolate);
-        size_t i = std::max<size_t>(0, std::min(numX() - 2, static_cast<size_t>(alpha)));
-        alpha -= i;
-
-        Scalar beta1 = yToJ(i, y, extrapolate);
-        Scalar beta2 = yToJ(i + 1, y, extrapolate);
-
-        size_t j1 = std::max<size_t>(0, std::min(numY(i) - 2, static_cast<size_t>(beta1)));
-        size_t j2 = std::max<size_t>(0, std::min(numY(i + 1) - 2, static_cast<size_t>(beta2)));
-
-        beta1 -= j1;
-        beta2 -= j2;
-
-        // bi-linear interpolation
-        Scalar s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
-        Scalar s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
-        return s1*(1.0 - alpha) + s2*alpha;
-    }
-
     /*!
      * \brief Evaluate the function at a given (x,y) position.
      *
@@ -283,8 +247,10 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate=false) const
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
 #ifndef NDEBUG
-        if (!extrapolate && !applies(x.value, y.value)) {
+        if (!extrapolate && !applies(Toolbox::value(x), Toolbox::value(y))) {
             OPM_THROW(NumericalProblem,
                       "Attempt to get undefined table value (" << x << ", " << y << ")");
         };
@@ -292,41 +258,24 @@ public:
 
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
-        Evaluation alpha = Evaluation::createConstant(xToI(x.value, extrapolate));
-        unsigned i = static_cast<unsigned>(
-            std::max<int>(0, std::min<int>(static_cast<int>(numX() - 2),
-                                           static_cast<int>(alpha.value))));
+        Evaluation alpha = xToI(x, extrapolate);
+        int i = std::max(0, std::min<int>(numX() - 2, Toolbox::value(alpha)));
         alpha -= i;
 
         Evaluation beta1;
         Evaluation beta2;
 
-        beta1.value = yToJ(i, y.value, extrapolate);
-        beta2.value = yToJ(i + 1, y.value, extrapolate);
+        beta1 = yToJ(i, y, extrapolate);
+        beta2 = yToJ(i + 1, y, extrapolate);
 
-        unsigned j1 = static_cast<unsigned>(
-            std::max(0, std::min<int>(static_cast<int>(numY(i) - 2),
-                                      static_cast<int>(beta1.value))));
-        unsigned j2 = static_cast<unsigned>(
-            std::max(0, std::min<int>(static_cast<int>(numY(i + 1) - 2),
-                                      static_cast<int>(beta2.value))));
+        int j1 = std::max(0, std::min<int>(numY(i) - 2, Toolbox::value(beta1)));
+        int j2 = std::max(0, std::min<int>(numY(i + 1) - 2, Toolbox::value(beta2)));
 
-        beta1.value -= j1;
-        beta2.value -= j2;
+        beta1 -= j1;
+        beta2 -= j2;
 
-        // set the correct derivatives of alpha and the betas
-        for (unsigned varIdx = 0; varIdx < x.derivatives.size(); ++varIdx) {
-            alpha.derivatives[varIdx] = x.derivatives[varIdx]/(xAt(i + 1) - xAt(i));
 
-            beta1.derivatives[varIdx] = y.derivatives[varIdx]/(yAt(i, j1 + 1) - yAt(i, j1));
-            beta2.derivatives[varIdx] = y.derivatives[varIdx]/(yAt(i + 1, j2 + 1) - yAt(i + 1, j2));
-        }
-
-        Valgrind::CheckDefined(alpha);
-        Valgrind::CheckDefined(beta1);
-        Valgrind::CheckDefined(beta2);
-
-        // ... then evaluate the two function values for the same y value ...
+        // evaluate the two function values for the same y value ...
         Evaluation s1, s2;
         s1 = valueAt(i, j1)*(1.0 - beta1) + valueAt(i, j1 + 1)*beta1;
         s2 = valueAt(i + 1, j2)*(1.0 - beta2) + valueAt(i + 1, j2 + 1)*beta2;
