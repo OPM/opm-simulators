@@ -208,6 +208,11 @@ namespace Opm {
         // the mass flow rate in the segments
         ADB segment_mass_flow_rates_;
 
+        // the viscosity of the fluid mixture in the segments
+        // TODO: it is only used to calculate the Reynolds number as we know
+        //       maybe it is better just to store the Reynolds number here?
+        ADB segment_viscosities_;
+
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         std::vector<int> top_well_segments_;

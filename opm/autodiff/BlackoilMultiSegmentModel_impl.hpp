@@ -87,6 +87,7 @@ namespace Opm {
         , segment_comp_surf_volume_initial_(fluid.numPhases())
         , segment_comp_surf_volume_current_(fluid.numPhases(), ADB::null())
         , segment_mass_flow_rates_(ADB::null())
+        , segment_viscosities_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
             // Modify the wops_.well_cell member, since the
@@ -1703,11 +1704,14 @@ namespace Opm {
             segment_cond[s] = pc[segment_cells[s]];
         }
         std::vector<ADB> b_seg(np, ADB::null());
+        // Viscosities for different phases
+        std::vector<ADB> mu_seg(np, ADB::null());
         ADB rsmax_seg = ADB::null();
         ADB rvmax_seg = ADB::null();
         const PhaseUsage& pu = fluid_.phaseUsage();
         if (pu.phase_used[Water]) {
             b_seg[pu.phase_pos[Water]] = fluid_.bWat(segment_press, segment_temp, segment_cells);
+            mu_seg[pu.phase_pos[Water]] = fluid_.muWat(segment_press, segment_temp, segment_cells);
         }
         assert(active_[Oil]);
         const ADB segment_so = subset(state.saturation[pu.phase_pos[Oil]], segment_cells);
@@ -1716,6 +1720,8 @@ namespace Opm {
             b_seg[pu.phase_pos[Oil]] = fluid_.bOil(segment_press, segment_temp, segment_rs,
                                                    segment_cond, segment_cells);
             rsmax_seg = fluidRsSat(segment_press, segment_so, segment_cells);
+            mu_seg[pu.phase_pos[Oil]] = fluid_.muOil(segment_press, segment_temp, segment_rs,
+                                                     segment_cond, segment_cells);
         }
         assert(active_[Gas]);
         if (pu.phase_used[Gas]) {
@@ -1723,6 +1729,8 @@ namespace Opm {
             b_seg[pu.phase_pos[Gas]] = fluid_.bGas(segment_press, segment_temp, segment_rv,
                                                    segment_cond, segment_cells);
             rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
+            mu_seg[pu.phase_pos[Gas]] = fluid_.muGas(segment_press, segment_temp, segment_rv,
+                                                   segment_cond, segment_cells);
         }
 #if 0
         std::cout << " segment_press " << std::endl;
@@ -1861,6 +1869,11 @@ namespace Opm {
             segment_mass_flow_rates_ += surf_dens[pu.phase_pos[phase]] * segqs[phase];
         }
 
+        // Viscosity of the fluid mixture in the segments
+        segment_viscosities_ = ADB::constant(V::Zero(nseg_total));
+        for (int phase = 0; phase < np; ++phase) {
+            segment_viscosities_ += x[phase] * mu_seg[phase];
+        }
 #if 0
         std::cout << " output the well_segment_densities_ " << std::endl;
         std::cout << well_segment_densities_.value() << std::endl;
