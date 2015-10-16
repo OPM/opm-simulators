@@ -73,6 +73,7 @@ namespace Opm
         const std::vector<std::vector<int>>& inletSegments() const;
         const std::vector<double>& segmentLength() const;
         const std::vector<double>& segmentDepth() const;
+        const std::vector<double>& segmentDiameter() const;
         const std::vector<double>& segmentCrossArea() const;
         const std::vector<double>& segmentRoughness() const;
         const std::vector<double>& segmentVolume() const;

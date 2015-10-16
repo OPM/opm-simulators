@@ -427,6 +427,10 @@ namespace Opm
         return m_segment_depth_;
     }
 
+    const std::vector<double>& WellMultiSegment::segmentDiameter() const {
+        return m_segment_internal_diameter_;
+    }
+
     const std::vector<double>& WellMultiSegment::segmentCrossArea() const {
         return m_segment_cross_area_;
     }
