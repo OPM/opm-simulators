@@ -279,7 +279,7 @@ namespace Opm {
         // Calculate the density of the mixture in the segments
         // And the surface volume of the components in the segments by dt
         void
-        computeSegmentDensitiesAndCompVolumeDt(const SolutionState& state);
+        computeSegmentFluidProperties(const SolutionState& state);
 
         void
         computeSegmentPressuresDelta(const SolutionState& state);

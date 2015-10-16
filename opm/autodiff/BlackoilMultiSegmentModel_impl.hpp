@@ -509,7 +509,7 @@ namespace Opm {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            asImpl().computeSegmentDensitiesAndCompVolumeDt(state0);
+            asImpl().computeSegmentFluidProperties(state0);
             const int np = numPhases();
             assert(np == int(segment_comp_surf_volume_initial_.size()));
             for (int phase = 0; phase < np; ++phase) {
@@ -536,7 +536,7 @@ namespace Opm {
             return;
         }
 
-        asImpl().computeSegmentDensitiesAndCompVolumeDt(state);
+        asImpl().computeSegmentFluidProperties(state);
         asImpl().computeSegmentPressuresDelta(state);
 
         std::vector<ADB> mob_perfcells;
@@ -1667,7 +1667,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::computeSegmentDensitiesAndCompVolumeDt(const SolutionState& state)
+    BlackoilMultiSegmentModel<Grid>::computeSegmentFluidProperties(const SolutionState& state)
     {
         const int nw = wellsMultiSegment().size();
         const int nseg_total = state.segp.size();
