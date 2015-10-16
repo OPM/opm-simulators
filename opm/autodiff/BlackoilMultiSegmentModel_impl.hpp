@@ -86,6 +86,7 @@ namespace Opm {
         , well_segment_pressures_delta_(ADB::null())
         , segment_comp_surf_volume_initial_(fluid.numPhases())
         , segment_comp_surf_volume_current_(fluid.numPhases(), ADB::null())
+        , segment_mass_flow_rates_(ADB::null())
         , wells_multisegment_(wells_multisegment)
         {
             // Modify the wops_.well_cell member, since the
@@ -1852,6 +1853,12 @@ namespace Opm {
         const ADB segment_surface_volume = segvdt_ / volrat;
         for (int phase = 0; phase < np; ++phase) {
             segment_comp_surf_volume_current_[phase] = segment_surface_volume * mix[phase];
+        }
+
+        // Mass flow rate of the segments
+        segment_mass_flow_rates_ = ADB::constant(V::Zero(nseg_total));
+        for (int phase = 0; phase < np; ++phase) {
+            segment_mass_flow_rates_ += surf_dens[pu.phase_pos[phase]] * segqs[phase];
         }
 
 #if 0

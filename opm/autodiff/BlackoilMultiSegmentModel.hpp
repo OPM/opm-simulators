@@ -205,6 +205,9 @@ namespace Opm {
         // the current one at the current iteration.
         std::vector<ADB> segment_comp_surf_volume_current_;
 
+        // the mass flow rate in the segments
+        ADB segment_mass_flow_rates_;
+
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
 
         std::vector<int> top_well_segments_;
