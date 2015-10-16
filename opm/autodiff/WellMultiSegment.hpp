@@ -57,6 +57,7 @@ namespace Opm
         bool isMultiSegmented() const;
         int numberOfPerforations() const;
         int numberOfSegments() const;
+        std::string compPressureDrop() const;
 
         const WellControls* wellControls() const;
         const std::vector<double>& compFrac() const;

@@ -383,6 +383,10 @@ namespace Opm
         return m_number_of_segments_;
     }
 
+    std::string WellMultiSegment::compPressureDrop() const {
+        return WellSegment::CompPresureDropEnumToString(m_comp_pressure_drop_);
+    }
+
     const std::vector<double>& WellMultiSegment::compFrac() const {
         return m_comp_frac_;
     }
