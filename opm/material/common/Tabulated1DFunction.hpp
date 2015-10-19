@@ -401,7 +401,7 @@ public:
 
         // make sure that the segments which are completly in the
         // interval [x0, x1] all exhibit the same monotonicity.
-        int iEnd = findSegmentIndex_(x1);
+        size_t iEnd = findSegmentIndex_(x1);
         for (; i < iEnd - 1; ++i) {
             updateMonotonicity_(i, r);
             if (!r)
