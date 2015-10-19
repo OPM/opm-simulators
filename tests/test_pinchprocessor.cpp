@@ -55,12 +55,20 @@ BOOST_AUTO_TEST_CASE(Processing)
     std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseMode));
     std::vector<double> porv = eclstate->getDoubleGridProperty("PORV")->getData();
     EclipseGridConstPtr eclgrid = eclstate->getEclipseGrid();
-    Opm::GridManager gridM(eclgrid);
+
+    BOOST_CHECK_EQUAL(eclgrid->getMinpvMode(), MinpvMode::EclSTD);
+
+    const int nc_initial = eclgrid->getNumActive();
+
+    Opm::GridManager gridM(eclgrid, porv);
     typedef UnstructuredGrid Grid;
     const Grid& grid = *(gridM.c_grid());
     const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
     const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
     const int nc = Opm::UgGridHelpers::numCells(grid);
+
+    BOOST_CHECK_EQUAL(nc_initial - nc, 2); // two cells are removed
+
     Opm::RockFromDeck rock;
     rock.init(eclstate, nc, global_cell, cart_dims);
 
@@ -77,22 +85,19 @@ BOOST_AUTO_TEST_CASE(Processing)
     BOOST_CHECK_EQUAL(multzMode, PinchMode::ModeEnum::TOP);
 
     PinchProcessor<Grid> pinch(minpv, thickness, transMode, multzMode);
-    std::vector<int> actnum;
-    eclgrid->exportACTNUM(actnum);
+    std::vector<int> actnum(nc_initial, 1);
 
-    if (actnum.empty() && (nc == int(eclgrid->getCartesianSize()))) {
-        actnum.assign(nc, 1);
-    }
     std::vector<double> htrans(Opm::UgGridHelpers::numCellFaces(grid));
     Grid* ug = const_cast<Grid*>(& grid);
     tpfa_htrans_compute(ug, rock.permeability(), htrans.data());
     auto transMult = eclstate->getTransMult();
     std::vector<double> multz(nc, 0.0);
+    std::vector<double> dz(porv.size(), 0.0);
     for (int i = 0; i < nc; ++i) {
         multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
     }
     Opm::NNC nnc(deck, eclgrid);
-    pinch.process(grid, htrans, actnum, multz, porv, nnc);
+    pinch.process(grid, htrans, actnum, multz, porv, dz, nnc);
     auto nnc1 = nnc.nnc1();
     auto nnc2 = nnc.nnc2();
     auto trans = nnc.trans();
