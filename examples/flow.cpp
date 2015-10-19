@@ -155,7 +155,7 @@ try
     }
 
 #ifdef _OPENMP
-    if (!getenv("OPM_NUM_THREADS")) {
+    if (!getenv("OMP_NUM_THREADS")) {
         //Default to max(4,#cores) threads,
         //not number of cores (unless ENV(OMP_NUM_THREADS) is defined)
         int num_cores = omp_get_num_procs();
