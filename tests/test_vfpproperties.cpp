@@ -783,7 +783,7 @@ BOOST_AUTO_TEST_CASE(InterpolateADBAndQs)
         std::stringstream ss;
         ss << "WELL_" << i;
         const bool ok = add_well(INJECTOR, 0.0, 1, NULL, &cells,
-                              NULL, ss.str().c_str(), true, wells.get());
+                                 NULL, ss.str().c_str(), true, wells.get());
         BOOST_REQUIRE(ok);
     }
 
