@@ -179,7 +179,11 @@ namespace Opm {
 
         // Pressure correction due to the depth differennce between segment depth and perforation depth.
         // TODO: It will only be able to be merge as a part of the perforation_pressure_diffs_
-        ADB well_perforations_segment_pressure_diffs_;
+        ADB well_segment_perforation_pressure_diffs_;
+
+        // The depth difference between segment nodes and perforations
+        // TODO: it should be a member in a global wells class later
+        V well_segment_perforation_depth_diffs_;
 
         // the average of the fluid densities in the grid block
         // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
@@ -207,7 +211,7 @@ namespace Opm {
 
         // the viscosity of the fluid mixture in the segments
         // TODO: it is only used to calculate the Reynolds number as we know
-        //       maybe it is better just to store the Reynolds number here?
+        //       maybe it is not better just to store the Reynolds number here?
         ADB segment_viscosities_;
 
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
