@@ -76,12 +76,7 @@ namespace Opm {
                   const std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
-          // not all will be necessary eventually
-        , well_perforation_densities_adb_(ADB::null())
-        , well_perforation_pressure_diffs_adb_(ADB::null())
-        , well_perforation_pressure_cell_diffs_adb_(ADB::null())
         , well_perforations_segment_pressure_diffs_(ADB::null())
-        , well_perforation_cell_densities_adb_(ADB::null())
         , well_segment_densities_(ADB::null())
         , well_segment_pressures_delta_(ADB::null())
         , segment_comp_surf_volume_initial_(fluid.numPhases())
@@ -457,7 +452,6 @@ namespace Opm {
         // Are they actually zero for the current cases?
         // TODO
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
-        well_perforation_pressure_cell_diffs_ = V::Zero(xw.numPerforations());
         well_perforation_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
 #if 0
         std::cout << " avg_press " << std::endl;
