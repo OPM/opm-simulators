@@ -172,10 +172,10 @@ namespace Opm
                 if (has_shrate_) {
                     siFactor = unitSystem.parse("1/Time")->getSIScaling();
                     DeckKeywordConstPtr shrateKeyword = deck->getKeyword("SHRATE");
-                    std::vector<double> shrate = shrateKeyword->getSIDoubleData();
-                    if (shrate.size() == 1) {
-                        shrate_ = shrate[0];
-                    } else if (shrate.size() == 0) {
+                    std::vector<double> shrate_readin = shrateKeyword->getSIDoubleData();
+                    if (shrate_readin.size() == 1) {
+                        shrate_ = shrate_readin[0];
+                    } else if (shrate_readin.size() == 0) {
                         shrate_ = 4.8; // default value
                     } else {
                         OPM_THROW(std::logic_error, "Only NTPVT == 1 is allowed for SHRATE keyword now !\n");
