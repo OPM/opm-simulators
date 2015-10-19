@@ -268,46 +268,6 @@ namespace Opm {
             well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
         }
 
-        // compute the average of the fluid densites in the well blocks.
-        // the average is weighted according to the fluid relative permeabilities.
-        const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
-        size_t temp_size = kr_adb.size();
-        std::vector<V> perf_kr;
-        for(size_t i = 0; i < temp_size; ++i) {
-            const ADB kr_phase_adb = subset(kr_adb[i], well_cells);
-            const V kr_phase = kr_phase_adb.value();
-            perf_kr.push_back(kr_phase);
-        }
-
-        // compute the averaged density for the well block
-        // TODO: for the non-segmented wells, they should be set to zero
-        // TODO: for the moment, they are still calculated, while not used later.
-        for (int i = 0; i < nperf; ++i) {
-            double sum_kr = 0.;
-            int np = perf_kr.size(); // make sure it is 3
-            for (int p = 0;  p < np; ++p) {
-                sum_kr += perf_kr[p][i];
-            }
-
-            for (int p = 0; p < np; ++p) {
-                perf_kr[p][i] /= sum_kr;
-            }
-        }
-
-        // ADB rho_avg_perf = ADB::const(V::Zero(nperf);
-        V rho_avg_perf(nperf);
-        // get the fluid densities to do the average?
-        // TODO: make sure the order of the density and the order of the kr are the same.
-        for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            const int canonicalPhaseIdx = canph_[phaseIdx];
-            const ADB rho = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
-            const V rho_perf = subset(rho, well_cells).value();
-            // TODO: phaseIdx or canonicalPhaseIdx ?
-            rho_avg_perf = rho_perf * perf_kr[phaseIdx];
-        }
-
-        // TODO: rho_avg_perf is actually the well_perforation_cell_densities_;
-        well_perforation_cell_densities_ = Eigen::Map<const V>(rho_avg_perf.data(), nperf);
         // TODO: just for the current cases
         well_perforation_densities_ = V::Zero(nperf);
 
@@ -415,8 +375,8 @@ namespace Opm {
         std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);
         // Extract well connection depths.
         const V depth = cellCentroidsZToEigen(grid_);
-        const V pdepth = subset(depth, well_cells);
-        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+        const V perfcelldepth = subset(depth, well_cells);
+        std::vector<double> perf_cell_depth(perfcelldepth.data(), perfcelldepth.data() + nperf);
 
         // Surface density.
         DataBlock surf_dens(nperf, pu.num_phases);
@@ -438,7 +398,7 @@ namespace Opm {
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        wells(), perf_depth, cd, grav);
+                        wells(), perf_cell_depth, cd, grav);
 
         // 4. Store the results
         well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf); // This one is not useful for segmented wells at all
@@ -452,7 +412,64 @@ namespace Opm {
         // Are they actually zero for the current cases?
         // TODO
         well_perforations_segment_pressure_diffs_ = ADB::constant(V::Zero(xw.numPerforations()));
-        well_perforation_cell_pressure_diffs_ = V::Zero(xw.numPerforations());
+
+        // compute the average of the fluid densites in the well blocks.
+        // the average is weighted according to the fluid relative permeabilities.
+        const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
+        size_t temp_size = kr_adb.size();
+        std::vector<V> perf_kr;
+        for(size_t i = 0; i < temp_size; ++i) {
+            // const ADB kr_phase_adb = subset(kr_adb[i], well_cells);
+            const V kr_phase = (subset(kr_adb[i], well_cells)).value();
+            perf_kr.push_back(kr_phase);
+        }
+
+
+        // compute the averaged density for the well block
+        // TODO: for the non-segmented wells, they should be set to zero
+        // TODO: for the moment, they are still calculated, while not used later.
+        for (int i = 0; i < nperf; ++i) {
+            double sum_kr = 0.;
+            int np = perf_kr.size(); // make sure it is 3
+            for (int p = 0;  p < np; ++p) {
+                sum_kr += perf_kr[p][i];
+            }
+
+            for (int p = 0; p < np; ++p) {
+                perf_kr[p][i] /= sum_kr;
+            }
+        }
+
+        // ADB rho_avg_perf = ADB::const(V::Zero(nperf);
+        V rho_avg_perf = V::Constant(nperf, 0.0);
+        // TODO: make sure the order of the density and the order of the kr are the same.
+        for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            const int canonicalPhaseIdx = canph_[phaseIdx];
+            const ADB rho = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            const V rho_perf = subset(rho, well_cells).value();
+            // TODO: phaseIdx or canonicalPhaseIdx ?
+            rho_avg_perf += rho_perf * perf_kr[phaseIdx];
+        }
+
+        // TODO: rho_avg_perf is actually the well_perforation_cell_densities_;
+        well_perforation_cell_densities_ = Eigen::Map<const V>(rho_avg_perf.data(), nperf);
+
+        // We should put this in a global class
+        std::vector<double> perf_depth_vec;
+        perf_depth_vec.reserve(nperf);
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const std::vector<double>& perf_depth_well = well->perfDepth();
+            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
+        }
+        assert(int(perf_depth_vec.size()) == nperf);
+        const V perf_depth = Eigen::Map<V>(perf_depth_vec.data(), nperf);
+
+        const V perf_cell_depth_diffs = perf_depth - perfcelldepth;
+
+        well_perforation_cell_pressure_diffs_ = grav * well_perforation_cell_densities_ * perf_cell_depth_diffs;
+
+
 #if 0
         std::cout << " avg_press " << std::endl;
         std::cout << avg_press << std::endl;
@@ -462,6 +479,16 @@ namespace Opm {
 
         std::cout << "well_perforation_pressure_diffs_ " << std::endl;
         std::cout << well_perforation_pressure_diffs_ << std::endl;
+
+        std::cout << " perf_cell_depth_diffs " << std::endl;
+        std::cout << perf_cell_depth_diffs << std::endl;
+
+        std::cout << " well_perforation_cell_densities_ " << std::endl;
+        std::cout << well_perforation_cell_densities_ << std::endl;
+
+        std::cout << " well_perforation_cell_pressure_diffs_ " << std::endl;
+        std::cout <<  well_perforation_cell_pressure_diffs_ << std::endl;
+        std::cin.ignore();
 #endif
     }
 
