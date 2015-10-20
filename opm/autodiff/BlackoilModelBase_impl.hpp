@@ -163,7 +163,7 @@ namespace detail {
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid, eclState)
+        , ops_   (grid, geo.nnc())
         , wops_  (wells_)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
@@ -913,6 +913,7 @@ namespace detail {
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const V trans_nnc = ops_.nnc_trans;
+
         V trans_all(transi.size() + trans_nnc.size());
         trans_all << transi, trans_nnc;
 
@@ -2256,7 +2257,7 @@ namespace detail {
         const ADB rhoavg = ops_.caver * rho;
         rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
-            applyThresholdPressures(rq_[ actph ].dh);
+            //applyThresholdPressures(rq_[ actph ].dh);
         }
 
         // Compute phase fluxes with upwinding of formation value factor and mobility.
