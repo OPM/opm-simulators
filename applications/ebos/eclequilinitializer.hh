@@ -76,7 +76,7 @@ public:
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
-        const auto& grid = gridManager.grid();
+        const auto& equilGrid   = gridManager.equilGrid();
 
         // create the data structures which are used by initStateEquil()
         Opm::parameter::ParameterGroup tmpParam;
@@ -84,19 +84,21 @@ public:
             gridManager.deck(),
             gridManager.eclState(),
             materialLawManager,
-            Opm::UgGridHelpers::numCells(grid),
-            Opm::UgGridHelpers::globalCell(grid),
-            Opm::UgGridHelpers::cartDims(grid),
+            Opm::UgGridHelpers::numCells(equilGrid),
+            Opm::UgGridHelpers::globalCell(equilGrid),
+            Opm::UgGridHelpers::cartDims(equilGrid),
             tmpParam);
 
+        const int numElems = equilGrid.size(/*codim=*/0);
+        assert( int(gridManager.grid().size(/*codim=*/0)) == numElems );
         // initialize the boiler plate of opm-core the state structure.
         Opm::BlackoilState opmBlackoilState;
-        opmBlackoilState.init(grid.size(/*codim=*/0),
+        opmBlackoilState.init(numElems,
                               /*numFaces=*/0, // we don't care here
                               numPhases);
 
         // do the actual computation.
-        Opm::initStateEquil(gridManager.grid(),
+        Opm::initStateEquil(equilGrid,
                             opmBlackoilProps,
                             gridManager.deck(),
                             gridManager.eclState(),
@@ -109,7 +111,6 @@ public:
         const Scalar MO = FluidSystem::molarMass(oilCompIdx);
 
         // copy the result into the array of initial fluid states
-        int numElems = gridManager.gridView().size(/*codim=*/0);
         initialFluidStates_.resize(numElems);
         for (int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto &fluidState = initialFluidStates_[elemIdx];

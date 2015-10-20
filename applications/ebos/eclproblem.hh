@@ -41,6 +41,7 @@
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include <ewoms/io/polyhedralgridconverter.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -849,9 +850,6 @@ private:
 
     void readEquilInitialCondition_()
     {
-#if EBOS_USE_ALUGRID
-#warning "EQUIL-based initialization cannot yet be used with ALUGrid"
-#else
         // The EQUIL initializer also modifies the material law manager according to
         // SWATINIT (although it does not belong there strictly speaking)
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
@@ -868,7 +866,9 @@ private:
             auto &elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
-#endif
+
+        // release the equil grid pointer since it's no longer needed.
+        this->simulator().gridManager().releaseEquilGrid();
     }
 
     void readExplicitInitialCondition_()
