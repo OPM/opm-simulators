@@ -156,14 +156,15 @@ try
 
 #ifdef _OPENMP
     if (!getenv("OMP_NUM_THREADS")) {
-        //Default to max(4,#cores) threads,
-        //not number of cores (unless ENV(OMP_NUM_THREADS) is defined)
+        //Default to at most 4 threads, regardless of 
+        //number of cores (unless ENV(OMP_NUM_THREADS) is defined)
         int num_cores = omp_get_num_procs();
         int num_threads = std::min(4, num_cores);
         omp_set_num_threads(num_threads);
     }
 #pragma omp parallel
     if (omp_get_thread_num() == 0){
+        //opm_get_num_threads() only works as expected within a parallel region.
         std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
     }
 #endif
