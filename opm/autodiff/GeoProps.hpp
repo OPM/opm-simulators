@@ -133,6 +133,12 @@ namespace Opm
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
 
+            // Handle NNCs
+            std::shared_ptr<const NNC> nnc_deck = eclState ? eclState->getNNC()
+                             : std::shared_ptr<const Opm::NNC>();
+            NNC nnc (*nnc_deck);
+            nnc_ = nnc;
+
             if (eclgrid->isPinchActive()) {
                 const double minpv = eclgrid->getMinpvValue();
                 const double thickness = eclgrid->getPinchThresholdThickness();
@@ -147,20 +153,15 @@ namespace Opm
                 eclgrid->exportACTNUM(actnum);
                 auto transMult = eclState->getTransMult();
                 std::vector<double> multz(numCells, 0.0);
-                std::vector<double> dz(numCartesianCells, 0.0);
                 const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
 
                 for (int i = 0; i < numCells; ++i) {
                     multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
                 }
 
-                std::shared_ptr<const NNC> nnc_deck = eclState ? eclState->getNNC()
-                    : std::shared_ptr<const Opm::NNC>();
-
                 // Note the pore volume from eclState is used and not the pvol_ calculated above
                 std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
-                NNC nnc_ (*nnc_deck);
-                pinch.process(grid, htrans_copy, actnum, multz, porv, dz, nnc_);
+                pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
             }
 
             // combine the half-face transmissibilites into the final face
