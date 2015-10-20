@@ -371,12 +371,18 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-    if (param.getDefault("use_interleaved", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
-    } else if (param.getDefault("use_cpr", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
-    } else {
-        fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+    {
+        std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipseState->getSimulationConfig();
+        bool useInterleaved = param.getDefault("use_interleaved", true);
+        bool useCpr = param.getDefault("use_cpr", true) || simCfg->useCPR();
+
+        if (useInterleaved) {
+            fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
+        } else if (useCpr) {
+            fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
+        } else {
+            fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+        }
     }
 
     Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
