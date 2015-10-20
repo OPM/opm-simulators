@@ -26,8 +26,8 @@
 #include <vector>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 
 namespace Opm
@@ -314,28 +314,25 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
 
     template <class Grid>
-    std::vector<double> thresholdPressures(const DeckConstPtr& /* deck */,
-                                           EclipseStateConstPtr eclipseState,
-                                           const Grid& grid,
-                                           const std::map<std::pair<int, int>, double>& maxDp)
+    std::vector<double> thresholdPressures(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const Grid& grid)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
         if (simulationConfig->hasThresholdPressure()) {
             std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
             std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
-            const auto& eqlnumData = eqlnum->getData();
+            auto eqlnumData = eqlnum->getData();
 
-            // Set threshold pressure values for each cell face.
+            // Set values for each face.
             const int num_faces = UgGridHelpers::numFaces(grid);
-            const auto& fc = UgGridHelpers::faceCells(grid);
-            const int* gc = UgGridHelpers::globalCell(grid);
             thpres_vals.resize(num_faces, 0.0);
+            const int* gc = UgGridHelpers::globalCell(grid);
+            auto fc = UgGridHelpers::faceCells(grid);
             for (int face = 0; face < num_faces; ++face) {
                 const int c1 = fc(face, 0);
                 const int c2 = fc(face, 1);
                 if (c1 < 0 || c2 < 0) {
-                    // Boundary face, skip it.
+                    // Boundary face, skip this.
                     continue;
                 }
                 const int gc1 = (gc == 0) ? c1 : gc[c1];
@@ -347,12 +344,34 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                     if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
                         thpres_vals[face] = thresholdPressure->getThresholdPressure(eq1,eq2);
                     }
-                    else {
-                        // set the threshold pressure for faces of PVT regions where the third item
-                        // has been defaulted to the maximum pressure potential difference between
-                        // these regions
-                        const auto barrierId = std::make_pair(eq1, eq2);
-                        thpres_vals[face] = maxDp.at(barrierId);
+                }
+            }
+        }
+        return thpres_vals;
+    }
+     std::vector<double> thresholdPressuresNNC(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const NNC& nnc)
+    {
+        SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
+        std::vector<double> thpres_vals;
+        if (simulationConfig->hasThresholdPressure()) {
+            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
+            std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+            auto eqlnumData = eqlnum->getData();
+
+            // Set values for each NNC
+            thpres_vals.resize(nnc.numNNC(), 0.0);
+            for (size_t i = 0 ; i < nnc.numNNC(); ++i) {
+                const int gc1 = nnc.nnc1()[i];
+                const int gc2 = nnc.nnc2()[i];
+                const int eq1 = eqlnumData[gc1];
+                const int eq2 = eqlnumData[gc2];
+
+                if (thresholdPressure->hasRegionBarrier(eq1,eq2)) {
+                    if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
+                        thpres_vals[i] = thresholdPressure->getThresholdPressure(eq1,eq2);
+                    } else {
+                        std::string msg = "Initializing the THPRES pressure values from the initial state is not supported - using 0.0";
+                        parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
                     }
                 }
             }
