@@ -118,6 +118,7 @@ namespace Opm
                                               BlackoilOutputWriter& output_writer,
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face,
+                                              const std::vector<double>& threshold_pressures_by_nnc,
                                               const bool solvent);
 
         std::unique_ptr<Solver> createSolver(const Wells* wells);

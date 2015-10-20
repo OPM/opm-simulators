@@ -118,7 +118,9 @@ namespace Opm
         /// \param[in] vapoil        true for vaporized oil option
         /// \param[in] eclipse_state
         /// \param[in] output_writer
-        /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
+        /// \param[in] threshold_pressures_by_face  if nonempty, threshold pressures that inhibit flow
+        /// \param[in] threshold_pressures_by_nnc   if nonempty, threshold pressures that inhibit flow
+
         SimulatorBase(const parameter::ParameterGroup& param,
                       const Grid& grid,
                       const DerivedGeology& geo,
@@ -130,7 +132,8 @@ namespace Opm
                       const bool vapoil,
                       std::shared_ptr<EclipseState> eclipse_state,
                       OutputWriter& output_writer,
-                      const std::vector<double>& threshold_pressures_by_face);
+                      const std::vector<double>& threshold_pressures_by_face,
+                      const std::vector<double>& threshold_pressures_by_nnc);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -191,6 +194,8 @@ namespace Opm
         RateConverterType rateConverter_;
         // Threshold pressures.
         std::vector<double> threshold_pressures_by_face_;
+        std::vector<double> threshold_pressures_by_nnc_;
+
         // Whether this a parallel simulation or not
         bool is_parallel_run_;
     };

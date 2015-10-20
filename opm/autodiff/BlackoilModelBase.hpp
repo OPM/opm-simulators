@@ -145,7 +145,9 @@ namespace Opm {
         /// flow is prevented or reduced in both directions equally.
         /// \param[in]  threshold_pressures_by_face   array of size equal to the number of faces
         ///                                   of the grid passed in the constructor.
-        void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
+        ///  \param[in]  threshold_pressures_by_nnc   array of size equal to the number of nncs
+        void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face ,
+                                   const std::vector<double>& threshold_pressures_by_nnc);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size
@@ -266,7 +268,7 @@ namespace Opm {
         ModelParameters                 param_;
         bool use_threshold_pressure_;
         bool wells_active_;
-        V threshold_pressures_by_interior_face_;
+        V threshold_pressures;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;

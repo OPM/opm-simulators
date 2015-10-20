@@ -411,6 +411,7 @@ try
     simtimer.init(timeMap);
 
     std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, grid);
+    std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(parseMode, eclipseState, geoprops.nnc());
 
     SimulatorFullyImplicitBlackoil< Grid >  simulator(param,
                                                       grid,
@@ -423,7 +424,8 @@ try
                                                       deck->hasKeyword("VAPOIL"),
                                                       eclipseState,
                                                       outputWriter,
-                                                      threshold_pressures);
+                                                      threshold_pressures,
+                                                      threshold_pressures_nnc);
 
     if (!schedule->initOnly()){
         if( output_cout )
