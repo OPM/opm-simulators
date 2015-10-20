@@ -1950,12 +1950,30 @@ namespace Opm {
         const ADB grav_adb = ADB::constant(V::Constant(nseg_total, grav));
         well_segment_pressures_delta_ = segment_depth_delta * grav_adb * well_segment_densities_;
 
-        well_segment_perforation_pressure_diffs_ = ADB::constant(V::Zero(nperf_total));
+        // again we need a global mapping
+        ADB well_segment_perforation_densities = ADB::constant(V::Zero(nperf_total));
+        int start_perforation = 0;
+        start_segment = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
+            ADB segment_densities_well = subset(well_segment_densities_, Span(nseg, 1 , start_segment));
+            ADB segment_densities_perforation_densities_well = well->wellOps().s2p * segment_densities_well;
+            well_segment_perforation_densities += superset(segment_densities_perforation_densities_well,
+                                                           Span(nperf, 1, start_perforation), nperf_total);
+            start_segment += nseg;
+            start_perforation += nperf;
+        }
+        well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
+
 #if 0
         std::cout << " segment_depth_delta " << std::endl;
         std::cout << segment_depth_delta << std::endl;
         std::cout << " well_segment_pressures_delta_ " << std::endl;
         std::cout << well_segment_pressures_delta_.value() << std::endl;
+        std::cout << " well_segment_perforation_pressure_diffs_ " << std::endl;
+        std::cout << well_segment_perforation_pressure_diffs_.value() << std::endl;
         std::cin.ignore();
 #endif
     }
