@@ -233,6 +233,12 @@ namespace Opm
                                       const double pcow, 
                                       double & swat);
 
+        // return a reference to the "raw" PVT fluid object for a phase.
+        const PvtInterface& pvt(int phaseIdx) const
+        {
+            return pvt_.pvt(phaseIdx);
+        }
+
     private:
         int getTableIndex_(const int* pvtTableIdx, int cellIdx) const
         {
