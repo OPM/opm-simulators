@@ -13,11 +13,11 @@ Group:          Development/Libraries/C and C++
 Url:            http://www.opm-project.org/
 Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  blas-devel lapack-devel dune-common-devel
-BuildRequires:  git suitesparse-devel cmake28 doxygen bc boost148-devel
+BuildRequires:  git suitesparse-devel doxygen bc boost148-devel
 BuildRequires:  opm-parser-devel opm-core-devel dune-cornerpoint-devel
 BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ert.ecl-devel
-%{?el5:BuildRequires: gcc44 gcc44-c++}
-%{!?el5:BuildRequires: gcc gcc-c++}
+%{?el6:BuildRequires: cmake28 devtoolset-2}
+%{!?el6:BuildRequires: cmake gcc gcc-c++}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires:       libopm-autodiff1 = %{version}
 
@@ -27,7 +27,6 @@ The Open Porous Media (OPM) initiative provides a set of open-source tools cente
 %package -n libopm-autodiff1
 Summary:        Open Porous Media - automatic differentiation library
 Group:          System/Libraries
-%{?el5:BuildArch: %{_arch}}
 
 %description -n libopm-autodiff1
 The Open Porous Media (OPM) initiative provides a set of open-source tools centered around the simulation of flow and transport of fluids in porous media. The goal of the initiative is to establish a sustainable environment for the development of an efficient and well-maintained software suite.
@@ -36,7 +35,6 @@ The Open Porous Media (OPM) initiative provides a set of open-source tools cente
 Summary:        Development and header files for opm-autodiff
 Group:          Development/Libraries/C and C++
 Requires:       libopm-autodiff1 = %{version}
-%{?el5:BuildArch: %{_arch}}
 
 %description devel
 This package contains the development and header files for opm-autodiff
@@ -53,7 +51,6 @@ This package contains the documentation files for opm-autodiff
 Summary:        Applications in opm-autodiff
 Group:          Scientific
 Requires:       libopm-autodiff1 = %{version}
-%{?el5:BuildArch: %{_arch}}
 
 %description bin
 This package contains the applications for opm-autodiff
@@ -62,7 +59,8 @@ This package contains the applications for opm-autodiff
 %setup -q -n %{name}-release-%{version}-%{tag}
 
 %build
-cmake28 -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF %{?el5:-DCMAKE_CXX_COMPILER=g++44 -DCMAKE_C_COMPILER=gcc44} -DBOOST_LIBRARYDIR=%{_libdir}/boost148 -DBOOST_INCLUDEDIR=/usr/include/boost148
+%{?el6:scl enable devtoolset-2 bash}
+%{?el6:cmake28} %{?!el6:cmake} -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF %{?el6:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-2/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-2/root/usr/bin/gcc} -DBOOST_LIBRARYDIR=%{_libdir}/boost148 -DBOOST_INCLUDEDIR=/usr/include/boost148
 make
 
 %install
