@@ -55,6 +55,7 @@ else()
 
 endif()
 
+
 # not the same location as most of the other projects? this hook overrides
 macro (dir_hook)
 endmacro (dir_hook)
@@ -63,6 +64,10 @@ endmacro (dir_hook)
 # we cannot generate dune.module since it is read by dunecontrol before
 # the build starts, so it makes sense to keep the data there then.
 include (OpmInit)
+
+# Look for the opm-data repository; if found the variable
+# HAVE_OPM_DATA will be set to true.
+include( Findopm-data )
 
 # list of prerequisites for this particular project; this is in a
 # separate file (in cmake/Modules sub-directory) because it is shared
@@ -114,3 +119,9 @@ if (NOT EIGEN3_FOUND)
 	include_directories (${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
 	add_dependencies (opmautodiff Eigen3)
 endif (NOT EIGEN3_FOUND)
+
+
+
+if (HAVE_OPM_DATA)
+   add_test( NAME flow_SPE1 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
+endif()
