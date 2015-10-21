@@ -408,16 +408,26 @@ private:
         if (unscaledSats[1] >= unscaledSats[2])
             return scaledToUnscaledSatTwoPoint_(scaledSat, unscaledSats, scaledSats);
 
-        if (scaledSat < scaledSats[1])
+        if (scaledSat < scaledSats[1]) {
+            Scalar delta = scaledSats[1] - scaledSats[0];
+            if (delta <= 1e-20)
+                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+
             return
                 unscaledSats[0]
                 +
-                (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
-        else
+                (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/delta);
+        }
+        else {
+            Scalar delta = scaledSats[2] - scaledSats[1];
+            if (delta <= 1e-20)
+                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+
             return
                 unscaledSats[1]
                 +
-                (scaledSat - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/(scaledSats[2] - scaledSats[1]));
+                (scaledSat - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/delta);
+        }
     }
 
     template <class Evaluation, class PointsContainer>
@@ -428,16 +438,26 @@ private:
         if (unscaledSats[1] >= unscaledSats[2])
             return unscaledToScaledSatTwoPoint_(unscaledSat, unscaledSats, scaledSats);
 
-        if (unscaledSat < unscaledSats[1])
+        if (unscaledSat < unscaledSats[1]) {
+            Scalar delta = unscaledSats[1] - unscaledSats[0];
+            if (delta <= 1e-20)
+                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+
             return
                 scaledSats[0]
                 +
-                (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
-        else
+                (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/delta);
+        }
+        else {
+            Scalar delta = unscaledSats[2] - unscaledSats[1];
+            if (delta <= 1e-20)
+                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+
             return
                 scaledSats[1]
                 +
-                (unscaledSat - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/(unscaledSats[2] - unscaledSats[1]));
+                (unscaledSat - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/delta);
+        }
     }
 
     /*!
