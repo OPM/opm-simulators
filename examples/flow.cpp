@@ -371,12 +371,33 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-    if (param.getDefault("use_interleaved", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
-    } else if (param.getDefault("use_cpr", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
-    } else {
-        fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+    {
+        const std::string cprSolver = "cpr";
+        const std::string interleavedSolver = "interleaved";
+        const std::string directSolver = "direct";
+        const std::string flowDefaultSolver = interleavedSolver;
+
+        std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipseState->getSimulationConfig();
+        std::string solver_approach = flowDefaultSolver;
+
+        if (param.has("solver_approach")) {
+            solver_approach = param.get<std::string>("solver_approach");
+        }  else {
+            if (simCfg->useCPR()) {
+                solver_approach = cprSolver;
+            }
+        }
+
+        if (solver_approach == cprSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
+        } else if (solver_approach == interleavedSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
+        } else if (solver_approach == directSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+        } else {
+            OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
+        }
+
     }
 
     Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
