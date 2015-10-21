@@ -82,7 +82,7 @@ namespace Opm
     {
         assert(cells != 0);
 
-        const int np = BlackoilPhases::MaxNumPhases;
+        const int np = numPhases();
         if (dkrds) {
             ExplicitArraysSatDerivativesFluidState fluidState(phaseUsage_);
             fluidState.setSaturationArray(s);
@@ -141,7 +141,7 @@ namespace Opm
     {
         assert(cells != 0);
 
-        const int np = BlackoilPhases::MaxNumPhases;
+        const int np = numPhases();
         if (dpcds) {
             ExplicitArraysSatDerivativesFluidState fluidState(phaseUsage_);
             typedef ExplicitArraysSatDerivativesFluidState::Evaluation Evaluation;
@@ -196,7 +196,7 @@ namespace Opm
         int gpos = phaseUsage_.phase_pos[BlackoilPhases::Vapour];
         int opos = phaseUsage_.phase_pos[BlackoilPhases::Liquid];
 
-        const int np = phaseUsage_.num_phases;
+        const int np = numPhases();
         for (int i = 0; i < n; ++i) {
             const auto& scaledDrainageInfo =
                 materialLawManager_->oilWaterScaledEpsInfoDrainage(cells[i]);
