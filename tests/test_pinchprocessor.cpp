@@ -26,7 +26,11 @@
 #define NVERBOSE // Suppress own messages when throw()in 
 
 #define BOOST_TEST_MODULE PinchProcessorTest
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 #include <vector>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
@@ -76,7 +80,7 @@ BOOST_AUTO_TEST_CASE(Processing)
     std::vector<int> actnum;
     eclgrid->exportACTNUM(actnum);
 
-    if (actnum.empty() && (nc == eclgrid->getCartesianSize())) {
+    if (actnum.empty() && (nc == int(eclgrid->getCartesianSize()))) {
         actnum.assign(nc, 1);
     }
     std::vector<double> htrans(Opm::UgGridHelpers::numCellFaces(grid));
@@ -84,12 +88,11 @@ BOOST_AUTO_TEST_CASE(Processing)
     tpfa_htrans_compute(ug, rock.permeability(), htrans.data());
     auto transMult = eclstate->getTransMult();
     std::vector<double> multz(nc, 0.0);
-    std::vector<double> dz(porv.size(), 0.0);
     for (int i = 0; i < nc; ++i) {
         multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
     }
     Opm::NNC nnc(deck, eclgrid);
-    pinch.process(grid, htrans, actnum, multz, porv, dz, nnc);
+    pinch.process(grid, htrans, actnum, multz, porv, nnc);
     auto nnc1 = nnc.nnc1();
     auto nnc2 = nnc.nnc2();
     auto trans = nnc.trans();
