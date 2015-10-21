@@ -249,15 +249,17 @@ try
         // Use timer for last epoch to obtain total time.
         simtimer.init(timeMap);
         const double total_time = simtimer.totalTime();
-        for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        // for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        size_t reportStepIdx = 0; // Only handle a single, unchanging well setup.
+        {
             // Update the timer.
             simtimer.setCurrentStepNum(step);
             simtimer.setTotalTime(total_time);
 
             // Report on start of report step.
-            std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
-                      << "\n                  (number of time steps: "
-                      << simtimer.numSteps() - step << ")\n\n" << std::flush;
+            // std::cout << "\n\n--------------    Starting report step " << reportStepIdx << "    --------------"
+            //           << "\n                  (number of time steps: "
+            //           << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
             WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
