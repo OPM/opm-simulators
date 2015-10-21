@@ -314,7 +314,10 @@ public:
             Evaluation SSg = Sg/(1.0 - Swco);
             Evaluation SSo = 1.0 - SSw - SSg;
 
-            beta = Toolbox::pow( SSo/((1 - SSw)*(1 - SSg)), params.eta());
+            if (SSw >= 1.0 || SSg >= 1.0)
+                beta = 1.0;
+            else
+                beta = Toolbox::pow( SSo/((1 - SSw)*(1 - SSg)), params.eta());
         }
 
         return Toolbox::max(0.0, Toolbox::min(1.0, beta*kro_ow*kro_go/krocw));
