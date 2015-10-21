@@ -47,6 +47,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPInjProperties.cpp
 	)
 
+
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
@@ -68,16 +69,6 @@ list (APPEND TEST_DATA_FILES
 	tests/VFPPROD1
 	tests/VFPPROD2
 	)
-
-# Note, these two files are not included in the repo.
-# If enabling INCLUDE_NON_PUBLIC_TESTS, please add add symlink to the folder
-# "non_public" containing these two files.
-if (INCLUDE_NON_PUBLIC_TESTS)
-	list (APPEND TEST_DATA_FILES
-		tests/non_public/SPE1_opm.DATA
-		tests/non_public/spe1.xml
-		)
-endif()
 
 
 # originally generated with the command:
