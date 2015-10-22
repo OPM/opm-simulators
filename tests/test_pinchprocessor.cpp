@@ -92,12 +92,11 @@ BOOST_AUTO_TEST_CASE(Processing)
     tpfa_htrans_compute(ug, rock.permeability(), htrans.data());
     auto transMult = eclstate->getTransMult();
     std::vector<double> multz(nc, 0.0);
-    std::vector<double> dz(porv.size(), 0.0);
     for (int i = 0; i < nc; ++i) {
         multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
     }
     Opm::NNC nnc(deck, eclgrid);
-    pinch.process(grid, htrans, actnum, multz, porv, dz, nnc);
+    pinch.process(grid, htrans, actnum, multz, porv, nnc);
     auto nnc1 = nnc.nnc1();
     auto nnc2 = nnc.nnc2();
     auto trans = nnc.trans();
