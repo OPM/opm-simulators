@@ -1,7 +1,13 @@
+####################################################################
+# Dune module information file: This file gets parsed by dunecontrol
+# and by the CMake build scripts.
+####################################################################
+
 Module: opm-autodiff
 Description: Utilities for automatic differentiation and simulators based on AD
 Version: 2015.10
 Label: 2015.10
 Maintainer: atgeirr@sintef.no
-Depends: opm-common opm-core dune-istl (>=2.2)
-Suggests: dune-cornerpoint
+MaintainerName: Atgeirr F. Rasmussen
+Url: http://opm-project.org
+Depends: opm-common opm-core dune-cornerpoint dune-istl (>=2.2)
