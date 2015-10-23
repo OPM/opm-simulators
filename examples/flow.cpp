@@ -80,6 +80,7 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
+#include <opm/autodiff/moduleVersion.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
 
@@ -141,11 +142,13 @@ try
     // Write parameters used for later reference. (only if rank is zero)
     const bool output_cout = ( mpi_rank == 0 );
 
-    if(output_cout)
+    if (output_cout)
     {
+        std::string version = moduleVersionName();
         std::cout << "**********************************************************************\n";
         std::cout << "*                                                                    *\n";
-        std::cout << "*                   This is Flow (version 2015.04)                   *\n";
+        std::cout << "*                   This is Flow (version " << version << ")"
+                  << std::string(26 - version.size(), ' ') << "*\n";
         std::cout << "*                                                                    *\n";
         std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
         std::cout << "*            and is part of OPM. For more information see:           *\n";
