@@ -180,7 +180,6 @@ namespace Opm
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
-        WellMapType wellMap_;
     };
 
 } // namespace Opm
