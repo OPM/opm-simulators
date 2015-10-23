@@ -463,7 +463,7 @@ namespace Opm
             }
         }
 
-        for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
+        for (int w = 0, nw = wells ? wells->number_of_wells : 0; w < nw; ++w) {
             WellControls* ctrl = wells->ctrls[w];
             const bool is_producer = wells->type[w] == PRODUCER;
             if (!is_producer && wells->name[w] != 0) {
