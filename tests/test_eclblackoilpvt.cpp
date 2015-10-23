@@ -175,7 +175,7 @@ int main()
     tmp = constCompWaterPvt.density(/*regionIdx=*/0,
                                     /*temperature=*/273.15 + 20.0,
                                     /*pressure=*/1e5);
-    if (std::abs(tmp - refTmp)  > 1e-30)
+    if (std::abs(tmp - refTmp)  > 5e-14)
         OPM_THROW(std::logic_error,
                   "The reference water density at region 0 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
@@ -185,7 +185,7 @@ int main()
     tmp = constCompWaterPvt.density(/*regionIdx=*/1,
                                     /*temperature=*/273.15 + 20.0,
                                     /*pressure=*/2e5);
-    if (std::abs(tmp - refTmp)  > 1e-30)
+    if (std::abs(tmp - refTmp)  > 5e-14)
         OPM_THROW(std::logic_error,
                   "The reference water density at region 1 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");

@@ -247,7 +247,7 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
         Scalar yStar2 = classicFn(x + eps);
         Scalar yPrime = (yStar2 - yStar1)/(2*eps);
 
-        if (y != yEval.value)
+        if (std::abs(y-yEval.value) > 5e-14)
             throw std::logic_error("oops: value");
 
         Scalar deltaAbs = std::abs(yPrime - yEval.derivatives[0]);
