@@ -1,12 +1,14 @@
-################################ 
+####################################################################
 # Dune module information file: This file gets parsed by dunecontrol
 # and by the CMake build scripts.
-################################
+####################################################################
+
 Module: opm-material
 Description: This module contains the thermodynamic framework used by OPM
-Version: 2015.10
-Url: http://opm-project.org
+Version: 2016.04-pre
+Label: 2016.04-pre
 Maintainer: and@poware.org
 MaintainerName: Andreas Lauser
+Url: http://opm-project.org
 Depends: dune-common opm-common
 Suggests: opm-parser
