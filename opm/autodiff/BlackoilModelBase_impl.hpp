@@ -196,10 +196,10 @@ namespace detail {
             wells_active_ = ( global_number_of_wells > 0 );
         }else
         {
-            wells_active_ = (wells_->number_of_wells > 0 );
+            wells_active_ = wells_ && (wells_->number_of_wells > 0 );
         }
 #else
-        wells_active_ = (wells_->number_of_wells > 0 );
+        wells_active_ = wells_ && (wells_->number_of_wells > 0 );
 #endif
     }
 
