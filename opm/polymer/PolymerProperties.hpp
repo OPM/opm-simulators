@@ -160,7 +160,7 @@ namespace Opm
             has_shrate_ = deck->hasKeyword("SHRATE");
 
             if (has_plyshlog_) {
-                // Assuming NTPVT == 1 always 
+                // Assuming NTPVT == 1 always
                 const auto& plyshlogTable = tables->getPlyshlogTables().getTable<PlyshlogTable>(0);
 
                 water_vel_vals_ = plyshlogTable.getWaterVelocityColumn();
