@@ -132,7 +132,7 @@ namespace Opm
             mix_param_ = plmixparRecord->getItem("TODD_LONGSTAFF")->getSIDouble(0);
 
             // We assume NTSFUN=1
-            const auto& plyrockTable = tables->getPlymaxTables().getTable<PlyrockTable>(0);
+            const auto& plyrockTable = tables->getPlyrockTables().getTable<PlyrockTable>(0);
 
             // We also assume that each table has exactly one row...
             assert(plyrockTable.numRows() == 1);
