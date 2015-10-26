@@ -1,5 +1,5 @@
-opm-autodiff (2013.10-2~precise) precise; urgency=low
+opm-autodiff (2015.10-rc1-2~trusty) trusty; urgency=medium
 
-  * New release
+  * New version
 
- -- Arne Morten Kvarving <arne.morten.kvarving@sintef.no>  Mon, 14 Oct 2013 11:54:10 +0200
+ -- Arne Morten Kvarving <arne.morten.kvarving@sintef.no>  Mon, 26 Oct 2015 09:23:52 +0100
