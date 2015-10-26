@@ -120,7 +120,7 @@ namespace Opm
 BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
                                                  std::shared_ptr<MaterialLawManager> materialLawManager,
                                                  const int number_of_cells)
-    : rock_(number_of_cells)
+    : rock_(number_of_cells), satprops_(new SaturationPropsFromDeck())
 {
     const int original_size = props.cellPvtRegionIdx_.size();
     if (number_of_cells > original_size) {
@@ -133,7 +133,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     materialLawManager_ = materialLawManager;
 
     // Copy properties that do not depend on the postion within the grid.
-    satprops_         = props.satprops_;
     phase_usage_      = props.phase_usage_;
     props_            = props.props_;
     densities_        = props.densities_;
@@ -143,6 +142,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // For data that is dependant on the subgrid we simply allocate space
     // and initialize with obviously bogus numbers.
     cellPvtRegionIdx_.resize(number_of_cells, std::numeric_limits<int>::min());
+    satprops_->init(phase_usage_, materialLawManager_);
 }
 
     /// Initializes the properties.
