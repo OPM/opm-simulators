@@ -200,18 +200,23 @@ namespace Dune
         void cartesianCoordinate(const int compressedElementIndex, std::array<int,dimension>& coords) const
         {
           int gc = cartesianIndex( compressedElementIndex );
-          if( dimension >=2 )
+          if( dimension == 3 )
           {
-              for( int d=0; d<dimension-2; ++d )
-              {
-                coords[d] = gc % cartesianDimensions()[d];  gc /= cartesianDimensions()[d];
-              }
-
-              coords[dimension-2] = gc % cartesianDimensions()[dimension-2];
-              coords[dimension-1] = gc / cartesianDimensions()[dimension-1];
+             coords[0] = gc % cartesianDimensions()[0];  gc /= cartesianDimensions()[0];
+             coords[1] = gc % cartesianDimensions()[1];
+             coords[2] = gc / cartesianDimensions()[1];
+          }
+          else if( dimension == 2 )
+          {
+             coords[0] = gc % cartesianDimensions()[0];
+             coords[1] = gc / cartesianDimensions()[0];
+          }
+          else if( dimension == 1 )
+          {
+              coords[ 0 ] = gc ;
           }
           else
-              coords[ 0 ] = gc ;
+            OPM_THROW(Opm::NotImplemented,"cartesianCoordinate not implemented for dimension " << dimension );
         }
 
         template <class GridView>
