@@ -421,8 +421,6 @@ public:
         auto& linearizer = this->model().linearizer();
         int episodeIdx = simulator.episodeIndex();
 
-        std::cout << "Episode " << episodeIdx + 1 << " finished.\n";
-
         bool wellsWillChange = wellManager_.wellsChanged(eclState, episodeIdx + 1);
         linearizer.setLinearizationReusable(!wellsWillChange);
 

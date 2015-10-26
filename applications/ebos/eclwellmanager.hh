@@ -91,14 +91,26 @@ public:
     {
         const auto &deckSchedule = eclState->getSchedule();
 
+        typedef std::array<int, Grid::dimension> CartesianCoordinate;
+
+        // vector containing wells used for numerics
+        // this list can differ from the overall number of wells
+        // due to partitioning issues
+        std::map< const std::string, std::pair< std::shared_ptr<Well>, CartesianCoordinate> > wells;
+
         // create the wells
-        for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx) {
+        for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx)
+        {
             Opm::WellConstPtr deckWell = deckSchedule->getWells()[deckWellIdx];
             const std::string &wellName = deckWell->name();
+            CartesianCoordinate cartesianCoord;
+            cartesianCoord.fill( 0 );
+            cartesianCoord[ 0 ] = deckWell->getHeadI();
+            cartesianCoord[ 1 ] = deckWell->getHeadJ();
 
             std::shared_ptr<Well> well(new Well(simulator_));
-            wellNameToIndex_[wellName] = wells_.size();
-            wells_.push_back(well);
+            // insert well into well map
+            wells[ wellName ] = std::make_pair( well, cartesianCoord );
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
@@ -107,6 +119,45 @@ public:
             well->setName(wellName);
             well->setWellStatus(Well::Shut);
             well->endSpec();
+        }
+
+        const auto gridView = simulator_.gridManager().gridView();
+        ElementContext elemCtx(simulator_);
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto elemEndIt = gridView.template end</*codim=*/0>();
+
+        // loop over elements and insert those wells that appear on the current process
+        for (; elemIt != elemEndIt; ++elemIt)
+        {
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+                continue; // non-local entities need to be skipped
+
+            elemCtx.updateStencil(elem);
+            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
+            {
+                const int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                CartesianCoordinate cartCoord;
+                simulator_.gridManager().cartesianCoordinate( globalDofIdx, cartCoord );
+
+                for( auto wellIt = wells.begin(); wellIt != wells.end(); ++wellIt )
+                {
+                    std::shared_ptr< Well > well = wellIt->second.first;
+                    const CartesianCoordinate& wellCoord = wellIt->second.second;
+                    if( wellCoord[ 0 ] == cartCoord[ 0 ] && wellCoord[ 1 ] == cartCoord[ 1 ] )
+                    {
+                        wellNameToIndex_[ well->name() ] = wells_.size();
+                        wells_.push_back( well );
+
+                        // only insert a well once and therefore erase it
+                        wells.erase( wellIt++ );
+                        // if all wells inserted, return
+                        if( wells.empty() )
+                            return ;
+                    }
+                }
+            }
+
         }
     }
 
@@ -312,7 +363,9 @@ public:
      * \brief Return if a given well name is known to the wells manager
      */
     bool hasWell(const std::string &wellName) const
-    { return wellNameToIndex_.count(wellName) > 0; }
+    {
+        return wellNameToIndex_.find( wellName ) != wellNameToIndex_.end();
+    }
 
     /*!
      * \brief Given a well name, return the corresponding index.
@@ -321,10 +374,13 @@ public:
      */
     int wellIndex(const std::string &wellName) const
     {
+        assert( hasWell( wellName ) );
         const auto &it = wellNameToIndex_.find(wellName);
         if (it == wellNameToIndex_.end())
+        {
             OPM_THROW(std::runtime_error,
                       "No well called '" << wellName << "'found");
+        }
         return it->second;
     }
 
@@ -375,7 +431,8 @@ public:
     void beginIteration()
     {
         // call the preprocessing routines
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
+        const size_t wellSize = wells_.size();
+        for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
             wells_[wellIdx]->beginIterationPreProcess();
 
         // call the accumulation routines
@@ -390,12 +447,12 @@ public:
             elemCtx.updateStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
+            for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
                 wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
         }
 
         // call the postprocessing routines
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
+        for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
             wells_[wellIdx]->beginIterationPostProcess();
     }
 
@@ -405,7 +462,8 @@ public:
     void endIteration()
     {
         // iterate over all wells and notify them individually
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx)
+        const size_t wellSize = wells_.size();
+        for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
             wells_[wellIdx]->endIteration();
     }
 
@@ -418,7 +476,8 @@ public:
 
         // iterate over all wells and notify them individually. also, update the
         // production/injection totals for the active wells.
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx) {
+        const size_t wellSize = wells_.size();
+        for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx) {
             auto well = wells_[wellIdx];
             well->endTimeStep();
 
@@ -495,7 +554,8 @@ public:
         RateVector wellRate;
 
         // iterate over all wells and add up their individual rates
-        for (size_t wellIdx = 0; wellIdx < wells_.size(); ++wellIdx) {
+        const size_t wellSize = wells_.size();
+        for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx) {
             wellRate = 0.0;
             wells_[wellIdx]->computeTotalRatesForDof(wellRate, context, dofIdx, timeIdx);
             q += wellRate;
@@ -674,7 +734,9 @@ protected:
         auto wellIt2 = wells.begin();
         const auto& wellEndIt2 = wells.end();
         for (; wellIt2 != wellEndIt2; ++wellIt2)
+        {
             model.addAuxiliaryModule(*wellIt2);
+        }
     }
 
     void computeWellCompletionsMap_(int reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
@@ -683,8 +745,8 @@ protected:
         auto deckSchedule = eclStatePtr->getSchedule();
         auto eclGrid = eclStatePtr->getEclipseGrid();
 
-        assert((int) eclGrid->getNX() == simulator_.gridManager().cartesianDimensions()[0]);
-        assert((int) eclGrid->getNY() == simulator_.gridManager().cartesianDimensions()[1]);
+        assert( int(eclGrid->getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
+        assert( int(eclGrid->getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
@@ -693,10 +755,16 @@ protected:
             Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
 
-            if (!hasWell(wellName)) {
-                std::cout << "Well '" << wellName << "' suddenly appears in the completions "
-                          << "for the report step, but has not been previously specified. "
-                          << "Ignoring.\n";
+            if (!hasWell(wellName))
+            {
+#ifndef NDEBUG
+                if( simulator_.gridManager().grid().comm().size() == 1 )
+                {
+                    std::cout << "Well '" << wellName << "' suddenly appears in the completions "
+                              << "for the report step, but has not been previously specified. "
+                              << "Ignoring.\n";
+                }
+#endif
                 continue;
             }
 
@@ -708,11 +776,9 @@ protected:
                 cartesianCoordinate[ 0 ] = completion->getI();
                 cartesianCoordinate[ 1 ] = completion->getJ();
                 cartesianCoordinate[ 2 ] = completion->getK();
-                unsigned cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
-                assert(cartIdx ==
-                       (completion->getI()
-                        + completion->getJ()*eclGrid->getNX()
-                        + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
+                const int cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
+                assert( cartIdx == (completion->getI() + completion->getJ()*eclGrid->getNX()
+                                      + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
 
                 // in this code we only support each cell to be part of at most a single
                 // well. TODO (?) change this?
@@ -735,7 +801,10 @@ protected:
             Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
 
-            wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
+            if( hasWell( wellName ) )
+            {
+                wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
+            }
         }
 
         // associate the well completions with grid cells and register them in the
@@ -753,7 +822,9 @@ protected:
                 continue; // non-local entities need to be skipped
 
             elemCtx.updateStencil(elem);
-            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
+            {
+                assert( elemCtx.numPrimaryDof(/*timeIdx=*/0) == 1 );
                 int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 int cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
 

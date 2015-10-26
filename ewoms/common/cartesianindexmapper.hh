@@ -202,7 +202,8 @@ namespace Dune
           int gc = cartesianIndex( compressedElementIndex );
           if( dimension == 3 )
           {
-             coords[0] = gc % cartesianDimensions()[0];  gc /= cartesianDimensions()[0];
+             coords[0] = gc % cartesianDimensions()[0];
+             gc /= cartesianDimensions()[0];
              coords[1] = gc % cartesianDimensions()[1];
              coords[2] = gc / cartesianDimensions()[1];
           }
