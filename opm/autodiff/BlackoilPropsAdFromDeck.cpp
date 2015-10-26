@@ -119,6 +119,7 @@ namespace Opm
 /// Constructor for properties on a subgrid
 BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& props,
                                                  const int number_of_cells)
+    : rock_(number_of_cells)
 {
     const int original_size = props.cellPvtRegionIdx_.size();
     if (number_of_cells > original_size) {
@@ -131,7 +132,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     materialLawManager_ = props.materialLawManager_;
 
     // Copy properties that do not depend on the postion within the grid.
-    rock_             = props.rock_;
     satprops_         = props.satprops_;
     phase_usage_      = props.phase_usage_;
     props_            = props.props_;

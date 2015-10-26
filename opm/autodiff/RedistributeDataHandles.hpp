@@ -242,7 +242,7 @@ public:
     BlackoilPropsDataHandle(const BlackoilPropsAdFromDeck& sendProps,
                             BlackoilPropsAdFromDeck& recvProps)
         : sendProps_(sendProps), recvProps_(recvProps),
-          size_(1)
+          size_(11)
     {
         // satOilMax might be non empty. In this case we will need to send it, too.
         // It has to have the same size as the cellPvtRegionIdx_
@@ -278,7 +278,12 @@ public:
         assert( T::codimension == 0);
 
         buffer.write(sendProps_.cellPvtRegionIndex()[e.index()]);
-        if ( size_ > 1 ) {
+        for( std::size_t i = 0; i < 9; ++i )
+        {
+            buffer.write(sendProps_.rock_.permeability_[e.index()*9+i]);
+        }
+        buffer.write(sendProps_.rock_.porosity_[e.index()]);
+        if ( size_ > 11 ) {
             buffer.write(sendProps_.satOilMax_[e.index()]);
         }
     }
@@ -290,7 +295,15 @@ public:
         double val;
         buffer.read(val);
         recvProps_.cellPvtRegionIdx_[e.index()]=val;
-        if ( size_ > 1 ) {
+        for( std::size_t i = 0; i < 9; ++i )
+        {
+            buffer.read(val);
+            recvProps_.rock_.permeability_[e.index()*9+i]
+                = val;
+        }
+        buffer.read(val);
+        recvProps_.rock_.porosity_[e.index()]=val;
+        if ( size_ > 11 ) {
             buffer.read(val);
             recvProps_.satOilMax_[e.index()]=val;
         }
