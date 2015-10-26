@@ -144,8 +144,9 @@ public:
     void copyOwnerToAll (const T& source, T& dest) const
     {
         typedef Dune::Combine<Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::owner>,Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::overlap>,Dune::OwnerOverlapCopyAttributeSet::AttributeSet> OwnerOverlapSet;
+        typedef Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::owner> OwnerSet;
         typedef Dune::Combine<OwnerOverlapSet, Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::copy>,Dune::OwnerOverlapCopyAttributeSet::AttributeSet> AllSet;
-      OwnerOverlapSet sourceFlags;
+      OwnerSet sourceFlags;
       AllSet destFlags;
       Dune::Interface interface(communicator_);
       if( !remoteIndices_->isSynced() )
