@@ -63,12 +63,12 @@ namespace Opm
     {
         return ads_index_;
     }
-    
+
     const std::vector<double>&
     PolymerProperties::shearWaterVelocity() const
     {
         return water_vel_vals_;
-    } 
+    }
 
     const std::vector<double>&
     PolymerProperties::shearViscosityReductionFactor() const
@@ -280,7 +280,7 @@ namespace Opm
         if (if_with_der) {
             deff_relperm_wat_ds = (drelperm_ds[0]-drelperm_ds[2])/rk; //derivative with respect to sw
             //\frac{\partial k_{rw_eff}}{\parital c} = -\frac{krw}{rk^2}\frac{(RRF-1)}{c^a_{max}}\frac{\partial c^a}{\partial c}.
-            deff_relperm_wat_dc = -(res_factor_ - 1)*dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_); 
+            deff_relperm_wat_dc = -(res_factor_ - 1)*dc_ads_dc*relperm[0]/(rk*rk*c_max_ads_);
         } else {
             deff_relperm_wat_ds = -1.0;
             deff_relperm_wat_dc = -1.0;
@@ -336,7 +336,7 @@ namespace Opm
                              deff_relperm_wat_ds, deff_relperm_wat_dc,
                              if_with_der);
 
-        // The "function" eff_relperm_wat is defined as a function of only sw (so that its 
+        // The "function" eff_relperm_wat is defined as a function of only sw (so that its
         // partial derivative with respect to so is zero).
 
         mob[0] = eff_relperm_wat*inv_mu_w_eff;
@@ -347,7 +347,7 @@ namespace Opm
                 + deff_relperm_wat_dc*inv_mu_w_eff;
             dmob_ds[0*2 + 0] = deff_relperm_wat_ds*inv_mu_w_eff;
 	    // one have to deside which variables to derive
-	    // here the full derivative is written out 
+	    // here the full derivative is written out
             dmob_ds[0*2 + 1] = 0.0*(drelperm_ds[0*2 + 1] - drelperm_ds[1*2 + 1])/visc[1];
             dmob_ds[1*2 + 0] = -0.0*deff_relperm_wat_ds*inv_mu_w_eff;
             dmob_ds[1*2 + 1] = (drelperm_ds[1*2 + 1] - drelperm_ds[0*2 + 1])/visc[1];
