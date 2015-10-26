@@ -801,15 +801,14 @@ private:
             realParams.setGasOilParams(gasOilParams);
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
-            realParams.setSowcr(epsInfo.Sowcr);
 
             if (deck->hasKeyword("STONE1EX")) {
                 Scalar eta =
                     deck->getKeyword("STONE1EX")->getRecord(satnumIdx)->getItem(0)->getSIDouble(0);
-                realParams.setSogcr(eta);
+                realParams.setEta(eta);
             }
             else
-                realParams.setSogcr(1.0);
+                realParams.setEta(1.0);
             realParams.finalize();
             break;
         }

@@ -54,9 +54,7 @@ namespace Opm {
 template <class TraitsT,
           class GasOilMaterialLawT,
           class OilWaterMaterialLawT,
-          class ParamsT = EclStone1MaterialParams<TraitsT,
-                                                   typename GasOilMaterialLawT::Params,
-                                                   typename OilWaterMaterialLawT::Params> >
+          class ParamsT = EclStone1MaterialParams<TraitsT, GasOilMaterialLawT, OilWaterMaterialLawT> >
 class EclStone1Material : public TraitsT
 {
 public:
@@ -291,40 +289,38 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        // the Eclipse docu is inconsistent here: In some places the connate water
-        // saturation is represented by "Swl", in others "Swco" is used.
+        // the Eclipse docu is inconsistent with naming the variable of connate water: In
+        // some places the connate water saturation is represented by "Swl", in others
+        // "Swco" is used.
         Scalar Swco = params.Swl();
 
-        Scalar Sowcr = params.Sowcr();
-        Scalar Sogcr = params.Sogcr();
-        Scalar Som = std::min(Sowcr, Sogcr); // minimum residual oil saturation
-
-        Scalar eta = params.eta(); // exponent of the beta term
+        // oil relperm at connate water saturations (with Sg=0)
+        Scalar krocw = params.krocw();
 
         const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
-        const Evaluation& So = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
         const Evaluation& Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
-        Evaluation SSw;
-        if (Sw > Swco)
-            SSw = (Sw - Swco)/(1 - Swco - Som);
-        else
-            SSw = 0.0;
+        Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
+        Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Swco);
 
-        Evaluation SSo;
-        if (So > Som)
-            SSo = (So - Som)/(1 - Swco - Som);
-        else
-            SSo = 0.0;
+        Evaluation beta;
+        if (Sw <= Swco)
+            beta = 1.0;
+        else {
+            // there seems to be an error in the ECL documentation: using the approach to
+            // the scaled saturations as described there leads to significant deviations
+            // from the results produced by Eclipse 100.
+            Evaluation SSw = (Sw - Swco)/(1.0 - Swco);
+            Evaluation SSg = Sg/(1.0 - Swco);
+            Evaluation SSo = 1.0 - SSw - SSg;
 
-        Evaluation SSg = Sg/(1 - Swco - Som);
+            if (SSw >= 1.0 || SSg >= 1.0)
+                beta = 1.0;
+            else
+                beta = Toolbox::pow( SSo/((1 - SSw)*(1 - SSg)), params.eta());
+        }
 
-        Scalar krocw = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Swco);
-        Evaluation krow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
-        Evaluation krog = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg);
-
-        Evaluation beta = Toolbox::pow(SSo/((1 - SSw)*(1 - SSg)), eta);
-        return beta*krow*krog/krocw;
+        return Toolbox::max(0.0, Toolbox::min(1.0, beta*kro_ow*kro_go/krocw));
     }
 
     /*!
