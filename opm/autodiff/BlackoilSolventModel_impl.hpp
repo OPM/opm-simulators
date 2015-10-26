@@ -237,7 +237,20 @@ namespace Opm {
         if (has_solvent_) {
             const ADB& temp_b = rq_[solvent_pos_].b;
             ADB::V B = 1. / temp_b.value();
-            residual_.matbalscale[solvent_pos_] = B.mean();
+            #if HAVE_MPI
+            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& real_info =
+                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                double B_global_sum = 0;
+                real_info.computeReduction(B, Reduction::makeGlobalSumFunctor<double>(), B_global_sum);
+                residual_.matbalscale[idx] = B_global_sum / global_nc_;
+            }
+            else
+#endif
+            {
+                residual_.matbalscale[idx] = B.mean();
+            }
         }
     }
 

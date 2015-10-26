@@ -194,13 +194,16 @@ namespace detail {
             int local_number_of_wells = wells_ ? wells_->number_of_wells : 0;
             int global_number_of_wells = info.communicator().sum(local_number_of_wells);
             wells_active_ = ( wells_ && global_number_of_wells > 0 );
+            // Compute the global number of cells
+            std::vector<int> v( Opm::AutoDiffGrid::numCells(grid_), 1);
+            global_nc_ = 0;
+            info.computeReduction(v, Opm::Reduction::makeGlobalSumFunctor<int>(), global_nc_);
         }else
+#endif
         {
             wells_active_ = ( wells_ && wells_->number_of_wells > 0 );
+            global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
-#else
-        wells_active_ = ( wells_ && wells_->number_of_wells > 0 );
-#endif
     }
 
 
@@ -969,7 +972,20 @@ namespace detail {
                 const int pos    = pu.phase_pos[idx];
                 const ADB& temp_b = rq_[pos].b;
                 B = 1. / temp_b.value();
-                residual_.matbalscale[idx] = B.mean();
+#if HAVE_MPI
+                if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+                {
+                    const ParallelISTLInformation& real_info =
+                        boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                    double B_global_sum = 0;
+                    real_info.computeReduction(B, Reduction::makeGlobalSumFunctor<double>(), B_global_sum);
+                    residual_.matbalscale[idx] = B_global_sum / global_nc_;
+                }
+                else
+#endif
+                {
+                    residual_.matbalscale[idx] = B.mean();
+                }
             }
         }
     }
