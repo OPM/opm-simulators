@@ -350,7 +350,7 @@ namespace Opm
                            const double temp,
                            const double sat_oil = 0.0 ) const
                 {
-                    if (sat_oil > 0.0) {
+                    if (std::abs(sat_oil) > 1e-16) {
                         return satRv(press, temp);
                     } else {
                         return std::min(satRv(press, temp), linearInterpolation(depth_, rv_, depth));
