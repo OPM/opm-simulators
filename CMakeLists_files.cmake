@@ -61,7 +61,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_scalar_mult.cpp
 	tests/test_transmissibilitymultipliers.cpp
 	tests/test_welldensitysegmented.cpp
-	tests/test_vfpproperties.cpp
+	#	tests/test_vfpproperties.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
