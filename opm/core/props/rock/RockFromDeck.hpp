@@ -31,10 +31,16 @@ namespace Opm
 
     class RockFromDeck
     {
+        // BlackoilPropsDataHandle needs mutable
+        // access to porosity and permeability
+        friend class BlackoilPropsDataHandle;
+
     public:
         /// Default constructor.
         RockFromDeck();
-
+        /// Creates rock properties with zero porosity and permeability
+        /// \param number_of_cells The number of cells
+        RockFromDeck(std::size_t number_of_cells);
         /// Initialize from deck and cell mapping.
         /// \param  eclState        The EclipseState (processed deck) produced by the opm-parser code
         /// \param  number_of_cells The number of cells in the grid.

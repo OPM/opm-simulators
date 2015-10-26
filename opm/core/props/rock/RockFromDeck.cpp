@@ -72,6 +72,13 @@ namespace Opm
     {
     }
 
+    RockFromDeck::RockFromDeck(std::size_t number_of_cells)
+        : porosity_(number_of_cells, 0),
+          permeability_(number_of_cells*9, 0.0),
+          permfield_valid_(number_of_cells, false)
+    {
+    }
+
     void RockFromDeck::init(Opm::EclipseStateConstPtr eclState,
                             int number_of_cells, const int* global_cell,
                             const int* cart_dims)
