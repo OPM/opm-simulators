@@ -782,12 +782,14 @@ namespace detail {
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
 
         // Surface density.
-        DataBlock surf_dens(nperf, pu.num_phases);
-        for (int phase = 0; phase < pu.num_phases; ++ phase) {
-            surf_dens.col(phase) = V::Constant(nperf, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
+        const std::vector<V> rhos = fluid_.surfaceDensity(well_cells);
+        // The compute density segment wants the surface densities as
+        // an np * number of wells cells array
+        V rho = superset(rhos[0], Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            rho += superset(rhos[phase], Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
-
-        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf * pu.num_phases);
+        std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf * pu.num_phases);
 
         // Gravity
         double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
@@ -2690,7 +2692,7 @@ namespace detail {
                                                           const ADB& rs,
                                                           const ADB& rv) const
     {
-        const double* rhos = fluid_.surfaceDensity();
+        std::vector<V> rhos = fluid_.surfaceDensity(cells_);
         ADB rho = rhos[phase] * b;
         if (phase == Oil && active_[Gas]) {
             // It is correct to index into rhos with canonical phase indices.

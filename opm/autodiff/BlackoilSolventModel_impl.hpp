@@ -341,12 +341,7 @@ namespace Opm {
         const ADB perf_temp = subset(state.temperature, well_cells);
 
         // Surface density.
-        const PhaseUsage& pu = fluid_.phaseUsage();
-        //std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + pu.num_phases);
-        DataBlock surf_dens(nperf, pu.num_phases);
-        for (int phase = 0; phase < pu.num_phases; ++ phase) {
-            surf_dens.col(phase) = V::Constant(nperf, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
-        }
+        std::vector<V> surf_dens = fluid_.surfaceDensity(well_cells);
 
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
@@ -358,6 +353,7 @@ namespace Opm {
             perf_cond[perf] = pc[well_cells[perf]];
         }
 
+        const PhaseUsage& pu = fluid_.phaseUsage();
         DataBlock b(nperf, pu.num_phases);
         std::vector<double> rsmax_perf(nperf, 0.0);
         std::vector<double> rvmax_perf(nperf, 0.0);
@@ -408,9 +404,9 @@ namespace Opm {
                 bg = bg * (ones - F_solvent);
                 bg = bg + F_solvent * bs;
 
-                const V& rhog = surf_dens.col(pu.phase_pos[BlackoilPhases::Vapour]);
+                const V& rhog = surf_dens[pu.phase_pos[BlackoilPhases::Vapour]];
                 const V& rhos = solvent_props_.solventSurfaceDensity(well_cells);
-                surf_dens.col(pu.phase_pos[BlackoilPhases::Vapour]) = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
+                surf_dens[pu.phase_pos[BlackoilPhases::Vapour]] = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
             }
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
 
@@ -419,8 +415,13 @@ namespace Opm {
         }
 
         // b and surf_dens_perf is row major, so can just copy data.
+        V surf_dens_copy = superset(surf_dens[0], Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            surf_dens_copy += superset(surf_dens[phase], Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+        }
+
         std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);        
-        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf * pu.num_phases);
+        std::vector<double> surf_dens_perf(surf_dens_copy.data(), surf_dens_copy.data() + nperf * pu.num_phases);
 
         // Extract well connection depths.
         const V depth = cellCentroidsZToEigen(grid_);

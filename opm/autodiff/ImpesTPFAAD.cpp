@@ -623,9 +623,9 @@ namespace {
 
     V ImpesTPFAAD::fluidRho(const int phase, const V& p, const V& T, const std::vector<int>& cells) const
     {
-        const double* rhos = fluid_.surfaceDensity();
+        std::vector<V> rhos = fluid_.surfaceDensity(cells);
         V b = fluidFvf(phase, p, T, cells);
-        V rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        V rho = rhos[phase] * b;
         return rho;
     }
 
@@ -635,9 +635,9 @@ namespace {
 
     ADB ImpesTPFAAD::fluidRho(const int phase, const ADB& p, const ADB& T, const std::vector<int>& cells) const
     {
-        const double* rhos = fluid_.surfaceDensity();
+        std::vector<V> rhos = fluid_.surfaceDensity(cells);
         ADB b = fluidFvf(phase, p, T, cells);
-        ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        ADB rho = rhos[phase] * b;
         return rho;
     }
 

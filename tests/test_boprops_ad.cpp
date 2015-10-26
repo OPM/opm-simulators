@@ -115,16 +115,25 @@ BOOST_FIXTURE_TEST_CASE(SubgridConstruction, TestFixtureAd<SetupSimple>)
 
 BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 {
-    const double* rho0AD = boprops_ad.surfaceDensity();
+    const Opm::BlackoilPropsAdFromDeck::Cells cells(1, 0);
+
+    typedef Opm::BlackoilPropsAdFromDeck::V V;
+
+    std::vector<V> rho0AD = boprops_ad.surfaceDensity(cells);
+
+    BOOST_REQUIRE_EQUAL(rho0AD.size(), 3);
 
     enum { Water = Opm::BlackoilPropsAdFromDeck::Water };
-    BOOST_CHECK_EQUAL(rho0AD[ Water ], 1000.0);
+    BOOST_REQUIRE_EQUAL(rho0AD[Water].size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD[ Water ][0], 1000.0);
 
     enum { Oil = Opm::BlackoilPropsAdFromDeck::Oil };
-    BOOST_CHECK_EQUAL(rho0AD[ Oil ], 800.0);
+    BOOST_REQUIRE_EQUAL(rho0AD[Oil].size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD[ Oil ][0], 800.0);
 
     enum { Gas = Opm::BlackoilPropsAdFromDeck::Gas };
-    BOOST_CHECK_EQUAL(rho0AD[ Gas ], 1.0);
+    BOOST_REQUIRE_EQUAL(rho0AD[Gas].size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD[ Gas ][0], 1.0);
 }
 
 
