@@ -231,6 +231,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                  << "process deactivating here." << std::endl;
                         // Mark well as not existent on this process
                         wells_on_proc[wellIter-wells.begin()] = 0;
+                        wellperf_data[well_index].clear();
                         continue;
                     }
                 }
