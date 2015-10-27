@@ -226,9 +226,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     // Check that the complete well is on this process
                     if ( sum_completions_on_proc < completionSet->size() )
                     {
-                        std::cout<< "Well "<< well->name() << " semms not be in "
+                        std::cout<< "Well "<< well->name() << " does not seem to be"
                                  << "completely in the disjoint partition of "
-                                 << "process deactivating here." << std::endl;
+                                 << "process. Therefore we  deactivate it here." << std::endl;
                         // Mark well as not existent on this process
                         wells_on_proc[wellIter-wells.begin()] = 0;
                         wellperf_data[well_index].clear();
