@@ -244,12 +244,12 @@ namespace Opm {
                     boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
                 double B_global_sum = 0;
                 real_info.computeReduction(B, Reduction::makeGlobalSumFunctor<double>(), B_global_sum);
-                residual_.matbalscale[idx] = B_global_sum / global_nc_;
+                residual_.matbalscale[solvent_pos_] = B_global_sum / Base::global_nc_;
             }
             else
 #endif
             {
-                residual_.matbalscale[idx] = B.mean();
+                residual_.matbalscale[solvent_pos_] = B.mean();
             }
         }
     }
