@@ -283,6 +283,7 @@ struct EclEpsScalingPointsInfo
     }
 
 private:
+#if HAVE_OPM_PARSER
     void extractUnscaledSgof_(const Opm::SgofTable& sgofTable)
     {
         // minimum gas and oil-in-gas-oil saturation
@@ -473,6 +474,7 @@ private:
         maxKrow = sof3Table.getKrowColumn().back();
         maxKrog = sof3Table.getKrogColumn().back();
     }
+#endif // HAVE_OPM_PARSER
 
     void extractGridPropertyValue_(Scalar& targetValue,
                                    const std::vector<double>* propData,
