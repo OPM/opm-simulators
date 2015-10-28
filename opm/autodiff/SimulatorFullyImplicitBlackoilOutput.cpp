@@ -265,7 +265,7 @@ namespace Opm
         if( parallelOutput_ && parallelOutput_->isParallel() )
         {
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, timer.reportStepNum() );
         }
 
         const SimulatorState& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;

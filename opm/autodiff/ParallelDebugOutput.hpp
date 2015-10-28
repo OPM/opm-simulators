@@ -43,7 +43,8 @@ namespace Opm
 
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulatorState& localReservoirState,
-                                      const WellState& localWellState ) = 0;
+                                      const WellState& localWellState,
+                                      const int reportStep ) = 0;
 
         virtual const SimulatorState& globalReservoirState() const = 0 ;
         virtual const WellState& globalWellState() const = 0 ;
@@ -71,7 +72,8 @@ namespace Opm
 
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulatorState& localReservoirState,
-                                      const WellState& localWellState )
+                                      const WellState& localWellState,
+                                      const int /* reportStep */)
         {
             globalState_ = &localReservoirState;
             wellState_   = &localWellState;
@@ -222,7 +224,10 @@ namespace Opm
                              Opm::EclipseStateConstPtr eclipseState,
                              const int numPhases,
                              const double* permeability )
-            : toIORankComm_( otherGrid.comm() ),
+            : grid_(),
+              eclipseState_( eclipseState ),
+              permeability_( permeability ),
+              toIORankComm_( otherGrid.comm() ),
               isIORank_( otherGrid.comm().rank() == ioRank )
         {
             const CollectiveCommunication& comm = otherGrid.comm();
@@ -232,27 +237,13 @@ namespace Opm
                 // the I/O rank receives from all other ranks
                 if( isIORank() )
                 {
-                    Dune::CpGrid globalGrid( otherGrid );
-                    globalGrid.switchToGlobalView();
+                    // copy grid
+                    grid_.reset( new Dune::CpGrid(otherGrid ) );
+                    grid_->switchToGlobalView();
+                    Dune::CpGrid& globalGrid = *grid_;
 
                     // initialize global state with correct sizes
                     globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
-                    // TODO init well state
-
-                    // Create wells and well state.
-                    WellsManager wells_manager(eclipseState,
-                                               0,
-                                               Opm::UgGridHelpers::numCells( globalGrid ),
-                                               Opm::UgGridHelpers::globalCell( globalGrid ),
-                                               Opm::UgGridHelpers::cartDims( globalGrid ),
-                                               Opm::UgGridHelpers::dimensions( globalGrid ),
-                                               Opm::UgGridHelpers::cell2Faces( globalGrid ),
-                                               Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
-                                               permeability,
-                                               false);
-
-                    const Wells* wells = wells_manager.c_wells();
-                    globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
 
                     // copy global cartesian index
                     globalIndex_ = globalGrid.globalCell();
@@ -526,8 +517,28 @@ namespace Opm
 
         // gather solution to rank 0 for EclipseWriter
         bool collectToIORank( const SimulatorState& localReservoirState,
-                              const WellState& localWellState )
+                              const WellState& localWellState,
+                              const int reportStep )
         {
+            if( isIORank() )
+            {
+                Dune::CpGrid& globalGrid = *grid_;
+                // Create wells and well state.
+                WellsManager wells_manager(eclipseState_,
+                                           reportStep,
+                                           Opm::UgGridHelpers::numCells( globalGrid ),
+                                           Opm::UgGridHelpers::globalCell( globalGrid ),
+                                           Opm::UgGridHelpers::cartDims( globalGrid ),
+                                           Opm::UgGridHelpers::dimensions( globalGrid ),
+                                           Opm::UgGridHelpers::cell2Faces( globalGrid ),
+                                           Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
+                                           permeability_,
+                                           false);
+
+                const Wells* wells = wells_manager.c_wells();
+                globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
+            }
+
             PackUnPackSimulatorState packUnpack( localReservoirState, globalReservoirState_,
                                                  localWellState, globalWellState_,
                                                  localIndexMap_, indexMaps_, isIORank() );
@@ -562,6 +573,9 @@ namespace Opm
         }
 
     protected:
+        std::unique_ptr< Dune::CpGrid > grid_;
+        Opm::EclipseStateConstPtr       eclipseState_;
+        const double*                   permeability_;
         P2PCommunicatorType             toIORankComm_;
         IndexMapType                    globalIndex_;
         IndexMapType                    localIndexMap_;
