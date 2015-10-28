@@ -45,6 +45,7 @@
 
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/moduleVersion.hpp>
 
 #include <opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
@@ -95,15 +96,19 @@ try
 {
     using namespace Opm;
 
-    std::cout << "*********************************************************************************************\n";
-    std::cout << "*                                                                                           *\n";
-    std::cout << "*                       This is Flow-Polymer (version 2015.04)                              *\n";
-    std::cout << "*                                                                                           *\n";
-    std::cout << "* Flow-Polymer is a simulator for three-phase black-oil-polymer flow that is a part of OPM. *\n";
-    std::cout << "* For more information see:                                                                 *\n";
-    std::cout << "*                              http://opm-project.org                                       *\n";
-    std::cout << "*                                                                                           *\n";
-    std::cout << "*********************************************************************************************\n\n";
+    {
+        std::string version = moduleVersionName();
+        std::cout << "**********************************************************************\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "*                   This is Flow-Polymer (version " << version << ")"
+                  << std::string(18 - version.size(), ' ') << "*\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "*     Flow-Polymer is a simulator for fully implicit three-phase,    *\n";
+        std::cout << "*    four-component (black-oil + polymer) flow, and is part of OPM.  *\n";
+        std::cout << "*           For more information see http://opm-project.org          *\n";
+        std::cout << "*                                                                    *\n";
+        std::cout << "**********************************************************************\n\n";
+    }
 
     // Read parameters, see if a deck was specified on the command line.
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
