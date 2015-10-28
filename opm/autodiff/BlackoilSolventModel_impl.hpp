@@ -237,7 +237,7 @@ namespace Opm {
         if (has_solvent_) {
             const ADB& temp_b = rq_[solvent_pos_].b;
             ADB::V B = 1. / temp_b.value();
-            #if HAVE_MPI
+#if HAVE_MPI
             if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
             {
                 const ParallelISTLInformation& real_info =
