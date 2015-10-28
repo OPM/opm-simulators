@@ -231,6 +231,7 @@ private:
     BlackoilState& recvState_;
 };
 
+/// \brief A DUNE data handle for sending the blackoil properties
 class BlackoilPropsDataHandle
 {
 public:
@@ -242,12 +243,13 @@ public:
     BlackoilPropsDataHandle(const BlackoilPropsAdFromDeck& sendProps,
                             BlackoilPropsAdFromDeck& recvProps)
         : sendProps_(sendProps), recvProps_(recvProps),
-          size_(11)
+          size_(11) // full permeability tensor 9 + porosity 1 + pvt region index
     {
         // satOilMax might be non empty. In this case we will need to send it, too.
-        // It has to have the same size as the cellPvtRegionIdx_
         if ( sendProps.satOilMax_.size()>0 )
         {
+            
+            // satOilMax has to have the same size as the cellPvtRegionIdx_
             recvProps_.satOilMax_.resize(recvProps_.cellPvtRegionIdx_.size(),
                                          -std::numeric_limits<double>::max());
             ++size_;
@@ -264,7 +266,6 @@ public:
     {
         if ( T::codimension == 0)
         {
-            // We only send cellPvtRegionIdx_, and maybe satOilMax_
             return size_;
         }
         else
@@ -315,8 +316,12 @@ public:
 private:
     /// \brief The properties where we will retieve the values to be sent.
     const BlackoilPropsAdFromDeck& sendProps_;
-    // \brief The properties where we will store the received values.
+    /// \brief The properties where we will store the received values.
     BlackoilPropsAdFromDeck& recvProps_;
+    /// \brief The number of entries to send.
+    ///
+    /// full permeability tensor 9 + porosity 1 + pvt region index and
+    /// in some case satOilMax
     std::size_t size_;
 };
 
