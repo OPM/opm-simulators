@@ -73,7 +73,7 @@ namespace Opm
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulatorState& localReservoirState,
                                       const WellState& localWellState,
-                                      const int reportStep )
+                                      const int /* reportStep */)
         {
             globalState_ = &localReservoirState;
             wellState_   = &localWellState;
@@ -244,23 +244,6 @@ namespace Opm
 
                     // initialize global state with correct sizes
                     globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
-
-                    /*
-                    // Create wells and well state.
-                    WellsManager wells_manager(eclipseState,
-                                               0,
-                                               Opm::UgGridHelpers::numCells( globalGrid ),
-                                               Opm::UgGridHelpers::globalCell( globalGrid ),
-                                               Opm::UgGridHelpers::cartDims( globalGrid ),
-                                               Opm::UgGridHelpers::dimensions( globalGrid ),
-                                               Opm::UgGridHelpers::cell2Faces( globalGrid ),
-                                               Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
-                                               permeability,
-                                               false);
-
-                    const Wells* wells = wells_manager.c_wells();
-                    globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
-                    */
 
                     // copy global cartesian index
                     globalIndex_ = globalGrid.globalCell();
