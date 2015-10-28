@@ -776,7 +776,7 @@ protected:
                 cartesianCoordinate[ 0 ] = completion->getI();
                 cartesianCoordinate[ 1 ] = completion->getJ();
                 cartesianCoordinate[ 2 ] = completion->getK();
-                const int cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
+                unsigned cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
                 assert( cartIdx == (completion->getI() + completion->getJ()*eclGrid->getNX()
                                       + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
 
