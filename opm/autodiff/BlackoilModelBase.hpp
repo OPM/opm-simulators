@@ -280,6 +280,8 @@ namespace Opm {
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
+        /// \brief The number of cells of the global grid.
+        int global_nc_;
 
         std::vector<int>         primalVariable_;
         V pvdt_;
