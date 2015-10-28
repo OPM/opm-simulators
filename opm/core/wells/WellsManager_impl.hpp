@@ -128,7 +128,11 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     wellperf_data.resize(wells.size());
     wells_on_proc.resize(wells.size(), 1);
 
-    int well_index = 0;
+    // The well index on the current process.
+    // Note that some wells are deactivated as they live on the interior
+    // domain of another proccess. Therefore this might different from
+    // the index of the well according to the eclipse state
+    int well_index_on_proc = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         WellConstPtr well = (*wellIter);
 
@@ -198,7 +202,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                             }
                             pd.well_index *= wellPi;
                         }
-                        wellperf_data[well_index].push_back(pd);
+                        wellperf_data[well_index_on_proc].push_back(pd);
                     }
                 } else {
                     ++shut_completions_number;
@@ -231,14 +235,14 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                  << "process. Therefore we  deactivate it here." << std::endl;
                         // Mark well as not existent on this process
                         wells_on_proc[wellIter-wells.begin()] = 0;
-                        wellperf_data[well_index].clear();
+                        wellperf_data[well_index_on_proc].clear();
                         continue;
                     }
                 }
             }
         }
         {   // WELSPECS handling
-            well_names_to_index[well->name()] = well_index;
+            well_names_to_index[well->name()] = well_index_on_proc;
             well_names.push_back(well->name());
             {
                 WellData wd;
@@ -254,7 +258,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
             }
         }
 
-        well_index++;
+        well_index_on_proc++;
     }
     // Set up reference depths that were defaulted. Count perfs.
 
