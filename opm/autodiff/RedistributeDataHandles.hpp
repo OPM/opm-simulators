@@ -358,7 +358,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     typedef Dune::CpGrid::ParallelIndexSet IndexSet;
     typedef IndexSet::IndexPair Pair;
     const IndexSet& local_indices  = grid.getCellIndexSet();
-    for(auto index : local_indices)
+    for ( auto index : local_indices )
     {
         distributed_material_law_manager->materialLawParamsPointer(index.local()) =
             material_law_manager->materialLawParamsPointer(index.global());
