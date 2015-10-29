@@ -2445,7 +2445,7 @@ namespace detail {
         const int nm = asImpl().numMaterials();
         assert(int(rq_.size()) == nm);
 
-        const V pv = geo_.poreVolume();
+        const V& pv = geo_.poreVolume();
 
         std::vector<double> R_sum(nm);
         std::vector<double> B_avg(nm);
@@ -2564,7 +2564,7 @@ namespace detail {
         const int np = asImpl().numPhases();
         const int nm = asImpl().numMaterials();
 
-        const V pv = geo_.poreVolume();
+        const V& pv = geo_.poreVolume();
         std::vector<double> R_sum(nm);
         std::vector<double> B_avg(nm);
         std::vector<double> maxCoeff(nm);
