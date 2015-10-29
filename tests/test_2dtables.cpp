@@ -110,6 +110,8 @@ createUniformXTabulatedFunction2(Fn &f)
     Scalar xMax = 3.0;
     Scalar m = 50;
 
+    Scalar yMin = - 4.0;
+    Scalar yMax = 5.0;
 
     auto tab = std::make_shared<Opm::UniformXTabulated2DFunction<Scalar>>();
     for (unsigned i = 0; i < m; ++i) {
@@ -117,8 +119,6 @@ createUniformXTabulatedFunction2(Fn &f)
         tab->appendXPos(x);
 
         Scalar n = i + 10;
-        Scalar yMin = - (x + 1);
-        Scalar yMax = (x + 1);
 
         for (unsigned j = 0; j < n; ++j) {
             Scalar y = yMin + Scalar(j)/(n -1) * (yMax - yMin);
@@ -345,8 +345,8 @@ int main()
 
     uniformXTab = createUniformXTabulatedFunction2(testFn3);
     if (!compareTableWithAnalyticFn(uniformXTab,
-                                    -10, 10, 100,
-                                    -10, 10, 100,
+                                    -2.0, 3.0, 100,
+                                    -4.0, 5.0, 100,
                                     testFn3,
                                     /*tolerance=*/1e-2))
         return 1;
