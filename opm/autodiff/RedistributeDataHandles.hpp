@@ -356,7 +356,6 @@ void distributeGridAndData( Dune::CpGrid& grid,
     // really, really cumbersome for the underlying vector<shared_ptr>
     // where the classes pointed to even have more shared_ptr stored in them.
     typedef Dune::CpGrid::ParallelIndexSet IndexSet;
-    typedef IndexSet::IndexPair Pair;
     const IndexSet& local_indices  = grid.getCellIndexSet();
     for ( auto index : local_indices )
     {
