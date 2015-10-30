@@ -45,7 +45,7 @@ inline void distributeGridAndData( Grid& ,
 {
 }
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_DUNE_CORNERPOINT && HAVE_MPI
 /// \brief a data handle to distribute Derived Geology
 class GeologyDataHandle
 {
