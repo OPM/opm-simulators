@@ -366,9 +366,9 @@ namespace Opm
                 typedef Details::RK4IVP<ODE> WPress;
                 std::array<WPress,2> wpress = {
                     {
-                        WPress(drho, up  , p0, 100)
+                        WPress(drho, up  , p0, 2000)
                         ,
-                        WPress(drho, down, p0, 100)
+                        WPress(drho, down, p0, 2000)
                     }
                 };
 
@@ -426,9 +426,9 @@ namespace Opm
                 typedef Details::RK4IVP<ODE> OPress;
                 std::array<OPress,2> opress = {
                     {
-                        OPress(drho, up  , p0, 100)
+                        OPress(drho, up  , p0, 2000)
                         ,
-                        OPress(drho, down, p0, 100)
+                        OPress(drho, down, p0, 2000)
                     }
                 };
 
@@ -488,9 +488,9 @@ namespace Opm
                 typedef Details::RK4IVP<ODE> GPress;
                 std::array<GPress,2> gpress = {
                     {
-                        GPress(drho, up  , p0, 100)
+                        GPress(drho, up  , p0, 2000)
                         ,
-                        GPress(drho, down, p0, 100)
+                        GPress(drho, down, p0, 2000)
                     }
                 };
 
