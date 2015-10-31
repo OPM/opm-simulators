@@ -178,6 +178,10 @@ namespace Opm {
         /// and afterwards the norm of the residual of the well flux and the well equation.
         std::vector<double> computeResidualNorms() const;
 
+        /// \brief compute the relative change between to simulation states
+        //  \return || u^n+1 - u^n || / || u^n+1 ||
+        double computeTimeError( const SimulatorState& previous, const SimulatorState& current ) const;
+
         /// The size (number of unknowns) of the nonlinear system of equations.
         int sizeNonLinear() const;
 

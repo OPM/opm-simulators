@@ -1800,6 +1800,47 @@ namespace detail {
             }
         }
 
+        /// \brief Compute the L-infinity norm of a vector
+        /// \warn This function is not suitable to compute on the well equations.
+        /// \param a The container to compute the infinity norm on.
+        ///          It has to have one entry for each cell.
+        /// \param info In a parallel this holds the information about the data distribution.
+        template <class Iterator>
+        inline
+        double euclidianNormSquared( Iterator it, const Iterator end, int num_components, const boost::any& pinfo = boost::any() )
+        {
+            static_cast<void>(num_components); // Suppress warning in the serial case.
+            static_cast<void>(pinfo); // Suppress warning in non-MPI case.
+#if HAVE_MPI
+            if ( pinfo.type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
+                int size_per_component = (end - it) / num_components;
+                assert((end - it) == num_components * size_per_component);
+                double component_product = 0.0;
+                for( int i = 0; i < num_components; ++i )
+                {
+                    auto component_container =
+                        boost::make_iterator_range(it + i * size_per_component,
+                                                   it + (i + 1) * size_per_component);
+                    info.computeReduction(component_container,
+                                           Opm::Reduction::makeInnerProductFunctor<double>(),
+                                           component_product);
+                }
+                return component_product;
+            }
+            else
+#endif
+            {
+                double product = 0.0 ;
+                for( ; it != end; ++it ) {
+                    product += ( *it * *it );
+                }
+                return product;
+            }
+        }
+
         /// \brief Compute the L-infinity norm of a vector representing a well equation.
         /// \param a The container to compute the infinity norm on.
         /// \param info In a parallel this holds the information about the data distribution.
@@ -2343,8 +2384,44 @@ namespace detail {
     }
 
 
+    template <class Grid, class Implementation>
+    double
+    BlackoilModelBase<Grid, Implementation>::
+    computeTimeError(const SimulatorState& previous,
+                     const SimulatorState& current ) const
+    {
+        std::vector< double > p0  ( previous.pressure() );
+        std::vector< double > sat0( previous.saturation() );
 
+        const std::size_t pSize = p0.size();
+        const std::size_t satSize = sat0.size();
 
+        // compute u^n - u^n+1
+        for( std::size_t i=0; i<pSize; ++i ) {
+            p0[ i ]   -= current.pressure()[ i ];
+        }
+
+        for( std::size_t i=0; i<satSize; ++i ) {
+            sat0[ i ] -= current.saturation()[ i ];
+        }
+
+        // compute || u^n - u^n+1 ||
+        const double stateOld  = detail::euclidianNormSquared( p0.begin(),   p0.end(), 1, linsolver_.parallelInformation() ) +
+                                 detail::euclidianNormSquared( sat0.begin(), sat0.end(),
+                                                               current.numPhases(),
+                                                               linsolver_.parallelInformation() );
+
+        // compute || u^n+1 ||
+        const double stateNew  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end(), 1, linsolver_.parallelInformation() ) +
+                                 detail::euclidianNormSquared( current.saturation().begin(), current.saturation().end(),
+                                                               current.numPhases(),
+                                                               linsolver_.parallelInformation() );
+
+        if( stateNew > 0.0 )
+            return stateOld / stateNew ;
+        else
+            return 0.0;
+    }
 
     template <class Grid, class Implementation>
     double

@@ -49,6 +49,12 @@ namespace Opm
         return linearIterations_;
     }
 
+    template <class PhysicalModel>
+    const PhysicalModel& NewtonSolver<PhysicalModel>::model() const
+    {
+        assert( model_ );
+        return *model_;
+    }
 
     template <class PhysicalModel>
     int
