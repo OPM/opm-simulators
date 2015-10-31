@@ -55,7 +55,7 @@ namespace Opm
     }
 
     double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const SimulatorState& /* state */ ) const
+    computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& /* timeError */ ) const
     {
         double dtEstimate = dt ;
 
@@ -82,58 +82,24 @@ namespace Opm
     //
     ////////////////////////////////////////////////////////
 
-    PIDTimeStepControl::PIDTimeStepControl( const double tol, const boost::any& pinfo,
+    PIDTimeStepControl::PIDTimeStepControl( const double tol,
                                             const bool verbose )
-        : p0_()
-        , sat0_()
-        , tol_( tol )
+        : tol_( tol )
         , errors_( 3, tol_ )
         , verbose_( verbose )
-        , parallel_information_(pinfo)
     {}
 
-    void PIDTimeStepControl::initialize( const SimulatorState& state )
-    {
-        // store current state for later time step computation
-        p0_   = state.pressure();
-        sat0_ = state.saturation();
-    }
-
     double PIDTimeStepControl::
-    computeTimeStepSize( const double dt, const int /* iterations */, const SimulatorState& state ) const
+    computeTimeStepSize( const double dt, const int /* iterations */, const SolutionTimeErrorInterface& errorObj ) const
     {
-        const std::size_t pSize = p0_.size();
-        assert( state.pressure().size() == pSize );
-        const std::size_t satSize = sat0_.size();
-        assert( state.saturation().size() == satSize );
-
-        // compute u^n - u^n+1
-        for( std::size_t i=0; i<pSize; ++i ) {
-            p0_[ i ]   -= state.pressure()[ i ];
-        }
-
-        for( std::size_t i=0; i<satSize; ++i ) {
-            sat0_[ i ] -= state.saturation()[ i ];
-        }
-
-        // compute || u^n - u^n+1 ||
-        const double stateOld  = euclidianNormSquared( p0_.begin(),   p0_.end() ) +
-                                 euclidianNormSquared( sat0_.begin(), sat0_.end(),
-                                                       state.numPhases() );
-
-        // compute || u^n+1 ||
-        const double stateNew  = euclidianNormSquared( state.pressure().begin(),   state.pressure().end()   ) +
-                                 euclidianNormSquared( state.saturation().begin(), state.saturation().end(),
-                                                       state.numPhases() );
-
         // shift errors
         for( int i=0; i<2; ++i ) {
           errors_[ i ] = errors_[i+1];
         }
 
         // store new error
-        const double error = stateOld / stateNew;
-        errors_[ 2 ] =  error ;
+        const double error = errorObj.timeError();
+        errors_[ 2 ] = error;
 
         if( error > tol_ )
         {
@@ -169,16 +135,15 @@ namespace Opm
     PIDAndIterationCountTimeStepControl::
     PIDAndIterationCountTimeStepControl( const int target_iterations,
                                          const double tol,
-                                         const boost::any& pinfo,
                                          const bool verbose)
-        : BaseType( tol, pinfo, verbose )
+        : BaseType( tol, verbose )
         , target_iterations_( target_iterations )
     {}
 
     double PIDAndIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const SimulatorState& state ) const
+    computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& errorObj ) const
     {
-        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, state );
+        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, errorObj );
 
         // further reduce step size if to many iterations were used
         if( iterations > target_iterations_ )

@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 IRIS AS 
+  Copyright 2014 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -19,31 +19,45 @@
 #ifndef OPM_TIMESTEPCONTROLINTERFACE_HEADER_INCLUDED
 #define OPM_TIMESTEPCONTROLINTERFACE_HEADER_INCLUDED
 
-#include <opm/core/simulator/SimulatorState.hpp> 
+#include <opm/core/simulator/SimulatorState.hpp>
 
 namespace Opm
 {
 
     ///////////////////////////////////////////////////////////////////
     ///
-    ///  TimeStepControlInterface 
-    /// 
+    ///  TimeStepControlInterface
+    ///
     ///////////////////////////////////////////////////////////////////
-    class TimeStepControlInterface 
+    class SolutionTimeErrorInterface
     {
-    protected:    
+    protected:
+        SolutionTimeErrorInterface() {}
+    public:
+        /// \return || u^n+1 - u^n || / || u^n+1 ||
+        virtual double timeError() const = 0;
+
+        /// virtual destructor (empty)
+        virtual ~SolutionTimeErrorInterface () {}
+    };
+
+    ///////////////////////////////////////////////////////////////////
+    ///
+    ///  TimeStepControlInterface
+    ///
+    ///////////////////////////////////////////////////////////////////
+    class TimeStepControlInterface
+    {
+    protected:
         TimeStepControlInterface() {}
     public:
-        /// \param state simulation state before computing update in the solver (default is empty)
-        virtual void initialize( const SimulatorState& /*state*/ ) {}
-
         /// compute new time step size suggestions based on the PID controller
         /// \param dt          time step size used in the current step
-        /// \param iterations  number of iterations used (linear/nonlinear) 
-        /// \param state       new solution state
+        /// \param iterations  number of iterations used (linear/nonlinear)
+        /// \param timeError   object to compute || u^n+1 - u^n || / || u^n+1 ||
         ///
         /// \return suggested time step size for the next step
-        virtual double computeTimeStepSize( const double dt, const int iterations, const SimulatorState& ) const = 0;
+        virtual double computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& timeError ) const = 0;
 
         /// virtual destructor (empty)
         virtual ~TimeStepControlInterface () {}

@@ -31,11 +31,35 @@
 
 namespace Opm {
 
+    namespace detail
+    {
+        template <class Solver, class State>
+        class SolutionTimeErrorSolverWrapper : public SolutionTimeErrorInterface
+        {
+            const Solver& solver_;
+            const State&  previous_;
+            const State&  current_;
+        public:
+            SolutionTimeErrorSolverWrapper( const Solver& solver,
+                                            const State&  previous,
+                                            const State&  current )
+              : solver_( solver ),
+                previous_( previous ),
+                current_( current )
+            {}
+
+            /// return || u^n+1 - u^n || / || u^n+1 ||
+            double timeError() const
+            {
+                return solver_.model().computeTimeError( previous_, current_ );
+            }
+        };
+    }
+
     // AdaptiveTimeStepping
     //---------------------
 
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
-                                                const boost::any& parallel_information,
                                                 const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.33) ) )
@@ -56,12 +80,12 @@ namespace Opm {
 
         const double tol = param.getDefault("timestep.control.tol", double(1e-1) );
         if( control == "pid" ) {
-            timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol, parallel_information ) );
+            timeStepControl_ = TimeStepControlType( new PIDTimeStepControl( tol ) );
         }
         else if ( control == "pid+iteration" )
         {
             const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
-            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol, parallel_information ) );
+            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol ) );
         }
         else if ( control == "iterationcount" )
         {
@@ -130,9 +154,6 @@ namespace Opm {
             // get current delta t
             const double dt = substepTimer.currentStepLength() ;
 
-            // initialize time step control in case current state is needed later
-            timeStepControl_->initialize( state );
-
             if( timestep_verbose_ )
             {
                 std::cout <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
@@ -172,9 +193,13 @@ namespace Opm {
                 // advance by current dt
                 ++substepTimer;
 
+                // create object to compute the time error, simply forwards the call to the model
+                detail::SolutionTimeErrorSolverWrapper< Solver, State >
+                    timeError( solver, last_state, state );
+
                 // compute new time step estimate
                 double dtEstimate =
-                    timeStepControl_->computeTimeStepSize( dt, linearIterations, state );
+                    timeStepControl_->computeTimeStepSize( dt, linearIterations, timeError );
 
                 // limit the growth of the timestep size by the growth factor
                 dtEstimate = std::min( dtEstimate, double(max_growth_ * dt) );
