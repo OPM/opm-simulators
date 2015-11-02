@@ -365,11 +365,33 @@ namespace Opm
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
 
+        const std::size_t number_resv_wells        = resv_wells.size();
+        std::size_t       global_number_resv_wells = number_resv_wells;
+#if HAVE_MPI
+        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            global_number_resv_wells = boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()).communicator().sum(global_number_resv_wells);
+            if ( global_number_resv_wells )
+            {
+                // At least one process has resv wells. Therefore rate converter needs
+                // to calculate averages over regions that might cross process
+                // borders. This needs to be done by all processes and therefore
+                // outside of the next if statement.
+                rateConverter_.defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
+            }
+        }
+        else
+#endif
+        {
+            if ( global_number_resv_wells )
+            {
+                rateConverter_.defineState(x);
+            }
+        }
+
         if (! resv_wells.empty()) {
             const PhaseUsage&                    pu = props_.phaseUsage();
             const std::vector<double>::size_type np = props_.numPhases();
-
-            rateConverter_.defineState(x);
 
             std::vector<double> distr (np);
             std::vector<double> hrates(np);
