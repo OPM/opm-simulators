@@ -160,7 +160,7 @@ public:
       communicator.free();
     }
     template<class T>
-    void updateOwnerMask(const T& container) const
+    const std::vector<double>& updateOwnerMask(const T& container) const
     {
         if( ! indexSet_ )
         {
@@ -177,6 +177,7 @@ public:
                 }
             }
         }
+        return ownerMask_;
     }
     /// \brief Compute one or more global reductions.
     ///
