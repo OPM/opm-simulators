@@ -226,12 +226,13 @@ protected:
             // do the gravity correction at the face's integration point
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
+            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
             Evaluation pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
-            Scalar pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
+            Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
 
-            pressureInterior += - rhoIn*(g*distZIn);
-            pressureExterior += - rhoEx*(g*distZEx);
+            pressureInterior += - rhoAvg*(g*distZIn);
+            pressureExterior += - rhoAvg*(g*distZEx);
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
