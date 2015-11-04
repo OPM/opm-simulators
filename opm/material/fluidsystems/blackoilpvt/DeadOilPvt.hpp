@@ -246,7 +246,7 @@ public:
      * \brief Returns the saturation pressure of the oil phase [Pa]
      *        depending on its mass fraction of the gas component
      *
-     * \param Rs The mass fraction of the gas component in the oil phase [-]
+     * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
      */
     template <class Evaluation>
     Evaluation oilSaturationPressure(unsigned /*regionIdx*/,

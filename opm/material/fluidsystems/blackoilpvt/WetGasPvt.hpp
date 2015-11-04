@@ -265,14 +265,13 @@ public:
         // choice.)
         for (size_t RvIdx = 0; RvIdx < nRv; ++RvIdx) {
             Scalar Rv = RvMin + (RvMax - RvMin)*RvIdx/nRv;
-            Scalar XgO = Rv/(rhooRef/rhogRef + Rv);
 
             invGasB.appendXPos(Rv);
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar pg = poMin + (poMax - poMin)*pIdx/nP;
 
-                Scalar poSat = gasSaturationPressure(regionIdx, T, XgO);
+                Scalar poSat = gasSaturationPressure(regionIdx, T, Rv);
                 Scalar BgSat = gasFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
                 Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
                 Scalar rhoo = rhooRef/BgSat*(1 + drhoo_dp*(pg - poSat));
@@ -388,12 +387,8 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& /*temperature*/,
                          const Evaluation& pressure,
-                         const Evaluation& XgO) const
+                         const Evaluation& Rv) const
     {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        const Evaluation& Rv = XgO/(1 - XgO)*(rhogRef/rhooRef);
-
         const Evaluation& invBg = inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
         const Evaluation& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
 
@@ -407,19 +402,16 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& XgO) const
+                       const Evaluation& Rv) const
     {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
+        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, Rv);
+
         Scalar rhogRef = gasReferenceDensity_[regionIdx];
-
-        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, XgO);
-
         Evaluation rhog = rhogRef/Bg;
 
         // the oil formation volume factor just represents the partial density of the gas
         // component in the gas phase. to get the total density of the phase, we have to
         // add the partial density of the oil component.
-        const Evaluation& Rv = XgO/(1 - XgO)*(rhogRef/rhooRef);
         rhog += (rhogRef*Rv)/Bg;
 
         return rhog;
@@ -432,15 +424,8 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& /*temperature*/,
                                      const Evaluation& pressure,
-                                     const Evaluation& XgO) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-
-        const Evaluation& Rv = XgO/(1-XgO)*(rhogRef/rhooRef);
-
-        return 1.0 / inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true);
-    }
+                                     const Evaluation& Rv) const
+    { return 1.0 / inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
@@ -497,25 +482,25 @@ public:
      * \brief Returns the saturation pressure of the gas phase [Pa]
      *        depending on its mass fraction of the oil component
      *
-     * \param XgO The mass fraction of the oil component in the gas phase [-]
+     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
      */
     template <class Evaluation>
     Evaluation gasSaturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
-                                     const Evaluation& XgO) const
+                                     const Evaluation& Rv) const
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
         // use the saturation pressure spline to get a pretty good initial value
-        Evaluation pSat = saturationPressureSpline_[regionIdx].eval(XgO, /*extrapolate=*/true);
+        Evaluation pSat = saturationPressureSpline_[regionIdx].eval(Rv, /*extrapolate=*/true);
         const Evaluation& eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
         // value is good, this should only take two to three
         // iterations...
         for (unsigned i = 0; i < 20; ++i) {
-            const Evaluation& f = saturatedGasOilMassFraction(regionIdx, temperature, pSat) - XgO;
-            const Evaluation& fPrime = ((saturatedGasOilMassFraction(regionIdx, temperature, pSat + eps) - XgO) - f)/eps;
+            const Evaluation& f = oilVaporizationFactor(regionIdx, temperature, pSat) - Rv;
+            const Evaluation& fPrime = ((oilVaporizationFactor(regionIdx, temperature, pSat + eps) - Rv) - f)/eps;
 
             const Evaluation& delta = f/fPrime;
             pSat -= delta;
@@ -524,7 +509,7 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalProblem, "Could find the gas saturation pressure for X_g^O = " << XgO);
+        OPM_THROW(NumericalProblem, "Could find the gas saturation pressure for X_g^O = " << Rv);
     }
 
     template <class Evaluation>
@@ -552,15 +537,15 @@ public:
                                            const Evaluation& pressure) const
     {
         // calculate the mass fractions of gas and oil
-        const Evaluation& XgO = saturatedGasOilMassFraction(regionIdx, temperature, pressure);
+        const Evaluation& Rv = saturatedGasOilMassFraction(regionIdx, temperature, pressure);
 
         // which can be converted to mole fractions, given the
         // components' molar masses
         Scalar MG = gasMolarMass_[regionIdx];
         Scalar MO = oilMolarMass_[regionIdx];
 
-        const Evaluation& avgMolarMass = MO/(1 + (1 - XgO)*(MO/MG - 1));
-        return XgO*avgMolarMass/MO;
+        const Evaluation& avgMolarMass = MO/(1 + (1 - Rv)*(MO/MG - 1));
+        return Rv*avgMolarMass/MO;
     }
 
 private:
@@ -574,12 +559,12 @@ private:
         Scalar delta = (oilVaporizationFac.xMax() - oilVaporizationFac.xMin())/(n + 1);
 
         SamplingPoints pSatSamplePoints;
-        Scalar XgO = 0;
+        Scalar Rv = 0;
         for (size_t i = 0; i <= n; ++ i) {
             Scalar pSat = oilVaporizationFac.xMin() + i*delta;
-            XgO = saturatedGasOilMassFraction(regionIdx, /*temperature=*/Scalar(1e100), pSat);
+            Rv = oilVaporizationFactor(regionIdx, /*temperature=*/Scalar(1e100), pSat);
 
-            std::pair<Scalar, Scalar> val(XgO, pSat);
+            std::pair<Scalar, Scalar> val(Rv, pSat);
             pSatSamplePoints.push_back(val);
         }
         saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints,

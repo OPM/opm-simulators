@@ -313,8 +313,8 @@ public:
         switch (phaseIdx) {
         case waterPhaseIdx: return waterDensity<LhsEval>(T, p, regionIdx);
         case gasPhaseIdx: {
-            const auto& XgO = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
-            return gasDensity<LhsEval>(T, p, XgO, regionIdx);
+            const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+            return gasDensity<LhsEval>(T, p, Rv, regionIdx);
         }
         case oilPhaseIdx: {
             const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
@@ -372,8 +372,8 @@ public:
         case waterPhaseIdx:
             return waterPvt_->viscosity(regionIdx, T, p);
         case gasPhaseIdx: {
-            const auto& XgO = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
-            return gasPvt_->viscosity(regionIdx, T, p, XgO);
+            const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+            return gasPvt_->viscosity(regionIdx, T, p, Rv);
         }
         }
 
@@ -540,10 +540,10 @@ public:
     }
 
     /*!
-     * \brief Returns the saturation pressure of the oil phase [Pa]
-     *        depending on its mass fraction of the gas component
+     * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
+     *        fraction of the gas component
      *
-     * \param XoG The mass fraction of the gas component in the oil phase [-]
+     * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
      */
     template <class LhsEval>
     static LhsEval oilSaturationPressure(const LhsEval& temperature,
@@ -568,6 +568,18 @@ public:
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
     { return oilPvt_->saturatedOilGasMoleFraction(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
+     *        fraction of the gas component
+     *
+     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
+     */
+    template <class LhsEval>
+    static LhsEval gasSaturationPressure(const LhsEval& temperature,
+                                         const LhsEval& Rv,
+                                         unsigned regionIdx)
+    { return gasPvt_->gasSaturationPressure(regionIdx, temperature, Rv); }
 
     /*!
      * \brief The maximum mass fraction of the oil component in the gas phase.
@@ -627,9 +639,9 @@ public:
     template <class LhsEval>
     static LhsEval gasFormationVolumeFactor(const LhsEval& temperature,
                                             const LhsEval& pressure,
-                                            const LhsEval& XgO,
+                                            const LhsEval& Rv,
                                             unsigned regionIdx)
-    { return gasPvt_->formationVolumeFactor(regionIdx, temperature, pressure, XgO); }
+    { return gasPvt_->formationVolumeFactor(regionIdx, temperature, pressure, Rv); }
 
     /*!
      * \brief Return the density of dry gas.
@@ -637,9 +649,9 @@ public:
     template <class LhsEval>
     static LhsEval gasDensity(const LhsEval& temperature,
                               const LhsEval& pressure,
-                              const LhsEval& XgO,
+                              const LhsEval& Rv,
                               unsigned regionIdx)
-    { return gasPvt_->density(regionIdx, temperature, pressure, XgO); }
+    { return gasPvt_->density(regionIdx, temperature, pressure, Rv); }
 
     /*!
      * \brief Return the density of water.
@@ -650,11 +662,26 @@ public:
                                 unsigned regionIdx)
     { return waterPvt_->density(regionIdx, temperature, pressure); }
 
+    /*!
+     * \brief Convert the mass fraction of the gas component in the oil phase to the
+     *        corresponding gas dissolution factor.
+     */
     template <class LhsEval>
     static LhsEval XoGToRs(const LhsEval& XoG, unsigned regionIdx)
     {
         return XoG/(1 - XoG)
             *(referenceDensity(oilPhaseIdx, regionIdx)/referenceDensity(gasPhaseIdx, regionIdx));
+    }
+
+    /*!
+     * \brief Convert the mass fraction of the oil component in the gas phase to the
+     *        corresponding oil vaporization factor.
+     */
+    template <class LhsEval>
+    static LhsEval XgOToRv(const LhsEval& XgO, unsigned regionIdx)
+    {
+        return XgO/(1 - XgO)
+            *(referenceDensity(gasPhaseIdx, regionIdx)/referenceDensity(oilPhaseIdx, regionIdx));
     }
 
 private:
@@ -672,6 +699,16 @@ private:
         const auto& XoG =
             FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
         return XoGToRs(XoG, regionIdx);
+    }
+
+    template <class LhsEval, class FluidState>
+    static LhsEval getRv_(const FluidState& fluidState, unsigned regionIdx)
+    {
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& XgO =
+            FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
+        return XgOToRv(XgO, regionIdx);
     }
 
     static std::shared_ptr<GasPvt> gasPvt_;
