@@ -165,7 +165,7 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& /*temperature*/,
                          const Evaluation& pressure,
-                         const Evaluation& /*XoG*/) const
+                         const Evaluation& /*Rs*/) const
     {
         const Evaluation& invBo = inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true);
         const Evaluation& invMuoBo = inverseOilBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
@@ -180,11 +180,11 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& XoG) const
+                       const Evaluation& Rs) const
     {
         Scalar rhooRef = oilReferenceDensity_[regionIdx];
 
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
         return rhooRef/Bo;
     }
 
@@ -195,7 +195,7 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& /*temperature*/,
                                      const Evaluation& pressure,
-                                     const Evaluation& /*XoG*/) const
+                                     const Evaluation& /*Rs*/) const
     { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
@@ -246,12 +246,12 @@ public:
      * \brief Returns the saturation pressure of the oil phase [Pa]
      *        depending on its mass fraction of the gas component
      *
-     * \param XoG The mass fraction of the gas component in the oil phase [-]
+     * \param Rs The mass fraction of the gas component in the oil phase [-]
      */
     template <class Evaluation>
     Evaluation oilSaturationPressure(unsigned /*regionIdx*/,
                                      const Evaluation& /*temperature*/,
-                                     const Evaluation& /*XoG*/) const
+                                     const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
     template <class Evaluation>

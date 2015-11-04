@@ -169,16 +169,16 @@ public:
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>
-        Evaluation viscosity(unsigned regionIdx,
-                             const Evaluation& temperature,
-                             const Evaluation& pressure,
-                             const Evaluation& XoG) const
+    Evaluation viscosity(unsigned regionIdx,
+                         const Evaluation& temperature,
+                         const Evaluation& pressure,
+                         const Evaluation& Rs) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& Y =
@@ -194,9 +194,9 @@ public:
         Evaluation density(unsigned regionIdx,
                            const Evaluation& temperature,
                            const Evaluation& pressure,
-                           const Evaluation& XoG) const
+                           const Evaluation& Rs) const
     {
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, XoG);
+        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
         Scalar rhooRef = oilReferenceDensity_[regionIdx];
         return rhooRef/Bo;
     }
@@ -208,7 +208,7 @@ public:
         Evaluation formationVolumeFactor(unsigned regionIdx,
                                          const Evaluation& /*temperature*/,
                                          const Evaluation& pressure,
-                                         const Evaluation& /*XoG*/) const
+                                         const Evaluation& /*Rs*/) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
@@ -266,12 +266,12 @@ public:
      * \brief Returns the saturation pressure of the oil phase [Pa]
      *        depending on its mass fraction of the gas component
      *
-     * \param XoG The mass fraction of the gas component in the oil phase [-]
+     * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
      */
     template <class Evaluation>
-        Evaluation oilSaturationPressure(unsigned /*regionIdx*/,
-                                         const Evaluation& /*temperature*/,
-                                         const Evaluation& /*XoG*/) const
+    Evaluation oilSaturationPressure(unsigned /*regionIdx*/,
+                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
     template <class Evaluation>

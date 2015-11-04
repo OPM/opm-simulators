@@ -135,8 +135,8 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
-                         const Evaluation& XoG) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, XoG)); return 0; }
+                         const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
@@ -145,8 +145,8 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& pressure,
-                                     const Evaluation& XoG) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, XoG)); return 0; }
+                                     const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
@@ -155,8 +155,8 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& XoG) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, XoG)); return 0; }
+                       const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
      * \brief Returns the fugacity coefficient [-] of the oil component in the oil phase
@@ -207,8 +207,8 @@ public:
     template <class Evaluation>
     Evaluation oilSaturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
-                                     const Evaluation& XoG) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.oilSaturationPressure(regionIdx, temperature, XoG)); return 0; }
+                                     const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.oilSaturationPressure(regionIdx, temperature, Rs)); return 0; }
 
     /*!
      * \brief Returns the gas mass fraction of gas-saturated oil at a given temperatire
