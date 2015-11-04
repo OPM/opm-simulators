@@ -99,9 +99,12 @@ namespace Opm
 
             // retrieve the PVT region of each cell. note that we need c++ instead of
             // Fortran indices.
-            std::vector<int> pvtRegion = eclipseState->getIntGridProperty("PVTNUM")->getData();
-            for (auto it = pvtRegion.begin(); it != pvtRegion.end(); ++ it) {
-                *it = std::max(0, *it - 1);
+            const int* gc = UgGridHelpers::globalCell(grid);
+            std::vector<int> pvtRegion(numCells);
+            const auto& cartPvtRegion = eclipseState->getIntGridProperty("PVTNUM")->getData();
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                int cartCellIdx = gc?gc[cellIdx]:cellIdx;
+                pvtRegion[cellIdx] = std::max(0, cartPvtRegion[cartCellIdx] - 1);
             }
 
             // compute the initial "phase presence" of each cell (required to calculate
@@ -215,7 +218,7 @@ namespace Opm
                        pvtRegion.data(),
                        phasePressure[gpos].data(),
                        initialState.temperature().data(),
-                       initialState.gasoilratio().data(),
+                       initialState.rv().data(),
                        cond.data(),
                        b.data(),
                        dummy.data(),
@@ -236,7 +239,6 @@ namespace Opm
             std::map<std::pair<int, int>, double> maxDp;
             const int num_faces = UgGridHelpers::numFaces(grid);
             thpres_vals.resize(num_faces, 0.0);
-            const int* gc = UgGridHelpers::globalCell(grid);
             auto fc = UgGridHelpers::faceCells(grid);
             for (int face = 0; face < num_faces; ++face) {
                 const int c1 = fc(face, 0);
