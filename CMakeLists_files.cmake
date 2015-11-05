@@ -88,6 +88,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 list (APPEND PROGRAM_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
 	examples/flow.cpp
+	examples/flow_solvent.cpp
 	examples/opm_init_check.cpp
 	)
 
