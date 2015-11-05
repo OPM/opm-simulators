@@ -278,8 +278,8 @@ namespace Opm
                     double p1 = phasePressure[phaseIdx][c1];
                     double p2 = phasePressure[phaseIdx][c2];
 
-                    p1 += rhoAvg*gravity*(z1 - zAvg);
-                    p2 += rhoAvg*gravity*(z2 - zAvg);
+                    p1 += rhoAvg*gravity*(zAvg - z1);
+                    p2 += rhoAvg*gravity*(zAvg - z2);
 
                     if ((p1 > p2 && s1 > 0.0) || (p2 > p1 && s2 > 0.0))
                         maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
