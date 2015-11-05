@@ -72,6 +72,15 @@ namespace Opm
             int numCells = UgGridHelpers::numCells(grid);
             int numPvtRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTPVT")->getInt(0);
 
+            // retrieve the minimum (residual!?) and the maximum saturations for all cells
+            std::vector<double> minSat(numPhases*numCells);
+            std::vector<double> maxSat(numPhases*numCells);
+            std::vector<int> allCells(numCells);
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                allCells[cellIdx] = cellIdx;
+            }
+            props.satRange(numCells, allCells.data(), minSat.data(), maxSat.data());
+
             // retrieve the surface densities
             std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
             Opm::DeckKeywordConstPtr densityKw = deck->getKeyword("DENSITY");
@@ -274,6 +283,9 @@ namespace Opm
                     double s1 = initialState.saturation()[numPhases*c1 + phaseIdx];
                     double s2 = initialState.saturation()[numPhases*c2 + phaseIdx];
 
+                    double sResid1 = minSat[numPhases*c1 + phaseIdx];
+                    double sResid2 = minSat[numPhases*c2 + phaseIdx];
+
                     // compute gravity corrected pressure potentials at the average depth
                     double p1 = phasePressure[phaseIdx][c1];
                     double p2 = phasePressure[phaseIdx][c2];
@@ -281,7 +293,7 @@ namespace Opm
                     p1 += rhoAvg*gravity*(zAvg - z1);
                     p2 += rhoAvg*gravity*(zAvg - z2);
 
-                    if ((p1 > p2 && s1 > 0.0) || (p2 > p1 && s2 > 0.0))
+                    if ((p1 > p2 && s1 > sResid1) || (p2 > p1 && s2 > sResid2))
                         maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
                 }
             }
