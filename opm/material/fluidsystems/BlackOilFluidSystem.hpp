@@ -667,7 +667,7 @@ public:
      *        corresponding gas dissolution factor.
      */
     template <class LhsEval>
-    static LhsEval XoGToRs(const LhsEval& XoG, unsigned regionIdx)
+    static LhsEval convertXoGToRs(const LhsEval& XoG, unsigned regionIdx)
     {
         return XoG/(1 - XoG)
             *(referenceDensity(oilPhaseIdx, regionIdx)/referenceDensity(gasPhaseIdx, regionIdx));
@@ -678,7 +678,7 @@ public:
      *        corresponding oil vaporization factor.
      */
     template <class LhsEval>
-    static LhsEval XgOToRv(const LhsEval& XgO, unsigned regionIdx)
+    static LhsEval convertXgOToRv(const LhsEval& XgO, unsigned regionIdx)
     {
         return XgO/(1 - XgO)
             *(referenceDensity(gasPhaseIdx, regionIdx)/referenceDensity(oilPhaseIdx, regionIdx));
@@ -698,7 +698,7 @@ private:
 
         const auto& XoG =
             FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
-        return XoGToRs(XoG, regionIdx);
+        return convertXoGToRs(XoG, regionIdx);
     }
 
     template <class LhsEval, class FluidState>
@@ -708,7 +708,7 @@ private:
 
         const auto& XgO =
             FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
-        return XgOToRv(XgO, regionIdx);
+        return convertXgOToRv(XgO, regionIdx);
     }
 
     static std::shared_ptr<GasPvt> gasPvt_;
