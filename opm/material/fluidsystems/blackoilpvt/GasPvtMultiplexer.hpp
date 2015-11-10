@@ -144,8 +144,8 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
-                         const Evaluation& XgO) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, XgO)); return 0; }
+                         const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
@@ -154,8 +154,8 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& pressure,
-                                     const Evaluation& XgO) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, XgO)); return 0; }
+                                     const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
@@ -164,8 +164,8 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& XgO) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, XgO)); return 0; }
+                       const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the fugacity coefficient [Pa] of the gas component in the gas phase
@@ -202,13 +202,13 @@ public:
      * \brief Returns the saturation pressure of the gas phase [Pa]
      *        depending on its mass fraction of the oil component
      *
-     * \param XgO The mass fraction of the oil component in the gas phase [-]
+     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
      */
     template <class Evaluation = Scalar>
     Evaluation gasSaturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
-                                     const Evaluation& XgO) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.gasSaturationPressure(regionIdx, temperature, XgO)); return 0; }
+                                     const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.gasSaturationPressure(regionIdx, temperature, Rv)); return 0; }
 
     /*!
      * \brief Returns the gas mass fraction of oil-saturated gas at a given temperatire

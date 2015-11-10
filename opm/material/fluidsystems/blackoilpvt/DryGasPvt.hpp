@@ -193,7 +193,7 @@ public:
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& /*temperature*/,
                          const Evaluation& pressure,
-                         const Evaluation& /*XgO*/) const
+                         const Evaluation& /*Rv*/) const
     {
         const Evaluation& invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
         const Evaluation& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
@@ -208,10 +208,10 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& XgO) const
+                       const Evaluation& Rv) const
     {
         // gas formation volume factor at reservoir pressure
-        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, XgO);
+        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, Rv);
         return gasReferenceDensity_[regionIdx]/Bg;
     }
 
@@ -222,7 +222,7 @@ public:
     Evaluation formationVolumeFactor(unsigned regionIdx,
                                      const Evaluation& /*temperature*/,
                                      const Evaluation& pressure,
-                                     const Evaluation& /*XgO*/) const
+                                     const Evaluation& /*Rv*/) const
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
@@ -262,12 +262,12 @@ public:
      * \brief Returns the saturation pressure of the gas phase [Pa]
      *        depending on its mass fraction of the oil component
      *
-     * \param XgO The mass fraction of the oil component in the gas phase [-]
+     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
      */
     template <class Evaluation>
     Evaluation gasSaturationPressure(unsigned /*regionIdx*/,
                                      const Evaluation& /*temperature*/,
-                                     const Evaluation& /*XgO*/) const
+                                     const Evaluation& /*Rv*/) const
     { return 0.0; /* this is dry gas! */ }
 
     /*!
