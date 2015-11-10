@@ -59,6 +59,9 @@ namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
 } }
 
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+
 // include dune's MPI helper header
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
@@ -66,6 +69,9 @@ namespace FluidSystemsTest {
 #else
 #include <dune/common/mpihelper.hh>
 #endif
+
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 
 // check the API of all fluid states
 template <class Scalar>
