@@ -1800,11 +1800,11 @@ namespace detail {
             }
         }
 
-        /// \brief Compute the L-infinity norm of a vector
-        /// \warn This function is not suitable to compute on the well equations.
-        /// \param a The container to compute the infinity norm on.
-        ///          It has to have one entry for each cell.
-        /// \param info In a parallel this holds the information about the data distribution.
+        /// \brief Compute the Euclidian norm of a vector
+        /// \param it              begin iterator for the given vector
+        /// \param end             end iterator for the given vector
+        /// \param num_components  number of components (i.e. phases) in the vector
+        /// \param pinfo           In a parallel this holds the information about the data distribution.
         template <class Iterator>
         inline
         double euclidianNormSquared( Iterator it, const Iterator end, int num_components, const boost::any& pinfo = boost::any() )
