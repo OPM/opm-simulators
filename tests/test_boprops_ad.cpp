@@ -119,21 +119,20 @@ BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 
     typedef Opm::BlackoilPropsAdFromDeck::V V;
 
-    std::vector<V> rho0AD = boprops_ad.surfaceDensity(cells);
-
-    BOOST_REQUIRE_EQUAL(rho0AD.size(), 3);
-
     enum { Water = Opm::BlackoilPropsAdFromDeck::Water };
-    BOOST_REQUIRE_EQUAL(rho0AD[Water].size(), cells.size());
-    BOOST_CHECK_EQUAL(rho0AD[ Water ][0], 1000.0);
+    V rho0AD_Water = boprops_ad.surfaceDensity(Water, cells);
+    BOOST_REQUIRE_EQUAL(rho0AD_Water.size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD_Water[0], 1000.0);
 
     enum { Oil = Opm::BlackoilPropsAdFromDeck::Oil };
-    BOOST_REQUIRE_EQUAL(rho0AD[Oil].size(), cells.size());
-    BOOST_CHECK_EQUAL(rho0AD[ Oil ][0], 800.0);
+    V rho0AD_Oil = boprops_ad.surfaceDensity(Oil, cells);
+    BOOST_REQUIRE_EQUAL(rho0AD_Oil.size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD_Oil[0], 800.0);
 
     enum { Gas = Opm::BlackoilPropsAdFromDeck::Gas };
-    BOOST_REQUIRE_EQUAL(rho0AD[Gas].size(), cells.size());
-    BOOST_CHECK_EQUAL(rho0AD[ Gas ][0], 1.0);
+    V rho0AD_Gas = boprops_ad.surfaceDensity(Gas, cells);
+    BOOST_REQUIRE_EQUAL(rho0AD_Gas.size(), cells.size());
+    BOOST_CHECK_EQUAL(rho0AD_Gas[0], 1.0);
 }
 
 

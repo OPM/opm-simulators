@@ -340,9 +340,6 @@ namespace Opm {
         // Use cell values for the temperature as the wells don't knows its temperature yet.
         const ADB perf_temp = subset(state.temperature, well_cells);
 
-        // Surface density.
-        std::vector<V> surf_dens = fluid_.surfaceDensity(well_cells);
-
         // Compute b, rsmax, rvmax values for perforations.
         // Evaluate the properties using average well block pressures
         // and cell values for rs, rv, phase condition and temperature.
@@ -370,10 +367,18 @@ namespace Opm {
             const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
         }
+        V surf_dens_copy = superset(fluid_.surfaceDensity(0, well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            if ( phase != pu.phase_pos[BlackoilPhases::Vapour]) {
+                continue; // the gas surface density is added after the solvent is accounted for.
+            }
+            surf_dens_copy += superset(fluid_.surfaceDensity(phase, well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+        }
+
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
             V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
-
+            V rhog = fluid_.surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
             if (has_solvent_) {
                 const V bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
                 // A weighted sum of the b-factors of gas and solvent are used.
@@ -404,22 +409,17 @@ namespace Opm {
                 bg = bg * (ones - F_solvent);
                 bg = bg + F_solvent * bs;
 
-                const V& rhog = surf_dens[pu.phase_pos[BlackoilPhases::Vapour]];
                 const V& rhos = solvent_props_.solventSurfaceDensity(well_cells);
-                surf_dens[pu.phase_pos[BlackoilPhases::Vapour]] = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
+                rhog = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
             }
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
+            surf_dens_copy += superset(rhog, Span(nperf, pu.num_phases, pu.phase_pos[BlackoilPhases::Vapour]), nperf*pu.num_phases);
 
             const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
         }
 
         // b and surf_dens_perf is row major, so can just copy data.
-        V surf_dens_copy = superset(surf_dens[0], Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
-        for (int phase = 1; phase < pu.num_phases; ++phase) {
-            surf_dens_copy += superset(surf_dens[phase], Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
-        }
-
         std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);        
         std::vector<double> surf_dens_perf(surf_dens_copy.data(), surf_dens_copy.data() + nperf * pu.num_phases);
 

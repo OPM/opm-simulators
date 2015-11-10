@@ -782,12 +782,11 @@ namespace detail {
         std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
 
         // Surface density.
-        const std::vector<V> rhos = fluid_.surfaceDensity(well_cells);
         // The compute density segment wants the surface densities as
         // an np * number of wells cells array
-        V rho = superset(rhos[0], Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        V rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
         for (int phase = 1; phase < pu.num_phases; ++phase) {
-            rho += superset(rhos[phase], Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+            rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
         std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf * pu.num_phases);
 
@@ -2692,15 +2691,14 @@ namespace detail {
                                                           const ADB& rs,
                                                           const ADB& rv) const
     {
-        std::vector<V> rhos = fluid_.surfaceDensity(cells_);
-        ADB rho = rhos[phase] * b;
+        const V& rhos = fluid_.surfaceDensity(phase,  cells_);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        ADB rho = rhos * b;
         if (phase == Oil && active_[Gas]) {
-            // It is correct to index into rhos with canonical phase indices.
-            rho += rhos[Gas] * rs * b;
+            rho += fluid_.surfaceDensity(pu.phase_pos[ Gas ],  cells_) * rs * b;
         }
         if (phase == Gas && active_[Oil]) {
-            // It is correct to index into rhos with canonical phase indices.
-            rho += rhos[Oil] * rv * b;
+            rho += fluid_.surfaceDensity(pu.phase_pos[ Oil ],  cells_) * rv * b;
         }
         return rho;
     }

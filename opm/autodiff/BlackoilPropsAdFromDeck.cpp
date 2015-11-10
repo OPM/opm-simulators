@@ -349,25 +349,20 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // ------ Density ------
 
     /// Densities of stock components at surface conditions.
-    /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
-    /// \return Array of number of phases with n density values each.
-    std::vector<V> BlackoilPropsAdFromDeck::surfaceDensity(const Cells& cells) const
+    /// \param[in] phaseIdx
+    /// \param[in] cells  Array of n cell indices to be associated with the pressure values.
+    /// \return Array of n density values for phase given by phaseIdx.
+    V BlackoilPropsAdFromDeck::surfaceDensity(const int phaseIdx, const Cells& cells) const
     {
+        assert( !(phaseIdx > numPhases()));
         const int n = cells.size();
-        std::vector<V> rhos(BlackoilPhases::MaxNumPhases);
-        for (size_t phaseIdx = 0; phaseIdx < rhos.size(); ++phaseIdx) {
-            rhos[phaseIdx] = V::Zero(n);
-        }
-
+        V rhos = V::Zero(n);
         for (int cellIdx = 0; cellIdx < n; ++cellIdx) {
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            const double* rho = &densities_[pvtRegionIdx][0];
-            for (size_t phaseIdx = 0; phaseIdx < rhos.size(); ++phaseIdx) {
-                rhos[phaseIdx][cellIdx] = rho[phaseIdx];
-            }
+            const auto* rho = &densities_[pvtRegionIdx][0];
+            rhos[cellIdx] = rho[phaseIdx];
         }
         return rhos;
-
     }
 
 
