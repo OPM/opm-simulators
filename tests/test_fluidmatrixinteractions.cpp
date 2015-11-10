@@ -67,6 +67,9 @@
 
 #include <opm/material/common/Unused.hpp>
 
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+
 // include dune's MPI helper header
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
@@ -74,6 +77,9 @@
 #else
 #include <dune/common/mpihelper.hh>
 #endif
+
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 
 // this function makes sure that a capillary pressure law adheres to
 // the generic programming interface for such laws. This API _must_ be
