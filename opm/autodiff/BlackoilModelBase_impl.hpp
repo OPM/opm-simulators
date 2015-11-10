@@ -2398,7 +2398,7 @@ namespace detail {
 
         // compute u^n - u^n+1
         for( std::size_t i=0; i<pSize; ++i ) {
-            p0[ i ]   -= current.pressure()[ i ];
+            p0[ i ] -= current.pressure()[ i ];
         }
 
         for( std::size_t i=0; i<satSize; ++i ) {
@@ -2417,10 +2417,12 @@ namespace detail {
                                                                current.numPhases(),
                                                                linsolver_.parallelInformation() );
 
-        if( stateNew > 0.0 )
+        if( stateNew > 0.0 ) {
             return stateOld / stateNew ;
-        else
+        }
+        else {
             return 0.0;
+        }
     }
 
     template <class Grid, class Implementation>
