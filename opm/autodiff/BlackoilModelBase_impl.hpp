@@ -2387,8 +2387,8 @@ namespace detail {
     template <class Grid, class Implementation>
     double
     BlackoilModelBase<Grid, Implementation>::
-    computeTimeError(const SimulatorState& previous,
-                     const SimulatorState& current ) const
+    relativeChange(const SimulatorState& previous,
+                   const SimulatorState& current ) const
     {
         std::vector< double > p0  ( previous.pressure() );
         std::vector< double > sat0( previous.saturation() );
