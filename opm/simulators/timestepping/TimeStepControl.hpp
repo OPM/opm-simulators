@@ -26,7 +26,6 @@
 #include <boost/any.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <opm/core/simulator/TimeStepControlInterface.hpp>
-#include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 namespace Opm
 {
@@ -49,7 +48,7 @@ namespace Opm
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& /* timeError */ ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */ ) const;
 
     protected:
         const int     target_iterations_;
@@ -78,22 +77,18 @@ namespace Opm
         /// \brief constructor
         /// \param tol      tolerance for the relative changes of the numerical solution to be accepted
         ///                 in one time step (default is 1e-3)
-        /// \paramm pinfo   The information about the parallel information. Needed to
-        ///                 compute parallel scalarproducts.
         /// \param verbose  if true get some output (default = false)
         PIDTimeStepControl( const double tol = 1e-3,
                             const bool verbose = false );
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const SolutionTimeErrorInterface& timeError ) const;
+        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange ) const;
 
     protected:
         const double tol_;
         mutable std::vector< double > errors_;
 
         const bool verbose_;
-    private:
-    //    const boost::any parallel_information_;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,16 +105,13 @@ namespace Opm
         /// \param target_iterations  number of desired iterations per time step
         /// \param tol        tolerance for the relative changes of the numerical solution to be accepted
         ///                   in one time step (default is 1e-3)
-        //  \param maxgrowth  max growth factor for new time step in relation of old time step (default = 3.0)
-        /// \paramm pinfo     The information about the parallel information. Needed to
-        ///                   compute parallel scalarproducts.
         /// \param verbose    if true get some output (default = false)
         PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
                                              const double tol = 1e-3,
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& timeError ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange ) const;
 
     protected:
         const int     target_iterations_;

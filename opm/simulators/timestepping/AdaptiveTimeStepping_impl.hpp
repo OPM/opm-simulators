@@ -49,9 +49,9 @@ namespace Opm {
             {}
 
             /// return || u^n+1 - u^n || / || u^n+1 ||
-            double timeError() const
+            double relativeChange() const
             {
-                return solver_.model().computeTimeError( previous_, current_ );
+                return solver_.model().relativeChange( previous_, current_ );
             }
         };
     }
@@ -195,11 +195,11 @@ namespace Opm {
 
                 // create object to compute the time error, simply forwards the call to the model
                 detail::SolutionTimeErrorSolverWrapper< Solver, State >
-                    timeError( solver, last_state, state );
+                    relativeChange( solver, last_state, state );
 
                 // compute new time step estimate
                 double dtEstimate =
-                    timeStepControl_->computeTimeStepSize( dt, linearIterations, timeError );
+                    timeStepControl_->computeTimeStepSize( dt, linearIterations, relativeChange );
 
                 // limit the growth of the timestep size by the growth factor
                 dtEstimate = std::min( dtEstimate, double(max_growth_ * dt) );

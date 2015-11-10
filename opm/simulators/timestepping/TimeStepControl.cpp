@@ -55,7 +55,7 @@ namespace Opm
     }
 
     double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& /* timeError */ ) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */ ) const
     {
         double dtEstimate = dt ;
 
@@ -90,7 +90,7 @@ namespace Opm
     {}
 
     double PIDTimeStepControl::
-    computeTimeStepSize( const double dt, const int /* iterations */, const SolutionTimeErrorInterface& errorObj ) const
+    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange ) const
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
@@ -98,7 +98,7 @@ namespace Opm
         }
 
         // store new error
-        const double error = errorObj.timeError();
+        const double error = relChange.relativeChange();
         errors_[ 2 ] = error;
 
         if( error > tol_ )
@@ -141,9 +141,9 @@ namespace Opm
     {}
 
     double PIDAndIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const SolutionTimeErrorInterface& errorObj ) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange ) const
     {
-        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, errorObj );
+        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, relChange );
 
         // further reduce step size if to many iterations were used
         if( iterations > target_iterations_ )
