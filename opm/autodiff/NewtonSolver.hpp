@@ -96,6 +96,9 @@ namespace Opm {
         /// Number of linear solver iterations used in the last call to step().
         unsigned int linearIterationsLastStep() const;
 
+        /// return reference to physical model
+        const PhysicalModel& model() const;
+
     private:
         // ---------  Data members  ---------
         SolverParameters param_;
