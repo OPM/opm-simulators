@@ -52,7 +52,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    const PhysicalModel& NewtonSolver<PhysicalModel>::model() const
+    const PhysicalModel& NonlinearSolver<PhysicalModel>::model() const
     {
         assert( model_ );
         return *model_;
