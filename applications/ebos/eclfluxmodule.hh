@@ -185,7 +185,7 @@ protected:
     int downstreamIndex_(int phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?interiorDofIdx_:exteriorDofIdx_;
+        return (pressureDifferential_[phaseIdx] < 0)?exteriorDofIdx_:interiorDofIdx_;
     }
 
     /*!
@@ -217,22 +217,21 @@ protected:
 
         Scalar zIn = elemCtx.pos(interiorDofIdx_, timeIdx)[dimWorld - 1];
         Scalar zEx = elemCtx.pos(exteriorDofIdx_, timeIdx)[dimWorld - 1];
-        Scalar zFace = scvf.integrationPos()[dimWorld - 1];
 
-        Scalar distZIn = zIn - zFace;
-        Scalar distZEx = zEx - zFace;
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
 
         for (int phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            // do the gravity correction at the face's integration point
+            // do the gravity correction: compute the hydrostatic pressure for the
+            // external at the depth of the internal one
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
             Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
-            Evaluation pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+            const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
             Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
-
-            pressureInterior += - rhoAvg*(g*distZIn);
-            pressureExterior += - rhoAvg*(g*distZEx);
+            pressureExterior += rhoAvg*(distZ*g);
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
@@ -243,10 +242,10 @@ protected:
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx) * (- trans_/faceArea_);
+                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx)*(-trans_/faceArea_);
             else
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx)) * (- trans_/faceArea_));
+                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans_/faceArea_));
 
         }
     }
