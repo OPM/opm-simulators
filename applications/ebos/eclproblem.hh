@@ -262,14 +262,13 @@ public:
 
         auto& simulator = this->simulator();
 
-        // invert the direction of the gravity vector for ECL problems
-        // (z coodinates represent depth, not height.)
-        this->gravity_[dim - 1] *= -1;
+        // set the value of the gravity constant to the one used by the FLOW simulator
+        this->gravity_ = 0.0;
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
         const auto& deck = simulator.gridManager().deck();
-        if (deck->hasKeyword("NOGRAV") || !EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
-            this->gravity_ = 0.0;
+        if (!deck->hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
+            this->gravity_[dim - 1] = 9.80665;
 
         initFluidSystem_();
         readRockParameters_();
