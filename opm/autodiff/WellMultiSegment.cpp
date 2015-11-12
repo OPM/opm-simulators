@@ -19,7 +19,6 @@
 */
 
 #include <opm/autodiff/WellMultiSegment.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SegmentSet.hpp>
 
 
 namespace Opm
@@ -35,7 +34,7 @@ namespace Opm
         m_well_name_ = well->name();
         CompletionSetConstPtr completion_set = well->getCompletions(time_step);
 
-        if (well->isMultiSegment()) {
+        if (well->isMultiSegment(time_step)) {
             m_is_multi_segment_ = true;
             SegmentSetConstPtr segment_set = well->getSegmentSet(time_step);
             m_number_of_segments_ = segment_set->numberSegment();
@@ -62,7 +61,7 @@ namespace Opm
                 // now the segment for top segment is 0, then its outlet segment will be -1
                 // it is also the flag to indicate the top segment
                 m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
-                m_segment_length_[i] = (*segment_set)[i]->length();
+                m_segment_length_[i] = (*segment_set)[i]->totalLength();
                 m_segment_depth_[i] = (*segment_set)[i]->depth();
                 m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
                 m_segment_roughness_[i] = (*segment_set)[i]->roughness();
@@ -384,7 +383,7 @@ namespace Opm
     }
 
     std::string WellMultiSegment::compPressureDrop() const {
-        return WellSegment::CompPresureDropEnumToString(m_comp_pressure_drop_);
+        return WellSegment::CompPressureDropEnumToString(m_comp_pressure_drop_);
     }
 
     const std::vector<double>& WellMultiSegment::compFrac() const {

@@ -31,7 +31,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SegmentSet.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SegmentSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <vector>
 #include <cassert>
@@ -121,7 +121,7 @@ namespace Opm
         // changing it when figuring out how to using it
         struct WellControls *m_well_controls_;
         // components of the pressure drop to be included
-        WellSegment::CompPresureDropEnum m_comp_pressure_drop_;
+        WellSegment::CompPressureDropEnum m_comp_pressure_drop_;
         // multi-phase flow model
         WellSegment::MultiPhaseModelEnum m_multiphase_model_;
         // number of perforation for this well

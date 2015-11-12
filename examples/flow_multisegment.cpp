@@ -80,6 +80,7 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
+#include <opm/autodiff/moduleVersion.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
 
@@ -95,6 +96,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <memory>
 #include <algorithm>
 #include <cstdlib>
@@ -139,9 +143,11 @@ try
 
     if(output_cout)
     {
+        std::string version = moduleVersionName();
         std::cout << "**********************************************************************\n";
         std::cout << "*                                                                    *\n";
-        std::cout << "*                   This is Flow (version 2015.04)                   *\n";
+        std::cout << "*                   This is Flow (version " << version << ")"
+                  << std::string(26 - version.size(), ' ') << "*\n";
         std::cout << "*                                                                    *\n";
         std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
         std::cout << "*            and is part of OPM. For more information see:           *\n";
@@ -149,6 +155,21 @@ try
         std::cout << "*                                                                    *\n";
         std::cout << "**********************************************************************\n\n";
     }
+
+#ifdef _OPENMP
+    if (!getenv("OMP_NUM_THREADS")) {
+        //Default to at most 4 threads, regardless of 
+        //number of cores (unless ENV(OMP_NUM_THREADS) is defined)
+        int num_cores = omp_get_num_procs();
+        int num_threads = std::min(4, num_cores);
+        omp_set_num_threads(num_threads);
+    }
+#pragma omp parallel
+    if (omp_get_thread_num() == 0){
+        //opm_get_num_threads() only works as expected within a parallel region.
+        std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
+    }
+#endif
 
     // Read parameters, see if a deck was specified on the command line.
     if ( output_cout )
@@ -342,7 +363,7 @@ try
     // and initilialize new properties and states for it.
     if( mpi_size > 1 )
     {
-        Opm::distributeGridAndData( grid, eclipseState, state, new_props, geoprops, parallel_information, use_local_perm );
+        Opm::distributeGridAndData( grid, deck, eclipseState, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
     }
 
     // create output writer after grid is distributed, otherwise the parallel output
@@ -352,12 +373,33 @@ try
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-    if (param.getDefault("use_interleaved", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
-    } else if (param.getDefault("use_cpr", true)) {
-        fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
-    } else {
-        fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+    {
+        const std::string cprSolver = "cpr";
+        const std::string interleavedSolver = "interleaved";
+        const std::string directSolver = "direct";
+        const std::string flowDefaultSolver = interleavedSolver;
+
+        std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipseState->getSimulationConfig();
+        std::string solver_approach = flowDefaultSolver;
+
+        if (param.has("solver_approach")) {
+            solver_approach = param.get<std::string>("solver_approach");
+        }  else {
+            if (simCfg->useCPR()) {
+                solver_approach = cprSolver;
+            }
+        }
+
+        if (solver_approach == cprSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
+        } else if (solver_approach == interleavedSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
+        } else if (solver_approach == directSolver) {
+            fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+        } else {
+            OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
+        }
+
     }
 
     Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
