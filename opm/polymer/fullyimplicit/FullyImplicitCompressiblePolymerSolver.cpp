@@ -951,9 +951,9 @@ namespace {
                                                          const std::vector<PhasePresence>& cond,
                                               		     const std::vector<int>&           cells) const
     {
-        const double* rhos = fluid_.surfaceDensity();
-        ADB b = fluidReciprocFVF(phase, p, T, cond, cells);
-        ADB rho = V::Constant(p.size(), 1, rhos[phase]) * b;
+        const V rhos = fluid_.surfaceDensity(phase, cells);
+        const ADB b = fluidReciprocFVF(phase, p, T, cond, cells);
+        const ADB rho = rhos * b;
         return rho;
     }
 
