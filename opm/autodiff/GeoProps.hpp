@@ -25,9 +25,11 @@
 #include <opm/common/ErrorMacros.hpp>
 //#include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
+#include <opm/core/grid/PinchProcessor.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
@@ -90,10 +92,17 @@ namespace Opm
                 ntg = eclState->getDoubleGridProperty("NTG")->getData();
             }
 
-            // get grid from parser.
-
-            // Get original grid cell volume.
+            // Get grid from parser .
             EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
+
+            // Use volume weighted arithmetic average of the NTG values for
+            // the cells effected by the current OPM cpgrid process algorithm
+            // for MINPV.
+            // TODO: do similar manipulations for porosity etc.
+            if (eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
+                minPvFillProps_(grid, eclState, ntg);
+            }
+
             // Pore volume.
             // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
             // But the default behavior is to get the comparable pore volume with ECLIPSE.
@@ -109,15 +118,8 @@ namespace Opm
                     pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
                 }
             }
-            // Use volume weighted arithmetic average of the NTG values for
-            // the cells effected by the current OPM cpgrid process algorithm
-            // for MINPV. Note that the change does not effect the pore volume calculations
-            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
-            // only the transmissibility calculations.
-            minPvFillProps_(grid, eclState,ntg);
 
             // Transmissibility
-
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
 
@@ -130,6 +132,37 @@ namespace Opm
 
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
+
+            // Handle NNCs
+            std::shared_ptr<const NNC> nnc_deck = eclState ? eclState->getNNC()
+                             : std::shared_ptr<const Opm::NNC>();
+            NNC nnc (*nnc_deck);
+            nnc_ = nnc;
+
+            if (eclgrid->isPinchActive()) {
+                const double minpv = eclgrid->getMinpvValue();
+                const double thickness = eclgrid->getPinchThresholdThickness();
+                auto transMode = eclgrid->getPinchOption();
+                auto multzMode = eclgrid->getMultzOption();
+                PinchProcessor<Grid> pinch(minpv, thickness, transMode, multzMode);
+
+                std::vector<double> htrans_copy(htrans.size());
+                std::copy_n(htrans.data(), htrans.size(), htrans_copy.begin());
+
+                std::vector<int> actnum;
+                eclgrid->exportACTNUM(actnum);
+                auto transMult = eclState->getTransMult();
+                std::vector<double> multz(numCells, 0.0);
+                const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+
+                for (int i = 0; i < numCells; ++i) {
+                    multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
+                }
+
+                // Note the pore volume from eclState is used and not the pvol_ calculated above
+                std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
+                pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
+            }
 
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
@@ -180,6 +213,7 @@ namespace Opm
         const double* gravity()          const { return gravity_;}
         Vector&       poreVolume()             { return pvol_   ;}
         Vector&       transmissibility()       { return trans_  ;}
+        const NNC& nnc() const { return nnc_;}
 
     private:
         template <class Grid>
@@ -204,6 +238,9 @@ namespace Opm
         Vector gpot_ ;
         Vector z_;
         double gravity_[3]; // Size 3 even if grid is 2-dim.
+
+        /// Non-neighboring connections
+        NNC nnc_;
 
 
 

@@ -36,7 +36,9 @@ namespace Opm
                                                  const bool has_vapoil,
                                                  std::shared_ptr<EclipseState> eclipse_state,
                                                  OutputWriter& output_writer,
-                                                 const std::vector<double>& threshold_pressures_by_face)
+                                                 const std::vector<double>& threshold_pressures_by_face,
+                                                 const std::vector<double>& threshold_pressures_by_nnc
+                                                 )
         : param_(param),
           model_param_(param),
           solver_param_(param),
@@ -53,6 +55,7 @@ namespace Opm
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
+          threshold_pressures_by_nnc_(threshold_pressures_by_nnc),
           is_parallel_run_( false )
     {
         // Misc init.
@@ -346,7 +349,7 @@ namespace Opm
                                                       terminal_output_));
 
         if (!threshold_pressures_by_face_.empty()) {
-            model->setThresholdPressures(threshold_pressures_by_face_);
+            model->setThresholdPressures(threshold_pressures_by_face_, threshold_pressures_by_nnc_);
         }
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));

@@ -163,7 +163,7 @@ namespace detail {
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid, eclState)
+        , ops_   (grid, geo.nnc())
         , wops_  (wells_)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
@@ -317,19 +317,33 @@ namespace detail {
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::
-    setThresholdPressures(const std::vector<double>& threshold_pressures_by_face)
+    setThresholdPressures(const std::vector<double>& threshold_pressures_by_face, const std::vector<double>& threshold_pressures_by_nnc)
     {
         const int num_faces = AutoDiffGrid::numFaces(grid_);
-        if (int(threshold_pressures_by_face.size()) != num_faces) {
+
+        if (int(threshold_pressures_by_face.size()) != num_faces ) {
             OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures_by_face input, must be equal to number of faces.");
         }
+
+        const int num_nnc = ops_.nnc_trans.size();
+        if (int(threshold_pressures_by_nnc.size()) != num_nnc ) {
+            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures_by_nnc input, must be equal to number of nncs.");
+        }
+
         use_threshold_pressure_ = true;
+
+
         // Map to interior faces.
         const int num_ifaces = ops_.internal_faces.size();
-        threshold_pressures_by_interior_face_.resize(num_ifaces);
+        threshold_pressures.resize(num_ifaces + num_nnc);
         for (int ii = 0; ii < num_ifaces; ++ii) {
-            threshold_pressures_by_interior_face_[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
+            threshold_pressures[ii] = threshold_pressures_by_face[ops_.internal_faces[ii]];
         }
+        // Add NNCs
+        for (int ii = 0; ii < num_nnc; ++ii) {
+            threshold_pressures[ii + num_ifaces] = threshold_pressures_by_nnc[ii];
+        }
+
     }
 
 
@@ -914,6 +928,7 @@ namespace detail {
         // for each active phase.
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         const V trans_nnc = ops_.nnc_trans;
+
         V trans_all(transi.size() + trans_nnc.size());
         trans_all << transi, trans_nnc;
 
@@ -2328,14 +2343,14 @@ namespace detail {
         // threshold, that shall have zero flow. Storing the bool
         // Array as a V (a double Array) with 1 and 0 elements, a
         // 1 where flow is allowed, a 0 where it is not.
-        const V high_potential = (dp.value().abs() >= threshold_pressures_by_interior_face_).template cast<double>();
+        const V high_potential = (dp.value().abs() >= threshold_pressures).template cast<double>();
 
         // Create a sparse vector that nullifies the low potential elements.
         const M keep_high_potential(high_potential.matrix().asDiagonal());
 
         // Find the current sign for the threshold modification
         const V sign_dp = sign(dp.value());
-        const V threshold_modification = sign_dp * threshold_pressures_by_interior_face_;
+        const V threshold_modification = sign_dp * threshold_pressures;
 
         // Modify potential and nullify where appropriate.
         dp = keep_high_potential * (dp - threshold_modification);

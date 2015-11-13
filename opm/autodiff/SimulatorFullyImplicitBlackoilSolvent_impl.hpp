@@ -38,6 +38,7 @@ namespace Opm
                                           BlackoilOutputWriter& output_writer,
                                           Opm::DeckConstPtr& deck,
                                           const std::vector<double>& threshold_pressures_by_face,
+                                          const std::vector<double>& threshold_pressures_by_nnc,
                                           const bool has_solvent)
     : BaseType(param,
                grid,
@@ -50,7 +51,8 @@ namespace Opm
                has_vapoil,
                eclipse_state,
                output_writer,
-               threshold_pressures_by_face)
+               threshold_pressures_by_face,
+               threshold_pressures_by_nnc)
     , has_solvent_(has_solvent)
     , deck_(deck)
     , solvent_props_(solvent_props)
@@ -83,7 +85,7 @@ namespace Opm
                                                       has_solvent_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
-            model->setThresholdPressures(BaseType::threshold_pressures_by_face_);
+            model->setThresholdPressures(BaseType::threshold_pressures_by_face_, BaseType::threshold_pressures_by_nnc_);
         }
 
         return std::unique_ptr<Solver>(new Solver(BaseType::solver_param_, std::move(model)));
