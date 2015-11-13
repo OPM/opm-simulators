@@ -349,11 +349,20 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // ------ Density ------
 
     /// Densities of stock components at surface conditions.
-    /// \return Array of 3 density values.
-    const double* BlackoilPropsAdFromDeck::surfaceDensity(const int cellIdx) const
+    /// \param[in] phaseIdx
+    /// \param[in] cells  Array of n cell indices to be associated with the pressure values.
+    /// \return Array of n density values for phase given by phaseIdx.
+    V BlackoilPropsAdFromDeck::surfaceDensity(const int phaseIdx, const Cells& cells) const
     {
-        int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-        return &densities_[pvtRegionIdx][0];
+        assert( !(phaseIdx > numPhases()));
+        const int n = cells.size();
+        V rhos = V::Zero(n);
+        for (int cellIdx = 0; cellIdx < n; ++cellIdx) {
+            int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
+            const auto* rho = &densities_[pvtRegionIdx][0];
+            rhos[cellIdx] = rho[phaseIdx];
+        }
+        return rhos;
     }
 
 

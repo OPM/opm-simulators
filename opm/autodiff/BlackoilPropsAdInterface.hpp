@@ -88,8 +88,10 @@ namespace Opm
         // ------ Density ------
 
         /// Densities of stock components at surface conditions.
-        /// \return Array of 3 density values.
-        virtual const double* surfaceDensity(int regionIdx = 0) const = 0;
+        /// \param[in] phaseIdx
+        /// \param[in] cells  Array of n cell indices to be associated with the pressure values.
+        /// \return Array of n density values for phase given by phaseIdx.
+        virtual V surfaceDensity(const int PhaseIdx, const Cells& cells) const = 0;
 
 
         // ------ Viscosity ------
