@@ -618,9 +618,9 @@ namespace Opm {
              * \param[in] info        The information and communication utilities
              *                        about/of the parallelization.
              * \param[in] ownership   In a parallel run this is vector containing
-             *                        1 for every owned unknown, zero othercase.
-             *                        If it is no such run then it is not used.
-             * \tparam    is_parallel True if the runi is parallel. In this case
+             *                        1 for every owned unknown, zero otherwise.
+             *                        Not used in a sequential run.
+             * \tparam    is_parallel True if the run is parallel. In this case
              *                        info has to contain a ParallelISTLInformation
              *                        object.
              */
