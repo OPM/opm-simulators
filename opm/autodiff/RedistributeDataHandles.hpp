@@ -344,7 +344,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     global_grid.switchToGlobalView();
 
     // distribute the grid and switch to the distributed view
-    grid.loadBalance(eclipseState);
+    grid.loadBalance(eclipseState, geology.transmissibility().data());
     grid.switchToDistributedView();
     std::vector<int> compressedToCartesianIdx;
     Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
