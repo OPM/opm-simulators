@@ -92,6 +92,13 @@ namespace Opm {
         /// Not used by this class except to satisfy interface requirements.
         typedef parameter::ParameterGroup SolverParameters;
 
+        /// There is no separate model class for this solver, return itself.
+        const FullyImplicitCompressiblePolymerSolver& model() const;
+
+        /// Evaluate the relative changes in the physical variables.
+        double relativeChange(const PolymerBlackoilState& previous,
+                              const PolymerBlackoilState& current ) const;
+
     private:
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
