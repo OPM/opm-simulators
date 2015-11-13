@@ -120,15 +120,19 @@ namespace Opm
             // the inverse formation volume factors
             std::vector<PhasePresence> cond(numCells);
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                if (pu.phase_used[BlackoilPhases::Aqua] && initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]] > 0.0) {
+                const double sw = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]];
+                const double so = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]];
+                const double sg = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]];
+
+                if (pu.phase_used[BlackoilPhases::Aqua] && sw > 0.0) {
                     cond[cellIdx].setFreeWater();
                 }
 
-                if (pu.phase_used[BlackoilPhases::Liquid] && initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]] > 0.0) {
+                if (pu.phase_used[BlackoilPhases::Liquid] && so > 0.0) {
                     cond[cellIdx].setFreeOil();
                 }
 
-                if (pu.phase_used[BlackoilPhases::Vapour] && initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]] > 0.0) {
+                if (pu.phase_used[BlackoilPhases::Vapour] && sg > 0.0) {
                     cond[cellIdx].setFreeGas();
                 }
             }
@@ -161,18 +165,24 @@ namespace Opm
             }
 
             for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                assert(pu.phase_used[BlackoilPhases::Liquid]); // we currently hard-code the oil phase as the reference phase!
+                // we currently hard-code the oil phase as the reference phase!
+                assert(pu.phase_used[BlackoilPhases::Liquid]);
+
                 const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                 phasePressure[opos][cellIdx] = initialState.pressure()[cellIdx];
 
                 if (pu.phase_used[BlackoilPhases::Aqua]) {
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                    phasePressure[wpos][cellIdx] = initialState.pressure()[cellIdx] + (capPress[cellIdx*numPhases + opos] - capPress[cellIdx*numPhases + wpos]);
+                    phasePressure[wpos][cellIdx] =
+                        initialState.pressure()[cellIdx]
+                        + (capPress[cellIdx*numPhases + opos] - capPress[cellIdx*numPhases + wpos]);
                 }
 
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                    phasePressure[gpos][cellIdx] = initialState.pressure()[cellIdx] + (capPress[cellIdx*numPhases + gpos] - capPress[cellIdx*numPhases + opos]);
+                    phasePressure[gpos][cellIdx] =
+                        initialState.pressure()[cellIdx]
+                        + (capPress[cellIdx*numPhases + gpos] - capPress[cellIdx*numPhases + opos]);
                 }
             }
 
