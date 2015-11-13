@@ -370,7 +370,9 @@ namespace Opm
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
-            global_number_resv_wells = boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()).communicator().sum(global_number_resv_wells);
+            const auto& info =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            global_number_resv_wells = info.communicator().sum(global_number_resv_wells);
             if ( global_number_resv_wells )
             {
                 // At least one process has resv wells. Therefore rate converter needs
