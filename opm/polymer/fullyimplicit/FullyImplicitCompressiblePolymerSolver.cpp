@@ -1039,4 +1039,69 @@ namespace {
         }
     }
 
+
+
+
+
+    const FullyImplicitCompressiblePolymerSolver&
+    FullyImplicitCompressiblePolymerSolver::model() const
+    {
+        return *this;
+    }
+
+
+
+
+
+    namespace detail {
+        template <class RAIter>
+        double euclidianNormSquared(RAIter it, const RAIter end)
+        {
+            double product = 0.0 ;
+            for( ; it != end; ++it ) {
+                product += ( *it * *it );
+            }
+            return product;
+        }
+    } // namespace detail
+
+
+
+
+
+    double
+    FullyImplicitCompressiblePolymerSolver::
+    relativeChange(const PolymerBlackoilState& previous,
+                   const PolymerBlackoilState& current ) const
+    {
+        std::vector< double > p0  ( previous.pressure() );
+        std::vector< double > sat0( previous.saturation() );
+
+        const std::size_t pSize = p0.size();
+        const std::size_t satSize = sat0.size();
+
+        // compute u^n - u^n+1
+        for( std::size_t i=0; i<pSize; ++i ) {
+            p0[ i ] -= current.pressure()[ i ];
+        }
+
+        for( std::size_t i=0; i<satSize; ++i ) {
+            sat0[ i ] -= current.saturation()[ i ];
+        }
+
+        // compute || u^n - u^n+1 ||
+        const double normDiff  = detail::euclidianNormSquared( p0.begin(),   p0.end())
+                               + detail::euclidianNormSquared( sat0.begin(), sat0.end());
+
+        // compute || u^n+1 ||
+        const double normNewState  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end())
+                                   + detail::euclidianNormSquared( current.saturation().begin(), current.saturation().end());
+
+        if ( normNewState > 0.0 ) {
+            return normDiff / normNewState;
+        } else {
+            return 0.0;
+        }
+    }
+
 } //namespace Opm
