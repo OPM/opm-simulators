@@ -188,7 +188,9 @@ namespace {
         , rq_    (fluid.numPhases() + 1)
         , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
                         ADB::null(),
-                        ADB::null() } )
+                        ADB::null(),
+                        { 1.1169, 1.0031, 0.0031 } // Reasonable default scaling
+                       } )
     {
     }
 
