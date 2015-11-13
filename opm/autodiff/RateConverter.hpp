@@ -105,7 +105,7 @@ namespace Opm {
                 }
             };
             template<>
-            struct AverageIncrementCalculator<true>
+            struct AverageIncrementCalculator<false>
             {
                 std::tuple<double, double, int>
                 operator()(const std::vector<double>& pressure,
