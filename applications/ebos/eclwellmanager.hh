@@ -174,7 +174,7 @@ public:
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
         if (wasRestarted || wellTopologyChanged_(eclState, episodeIdx)) {
-            updateWellTopology_(episodeIdx, wellCompMap);
+            updateWellTopology_(episodeIdx, wellCompMap, gridDofIsPenetrated_);
         }
 
         // set those parameters of the wells which do not change the topology of the
@@ -368,6 +368,12 @@ public:
     }
 
     /*!
+     * \brief Returns true iff a given degree of freedom is currently penetrated by any well.
+     */
+    bool gridDofIsPenetrated(int globalDofIdx) const
+    { return gridDofIsPenetrated_[globalDofIdx]; }
+
+    /*!
      * \brief Given a well name, return the corresponding index.
      *
      * A std::runtime_error will be thrown if the well name is unknown.
@@ -548,8 +554,10 @@ public:
                                  int dofIdx,
                                  int timeIdx) const
     {
-        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-            q[eqIdx] = 0.0;
+        q = 0.0;
+
+        if (!gridDofIsPenetrated(context.globalSpaceIndex(dofIdx, timeIdx)))
+            return;
 
         RateVector wellRate;
 
@@ -690,7 +698,9 @@ protected:
         return false;
     }
 
-    void updateWellTopology_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
+    void updateWellTopology_(int reportStepIdx,
+                             const WellCompletionsMap& wellCompletions,
+                             std::vector<bool>& gridDofIsPenetrated) const
     {
         auto& model = simulator_.model();
         const auto& gridManager = simulator_.gridManager();
@@ -704,6 +714,10 @@ protected:
 
         // tell the active wells which DOFs they contain
         const auto gridView = simulator_.gridManager().gridView();
+
+        gridDofIsPenetrated.resize(model.numGridDof());
+        std::fill(gridDofIsPenetrated.begin(), gridDofIsPenetrated.end(), false);
+
         ElementContext elemCtx(simulator_);
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto elemEndIt = gridView.template end</*codim=*/0>();
@@ -722,6 +736,8 @@ protected:
                     // the current DOF is not contained in any well, so we must skip
                     // it...
                     continue;
+
+                gridDofIsPenetrated[globalDofIdx] = true;
 
                 auto eclWell = wellCompletions.at(cartesianDofIdx).second;
                 eclWell->addDof(elemCtx, dofIdx);
@@ -868,6 +884,7 @@ protected:
     Simulator &simulator_;
 
     std::vector<std::shared_ptr<Well> > wells_;
+    std::vector<bool> gridDofIsPenetrated_;
     std::map<std::string, int> wellNameToIndex_;
     std::map<std::string, std::array<Scalar, numPhases> > wellTotalInjectedVolume_;
     std::map<std::string, std::array<Scalar, numPhases> > wellTotalProducedVolume_;

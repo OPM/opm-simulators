@@ -683,6 +683,14 @@ public:
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
     }
 
+    /*!
+     * \brief Returns a reference to the ECL well manager used by the problem.
+     *
+     * This can be used for inspecting wells outside of the problem.
+     */
+    const EclWellManager<TypeTag>& wellManager() const
+    { return wellManager_; }
+
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
