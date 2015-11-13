@@ -37,6 +37,9 @@ namespace Opm
           nonlinearIterationsLast_(0),
           linearIterationsLast_(0)
     {
+        if (!model_) {
+            OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
+        }
     }
 
     template <class PhysicalModel>
@@ -54,7 +57,6 @@ namespace Opm
     template <class PhysicalModel>
     const PhysicalModel& NonlinearSolver<PhysicalModel>::model() const
     {
-        assert( model_ );
         return *model_;
     }
 
