@@ -32,6 +32,266 @@
 
 namespace Opm
 {
+/// \brief Compute the maximum gravity corrected pressure difference of all
+///        equilibration regions given a reservoir state.
+/// \tparam    Grid           Type of grid object (UnstructuredGrid or CpGrid).
+/// \param[out] maxDp         The resulting pressure difference between equilibration regions
+/// \param[in] deck           Input deck, EQLOPTS and THPRES are accessed from it.
+/// \param[in] eclipseState   Processed eclipse state, EQLNUM is accessed from it.
+/// \param[in] grid           The grid to which the thresholds apply.
+/// \param[in] initialState   The state of the reservoir
+/// \param[in] props          The object which calculates fluid properties
+/// \param[in] gravity        The gravity constant
+template <class Grid>
+void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
+                  const DeckConstPtr& deck,
+                  EclipseStateConstPtr eclipseState,
+                  const Grid& grid,
+                  const BlackoilState& initialState,
+                  const BlackoilPropertiesFromDeck& props,
+                  const double gravity)
+{
+
+    const PhaseUsage& pu = props.phaseUsage();
+
+    std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+    const auto& eqlnumData = eqlnum->getData();
+
+    const int numPhases = initialState.numPhases();
+    const int numCells = UgGridHelpers::numCells(grid);
+    const int numPvtRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTPVT")->getInt(0);
+
+    // retrieve the minimum (residual!?) and the maximum saturations for all cells
+    std::vector<double> minSat(numPhases*numCells);
+    std::vector<double> maxSat(numPhases*numCells);
+    std::vector<int> allCells(numCells);
+    for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+        allCells[cellIdx] = cellIdx;
+    }
+    props.satRange(numCells, allCells.data(), minSat.data(), maxSat.data());
+
+    // retrieve the surface densities
+    std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
+    Opm::DeckKeywordConstPtr densityKw = deck->getKeyword("DENSITY");
+    for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
+        surfaceDensity[regionIdx].resize(numPhases);
+
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+            surfaceDensity[regionIdx][wpos] =
+                densityKw->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+        }
+
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+            surfaceDensity[regionIdx][opos] =
+                densityKw->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+        }
+
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+            surfaceDensity[regionIdx][gpos] =
+                densityKw->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
+        }
+    }
+
+    // retrieve the PVT region of each cell. note that we need c++ instead of
+    // Fortran indices.
+    const int* gc = UgGridHelpers::globalCell(grid);
+    std::vector<int> pvtRegion(numCells);
+    const auto& cartPvtRegion = eclipseState->getIntGridProperty("PVTNUM")->getData();
+    for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+        const int cartCellIdx = gc ? gc[cellIdx] : cellIdx;
+        pvtRegion[cellIdx] = std::max(0, cartPvtRegion[cartCellIdx] - 1);
+    }
+
+    // compute the initial "phase presence" of each cell (required to calculate
+    // the inverse formation volume factors
+    std::vector<PhasePresence> cond(numCells);
+    for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+        const double sw = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]];
+        const double so = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]];
+        const double sg = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]];
+
+        if (pu.phase_used[BlackoilPhases::Aqua] && sw > 0.0) {
+            cond[cellIdx].setFreeWater();
+        }
+
+        if (pu.phase_used[BlackoilPhases::Liquid] && so > 0.0) {
+            cond[cellIdx].setFreeOil();
+        }
+
+        if (pu.phase_used[BlackoilPhases::Vapour] && sg > 0.0) {
+            cond[cellIdx].setFreeGas();
+        }
+    }
+
+    // calculate the initial fluid densities for the gravity correction.
+    std::vector<double> b(numCells);
+
+    std::vector<std::vector<double>> rho(numPhases);
+    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        rho[phaseIdx].resize(numCells);
+    }
+
+    // compute the capillary pressures of the active phases
+    std::vector<double> capPress(numCells*numPhases);
+    std::vector<int> cellIdxArray(numCells);
+    for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
+        cellIdxArray[cellIdx] = cellIdx;
+    }
+    props.capPress(numCells, initialState.saturation().data(), cellIdxArray.data(), capPress.data(), NULL);
+
+    // compute the absolute pressure of each active phase: for some reason, E100
+    // defines the capillary pressure for the water phase as p_o - p_w while it
+    // uses p_g - p_o for the gas phase. (it would be more consistent to use the
+    // oil pressure as reference for both the other phases.) probably this is
+    // done to always have a positive number for the capillary pressure (as long
+    // as the medium is hydrophilic)
+    std::vector<std::vector<double> > phasePressure(numPhases);
+    for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        phasePressure[phaseIdx].resize(numCells);
+    }
+
+    for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
+        // we currently hard-code the oil phase as the reference phase!
+        assert(pu.phase_used[BlackoilPhases::Liquid]);
+
+        const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+        phasePressure[opos][cellIdx] = initialState.pressure()[cellIdx];
+
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+            phasePressure[wpos][cellIdx] =
+                initialState.pressure()[cellIdx]
+                + (capPress[cellIdx*numPhases + opos] - capPress[cellIdx*numPhases + wpos]);
+        }
+
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+            phasePressure[gpos][cellIdx] =
+                initialState.pressure()[cellIdx]
+                + (capPress[cellIdx*numPhases + gpos] - capPress[cellIdx*numPhases + opos]);
+        }
+    }
+
+    // calculate the inverse formation volume factors for the active phases and each cell
+    if (pu.phase_used[BlackoilPhases::Aqua]) {
+        std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
+        const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+        const PvtInterface& pvtw = props.pvt(wpos);
+        pvtw.b(numCells,
+               pvtRegion.data(),
+               phasePressure[wpos].data(),
+               initialState.temperature().data(),
+               initialState.gasoilratio().data(),
+               cond.data(),
+               b.data(),
+               dummy.data(),
+               dummy.data());
+        for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
+            rho[wpos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][wpos]*b[cellIdx];
+        }
+    }
+
+    if (pu.phase_used[BlackoilPhases::Liquid]) {
+        std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
+        const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+        const PvtInterface& pvto = props.pvt(opos);
+        pvto.b(numCells,
+               pvtRegion.data(),
+               phasePressure[opos].data(),
+               initialState.temperature().data(),
+               initialState.gasoilratio().data(),
+               cond.data(),
+               b.data(),
+               dummy.data(),
+               dummy.data());
+        for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
+            rho[opos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][opos]*b[cellIdx];
+
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                rho[opos][cellIdx] +=
+                    surfaceDensity[pvtRegion[cellIdx]][gpos]*initialState.gasoilratio()[cellIdx]*b[cellIdx];
+            }
+        }
+    }
+
+    if (pu.phase_used[BlackoilPhases::Vapour]) {
+        std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
+        const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+        const PvtInterface& pvtg = props.pvt(gpos);
+        pvtg.b(numCells,
+               pvtRegion.data(),
+               phasePressure[gpos].data(),
+               initialState.temperature().data(),
+               initialState.rv().data(),
+               cond.data(),
+               b.data(),
+               dummy.data(),
+               dummy.data());
+        for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
+            rho[gpos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][gpos]*b[cellIdx];
+
+            if (pu.phase_used[BlackoilPhases::Liquid]) {
+                const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                rho[gpos][cellIdx] +=
+                    surfaceDensity[pvtRegion[cellIdx]][opos]*initialState.rv()[cellIdx]*b[cellIdx];
+            }
+        }
+    }
+
+    // Calculate the maximum pressure potential difference between all PVT region
+    // transitions of the initial solution.
+    const int num_faces = UgGridHelpers::numFaces(grid);
+    const auto& fc = UgGridHelpers::faceCells(grid);
+    for (int face = 0; face < num_faces; ++face) {
+        const int c1 = fc(face, 0);
+        const int c2 = fc(face, 1);
+        if (c1 < 0 || c2 < 0) {
+            // Boundary face, skip this.
+            continue;
+        }
+        const int gc1 = (gc == 0) ? c1 : gc[c1];
+        const int gc2 = (gc == 0) ? c2 : gc[c2];
+        const int eq1 = eqlnumData[gc1];
+        const int eq2 = eqlnumData[gc2];
+
+        if (eq1 == eq2) {
+            // not an equilibration region boundary. skip this.
+            continue;
+        }
+
+        // update the maximum pressure potential difference between the two
+        // regions
+        const auto barrierId = std::make_pair(eq1, eq2);
+        if (maxDp.count(barrierId) == 0) {
+            maxDp[barrierId] = 0.0;
+        }
+
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const double z1 = UgGridHelpers::cellCenterDepth(grid, c1);
+            const double z2 = UgGridHelpers::cellCenterDepth(grid, c2);
+            const double zAvg = (z1 + z2)/2; // average depth
+
+            const double rhoAvg = (rho[phaseIdx][c1] + rho[phaseIdx][c2])/2;
+
+            const double s1 = initialState.saturation()[numPhases*c1 + phaseIdx];
+            const double s2 = initialState.saturation()[numPhases*c2 + phaseIdx];
+
+            const double sResid1 = minSat[numPhases*c1 + phaseIdx];
+            const double sResid2 = minSat[numPhases*c2 + phaseIdx];
+
+            // compute gravity corrected pressure potentials at the average depth
+            const double p1 = phasePressure[phaseIdx][c1] + rhoAvg*gravity*(zAvg - z1);
+            const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(zAvg - z2);
+
+            if ((p1 > p2 && s1 > sResid1) || (p2 > p1 && s2 > sResid2))
+                maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
+        }
+    }
+}
 
     /// \brief Get a vector of pressure thresholds from EclipseState.
     /// This function looks at EQLOPTS, THPRES and EQLNUM to determine
@@ -41,6 +301,8 @@ namespace Opm
     /// \tparam    Grid           Type of grid object (UnstructuredGrid or CpGrid).
     /// \param[in] deck           Input deck, EQLOPTS and THPRES are accessed from it.
     /// \param[in] eclipseState   Processed eclipse state, EQLNUM is accessed from it.
+    /// \param[in] maxDp          The maximum gravity corrected pressure differences between
+    ///                           the equilibration regions.
     /// \param[in] grid           The grid to which the thresholds apply.
     /// \return                   A vector of pressure thresholds, one
     ///                           for each face in the grid. A value
@@ -55,12 +317,8 @@ namespace Opm
     std::vector<double> thresholdPressures(const DeckConstPtr& deck,
                                            EclipseStateConstPtr eclipseState,
                                            const Grid& grid,
-                                           const BlackoilState& initialState,
-                                           const BlackoilPropertiesFromDeck& props,
-                                           const double gravity)
+                                           const std::map<std::pair<int, int>, double>& maxDp)
     {
-
-        const PhaseUsage& pu = props.phaseUsage();
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
         if (simulationConfig->hasThresholdPressure()) {
@@ -68,244 +326,10 @@ namespace Opm
             std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum->getData();
 
-            const int numPhases = initialState.numPhases();
-            const int numCells = UgGridHelpers::numCells(grid);
-            const int numPvtRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTPVT")->getInt(0);
-
-            // retrieve the minimum (residual!?) and the maximum saturations for all cells
-            std::vector<double> minSat(numPhases*numCells);
-            std::vector<double> maxSat(numPhases*numCells);
-            std::vector<int> allCells(numCells);
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                allCells[cellIdx] = cellIdx;
-            }
-            props.satRange(numCells, allCells.data(), minSat.data(), maxSat.data());
-
-            // retrieve the surface densities
-            std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
-            Opm::DeckKeywordConstPtr densityKw = deck->getKeyword("DENSITY");
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
-                surfaceDensity[regionIdx].resize(numPhases);
-
-                if (pu.phase_used[BlackoilPhases::Aqua]) {
-                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                    surfaceDensity[regionIdx][wpos] =
-                        densityKw->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
-                }
-
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                    surfaceDensity[regionIdx][opos] =
-                        densityKw->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
-                }
-
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                    surfaceDensity[regionIdx][gpos] =
-                        densityKw->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
-                }
-            }
-
-            // retrieve the PVT region of each cell. note that we need c++ instead of
-            // Fortran indices.
-            const int* gc = UgGridHelpers::globalCell(grid);
-            std::vector<int> pvtRegion(numCells);
-            const auto& cartPvtRegion = eclipseState->getIntGridProperty("PVTNUM")->getData();
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                const int cartCellIdx = gc ? gc[cellIdx] : cellIdx;
-                pvtRegion[cellIdx] = std::max(0, cartPvtRegion[cartCellIdx] - 1);
-            }
-
-            // compute the initial "phase presence" of each cell (required to calculate
-            // the inverse formation volume factors
-            std::vector<PhasePresence> cond(numCells);
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                const double sw = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]];
-                const double so = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]];
-                const double sg = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]];
-
-                if (pu.phase_used[BlackoilPhases::Aqua] && sw > 0.0) {
-                    cond[cellIdx].setFreeWater();
-                }
-
-                if (pu.phase_used[BlackoilPhases::Liquid] && so > 0.0) {
-                    cond[cellIdx].setFreeOil();
-                }
-
-                if (pu.phase_used[BlackoilPhases::Vapour] && sg > 0.0) {
-                    cond[cellIdx].setFreeGas();
-                }
-            }
-
-            // calculate the initial fluid densities for the gravity correction.
-            std::vector<double> b(numCells);
-
-            std::vector<std::vector<double>> rho(numPhases);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                rho[phaseIdx].resize(numCells);
-            }
-
-            // compute the capillary pressures of the active phases
-            std::vector<double> capPress(numCells*numPhases);
-            std::vector<int> cellIdxArray(numCells);
-            for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                cellIdxArray[cellIdx] = cellIdx;
-            }
-            props.capPress(numCells, initialState.saturation().data(), cellIdxArray.data(), capPress.data(), NULL);
-
-            // compute the absolute pressure of each active phase: for some reason, E100
-            // defines the capillary pressure for the water phase as p_o - p_w while it
-            // uses p_g - p_o for the gas phase. (it would be more consistent to use the
-            // oil pressure as reference for both the other phases.) probably this is
-            // done to always have a positive number for the capillary pressure (as long
-            // as the medium is hydrophilic)
-            std::vector<std::vector<double> > phasePressure(numPhases);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                phasePressure[phaseIdx].resize(numCells);
-            }
-
-            for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                // we currently hard-code the oil phase as the reference phase!
-                assert(pu.phase_used[BlackoilPhases::Liquid]);
-
-                const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                phasePressure[opos][cellIdx] = initialState.pressure()[cellIdx];
-
-                if (pu.phase_used[BlackoilPhases::Aqua]) {
-                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                    phasePressure[wpos][cellIdx] =
-                        initialState.pressure()[cellIdx]
-                        + (capPress[cellIdx*numPhases + opos] - capPress[cellIdx*numPhases + wpos]);
-                }
-
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                    phasePressure[gpos][cellIdx] =
-                        initialState.pressure()[cellIdx]
-                        + (capPress[cellIdx*numPhases + gpos] - capPress[cellIdx*numPhases + opos]);
-                }
-            }
-
-            // calculate the inverse formation volume factors for the active phases and each cell
-            if (pu.phase_used[BlackoilPhases::Aqua]) {
-                std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
-                const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-                const PvtInterface& pvtw = props.pvt(wpos);
-                pvtw.b(numCells,
-                       pvtRegion.data(),
-                       phasePressure[wpos].data(),
-                       initialState.temperature().data(),
-                       initialState.gasoilratio().data(),
-                       cond.data(),
-                       b.data(),
-                       dummy.data(),
-                       dummy.data());
-                for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                    rho[wpos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][wpos]*b[cellIdx];
-                }
-            }
-
-            if (pu.phase_used[BlackoilPhases::Liquid]) {
-                std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
-                const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                const PvtInterface& pvto = props.pvt(opos);
-                pvto.b(numCells,
-                       pvtRegion.data(),
-                       phasePressure[opos].data(),
-                       initialState.temperature().data(),
-                       initialState.gasoilratio().data(),
-                       cond.data(),
-                       b.data(),
-                       dummy.data(),
-                       dummy.data());
-                for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                    rho[opos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][opos]*b[cellIdx];
-
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                        rho[opos][cellIdx] +=
-                            surfaceDensity[pvtRegion[cellIdx]][gpos]*initialState.gasoilratio()[cellIdx]*b[cellIdx];
-                    }
-                }
-            }
-
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                std::vector<double> dummy(numCells*BlackoilPhases::MaxNumPhases);
-                const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                const PvtInterface& pvtg = props.pvt(gpos);
-                pvtg.b(numCells,
-                       pvtRegion.data(),
-                       phasePressure[gpos].data(),
-                       initialState.temperature().data(),
-                       initialState.rv().data(),
-                       cond.data(),
-                       b.data(),
-                       dummy.data(),
-                       dummy.data());
-                for (int cellIdx = 0; cellIdx < numCells; ++ cellIdx) {
-                    rho[gpos][cellIdx] = surfaceDensity[pvtRegion[cellIdx]][gpos]*b[cellIdx];
-
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                        rho[gpos][cellIdx] +=
-                            surfaceDensity[pvtRegion[cellIdx]][opos]*initialState.rv()[cellIdx]*b[cellIdx];
-                    }
-                }
-            }
-
-            // Calculate the maximum pressure potential difference between all PVT region
-            // transitions of the initial solution.
-            std::map<std::pair<int, int>, double> maxDp;
-            const int num_faces = UgGridHelpers::numFaces(grid);
-            thpres_vals.resize(num_faces, 0.0);
-            const auto& fc = UgGridHelpers::faceCells(grid);
-            for (int face = 0; face < num_faces; ++face) {
-                const int c1 = fc(face, 0);
-                const int c2 = fc(face, 1);
-                if (c1 < 0 || c2 < 0) {
-                    // Boundary face, skip this.
-                    continue;
-                }
-                const int gc1 = (gc == 0) ? c1 : gc[c1];
-                const int gc2 = (gc == 0) ? c2 : gc[c2];
-                const int eq1 = eqlnumData[gc1];
-                const int eq2 = eqlnumData[gc2];
-
-                if (eq1 == eq2) {
-                    // not an equilibration region boundary. skip this.
-                    continue;
-                }
-
-                // update the maximum pressure potential difference between the two
-                // regions
-                const auto barrierId = std::make_pair(eq1, eq2);
-                if (maxDp.count(barrierId) == 0) {
-                    maxDp[barrierId] = 0.0;
-                }
-
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    const double z1 = UgGridHelpers::cellCenterDepth(grid, c1);
-                    const double z2 = UgGridHelpers::cellCenterDepth(grid, c2);
-                    const double zAvg = (z1 + z2)/2; // average depth
-
-                    const double rhoAvg = (rho[phaseIdx][c1] + rho[phaseIdx][c2])/2;
-
-                    const double s1 = initialState.saturation()[numPhases*c1 + phaseIdx];
-                    const double s2 = initialState.saturation()[numPhases*c2 + phaseIdx];
-
-                    const double sResid1 = minSat[numPhases*c1 + phaseIdx];
-                    const double sResid2 = minSat[numPhases*c2 + phaseIdx];
-
-                    // compute gravity corrected pressure potentials at the average depth
-                    const double p1 = phasePressure[phaseIdx][c1] + rhoAvg*gravity*(zAvg - z1);
-                    const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(zAvg - z2);
-
-                    if ((p1 > p2 && s1 > sResid1) || (p2 > p1 && s2 > sResid2))
-                        maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
-                }
-            }
-
             // Set threshold pressure values for each cell face.
+            const int num_faces = UgGridHelpers::numFaces(grid);
+            const auto& fc = UgGridHelpers::faceCells(grid);
+            const int* gc = UgGridHelpers::globalCell(grid);
             thpres_vals.resize(num_faces, 0.0);
             for (int face = 0; face < num_faces; ++face) {
                 const int c1 = fc(face, 0);
@@ -328,7 +352,7 @@ namespace Opm
                         // has been defaulted to the maximum pressure potential difference between
                         // these regions
                         const auto barrierId = std::make_pair(eq1, eq2);
-                        thpres_vals[face] = maxDp[barrierId];
+                        thpres_vals[face] = maxDp.at(barrierId);
                     }
                 }
             }
