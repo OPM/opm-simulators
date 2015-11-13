@@ -34,7 +34,7 @@ namespace Opm {
     namespace detail
     {
         template <class Solver, class State>
-        class SolutionTimeErrorSolverWrapper : public SolutionTimeErrorInterface
+        class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
         {
             const Solver& solver_;
             const State&  previous_;
