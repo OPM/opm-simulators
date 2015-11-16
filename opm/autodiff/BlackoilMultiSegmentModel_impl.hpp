@@ -377,12 +377,13 @@ namespace Opm {
         std::vector<double> perf_cell_depth(perfcelldepth.data(), perfcelldepth.data() + nperf_total);
 
         // Surface density.
-        DataBlock surf_dens(nperf_total, pu.num_phases);
-        for (int phase = 0; phase < pu.num_phases; ++ phase) {
-            surf_dens.col(phase) = V::Constant(nperf_total, fluid_.surfaceDensity()[pu.phase_pos[phase]]);
+        // The compute density segment wants the surface densities as
+        // an np * number of wells cells array
+        V rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf_total, pu.num_phases, 0), nperf_total * pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf_total, pu.num_phases, phase), nperf_total * pu.num_phases);
         }
-
-        std::vector<double> surf_dens_perf(surf_dens.data(), surf_dens.data() + nperf_total * pu.num_phases);
+        std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf_total * pu.num_phases);
 
         // Gravity
         double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
@@ -433,8 +434,8 @@ namespace Opm {
         // TODO: make sure the order of the density and the order of the kr are the same.
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             const int canonicalPhaseIdx = canph_[phaseIdx];
-            const ADB rho = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
-            const V rho_perf = subset(rho, well_cells).value();
+            const ADB fluid_density = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            const V rho_perf = subset(fluid_density, well_cells).value();
             // TODO: phaseIdx or canonicalPhaseIdx ?
             rho_avg_perf += rho_perf * perf_kr[phaseIdx];
         }
@@ -1782,8 +1783,6 @@ namespace Opm {
         }
 #endif
 
-        // Surface density.
-        std::vector<double> surf_dens(fluid_.surfaceDensity(), fluid_.surfaceDensity() + np);
 
         // Extract segment flow by phase (segqs) and compute total surface rate.
         ADB tot_surface_rate = ADB::constant(V::Zero(nseg_total));
@@ -1886,7 +1885,8 @@ namespace Opm {
         // Compute segment densities.
         ADB dens = ADB::constant(V::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
-            dens += surf_dens[pu.phase_pos[phase]] * mix[phase];
+            const V surface_density = fluid_.surfaceDensity(phase, segment_cells);
+            dens += surface_density * mix[phase];
         }
         well_segment_densities_ = dens / volrat;
 
@@ -1900,7 +1900,9 @@ namespace Opm {
         // Mass flow rate of the segments
         segment_mass_flow_rates_ = ADB::constant(V::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
-            segment_mass_flow_rates_ += surf_dens[pu.phase_pos[phase]] * segqs[phase];
+            // TODO: how to remove one repeated surfaceDensity()
+            const V surface_density = fluid_.surfaceDensity(phase, segment_cells);
+            segment_mass_flow_rates_ += surface_density * segqs[phase];
         }
 
         // Viscosity of the fluid mixture in the segments
