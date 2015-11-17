@@ -80,24 +80,96 @@ namespace Opm {
         , segment_mass_flow_rates_(ADB::null())
         , segment_viscosities_(ADB::null())
         , wells_multisegment_(wells_multisegment)
-        {
-            // Modify the wops_.well_cell member, since the
-            // order of perforations is different for multi-segment
-            // wells, since the segments may have been reordered.
-            // It should already have the correct capacity, though.
-            // Note that we need the const_cast since wops_ is declared
-            // as a 'const WellOps'.
-            std::vector<int>& well_cells = const_cast<typename Base::WellOps&>(wops_).well_cells;
-            const size_t old_sz = well_cells.size();
-            well_cells.clear();
-            const int nw = wells_multisegment.size();
-            for (int i = 0; i < nw; ++i) {
-                const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
-                well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
-            }
-            assert(old_sz == well_cells.size());
-            static_cast<void>(old_sz); // Avoid warning in release mode.
+        , wops_ms_(wells_multisegment)
+    {
+        // Modify the wops_.well_cell member, since the
+        // order of perforations is different for multi-segment
+        // wells, since the segments may have been reordered.
+        // It should already have the correct capacity, though.
+        // Note that we need the const_cast since wops_ is declared
+        // as a 'const WellOps'.
+        std::vector<int>& well_cells = const_cast<typename Base::WellOps&>(wops_).well_cells;
+        const size_t old_sz = well_cells.size();
+        well_cells.clear();
+        const int nw = wells_multisegment.size();
+        for (int i = 0; i < nw; ++i) {
+            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
+            well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
         }
+        assert(old_sz == well_cells.size());
+        static_cast<void>(old_sz); // Avoid warning in release mode.
+    }
+
+
+
+
+
+
+    template <class Grid>
+    BlackoilMultiSegmentModel<Grid>::
+    MultiSegmentWellOps::MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
+        : s2p(),
+          p2s(),
+          well_cells(),
+          conn_trans_factors()
+    {
+        if (wells_ms.empty()) {
+            return;
+        }
+
+        // Count the total number of perforations and segments.
+        const int nw = wells_ms.size();
+        int total_nperf = 0;
+        int total_nseg = 0;
+        for (int w = 0; w < nw; ++w) {
+            total_nperf += wells_ms[w]->numberOfPerforations();
+            total_nseg += wells_ms[w]->numberOfSegments();
+        }
+
+        // Create well_cells and conn_trans_factors.
+        well_cells.reserve(total_nperf);
+        conn_trans_factors.resize(total_nperf);
+        int perf_start = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            well_cells.insert(well_cells.end(), well->wellCells().begin(), well->wellCells().end());
+            const std::vector<double>& perf_trans = well->wellIndex();
+            std::copy(perf_trans.begin(), perf_trans.end(), conn_trans_factors.data() + perf_start);
+            perf_start += well->numberOfPerforations();
+        }
+        assert(perf_start == total_nperf);
+        assert(int(well_cells.size() == total_nperf));
+
+        // Create the segment <-> perforation operator matrices,
+        // using the setFromTriplets() method.
+        s2p = Eigen::SparseMatrix<double>(total_nperf, total_nseg);
+        p2s = Eigen::SparseMatrix<double>(total_nseg, total_nperf);
+        typedef Eigen::Triplet<double> Tri;
+        std::vector<Tri> scatter, gather;
+        scatter.reserve(total_nperf);
+        gather .reserve(total_nperf);
+        int seg_start = 0;
+        int perf_start = 0;
+        for (int w = 0; w < nw; ++w) {
+            const int ns = well_ms[w]->numberOfSegments();
+            for (int seg = 0; seg < ns; ++seg) {
+                const auto& segPerf = well_ms[w]->segmentPerforations()[seg];
+                const int np = segPerf.size();
+                for (int perf = 0; perf < np; ++perf) {
+                    const int perf_ind = perf_start + segPerf[perf];
+                    const int seg_ind = seg_start + seg;
+                    scatter.push_back(Tri(perf_ind, seg_ind, 1.0));
+                    gather .push_back(Tri(seg_ind, perf_ind, 1.0));
+                }
+                perf_start += np;
+            }
+            seg_start += ns;
+        }
+        s2p.setFromTriplets(scatter.begin(), scatter.end());
+        p2s.setFromTriplets(gather .begin(), gather .end());
+    }
+
+
 
 
 

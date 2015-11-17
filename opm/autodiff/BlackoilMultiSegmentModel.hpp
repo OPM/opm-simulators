@@ -219,6 +219,20 @@ namespace Opm {
         // to handle the volume effects of the segment
         V segvdt_;
 
+        // Well operations and data needed.
+        struct MultiSegmentWellOps {
+            explicit MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms);
+            // Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
+            // Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
+            Eigen::SparseMatrix<double> s2p;              // segment -> perf (scatter)
+            Eigen::SparseMatrix<double> p2s;              // perf -> segment (gather)
+            std::vector<int> well_cells;                  // the set of perforated cells
+            V conn_trans_factors;                         // connection transmissibility factors
+        };
+
+        MultiSegmentWellOps wops_ms_;
+
+
         // return wells object
         // TODO: remove this wells structure
         using Base::wells;
