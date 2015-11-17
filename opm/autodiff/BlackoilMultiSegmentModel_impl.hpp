@@ -129,16 +129,16 @@ namespace Opm {
         // Create well_cells and conn_trans_factors.
         well_cells.reserve(total_nperf);
         conn_trans_factors.resize(total_nperf);
-        int perf_start = 0;
+        int well_perf_start = 0;
         for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
+            WellMultiSegmentConstPtr well = wells_ms[w];
             well_cells.insert(well_cells.end(), well->wellCells().begin(), well->wellCells().end());
             const std::vector<double>& perf_trans = well->wellIndex();
-            std::copy(perf_trans.begin(), perf_trans.end(), conn_trans_factors.data() + perf_start);
-            perf_start += well->numberOfPerforations();
+            std::copy(perf_trans.begin(), perf_trans.end(), conn_trans_factors.data() + well_perf_start);
+            well_perf_start += well->numberOfPerforations();
         }
-        assert(perf_start == total_nperf);
-        assert(int(well_cells.size() == total_nperf));
+        assert(well_perf_start == total_nperf);
+        assert(int(well_cells.size()) == total_nperf);
 
         // Create the segment <-> perforation operator matrices,
         // using the setFromTriplets() method.
@@ -151,9 +151,9 @@ namespace Opm {
         int seg_start = 0;
         int perf_start = 0;
         for (int w = 0; w < nw; ++w) {
-            const int ns = well_ms[w]->numberOfSegments();
+            const int ns = wells_ms[w]->numberOfSegments();
             for (int seg = 0; seg < ns; ++seg) {
-                const auto& segPerf = well_ms[w]->segmentPerforations()[seg];
+                const auto& segPerf = wells_ms[w]->segmentPerforations()[seg];
                 const int np = segPerf.size();
                 for (int perf = 0; perf < np; ++perf) {
                     const int perf_ind = perf_start + segPerf[perf];
