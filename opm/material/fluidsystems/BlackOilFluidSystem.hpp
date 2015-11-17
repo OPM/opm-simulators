@@ -313,12 +313,22 @@ public:
         switch (phaseIdx) {
         case waterPhaseIdx: return waterDensity<LhsEval>(T, p, regionIdx);
         case gasPhaseIdx: {
-            const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
-            return gasDensity<LhsEval>(T, p, Rv, regionIdx);
+            if (fluidState.saturation(oilPhaseIdx) > 0.0)
+                return gasPvt_->saturatedDensity(regionIdx, T, p);
+            else {
+                // undersaturated oil
+                const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                return gasPvt_->density(regionIdx, T, p, Rv);
+            }
         }
         case oilPhaseIdx: {
-            const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
-            return oilDensity<LhsEval>(T, p, Rs, regionIdx);
+            if (fluidState.saturation(gasPhaseIdx) > 0.0)
+                return oilPvt_->saturatedDensity(regionIdx, T, p);
+            else {
+                // undersaturated gas
+                const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
+                return oilPvt_->density(regionIdx, T, p, Rs);
+            }
         }
         }
 
@@ -366,14 +376,24 @@ public:
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
-            const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
-            return oilPvt_->viscosity(regionIdx, T, p, Rs);
+            if (fluidState.saturation(gasPhaseIdx) > 0.0)
+                return oilPvt_->saturatedViscosity(regionIdx, T, p);
+            else {
+                // undersaturated oil
+                const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
+                return oilPvt_->viscosity(regionIdx, T, p, Rs);
+            }
         }
         case waterPhaseIdx:
             return waterPvt_->viscosity(regionIdx, T, p);
         case gasPhaseIdx: {
-            const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
-            return gasPvt_->viscosity(regionIdx, T, p, Rv);
+            if (fluidState.saturation(oilPhaseIdx) > 0.0)
+                return gasPvt_->saturatedViscosity(regionIdx, T, p);
+            else {
+                // undersaturated gas
+                const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                return gasPvt_->viscosity(regionIdx, T, p, Rv);
+            }
         }
         }
 
@@ -415,14 +435,18 @@ public:
     static LhsEval saturatedOilFormationVolumeFactor(const LhsEval& temperature,
                                                      const LhsEval& pressure,
                                                      unsigned regionIdx)
-    {
-        Valgrind::CheckDefined(pressure);
+    { return oilPvt_->saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
 
-        // calculate the mass fractions of gas and oil
-        const auto& Rs = gasDissolutionFactor(temperature, pressure, regionIdx);
-
-        return oilFormationVolumeFactor(temperature, pressure, Rs, regionIdx);
-    }
+    /*!
+     * \brief Returns the gas formation volume factor \f$B_o\f$ of saturated gas for a given pressure
+     *
+     * \param pressure The pressure of interest [Pa]
+     */
+    template <class LhsEval>
+    static LhsEval saturatedGasFormationVolumeFactor(const LhsEval& temperature,
+                                                     const LhsEval& pressure,
+                                                     unsigned regionIdx)
+    { return gasPvt_->saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the formation volume factor of water.
@@ -558,7 +582,7 @@ public:
     static LhsEval saturatedOilGasMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return oilPvt_->saturatedOilGasMassFraction(regionIdx, temperature, pressure); }
+    { return oilPvt_->saturatedGasMassFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief The maximum mole fraction of the gas component in the oil phase.
@@ -567,7 +591,7 @@ public:
     static LhsEval saturatedOilGasMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return oilPvt_->saturatedOilGasMoleFraction(regionIdx, temperature, pressure); }
+    { return oilPvt_->saturatedGasMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
@@ -588,7 +612,7 @@ public:
     static LhsEval saturatedGasOilMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return gasPvt_->saturatedGasOilMassFraction(regionIdx, temperature, pressure); }
+    { return gasPvt_->saturatedOilMassFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief The maximum mole fraction of the oil component in the gas phase.
@@ -597,7 +621,7 @@ public:
     static LhsEval saturatedGasOilMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return gasPvt_->saturatedGasOilMoleFraction(regionIdx, temperature, pressure); }
+    { return gasPvt_->saturatedOilMoleFraction(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the normalized formation volume factor of (potentially)
@@ -627,11 +651,7 @@ public:
     static LhsEval saturatedOilDensity(const LhsEval& temperature,
                                        const LhsEval& pressure,
                                        unsigned regionIdx)
-    {
-        // mass fraction of gas-saturated oil
-        const LhsEval& Rs = gasDissolutionFactor(temperature, pressure, regionIdx);
-        return oilPvt_->density(regionIdx, temperature, pressure, Rs);
-    }
+    { return oilPvt_->saturatedOilDensity(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the formation volume factor of gas.
@@ -652,6 +672,15 @@ public:
                               const LhsEval& Rv,
                               unsigned regionIdx)
     { return gasPvt_->density(regionIdx, temperature, pressure, Rv); }
+
+    /*!
+     * \brief Return the density of gas-saturated oil.
+     */
+    template <class LhsEval>
+    static LhsEval saturatedGasDensity(const LhsEval& temperature,
+                                       const LhsEval& pressure,
+                                       unsigned regionIdx)
+    { return oilPvt_->saturatedGasDensity(regionIdx, temperature, pressure);  }
 
     /*!
      * \brief Return the density of water.

@@ -113,9 +113,7 @@ public:
                                Scalar rhoRefOil,
                                Scalar /*rhoRefGas*/,
                                Scalar /*rhoRefWater*/)
-    {
-        oilReferenceDensity_[regionIdx] = rhoRefOil;
-    }
+    { oilReferenceDensity_[regionIdx] = rhoRefOil; }
 
     /*!
      * \brief Initialize the reference densities of all fluids for a given PVT region
@@ -165,20 +163,26 @@ public:
     void initEnd(const GasPvtMultiplexer */*gasPvt*/)
     { }
 
-    /*!
-     * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
-     */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
                          const Evaluation& pressure,
-                         const Evaluation& Rs) const
+                         const Evaluation& /*Rs*/) const
+    { return saturatedViscosity(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of gas saturated oil given a pressure.
+     */
+    template <class Evaluation>
+    Evaluation saturatedViscosity(unsigned regionIdx,
+                                  const Evaluation& temperature,
+                                  const Evaluation& pressure) const
     {
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
+        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& Y =
@@ -191,13 +195,23 @@ public:
      * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>
-        Evaluation density(unsigned regionIdx,
-                           const Evaluation& temperature,
-                           const Evaluation& pressure,
-                           const Evaluation& Rs) const
+    Evaluation density(unsigned regionIdx,
+                       const Evaluation& temperature,
+                       const Evaluation& pressure,
+                       const Evaluation& /*Rs*/) const
+    { return saturatedDensity(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the density [kg/m^3] of gas saturated oil given a pressure.
+     */
+    template <class Evaluation>
+    Evaluation saturatedDensity(unsigned regionIdx,
+                                const Evaluation& temperature,
+                                const Evaluation& pressure) const
     {
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
         Scalar rhooRef = oilReferenceDensity_[regionIdx];
+
+        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
         return rhooRef/Bo;
     }
 
@@ -205,10 +219,22 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-        Evaluation formationVolumeFactor(unsigned regionIdx,
-                                         const Evaluation& /*temperature*/,
-                                         const Evaluation& pressure,
-                                         const Evaluation& /*Rs*/) const
+    Evaluation formationVolumeFactor(unsigned regionIdx,
+                                     const Evaluation& temperature,
+                                     const Evaluation& pressure,
+                                     const Evaluation& /*Rs*/) const
+    { return saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the formation volume factor [-] of gas saturated oil.
+     *
+     * Note that constant compressibility oil is a special case of dead oil and dead oil
+     * is always gas saturated by by definition.
+     */
+    template <class Evaluation>
+    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
+                                              const Evaluation& /*temperature*/,
+                                              const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
@@ -223,9 +249,9 @@ public:
      *        a set of parameters.
      */
     template <class Evaluation>
-        Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                          const Evaluation& /*temperature*/,
-                                          const Evaluation& pressure) const
+    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
+                                      const Evaluation& /*temperature*/,
+                                      const Evaluation& pressure) const
     {
         // set the oil component fugacity coefficient in oil phase
         // arbitrarily. we use some pseudo-realistic value for the vapor
@@ -234,9 +260,9 @@ public:
     }
 
     template <class Evaluation>
-        Evaluation fugacityCoefficientWater(unsigned regionIdx,
-                                            const Evaluation& temperature,
-                                            const Evaluation& pressure) const
+    Evaluation fugacityCoefficientWater(unsigned regionIdx,
+                                        const Evaluation& temperature,
+                                        const Evaluation& pressure) const
     {
         // assume that the affinity of the water component to the oil phase is many orders
         // of magnitude smaller than that of the oil component
@@ -244,9 +270,9 @@ public:
     }
 
     template <class Evaluation>
-        Evaluation fugacityCoefficientGas(unsigned regionIdx,
-                                          const Evaluation& temperature,
-                                          const Evaluation& pressure) const
+    Evaluation fugacityCoefficientGas(unsigned regionIdx,
+                                      const Evaluation& temperature,
+                                      const Evaluation& pressure) const
     {
         // assume that the affinity of the gas component to the oil phase is many orders
         // of magnitude smaller than that of the oil component
@@ -257,9 +283,9 @@ public:
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class Evaluation>
-        Evaluation gasDissolutionFactor(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
+    Evaluation gasDissolutionFactor(unsigned /*regionIdx*/,
+                                    const Evaluation& /*temperature*/,
+                                    const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
     /*!
@@ -275,15 +301,15 @@ public:
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
     template <class Evaluation>
-        Evaluation saturatedOilGasMassFraction(unsigned /*regionIdx*/,
-                                               const Evaluation& /*temperature*/,
-                                               const Evaluation& /*pressure*/) const
+    Evaluation saturatedGasMassFraction(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
     template <class Evaluation>
-        Evaluation saturatedOilGasMoleFraction(unsigned /*regionIdx*/,
-                                               const Evaluation& /*temperature*/,
-                                               const Evaluation& /*pressure*/) const
+    Evaluation saturatedGasMoleFraction(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
 private:

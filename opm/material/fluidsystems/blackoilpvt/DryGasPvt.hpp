@@ -191,9 +191,18 @@ public:
      */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
-                         const Evaluation& /*temperature*/,
+                         const Evaluation& temperature,
                          const Evaluation& pressure,
                          const Evaluation& /*Rv*/) const
+    { return saturatedViscosity(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of oil saturated gas at given pressure.
+     */
+    template <class Evaluation>
+    Evaluation saturatedViscosity(unsigned regionIdx,
+                                  const Evaluation& /*temperature*/,
+                                  const Evaluation& pressure) const
     {
         const Evaluation& invBg = inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true);
         const Evaluation& invMugBg = inverseGasBMu_[regionIdx].eval(pressure, /*extrapolate=*/true);
@@ -209,9 +218,18 @@ public:
                        const Evaluation& temperature,
                        const Evaluation& pressure,
                        const Evaluation& Rv) const
+    { return saturatedViscosity(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the density [kg/m^3] of oil saturated gas at given pressure.
+     */
+    template <class Evaluation>
+    Evaluation saturatedDensity(unsigned regionIdx,
+                                const Evaluation& temperature,
+                                const Evaluation& pressure) const
     {
         // gas formation volume factor at reservoir pressure
-        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, Rv);
+        const Evaluation& Bg = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
         return gasReferenceDensity_[regionIdx]/Bg;
     }
 
@@ -220,9 +238,18 @@ public:
      */
     template <class Evaluation>
     Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
+                                     const Evaluation& temperature,
                                      const Evaluation& pressure,
                                      const Evaluation& /*Rv*/) const
+    { return saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the formation volume factor [-] of oil saturated gas at given pressure.
+     */
+    template <class Evaluation>
+    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
+                                              const Evaluation& /*temperature*/,
+                                              const Evaluation& pressure) const
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
@@ -280,15 +307,15 @@ public:
     { return 0.0; /* this is dry gas! */ }
 
     template <class Evaluation>
-    Evaluation saturatedGasOilMassFraction(unsigned /*regionIdx*/,
-                                           const Evaluation& /*temperature*/,
-                                           const Evaluation& /*pressure*/) const
+    Evaluation saturatedOilMassFraction(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
 
     template <class Evaluation>
-    Evaluation saturatedGasOilMoleFraction(unsigned /*regionIdx*/,
-                                           const Evaluation& /*temperature*/,
-                                           const Evaluation& /*pressure*/) const
+    Evaluation saturatedOilMoleFraction(unsigned /*regionIdx*/,
+                                        const Evaluation& /*temperature*/,
+                                        const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
 
 private:

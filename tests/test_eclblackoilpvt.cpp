@@ -42,6 +42,9 @@
 #include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
 
+#include <opm/material/localad/Evaluation.hpp>
+#include <opm/material/localad/Math.hpp>
+
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -123,6 +126,119 @@ static const char* deckString1 =
     "              1.1e-3       2.25    2.015 /\n"
     "/\n"
     "\n";
+
+template <class Evaluation, class OilPvt, class GasPvt, class WaterPvt>
+void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& waterPvt)
+{
+    // we don't want to run this, we just want to make sure that it compiles
+    while (0) {
+        Evaluation temperature = 273.15 + 20.0;
+        Evaluation pressure = 1e5;
+        Evaluation Rs = 0.0;
+        Evaluation Rv = 0.0;
+        Evaluation OPM_UNUSED tmp;
+
+        /////
+        // water PVT API
+        /////
+        tmp = waterPvt.viscosity(/*regionIdx=*/0,
+                                 temperature,
+                                 pressure);
+        tmp = waterPvt.density(/*regionIdx=*/0,
+                               temperature,
+                               pressure);
+        tmp = waterPvt.fugacityCoefficientOil(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+        tmp = waterPvt.fugacityCoefficientGas(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+        tmp = waterPvt.fugacityCoefficientWater(/*regionIdx=*/0,
+                                                temperature,
+                                                pressure);
+
+        /////
+        // oil PVT API
+        /////
+        tmp = oilPvt.viscosity(/*regionIdx=*/0,
+                               temperature,
+                               pressure,
+                               Rs);
+        tmp = oilPvt.density(/*regionIdx=*/0,
+                             temperature,
+                             pressure,
+                             Rs);
+        tmp = oilPvt.formationVolumeFactor(/*regionIdx=*/0,
+                                           temperature,
+                                           pressure,
+                                           Rs);
+        tmp = oilPvt.saturatedViscosity(/*regionIdx=*/0,
+                                        temperature,
+                                        pressure);
+        tmp = oilPvt.saturatedDensity(/*regionIdx=*/0,
+                                      temperature,
+                                      pressure);
+        tmp = oilPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
+                                                    temperature,
+                                                    pressure);
+        tmp = oilPvt.saturatedGasMassFraction(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+        tmp = oilPvt.saturatedGasMoleFraction(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+        tmp = oilPvt.fugacityCoefficientOil(/*regionIdx=*/0,
+                                            temperature,
+                                            pressure);
+        tmp = oilPvt.fugacityCoefficientGas(/*regionIdx=*/0,
+                                            temperature,
+                                            pressure);
+        tmp = oilPvt.fugacityCoefficientWater(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+
+        /////
+        // gas PVT API
+        /////
+        tmp = gasPvt.viscosity(/*regionIdx=*/0,
+                               temperature,
+                               pressure,
+                               Rv);
+        tmp = gasPvt.density(/*regionIdx=*/0,
+                             temperature,
+                             pressure,
+                             Rv);
+        tmp = gasPvt.saturatedViscosity(/*regionIdx=*/0,
+                                        temperature,
+                                        pressure);
+        tmp = gasPvt.saturatedDensity(/*regionIdx=*/0,
+                                      temperature,
+                                      pressure);
+        tmp = gasPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
+                                                    temperature,
+                                                    pressure);
+        tmp = gasPvt.formationVolumeFactor(/*regionIdx=*/0,
+                                           temperature,
+                                           pressure,
+                                           Rv);
+        tmp = gasPvt.saturatedOilMassFraction(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+        tmp = gasPvt.saturatedOilMoleFraction(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+
+        tmp = gasPvt.fugacityCoefficientOil(/*regionIdx=*/0,
+                                            temperature,
+                                            pressure);
+        tmp = gasPvt.fugacityCoefficientGas(/*regionIdx=*/0,
+                                            temperature,
+                                            pressure);
+        tmp = gasPvt.fugacityCoefficientWater(/*regionIdx=*/0,
+                                              temperature,
+                                              pressure);
+    }
+}
 
 int main()
 {
@@ -206,6 +322,11 @@ int main()
     gasPvt.initEnd(&oilPvt);
     oilPvt.initEnd(&gasPvt);
     waterPvt.initEnd();
+
+    struct Foo;
+    typedef Opm::LocalAd::Evaluation<Scalar, Foo, 1> FooEval;
+    ensurePvtApi<Scalar>(oilPvt, gasPvt, waterPvt);
+    ensurePvtApi<FooEval>(oilPvt, gasPvt, waterPvt);
 
     // make sure that the BlackOil fluid system's initFromDeck() method compiles.
     typedef Opm::FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
