@@ -226,6 +226,8 @@ namespace Opm {
             // Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
             Eigen::SparseMatrix<double> s2p;              // segment -> perf (scatter)
             Eigen::SparseMatrix<double> p2s;              // perf -> segment (gather)
+            Eigen::SparseMatrix<double> s2s_inlets;       // segment -> its inlet segments
+            Eigen::SparseMatrix<double> s2s_outlet;       // segment -> its outlet segment
             std::vector<int> well_cells;                  // the set of perforated cells
             V conn_trans_factors;                         // connection transmissibility factors
         };

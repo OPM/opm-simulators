@@ -110,6 +110,8 @@ namespace Opm {
     MultiSegmentWellOps::MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
         : s2p(),
           p2s(),
+          s2s_inlets(),
+          s2s_outlet(),
           well_cells(),
           conn_trans_factors()
     {
@@ -152,21 +154,49 @@ namespace Opm {
         int perf_start = 0;
         for (int w = 0; w < nw; ++w) {
             const int ns = wells_ms[w]->numberOfSegments();
+            const int np = wells_ms[w]->numberOfPerforations();
             for (int seg = 0; seg < ns; ++seg) {
                 const auto& segPerf = wells_ms[w]->segmentPerforations()[seg];
-                const int np = segPerf.size();
-                for (int perf = 0; perf < np; ++perf) {
+                // the number of perforations related to this segment
+                const int npseg = segPerf.size();
+                for (int perf = 0; perf < npseg; ++perf) {
                     const int perf_ind = perf_start + segPerf[perf];
                     const int seg_ind = seg_start + seg;
                     scatter.push_back(Tri(perf_ind, seg_ind, 1.0));
                     gather .push_back(Tri(seg_ind, perf_ind, 1.0));
                 }
-                perf_start += np;
             }
+            perf_start += np;
             seg_start += ns;
         }
         s2p.setFromTriplets(scatter.begin(), scatter.end());
         p2s.setFromTriplets(gather .begin(), gather .end());
+
+
+        // Crate the segment -> its inlet segments and segment-> its outlet segment operator matrices,
+        // It can be done togehter with other operator generation process.
+        // Just do seperately for the moment for parallel development.
+        s2s_inlets = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
+        s2s_outlet = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
+        std::vector<Tri> s2s_inlets_vector;
+        std::vector<Tri> s2s_outlet_vector;
+        s2s_inlets_vector.reserve(total_nseg);
+        seg_start = 0;
+        for (int w = 0; w < nw; ++w) {
+            const int ns = wells_ms[w]->numberOfSegments();
+            for (int seg = 0; seg < ns; ++seg) {
+                int seg_outlet = wells_ms[w]->outletSegment()[seg];
+                if (seg_outlet >= 0) {
+                    const int seg_ind = seg_start + seg;
+                    const int outlet_ind = seg_start + seg_outlet;
+                    s2s_inlets_vector.push_back(Tri(outlet_ind, seg_ind, 1.0));
+                    s2s_outlet_vector.push_back(Tri(seg_ind, outlet_ind, 1.0));
+                }
+            }
+            seg_start += ns;
+        }
+        s2s_inlets.setFromTriplets(s2s_inlets_vector.begin(), s2s_inlets_vector.end());
+        s2s_outlet.setFromTriplets(s2s_outlet_vector.begin(), s2s_outlet_vector.end());
     }
 
 
