@@ -409,7 +409,9 @@ try
     // initialize variables
     simtimer.init(timeMap);
 
-    std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, grid);
+    std::map<std::pair<int, int>, double> maxDp;
+    computeMaxDp(maxDp, deck, eclipseState, grid, state, props, gravity[2]);
+    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, grid, maxDp);
 
     SimulatorFullyImplicitBlackoilMultiSegment< Grid >  simulator(param,
                                                       grid,
