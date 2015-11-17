@@ -132,7 +132,7 @@ try
     }
 
     std::shared_ptr<GridManager> grid;
-    std::shared_ptr<BlackoilPropertiesInterface> props;
+    std::shared_ptr<BlackoilPropertiesFromDeck> props;
     std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
     PolymerBlackoilState state;
@@ -284,7 +284,9 @@ try
     bool use_local_perm = param.getDefault("use_local_perm", true);
     Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, use_local_perm, grav);
 
-    std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, *grid->c_grid());
+    std::map<std::pair<int, int>, double> maxDp;
+    computeMaxDp(maxDp, deck, eclipseState, *grid->c_grid(), state, *props, gravity[2]);
+    std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid(), maxDp);
 
     Opm::BlackoilOutputWriter
         outputWriter(cGrid, param, eclipseState, pu,
