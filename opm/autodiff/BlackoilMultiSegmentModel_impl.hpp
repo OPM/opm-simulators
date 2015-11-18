@@ -1004,64 +1004,20 @@ namespace Opm {
     {
         // the equations is for each segment
         const int np = numPhases();
-        const int nw = wellsMultiSegment().size();
         const int nseg_total = state.segp.size();
 
         ADB segqs = state.segqs;
 
-        // Gain of the surface volume of each component in the segment by dt
         std::vector<ADB> segment_volume_change_dt(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
+            // Gain of the surface volume of each component in the segment by dt
             segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
                                               segment_comp_surf_volume_initial_[phase];
-        }
 
-        for (int phase = 0; phase < np; ++phase) {
-            int start_segment = 0;
-            int start_perforation = 0;
-            for (int w = 0; w < nw; ++w) {
-                WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-                // the equation is
-                // /deta m_p_n - /sigma Q_pi - /sigma q_pj + Q_pn = 0
-                // Q_pn + /deta m_p_n - /sigma Q_pi - /sigma q_pj = 0
-                // 1. for the first term, we need the information from the previous step.
-                //    in term of stock-tank conditions.
-                //    it should the total volume of the well bore * volume ratio for each phase.
-                //    it can be the phase rate / total rates (in surface units)
-                //    For the first one.
-                //    it will be (V_1 * S_1 - V_0 * S_0) / delta_T
-                //    so we need the information from the previous step and the time step.
-                // 2. for the second term, it is the inlet segments, which are also unknowns
-                //    TODO:we can have a mapping for the inlet segments
-                // 3. for the third term, it is the inflow.
-                // 4. for the last term, it is the outlet rates, which are also unknowns
-
-                // For this version, we will ignore the wellbore volume effects
-                // In the DATA file, the well bore volumes are set to be zero already.
-                // The equation is Q_pn - /sigma Q_pi - /sigma q_pj = 0;
-                const int nperf = well->numberOfPerforations();
-                const int nseg = well->numberOfSegments();
-
-                // perforate rates for this well
-                const ADB& cq_s_perf = subset(cq_s[phase], Span(nperf, 1, start_perforation));
-
-                // sum of the perforate rates to its related segment
-                const ADB& cq_s_seg = well->wellOps().p2s * cq_s_perf;
-
-                const int start_position = start_segment + phase * nseg_total;
-                // the segment rates of this well
-                const ADB& segqs_well = subset(segqs, Span(nseg, 1, start_position));
-
-                const ADB segment_volume_change_dt_well = subset(segment_volume_change_dt[phase],
-                                                          Span(nseg, 1, start_segment));
-                segqs -= superset(cq_s_seg + well->wellOps().s2s_inlets * segqs_well + segment_volume_change_dt_well,
-                                  Span(nseg, 1, start_position), np * nseg_total);
-                // another form for non-segment wells, keep here for future reference
-                // segqs -= superset(cq_s_seg, Span(1, 1, start_position), np * nseg_total);
-                start_segment += nseg;
-                start_perforation += nperf;
-            }
-            assert(start_segment == nseg_total);
+            const ADB cq_s_seg = wops_ms_.p2s * cq_s[phase];
+            const ADB segqs_phase = subset(segqs, Span(nseg_total, 1, phase * nseg_total));
+            segqs -= superset(cq_s_seg + wops_ms_.s2s_inlets * segqs_phase + segment_volume_change_dt[phase],
+                              Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
         }
 
         residual_.well_flux_eq = segqs;
