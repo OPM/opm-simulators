@@ -126,8 +126,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NewtonIterationBlackoilInterleaved.hpp
 	opm/autodiff/NewtonIterationBlackoilSimple.hpp
 	opm/autodiff/NewtonIterationUtilities.hpp
-	opm/autodiff/NewtonSolver.hpp
-	opm/autodiff/NewtonSolver_impl.hpp
+	opm/autodiff/NonlinearSolver.hpp
+	opm/autodiff/NonlinearSolver_impl.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/ParallelDebugOutput.hpp
 	opm/autodiff/RateConverter.hpp

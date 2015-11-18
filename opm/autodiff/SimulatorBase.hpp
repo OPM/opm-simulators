@@ -26,7 +26,6 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/NewtonSolver.hpp>
 #include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
