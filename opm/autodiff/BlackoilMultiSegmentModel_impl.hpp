@@ -108,16 +108,6 @@ namespace Opm {
     template <class Grid>
     BlackoilMultiSegmentModel<Grid>::
     MultiSegmentWellOps::MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
-        : p2w(),
-          w2p(),
-          w2s(),
-          s2w(),
-          s2p(),
-          p2s(),
-          s2s_inlets(),
-          s2s_outlet(),
-          well_cells(),
-          conn_trans_factors()
     {
         if (wells_ms.empty()) {
             return;
@@ -184,10 +174,12 @@ namespace Opm {
         s2s_outlet = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
         s2w        = Eigen::SparseMatrix<double>(nw, total_nseg);
         w2s        = Eigen::SparseMatrix<double>(total_nseg, nw);
+        topseg2w   = Eigen::SparseMatrix<double>(nw, total_nseg);
         std::vector<Tri> s2s_inlets_vector;
         std::vector<Tri> s2s_outlet_vector;
         std::vector<Tri> s2w_vector;
         std::vector<Tri> w2s_vector;
+        std::vector<Tri> topseg2w_vector;
         s2s_inlets_vector.reserve(total_nseg);
         s2s_outlet_vector.reserve(total_nseg);
         s2w_vector.reserve(total_nseg);
@@ -199,6 +191,9 @@ namespace Opm {
                 const int seg_ind = seg_start + seg;
                 w2s_vector.push_back(Tri(seg_ind, w, 1.0));
                 s2w_vector.push_back(Tri(w, seg_ind, 1.0));
+                if (seg == 0) {
+                    topseg2w_vector.push_back(Tri(w, seg_ind, 1.0));
+                }
                 int seg_outlet = wells_ms[w]->outletSegment()[seg];
                 if (seg_outlet >= 0) {
                     const int outlet_ind = seg_start + seg_outlet;
@@ -213,6 +208,7 @@ namespace Opm {
         s2s_outlet.setFromTriplets(s2s_outlet_vector.begin(), s2s_outlet_vector.end());
         w2s.setFromTriplets(w2s_vector.begin(), w2s_vector.end());
         s2w.setFromTriplets(s2w_vector.begin(), s2w_vector.end());
+        topseg2w.setFromTriplets(topseg2w_vector.begin(), topseg2w_vector.end());
 
         w2p = Eigen::SparseMatrix<double>(total_nperf, nw);
         p2w = Eigen::SparseMatrix<double>(nw, total_nperf);
@@ -354,7 +350,6 @@ namespace Opm {
         //    Note that some of the complexity of this part is due to the function
         //    taking std::vector<double> arguments, and not Eigen objects.
         const int nperf_total = xw.numPerforations();
-        const int nseg_total = xw.numSegments();
         const int nw = xw.numWells();
 
         // the well cells for multisegment wells and non-segmented wells should be counted seperatedly
@@ -444,7 +439,7 @@ namespace Opm {
             // std::cout << " the bhp value is " << state.segp.value()[start_segment];
             start_segment += nseg;
         }
-        assert(start_segment == nseg_total);
+        assert(start_segment == xw.numSegments());
 
 #if 0
         std::cout << " state.segp " << std::endl;
@@ -748,31 +743,22 @@ namespace Opm {
         const int nw = wellsMultiSegment().size();
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
-        int start_perforation = 0;
-        int start_segment = 0;
-
         aliveWells = V::Constant(nw, 1.0);
 
-
-        // temporary, no place to store the information about total perforations and segments
-        int total_nperf = 0;
-        for (int w = 0; w < nw; ++w) {
-            total_nperf += wellsMultiSegment()[w]->numberOfPerforations();
-        }
         const int np = numPhases();
+        const int nseg = wops_ms_.s2p.cols();
+        const int nperf = wops_ms_.s2p.rows();
 
         cq_s.resize(np, ADB::null());
-        for (int p = 0; p < np; ++p) {
-            cq_s[p] = ADB::constant(V::Zero(total_nperf));
-        }
 
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const int nseg = well->numberOfSegments();
-            const int nperf = well->numberOfPerforations();
+        // for (int w = 0; w < nw; ++w) {
+        {
+            // WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
 
-            V Tw = Eigen::Map<const V>(well->wellIndex().data(), nperf);
-            const std::vector<int>& well_cells = well->wellCells();
+            // V Tw = Eigen::Map<const V>(well->wellIndex().data(), nperf);
+            const V& Tw = wops_ms_.conn_trans_factors;
+            // const std::vector<int>& well_cells = well->wellCells();
+            const std::vector<int>& well_cells = wops_ms_.well_cells;
 
             // extract mob_perfcells and b_perfcells.
             std::vector<ADB> mob_perfcells(np, ADB::null());
@@ -788,43 +774,33 @@ namespace Opm {
             const ADB& rs_perfcells = subset(state.rs, well_cells);
             const ADB& rv_perfcells = subset(state.rv, well_cells);
 
-            const ADB& seg_pressures = subset(state.segp, Span(nseg, 1, start_segment));
+            // const ADB& seg_pressures = subset(state.segp, Span(nseg, 1, start_segment));
+            const ADB& seg_pressures = state.segp;
 
-            ADB drawdown = ADB::null();
+            // const ADB seg_pressures_perf = well->wellOps().s2p * seg_pressures;
+            const ADB seg_pressures_perf = wops_ms_.s2p * seg_pressures;
 
-            const ADB seg_pressures_perf = well->wellOps().s2p * seg_pressures;
-
-            if (well->isMultiSegmented())
-            {
-                // get H_nc
-                const ADB& h_nc = subset(well_segment_perforation_pressure_diffs_, Span(nperf, 1, start_perforation));
-                const V& h_cj = subset(well_perforation_cell_pressure_diffs_, Span(nperf, 1, start_perforation));
-
-                // V seg_pressures_perf = V::Zero(nperf);
-                // for (int i = 0; i < nseg; ++i) {
-                //     int temp_nperf = well->segmentPerforations()[i].size();
-                //     assert(temp_nperf > 0);
-                //     for (int j = 0; j < temp_nperf; ++j) {
-                //         int index_perf = well->segmentPerforations()[i][j];
-                //         assert(index_perf <= nperf);
-                        // set the perforation pressure to be the segment pressure
-                        // similiar to a scatter operation
-                //         seg_pressures_perf[index_perf] = seg_pressures.value()[i];
-                //     }
-                // }
-
-                drawdown = (p_perfcells + h_cj - seg_pressures_perf - h_nc);
+            // Create selector for perforations of multi-segment vs. regular wells.
+            V is_multisegment_well(nw);
+            for (int w = 0; w < nw; ++w) {
+                is_multisegment_well[w] = double(wellsMultiSegment()[w]->isMultiSegmented());
             }
-            else
-            // usual wells
-            // only one segment each
-            {
-                const V& cdp = subset(well_perforation_pressure_diffs_, Span(nperf, 1, start_perforation));
+            // Take one flag per well and expand to one flag per perforation.
+            V is_multisegment_perf = wops_.w2p * is_multisegment_well.matrix();
+            Selector<double> msperf_selector(is_multisegment_perf, Selector<double>::NotEqualZero);
 
-                const ADB perf_pressures = well->wellOps().s2p * seg_pressures + cdp;
+            // Compute drawdown.
+            const ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
+                                                    ADB::constant(well_perforation_pressure_diffs_));
+            const V h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, V::Zero(nperf));
+            ADB drawdown = (p_perfcells + h_cj - seg_pressures_perf - h_nc);
 
-                drawdown = p_perfcells - perf_pressures;
-            }
+            // ADB h_cj_ad = ADB::constant(h_cj);
+            // OPM_AD_DUMPVAL(h_cj_ad);
+            // OPM_AD_DUMPVAL(h_nc);
+            // OPM_AD_DUMPVAL(drawdown);
+            // exit(0);
+
 
             // selects injection perforations
             V selectInjectingPerforations = V::Zero(nperf);
@@ -884,22 +860,21 @@ namespace Opm {
            // TODO: involves one operations that are not valid now. (i.e. how to transverse from the leaves to the root,
            // TODO: although we can begin from the brutal force way)
 
-            const std::vector<double>& compi = well->compFrac();
+            // TODO: stop using wells() here.
+            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+            // const std::vector<double>& compi = well->compFrac();
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(V::Zero(nseg));
 
             for (int phase = 0; phase < np; ++phase) {
-
-                // const ADB& q_ps = well->wellOps().p2s * cq_ps[phase];
-                const ADB& q_ps = well->wellOps().p2s_gather * cq_ps[phase];
-                const int n_total_segments = state.segp.size();
-                const ADB& q_s = subset(state.segqs, Span(nseg, 1, phase * n_total_segments + start_segment));
+                const ADB& q_ps = wops_ms_.p2s * cq_ps[phase];
+                const ADB& q_s = subset(state.segqs, Span(nseg, 1, phase * nseg));
                 Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
 
                 const int pos = pu.phase_pos[phase];
 
                 // this is per segment
-                wbq[phase] = (compi[pos] * injectingPhase_selector.select(q_s, ADB::constant(V::Zero(nseg)))) - q_ps;
+                wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s, ADB::constant(V::Zero(nseg)))) - q_ps;
 
                 // TODO: it should be a single value for this certain well.
                 // TODO: it need to be changed later to handle things more consistently
@@ -907,28 +882,29 @@ namespace Opm {
                 wbqt += wbq[phase];
             }
 
+            // Set aliveWells.
             // the first value of the wbqt is the one to decide if the well is dead
             // or there should be some dead segments?
             // maybe not.
-            if (wbqt.value()[0] == 0.) {
-                aliveWells[w] = 0.;
+            {
+                int topseg = 0;
+                for (int w = 0; w < nw; ++w) {
+                    if (wbqt.value()[topseg] == 0.0) { // yes we really mean == here, no fuzzyness
+                        aliveWells[w] = 0.0;
+                    }
+                    topseg += wells_multisegment_[w]->numberOfSegments();
+                }
             }
 
-            // compute wellbore mixture at standard conditons
+            // compute wellbore mixture at standard conditions.
             // before, the determination of alive wells is based on wells.
             // now, will there be any dead segment? I think no.
-            std::vector<ADB> cmix_s(np, ADB::constant(V::Zero(nperf)));
-            if (aliveWells[w] > 0.) {
-                for (int phase = 0; phase < np; ++phase) {
-                    // const int pos = pu.phase_pos[phase];
-                    // TODO: make sure wheter phase or pos be required here.
-                    cmix_s[phase] = well->wellOps().s2p * (wbq[phase] / wbqt);
-                }
-            } else {
-                for (int phase = 0; phase < np; ++phase) {
-                    const int pos = pu.phase_pos[phase];
-                    cmix_s[phase] += ADB::constant(V::Zero(nperf) + compi[pos]);
-                }
+            std::vector<ADB> cmix_s(np, ADB::null());
+            Selector<double> aliveWells_selector(aliveWells, Selector<double>::NotEqualZero);
+            for (int phase = 0; phase < np; ++phase) {
+                const int pos = pu.phase_pos[phase];
+                const ADB phase_fraction = wops_ms_.topseg2w * (wbq[phase] / wbqt);
+                cmix_s[phase] = wops_.w2p * aliveWells_selector.select(phase_fraction, ADB::constant(compi.col(pos)));
             }
 
             // compute volume ration between connection at standard conditions
@@ -953,11 +929,8 @@ namespace Opm {
 
             // connection phase volumerates at standard conditions
             for (int phase = 0; phase < np; ++phase) {
-                cq_s[phase] += superset(cq_ps[phase] + cmix_s[phase]*cqt_is, Span(nperf, 1, start_perforation), total_nperf);
+                cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
             }
-
-            start_perforation += nperf;
-            start_segment += nseg;
         }
     }
 
