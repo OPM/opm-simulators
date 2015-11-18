@@ -189,8 +189,7 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
                         ADB::null(),
                         ADB::null(),
-                        { 1.1169, 1.0031, 0.0031 } // Reasonable default scaling
-                       } )
+                        { 1.1169, 1.0031, 0.0031, 1.0 }} ) // default scaling
     {
     }
 
@@ -258,7 +257,7 @@ namespace {
         return it;
     }
 
-    int FullyImplicitCompressiblePolymerSolver::newtonIterations() const
+    int FullyImplicitCompressiblePolymerSolver::nonlinearIterations() const
     {
         return newtonIterations_;
     }
