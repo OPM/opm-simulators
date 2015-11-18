@@ -218,7 +218,7 @@ public:
                        const Evaluation& temperature,
                        const Evaluation& pressure,
                        const Evaluation& Rv) const
-    { return saturatedViscosity(regionIdx, temperature, pressure); }
+    { return saturatedDensity(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the density [kg/m^3] of oil saturated gas at given pressure.

@@ -295,9 +295,9 @@ public:
      * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
      */
     template <class Evaluation>
-    Evaluation oilSaturationPressure(unsigned /*regionIdx*/,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& /*Rs*/) const
+    Evaluation saturationPressure(unsigned /*regionIdx*/,
+                                  const Evaluation& /*temperature*/,
+                                  const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
     template <class Evaluation>

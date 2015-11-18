@@ -232,10 +232,10 @@ public:
      * the black-oil PVT interface will just throw an exception...
      */
     template <class Evaluation>
-    Evaluation oilSaturationPressure(unsigned regionIdx,
+    Evaluation saturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& Rs) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.oilSaturationPressure(regionIdx, temperature, Rs)); return 0; }
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rs)); return 0; }
 
     /*!
      * \brief Returns the gas mass fraction of gas-saturated oil at a given temperatire

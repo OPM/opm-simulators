@@ -50,11 +50,11 @@ namespace FluidSystems {
 template <class Scalar>
 class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
+public:
     typedef Opm::GasPvtMultiplexer<Scalar> GasPvt;
     typedef Opm::OilPvtMultiplexer<Scalar> OilPvt;
     typedef Opm::WaterPvtMultiplexer<Scalar> WaterPvt;
 
-public:
     //! \copydoc BaseFluidSystem::ParameterCache
     class ParameterCache : public Opm::NullParameterCache
     {
@@ -573,7 +573,7 @@ public:
     static LhsEval oilSaturationPressure(const LhsEval& temperature,
                                          const LhsEval& Rs,
                                          unsigned regionIdx)
-    { return oilPvt_->oilSaturationPressure(regionIdx, temperature, Rs); }
+    { return oilPvt_->saturationPressure(regionIdx, temperature, Rs); }
 
     /*!
      * \brief The maximum mass fraction of the gas component in the oil phase.
@@ -651,7 +651,7 @@ public:
     static LhsEval saturatedOilDensity(const LhsEval& temperature,
                                        const LhsEval& pressure,
                                        unsigned regionIdx)
-    { return oilPvt_->saturatedOilDensity(regionIdx, temperature, pressure); }
+    { return oilPvt_->saturatedDensity(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Return the formation volume factor of gas.
@@ -680,7 +680,7 @@ public:
     static LhsEval saturatedGasDensity(const LhsEval& temperature,
                                        const LhsEval& pressure,
                                        unsigned regionIdx)
-    { return oilPvt_->saturatedGasDensity(regionIdx, temperature, pressure);  }
+    { return oilPvt_->saturatedDensity(regionIdx, temperature, pressure);  }
 
     /*!
      * \brief Return the density of water.

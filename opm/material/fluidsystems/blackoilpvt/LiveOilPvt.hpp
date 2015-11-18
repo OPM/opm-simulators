@@ -279,7 +279,7 @@ public:
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar po = poMin + (poMax - poMin)*pIdx/nP;
 
-                Scalar poSat = oilSaturationPressure(regionIdx, T, Rs);
+                Scalar poSat = saturationPressure(regionIdx, T, Rs);
                 Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
                 Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
                 Scalar rhoo = oilReferenceDensity_[regionIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
@@ -573,9 +573,9 @@ public:
      * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
      */
     template <class Evaluation>
-    Evaluation oilSaturationPressure(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& Rs) const
+    Evaluation saturationPressure(unsigned regionIdx,
+                                  const Evaluation& temperature,
+                                  const Evaluation& Rs) const
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
