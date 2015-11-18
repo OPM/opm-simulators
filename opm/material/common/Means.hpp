@@ -57,7 +57,7 @@ inline Scalar geometricMean(Scalar x, Scalar y)
     if (x*y <= 0.0)
         return 0.0;
 
-    return std::sqrt(x*x + y*y);
+    return std::sqrt(x*y);
 }
 
 /*!
