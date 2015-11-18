@@ -874,7 +874,7 @@ namespace Opm {
                 const int pos = pu.phase_pos[phase];
 
                 // this is per segment
-                wbq[phase] = (compi.col(pos) * injectingPhase_selector.select(q_s, ADB::constant(V::Zero(nseg)))) - q_ps;
+                wbq[phase] = (wops_ms_.w2s * ADB::constant(compi.col(pos)) * injectingPhase_selector.select(q_s, ADB::constant(V::Zero(nseg)))) - q_ps;
 
                 // TODO: it should be a single value for this certain well.
                 // TODO: it need to be changed later to handle things more consistently
@@ -899,6 +899,7 @@ namespace Opm {
             // compute wellbore mixture at standard conditions.
             // before, the determination of alive wells is based on wells.
             // now, will there be any dead segment? I think no.
+            // TODO: it is not clear if the cmix_s should be based on segment or the well
             std::vector<ADB> cmix_s(np, ADB::null());
             Selector<double> aliveWells_selector(aliveWells, Selector<double>::NotEqualZero);
             for (int phase = 0; phase < np; ++phase) {
