@@ -140,7 +140,7 @@ public:
                       ParameterCache &paramCache,
                       const typename MaterialLaw::Params &matParams,
                       const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities,
-                      Scalar tolerance = 0.0)
+                      Scalar tolerance = -1.0)
     {
         typedef typename FluidState::Scalar Evaluation;
         typedef Dune::FieldMatrix<Evaluation, numEq, numEq> Matrix;
@@ -148,11 +148,10 @@ public:
 
         Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-35);
 
-        if (tolerance <= 0.0) {
-            tolerance = std::min<Scalar>(1e-10,
+        if (tolerance <= 0)
+            tolerance = std::min<Scalar>(1e-5,
                                          Opm::geometricMean(Scalar(1.0),
-                                                            std::numeric_limits<Scalar>::epsilon()));
-        }
+                                                            1e5*std::numeric_limits<Scalar>::epsilon()));
 
         /////////////////////////
         // Newton method
@@ -235,7 +234,7 @@ public:
             //update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
             Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
 
-            if (relError < 1e-9)
+            if (relError < tolerance)
                 return;
         }
 
