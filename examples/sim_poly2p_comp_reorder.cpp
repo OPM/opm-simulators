@@ -100,7 +100,7 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         ParserPtr parser(new Opm::Parser());
-        ParseMode parseMode;
+        Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
         deck = parser->parseFile(deck_filename , parseMode);
         eclipseState.reset(new Opm::EclipseState(deck , parseMode));
 

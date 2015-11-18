@@ -172,7 +172,7 @@ try
 
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
-    Opm::ParseMode parseMode;
+    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     try {
         deck = parser->parseFile(deck_filename , parseMode);
         Opm::checkDeck(deck);

@@ -99,7 +99,7 @@ try
     double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
-        ParseMode parseMode;
+        Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
         ParserPtr parser(new Opm::Parser());
         deck = parser->parseFile(deck_filename , parseMode);
         eclipseState.reset(new Opm::EclipseState(deck , parseMode));
