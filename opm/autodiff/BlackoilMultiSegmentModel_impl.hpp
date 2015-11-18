@@ -1002,7 +1002,17 @@ namespace Opm {
     void BlackoilMultiSegmentModel<Grid>::addWellFluxEq(const std::vector<ADB>& cq_s,
                                                         const SolutionState& state)
     {
-        // the equations is for each segment
+        // the well flux equations are for each segment and each phase.
+        //    /delta m_p_n / dt  - /sigma Q_pi - /sigma q_pj + Q_pn = 0
+        // 1. It is the gain of the amount of the component p in the segment n during the
+        //    current time step under stock-tank conditions.
+        //    It is used to handle the volume storage effects of the wellbore.
+        //    We need the information from the previous step and the crrent time step.
+        // 2. for the second term, it is flow into the segment from the inlet segments,
+        //    which are unknown and treated implictly.
+        // 3. for the third term, it is the inflow through the perforations.
+        // 4. for the last term, it is the outlet rates and also the segment rates,
+        //    which are the primary variable.
         const int np = numPhases();
         const int nseg_total = state.segp.size();
 
