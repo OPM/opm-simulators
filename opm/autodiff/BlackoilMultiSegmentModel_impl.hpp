@@ -108,7 +108,11 @@ namespace Opm {
     template <class Grid>
     BlackoilMultiSegmentModel<Grid>::
     MultiSegmentWellOps::MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
-        : s2p(),
+        : p2w(),
+          w2p(),
+          w2s(),
+          s2w(),
+          s2p(),
           p2s(),
           s2s_inlets(),
           s2s_outlet(),
@@ -178,16 +182,25 @@ namespace Opm {
         // Just do seperately for the moment for parallel development.
         s2s_inlets = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
         s2s_outlet = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
+        s2w        = Eigen::SparseMatrix<double>(nw, total_nseg);
+        w2s        = Eigen::SparseMatrix<double>(total_nseg, nw);
         std::vector<Tri> s2s_inlets_vector;
         std::vector<Tri> s2s_outlet_vector;
+        std::vector<Tri> s2w_vector;
+        std::vector<Tri> w2s_vector;
         s2s_inlets_vector.reserve(total_nseg);
+        s2s_outlet_vector.reserve(total_nseg);
+        s2w_vector.reserve(total_nseg);
+        w2s_vector.reserve(total_nseg);
         seg_start = 0;
         for (int w = 0; w < nw; ++w) {
             const int ns = wells_ms[w]->numberOfSegments();
             for (int seg = 0; seg < ns; ++seg) {
+                const int seg_ind = seg_start + seg;
+                w2s_vector.push_back(Tri(seg_ind, w, 1.0));
+                s2w_vector.push_back(Tri(w, seg_ind, 1.0));
                 int seg_outlet = wells_ms[w]->outletSegment()[seg];
                 if (seg_outlet >= 0) {
-                    const int seg_ind = seg_start + seg;
                     const int outlet_ind = seg_start + seg_outlet;
                     s2s_inlets_vector.push_back(Tri(outlet_ind, seg_ind, 1.0));
                     s2s_outlet_vector.push_back(Tri(seg_ind, outlet_ind, 1.0));
@@ -195,8 +208,16 @@ namespace Opm {
             }
             seg_start += ns;
         }
+
         s2s_inlets.setFromTriplets(s2s_inlets_vector.begin(), s2s_inlets_vector.end());
         s2s_outlet.setFromTriplets(s2s_outlet_vector.begin(), s2s_outlet_vector.end());
+        w2s.setFromTriplets(w2s_vector.begin(), w2s_vector.end());
+        s2w.setFromTriplets(s2w_vector.begin(), s2w_vector.end());
+
+        w2p = Eigen::SparseMatrix<double>(total_nperf, nw);
+        p2w = Eigen::SparseMatrix<double>(nw, total_nperf);
+        w2p = s2p * w2s;
+        p2w = s2w * p2s;
     }
 
 
