@@ -23,8 +23,8 @@
 
 #include "SimulatorBase.hpp"
 
-#include "NewtonSolver.hpp"
 
+#include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilMultiSegmentModel.hpp>
 #include <opm/autodiff/WellStateMultiSegment.hpp>
 
@@ -41,7 +41,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoilMultiSegment<GridT> >
     typedef BlackoilOutputWriter OutputWriter;
     typedef GridT Grid;
     typedef BlackoilMultiSegmentModel<Grid> Model;
-    typedef NewtonSolver<Model> Solver;
+    typedef NonlinearSolver<Model> Solver;
 };
 
 /// a simulator for the blackoil model
