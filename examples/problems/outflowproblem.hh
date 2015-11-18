@@ -192,7 +192,7 @@ public:
      * This problem assumes a temperature.
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; } // in [K]
 
     /*!
@@ -201,8 +201,8 @@ public:
      * This problem uses a constant intrinsic permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     { return perm_; }
 
     /*!
@@ -211,7 +211,7 @@ public:
      * This problem uses a constant porosity.
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return porosity_; }
 
 #if 0
@@ -220,7 +220,7 @@ public:
      *
      */
     template <class Context>
-    Scalar tortuosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar tortuosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return tortuosity_; }
 
     /*!
@@ -229,7 +229,7 @@ public:
      */
     template <class Context>
     Scalar dispersivity(const Context &context,
-                        int spaceIdx, int timeIdx) const
+                        unsigned spaceIdx, unsigned timeIdx) const
     { return 0; }
 #endif
 
@@ -245,7 +245,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -286,8 +286,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
         initialFluidState_(fs, context, spaceIdx, timeIdx);
@@ -302,8 +302,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -317,7 +317,7 @@ private:
 
     template <class FluidState, class Context>
     void initialFluidState_(FluidState &fs, const Context &context,
-                            int spaceIdx, int timeIdx) const
+                            unsigned spaceIdx, unsigned timeIdx) const
     {
         Scalar T = temperature(context, spaceIdx, timeIdx);
         // Scalar rho = FluidSystem::H2O::liquidDensity(T, /*pressure=*/1.5e5);

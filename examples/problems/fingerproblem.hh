@@ -242,9 +242,9 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes
-        int n = this->model().numGridDof();
+        unsigned n = this->model().numGridDof();
         materialParams_.resize(n);
-        for (int i = 0; i < n; ++i) {
+        for (unsigned i = 0; i < n; ++i) {
             materialParams_[i].setMicParams(&micParams_);
             materialParams_[i].setMdcParams(&mdcParams_);
             materialParams_[i].setSwr(0.0);
@@ -285,8 +285,8 @@ public:
         const auto &elemEndIt = this->gridView().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             elemCtx.updateAll(*elemIt);
-            for (int scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx) {
-                int globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
+            for (unsigned scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx) {
+                unsigned globalIdx = elemCtx.globalSpaceIndex(scvIdx, /*timeIdx=*/0);
                 const auto &fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
                 ParkerLenhard::update(materialParams_[globalIdx], fs);
             }
@@ -304,22 +304,22 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     { return K_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 0.4; }
 
     /*!
@@ -327,9 +327,9 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return materialParams_[globalSpaceIdx];
     }
 
@@ -345,7 +345,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.cvCenter(spaceIdx, timeIdx);
 
@@ -377,8 +377,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         // assign the primary variables
         values.assignNaive(initialFluidState_);
@@ -389,7 +389,7 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -410,8 +410,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
     //! \}
 

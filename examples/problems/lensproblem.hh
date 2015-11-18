@@ -309,8 +309,8 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -323,7 +323,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 0.4; }
 
     /*!
@@ -331,7 +331,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -344,7 +344,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -408,7 +408,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values,
-                  const Context &context, int spaceIdx, int timeIdx) const
+                  const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -479,7 +479,7 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         Scalar depth = this->boundingBoxMax()[1] - pos[1];
@@ -520,8 +520,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -529,7 +529,7 @@ public:
 private:
     bool isInLens_(const GlobalPosition &pos) const
     {
-        for (int i = 0; i < dim; ++i) {
+        for (unsigned i = 0; i < dim; ++i) {
             if (pos[i] < lensLowerLeft_[i] - eps_ || pos[i] > lensUpperRight_[i]
                                                               + eps_)
                 return false;

@@ -261,22 +261,22 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 273.15 + 10; } // 10C
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 0.4; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         return isInLens_(context.pos(spaceIdx, timeIdx)) ? intrinsicPermLens_
                                                          : intrinsicPerm_;
@@ -293,7 +293,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
 
@@ -331,8 +331,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         // const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
         values[pressure0Idx] = 1.0e+5; // + 9.81*1.23*(20-globalPos[dim-1]);
@@ -342,8 +342,8 @@ public:
      * \copydoc FvBaseProblem::source
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}

@@ -317,7 +317,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     // \}
@@ -331,8 +331,8 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     { return matrixK_; }
 
     /*!
@@ -342,15 +342,15 @@ public:
      */
     template <class Context>
     const DimMatrix &fractureIntrinsicPermeability(const Context &context,
-                                                   int spaceIdx,
-                                                   int timeIdx) const
+                                                   unsigned spaceIdx,
+                                                   unsigned timeIdx) const
     { return fractureK_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return matrixPorosity_; }
 
     /*!
@@ -359,8 +359,8 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    Scalar fracturePorosity(const Context &context, int spaceIdx,
-                            int timeIdx) const
+    Scalar fracturePorosity(const Context &context, unsigned spaceIdx,
+                            unsigned timeIdx) const
     { return fracturePorosity_; }
 
     /*!
@@ -368,7 +368,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     { return matrixMaterialParams_; }
 
     /*!
@@ -378,8 +378,8 @@ public:
      */
     template <class Context>
     const MaterialLawParams &fractureMaterialLawParams(const Context &context,
-                                                       int spaceIdx,
-                                                       int timeIdx) const
+                                                       unsigned spaceIdx,
+                                                       unsigned timeIdx) const
     { return fractureMaterialParams_; }
 
     /*!
@@ -401,8 +401,8 @@ public:
      * \param timeIdx The index used by the time discretization.
      */
     template <class Context>
-    Scalar fractureWidth(const Context &context, int spaceIdx1, int spaceIdx2,
-                         int timeIdx) const
+    Scalar fractureWidth(const Context &context, unsigned spaceIdx1, unsigned spaceIdx2,
+                         unsigned timeIdx) const
     { return fractureWidth_; }
 
     /*!
@@ -410,7 +410,7 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams &
-    heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
+    heatConductionParams(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return heatCondParams_; }
 
     /*!
@@ -419,8 +419,8 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
-                             int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, unsigned spaceIdx,
+                             unsigned timeIdx) const
     {
         return 790     // specific heat capacity of granite [J / (kg K)]
                * 2700; // density of granite [kg/m^3]
@@ -438,7 +438,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -476,7 +476,7 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -484,7 +484,7 @@ public:
             // only impose constraints adjacent to the left boundary
             return;
 
-        int globalIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         if (!fractureMapper().isFractureVertex(globalIdx)) {
             // do not impose constraints if the finite volume does
             // not contain fractures.
@@ -521,8 +521,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         FluidState fluidState;
         fluidState.setTemperature(temperature_);
@@ -543,8 +543,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     // \}
@@ -569,18 +569,18 @@ private:
         // create a Fluid state which has all phases present
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
         fs.setTemperature(293.15);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fs.setPressure(phaseIdx, 1.0135e5);
         }
 
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updateAll(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
             fs.setDensity(phaseIdx, rho);
         }
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
                 Scalar lambdaFluid = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);

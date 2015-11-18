@@ -198,7 +198,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -225,8 +225,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -259,7 +259,7 @@ public:
         Scalar rho = 1.189;
         Scalar pressure = 1e5 - rho * this->gravity()[1] * y;
 
-        for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
+        for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
             values[velocity0Idx + axisIdx] = velocity[axisIdx];
 
         values[pressureIdx] = pressure;
@@ -274,8 +274,8 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -286,7 +286,7 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -302,7 +302,7 @@ public:
             constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1,
                                       initCond[moleFrac1Idx]);
             ;
-            for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
+            for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 constraints.setConstraint(velocity0Idx + axisIdx,
                                           momentum0EqIdx + axisIdx,
                                           initCond[momentum0EqIdx + axisIdx]);
