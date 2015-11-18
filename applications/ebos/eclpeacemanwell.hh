@@ -101,21 +101,21 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     // convenient access to the number of phases and the number of
     // components
-    static const int numComponents = GET_PROP_VALUE(TypeTag, NumComponents);
-    static const int numPhases = GET_PROP_VALUE(TypeTag, NumPhases);
+    static const unsigned numComponents = GET_PROP_VALUE(TypeTag, NumComponents);
+    static const unsigned numPhases = GET_PROP_VALUE(TypeTag, NumPhases);
 
     // convenient access to the phase and component indices. If the compiler bails out
     // here, you're probably using an incompatible fluid system. This class has only been
     // tested with Opm::FluidSystems::BlackOil...
-    static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
-    static const int oilPhaseIdx = FluidSystem::oilPhaseIdx;
-    static const int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+    static const unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
+    static const unsigned oilPhaseIdx = FluidSystem::oilPhaseIdx;
+    static const unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
-    static const int oilCompIdx = FluidSystem::oilCompIdx;
-    static const int waterCompIdx = FluidSystem::waterCompIdx;
-    static const int gasCompIdx = FluidSystem::gasCompIdx;
+    static const unsigned oilCompIdx = FluidSystem::oilCompIdx;
+    static const unsigned waterCompIdx = FluidSystem::waterCompIdx;
+    static const unsigned gasCompIdx = FluidSystem::gasCompIdx;
 
-    static const int numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
 
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -136,13 +136,13 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         void update(const IntensiveQuantities& intQuants)
         {
             const auto& fs = intQuants.fluidState();
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 pressure[phaseIdx] = fs.pressure(phaseIdx);
                 density[phaseIdx] = fs.density(phaseIdx);
                 mobility[phaseIdx] = intQuants.mobility(phaseIdx);
             }
 
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 oilMassFraction[compIdx] = fs.massFraction(oilPhaseIdx, compIdx);
                 gasMassFraction[compIdx] = fs.massFraction(gasPhaseIdx, compIdx);
             }
@@ -197,7 +197,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         std::array<Evaluation, numComponents> gasMassFraction;
 
         std::shared_ptr<ElementPointer> elementPtr;
-        int localDofIdx;
+        unsigned localDofIdx;
     };
 
     // some safety checks/caveats
@@ -254,7 +254,7 @@ public:
 
         actualWeightedSurfaceRate_ = 0.0;
         actualWeightedResvRate_ = 0.0;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             actualSurfaceRates_[phaseIdx] = 0.0;
             actualResvRates_[phaseIdx] = 0.0;
 
@@ -266,8 +266,8 @@ public:
         // set the composition of the injected fluids based. If
         // somebody is stupid enough to inject oil, we assume he wants
         // to loose his fortune on dry oil...
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
-            for (int compIdx = 0; compIdx < numComponents; ++ compIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
                 injectionFluidState_.setMoleFraction(phaseIdx, compIdx, 0.0);
         injectionFluidState_.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
         injectionFluidState_.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
@@ -282,7 +282,7 @@ public:
     /*!
      * \copydoc Ewoms::BaseAuxiliaryModule::numDofs()
      */
-    virtual int numDofs() const
+    virtual unsigned numDofs() const
     { return 1; }
 
     /*!
@@ -323,7 +323,7 @@ public:
     {
         const SolutionVector& curSol = simulator_.model().solution(/*timeIdx=*/0);
 
-        int wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
+        unsigned wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
 
         Scalar wellResid = wellResidual_(actualBottomHolePressure_);
@@ -331,7 +331,7 @@ public:
 
         auto &diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
         diagBlock = 0.0;
-        for (int i = 0; i < numModelEq; ++ i)
+        for (unsigned i = 0; i < numModelEq; ++ i)
             diagBlock[i][i] = 1.0;
 
         // account for the effect of the grid DOFs which are influenced by the well on
@@ -355,7 +355,7 @@ public:
             elemCtx.updateStencil(*(*dofVars.elementPtr));
 #endif
             curBlock = 0.0;
-            for (int priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
+            for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
                 // primary variable using forward differences
                 Scalar eps = 1e-6*std::max<Scalar>(1.0, priVars[priVarIdx]);
@@ -388,20 +388,20 @@ public:
             // first, we need the source term of the grid for the slightly disturbed well.
             Scalar eps = std::max<Scalar>(1e5, actualBottomHolePressure_)*1e-8;
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, dofVariables_[gridDofIdx]);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 q += modelRate;
             }
 
             // then, we subtract the source rates for a undisturbed well.
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_, dofVariables_[gridDofIdx]);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 q -= modelRate;
             }
 
             // and finally, we divide by the epsilon to get the derivative
-            for (int eqIdx = 0; eqIdx < numModelEq; ++eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numModelEq; ++eqIdx)
                 q[eqIdx] /= eps;
 
             // now we put this derivative into the right place in the Jacobian
@@ -413,7 +413,7 @@ public:
             Valgrind::CheckDefined(q);
             auto &matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
-            for (int eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
                 matrixEntry[eqIdx][0] = - Toolbox::value(q[eqIdx])/dofVars.totalVolume;
             //
             /////////////
@@ -518,7 +518,7 @@ public:
         actualBottomHolePressure_ = 0.0;
 
         // By default, all fluids exhibit the weight 1.0
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             volumetricWeight_[phaseIdx] = 1.0;
 
         wellType_ = Undefined;
@@ -554,9 +554,9 @@ public:
      * \brief Add a degree of freedom to the well.
      */
     template <class Context>
-    void addDof(const Context &context, int dofIdx)
+    void addDof(const Context &context, unsigned dofIdx)
     {
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         if (applies(globalDofIdx))
             // we already have this DOF in the well!
             return;
@@ -588,8 +588,8 @@ public:
 
         // determine the current element's effective size
         const auto &elem = context.element();
-        int faceIdx = 0;
-        int numFaces = refElem.size(/*codim=*/1);
+        unsigned faceIdx = 0;
+        unsigned numFaces = refElem.size(/*codim=*/1);
         for (; faceIdx < numFaces; ++faceIdx) {
             const auto &faceCenterLocal = refElem.position(faceIdx, /*codim=*/1);
             const auto &faceCenter = elem.geometry().global(faceCenterLocal);
@@ -677,9 +677,9 @@ public:
      * \brief Set the connection transmissibility factor for a given degree of freedom.
      */
     template <class Context>
-    void setConnectionTransmissibilityFactor(const Context &context, int dofIdx, Scalar value)
+    void setConnectionTransmissibilityFactor(const Context &context, unsigned dofIdx, Scalar value)
     {
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].connectionTransmissibilityFactor = value;
     }
 
@@ -695,9 +695,9 @@ public:
      *       be called after setEffectivePermeability()!
      */
     template <class Context>
-    void setEffectivePermeability(const Context &context, int dofIdx, Scalar value)
+    void setEffectivePermeability(const Context &context, unsigned dofIdx, Scalar value)
     {
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].effectivePermeability = value;
 
         computeConnectionTransmissibilityFactor_(globalDofIdx);
@@ -720,7 +720,7 @@ public:
      *
      * This is only relevant if the well type is an injector.
      */
-    void setInjectedPhaseIndex(int injPhaseIdx)
+    void setInjectedPhaseIndex(unsigned injPhaseIdx)
     { injectedPhaseIdx_ = injPhaseIdx; }
 
     /*!
@@ -751,7 +751,7 @@ public:
      * \brief Return true iff a degree of freedom is directly affected
      *        by the well
      */
-    bool applies(int globalDofIdx) const
+    bool applies(unsigned globalDofIdx) const
     { return dofVariables_.count(globalDofIdx) > 0; }
 
     /*!
@@ -841,14 +841,14 @@ public:
      * \brief Return the reservoir rate [m^3/s] of a given fluid which is actually seen
      *        by the well in the current time step.
      */
-    Scalar reservoirRate(int phaseIdx) const
+    Scalar reservoirRate(unsigned phaseIdx) const
     { return actualResvRates_[phaseIdx]; }
 
     /*!
      * \brief Return the weighted surface rate [m^3/s] of a given fluid which is actually
      *        seen by the well in the current time step.
      */
-    Scalar surfaceRate(int phaseIdx) const
+    Scalar surfaceRate(unsigned phaseIdx) const
     { return actualSurfaceRates_[phaseIdx]; }
 
     /*!
@@ -859,9 +859,9 @@ public:
      *       be called after setSkinFactor()!
      */
     template <class Context>
-    void setSkinFactor(const Context &context, int dofIdx, Scalar value)
+    void setSkinFactor(const Context &context, unsigned dofIdx, Scalar value)
     {
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].skinFactor = value;
 
         computeConnectionTransmissibilityFactor_(globalDofIdx);
@@ -870,7 +870,7 @@ public:
     /*!
      * \brief Return the well's skin factor at a DOF [-].
      */
-    Scalar skinFactor(int gridDofIdx) const
+    Scalar skinFactor(unsigned gridDofIdx) const
     { return dofVariables_.at(gridDofIdx).skinFactor_; }
 
     /*!
@@ -881,9 +881,9 @@ public:
      *       be called after setRadius()!
      */
     template <class Context>
-    void setRadius(const Context &context, int dofIdx, Scalar value)
+    void setRadius(const Context &context, unsigned dofIdx, Scalar value)
     {
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].boreholeRadius = value;
 
         computeConnectionTransmissibilityFactor_(globalDofIdx);
@@ -892,7 +892,7 @@ public:
     /*!
      * \brief Return the well's radius at a cell [m].
      */
-    Scalar radius(int gridDofIdx) const
+    Scalar radius(unsigned gridDofIdx) const
     { return dofVariables_.at(gridDofIdx).radius_; }
 
     /*!
@@ -947,13 +947,13 @@ public:
      * \brief Do the DOF specific part at the beginning of each iteration
      */
     template <class Context>
-    void beginIterationAccumulate(Context &context, int timeIdx)
+    void beginIterationAccumulate(Context &context, unsigned timeIdx)
     {
         if (wellStatus() == Shut)
             return;
 
-        for (int dofIdx = 0; dofIdx < context.numPrimaryDof(timeIdx); ++dofIdx) {
-            int globalDofIdx = context.globalSpaceIndex(dofIdx, timeIdx);
+        for (unsigned dofIdx = 0; dofIdx < context.numPrimaryDof(timeIdx); ++dofIdx) {
+            unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, timeIdx);
             if (!applies(globalDofIdx))
                 continue;
 
@@ -1051,12 +1051,12 @@ public:
     template <class Context>
     void computeTotalRatesForDof(RateVector &q,
                                  const Context &context,
-                                 int dofIdx,
-                                 int timeIdx) const
+                                 unsigned dofIdx,
+                                 unsigned timeIdx) const
     {
         q = 0.0;
 
-        int globalDofIdx = context.globalSpaceIndex(dofIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, timeIdx);
         if (wellStatus() == Shut || !applies(globalDofIdx))
             return;
 
@@ -1071,7 +1071,7 @@ public:
         // convert to mass rates
         RateVector modelRate;
         const auto &intQuants = context.intensiveQuantities(dofIdx, timeIdx);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
             q += modelRate;
         }
@@ -1082,7 +1082,7 @@ public:
 protected:
     // compute the connection transmissibility factor based on the effective permeability
     // of a connection, the radius of the borehole and the skin factor.
-    void computeConnectionTransmissibilityFactor_(int globalDofIdx)
+    void computeConnectionTransmissibilityFactor_(unsigned globalDofIdx)
     {
         auto& dofVars = dofVariables_[globalDofIdx];
 
@@ -1117,7 +1117,7 @@ protected:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             volRates[phaseIdx] = 0.0;
 
         // connection transmissibility factor for the current DOF.
@@ -1130,7 +1130,7 @@ protected:
         // gravity constant
         Scalar g = simulator_.problem().gravity()[dimWorld - 1];
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // well model due to Peaceman; see Chen et al., p. 449
 
             // phase pressure in grid cell
@@ -1153,7 +1153,7 @@ protected:
                 // there should only be injected phase present, so its mobility should be
                 // 1/viscosity...
                 lambda = 0.0;
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                     lambda += Toolbox::template toLhs<Eval>(dofVars.mobility[phaseIdx]);
             }
             else
@@ -1190,7 +1190,7 @@ protected:
     Scalar computeWeightedRate_(const std::array<Scalar, numPhases> &volRates) const
     {
         Scalar result = 0;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             result += volRates[phaseIdx]*volumetricWeight_[phaseIdx];
         return result;
     }
@@ -1263,7 +1263,7 @@ protected:
                               int globalEvalDofIdx = -1) const
 
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             overallResvRates[phaseIdx] = 0.0;
             overallSurfaceRates[phaseIdx] = 0.0;
         }
@@ -1283,7 +1283,7 @@ protected:
             std::array<Scalar, numPhases> volumetricSurfaceRates;
             computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, *tmp);
 
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 overallResvRates[phaseIdx] += volumetricReservoirRates[phaseIdx];
                 overallSurfaceRates[phaseIdx] += volumetricSurfaceRates[phaseIdx];
             }
@@ -1403,7 +1403,7 @@ protected:
             std::array<Scalar, numPhases> surfaceRates;
             computeSurfaceRates_(surfaceRates, resvRates, *dofVars);
 
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 totalSurfaceRates[phaseIdx] += surfaceRates[phaseIdx];
 
             resvRate += computeWeightedRate_(resvRates);
@@ -1430,7 +1430,7 @@ protected:
             // fluids are produced on the surface...
             maxSurfaceRate = 0.0;
             surfaceRate = 0;
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 surfaceRate += totalSurfaceRates[phaseIdx];
 
             // don't care about the reservoir rate...
@@ -1465,7 +1465,7 @@ protected:
     std::map<int, DofVariables> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
-    int iterationIdx_;
+    unsigned iterationIdx_;
 
     // the type of the well (injector, producer or undefined)
     WellType wellType_;
@@ -1532,7 +1532,7 @@ protected:
     // then performance would be slightly worse...
     mutable FluidState injectionFluidState_;
 
-    int injectedPhaseIdx_;
+    unsigned injectedPhaseIdx_;
 };
 } // namespace Ewoms
 

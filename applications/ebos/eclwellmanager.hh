@@ -134,9 +134,9 @@ public:
                 continue; // non-local entities need to be skipped
 
             elemCtx.updateStencil(elem);
-            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
             {
-                const int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 CartesianCoordinate cartCoord;
                 simulator_.gridManager().cartesianCoordinate( globalDofIdx, cartCoord );
 
@@ -167,7 +167,7 @@ public:
      */
     void beginEpisode(Opm::EclipseStateConstPtr eclState, bool wasRestarted=false)
     {
-        int episodeIdx = simulator_.episodeIndex();
+        unsigned episodeIdx = simulator_.episodeIndex();
 
         const auto &deckSchedule = eclState->getSchedule();
         WellCompletionsMap wellCompMap;
@@ -356,7 +356,7 @@ public:
     /*!
      * \brief Return the number of wells considered by the EclWellManager.
      */
-    int numWells() const
+    unsigned numWells() const
     { return wells_.size(); }
 
     /*!
@@ -370,7 +370,7 @@ public:
     /*!
      * \brief Returns true iff a given degree of freedom is currently penetrated by any well.
      */
-    bool gridDofIsPenetrated(int globalDofIdx) const
+    bool gridDofIsPenetrated(unsigned globalDofIdx) const
     { return gridDofIsPenetrated_[globalDofIdx]; }
 
     /*!
@@ -378,7 +378,7 @@ public:
      *
      * A std::runtime_error will be thrown if the well name is unknown.
      */
-    int wellIndex(const std::string &wellName) const
+    unsigned wellIndex(const std::string &wellName) const
     {
         assert( hasWell( wellName ) );
         const auto &it = wellNameToIndex_.find(wellName);
@@ -504,7 +504,7 @@ public:
             else
                 producedVolume = &wellTotalProducedVolume_[well->name()];
 
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 // this assumes that the implicit Euler method is used for time
                 // integration. TODO: Once the time discretization becomes pluggable,
                 // this integration needs to be done by the time discretization code!
@@ -527,7 +527,7 @@ public:
     /*!
      * \brief Returns the surface volume of a fluid phase produced by a well.
      */
-    Scalar totalProducedVolume(const std::string& wellName, int phaseIdx) const
+    Scalar totalProducedVolume(const std::string& wellName, unsigned phaseIdx) const
     {
         if (wellTotalProducedVolume_.count(wellName) == 0)
             return 0.0; // well not yet seen
@@ -537,7 +537,7 @@ public:
     /*!
      * \brief Returns the surface volume of a fluid phase injected by a well.
      */
-    Scalar totalInjectedVolume(const std::string& wellName, int phaseIdx) const
+    Scalar totalInjectedVolume(const std::string& wellName, unsigned phaseIdx) const
     {
         if (wellTotalInjectedVolume_.count(wellName) == 0)
             return 0.0; // well not yet seen
@@ -551,8 +551,8 @@ public:
     template <class Context>
     void computeTotalRatesForDof(EvalEqVector &q,
                                  const Context &context,
-                                 int dofIdx,
-                                 int timeIdx) const
+                                 unsigned dofIdx,
+                                 unsigned timeIdx) const
     {
         q = 0.0;
 
@@ -600,7 +600,7 @@ public:
      * "Something" can either be the well topology (i.e., which grid blocks are contained
      * in which well) or it can be a well parameter like the bottom hole pressure...
      */
-    bool wellsChanged(Opm::EclipseStateConstPtr eclState, int reportStepIdx) const
+    bool wellsChanged(Opm::EclipseStateConstPtr eclState, unsigned reportStepIdx) const
     {
         if (wellTopologyChanged_(eclState, reportStepIdx))
             return true;
@@ -626,7 +626,7 @@ public:
     }
 
 protected:
-    bool wellTopologyChanged_(Opm::EclipseStateConstPtr eclState, int reportStepIdx) const
+    bool wellTopologyChanged_(Opm::EclipseStateConstPtr eclState, unsigned reportStepIdx) const
     {
         if (reportStepIdx == 0) {
             // the well topology has always been changed relative to before the
@@ -698,7 +698,7 @@ protected:
         return false;
     }
 
-    void updateWellTopology_(int reportStepIdx,
+    void updateWellTopology_(unsigned reportStepIdx,
                              const WellCompletionsMap& wellCompletions,
                              std::vector<bool>& gridDofIsPenetrated) const
     {
@@ -728,9 +728,9 @@ protected:
                 continue; // non-local entities need to be skipped
 
             elemCtx.updateStencil(elem);
-            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
-                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx) {
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                unsigned cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip
@@ -755,7 +755,7 @@ protected:
         }
     }
 
-    void computeWellCompletionsMap_(int reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
+    void computeWellCompletionsMap_(unsigned reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
         auto deckSchedule = eclStatePtr->getSchedule();
@@ -806,7 +806,7 @@ protected:
         }
     }
 
-    void updateWellParameters_(int reportStepIdx, const WellCompletionsMap& wellCompletions)
+    void updateWellParameters_(unsigned reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
         auto deckSchedule = eclStatePtr->getSchedule();
@@ -838,11 +838,11 @@ protected:
                 continue; // non-local entities need to be skipped
 
             elemCtx.updateStencil(elem);
-            for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
             {
                 assert( elemCtx.numPrimaryDof(/*timeIdx=*/0) == 1 );
-                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                int cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                unsigned cartesianDofIdx = gridManager.cartesianIndex(globalDofIdx);
 
                 if (wellCompletions.count(cartesianDofIdx) == 0)
                     // the current DOF is not contained in any well, so we must skip

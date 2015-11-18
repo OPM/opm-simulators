@@ -89,8 +89,8 @@ public:
             Opm::UgGridHelpers::cartDims(equilGrid),
             tmpParam);
 
-        const int numElems = equilGrid.size(/*codim=*/0);
-        assert( int(gridManager.grid().size(/*codim=*/0)) == numElems );
+        const unsigned numElems = equilGrid.size(/*codim=*/0);
+        assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numElems) );
         // initialize the boiler plate of opm-core the state structure.
         Opm::BlackoilState opmBlackoilState;
         opmBlackoilState.init(numElems,
@@ -112,14 +112,14 @@ public:
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numElems);
-        for (int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto &fluidState = initialFluidStates_[elemIdx];
 
             // get the PVT region index of the current element
-            int regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
+            unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
 
             // set the phase saturations
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar S = opmBlackoilState.saturation()[elemIdx*numPhases + phaseIdx];
                 fluidState.setSaturation(phaseIdx, S);
             }
@@ -138,13 +138,13 @@ public:
             const auto& matParams = simulator.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             Scalar po = opmBlackoilState.pressure()[elemIdx];
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
             Scalar pg = fluidState.pressure(gasPhaseIdx);
 
             // reset the phase compositions
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     fluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
 
             // the composition of the water phase is simple: it only consists of the
@@ -194,7 +194,7 @@ public:
      *
      * This is supposed to correspond to hydrostatic conditions.
      */
-    const ScalarFluidState& initialFluidState(int elemIdx) const
+    const ScalarFluidState& initialFluidState(unsigned elemIdx) const
     { return initialFluidStates_[elemIdx]; }
 
 protected:

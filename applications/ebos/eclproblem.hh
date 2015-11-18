@@ -234,7 +234,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
-        EWOMS_REGISTER_PARAM(TypeTag, int, RestartWritingInterval,
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
     }
 
@@ -455,8 +455,8 @@ public:
      */
     bool shouldWriteRestartFile() const
     {
-        int n = EWOMS_GET_PARAM(TypeTag, int, RestartWritingInterval);
-        int i = this->simulator().timeStepIndex();
+        unsigned n = EWOMS_GET_PARAM(TypeTag, unsigned, RestartWritingInterval);
+        unsigned i = this->simulator().timeStepIndex();
         if (i > 0 && (i%n) == 0)
             return true; // we don't write a restart file for the initial condition
         return false;
@@ -496,10 +496,10 @@ public:
      */
     template <class Context>
     const DimMatrix &intrinsicPermeability(const Context &context,
-                                           int spaceIdx,
-                                           int timeIdx) const
+                                           unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return intrinsicPermeability_[globalSpaceIdx];
     }
 
@@ -509,22 +509,22 @@ public:
      *
      * Its main (only?) usage is the ECL transmissibility calculation code...
      */
-    const DimMatrix &intrinsicPermeability(int globalElemIdx) const
+    const DimMatrix &intrinsicPermeability(unsigned globalElemIdx) const
     { return intrinsicPermeability_[globalElemIdx]; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::transmissibility
      */
-    Scalar transmissibility(int elem1Idx, int elem2Idx) const
+    Scalar transmissibility(unsigned elem1Idx, unsigned elem2Idx) const
     { return transmissibilities_.transmissibility(elem1Idx, elem2Idx); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return porosity_[globalSpaceIdx];
     }
 
@@ -532,14 +532,14 @@ public:
      * \copydoc BlackoilProblem::rockCompressibility
      */
     template <class Context>
-    Scalar rockCompressibility(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar rockCompressibility(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 0.0;
 
-        int tableIdx = 0;
+        unsigned tableIdx = 0;
         if (!rockTableIdx_.empty()) {
-            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
 
@@ -550,14 +550,14 @@ public:
      * \copydoc BlackoilProblem::rockReferencePressure
      */
     template <class Context>
-    Scalar rockReferencePressure(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar rockReferencePressure(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 1e5;
 
-        int tableIdx = 0;
+        unsigned tableIdx = 0;
         if (!rockTableIdx_.empty()) {
-            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
 
@@ -569,26 +569,26 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return materialLawParams(globalSpaceIdx);
     }
 
-    const MaterialLawParams& materialLawParams(int globalDofIdx) const
+    const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
     { return materialLawManager_->materialLawParams(globalDofIdx); }
 
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
     template <class Context>
-    int pvtRegionIndex(const Context &context, int spaceIdx, int timeIdx) const
+    unsigned pvtRegionIndex(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return pvtRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
 
     /*!
      * \brief Returns the index the relevant PVT region given a cell index
      */
-    int pvtRegionIndex(int elemIdx) const
+    unsigned pvtRegionIndex(unsigned elemIdx) const
     {
         Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
 
@@ -597,7 +597,7 @@ public:
 
         const auto& gridManager = this->simulator().gridManager();
 
-        int cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
+        unsigned cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
 
@@ -611,11 +611,11 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         // use the temporally constant temperature, i.e. use the initial temperature of
         // the DOF
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
     }
 
@@ -627,8 +627,8 @@ public:
     template <class Context>
     void boundary(BoundaryRateVector &values,
                   const Context &context,
-                  int spaceIdx,
-                  int timeIdx) const
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     { values.setNoFlow(); }
 
     /*!
@@ -638,9 +638,9 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
 
@@ -665,20 +665,20 @@ public:
     template <class Context>
     void source(RateVector &rate,
                 const Context &context,
-                int spaceIdx,
-                int timeIdx) const
+                unsigned spaceIdx,
+                unsigned timeIdx) const
     {
         rate = Toolbox::createConstant(0);
 
-        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
             rate[eqIdx] = Toolbox::createConstant(0.0);
 
         wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
     }
 
@@ -724,7 +724,7 @@ private:
             eclState->getIntGridProperty("PVTNUM")->getData();
         rockTableIdx_.resize(gridManager.gridView().size(/*codim=*/0));
         for (size_t elemIdx = 0; elemIdx < rockTableIdx_.size(); ++ elemIdx) {
-            int cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices
             rockTableIdx_[elemIdx] = pvtnumData[cartElemIdx] - 1;
@@ -759,7 +759,7 @@ private:
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 intrinsicPermeability_[dofIdx] = 0.0;
                 intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
                 intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
@@ -787,7 +787,7 @@ private:
                 eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
@@ -799,7 +799,7 @@ private:
                 eclState->getDoubleGridProperty("PORV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 if (std::isfinite(porvData[cartesianElemIdx])) {
                     Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
                     porosity_[dofIdx] = porvData[cartesianElemIdx]/dofVolume;
@@ -981,7 +981,7 @@ private:
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(oilPressure);
             Valgrind::CheckDefined(pc);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
             Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
 
@@ -990,8 +990,8 @@ private:
             //////
 
             // reset all mole fractions to 0
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     dofFluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
 
             // by default, assume immiscibility for all phases
@@ -1103,7 +1103,7 @@ private:
             elemCtx.updateStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            int compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
