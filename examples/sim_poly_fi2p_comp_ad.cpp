@@ -141,7 +141,7 @@ try
     }
 
     std::string logFile = output_dir + "/LOGFILE.txt";
-    Opm::ParseMode parseMode;
+    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ParserPtr parser(new Opm::Parser());
     {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
