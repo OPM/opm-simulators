@@ -316,15 +316,15 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 293.15; /* [K] */ }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -336,7 +336,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -350,7 +350,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -364,15 +364,15 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams &
-    heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
+    heatConductionParams(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return heatCondParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
-                             int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, unsigned spaceIdx,
+                             unsigned timeIdx) const
     {
         return 850     // specific heat capacity [J / (kg K)]
                * 2650; // density of sand [kg/m^3]
@@ -390,7 +390,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -409,7 +409,7 @@ public:
             // inject with the same composition as the gas phase of
             // the injection fluid state
             Scalar molarInjectionRate = 0.3435; // [mol/(m^2 s)]
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 molarRate[conti0EqIdx + compIdx] =
                     -molarInjectionRate
                     * injectFluidState_.moleFraction(gasPhaseIdx, compIdx);
@@ -438,8 +438,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
 
@@ -456,8 +456,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -493,7 +493,7 @@ private:
 
     template <class FluidState, class Context>
     void initialFluidState_(FluidState &fs, const Context &context,
-                            int spaceIdx, int timeIdx) const
+                            unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -510,7 +510,7 @@ private:
             const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
@@ -528,7 +528,7 @@ private:
             const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
             Scalar pc[numPhases];
             MaterialLaw::capillaryPressures(pc, matParams, fs);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
@@ -539,17 +539,17 @@ private:
 
             // set the contaminant mole fractions to zero. this is a
             // little bit hacky...
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fs.setMoleFraction(phaseIdx, NAPLIdx, 0.0);
 
                 if (phaseIdx == naplPhaseIdx)
                     continue;
 
                 Scalar sumx = 0;
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     sumx += fs.moleFraction(phaseIdx, compIdx);
 
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     fs.setMoleFraction(phaseIdx, compIdx,
                                        fs.moleFraction(phaseIdx, compIdx) / sumx);
             }
@@ -563,18 +563,18 @@ private:
         // create a Fluid state which has all phases present
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
         fs.setTemperature(293.15);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fs.setPressure(phaseIdx, 1.0135e5);
         }
 
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updateAll(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
             fs.setDensity(phaseIdx, rho);
         }
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
                 Scalar lambdaFluid = FluidSystem::thermalConductivity(fs, paramCache, phaseIdx);

@@ -314,7 +314,7 @@ public:
         finePorosity_ = 0.2;
         coarsePorosity_ = 0.3;
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fineMaterialParams_.setPcMinSat(phaseIdx, 0.0);
             fineMaterialParams_.setPcMaxSat(phaseIdx, 0.0);
 
@@ -379,8 +379,8 @@ public:
      * above one with low permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -392,7 +392,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -405,7 +405,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -428,7 +428,7 @@ public:
      * will need it one day?
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     // \}
@@ -446,7 +446,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         // no flow on top and bottom
         values.setNoFlow();
@@ -466,7 +466,7 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         values.assignNaive(initialFluidState_);
 
@@ -488,7 +488,7 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
         Scalar x = pos[0] - this->boundingBoxMin()[0];
@@ -508,13 +508,13 @@ public:
             fs.setSaturation(gasPhaseIdx, 0.0);
 
             // set the compositions to only water
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     fs.setMoleFraction(phaseIdx, compIdx, 0.0);
 
             // set the composition of the oil phase to the initial
             // composition
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 fs.setMoleFraction(oilPhaseIdx, compIdx,
                                    initialFluidState_.moleFraction(oilPhaseIdx,
                                                                    compIdx));
@@ -537,8 +537,8 @@ public:
             fs.setSaturation(gasPhaseIdx, 0.0);
 
             // set the compositions to the initial composition
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     fs.setMoleFraction(phaseIdx, compIdx,
                                        initialFluidState_.moleFraction(phaseIdx,
                                                                        compIdx));
@@ -554,8 +554,8 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -591,8 +591,8 @@ private:
         fs.setPressure(gasPhaseIdx, pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]));
 
         // reset all mole fractions to 0
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 fs.setMoleFraction(phaseIdx, compIdx, 0.0);
 
         //////
