@@ -249,9 +249,6 @@ public:
         size_t nRs = 20;
         size_t nP = samplePoints.size()*2;
 
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-
         Spline oilFormationVolumeFactorSpline;
         oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
 
