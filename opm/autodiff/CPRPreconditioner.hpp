@@ -49,6 +49,7 @@
 
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
+#include <opm/autodiff/ParallelOverlappingILU0.hpp>
 namespace Opm
 {
 namespace
