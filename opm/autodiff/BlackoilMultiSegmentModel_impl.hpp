@@ -1990,14 +1990,12 @@ namespace Opm {
         // calculate the depth difference of the segments
         // TODO: make it a member fo the new Wells class or WellState or the Model.
         //       so that only do this once for each timestep.
+        // TODO: we need to store the following values some well to avoid recomputation.
         V segment_depth_delta = V::Zero(nseg_total);
-        int nperf_total = 0;
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
             WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
             const int nseg = well->numberOfSegments();
-            const int nperf = well->numberOfPerforations();
-            nperf_total += nperf;
             for (int s = 1; s < nseg; ++s) {
                 const int s_outlet = well->outletSegment()[s];
                 assert(s_outlet >= 0 && s_outlet < nseg);
@@ -2011,21 +2009,7 @@ namespace Opm {
         const ADB grav_adb = ADB::constant(V::Constant(nseg_total, grav));
         well_segment_pressures_delta_ = segment_depth_delta * grav_adb * well_segment_densities_;
 
-        // again we need a global mapping
-        ADB well_segment_perforation_densities = ADB::constant(V::Zero(nperf_total));
-        int start_perforation = 0;
-        start_segment = 0;
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const int nseg = well->numberOfSegments();
-            const int nperf = well->numberOfPerforations();
-            ADB segment_densities_well = subset(well_segment_densities_, Span(nseg, 1 , start_segment));
-            ADB segment_densities_perforation_densities_well = well->wellOps().s2p * segment_densities_well;
-            well_segment_perforation_densities += superset(segment_densities_perforation_densities_well,
-                                                           Span(nperf, 1, start_perforation), nperf_total);
-            start_segment += nseg;
-            start_perforation += nperf;
-        }
+        ADB well_segment_perforation_densities = wops_ms_.s2p * well_segment_densities_;
         well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
 
 #if 0
