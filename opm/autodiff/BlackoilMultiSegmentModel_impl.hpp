@@ -55,6 +55,22 @@
 namespace Opm {
 
 
+    namespace detail
+    {
+        ADB onlyWellDerivs(const ADB& x)
+        {
+            V val = x.value();
+            const int nb = x.numBlocks();
+            if (nb < 2) {
+                OPM_THROW(std::logic_error, "Called onlyWellDerivs() with argument that has " << nb << " blocks.");
+            }
+            std::vector<M> derivs = { x.derivative()[nb - 2], x.derivative()[nb - 1] };
+            return ADB::function(std::move(val), std::move(derivs));
+        }
+    } // namespace detail
+
+
+
 
     template <class Grid>
     BlackoilMultiSegmentModel<Grid>::
@@ -697,11 +713,10 @@ namespace Opm {
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
         asImpl().extractWellPerfProperties(mob_perfcells, b_perfcells);
-        // TODO: it will be a good thing to try to solve welleq seperately every time
-        // if (param_.solve_welleq_initially_ && initial_assembly) {
+        if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-        //     solveWellEq(mob_perfcells, b_perfcells, state, well_state);
-        // }
+            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        }
 
         // the perforation flux here are different
         // it is related to the segment location
@@ -1011,6 +1026,15 @@ namespace Opm {
             segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
                                               segment_comp_surf_volume_initial_[phase];
 
+            // Special handling for when we are called from solveWellEq().
+            // TODO: restructure to eliminate need for special treatmemt.
+            if (segment_volume_change_dt[phase].numBlocks() != segqs.numBlocks()) {
+                assert(segment_volume_change_dt[phase].numBlocks() > 2);
+                assert(segqs.numBlocks() == 2);
+                segment_volume_change_dt[phase] = detail::onlyWellDerivs(segment_volume_change_dt[phase]);
+                assert(segment_volume_change_dt[phase].numBlocks() == 2);
+            }
+
             const ADB cq_s_seg = wops_ms_.p2s * cq_s[phase];
             const ADB segqs_phase = subset(segqs, Span(nseg_total, 1, phase * nseg_total));
             segqs -= superset(cq_s_seg + wops_ms_.s2s_inlets * segqs_phase + segment_volume_change_dt[phase],
@@ -1156,6 +1180,48 @@ namespace Opm {
 
         }
     }
+
+
+
+
+
+    template <class Grid>
+    void BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
+                                                      const std::vector<ADB>& b_perfcells,
+                                                      SolutionState& state,
+                                                      WellState& well_state)
+    {
+        Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+
+        // We must now update the state.segp and state.segqs members,
+        // that the base version does not know about.
+        const int np = numPhases();
+        const int nw = wells().number_of_wells;
+        {
+            // We will set the segp primary variable to the new ones,
+            // but we do not change the derivatives here.
+            ADB::V new_segp = Eigen::Map<ADB::V>(well_state.segPress().data(), nw);
+            // Avoiding the copy below would require a value setter method
+            // in AutoDiffBlock.
+            std::vector<ADB::M> old_segp_derivs = state.segp.derivative();
+            state.segp = ADB::function(std::move(new_segp), std::move(old_segp_derivs));
+        }
+        {
+            // Need to reshuffle well rates, from phase running fastest
+            // to wells running fastest.
+            // The transpose() below switches the ordering.
+            const DataBlock segrates = Eigen::Map<const DataBlock>(well_state.segPhaseRates().data(), nw, np).transpose();
+            ADB::V new_segqs = Eigen::Map<const V>(segrates.data(), nw*np);
+            std::vector<ADB::M> old_segqs_derivs = state.segqs.derivative();
+            state.segqs = ADB::function(std::move(new_segqs), std::move(old_segqs_derivs));
+        }
+
+        // This is also called by the base version, but since we have updated
+        // state.segp we must call it again.
+        asImpl().computeWellConnectionPressures(state, well_state);
+    }
+
+
 
 
 
@@ -1315,13 +1381,20 @@ namespace Opm {
         // const ADB rate_residual = subset(rate_distr * state.segqs - rate_targets, rate_well_elems);
 
         ADB others_residual = ADB::constant(V::Zero(nseg_total));
+
+        // Special handling for when we are called from solveWellEq().
+        // TODO: restructure to eliminate need for special treatmemt.
+        ADB wspd = (state.segp.numBlocks() == 2)
+            ? detail::onlyWellDerivs(well_segment_pressures_delta_)
+            : well_segment_pressures_delta_;
+
         start_segment = 0;
         for (int w = 0; w < nw; ++w) {
             WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
             const int nseg = well->numberOfSegments();
             ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
             ADB well_residual = segp - well->wellOps().s2s_outlet * segp
-                                 + subset(well_segment_pressures_delta_, Span(nseg, 1, start_segment));
+                                 + subset(wspd, Span(nseg, 1, start_segment));
             ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
             others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
             start_segment += nseg;

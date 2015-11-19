@@ -273,6 +273,12 @@ namespace Opm {
                                             const WellState& xw);
 
         void
+        solveWellEq(const std::vector<ADB>& mob_perfcells,
+                    const std::vector<ADB>& b_perfcells,
+                    SolutionState& state,
+                    WellState& well_state);
+
+        void
         computeWellFlux(const SolutionState& state,
                         const std::vector<ADB>& mob_perfcells,
                         const std::vector<ADB>& b_perfcells,
