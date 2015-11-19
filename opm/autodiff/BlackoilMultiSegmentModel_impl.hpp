@@ -721,8 +721,8 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::computeWellFlux(const SolutionState& state,
-                                                     const std::vector<ADB>& /* mob_perfcells */,
-                                                     const std::vector<ADB>& /* b_perfcells */,
+                                                     const std::vector<ADB>& mob_perfcells,
+                                                     const std::vector<ADB>& b_perfcells,
                                                      V& aliveWells,
                                                      std::vector<ADB>& cq_s) const
     {
@@ -759,14 +759,6 @@ namespace Opm {
             const V& Tw = wops_ms_.conn_trans_factors;
             // const std::vector<int>& well_cells = well->wellCells();
             const std::vector<int>& well_cells = wops_ms_.well_cells;
-
-            // extract mob_perfcells and b_perfcells.
-            std::vector<ADB> mob_perfcells(np, ADB::null());
-            std::vector<ADB> b_perfcells(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
-                mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-                b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-            }
 
             // determining in-flow (towards well-bore) or out-flow (towards reservoir)
             // for mutli-segmented wells and non-segmented wells, the calculation of the drawdown are different.
