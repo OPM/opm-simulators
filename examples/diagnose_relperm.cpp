@@ -70,7 +70,10 @@ try
     ParserPtr parser(new Opm::Parser);
     Opm::DeckConstPtr deck;
     //ParseMode parseMode;
-    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
+                              { ParseMode::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
+                              { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE}
+                             });
     std::string deck_filename = param.get<std::string>("deck_filename");
     deck = parser->parseFile(deck_filename, parseMode);
     eclState.reset(new EclipseState(deck, parseMode));
@@ -96,14 +99,10 @@ try
     // Issue a warning if any parameters were unused.
     warnIfUnusedParams(param);
 
-    // Solve eikonal equation.
     Opm::time::StopWatch timer;
     timer.start();
     RelpermDiagnostics diagnostic(eclState);
-    diagnostic.phaseCheck(eclState, deck);
-    diagnostic.satFamilyCheck(eclState);
-    diagnostic.tableCheck(eclState, deck);
-    diagnostic.endPointsCheck(deck, eclState);
+    diagnostic.diagnosis(eclState, deck);
     timer.stop();
     double tt = timer.secsSinceStart();
     std::cout << "relperm diagnostics: " << tt << " seconds." << std::endl;
