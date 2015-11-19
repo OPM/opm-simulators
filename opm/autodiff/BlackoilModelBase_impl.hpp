@@ -1629,7 +1629,7 @@ namespace detail {
                 const Eigen::SparseLU< Sp > solver(Jn0);
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
-                assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
+                // assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
                 asImpl().updateWellState(dx.array(), well_state);
                 asImpl().updateWellControls(well_state);
             }

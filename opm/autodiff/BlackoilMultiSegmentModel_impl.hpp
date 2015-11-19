@@ -797,9 +797,19 @@ namespace Opm {
             Selector<double> msperf_selector(is_multisegment_perf, Selector<double>::NotEqualZero);
 
             // Compute drawdown.
-            const ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
+            ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
                                                     ADB::constant(well_perforation_pressure_diffs_));
             const V h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, V::Zero(nperf));
+
+            // Special handling for when we are called from solveWellEq().
+            // TODO: restructure to eliminate need for special treatmemt.
+            if ((h_nc.numBlocks() != 0) && (h_nc.numBlocks() != seg_pressures_perf.numBlocks())) {
+                assert(seg_pressures_perf.numBlocks() == 2);
+                assert(h_nc.numBlocks() > 2);
+                h_nc = detail::onlyWellDerivs(h_nc);
+                assert(h_nc.numBlocks() == 2);
+            }
+
             ADB drawdown = (p_perfcells + h_cj - seg_pressures_perf - h_nc);
 
             // ADB h_cj_ad = ADB::constant(h_cj);
@@ -1196,11 +1206,11 @@ namespace Opm {
         // We must now update the state.segp and state.segqs members,
         // that the base version does not know about.
         const int np = numPhases();
-        const int nw = wells().number_of_wells;
+        const int nseg_total =well_state.numSegments();
         {
             // We will set the segp primary variable to the new ones,
             // but we do not change the derivatives here.
-            ADB::V new_segp = Eigen::Map<ADB::V>(well_state.segPress().data(), nw);
+            ADB::V new_segp = Eigen::Map<ADB::V>(well_state.segPress().data(), nseg_total);
             // Avoiding the copy below would require a value setter method
             // in AutoDiffBlock.
             std::vector<ADB::M> old_segp_derivs = state.segp.derivative();
@@ -1210,8 +1220,8 @@ namespace Opm {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
             // The transpose() below switches the ordering.
-            const DataBlock segrates = Eigen::Map<const DataBlock>(well_state.segPhaseRates().data(), nw, np).transpose();
-            ADB::V new_segqs = Eigen::Map<const V>(segrates.data(), nw*np);
+            const DataBlock segrates = Eigen::Map<const DataBlock>(well_state.segPhaseRates().data(), nseg_total, np).transpose();
+            ADB::V new_segqs = Eigen::Map<const V>(segrates.data(), nseg_total * np);
             std::vector<ADB::M> old_segqs_derivs = state.segqs.derivative();
             state.segqs = ADB::function(std::move(new_segqs), std::move(old_segqs_derivs));
         }
