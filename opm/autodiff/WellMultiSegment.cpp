@@ -29,7 +29,6 @@ namespace Opm
     }
 
 
-    // how to find the order of the well?
     void WellMultiSegment::init(WellConstPtr well, size_t time_step, const Wells* wells) {
         m_well_name_ = well->name();
         CompletionSetConstPtr completion_set = well->getCompletions(time_step);
@@ -58,8 +57,7 @@ namespace Opm
 
             // we change the ID to location now for easier use later.
             for (int i = 0; i < m_number_of_segments_; ++i) {
-                // now the segment for top segment is 0, then its outlet segment will be -1
-                // it is also the flag to indicate the top segment
+                // The segment number for top segment is 0, the segment number of its outlet segment will be -1
                 m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
                 m_segment_length_[i] = (*segment_set)[i]->totalLength();
                 m_segment_depth_[i] = (*segment_set)[i]->depth();
@@ -67,15 +65,14 @@ namespace Opm
                 m_segment_roughness_[i] = (*segment_set)[i]->roughness();
                 m_segment_volume_[i] = (*segment_set)[i]->volume();
             }
+
             // update the completion related information
-            // find the location of the well in wells first
-            // through well names?
+            // find the location of the well in wells
             int index_well;
             for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
                 if (m_well_name_ == std::string(wells->name[index_well])) {
                     break;
                 }
-                 // std::cout << std::string(wells->name[i]) << "1" << std::endl;
             }
 
             std::vector<int> temp_well_cell;
@@ -94,14 +91,13 @@ namespace Opm
 
                 int index_begin = wells->well_connpos[index_well];
                 int index_end = wells->well_connpos[index_well + 1];
-                // m_number_of_perforations_ = index_end - index_begin;
 
 
                 for(int i = index_begin; i < index_end; ++i) {
+                    // copy the WI and  well_cell_ informatin to m_well_index_ and m_well_cell_
+                    // maybe also the depth of the perforations.
                     temp_well_cell.push_back(wells->well_cells[i]);
                     temp_well_index.push_back(wells->WI[i]);
-                // copy the WI and  well_cell_ informatin to m_well_index_ and m_well_cell_
-                // maybe also the depth of the perforations.
                 }
             }
 
@@ -110,12 +106,11 @@ namespace Opm
 
             for (int i = 0; i < (int)completion_set->size(); ++i) {
                 int i_segment = completion_set->get(i)->getSegmentNumber();
-                // convert the original segment id to be the current segment id,
-                // which is the location in the array.
+                // using the location of the segment in the array as the segment number/id.
+                // TODO: it can be helpful for output or postprocessing if we can keep the original number.
                 i_segment = segment_set->numberToLocation(i_segment);
                 m_segment_perforations_[i_segment].push_back(i);
                 temp_perf_depth[i] = completion_set->get(i)->getCenterDepth();
-                // TODO: how to handle the center depth of the perforation from the COMPSEGS
             }
 
             // reordering the perforation related informations
@@ -148,7 +143,7 @@ namespace Opm
                     // using the cell of its outlet segment
                     const int i_outlet_segment = m_outlet_segment_[is];
                     if (i_outlet_segment < 0) {
-                        assert(is ==0); // it must be the top segment
+                        assert(is == 0); // it must be the top segment
                         OPM_THROW(std::logic_error, "Top segment is not related to any perforation, its related cell must be calculated based the location of its segment node, which is not implemented yet \n");
                     } else {
                         if (m_well_cell_[i_outlet_segment] < 0) {
@@ -169,16 +164,6 @@ namespace Opm
                 m_inlet_segments_[index_outlet].push_back(is);
             }
 
-            // std::cin.ignore();
-
-            // how to build the relation between segments and completions
-            // the completion should be in a global array (all the wells) or local scope (this well)?
-            // As the first version, probably it should be OK to handle the wells seperately.
-            // Even it will be easier to genrate the matrix in an interleaved way.
-            // For each segment, a 4X4 block.
-            // we handle with in the local scope first
-            // need to change the related segments to the new segment ID (location in the arrary)
-
         } else {
             m_is_multi_segment_ = false;
             m_number_of_segments_ = 1;
@@ -187,7 +172,7 @@ namespace Opm
 
             m_outlet_segment_.resize(m_number_of_segments_, -1);
             m_segment_length_.resize(m_number_of_segments_, 0.);
-            // TODP: should set to be the bhp reference depth
+            // TODO: should set to be the bhp reference depth
             m_segment_depth_.resize(m_number_of_segments_, 0.);
             m_segment_internal_diameter_.resize(m_number_of_segments_, 0.);
             m_segment_roughness_.resize(m_number_of_segments_, 0.);
@@ -195,18 +180,7 @@ namespace Opm
             m_segment_volume_.resize(m_number_of_segments_, 0.);
             m_segment_perforations_.resize(m_number_of_segments_);
 
-                // now the segment for top segment is 0, then its outlet segment will be -1
-                // it is also the flag to indicate the top segment
-            // TODO: decide the following quantities later.
-            // m_segment_length_[i] = (*segment_set)[i]->length();
-            // m_segment_depth_[i] = (*segment_set)[i]->depth();
-            // m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
-            // m_segment_roughness_[i] = (*segment_set)[i]->roughness();
-            // m_segment_volume_[i] = (*segment_set)[i]->volume();
-
             // update the completion related information
-            // find the location of the well in wells first
-            // through well names?
             int index_well;
             for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
                 if (m_well_name_ == std::string(wells->name[index_well])) {
@@ -246,32 +220,6 @@ namespace Opm
             }
 
             m_inlet_segments_.resize(m_number_of_segments_);
-
-            // std::cin.ignore();
-
-            // how to build the relation between segments and completions
-            // the completion should be in a global array (all the wells) or local scope (this well)?
-            // As the first version, probably it should be OK to handle the wells seperately.
-            // Even it will be easier to genrate the matrix in an interleaved way.
-            // For each segment, a 4X4 block.
-            // we handle with in the local scope first
-            // need to change the related segments to the new segment ID (location in the arrary)
-
-
-            // building a segment structure for the non-segmented well
-            // basically, for each well, only one segment, which means the top segment
-            // and all the completions will contribute to the top segment.
-            // only hydrostatic pressure drop calculation (H--) and homogenous multiphase
-            // flow model (HO) will be used.
-            // so each well will have four primary variables
-            // G_t, F_w, F_g, bhp
-            // This is NOT something we are totally sure about at the moment.
-            // The major point will be if the pressure difference between the
-            // location of bhp reference point is exactly same with the current
-            // way to compute the connection pressure difference.
-            // And also, with Multisegment well, the way to calculate the density of
-            // mixture for wellbore hydrostatic head is always AVG.
-            // while for usual wells, it is typically SEG.
         }
 
         // update the wellOps (m_wops)
@@ -309,9 +257,7 @@ namespace Opm
         s2s_inlets.reserve(m_number_of_segments_);
         std::vector<Tri> s2s_outlet;
         s2s_outlet.reserve(m_number_of_segments_);
-        // a brutal way first
-        // will generate matrix with entries bigger than 1.0
-        // Then we need to normalize all the values.
+
         for (int s = 0; s < (int)m_number_of_segments_; ++s) {
             s2s_gather.push_back(Tri(s, s, 1.0));
             int s_outlet = m_outlet_segment_[s];
@@ -327,14 +273,10 @@ namespace Opm
         }
 
         m_wops_.s2s_gather.setFromTriplets(s2s_gather.begin(), s2s_gather.end());
-        // p2w should be simple
 
         m_wops_.p2s_gather = M(m_number_of_segments_, m_number_of_perforations_);
         m_wops_.p2s_gather = m_wops_.s2s_gather * m_wops_.p2s;
 
-        // s2s_gather
-
-        // s2outlet
         m_wops_.s2s_inlets = M(m_number_of_segments_, m_number_of_segments_);
         m_wops_.s2s_inlets.setFromTriplets(s2s_inlets.begin(), s2s_inlets.end());
 

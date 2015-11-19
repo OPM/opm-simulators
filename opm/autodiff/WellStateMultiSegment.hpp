@@ -39,8 +39,8 @@ namespace Opm
 {
 
     /// The state of a set of multi-sgemnet wells
-    /// since we are avoiding to use the old wells structure
-    /// it makes it might be a good idea not to relate this State to the WellState
+    //  Since we are avoiding to use the old Wells structure,
+    //  it might be a good idea not to relate this State to the WellState much.
     class WellStateMultiSegment
          : public WellStateFullyImplicitBlackoil
     {
@@ -60,12 +60,10 @@ namespace Opm
         } SegmentedMapentryType;
 
         typedef std::map<std::string, SegmentedMapentryType> SegmentedWellMapType;
-        // MAYNOT NEED THIS
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        /// the PrevState here must be the same with State
         template <class ReservoirState, class PrevWellState>
         void init(const std::vector<WellMultiSegmentConstPtr>& wells, const ReservoirState& state, const PrevWellState& prevState)
         {
@@ -218,23 +216,18 @@ namespace Opm
 
                     // 5. Segment rates and pressures
                     int number_of_segments = wellMapEntry.number_of_segments;
-                    // the seg_pressure is the same with the first pref_pressure. For the top segment, it is the same with bhp,
+                    // the seg_pressure is the same with the first perf_pressure. For the top segment, it is the same with bhp,
                     // when under bhp control.
                     // the seg_rates will related to the sum of the perforation rates, and also trying to keep consistent with the
-                    // well rates. Most importantly, the segment rates of the top segment is the same with the well rates
+                    // well rates. Most importantly, the segment rates of the top segment is the same with the well rates.
                     segpress_[start_segment] = bhp()[w];
                     for (int i = 1; i < number_of_segments; ++i) {
-                        /* for (int p = 0; p < np; ++p) {
-                            segphaserates_[np * (i + start_segment) + p] = 0.;
-                        } */
                         int first_perforation_segment = start_perforation + wellMapEntry.start_perforation_segment[i];
                         segpress_[i + start_segment] = perfPress()[first_perforation_segment];
                         // the segmnent pressure of the top segment should be the bhp
                     }
 
                     for (int p = 0; p < np; ++p) {
-                        // std::vector<double> v_phase_rates(number_of_perforations);
-                        // V v_perf_rates = V::Zero(number_of_perforations);
                         Eigen::VectorXd v_perf_rates(number_of_perforations);
                         for (int i = 0; i < number_of_perforations; ++i) {
                             v_perf_rates[i] = perfPhaseRates()[np * (i + start_perforation) + p];
@@ -246,24 +239,12 @@ namespace Opm
                             segphaserates_[np * (i + start_segment) + p] = v_segment_rates[i];
                         }
                     }
-                    // initialize the segmnet rates.
-                    // it works in the analog way with the usual wells.
-
-                    // How to initialize the perforation rates and the segment rates.?
-                    // Perforation pressures can be set to the pressure of the corresponding grid cells?
-                    // deviding the well rates by the number of the perforations
-                    // then calculating the segment rate based on the rates for perforations and
-                    // make sure the flow rate for the top segment is consistent with the well flow rates
-                    // for pressure it is not that trival
                 }
 
                 start_segment += wellMapEntry.number_of_segments;
                 start_perforation += wellMapEntry.number_of_perforations;
 
             }
-
-            // assert(start_perforation == total_perforation);
-            // assert(start_segment == total_segment);
 
             // Initialize current_controls_.
             // The controls set in the Wells object are treated as defaults,
@@ -345,97 +326,9 @@ namespace Opm
                                 currentControls()[ newIndex ] = old_control_index;
                             }
                         }
-
-                        // else {
-                            // deviding the well rates by the number of the perforations
-                            // then calculating the segment rate based on the rates for perforations and
-                            // make sure the flow rate for the top segment is consistent with the well flow rates
-                            // for pressure it is not that trival
-                        // }
-
-                        // peforation rates
-                        // segment rates
-                        // It really depends on if the structures on the segments and perforations are changed.
-                        // TODO: if it will be reasonable to assume that if the numbers of segments and perforations are same, then
-                        // the structures of the wells are not changed.
-                        // Obviously it is not true.
-
-                        // for the perforation rates, it is Okay to calculate by deviding the well rates by the perforation numbers.
-                        // Then the segment rates are calculated based on the perforation rates and the well rates.
-                        // The segment rates of top segments should be the same with the well rates.
                     }
                 }
             }
-
-#if 0
-            // Debugging output.
-            std::cout << " output all the well state informations after initialization " << std::endl;
-            const int nperf_total = numPerforations();
-            const int nseg_total = numSegments();
-
-            std::cout << " number of wells : " << nw << " nubmer of segments : " << nseg_total << std::endl;
-            std::cout << " number of phase : " << np << " nubmer of perforations " << nperf_total << std::endl;
-
-            std::cout << " bhps : " << std::endl;
-            for (int i = 0; i < nw; ++i) {
-                std::cout << bhp()[i] << std::endl;
-            }
-
-            std::cout << " thps : " << std::endl;
-
-            for (int i = 0; i < nw; ++i) {
-                std::cout << thp()[i] << std::endl;
-            }
-
-            std::cout << " well rates " << std::endl;
-            for (int i = 0; i < nw; ++i) {
-                std::cout << i;
-                for (int p = 0; p < np; ++p) {
-                    std::cout << " " << wellRates()[np * i + p];
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << " segment pressures and segment phase rates : " << std::endl;
-            for (int i = 0; i < nseg_total; ++i) {
-                std::cout << i << " " << segPress()[i];
-                for (int p = 0; p < np; ++p) {
-                    std::cout << " " << segPhaseRates()[np * i + p];
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << " perf pressures and pref phase rates : " << std::endl;
-            for (int i = 0; i < nperf_total; ++i) {
-                std::cout << i << " " << perfPress()[i];
-                for (int p = 0; p < np; ++p) {
-                    std::cout << " " << perfPhaseRates()[np * i + p];
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << " locations of the top segments : " << std::endl;
-            for (int i = 0; i < nw; ++i) {
-                std::cout << i << "  " << top_segment_loc_[i] << std::endl;
-            }
-
-            std::cout << " output all the information from the segmentedWellMap " << std::endl;
-
-            for (auto iter = segmentedWellMap().begin(); iter != segmentedWellMap().end(); ++iter) {
-                std::cout << " well name : " << iter->first << std::endl;
-                const MapentryType &wellmapInfo = iter->second;
-                std::cout << " well number : " << wellmapInfo.well_number << " start segment " << wellmapInfo.start_segment
-                          << " number of segment : " << wellmapInfo.number_of_segments << std::endl;
-                std::cout << " start perforation : " << wellmapInfo.start_perforation << " number of perforations : " << wellmapInfo.number_of_perforations << std::endl;
-                const int nseg_well = wellmapInfo.number_of_segments;
-                std::cout << "    start performation ofr each segment and number of perforation that each segment has" << std::endl;
-                for (int i = 0; i < nseg_well; ++i) {
-                    std::cout << " segment " << i << " start perforation " << wellmapInfo.start_perforation_segment[i]
-                              << " number of perforations " << wellmapInfo.number_of_perforations_segment[i] << std::endl;
-                }
-            }
-            std::cout << " output the well state right after intialization is DONE! " << std::endl;
-#endif
         }
 
 
