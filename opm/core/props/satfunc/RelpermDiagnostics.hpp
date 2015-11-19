@@ -58,6 +58,8 @@ namespace Opm {
         RelpermDiagnostics();
         RelpermDiagnostics(EclipseStateConstPtr eclstate);
 
+        void diagnosis(EclipseStateConstPtr eclState,
+                       DeckConstPtr deck);
         ///Display all the keywords.
         Status keywordsDisplay(EclipseStateConstPtr eclState);
         
@@ -107,6 +109,25 @@ namespace Opm {
     {}
 
 
+    void RelpermDiagnostics::diagnosis(Opm::EclipseStateConstPtr eclState,
+                                       Opm::DeckConstPtr deck)
+    {
+        std::cout << "***************Relperm Diagnostics***************\n";
+        phaseCheck(eclState, deck);
+        satFamilyCheck(eclState);
+        tableCheck(eclState, deck);
+        endPointsCheck(deck, eclState);
+        if (!messager_.empty()) {
+            int counter = 1;
+            std::cout << "***************\nProblem found:\n";
+            for (const auto& x : messager_) {
+                std::cout << counter << ".  " << x << std::endl;
+                counter++;
+            }
+        }
+        std::cout << "********************************************************\n";
+    }
+
     Status RelpermDiagnostics::satFamilyCheck(Opm::EclipseStateConstPtr eclState)
     {
         const auto& tableManager = eclState->getTableManager();
@@ -137,11 +158,11 @@ namespace Opm {
 
         if (family1 && !family2) {
             satFamily_ = SaturationFunctionFamily::FamilyI;
-            std::cout << "Using saturation Family I." << std::endl;
+            std::cout << "relperm: Saturation Family I." << std::endl;
         } 
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
-            std::cout << "Using saturation Family II." << std::endl;
+            std::cout << "relperm: Saturation Family II." << std::endl;
         }
 
         return Opm::Status::Pass;
@@ -156,19 +177,19 @@ namespace Opm {
         bool hasOil = deck->hasKeyword("OIL");
 
         if (hasWater && hasGas && !hasOil) {
-            std::cout << "This is Water-Gas system." << std::endl;
+            std::cout << "System:  Water-Gas system." << std::endl;
             return FluidSystem::WaterGas;
         }
         if (hasWater && hasOil && !hasGas) { 
-            std::cout << "This is Oil-Water system." << std::endl;
+            std::cout << "System:  Oil-Water system." << std::endl;
             return FluidSystem::OilWater; 
         }
         if (hasOil && hasGas && !hasWater) { 
-            std::cout << "This is Oil-Gas system." << std::endl;
+            std::cout << "System:  Oil-Gas system." << std::endl;
             return FluidSystem::OilGas; 
         }
         if (hasOil && hasWater && hasGas) {
-            std::cout << "This is Black-oil system." << std::endl;
+            std::cout << "System:  Black-oil system." << std::endl;
             return FluidSystem::BlackOil;
         }
     } 
@@ -189,60 +210,28 @@ namespace Opm {
 
         for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (deck->hasKeyword("SWOF")) {
-                std::cout << "Starting check SWOF tables......" << std::endl;
                 const auto& status = swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SGOF")) {
-                std::cout << "Starting check SGOF tables......" << std::endl;
                 const auto& status = sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SLGOF")) {
-                std::cout << "Starting check SLGOF tables......" << std::endl;
                 const auto& status = slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SWFN")) {
-                std::cout << "Starting check SWFN tables......" << std::endl;
                 const auto& status = swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SGFN")) {
-                std::cout << "Starting check SGFN tables......" << std::endl;
                 const auto& status = sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SOF3")) {
-                std::cout << "Starting check SOF3 tables......" << std::endl;
                 const auto& status = sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SOF2")) {
-                std::cout << "Starting check SOF2 tables......" << std::endl;
                 const auto& status = sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
             if (deck->hasKeyword("SGWFN")) {
-                std::cout << "Starting check SOF2 tables......" << std::endl;
                 const auto& status = sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx));
-                if (status == Opm::Status::Pass) {
-                    std::cout << "End of check." << std::endl;
-                }
             }
         }
         return Opm::Status::Pass;
@@ -545,16 +534,15 @@ namespace Opm {
 
         for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
              unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
+             std::cout << "***************\nEnd-Points In all the Tables\n";
              unscaledEpsInfo_[satnumIdx].print();
              ///Consistency check.
-             std::cout << "End-Points consistency check......"  << std::endl;
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-             messager_.push_back("Sgmax should not exceed 1-Swco");
+                messager_.push_back("Sgmax should not exceed 1-Swco");
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-             messager_.push_back("Sgco should not exceed 1-Swmax");
-            }
-
+                messager_.push_back("Sgco should not exceed 1-Swmax");
+             }
 
              ///Krow(Sou) == Krog(Sou) for three-phase
              /// means Krow(Swco) == Krog(Sgco)
@@ -592,10 +580,10 @@ namespace Opm {
              }
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
-            if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_.[satnumIdx].Swcr)-1) >= 0) {
+            if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
                 messager_.push_back("Sowcr + Swcr should less than 1");
             }
-            if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_.[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
+            if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
                 messager_.push_back("Sogcr + Sgcr + Swco should less than 1");
             }
         }
