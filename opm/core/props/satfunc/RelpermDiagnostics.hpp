@@ -83,6 +83,10 @@ namespace Opm {
         SaturationFunctionFamily satFamily_;
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
 
+<<<<<<< HEAD
+=======
+        std::vector<std::string> messager_;
+>>>>>>> df18165... Use messager container to store error message.
         Status valueRangeCheck_(const std::vector<double>& value, 
                                 bool isAscending);
         
@@ -122,6 +126,7 @@ namespace Opm {
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && (!sof3Tables.empty() || !sof2Tables.empty()) && !sgwfnTables.empty();
 
         if (family1 && family2) {
+<<<<<<< HEAD
             throw std::invalid_argument("Saturation families should not be mixed \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
         }
@@ -130,6 +135,18 @@ namespace Opm {
             throw std::invalid_argument("Saturations function must be specified using either "
                                         "family 1 or family 2 keywords \n"
                                         "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
+=======
+            std::string s = "Saturation families should not be mixed \n"
+                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3";
+            messager_.push_back(s);
+        }
+
+        if (!family1 && !family2) {
+            std::string s = "Saturations function must be specified using either "
+                                        "family 1 or family 2 keywords \n"
+                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         if (family1 && !family2) {
@@ -189,56 +206,88 @@ namespace Opm {
                 std::cout << "Starting check SWOF tables......" << std::endl;
                 const auto& status = swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SGOF")) {
                 std::cout << "Starting check SGOF tables......" << std::endl;
                 const auto& status = sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SLGOF")) {
                 std::cout << "Starting check SLGOF tables......" << std::endl;
                 const auto& status = slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SWFN")) {
                 std::cout << "Starting check SWFN tables......" << std::endl;
                 const auto& status = swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SGFN")) {
                 std::cout << "Starting check SGFN tables......" << std::endl;
                 const auto& status = sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SOF3")) {
                 std::cout << "Starting check SOF3 tables......" << std::endl;
                 const auto& status = sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SOF2")) {
                 std::cout << "Starting check SOF2 tables......" << std::endl;
                 const auto& status = sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
             if (deck->hasKeyword("SGWFN")) {
                 std::cout << "Starting check SOF2 tables......" << std::endl;
                 const auto& status = sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx));
                 if (status == Opm::Status::Pass) {
+<<<<<<< HEAD
                     std::cout << "End of check, all values are reasonable." << std::endl;
+=======
+                    std::cout << "End of check." << std::endl;
+>>>>>>> df18165... Use messager container to store error message.
                 }
             }
         }
@@ -250,24 +299,46 @@ namespace Opm {
         const auto& sw = swofTables.getSwColumn();
         const auto& krw = swofTables.getKrwColumn();
         const auto& krow = swofTables.getKrowColumn();
+<<<<<<< HEAD
         const auto& pc = swofTables.getPcowColumn();
         
         ///Check sw column.
         if (sw.front()< 0 || sw.back() > 1) {
             OPM_THROW(std::logic_error, "In SWOF table, saturation should be in range [0,1]");
+=======
+        
+        ///Check sw column.
+        if (sw.front()< 0 || sw.back() > 1) {
+            std::string s = "In SWOF table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
         if (krw.front() != 0) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SWOF table, first value of krw should be 0");
         }
         if (krw.front() < 0 || krw.back() > 1) {
             OPM_THROW(std::logic_error, "In SWOF table, krw should be in range [0,1]");
+=======
+            std::string s = "In SWOF table, first value of krw should be 0";
+            messager_.push_back(s);
+        }
+        if (krw.front() < 0 || krw.back() > 1) {
+            std::string s = "In SWOF table, krw should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krow column.
         if (krow.front() > 1 || krow.back() < 0) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SWOF table, krow should be in range [0, 1]");
+=======
+            std::string s = "In SWOF table, krow should be in range [0, 1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         ///TODO check if run with gas.
 
@@ -282,23 +353,46 @@ namespace Opm {
         const auto& krog = sgofTables.getKrogColumn();
                 ///Check sw column.
         if (sg.front()< 0 || sg.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGOF table, saturation should be in range [0,1]");
         }
         if (sg.front() != 0) {
             OPM_THROW(std::logic_error, "In SGOF table, first value in sg column muse be 0");
+=======
+            std::string s = "In SGOF table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (sg.front() != 0) {
+            std::string s = "In SGOF table, first value in sg column muse be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
         if (krg.front() != 0) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGOF table, first value of krg should be 0");
         }
         if (krg.front() < 0 || krg.back() > 1) {
             OPM_THROW(std::logic_error, "In SGOF table, krg should be in range [0,1]");
+=======
+            std::string s = "In SGOF table, first value of krg should be 0";
+            messager_.push_back(s);
+        }
+        if (krg.front() < 0 || krg.back() > 1) {
+            std::string s = "In SGOF table, krg should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krow column.
         if (krog.front() > 1 || krog.back() < 0) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGOF table, krog should be in range [0, 1]");
+=======
+            std::string s = "In SGOF table, krog should be in range [0, 1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         ///TODO check if run with water.
 
@@ -315,6 +409,7 @@ namespace Opm {
         ///Check sl column.
         ///TODO first value means sl = swco + sor
         if (sl.front()< 0 || sl.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SLGOF table, saturation should be in range [0,1]");
         }
         if (sl.back() != 1) {
@@ -331,6 +426,28 @@ namespace Opm {
         if (krog.front() < 0 || krog.back() > 1) {
             OPM_THROW(std::logic_error, "In SLGOF table, krog column shoule be in range [0, 1]");
 
+=======
+            std::string s = "In SLGOF table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (sl.back() != 1) {
+            std::string s = "In SLGOF table, last value in sl column muse be 1";
+            messager_.push_back(s);
+        }
+
+        if (krg.front() > 1 || krg.back() < 0) {
+            std::string s = "In SLGOF table, krg column shoule be in range [0, 1]";
+            messager_.push_back(s);
+        }
+        if (krg.back() != 0) {
+            std::string s = "In SLGOF table, last value in krg column should be 0";
+            messager_.push_back(s);
+        }
+
+        if (krog.front() < 0 || krog.back() > 1) {
+            std::string s = "In SLGOF table, krog column shoule be in range [0, 1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         return Opm::Status::Pass;
     }
@@ -342,15 +459,30 @@ namespace Opm {
         
         ///Check sw column.
         if (sw.front() < 0 || sw.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SWFN table, saturation should be in range [0,1]");
+=======
+            std::string s = "In SWFN table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         
         ///Check krw column.
         if (krw.front() < 0 || krw.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SWFN table, krw should be in range [0,1]");
         }
         if (krw.front() != 0) {
             OPM_THROW(std::logic_error, "In SWFN table, first value in krw column should be 0");
+=======
+            std::string s = "In SWFN table, krw should be in range [0,1]";
+            messager_.push_back(s);
+        }
+
+        if (krw.front() != 0) {
+            std::string s = "In SWFN table, first value in krw column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         return Opm::Status::Pass;
@@ -364,15 +496,29 @@ namespace Opm {
         
         ///Check sg column.
         if (sg.front() < 0 || sg.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGFN table, saturation should be in range [0,1]");
+=======
+            std::string s = "In SGFN table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         
         ///Check krg column.
         if (krg.front() < 0 || krg.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGFN table, krg should be in range [0,1]");
         }
         if (krg.front() != 0) {
             OPM_THROW(std::logic_error, "In SGFN table, first value in krg column should be 0");
+=======
+            std::string s = "In SGFN table, krg should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (krg.front() != 0) {
+            std::string s = "In SGFN table, first value in krg column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         return Opm::Status::Pass;
@@ -387,19 +533,34 @@ namespace Opm {
         ///Check so column.
         ///TODO: The max so = 1 - Swco
         if (so.front() < 0 || so.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SOF3 table, saturation should be in range [0,1]");
+=======
+            std::string s = "In SOF3 table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krow column.
         if (krow.front() < 0 || krow.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SOF3 table, krow should be in range [0,1]");
         }
         if (krow.front() != 0) {
             OPM_THROW(std::logic_error, "In SOF3 table, first value in krow column should be 0");
+=======
+            std::string s = "In SOF3 table, krow should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (krow.front() != 0) {
+            std::string s = "In SOF3 table, first value in krow column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krog column.
         if (krog.front() < 0 || krog.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SOF3 table, krog should be in range [0,1]");
         }
         if (krog.front() != 0) {
@@ -408,6 +569,20 @@ namespace Opm {
     
         if (krog.back() != krow.back()) {
             OPM_THROW(std::logic_error, "In SOF3 table, max value in krog and krow should be the same");
+=======
+            std::string s = "In SOF3 table, krog should be in range [0,1]";
+            messager_.push_back(s);
+        }
+
+        if (krog.front() != 0) {
+            std::string s = "In SOF3 table, first value in krog column should be 0";
+            messager_.push_back(s);
+        }
+    
+        if (krog.back() != krow.back()) {
+            std::string s = "In SOF3 table, max value in krog and krow should be the same";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
         
         return Opm::Status::Pass;
@@ -422,15 +597,29 @@ namespace Opm {
         ///Check so column.
         ///TODO: The max so = 1 - Swco
         if (so.front() < 0 || so.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SOF2 table, saturation should be in range [0,1]");
+=======
+            std::string s = "In SOF2 table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krow column.
         if (kro.front() < 0 || kro.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SOF2 table, krow should be in range [0,1]");
         }
         if (kro.front() != 0) {
             OPM_THROW(std::logic_error, "In SOF2 table, first value in krow column should be 0");
+=======
+            std::string s = "In SOF2 table, krow should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (kro.front() != 0) {
+            std::string s = "In SOF2 table, first value in krow column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         return Opm::Status::Pass;
@@ -445,24 +634,47 @@ namespace Opm {
         
         ///Check sg column.
         if (sg.front() < 0 || sg.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGWFN table, saturation should be in range [0,1]");
+=======
+            std::string s = "In SGWFN table, saturation should be in range [0,1]";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krg column.
         if (krg.front() < 0 || krg.back() > 1) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGWFN table, krg column should be in range [0,1]");
         }
         if (krg.front() != 0) {
             OPM_THROW(std::logic_error, "In SGWFN table, first value in krg column should be 0");
+=======
+            std::string s = "In SGWFN table, krg column should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (krg.front() != 0) {
+            std::string s = "In SGWFN table, first value in krg column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         ///Check krgw column.
         ///TODO check saturation sw = 1. - sg
         if (krgw.front() > 1 || krgw.back() < 0) {
+<<<<<<< HEAD
             OPM_THROW(std::logic_error, "In SGWFN table, krgw column should be in range [0,1]");
         }
         if (krgw.back() != 0) {
             OPM_THROW(std::logic_error, "In SGWFN table, last value in krgw column should be 0");
+=======
+            std::string s = "In SGWFN table, krgw column should be in range [0,1]";
+            messager_.push_back(s);
+        }
+        if (krgw.back() != 0) {
+            std::string s = "In SGWFN table, last value in krgw column should be 0";
+            messager_.push_back(s);
+>>>>>>> df18165... Use messager container to store error message.
         }
 
         return Opm::Status::Pass;
@@ -512,8 +724,17 @@ namespace Opm {
              unscaledEpsInfo_[satnumIdx].print();
              ///Consistency check.
              std::cout << "End-Points consistency check......"  << std::endl;
+<<<<<<< HEAD
              assert(unscaledEpsInfo_[satnumIdx].Sgu < (1. - unscaledEpsInfo_[satnumIdx].Swl));
              assert(unscaledEpsInfo_[satnumIdx].Sgl < (1. - unscaledEpsInfo_[satnumIdx].Swu));
+=======
+             if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
+             messager_.push_back("Sgmax should not exceed 1-Swco");
+             }
+             if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
+             messager_.push_back("Sgco should not exceed 1-Swmax");
+            }
+>>>>>>> df18165... Use messager container to store error message.
 
 
              ///Krow(Sou) == Krog(Sou) for three-phase
@@ -546,6 +767,7 @@ namespace Opm {
                      krow_value = Opm::linearInterpolation(so, krow, Sou);
                      krog_value = Opm::linearInterpolation(so, krog, Sou);
                  }
+<<<<<<< HEAD
                  assert(krow_value == krog_value);
              }
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
@@ -554,6 +776,21 @@ namespace Opm {
              assert(((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_.[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) < 1e-30);
         }
         std::cout << "End of Check. All values are resonable." << std::endl;
+=======
+                 if (krow_value != krog_value) {
+                     messager_.push_back("Krow(sSomax) should equal Krog(Somax)");
+                 }
+             }
+             ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
+             ///Mobile fluid requirements
+             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_.[satnumIdx].Swcr)-1) >= 0) {
+                messager_.push_back("Sowcr + Swcr should less than 1");
+            }
+            if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_.[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
+                messager_.push_back("Sogcr + Sgcr + Swco should less than 1");
+            }
+        }
+>>>>>>> df18165... Use messager container to store error message.
         return Opm::Status::Pass;
     }
 
