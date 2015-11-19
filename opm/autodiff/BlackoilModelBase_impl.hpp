@@ -245,11 +245,12 @@ namespace detail {
             current_relaxation_ = 1.0;
             dx_old_ = V::Zero(sizeNonLinear());
         }
-        assemble(reservoir_state, well_state, iteration == 0);
-        residual_norms_history_.push_back(computeResidualNorms());
-        const bool converged = getConvergence(dt, iteration);
+        asImpl().assemble(reservoir_state, well_state, iteration == 0);
+        residual_norms_history_.push_back(asImpl().computeResidualNorms());
+        const bool converged = asImpl().getConvergence(dt, iteration);
         if (!converged) {
-            V dx = solveJacobianSystem();
+            // Compute the nonlinear update.
+            V dx = asImpl().solveJacobianSystem();
 
             // Stabilize the nonlinear update.
             bool isOscillate = false;
@@ -267,10 +268,10 @@ namespace detail {
 
             // Apply the update, applying model-dependent
             // limitations and chopping of the update.
-            updateState(dx, reservoir_state, well_state);
+            asImpl().updateState(dx, reservoir_state, well_state);
         }
         const bool failed = false; // Not needed in this model.
-        const int linear_iters = converged ? 0 : linearIterationsLastSolve();
+        const int linear_iters = converged ? 0 : asImpl().linearIterationsLastSolve();
         return IterationReport{ failed, converged, linear_iters };
     }
 
