@@ -1584,6 +1584,7 @@ namespace detail {
         std::vector<ADB> cq_s(np, ADB::null());
         std::vector<int> indices = variableWellStateIndices();
         SolutionState state0 = state;
+        WellState well_state0 = well_state;
         asImpl().makeConstantState(state0);
 
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
@@ -1659,6 +1660,10 @@ namespace detail {
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
             asImpl().computeWellConnectionPressures(state, well_state);
+        }
+
+        if (!converged) {
+            well_state = well_state0;
         }
 
         return converged;
