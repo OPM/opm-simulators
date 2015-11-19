@@ -124,6 +124,8 @@ namespace Opm {
                 std::cout << counter << ".  " << x << std::endl;
                 counter++;
             }
+        } else {
+            std::cout << "****************\nConsistency check all passed!" << std::endl;
         }
         std::cout << "********************************************************\n";
     }
@@ -280,7 +282,7 @@ namespace Opm {
             messager_.push_back(s);
         }
         if (sg.front() != 0) {
-            std::string s = "In SGOF table, first value in sg column muse be 0";
+            std::string s = "In SGOF table, first value in sg column must be 0";
             messager_.push_back(s);
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
@@ -318,7 +320,7 @@ namespace Opm {
             messager_.push_back(s);
         }
         if (sl.back() != 1) {
-            std::string s = "In SLGOF table, last value in sl column muse be 1";
+            std::string s = "In SLGOF table, last value in sl column must be 1";
             messager_.push_back(s);
         }
 
