@@ -26,16 +26,9 @@
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
-    
-    enum Status {
-        Pass,
-        Error
-    };
-
     enum FluidSystem {
         OilWater,
         OilGas,
@@ -60,24 +53,6 @@ namespace Opm {
 
         void diagnosis(EclipseStateConstPtr eclState,
                        DeckConstPtr deck);
-        ///Display all the keywords.
-        Status keywordsDisplay(EclipseStateConstPtr eclState);
-        
-        ///Check the phase that used.
-        FluidSystem phaseCheck(EclipseStateConstPtr eclState, 
-                               DeckConstPtr deck);
-
-        
-        ///Check saturation family I and II.
-        Status satFamilyCheck(EclipseStateConstPtr eclState);
- 
-        ///Check saturation tables.
-        Status tableCheck(EclipseStateConstPtr eclState, 
-                          DeckConstPtr deck);
-
-        ///Check endpoints in the saturation tables.
-        Status endPointsCheck(DeckConstPtr deck,
-                              EclipseStateConstPtr eclState);
 
     private:
         FluidSystem fluidsystem_;
@@ -86,20 +61,34 @@ namespace Opm {
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
 
         std::vector<std::string> messager_;
-        Status valueRangeCheck_(const std::vector<double>& value, 
-                                bool isAscending);
         
-        //Status endPointCheck_(const TableContainer&)
+        ///Display all the keywords.
+        void keywordsDisplay_(EclipseStateConstPtr eclState);
+        
+        ///Check the phase that used.
+        FluidSystem phaseCheck_(EclipseStateConstPtr eclState, 
+                                DeckConstPtr deck);
 
+        
+        ///Check saturation family I and II.
+        void satFamilyCheck_(EclipseStateConstPtr eclState);
+ 
+        ///Check saturation tables.
+        void tableCheck_(EclipseStateConstPtr eclState, 
+                         DeckConstPtr deck);
+
+        ///Check endpoints in the saturation tables.
+        void endPointsCheck_(DeckConstPtr deck,
+                              EclipseStateConstPtr eclState);
         ///For every table, need to deal with case by case.
-        Status swofTableCheck_(const Opm::SwofTable& swofTables);
-        Status sgofTableCheck_(const Opm::SgofTable& sgofTables);
-        Status slgofTableCheck_(const Opm::SlgofTable& slgofTables);
-        Status swfnTableCheck_(const Opm::SwfnTable& swfnTables);
-        Status sgfnTableCheck_(const Opm::SgfnTable& sgfnTables);
-        Status sof3TableCheck_(const Opm::Sof3Table& sof3Tables);
-        Status sof2TableCheck_(const Opm::Sof2Table& sof2Tables);
-        Status sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables);
+        void swofTableCheck_(const Opm::SwofTable& swofTables);
+        void sgofTableCheck_(const Opm::SgofTable& sgofTables);
+        void slgofTableCheck_(const Opm::SlgofTable& slgofTables);
+        void swfnTableCheck_(const Opm::SwfnTable& swfnTables);
+        void sgfnTableCheck_(const Opm::SgfnTable& sgfnTables);
+        void sof3TableCheck_(const Opm::Sof3Table& sof3Tables);
+        void sof2TableCheck_(const Opm::Sof2Table& sof2Tables);
+        void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables);
     };
 
     RelpermDiagnostics::RelpermDiagnostics()
@@ -113,10 +102,10 @@ namespace Opm {
                                        Opm::DeckConstPtr deck)
     {
         std::cout << "***************Relperm Diagnostics***************\n";
-        phaseCheck(eclState, deck);
-        satFamilyCheck(eclState);
-        tableCheck(eclState, deck);
-        endPointsCheck(deck, eclState);
+        phaseCheck_(eclState, deck);
+        satFamilyCheck_(eclState);
+        tableCheck_(eclState, deck);
+        endPointsCheck_(deck, eclState);
         if (!messager_.empty()) {
             int counter = 1;
             std::cout << "***************\nProblem found:\n";
@@ -130,7 +119,7 @@ namespace Opm {
         std::cout << "********************************************************\n";
     }
 
-    Status RelpermDiagnostics::satFamilyCheck(Opm::EclipseStateConstPtr eclState)
+    void RelpermDiagnostics::satFamilyCheck_(Opm::EclipseStateConstPtr eclState)
     {
         const auto& tableManager = eclState->getTableManager();
         const TableContainer& swofTables = tableManager->getSwofTables();
@@ -166,13 +155,11 @@ namespace Opm {
             satFamily_ = SaturationFunctionFamily::FamilyII;
             std::cout << "relperm: Saturation Family II." << std::endl;
         }
-
-        return Opm::Status::Pass;
     }
 
 
-    FluidSystem RelpermDiagnostics::phaseCheck(EclipseStateConstPtr eclState,
-                                               DeckConstPtr deck)
+    FluidSystem RelpermDiagnostics::phaseCheck_(EclipseStateConstPtr eclState,
+                                                DeckConstPtr deck)
     {
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
@@ -196,8 +183,8 @@ namespace Opm {
         }
     } 
 
-    Status RelpermDiagnostics::tableCheck(EclipseStateConstPtr eclState, 
-                                          DeckConstPtr deck)
+    void RelpermDiagnostics::tableCheck_(EclipseStateConstPtr eclState, 
+                                         DeckConstPtr deck)
     {
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
         const auto& tableManager = eclState->getTableManager();
@@ -212,34 +199,33 @@ namespace Opm {
 
         for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (deck->hasKeyword("SWOF")) {
-                const auto& status = swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx));
+                swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx));
             }
             if (deck->hasKeyword("SGOF")) {
-                const auto& status = sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx));
+                sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx));
             }
             if (deck->hasKeyword("SLGOF")) {
-                const auto& status = slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx));
+                slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx));
             }
             if (deck->hasKeyword("SWFN")) {
-                const auto& status = swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx));
+                swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx));
             }
             if (deck->hasKeyword("SGFN")) {
-                const auto& status = sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx));
+                sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx));
             }
             if (deck->hasKeyword("SOF3")) {
-                const auto& status = sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx));
+                sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx));
             }
             if (deck->hasKeyword("SOF2")) {
-                const auto& status = sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx));
+                sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx));
             }
             if (deck->hasKeyword("SGWFN")) {
-                const auto& status = sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx));
+                sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx));
             }
         }
-        return Opm::Status::Pass;
     }
 
-    Status RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables)
+    void RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables)
     {
         const auto& sw = swofTables.getSwColumn();
         const auto& krw = swofTables.getKrwColumn();
@@ -266,12 +252,10 @@ namespace Opm {
             messager_.push_back(s);
         }
         ///TODO check if run with gas.
-
-        return Opm::Status::Pass;
     }
 
 
-    Status RelpermDiagnostics::sgofTableCheck_(const Opm::SgofTable& sgofTables)
+    void RelpermDiagnostics::sgofTableCheck_(const Opm::SgofTable& sgofTables)
     {
         const auto& sg = sgofTables.getSgColumn();
         const auto& krg = sgofTables.getKrgColumn();
@@ -302,12 +286,9 @@ namespace Opm {
             messager_.push_back(s);
         }
         ///TODO check if run with water.
-
-        return Opm::Status::Pass;
-        
     }
 
-    Status RelpermDiagnostics::slgofTableCheck_(const Opm::SlgofTable& slgofTables) 
+    void RelpermDiagnostics::slgofTableCheck_(const Opm::SlgofTable& slgofTables) 
     {
         const auto& sl = slgofTables.getSlColumn();
         const auto& krg = slgofTables.getKrgColumn();
@@ -337,10 +318,9 @@ namespace Opm {
             std::string s = "In SLGOF table, krog column shoule be in range [0, 1]";
             messager_.push_back(s);
         }
-        return Opm::Status::Pass;
     }
 
-    Status RelpermDiagnostics::swfnTableCheck_(const Opm::SwfnTable& swfnTables)
+    void RelpermDiagnostics::swfnTableCheck_(const Opm::SwfnTable& swfnTables)
     {
         const auto& sw = swfnTables.getSwColumn();
         const auto& krw = swfnTables.getKrwColumn();
@@ -361,12 +341,10 @@ namespace Opm {
             std::string s = "In SWFN table, first value in krw column should be 0";
             messager_.push_back(s);
         }
-
-        return Opm::Status::Pass;
     }
 
     
-    Status RelpermDiagnostics::sgfnTableCheck_(const Opm::SgfnTable& sgfnTables)
+    void RelpermDiagnostics::sgfnTableCheck_(const Opm::SgfnTable& sgfnTables)
     {
         const auto& sg = sgfnTables.getSgColumn();
         const auto& krg = sgfnTables.getKrgColumn();
@@ -386,11 +364,9 @@ namespace Opm {
             std::string s = "In SGFN table, first value in krg column should be 0";
             messager_.push_back(s);
         }
-
-        return Opm::Status::Pass;
     }
 
-    Status RelpermDiagnostics::sof3TableCheck_(const Opm::Sof3Table& sof3Tables)
+    void RelpermDiagnostics::sof3TableCheck_(const Opm::Sof3Table& sof3Tables)
     {
         const auto& so = sof3Tables.getSoColumn();
         const auto& krow = sof3Tables.getKrowColumn();
@@ -428,12 +404,10 @@ namespace Opm {
             std::string s = "In SOF3 table, max value in krog and krow should be the same";
             messager_.push_back(s);
         }
-        
-        return Opm::Status::Pass;
     }
 
 
-    Status RelpermDiagnostics::sof2TableCheck_(const Opm::Sof2Table& sof2Tables)
+    void RelpermDiagnostics::sof2TableCheck_(const Opm::Sof2Table& sof2Tables)
     {
         const auto& so = sof2Tables.getSoColumn();
         const auto& kro = sof2Tables.getKroColumn();
@@ -454,12 +428,10 @@ namespace Opm {
             std::string s = "In SOF2 table, first value in krow column should be 0";
             messager_.push_back(s);
         }
-
-        return Opm::Status::Pass;
     }
 
 
-    Status RelpermDiagnostics::sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables)
+    void RelpermDiagnostics::sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables)
     {
         const auto& sg = sgwfnTables.getSgColumn();
         const auto& krg = sgwfnTables.getKrgColumn();
@@ -491,32 +463,13 @@ namespace Opm {
             std::string s = "In SGWFN table, last value in krgw column should be 0";
             messager_.push_back(s);
         }
-
-        return Opm::Status::Pass;
     }
 
 
 
-    Status RelpermDiagnostics::valueRangeCheck_(const std::vector<double>& values,
-                                                bool isAscending)
-    {
-        if (isAscending) {
-            if (values.front() >1 || values.front() <0) {
-                OPM_THROW(std::logic_error, "Values should be in range [0,1]");
-            }
-        } else {
-            if (values.front() <0 || values.front() >1) {
-                OPM_THROW(std::logic_error, "Values should be in range [0,1]");
-            }
-        }
-        
 
-        return Opm::Status::Pass;
-    }
-
-
-    Status RelpermDiagnostics::endPointsCheck(DeckConstPtr deck,
-                                              EclipseStateConstPtr eclState)
+    void RelpermDiagnostics::endPointsCheck_(DeckConstPtr deck,
+                                             EclipseStateConstPtr eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
 
@@ -589,7 +542,6 @@ namespace Opm {
                 messager_.push_back("Sogcr + Sgcr + Swco should less than 1");
             }
         }
-        return Opm::Status::Pass;
     }
 
 
