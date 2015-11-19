@@ -44,18 +44,10 @@
 #include <iterator>
 
 
-namespace
-{
-    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
-    {
-        if (param.anyUnused()) {
-            std::cout << "--------------------   Warning: unused parameters:   --------------------\n";
-            param.displayUsage();
-            std::cout << "-------------------------------------------------------------------------" << std::endl;
-        }
-    }
-} // anon namespace
-
+void usage() {
+    std::cout << std::endl << 
+        "Usage: diagnose_relperm <eclipseFile>" << std::endl;
+}
 
 
 // ----------------- Main program -----------------
@@ -64,28 +56,40 @@ main(int argc, char** argv)
 try
 {
     using namespace Opm;
-    parameter::ParameterGroup param(argc, argv);
+    if (argc <= 1) {
+        usage();
+        exit(1);
+    } 
+    static char* ECLIPSEFILENAME(argv[1]);
+    std::ifstream eclipseFile(ECLIPSEFILENAME, std::ios::in);
+    if (eclipseFile.fail()) {
+        std::cerr << "Error: Filename " << ECLIPSEFILENAME << " not found or not readable." << std::endl;
+        usage();
+        exit(1);
+    }
+    eclipseFile.close();
+    //parameter::ParameterGroup param(argc, argv);
     // Read saturation tables.
     EclipseStateConstPtr eclState; 
     ParserPtr parser(new Opm::Parser);
-    Opm::DeckConstPtr deck;
     //ParseMode parseMode;
     Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
                               { ParseMode::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
                               { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE}
                              });
-    std::string deck_filename = param.get<std::string>("deck_filename");
-    deck = parser->parseFile(deck_filename, parseMode);
+    Opm::DeckConstPtr deck(parser->parseFile(ECLIPSEFILENAME, parseMode));
+    //std::string deck_filename = param.get<std::string>("deck_filename");
+    //deck = parser->parseFile(deck_filename, parseMode);
     eclState.reset(new EclipseState(deck, parseMode));
 
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
     // Write parameters used for later reference.
-    bool output = param.getDefault("output", true);
+    //bool output = param.getDefault("output", true);
+    bool output = true;
     std::string output_dir;
     if (output) {
-        output_dir =
-            param.getDefault("output_dir", std::string("output"));
+        output_dir = "output";
         boost::filesystem::path fpath(output_dir);
         try {
             create_directories(fpath);
@@ -93,11 +97,7 @@ try
         catch (...) {
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
-        param.writeParam(output_dir + "/relperm.param");
     }
-
-    // Issue a warning if any parameters were unused.
-    warnIfUnusedParams(param);
 
     Opm::time::StopWatch timer;
     timer.start();
