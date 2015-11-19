@@ -272,7 +272,7 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
-        void
+        bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,

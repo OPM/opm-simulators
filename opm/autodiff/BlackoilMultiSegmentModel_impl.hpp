@@ -1196,39 +1196,43 @@ namespace Opm {
 
 
     template <class Grid>
-    void BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
+    bool BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
                                                       const std::vector<ADB>& b_perfcells,
                                                       SolutionState& state,
                                                       WellState& well_state)
     {
-        Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        const bool converged = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
 
-        // We must now update the state.segp and state.segqs members,
-        // that the base version does not know about.
-        const int np = numPhases();
-        const int nseg_total =well_state.numSegments();
-        {
-            // We will set the segp primary variable to the new ones,
-            // but we do not change the derivatives here.
-            ADB::V new_segp = Eigen::Map<ADB::V>(well_state.segPress().data(), nseg_total);
-            // Avoiding the copy below would require a value setter method
-            // in AutoDiffBlock.
-            std::vector<ADB::M> old_segp_derivs = state.segp.derivative();
-            state.segp = ADB::function(std::move(new_segp), std::move(old_segp_derivs));
-        }
-        {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            // The transpose() below switches the ordering.
-            const DataBlock segrates = Eigen::Map<const DataBlock>(well_state.segPhaseRates().data(), nseg_total, np).transpose();
-            ADB::V new_segqs = Eigen::Map<const V>(segrates.data(), nseg_total * np);
-            std::vector<ADB::M> old_segqs_derivs = state.segqs.derivative();
-            state.segqs = ADB::function(std::move(new_segqs), std::move(old_segqs_derivs));
+        if (converged) {
+            // We must now update the state.segp and state.segqs members,
+            // that the base version does not know about.
+            const int np = numPhases();
+            const int nseg_total =well_state.numSegments();
+            {
+                // We will set the segp primary variable to the new ones,
+                // but we do not change the derivatives here.
+                ADB::V new_segp = Eigen::Map<ADB::V>(well_state.segPress().data(), nseg_total);
+                // Avoiding the copy below would require a value setter method
+                // in AutoDiffBlock.
+                std::vector<ADB::M> old_segp_derivs = state.segp.derivative();
+                state.segp = ADB::function(std::move(new_segp), std::move(old_segp_derivs));
+            }
+            {
+                // Need to reshuffle well rates, from phase running fastest
+                // to wells running fastest.
+                // The transpose() below switches the ordering.
+                const DataBlock segrates = Eigen::Map<const DataBlock>(well_state.segPhaseRates().data(), nseg_total, np).transpose();
+                ADB::V new_segqs = Eigen::Map<const V>(segrates.data(), nseg_total * np);
+                std::vector<ADB::M> old_segqs_derivs = state.segqs.derivative();
+                state.segqs = ADB::function(std::move(new_segqs), std::move(old_segqs_derivs));
+            }
+
+            // This is also called by the base version, but since we have updated
+            // state.segp we must call it again.
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
-        // This is also called by the base version, but since we have updated
-        // state.segp we must call it again.
-        asImpl().computeWellConnectionPressures(state, well_state);
+        return converged;
     }
 
 

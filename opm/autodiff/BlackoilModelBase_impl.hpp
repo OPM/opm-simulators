@@ -1574,7 +1574,7 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::solveWellEq(const std::vector<ADB>& mob_perfcells,
+    bool BlackoilModelBase<Grid, Implementation>::solveWellEq(const std::vector<ADB>& mob_perfcells,
                                                               const std::vector<ADB>& b_perfcells,
                                                               SolutionState& state,
                                                               WellState& well_state)
@@ -1629,7 +1629,7 @@ namespace detail {
                 const Eigen::SparseLU< Sp > solver(Jn0);
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
-                // assert(dx.size() == (well_state.numWells() * (well_state.numPhases()+1)));
+                assert(dx.size() == total_residual_v.size());
                 asImpl().updateWellState(dx.array(), well_state);
                 asImpl().updateWellControls(well_state);
             }
@@ -1661,6 +1661,7 @@ namespace detail {
             asImpl().computeWellConnectionPressures(state, well_state);
         }
 
+        return converged;
     }
 
 
