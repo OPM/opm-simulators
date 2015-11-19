@@ -196,6 +196,7 @@ namespace Opm {
         std::vector<Tri> s2w_vector;
         std::vector<Tri> w2s_vector;
         std::vector<Tri> topseg2w_vector;
+        V topseg_zero = V::Ones(total_nseg);
         s2s_inlets_vector.reserve(total_nseg);
         s2s_outlet_vector.reserve(total_nseg);
         s2w_vector.reserve(total_nseg);
@@ -209,6 +210,7 @@ namespace Opm {
                 s2w_vector.push_back(Tri(w, seg_ind, 1.0));
                 if (seg == 0) {
                     topseg2w_vector.push_back(Tri(w, seg_ind, 1.0));
+                    topseg_zero(seg_ind) = 0.0;
                 }
                 int seg_outlet = wells_ms[w]->outletSegment()[seg];
                 if (seg_outlet >= 0) {
@@ -230,6 +232,8 @@ namespace Opm {
         p2w = Eigen::SparseMatrix<double>(nw, total_nperf);
         w2p = s2p * w2s;
         p2w = s2w * p2s;
+
+        eliminate_topseg = AutoDiffMatrix(topseg_zero.matrix().asDiagonal());
     }
 
 
@@ -1402,17 +1406,7 @@ namespace Opm {
             ? detail::onlyWellDerivs(well_segment_pressures_delta_)
             : well_segment_pressures_delta_;
 
-        start_segment = 0;
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const int nseg = well->numberOfSegments();
-            ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
-            ADB well_residual = segp - well->wellOps().s2s_outlet * segp
-                                 + subset(wspd, Span(nseg, 1, start_segment));
-            ADB others_well_residual = subset(well_residual, Span(nseg - 1, 1, 1));
-            others_residual = others_residual +  superset(others_well_residual, Span(nseg - 1, 1, start_segment + 1), nseg_total);
-            start_segment += nseg;
-        }
+        others_residual = wops_ms_.eliminate_topseg * (state.segp - wops_ms_.s2s_outlet * state.segp + wspd);
 
         //       all the control equations
         // TODO: can be optimized better

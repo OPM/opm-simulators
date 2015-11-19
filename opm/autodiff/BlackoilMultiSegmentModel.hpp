@@ -231,6 +231,7 @@ namespace Opm {
             Eigen::SparseMatrix<double> s2s_inlets;       // segment -> its inlet segments
             Eigen::SparseMatrix<double> s2s_outlet;       // segment -> its outlet segment
             Eigen::SparseMatrix<double> topseg2w;         // top segment -> well
+            AutoDiffMatrix eliminate_topseg;              // change the top segment related to be zero
             std::vector<int> well_cells;                  // the set of perforated cells
             V conn_trans_factors;                         // connection transmissibility factors
         };
