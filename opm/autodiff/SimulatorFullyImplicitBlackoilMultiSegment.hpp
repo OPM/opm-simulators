@@ -21,7 +21,7 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILMULTISEGMENT_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILMULTISEGMENT_HEADER_INCLUDED
 
-#include "SimulatorBase.hpp"
+#include <opm/autodiff/SimulatorBase.hpp>
 
 
 #include <opm/autodiff/NonlinearSolver.hpp>

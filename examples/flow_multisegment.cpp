@@ -141,7 +141,7 @@ try
     // Write parameters used for later reference. (only if rank is zero)
     const bool output_cout = ( mpi_rank == 0 );
 
-    if(output_cout)
+    if (output_cout)
     {
         std::string version = moduleVersionName();
         std::cout << "**********************************************************************\n";
