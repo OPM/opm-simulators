@@ -356,60 +356,17 @@ namespace Opm {
         const int nperf_total = xw.numPerforations();
         const int nw = xw.numWells();
 
-        // the well cells for multisegment wells and non-segmented wells should be counted seperatedly
-        // indexing should be put in WellState
-        std::vector<int> well_cells;
-        std::vector<int> well_cells_segmented_idx;
-        std::vector<int> well_cells_non_segmented_idx;
-        std::vector<int> well_cells_segmented;
-        std::vector<int> well_cells_non_segmented;
-
-        well_cells_segmented_idx.reserve(nperf_total);
-        well_cells_non_segmented_idx.reserve(nperf_total);
-        well_cells_segmented.reserve(nperf_total);
-        well_cells_non_segmented.reserve(nperf_total);
-        well_cells.reserve(nperf_total);
-        for (int i = 0; i < nw; ++i) {
-            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
-            const int num_cells_this_well = temp_well_cells.size();
-            const int n_current = well_cells.size();
-            if (wellsMultiSegment()[i]->isMultiSegmented()) {
-                for (int j = 0; j < num_cells_this_well; ++j) {
-                    well_cells_segmented_idx.push_back(j + n_current);
-                }
-                well_cells_segmented.insert(well_cells_segmented.end(), temp_well_cells.begin(), temp_well_cells.end());
-            } else {
-                for (int j = 0; j < num_cells_this_well; ++j) {
-                    well_cells_non_segmented_idx.push_back(j + n_current);
-                }
-                well_cells_non_segmented.insert(well_cells_non_segmented.end(), temp_well_cells.begin(), temp_well_cells.end());
-            }
-            well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
-        }
+        std::vector<int>& well_cells = wops_ms_.well_cells;
 
         well_perforation_densities_ = V::Zero(nperf_total);
 
-        // Compute the average pressure in each well block
-        // The following code is necessary for non-segmented wells.
-        // For the multi-segmented wells.
-        // Two hydrostatic heads need to be computed.
-        // One is the hydrostatic head between the cell and the completion depth
-        // The density is the density mixture of that grid block
-        // one is the hydrostatic head between the segment and the completion depth
-        // The density is the density of the fluid mixture in the related segment
-
-        // TODO: the following part should be modified to fit the plan for only the non-segmented wells
-        // const int nperf_nonsegmented = well_cells_non_segmented.size();
-
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf_total);
-        // const V perf_press_nonsegmented = subset(perf_press, well_cells_non_segmented_idx);
 
         V avg_press = perf_press * 0.0;
 
-        // for the non-segmented wells, calculated the average pressures.
+        // for the non-segmented/regular wells, calculated the average pressures.
         // If it is the top perforation, then average with the bhp().
         // If it is not the top perforation, then average with the perforation above it().
-        // TODO: Make sure the order of the perforation are not changed, comparing with the old wells structure.
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
             const int nseg = wellsMultiSegment()[w]->numberOfSegments();
@@ -542,7 +499,6 @@ namespace Opm {
             rho_avg_perf += rho_perf * perf_kr[phaseIdx];
         }
 
-        // TODO: rho_avg_perf is actually the well_perforation_cell_densities_;
         well_perforation_cell_densities_ = Eigen::Map<const V>(rho_avg_perf.data(), nperf_total);
 
         // We should put this in a global class
