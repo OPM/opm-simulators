@@ -64,18 +64,19 @@ namespace Opm {
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
-        /// \param[in] param            parameters
-        /// \param[in] grid             grid data structure
-        /// \param[in] fluid            fluid properties
-        /// \param[in] geo              rock properties
-        /// \param[in] rock_comp_props  if non-null, rock compressibility properties
-        /// \param[in] wells            well structure
-        /// \param[in] vfp_properties   Vertical flow performance tables
-        /// \param[in] linsolver        linear solver
-        /// \param[in] eclState         eclipse state
-        /// \param[in] has_disgas       turn on dissolved gas
-        /// \param[in] has_vapoil       turn on vaporized oil feature
-        /// \param[in] terminal_output  request output to cout/cerr
+        /// \param[in] param              parameters
+        /// \param[in] grid               grid data structure
+        /// \param[in] fluid              fluid properties
+        /// \param[in] geo                rock properties
+        /// \param[in] rock_comp_props    if non-null, rock compressibility properties
+        /// \param[in] wells              well structure
+        /// \param[in] vfp_properties     Vertical flow performance tables
+        /// \param[in] linsolver          linear solver
+        /// \param[in] eclState           eclipse state
+        /// \param[in] has_disgas         turn on dissolved gas
+        /// \param[in] has_vapoil         turn on vaporized oil feature
+        /// \param[in] terminal_output    request output to cout/cerr
+        /// \param[in] wells_multisegment a vector of multisegment wells
         BlackoilMultiSegmentModel(const typename Base::ModelParameters&  param,
                           const Grid&                     grid ,
                           const BlackoilPropsAdInterface& fluid,
@@ -111,16 +112,10 @@ namespace Opm {
         using Base::materialName;
 
     protected:
-     /*
-        // ---------  Types and enums  ---------
-        // using Base::DataBlock;
-        // using Base::ReservoirResidualQuant;
-     */
         // ---------  Data members  ---------
 
-        // For the non-segmented well, it should be the density with AVG or SEG way.
-        // while usually SEG way
-        using Base::wops_; // Only for well_cells, the w2p and p2w members may have wrong perf order.
+        // For non-segmented wells, it should be the density calculated with AVG or SEG way.
+        // while usually SEG way by default.
         using Base::well_perforation_densities_; //Density of each well perforation
         using Base::pvdt_;
         using Base::geo_;
@@ -141,44 +136,27 @@ namespace Opm {
         using Base::param_;
         using Base::linsolver_;
 
-
-        // Diff to the pressure of the related segment.
-        // When the well is a usual well, the bhp will be the pressure of the top segment
-        // For mutlti-segmented wells, only AVG is allowed.
-        // For non-segmented wells, typically SEG is used. AVG way might not have been
-        // implemented yet.
-
         // Diff to bhp for each well perforation. only for usual wells.
         // For segmented wells, they are zeros.
-        using Base::well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
-
-        // ADB version of the densities, when using AVG way, the calculation of the density and hydrostatic head
-        // is implicit
-        // ADB well_perforation_densities_adb_; // TODO: NOT NEEDED for explicit SEG way
-
-        // ADB version. Eventually, only ADB version will be kept.
-        // ADB well_perforation_pressure_diffs_adb_; // TODO: NOT NEEDED for explicit SEG way
+        using Base::well_perforation_pressure_diffs_;
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
         // For the non-segmented wells, since the perforation are forced to be
         // at the center of the grid cell, it should be ZERO.
-        // It should only apply to the mutli-segmented wells.
+        // It only applies to the mutli-segmented wells.
         V well_perforation_cell_pressure_diffs_;
 
         // Pressure correction due to the depth differennce between segment depth and perforation depth.
-        // TODO: It will only be able to be merge as a part of the perforation_pressure_diffs_
         ADB well_segment_perforation_pressure_diffs_;
 
         // The depth difference between segment nodes and perforations
-        // TODO: it should be a member in a global wells class later
         V well_segment_perforation_depth_diffs_;
 
         // the average of the fluid densities in the grid block
         // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
         // and the cell center of the grid block
         V well_perforation_cell_densities_;
-
 
         // the density of the fluid mixture in the segments
         // which is calculated in an implicit way
@@ -190,9 +168,10 @@ namespace Opm {
         ADB well_segment_pressures_delta_;
 
         // the surface volume of components in the segments
-        // initial one at the beginning of the time step
+        // the initial value at the beginning of the time step
         std::vector<V>   segment_comp_surf_volume_initial_;
-        // the current one at the current iteration.
+
+        // the value within the current iteration.
         std::vector<ADB> segment_comp_surf_volume_current_;
 
         // the mass flow rate in the segments
@@ -200,7 +179,7 @@ namespace Opm {
 
         // the viscosity of the fluid mixture in the segments
         // TODO: it is only used to calculate the Reynolds number as we know
-        //       maybe it is not better just to store the Reynolds number here?
+        //       maybe it is not better just to store the Reynolds number?
         ADB segment_viscosities_;
 
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;

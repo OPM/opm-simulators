@@ -98,22 +98,6 @@ namespace Opm {
         , wells_multisegment_(wells_multisegment)
         , wops_ms_(wells_multisegment)
     {
-        // Modify the wops_.well_cell member, since the
-        // order of perforations is different for multi-segment
-        // wells, since the segments may have been reordered.
-        // It should already have the correct capacity, though.
-        // Note that we need the const_cast since wops_ is declared
-        // as a 'const WellOps'.
-        std::vector<int>& well_cells = const_cast<typename Base::WellOps&>(wops_).well_cells;
-        const size_t old_sz = well_cells.size();
-        well_cells.clear();
-        const int nw = wells_multisegment.size();
-        for (int i = 0; i < nw; ++i) {
-            const std::vector<int>& temp_well_cells = wellsMultiSegment()[i]->wellCells();
-            well_cells.insert(well_cells.end(), temp_well_cells.begin(), temp_well_cells.end());
-        }
-        assert(old_sz == well_cells.size());
-        static_cast<void>(old_sz); // Avoid warning in release mode.
     }
 
 
@@ -152,58 +136,36 @@ namespace Opm {
         assert(well_perf_start == total_nperf);
         assert(int(well_cells.size()) == total_nperf);
 
-        // Create the segment <-> perforation operator matrices,
+        // Create all the operator matrices,
         // using the setFromTriplets() method.
-        s2p = Eigen::SparseMatrix<double>(total_nperf, total_nseg);
-        p2s = Eigen::SparseMatrix<double>(total_nseg, total_nperf);
-        typedef Eigen::Triplet<double> Tri;
-        std::vector<Tri> scatter, gather;
-        scatter.reserve(total_nperf);
-        gather .reserve(total_nperf);
-        int seg_start = 0;
-        int perf_start = 0;
-        for (int w = 0; w < nw; ++w) {
-            const int ns = wells_ms[w]->numberOfSegments();
-            const int np = wells_ms[w]->numberOfPerforations();
-            for (int seg = 0; seg < ns; ++seg) {
-                const auto& segPerf = wells_ms[w]->segmentPerforations()[seg];
-                // the number of perforations related to this segment
-                const int npseg = segPerf.size();
-                for (int perf = 0; perf < npseg; ++perf) {
-                    const int perf_ind = perf_start + segPerf[perf];
-                    const int seg_ind = seg_start + seg;
-                    scatter.push_back(Tri(perf_ind, seg_ind, 1.0));
-                    gather .push_back(Tri(seg_ind, perf_ind, 1.0));
-                }
-            }
-            perf_start += np;
-            seg_start += ns;
-        }
-        s2p.setFromTriplets(scatter.begin(), scatter.end());
-        p2s.setFromTriplets(gather .begin(), gather .end());
-
-
-        // Crate the segment -> its inlet segments and segment-> its outlet segment operator matrices,
-        // It can be done togehter with other operator generation process.
-        // Just do seperately for the moment for parallel development.
         s2s_inlets = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
         s2s_outlet = Eigen::SparseMatrix<double>(total_nseg, total_nseg);
         s2w        = Eigen::SparseMatrix<double>(nw, total_nseg);
         w2s        = Eigen::SparseMatrix<double>(total_nseg, nw);
         topseg2w   = Eigen::SparseMatrix<double>(nw, total_nseg);
+        s2p = Eigen::SparseMatrix<double>(total_nperf, total_nseg);
+        p2s = Eigen::SparseMatrix<double>(total_nseg, total_nperf);
+        typedef Eigen::Triplet<double> Tri;
         std::vector<Tri> s2s_inlets_vector;
         std::vector<Tri> s2s_outlet_vector;
         std::vector<Tri> s2w_vector;
         std::vector<Tri> w2s_vector;
         std::vector<Tri> topseg2w_vector;
+        std::vector<Tri> s2p_vector;
+        std::vector<Tri> p2s_vector;
         V topseg_zero = V::Ones(total_nseg);
         s2s_inlets_vector.reserve(total_nseg);
         s2s_outlet_vector.reserve(total_nseg);
         s2w_vector.reserve(total_nseg);
         w2s_vector.reserve(total_nseg);
-        seg_start = 0;
+        topseg2w_vector.reserve(nw);
+        s2p_vector.reserve(total_nperf);
+        p2s_vector.reserve(total_nperf);
+        int seg_start = 0;
+        int perf_start = 0;
         for (int w = 0; w < nw; ++w) {
             const int ns = wells_ms[w]->numberOfSegments();
+            const int np = wells_ms[w]->numberOfPerforations();
             for (int seg = 0; seg < ns; ++seg) {
                 const int seg_ind = seg_start + seg;
                 w2s_vector.push_back(Tri(seg_ind, w, 1.0));
@@ -218,8 +180,18 @@ namespace Opm {
                     s2s_inlets_vector.push_back(Tri(outlet_ind, seg_ind, 1.0));
                     s2s_outlet_vector.push_back(Tri(seg_ind, outlet_ind, 1.0));
                 }
+
+                const auto& seg_perf = wells_ms[w]->segmentPerforations()[seg];
+                // the number of perforations related to this segment
+                const int npseg = seg_perf.size();
+                for (int perf = 0; perf < npseg; ++perf) {
+                    const int perf_ind = perf_start + seg_perf[perf];
+                    s2p_vector.push_back(Tri(perf_ind, seg_ind, 1.0));
+                    p2s_vector.push_back(Tri(seg_ind, perf_ind, 1.0));
+                }
             }
             seg_start += ns;
+            perf_start += np;
         }
 
         s2s_inlets.setFromTriplets(s2s_inlets_vector.begin(), s2s_inlets_vector.end());
@@ -227,6 +199,8 @@ namespace Opm {
         w2s.setFromTriplets(w2s_vector.begin(), w2s_vector.end());
         s2w.setFromTriplets(s2w_vector.begin(), s2w_vector.end());
         topseg2w.setFromTriplets(topseg2w_vector.begin(), topseg2w_vector.end());
+        s2p.setFromTriplets(s2p_vector.begin(), s2p_vector.end());
+        p2s.setFromTriplets(p2s_vector.begin(), p2s_vector.end());
 
         w2p = Eigen::SparseMatrix<double>(total_nperf, nw);
         p2w = Eigen::SparseMatrix<double>(nw, total_nperf);
@@ -808,7 +782,7 @@ namespace Opm {
                 is_multisegment_well[w] = double(wellsMultiSegment()[w]->isMultiSegmented());
             }
             // Take one flag per well and expand to one flag per perforation.
-            V is_multisegment_perf = wops_.w2p * is_multisegment_well.matrix();
+            V is_multisegment_perf = wops_ms_.w2p * is_multisegment_well.matrix();
             Selector<double> msperf_selector(is_multisegment_perf, Selector<double>::NotEqualZero);
 
             // Compute drawdown.
@@ -937,7 +911,7 @@ namespace Opm {
             for (int phase = 0; phase < np; ++phase) {
                 const int pos = pu.phase_pos[phase];
                 const ADB phase_fraction = wops_ms_.topseg2w * (wbq[phase] / wbqt);
-                cmix_s[phase] = wops_.w2p * aliveWells_selector.select(phase_fraction, ADB::constant(compi.col(pos)));
+                cmix_s[phase] = wops_ms_.w2p * aliveWells_selector.select(phase_fraction, ADB::constant(compi.col(pos)));
             }
 
             // compute volume ration between connection at standard conditions
