@@ -41,19 +41,15 @@ namespace Opm
             m_comp_pressure_drop_ = segment_set->compPressureDrop();
             m_multiphase_model_ = segment_set->multiPhaseModel();
 
-            // m_number_of_perforations_ from wells
-            // m_well_index_ from wells
             m_outlet_segment_.resize(m_number_of_segments_);
             m_inlet_segments_.resize(m_number_of_segments_);
             m_segment_length_.resize(m_number_of_segments_);
             m_segment_depth_.resize(m_number_of_segments_);
             m_segment_internal_diameter_.resize(m_number_of_segments_);
             m_segment_roughness_.resize(m_number_of_segments_);
-            // TODO: the cross area needs to be calculated.
             m_segment_cross_area_.resize(m_number_of_segments_, 0.);
             m_segment_volume_.resize(m_number_of_segments_);
             m_segment_perforations_.resize(m_number_of_segments_);
-            // what is the point to do this?
 
             // we change the ID to location now for easier use later.
             for (int i = 0; i < m_number_of_segments_; ++i) {
@@ -63,6 +59,7 @@ namespace Opm
                 m_segment_depth_[i] = (*segment_set)[i]->depth();
                 m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
                 m_segment_roughness_[i] = (*segment_set)[i]->roughness();
+                m_segment_cross_area_[i] = (*segment_set)[i]->crossArea();
                 m_segment_volume_[i] = (*segment_set)[i]->volume();
             }
 
@@ -172,7 +169,6 @@ namespace Opm
 
             m_outlet_segment_.resize(m_number_of_segments_, -1);
             m_segment_length_.resize(m_number_of_segments_, 0.);
-            // TODO: should set to be the bhp reference depth
             m_segment_depth_.resize(m_number_of_segments_, 0.);
             m_segment_internal_diameter_.resize(m_number_of_segments_, 0.);
             m_segment_roughness_.resize(m_number_of_segments_, 0.);
@@ -194,6 +190,8 @@ namespace Opm
                 m_well_type_ = wells->type[index_well];
                 m_well_controls_ = wells->ctrls[index_well];
                 m_number_of_phases_ = wells->number_of_phases;
+                // set the segment depth to be the bhp reference depth
+                m_segment_depth_[0] = wells->depth_ref[index_well];
                 m_comp_frac_.resize(m_number_of_phases_);
                 std::copy(wells->comp_frac + index_well * m_number_of_phases_,
                         wells->comp_frac + (index_well + 1) * m_number_of_phases_, m_comp_frac_.begin());
