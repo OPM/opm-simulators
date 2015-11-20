@@ -345,6 +345,8 @@ namespace Opm {
         // return wells object
         const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
 
+        int numWellVars() const;
+
         void
         makeConstantState(SolutionState& state) const;
 

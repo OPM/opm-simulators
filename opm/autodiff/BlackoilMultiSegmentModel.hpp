@@ -106,14 +106,6 @@ namespace Opm {
                       WellState& well_state,
                       const bool initial_assembly);
 
-
-        /// Apply an update to the primary variables, chopped if appropriate.
-        /// \param[in]      dx                updates to apply to primary variables
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void updateState(const V& dx,
-                         ReservoirState& reservoir_state,
-                         WellState& well_state);
         using Base::numPhases;
         using Base::numMaterials;
         using Base::materialName;
@@ -299,6 +291,8 @@ namespace Opm {
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
                          const V& aliveWells);
+
+        int numWellVars() const;
 
         void
         makeConstantState(SolutionState& state) const;

@@ -443,6 +443,19 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
+    int
+    BlackoilModelBase<Grid, Implementation>::numWellVars() const
+    {
+        // For each well, we have a bhp variable, and one flux per phase.
+        const int nw = localWellsActive() ? wells().number_of_wells : 0;
+        return (numPhases() + 1) * nw;
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::makeConstantState(SolutionState& state) const
     {
@@ -1958,7 +1971,6 @@ namespace detail {
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
         const int nc = numCells(grid_);
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
@@ -1973,7 +1985,7 @@ namespace detail {
         varstart += dxvar.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span((np+1)*nw, 1, varstart));
+        const V dwells = subset(dx, Span(asImpl().numWellVars(), 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());
