@@ -55,7 +55,7 @@ namespace Opm {
                        DeckConstPtr deck);
 
     private:
-        FluidSystem fluidsystem_;
+        FluidSystem fluidSystem_;
         
         SaturationFunctionFamily satFamily_;
 
@@ -67,8 +67,8 @@ namespace Opm {
         void keywordsDisplay_(EclipseStateConstPtr eclState);
         
         ///Check the phase that used.
-        FluidSystem phaseCheck_(EclipseStateConstPtr eclState, 
-                                DeckConstPtr deck);
+        void phaseCheck_(EclipseStateConstPtr eclState, 
+                         DeckConstPtr deck);
 
         
         ///Check saturation family I and II.
@@ -137,15 +137,14 @@ namespace Opm {
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && (!sof3Tables.empty() || !sof2Tables.empty()) && !sgwfnTables.empty();
 
         if (family1 && family2) {
-            std::string s = "Saturation families should not be mixed.\n"
-                          + "Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            std::string s = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messager_.push_back(s);
         }
 
         if (!family1 && !family2) {
-            std::string s = "Saturations function must be specified using either\n"
-                             + "family 1 or family 2 keywords \n"
-                             + "Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            std::string s = "Saturations function must be specified using either \n \
+                             family 1 or family 2 keywords \n \
+                             Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messager_.push_back(s);
         }
 
@@ -160,8 +159,8 @@ namespace Opm {
     }
 
 
-    FluidSystem RelpermDiagnostics::phaseCheck_(EclipseStateConstPtr eclState,
-                                                DeckConstPtr deck)
+    void RelpermDiagnostics::phaseCheck_(EclipseStateConstPtr eclState,
+                                         DeckConstPtr deck)
     {
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
@@ -169,19 +168,19 @@ namespace Opm {
 
         if (hasWater && hasGas && !hasOil) {
             std::cout << "System:  Water-Gas system." << std::endl;
-            return FluidSystem::WaterGas;
+            fluidSystem_ = FluidSystem::WaterGas;
         }
         if (hasWater && hasOil && !hasGas) { 
             std::cout << "System:  Oil-Water system." << std::endl;
-            return FluidSystem::OilWater; 
+            fluidSystem_ = FluidSystem::OilWater; 
         }
         if (hasOil && hasGas && !hasWater) { 
             std::cout << "System:  Oil-Gas system." << std::endl;
-            return FluidSystem::OilGas; 
+            fluidSystem_ = FluidSystem::OilGas; 
         }
         if (hasOil && hasWater && hasGas) {
             std::cout << "System:  Black-oil system." << std::endl;
-            return FluidSystem::BlackOil;
+            fluidSystem_ = FluidSystem::BlackOil;
         }
     } 
 
@@ -477,10 +476,6 @@ namespace Opm {
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
         unscaledEpsInfo_.resize(numSatRegions);
 
-        bool hasWater = deck->hasKeyword("WATER");
-        bool hasGas = deck->hasKeyword("GAS");
-        bool hasOil = deck->hasKeyword("OIL");
-
         auto tables = eclState->getTableManager();
         const TableContainer&  swofTables = tables->getSwofTables();
         const TableContainer&  sgofTables = tables->getSgofTables();
@@ -504,7 +499,7 @@ namespace Opm {
              /// means Krow(Swco) == Krog(Sgco)
              double krow_value = 1e20;
              double krog_value = 1e-20;
-             if (hasWater && hasGas && hasOil) {
+             if (fluidSystem_ = FluidSystem::BlackOil) {
                 if (satFamily_ == SaturationFunctionFamily::FamilyI) {
                      if (!sgofTables.empty()) {
                          auto sg = sgofTables.getTable<SgofTable>(satnumIdx).getSgColumn();
