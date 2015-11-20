@@ -69,6 +69,17 @@ namespace Opm
             , trans_(Opm::AutoDiffGrid::numFaces(grid))
             , gpot_ (Vector::Zero(Opm::AutoDiffGrid::cell2Faces(grid).noEntries(), 1))
             , z_(Opm::AutoDiffGrid::numCells(grid))
+            , use_local_perm_(use_local_perm)
+        {
+            update(grid, props, eclState, grav);
+        }
+
+        /// compute the all geological properties at a given report step
+        template <class Props, class Grid>
+        void update(const Grid&              grid,
+                    const Props&             props ,
+                    Opm::EclipseStateConstPtr eclState,
+                    const double*            grav)
         {
             int numCells = AutoDiffGrid::numCells(grid);
             int numFaces = AutoDiffGrid::numFaces(grid);
@@ -121,7 +132,7 @@ namespace Opm
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
 
-            if (! use_local_perm) {
+            if (! use_local_perm_) {
                 tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             }
             else {
@@ -204,9 +215,7 @@ namespace Opm
         Vector gpot_ ;
         Vector z_;
         double gravity_[3]; // Size 3 even if grid is 2-dim.
-
-
-
+        bool use_local_perm_;
 
     };
 

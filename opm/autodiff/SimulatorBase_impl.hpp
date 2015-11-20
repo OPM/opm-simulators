@@ -27,7 +27,7 @@ namespace Opm
     template <class Implementation>
     SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
                                                  const Grid& grid,
-                                                 const DerivedGeology& geo,
+                                                 DerivedGeology& geo,
                                                  BlackoilPropsAdInterface& props,
                                                  const RockCompressibility* rock_comp_props,
                                                  NewtonIterationBlackoilInterface& linsolver,
@@ -74,7 +74,8 @@ namespace Opm
     }
 
     template <class Implementation>
-    SimulatorReport SimulatorBase<Implementation>::run(SimulatorTimer& timer,
+    SimulatorReport SimulatorBase<Implementation>::run(EclipseStateConstPtr eclState,
+                                                       SimulatorTimer& timer,
                                                        ReservoirState& state)
     {
         WellState prev_well_state;
@@ -87,6 +88,9 @@ namespace Opm
         total_timer.start();
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
+
+        const auto& schedule = eclState->getSchedule();
+        const auto& events = schedule->getEvents();
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -162,6 +166,21 @@ namespace Opm
             else {
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
+            }
+
+            // update the derived geology (transmissibilities, pore volumes, etc) if the
+            // has geology changed for the next report step
+            const int nextTimeStepIdx = timer.currentStepNum() + 1;
+            if (nextTimeStepIdx < timer.numSteps()
+                && events.hasEvent(ScheduleEvents::GEO_MODIFIER, nextTimeStepIdx)) {
+                // bring the contents of the keywords to the current state of the SCHEDULE
+                // section
+                //
+                // TODO (?): handle the parallel case (maybe this works out of the box)
+                ScheduleConstPtr schedule = eclipse_state_->getSchedule();
+                DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
+                eclipse_state_->applyModifierDeck(miniDeck);
+                geo_.update(grid_, props_, eclipse_state_, gravity_);
             }
 
             // take time that was used to solve system for this reportStep

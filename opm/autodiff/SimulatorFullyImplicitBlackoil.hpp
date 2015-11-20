@@ -50,7 +50,7 @@ public:
     // forward the constructor to the base class
     SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
                                    const typename Base::Grid& grid,
-                                   const DerivedGeology& geo,
+                                   DerivedGeology& geo,
                                    BlackoilPropsAdInterface& props,
                                    const RockCompressibility* rock_comp_props,
                                    NewtonIterationBlackoilInterface& linsolver,
