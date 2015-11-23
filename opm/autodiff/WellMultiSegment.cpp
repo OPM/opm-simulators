@@ -25,205 +25,213 @@ namespace Opm
 {
 
     WellMultiSegment::WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells) {
-        init(well, time_step, wells);
+        m_well_name_ = well->name();
+        if (well->isMultiSegment(time_step)) {
+            initMultiSegmentWell(well, time_step, wells);
+        } else {
+            initNonMultiSegmentWell(well, time_step, wells);
+        }
+        updateWellOps();
     }
 
+    void WellMultiSegment::initMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells) {
 
-    void WellMultiSegment::init(WellConstPtr well, size_t time_step, const Wells* wells) {
-        m_well_name_ = well->name();
         CompletionSetConstPtr completion_set = well->getCompletions(time_step);
 
-        if (well->isMultiSegment(time_step)) {
-            m_is_multi_segment_ = true;
-            SegmentSetConstPtr segment_set = well->getSegmentSet(time_step);
-            m_number_of_segments_ = segment_set->numberSegment();
-            m_number_of_perforations_ = completion_set->size();
-            m_comp_pressure_drop_ = segment_set->compPressureDrop();
-            m_multiphase_model_ = segment_set->multiPhaseModel();
+        m_is_multi_segment_ = true;
+        SegmentSetConstPtr segment_set = well->getSegmentSet(time_step);
+        m_number_of_segments_ = segment_set->numberSegment();
+        m_number_of_perforations_ = completion_set->size();
+        m_comp_pressure_drop_ = segment_set->compPressureDrop();
+        m_multiphase_model_ = segment_set->multiPhaseModel();
 
-            m_outlet_segment_.resize(m_number_of_segments_);
-            m_inlet_segments_.resize(m_number_of_segments_);
-            m_segment_length_.resize(m_number_of_segments_);
-            m_segment_depth_.resize(m_number_of_segments_);
-            m_segment_internal_diameter_.resize(m_number_of_segments_);
-            m_segment_roughness_.resize(m_number_of_segments_);
-            m_segment_cross_area_.resize(m_number_of_segments_, 0.);
-            m_segment_volume_.resize(m_number_of_segments_);
-            m_segment_perforations_.resize(m_number_of_segments_);
+        m_outlet_segment_.resize(m_number_of_segments_);
+        m_inlet_segments_.resize(m_number_of_segments_);
+        m_segment_length_.resize(m_number_of_segments_);
+        m_segment_depth_.resize(m_number_of_segments_);
+        m_segment_internal_diameter_.resize(m_number_of_segments_);
+        m_segment_roughness_.resize(m_number_of_segments_);
+        m_segment_cross_area_.resize(m_number_of_segments_, 0.);
+        m_segment_volume_.resize(m_number_of_segments_);
+        m_segment_perforations_.resize(m_number_of_segments_);
 
-            // we change the ID to location now for easier use later.
-            for (int i = 0; i < m_number_of_segments_; ++i) {
-                // The segment number for top segment is 0, the segment number of its outlet segment will be -1
-                m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
-                m_segment_length_[i] = (*segment_set)[i]->totalLength();
-                m_segment_depth_[i] = (*segment_set)[i]->depth();
-                m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
-                m_segment_roughness_[i] = (*segment_set)[i]->roughness();
-                m_segment_cross_area_[i] = (*segment_set)[i]->crossArea();
-                m_segment_volume_[i] = (*segment_set)[i]->volume();
-            }
-
-            // update the completion related information
-            // find the location of the well in wells
-            int index_well;
-            for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
-                if (m_well_name_ == std::string(wells->name[index_well])) {
-                    break;
-                }
-            }
-
-            std::vector<int> temp_well_cell;
-            std::vector<double> temp_well_index;
-
-            if (index_well == wells->number_of_wells) {
-                throw std::runtime_error(" did not find the well  " + m_well_name_ + "\n");
-            } else {
-
-                m_well_type_ = wells->type[index_well];
-                m_well_controls_ = wells->ctrls[index_well];
-                m_number_of_phases_ = wells->number_of_phases;
-                m_comp_frac_.resize(m_number_of_phases_);
-                std::copy(wells->comp_frac + index_well * m_number_of_phases_,
-                        wells->comp_frac + (index_well + 1) * m_number_of_phases_, m_comp_frac_.begin());
-
-                int index_begin = wells->well_connpos[index_well];
-                int index_end = wells->well_connpos[index_well + 1];
-
-
-                for(int i = index_begin; i < index_end; ++i) {
-                    // copy the WI and  well_cell_ informatin to m_well_index_ and m_well_cell_
-                    // maybe also the depth of the perforations.
-                    temp_well_cell.push_back(wells->well_cells[i]);
-                    temp_well_index.push_back(wells->WI[i]);
-                }
-            }
-
-            std::vector<double> temp_perf_depth;
-            temp_perf_depth.resize(m_number_of_perforations_);
-
-            for (int i = 0; i < (int)completion_set->size(); ++i) {
-                int i_segment = completion_set->get(i)->getSegmentNumber();
-                // using the location of the segment in the array as the segment number/id.
-                // TODO: it can be helpful for output or postprocessing if we can keep the original number.
-                i_segment = segment_set->numberToLocation(i_segment);
-                m_segment_perforations_[i_segment].push_back(i);
-                temp_perf_depth[i] = completion_set->get(i)->getCenterDepth();
-            }
-
-            // reordering the perforation related informations
-            // so that the perforations belong to the same segment will be continuous
-            m_well_cell_.resize(m_number_of_perforations_);
-            m_well_index_.resize(m_number_of_perforations_);
-            m_perf_depth_.resize(m_number_of_perforations_);
-            m_segment_cell_.resize(m_number_of_segments_, -1);
-
-            int perf_count = 0;
-            for (int is = 0; is < m_number_of_segments_; ++is) {
-                // TODO: the grid cell related to a segment should be calculated based on the location
-                //       of the segment node.
-                //       As the current temporary solution, the grid cell related to a segment determined by the
-                //       first perforation cell related to the segment.
-                //       when no perforation is related to the segment, use it outlet segment's cell.
-                const int nperf = m_segment_perforations_[is].size();
-                if (nperf > 0) {
-                    const int first_perf_number = m_segment_perforations_[is][0];
-                    m_segment_cell_[is] = temp_well_cell[first_perf_number];
-                    for (int iperf = 0; iperf < nperf; ++iperf) {
-                        const int perf_number = m_segment_perforations_[is][iperf];
-                        m_well_cell_[perf_count] = temp_well_cell[perf_number];
-                        m_well_index_[perf_count] = temp_well_index[perf_number];
-                        m_perf_depth_[perf_count] = temp_perf_depth[perf_number];
-                        m_segment_perforations_[is][iperf] = perf_count;
-                        ++perf_count;
-                    }
-                } else {
-                    // using the cell of its outlet segment
-                    const int i_outlet_segment = m_outlet_segment_[is];
-                    if (i_outlet_segment < 0) {
-                        assert(is == 0); // it must be the top segment
-                        OPM_THROW(std::logic_error, "Top segment is not related to any perforation, its related cell must be calculated based the location of its segment node, which is not implemented yet \n");
-                    } else {
-                        if (m_well_cell_[i_outlet_segment] < 0) {
-                            OPM_THROW(std::logic_error, "The segment cell of its outlet segment is not determined yet, the current implementation does not support this \n");
-                        } else {
-                            m_segment_cell_[is] = m_segment_cell_[i_outlet_segment];
-                        }
-                    }
-                }
-            }
-
-            assert(perf_count == m_number_of_perforations_);
-
-            // update m_inlet_segments_
-            // top segment does not have a outlet segment
-            for (int is = 1; is < m_number_of_segments_; ++is) {
-                const int index_outlet = m_outlet_segment_[is];
-                m_inlet_segments_[index_outlet].push_back(is);
-            }
-
-        } else {
-            m_is_multi_segment_ = false;
-            m_number_of_segments_ = 1;
-            m_comp_pressure_drop_ = WellSegment::H__;
-            m_multiphase_model_ = WellSegment::HO;
-
-            m_outlet_segment_.resize(m_number_of_segments_, -1);
-            m_segment_length_.resize(m_number_of_segments_, 0.);
-            m_segment_depth_.resize(m_number_of_segments_, 0.);
-            m_segment_internal_diameter_.resize(m_number_of_segments_, 0.);
-            m_segment_roughness_.resize(m_number_of_segments_, 0.);
-            m_segment_cross_area_.resize(m_number_of_segments_, 0.);
-            m_segment_volume_.resize(m_number_of_segments_, 0.);
-            m_segment_perforations_.resize(m_number_of_segments_);
-
-            // update the completion related information
-            int index_well;
-            for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
-                if (m_well_name_ == std::string(wells->name[index_well])) {
-                    break;
-                }
-            }
-
-            if (index_well == wells->number_of_wells) {
-                throw std::runtime_error(" did not find the well  " + m_well_name_ + "\n");
-            } else {
-                m_well_type_ = wells->type[index_well];
-                m_well_controls_ = wells->ctrls[index_well];
-                m_number_of_phases_ = wells->number_of_phases;
-                // set the segment depth to be the bhp reference depth
-                m_segment_depth_[0] = wells->depth_ref[index_well];
-                m_comp_frac_.resize(m_number_of_phases_);
-                std::copy(wells->comp_frac + index_well * m_number_of_phases_,
-                        wells->comp_frac + (index_well + 1) * m_number_of_phases_, m_comp_frac_.begin());
-
-                int index_begin = wells->well_connpos[index_well];
-                int index_end = wells->well_connpos[index_well + 1];
-                m_number_of_perforations_ = index_end - index_begin;
-
-                for(int i = index_begin; i < index_end; ++i) {
-                    m_well_cell_.push_back(wells->well_cells[i]);
-                    m_well_index_.push_back(wells->WI[i]);
-                }
-                m_segment_cell_.resize(1, -1);
-                m_segment_cell_[0] = m_well_cell_[0];
-            }
-
-            // TODO: not sure if we need the perf_depth_.
-            m_perf_depth_.resize(m_number_of_perforations_, 0.);
-            m_segment_perforations_[0].resize(m_number_of_perforations_);
-
-            for (int i = 0; i < m_number_of_perforations_; ++i) {
-                m_segment_perforations_[0][i] = i;
-                m_perf_depth_[i] = completion_set->get(i)->getCenterDepth();
-            }
-
-            m_inlet_segments_.resize(m_number_of_segments_);
+        // we change the ID to location now for easier use later.
+        for (int i = 0; i < m_number_of_segments_; ++i) {
+            // The segment number for top segment is 0, the segment number of its outlet segment will be -1
+            m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
+            m_segment_length_[i] = (*segment_set)[i]->totalLength();
+            m_segment_depth_[i] = (*segment_set)[i]->depth();
+            m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
+            m_segment_roughness_[i] = (*segment_set)[i]->roughness();
+            m_segment_cross_area_[i] = (*segment_set)[i]->crossArea();
+            m_segment_volume_[i] = (*segment_set)[i]->volume();
         }
 
-        // update the wellOps (m_wops)
+        // update the completion related information
+        // find the location of the well in wells
+        int index_well;
+        for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
+            if (m_well_name_ == std::string(wells->name[index_well])) {
+                break;
+            }
+        }
+
+        std::vector<int> temp_well_cell;
+        std::vector<double> temp_well_index;
+
+        if (index_well == wells->number_of_wells) {
+            throw std::runtime_error(" did not find the well  " + m_well_name_ + "\n");
+        } else {
+
+            m_well_type_ = wells->type[index_well];
+            m_well_controls_ = wells->ctrls[index_well];
+            m_number_of_phases_ = wells->number_of_phases;
+            m_comp_frac_.resize(m_number_of_phases_);
+            std::copy(wells->comp_frac + index_well * m_number_of_phases_,
+                      wells->comp_frac + (index_well + 1) * m_number_of_phases_, m_comp_frac_.begin());
+
+            int index_begin = wells->well_connpos[index_well];
+            int index_end = wells->well_connpos[index_well + 1];
+
+
+            for(int i = index_begin; i < index_end; ++i) {
+                // copy the WI and  well_cell_ informatin to m_well_index_ and m_well_cell_
+                // maybe also the depth of the perforations.
+                temp_well_cell.push_back(wells->well_cells[i]);
+                temp_well_index.push_back(wells->WI[i]);
+            }
+        }
+
+        std::vector<double> temp_perf_depth;
+        temp_perf_depth.resize(m_number_of_perforations_);
+
+        for (int i = 0; i < (int)completion_set->size(); ++i) {
+            int i_segment = completion_set->get(i)->getSegmentNumber();
+            // using the location of the segment in the array as the segment number/id.
+            // TODO: it can be helpful for output or postprocessing if we can keep the original number.
+            i_segment = segment_set->numberToLocation(i_segment);
+            m_segment_perforations_[i_segment].push_back(i);
+            temp_perf_depth[i] = completion_set->get(i)->getCenterDepth();
+        }
+
+        // reordering the perforation related informations
+        // so that the perforations belong to the same segment will be continuous
+        m_well_cell_.resize(m_number_of_perforations_);
+        m_well_index_.resize(m_number_of_perforations_);
+        m_perf_depth_.resize(m_number_of_perforations_);
+        m_segment_cell_.resize(m_number_of_segments_, -1);
+
+        int perf_count = 0;
+            for (int is = 0; is < m_number_of_segments_; ++is) {
+            // TODO: the grid cell related to a segment should be calculated based on the location
+            //       of the segment node.
+            //       As the current temporary solution, the grid cell related to a segment determined by the
+            //       first perforation cell related to the segment.
+            //       when no perforation is related to the segment, use it outlet segment's cell.
+            const int nperf = m_segment_perforations_[is].size();
+            if (nperf > 0) {
+                const int first_perf_number = m_segment_perforations_[is][0];
+                m_segment_cell_[is] = temp_well_cell[first_perf_number];
+                for (int iperf = 0; iperf < nperf; ++iperf) {
+                    const int perf_number = m_segment_perforations_[is][iperf];
+                    m_well_cell_[perf_count] = temp_well_cell[perf_number];
+                    m_well_index_[perf_count] = temp_well_index[perf_number];
+                    m_perf_depth_[perf_count] = temp_perf_depth[perf_number];
+                    m_segment_perforations_[is][iperf] = perf_count;
+                    ++perf_count;
+                }
+            } else {
+                // using the cell of its outlet segment
+                const int i_outlet_segment = m_outlet_segment_[is];
+                if (i_outlet_segment < 0) {
+                    assert(is == 0); // it must be the top segment
+                    OPM_THROW(std::logic_error, "Top segment is not related to any perforation, its related cell must be calculated based the location of its segment node, which is not implemented yet \n");
+                } else {
+                    if (m_well_cell_[i_outlet_segment] < 0) {
+                    OPM_THROW(std::logic_error, "The segment cell of its outlet segment is not determined yet, the current implementation does not support this \n");
+                    } else {
+                        m_segment_cell_[is] = m_segment_cell_[i_outlet_segment];
+                    }
+                }
+            }
+        }
+
+        assert(perf_count == m_number_of_perforations_);
+
+        // update m_inlet_segments_
+        // top segment does not have a outlet segment
+        for (int is = 1; is < m_number_of_segments_; ++is) {
+            const int index_outlet = m_outlet_segment_[is];
+            m_inlet_segments_[index_outlet].push_back(is);
+        }
+
+    }
+
+    void WellMultiSegment::initNonMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells) {
+
+        CompletionSetConstPtr completion_set = well->getCompletions(time_step);
+
+        m_is_multi_segment_ = false;
+        m_number_of_segments_ = 1;
+        m_comp_pressure_drop_ = WellSegment::H__;
+        m_multiphase_model_ = WellSegment::HO;
+
+        m_outlet_segment_.resize(m_number_of_segments_, -1);
+        m_segment_length_.resize(m_number_of_segments_, 0.);
+        m_segment_depth_.resize(m_number_of_segments_, 0.);
+        m_segment_internal_diameter_.resize(m_number_of_segments_, 0.);
+        m_segment_roughness_.resize(m_number_of_segments_, 0.);
+        m_segment_cross_area_.resize(m_number_of_segments_, 0.);
+        m_segment_volume_.resize(m_number_of_segments_, 0.);
+        m_segment_perforations_.resize(m_number_of_segments_);
+
+        // update the completion related information
+        int index_well;
+        for (index_well = 0; index_well < wells->number_of_wells; ++index_well) {
+            if (m_well_name_ == std::string(wells->name[index_well])) {
+                break;
+            }
+        }
+
+        if (index_well == wells->number_of_wells) {
+            throw std::runtime_error(" did not find the well  " + m_well_name_ + "\n");
+        } else {
+            m_well_type_ = wells->type[index_well];
+            m_well_controls_ = wells->ctrls[index_well];
+            m_number_of_phases_ = wells->number_of_phases;
+            // set the segment depth to be the bhp reference depth
+            m_segment_depth_[0] = wells->depth_ref[index_well];
+            m_comp_frac_.resize(m_number_of_phases_);
+            std::copy(wells->comp_frac + index_well * m_number_of_phases_,
+                      wells->comp_frac + (index_well + 1) * m_number_of_phases_, m_comp_frac_.begin());
+
+            int index_begin = wells->well_connpos[index_well];
+            int index_end = wells->well_connpos[index_well + 1];
+            m_number_of_perforations_ = index_end - index_begin;
+
+            for(int i = index_begin; i < index_end; ++i) {
+                m_well_cell_.push_back(wells->well_cells[i]);
+                m_well_index_.push_back(wells->WI[i]);
+            }
+            m_segment_cell_.resize(1, -1);
+            m_segment_cell_[0] = m_well_cell_[0];
+        }
+
+        // TODO: not sure if we need the perf_depth_.
+        m_perf_depth_.resize(m_number_of_perforations_, 0.);
+        m_segment_perforations_[0].resize(m_number_of_perforations_);
+
+        for (int i = 0; i < m_number_of_perforations_; ++i) {
+            m_segment_perforations_[0][i] = i;
+            m_perf_depth_[i] = completion_set->get(i)->getCenterDepth();
+        }
+
+        m_inlet_segments_.resize(m_number_of_segments_);
+    }
+
+    void WellMultiSegment::updateWellOps() {
         m_wops_.s2p = M(m_number_of_perforations_, m_number_of_segments_);
         m_wops_.p2s = M(m_number_of_segments_, m_number_of_perforations_);
-
 
         typedef Eigen::Triplet<double> Tri;
 

@@ -101,7 +101,9 @@ namespace Opm
     private:
         // for the moment, we use the information from wells.
         // TODO: remove the dependency on wells from opm-core.
-        void init(WellConstPtr well, size_t time_step, const Wells* wells);
+        void initMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells);
+        void initNonMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells);
+        void updateWellOps();
 
     private:
         // name of the well
