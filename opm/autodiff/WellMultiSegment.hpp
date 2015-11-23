@@ -51,43 +51,88 @@ namespace Opm
         typedef Eigen::Array<double, Eigen::Dynamic, 1> V;
         typedef Eigen::SparseMatrix<double> M;
 
+        /// Constructor of WellMultiSegment
+        /// \param[in]       well information from EclipseState
+        /// \param[in]       current time step
+        /// \param[in[       pointer to Wells structure, to be removed eventually
         WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells);
 
+        /// Well name.
         const std::string& name() const;
+
+        /// Flag indicating if the well is a multi-segment well.
         bool isMultiSegmented() const;
+
+        /// Number of the perforations.
         int numberOfPerforations() const;
+
+        /// Number of the segments.
         int numberOfSegments() const;
+
+        /// Components of the pressure drop invloved.
+        /// HFA Hydrostatic + friction + acceleration
+        /// HF- Hydrostatic + friction
+        /// H-- Hydrostatic only.
         std::string compPressureDrop() const;
 
+        /// Well control.
         const WellControls* wellControls() const;
+
+        /// Component fractions for each well.
         const std::vector<double>& compFrac() const;
 
+        /// Number of phases.
         int numberOfPhases() const;
 
+        /// Well type.
         WellType wellType() const;
+
+        /// Well productivity index.
         const std::vector<double>& wellIndex() const;
+
+        /// Depth of the perforations.
         const std::vector<double>& perfDepth() const;
+
+        /// Indices of the grid blocks that perforations are completed in.
         const std::vector<int>& wellCells() const;
+
+        /// Indices of the gird blocks that segments locate at.
         const std::vector<int>& segmentCells() const;
+
+        /// Outlet segments, a segment (except top segment) can only have one outlet segment.
+        /// For top segment, its outlet segments is -1 always, which means no outlet segment for top segment.
         const std::vector<int>& outletSegment() const;
+
+        /// Inlet segments. a segment can have more than one inlet segments.
         const std::vector<std::vector<int>>& inletSegments() const;
+
+        /// The length of the segment nodes down the wellbore from the reference point.
         const std::vector<double>& segmentLength() const;
+
+        /// The depth of the segment nodes.
         const std::vector<double>& segmentDepth() const;
+
+        /// Tubing internal diameter.
         const std::vector<double>& segmentDiameter() const;
+
+        /// Cross-sectional area.
         const std::vector<double>& segmentCrossArea() const;
+
+        /// Effective absolute roughness of the tube.
         const std::vector<double>& segmentRoughness() const;
+
+        /// Volume of segment.
         const std::vector<double>& segmentVolume() const;
+
+        /// Perforations related to each segment.
         const std::vector<std::vector<int>>& segmentPerforations() const;
 
+        /// Struct for the well operator matrices.
+        /// All the operator matrics only apply to the one specifi well.
         struct WellOps {
             M s2p;              // segment -> perf (scatter)
             M p2s;              // perf -> segment (gather)
             M p2s_average;      // perf -> segment (avarage)
-            // M w2p;              // well -> perf (scatter)
-            // M p2w;              // perf - > well (gather)
-                                // but since only one well, so it is just an arrary
-                                // not needed now.
-            // M w2s;              // well -> segment (scatter)
             M s2s_gather;       // segment -> segment (in an accumlative way)
                                 // means the outlet segments will gather all the contribution
                                 // from all the inlet segments in a recurisive way
@@ -96,6 +141,7 @@ namespace Opm
             M s2s_outlet;      // segment -> its outlet segment
         };
 
+        /// Well operator matrics
         const WellOps& wellOps() const;
 
     private:
