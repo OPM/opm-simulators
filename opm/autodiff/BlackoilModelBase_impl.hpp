@@ -978,6 +978,7 @@ namespace detail {
         trans_all << transi, trans_nnc;
 
         const std::vector<ADB> kr = asImpl().computeRelPerm(state);
+#pragma omp parallel for schedule(static)
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
