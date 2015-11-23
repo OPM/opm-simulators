@@ -32,7 +32,6 @@
 #include <map>
 #include <algorithm>
 #include <array>
-#include <iostream>
 
 namespace Opm
 {
