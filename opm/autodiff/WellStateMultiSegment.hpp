@@ -68,29 +68,27 @@ namespace Opm
         void init(const std::vector<WellMultiSegmentConstPtr>& wells, const ReservoirState& state, const PrevWellState& prevState)
         {
             const int nw = wells.size();
+            nseg_ = 0;
+            nperf_ = 0;
             if (nw == 0) {
+                perfPhaseRates().clear();
+                perfPress().clear();
+                segphaserates_.clear();
+                segpress_.clear();
                 return;
             }
 
             const int np = wells[0]->numberOfPhases(); // number of the phases
 
-            int nperf = 0; // the number of the perforations
-            int nseg = 0; // the nubmer of the segments
-
             for (int iw = 0; iw < nw; ++iw) {
-                nperf += wells[iw]->numberOfPerforations();
-                nseg += wells[iw]->numberOfSegments();
+                nperf_ += wells[iw]->numberOfPerforations();
+                nseg_ += wells[iw]->numberOfSegments();
             }
 
             bhp().resize(nw);
             thp().resize(nw);
             top_segment_loc_.resize(nw);
             temperature().resize(nw, 273.15 + 20); // standard temperature for now
-
-            // deciding to add the following variables temporarily
-            // TODO: making it better later
-            nseg_ = nseg;
-            nperf_ = nperf;
 
             wellRates().resize(nw * np, 0.0);
 
@@ -106,17 +104,10 @@ namespace Opm
             int start_segment = 0;
             int start_perforation = 0;
 
-            perfPhaseRates().clear();
-            perfPhaseRates().resize(nperf * np, 0.0);
-
-            perfPress().clear();
-            perfPress().resize(nperf, -1.0e100);
-
-            segphaserates_.clear();
-            segphaserates_.resize(nseg * np, 0.0);
-
-            segpress_.clear();
-            segpress_.resize(nseg, -1.0e100);
+            perfPhaseRates().resize(nperf_ * np, 0.0);
+            perfPress().resize(nperf_, -1.0e100);
+            segphaserates_.resize(nseg_ * np, 0.0);
+            segpress_.resize(nseg_, -1.0e100);
 
 
             for (int w = 0; w < nw; ++w) {
