@@ -351,11 +351,6 @@ namespace Opm
         std::vector<double> segpress_;
         // phase rates for the segments
         std::vector<double> segphaserates_;
-        // TODO: MIGHT NOT USE THE FOLLOWING VARIABLES AT THE
-        // fractions for each segments (W, O, G)
-        std::vector<double> segphasefrac_;
-        // total flow rates for each segments, G_T
-        std::vector<double> segtotalrate_;
 
         // the location of the top segments within the whole segment list
         // it is better in the Wells class if we have a class instead of
