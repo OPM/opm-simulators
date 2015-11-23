@@ -99,6 +99,7 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
 #include <memory>
 #include <algorithm>
 #include <cstdlib>
@@ -369,7 +370,7 @@ try
     // create output writer after grid is distributed, otherwise the parallel output
     // won't work correctly since we need to create a mapping from the distributed to
     // the global view
-    Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu, new_props.permeability());
+    Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu, new_props.permeability() );
 
     // Solver for Newton iterations.
     std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
