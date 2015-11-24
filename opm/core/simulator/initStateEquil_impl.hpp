@@ -313,7 +313,6 @@ namespace Opm
                    const CellRange&                    cells,
                    std::vector<double>&                p    )
             {
-                const int nd = UgGridHelpers::dimensions(G);
 
                 enum { up = 0, down = 1 };
 
@@ -324,7 +323,7 @@ namespace Opm
                 {
                     assert (c < p.size());
 
-                    const double z = UgGridHelpers::cellCentroidCoordinate(G, *ci, nd-1);
+                    const double z = UgGridHelpers::cellCenterDepth(G, *ci);
                     p[c] = (z < split) ? f[up](z) : f[down](z);
                 }
             }
@@ -703,10 +702,8 @@ namespace Opm
                 double sw = 0.0;
                 if (water) {
                     if (isConstPc(props,waterpos,cell)){
-                        const int nd = UgGridHelpers::dimensions(G);
-                        const double cellDepth  =  UgGridHelpers::cellCentroidCoordinate(G,
-                                                                                         cell,
-                                                                                         nd-1);
+                        const double cellDepth  =  UgGridHelpers::cellCenterDepth(G,
+                                                                            cell);
                         sw = satFromDepth(props,cellDepth,reg.zwoc(),waterpos,cell,false);
                         phase_saturations[waterpos][local_index] = sw;
                     }
@@ -725,10 +722,8 @@ namespace Opm
                 double sg = 0.0;
                 if (gas) {
                     if (isConstPc(props,gaspos,cell)){
-                        const int nd = UgGridHelpers::dimensions(G);
-                        const double cellDepth  = UgGridHelpers::cellCentroidCoordinate(G,
-                                                                                        cell,
-                                                                                        nd-1);
+                        const double cellDepth  = UgGridHelpers::cellCenterDepth(G,
+                                                                                        cell);
                         sg = satFromDepth(props,cellDepth,reg.zgoc(),gaspos,cell,true);
                         phase_saturations[gaspos][local_index] = sg;
                     }
@@ -829,7 +824,7 @@ namespace Opm
             std::vector<double> rs(cells.size());
             int count = 0;
             for (auto it = cells.begin(); it != cells.end(); ++it, ++count) {
-                const double depth = UgGridHelpers::cellCentroidCoordinate(grid, *it, 2);
+                const double depth = UgGridHelpers::cellCenterDepth(grid, *it);
                 rs[count] = rs_func(depth, oil_pressure[count], temperature[count], gas_saturation[count]);
             }
             return rs;
