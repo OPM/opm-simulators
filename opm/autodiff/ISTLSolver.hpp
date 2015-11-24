@@ -26,6 +26,7 @@
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/autodiff/ParallelOverlappingILU0.hpp>
+#include <opm/autodiff/ParallelILU0.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/common/Exceptions.hpp>
@@ -456,10 +457,10 @@ namespace Opm
         // including 2.5.0
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
 #else
-        typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
-                                                                           Matrix::block_type::rows,
-                                                                           Matrix::block_type::cols> >,
-                                        Vector, Vector, Comm> ParPreconditioner;
+        typedef  ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
+                                                                Matrix::block_type::rows,
+                                                                Matrix::block_type::cols> >,
+                             Vector, Vector, Comm> ParPreconditioner;
 #endif
         template <class Operator>
         std::unique_ptr<ParPreconditioner>
