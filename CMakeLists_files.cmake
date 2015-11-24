@@ -85,6 +85,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
   tests/test_rateconverter.cpp
+	tests/test_parallel_ilu.cpp
   tests/test_span.cpp
   tests/test_syntax.cpp
   tests/test_scalar_mult.cpp
@@ -197,6 +198,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/LinearisedBlackoilResidual.hpp
   opm/autodiff/ParallelDebugOutput.hpp
   opm/autodiff/ParallelOverlappingILU0.hpp
+	opm/autodiff/ParallelILU0.hpp
   opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
   opm/autodiff/RateConverter.hpp
   opm/autodiff/RedistributeDataHandles.hpp
