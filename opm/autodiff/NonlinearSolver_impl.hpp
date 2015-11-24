@@ -103,11 +103,11 @@ namespace Opm
             }
             linIters += report.linear_iterations;
             ++iteration;
-        } while ( (!converged && (iteration <= maxIter())) || (minIter() > iteration));
+        } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
         if (!converged) {
             if (model_->terminalOutputEnabled()) {
-                std::cerr << "WARNING: Failed to compute converged solution in " << iteration << " iterations." << std::endl;
+                std::cerr << "WARNING: Failed to compute converged solution in " << iteration - 1 << " iterations." << std::endl;
             }
             return -1; // -1 indicates that the solver has to be restarted
         }

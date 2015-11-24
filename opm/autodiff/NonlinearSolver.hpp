@@ -113,6 +113,18 @@ namespace Opm {
         /// The step-change size for the relaxation factor.
         double relaxIncrement() const    { return param_.relax_increment_; }
 
+        /// The relaxation type (DAMPEN or SOR).
+        enum RelaxType relaxType() const { return param_.relax_type_; }
+
+        /// The relaxation relative tolerance.
+        double relaxRelTol() const       { return param_.relax_rel_tol_; }
+
+        /// The maximum number of nonlinear iterations allowed.
+        double maxIter() const           { return param_.max_iter_; }
+
+        /// The minimum number of nonlinear iterations allowed.
+        double minIter() const           { return param_.min_iter_; }
+
     private:
         // ---------  Data members  ---------
         SolverParameters param_;
@@ -121,12 +133,6 @@ namespace Opm {
         unsigned int linearIterations_;
         unsigned int nonlinearIterationsLast_;
         unsigned int linearIterationsLast_;
-
-        // ---------  Private methods  ---------
-        enum RelaxType relaxType() const { return param_.relax_type_; }
-        double relaxRelTol() const       { return param_.relax_rel_tol_; }
-        double maxIter() const           { return param_.max_iter_; }
-        double minIter() const           { return param_.min_iter_; }
     };
 } // namespace Opm
 
