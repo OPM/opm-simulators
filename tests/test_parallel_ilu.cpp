@@ -29,6 +29,7 @@
 #include <dune/istl/preconditioners.hh>
 
 #include <dune/common/version.hh>
+
 // MPI header
 #if HAVE_MPI
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
@@ -280,6 +281,55 @@ struct LocalExtractor
     }
 };
 
+struct ParallelGlobalLinearSystemPermutation
+    : public Opm::Detail::LinearSystemPermutation
+{
+    ParallelGlobalLinearSystemPermutation(std::size_t n, std::size_t procs)
+        : Opm::Detail::LinearSystemPermutation(n*procs*n)
+    {
+        std::size_t N = n*procs;
+        // interior nodes
+        std::size_t new_index = 0;
+        for(std::size_t p = 0; p < procs; ++p)
+        {
+            for(std::size_t j=0; j< n; ++j)
+            {
+                std::size_t end   = p * n + n - 1;
+                std::size_t start = p * n + 1;
+                if ( p == 0) start=0;
+                if ( p == procs - 1 ) end = (p + 1) * n;
+                for(std::size_t i = start; i < end; ++i, ++new_index)
+                {
+                    row_permutation_[ j * N + i ] = new_index;
+                }
+            }
+        }
+        if ( n > 1)
+        {
+            // upper interface
+            for(std::size_t p = 0; p < procs - 1; ++p)
+            {
+                std::size_t i = p * n + n - 1;
+                for(std::size_t j=0; j< n; ++j, ++new_index)
+                {
+                    row_permutation_[ j * N + i ] = new_index;
+                }
+            }
+        }
+        // lower interface
+        for(std::size_t p = 1; p < procs; ++p)
+        {
+            std::size_t i = p*n;
+            for(std::size_t j=0; j< n; ++j, ++new_index)
+            {
+                row_permutation_[ j * N + i ] = new_index;
+            }
+        }
+    }
+};
+
+
+
 struct GlobalLocalChecker
 {
     GlobalLocalChecker(std::string str)
@@ -332,9 +382,13 @@ void test_parallel_ilu0()
         setupAnisotropic2d<BCRSMat>(N, comm.indexSet(), region, 1);
     std::unique_ptr<BCRSMat> global_mat = setupAnisotropic2d<BCRSMat>(N, self_comm.indexSet(),
                                                                       global_region, 1);
+    ParallelGlobalLinearSystemPermutation permutation(N, size);
+
+    std::unique_ptr<BCRSMat> global_mat_permuted = permutation.createPermutedMatrix(*global_mat);
+
     comm.remoteIndices().template rebuild<false>();
     Opm::ParallelILU0<BCRSMat, Vector, Vector, Communication> pilu0(*mat, comm, 1.0);
-    Dune::SeqILU0<BCRSMat, Vector, Vector> ilu0(*global_mat, 1.0);
+    Dune::SeqILU0<BCRSMat, Vector, Vector> ilu0(*global_mat_permuted, 1.0);
 
     std::random_device rd;
     std::default_random_engine e1(rd());
@@ -344,14 +398,18 @@ void test_parallel_ilu0()
                   [&] (){
                       return typename Vector::block_type
                           (static_cast<double>(uniform_dist(rd)));});
+    Vector permuted_x(global_unknowns), permuted_b(global_unknowns);
     global_x = 0.0;
 
     Vector x(mat->N()), b(mat->N());
     processValuesFromGlobalVector(b, global_b, region, N, LocalExtractor());
     processValuesFromGlobalVector(b, global_b, region, N, GlobalLocalChecker("extracted"));
-    ilu0.apply(global_x, global_b);
+    permutation.permutateOrder(global_b, permuted_b);
+
+    ilu0.apply(permuted_x, permuted_b);
     pilu0.apply(x, b);
-    processValuesFromGlobalVector(b, global_b, region, N, GlobalLocalChecker("computed"));
+    permutation.permutateOrderBackwards(global_x, permuted_x);
+    processValuesFromGlobalVector(x, global_x, region, N, GlobalLocalChecker("computed"));
 
 }
 void test_parallel_ilu0_1()
