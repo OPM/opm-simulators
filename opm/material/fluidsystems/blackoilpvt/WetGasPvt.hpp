@@ -88,7 +88,9 @@ public:
             // TODO (?): the molar mass of the components can possibly specified
             // explicitly in the deck.
             setMolarMasses(regionIdx, MO, MG, MW);
+        }
 
+        for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtgTable = pvtgTables[regionIdx];
 
             const auto saturatedTable = pvtgTable.getOuterTable();
@@ -137,9 +139,9 @@ public:
             invSatGasB.setXYContainers(saturatedTable->getPressureColumn(), invSatGasBArray);
             invSatGasBMu.setXYContainers(saturatedTable->getPressureColumn(), invSatGasBMuArray);
 
-            // make sure to have at least two sample points per R_v value
+            // make sure to have at least two sample points per gas pressure value
             for (size_t xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
-                // a single sample point is definitely needed
+               // a single sample point is definitely needed
                 assert(invGasB.numY(xIdx) > 0);
 
                 // everything is fine if the current table has two or more sampling points
@@ -162,35 +164,66 @@ public:
                               "PVTG tables are invalid: The last table must exhibit at least one "
                               "entry for undersaturated gas!");
 
-                // extend the current table using the master table. this is done by assuming
-                // that the current table exhibits the same ratios of the gas formation
-                // volume factors and viscosities for identical pressure rations as in the
-                // master table.
-                const auto masterTable = pvtgTable.getInnerTable(masterTableIdx);
-                const auto curTable = pvtgTable.getInnerTable(xIdx);
-                for (size_t newRowIdx = 1; newRowIdx < masterTable->numRows(); ++ newRowIdx) {
-                    Scalar alphaRv =
-                        masterTable->getOilSolubilityColumn()[newRowIdx]
-                        / masterTable->getOilSolubilityColumn()[0];
-
-                    Scalar alphaBg =
-                        masterTable->getGasFormationFactorColumn()[newRowIdx]
-                        / masterTable->getGasFormationFactorColumn()[0];
-
-                    Scalar alphaMug =
-                        masterTable->getGasViscosityColumn()[newRowIdx]
-                        / masterTable->getGasViscosityColumn()[0];
-
-                    Scalar newRv = curTable->getOilSolubilityColumn()[0]*alphaRv;
-                    Scalar newBg = curTable->getGasFormationFactorColumn()[0]*alphaBg;
-                    Scalar newMug = curTable->getGasViscosityColumn()[0]*alphaMug;
-
-                    invGasB.appendSamplePoint(xIdx, newRv, 1.0/newBg);
-                    gasMu.appendSamplePoint(xIdx, newRv, newMug);
-                }
+                // extend the current table using the master table.
+                extendPvtgTable_(regionIdx,
+                                 xIdx,
+                                 *pvtgTable.getInnerTable(xIdx),
+                                 *pvtgTable.getInnerTable(masterTableIdx));
             }
         }
     }
+
+private:
+    void extendPvtgTable_(int regionIdx,
+                          int xIdx,
+                          const PvtgInnerTable& curTable,
+                          const PvtgInnerTable& masterTable)
+    {
+        std::vector<Scalar> RvArray(curTable.getOilSolubilityColumn());
+        std::vector<Scalar> gasBArray(curTable.getGasFormationFactorColumn());
+        std::vector<Scalar> gasMuArray(curTable.getGasViscosityColumn());
+
+        auto& invGasB = inverseGasB_[regionIdx];
+        auto& gasMu = gasMu_[regionIdx];
+
+        for (unsigned newRowIdx = 1; newRowIdx < masterTable.numRows(); ++ newRowIdx) {
+            // compute the gas pressure for the new entry
+            Scalar diffRv =
+                masterTable.getOilSolubilityColumn()[newRowIdx]
+                - masterTable.getOilSolubilityColumn()[newRowIdx - 1];
+            Scalar newRv = RvArray.back() + diffRv;
+
+            // calculate the compressibility of the master table
+            Scalar B1 = masterTable.getGasFormationFactorColumn()[newRowIdx];
+            Scalar B2 = masterTable.getGasFormationFactorColumn()[newRowIdx - 1];
+            Scalar x = (B1 - B2)/( (B1 + B2)/2.0 );
+
+            // calculate the gas formation volume factor which exhibits the same
+            // "compressibility" for the new value of Rv
+            Scalar newBg = gasBArray.back()*(1.0 + x/2.0)/(1.0 - x/2.0);
+
+            // calculate the "viscosibility" of the master table
+            Scalar mu1 = masterTable.getGasViscosityColumn()[newRowIdx];
+            Scalar mu2 = masterTable.getGasViscosityColumn()[newRowIdx - 1];
+            Scalar xMu = (mu1 - mu2)/( (mu1 + mu2)/2.0 );
+
+            // calculate the gas formation volume factor which exhibits the same
+            // compressibility for the new pressure
+            Scalar newMug = gasMuArray.back()*(1.0 + xMu/2)/(1.0 - xMu/2.0);
+
+            // append the new values to the arrays which we use to compute the additional
+            // values ...
+            RvArray.push_back(newRv);
+            gasBArray.push_back(newBg);
+            gasMuArray.push_back(newMug);
+
+            // ... and register them with the internal table objects
+            invGasB.appendSamplePoint(xIdx, newRv, 1.0/newBg);
+            gasMu.appendSamplePoint(xIdx, newRv, newMug);
+        }
+    }
+
+public:
 #endif // HAVE_OPM_PARSER
 
     void setNumRegions(size_t numRegions)
@@ -388,16 +421,19 @@ public:
 
                 assert(gasMu.numY(pIdx) == invGasB.numY(pIdx));
 
-                satPressuresArray.push_back(gasMu.xAt(pIdx));
-                invSatGasBArray.push_back(invGasB.valueAt(pIdx, 0));
-                invSatGasBMuArray.push_back(invGasB.valueAt(pIdx, 0)*1.0/gasMu.xAt(pIdx));
-
                 size_t numRv = gasMu.numY(pIdx);
                 for (size_t rvIdx = 0; rvIdx < numRv; ++rvIdx)
                     invGasBMu.appendSamplePoint(pIdx,
                                                 gasMu.yAt(pIdx, rvIdx),
-                                                invGasB.valueAt(pIdx, rvIdx)*
-                                                1/gasMu.valueAt(pIdx, rvIdx));
+                                                invGasB.valueAt(pIdx, rvIdx)
+                                                / gasMu.valueAt(pIdx, rvIdx));
+
+                // the sampling points in UniformXTabulated2DFunction are always sorted
+                // in ascending order. Thus, the value for saturated gas is the last one
+                // (i.e., the one with the largest Rv value)
+                satPressuresArray.push_back(gasMu.xAt(pIdx));
+                invSatGasBArray.push_back(invGasB.valueAt(pIdx, numRv - 1));
+                invSatGasBMuArray.push_back(invGasBMu.valueAt(pIdx, numRv - 1));
             }
 
             invSatGasB.setXYContainers(satPressuresArray, invSatGasBArray);

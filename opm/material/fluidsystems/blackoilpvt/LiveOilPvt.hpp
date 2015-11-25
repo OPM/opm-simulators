@@ -133,8 +133,8 @@ public:
             gasDissolutionFac.setXYContainers(saturatedTable->getPressureColumn(),
                                               saturatedTable->getGasSolubilityColumn());
 
-
-            // make sure to have at least two sample points per mole fraction
+            updateSaturationPressureSpline_(regionIdx);
+            // make sure to have at least two sample points per Rs value
             for (unsigned xIdx = 0; xIdx < invOilB.numX(); ++xIdx) {
                 // a single sample point is definitely needed
                 assert(invOilB.numY(xIdx) > 0);
@@ -159,35 +159,66 @@ public:
                               "PVTO tables are invalid: The last table must exhibit at least one "
                               "entry for undersaturated oil!");
 
-                // extend the current table using the master table. this is done by assuming
-                // that the current table exhibits the same ratios of the oil formation
-                // volume factors and viscosities for identical pressure rations as in the
-                // master table.
-                const auto masterTable = pvtoTable.getInnerTable(masterTableIdx);
-                const auto curTable = pvtoTable.getInnerTable(xIdx);
-                for (unsigned newRowIdx = 1; newRowIdx < masterTable->numRows(); ++ newRowIdx) {
-                    Scalar alphaPo =
-                        masterTable->getPressureColumn()[newRowIdx]
-                        / masterTable->getPressureColumn()[0];
-
-                    Scalar alphaBo =
-                        masterTable->getOilFormationFactorColumn()[newRowIdx]
-                        / masterTable->getOilFormationFactorColumn()[0];
-
-                    Scalar alphaMuo =
-                        masterTable->getOilViscosityColumn()[newRowIdx]
-                        / masterTable->getOilViscosityColumn()[0];
-
-                    Scalar newPo = curTable->getPressureColumn()[0]*alphaPo;
-                    Scalar newBo = curTable->getOilFormationFactorColumn()[0]*alphaBo;
-                    Scalar newMuo = curTable->getOilViscosityColumn()[0]*alphaMuo;
-
-                    invOilB.appendSamplePoint(xIdx, newPo, 1.0/newBo);
-                    oilMu.appendSamplePoint(xIdx, newPo, newMuo);
-                }
+                // extend the current table using the master table.
+                extendPvtoTable_(regionIdx,
+                                 xIdx,
+                                 *pvtoTable.getInnerTable(xIdx),
+                                 *pvtoTable.getInnerTable(masterTableIdx));
             }
         }
     }
+
+private:
+    void extendPvtoTable_(int regionIdx,
+                          int xIdx,
+                          const PvtoInnerTable& curTable,
+                          const PvtoInnerTable& masterTable)
+    {
+        std::vector<Scalar> pressuresArray(curTable.getPressureColumn());
+        std::vector<Scalar> oilBArray(curTable.getOilFormationFactorColumn());
+        std::vector<Scalar> oilMuArray(curTable.getOilViscosityColumn());
+
+        auto& invOilB = inverseOilBTable_[regionIdx];
+        auto& oilMu = oilMuTable_[regionIdx];
+
+        for (unsigned newRowIdx = 1; newRowIdx < masterTable.numRows(); ++ newRowIdx) {
+            // compute the oil pressure for the new entry
+            Scalar diffPo =
+                masterTable.getPressureColumn()[newRowIdx]
+                - masterTable.getPressureColumn()[newRowIdx - 1];
+            Scalar newPo = pressuresArray.back() + diffPo;
+
+            // calculate the compressibility of the master table
+            Scalar B1 = masterTable.getOilFormationFactorColumn()[newRowIdx];
+            Scalar B2 = masterTable.getOilFormationFactorColumn()[newRowIdx - 1];
+            Scalar x = (B1 - B2)/( (B1 + B2)/2.0 );
+
+            // calculate the oil formation volume factor which exhibits the same
+            // compressibility for the new pressure
+            Scalar newBo = oilBArray.back()*(1.0 + x/2.0)/(1.0 - x/2.0);
+
+            // calculate the "viscosibility" of the master table
+            Scalar mu1 = masterTable.getOilViscosityColumn()[newRowIdx];
+            Scalar mu2 = masterTable.getOilViscosityColumn()[newRowIdx - 1];
+            Scalar xMu = (mu1 - mu2)/( (mu1 + mu2)/2.0 );
+
+            // calculate the oil formation volume factor which exhibits the same
+            // compressibility for the new pressure
+            Scalar newMuo = oilMuArray.back()*(1.0 + xMu/2)/(1.0 - xMu/2.0);
+
+            // append the new values to the arrays which we use to compute the additional
+            // values ...
+            pressuresArray.push_back(newPo);
+            oilBArray.push_back(newBo);
+            oilMuArray.push_back(newMuo);
+
+            // ... and register them with the internal table objects
+            invOilB.appendSamplePoint(xIdx, newPo, 1.0/newBo);
+            oilMu.appendSamplePoint(xIdx, newPo, newMuo);
+        }
+    }
+
+public:
 #endif // HAVE_OPM_PARSER
 
     void setNumRegions(size_t numRegions)
@@ -381,16 +412,19 @@ public:
 
                 assert(oilMu.numY(rsIdx) == invOilB.numY(rsIdx));
 
-                satPressuresArray.push_back(oilMu.yAt(rsIdx, 0));
-                invSatOilBArray.push_back(invOilB.valueAt(rsIdx, 0));
-                invSatOilBMuArray.push_back(invOilB.valueAt(rsIdx, 0)*1.0/oilMu.valueAt(rsIdx, 0));
-
                 size_t numPressures = oilMu.numY(rsIdx);
                 for (unsigned pIdx = 0; pIdx < numPressures; ++pIdx)
                     invOilBMu.appendSamplePoint(rsIdx,
                                                 oilMu.yAt(rsIdx, pIdx),
-                                                invOilB.valueAt(rsIdx, pIdx)*
-                                                1/oilMu.valueAt(rsIdx, pIdx));
+                                                invOilB.valueAt(rsIdx, pIdx)
+                                                / oilMu.valueAt(rsIdx, pIdx));
+
+                // the sampling points in UniformXTabulated2DFunction are always sorted
+                // in ascending order. Thus, the value for saturated oil is the first one
+                // (i.e., the one for the lowest pressure value)
+                satPressuresArray.push_back(oilMu.yAt(rsIdx, 0));
+                invSatOilBArray.push_back(invOilB.valueAt(rsIdx, 0));
+                invSatOilBMuArray.push_back(invOilBMu.valueAt(rsIdx, 0));
             }
 
             invSatOilB.setXYContainers(satPressuresArray, invSatOilBArray);
