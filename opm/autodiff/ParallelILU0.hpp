@@ -90,15 +90,12 @@ private:
     RowIterator end_;
 };
 
-class InteriorInterfacePermutation
+class LinearSystemPermutation
 {
 public:
-    template<class M, class C>
-    InteriorInterfacePermutation(const M& A, const C& comm)
-        : process_mapping_(comm.communicator())
-    {
-        computeRowPermutation(A, comm);
-    }
+    LinearSystemPermutation(std::size_t size)
+        : row_permutation_(size, std::numeric_limits<std::size_t>::max())
+    {}
 
     template<class Y>
     void permutateOrder(const Y& d, Y& permuted_d)
@@ -119,6 +116,15 @@ public:
             {
                 v[ i ] [ j ] = w * permuted_v[ row_permutation_[i] ] [ j ];
             }
+        }
+    }
+
+    template<class X>
+    void permutateOrderBackwards(X& v, const X& permuted_v)
+    {
+        for ( std::size_t i = 0; i< row_permutation_.size(); ++i)
+        {
+            v[ i ] = permuted_v[ row_permutation_[i] ];
         }
     }
 
@@ -150,6 +156,27 @@ public:
         return row_permutation_[i];
     }
 
+    std::size_t size() const
+    {
+        return row_permutation_.size();
+    }
+protected:
+    /// \brief The permuted indices
+    std::vector<std::size_t> row_permutation_;
+};
+
+
+class InteriorInterfacePermutation
+    : public LinearSystemPermutation
+{
+public:
+    template<class M, class C>
+    InteriorInterfacePermutation(const M& A, const C& comm)
+        : LinearSystemPermutation(A.N()), process_mapping_(comm.communicator())
+    {
+        computeRowPermutation(A, comm);
+    }
+
     const std::array<std::size_t, 2>& interiorInterval() const
     {
         return interior_interval_;
@@ -165,16 +192,10 @@ public:
         return process_mapping_;
     }
 
-    std::size_t size() const
-    {
-        return row_permutation_.size();
-    }
-
 private:
     template<class M, class C>
     void computeRowPermutation(const M& A, const C& comm)
     {
-        row_permutation_.resize(A.N(), std::numeric_limits<std::size_t>::max());
         std::size_t interior_row_counter = 0;
         std::size_t interface_row_counter = 0;
         Dune::GlobalLookupIndexSet<typename C::ParallelIndexSet>
@@ -293,8 +314,6 @@ private:
     }
     // The mapping of the process onto an order
     Detail::IdProcessMap process_mapping_;
-    /// \brief The permuted indices
-    std::vector<std::size_t> row_permutation_;
     /// \brief Interval in which the indices of the interior are.
     std::array<std::size_t, 2> interior_interval_;
     /// \brief Interval in which the indices of the interface are.
@@ -902,4 +921,4 @@ private:
 };
 } // end namespace Opm
 #endif //HAVE_MPI
-#endif 
+#endif
