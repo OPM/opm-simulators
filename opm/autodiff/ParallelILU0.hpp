@@ -635,8 +635,8 @@ public:
         const auto& interface_interval = row_permutation_.interfaceInterval();
         row_permutation_.permutateOrder(d, permuted_d);
         forwardSolveRowInterval(permuted_v, permuted_d,
-                                interior_interval[0], interior_interval[0]);
-        receiveValuesFromLowerProcs(v);
+                                interior_interval[0], interior_interval[1]);
+        receiveValuesFromLowerProcs(permuted_v);
         forwardSolveRowInterval(permuted_v, permuted_d,
                                 interface_interval[0], interface_interval[1]);
         sendValuesToHigherProcs(permuted_v);
@@ -645,7 +645,7 @@ public:
                                  interface_interval[0], interface_interval[1]);
         sendValuesToLowerProcs(permuted_v);
         backwardSolveRowInterval(permuted_v,
-                                 interior_interval[0], interior_interval[0]);
+                                 interior_interval[0], interior_interval[1]);
         row_permutation_.permutateOrderBackwardsAndScale(v, permuted_v, w_);
     }
 
