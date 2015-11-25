@@ -334,14 +334,20 @@ struct GlobalLocalChecker
 {
     GlobalLocalChecker(std::string str)
         : str_(str)
-    {}
+    {
+        MPI_Comm_rank(MPI_COMM_WORLD, & rank_);
+    }
     template<class B>
     void operator()(B& b, const B& global_b, std::size_t local, std::size_t global)
     {
-        BOOST_CHECK_MESSAGE(b == global_b, " Value "<<str_<<" for global index"
-                            <<global<<" (local: "<<local<<" is inconsistent!");
+        bool is_same = (b - global_b).two_norm() < 1e-5;
+        BOOST_CHECK_MESSAGE(is_same, rank_<<": global index "<<global
+                            <<" "<<b<<" (local) != "
+                            <<global_b<<" (global), local index: "<<local
+                            <<" ("<<str_<<")!");
     }
     std::string str_;
+    int rank_;
 };
 
 template<class V, class T>
