@@ -647,6 +647,10 @@ public:
         backwardSolveRowInterval(permuted_v,
                                  interior_interval[0], interior_interval[1]);
         row_permutation_.permutateOrderBackwardsAndScale(v, permuted_v, w_);
+        // v is not yet consistent as the overlap/copy region shared owner
+        // processes with a lower label is not up to date.
+        comm_.copyOwnerToAll(v,v); // We send more than we need here.
+        // \todo use asynchronous sends to higher / receives from lower procs.
     }
 
     /*!
