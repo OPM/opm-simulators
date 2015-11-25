@@ -78,7 +78,6 @@ list (APPEND TEST_DATA_FILES
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/flow.cpp
-	examples/flow_multisegment_mpi.cpp
 	examples/flow_multisegment.cpp
 	examples/flow_solvent.cpp
 	examples/sim_2p_incomp_ad.cpp
