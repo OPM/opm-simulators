@@ -400,11 +400,16 @@ void test_parallel_ilu0()
     std::default_random_engine e1(rd());
     std::uniform_int_distribution<int> uniform_dist(1, 10);
     Vector global_x(global_unknowns), global_b(global_unknowns);
-    std::generate(global_b.begin(), global_b.end(),
-                  [&] (){
-                      return typename Vector::block_type
-                          (static_cast<double>(uniform_dist(rd)));});
     Vector permuted_x(global_unknowns), permuted_b(global_unknowns);
+
+    if( comm.communicator().rank() == 0 )
+    {
+        std::generate(global_b.begin(), global_b.end(),
+                      [&] (){
+                          return typename Vector::block_type
+                              (static_cast<double>(uniform_dist(rd)));});
+    }
+    comm.communicator().broadcast(&(global_b[0]), global_b.size(), 0);
     global_x = 0.0;
 
     Vector x(mat->N()), b(mat->N());
