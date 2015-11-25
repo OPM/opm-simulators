@@ -744,22 +744,11 @@ private:
                     hint = found; // we have found->global() <= datum.second !
                     if( found->global() == datum.second )
                     {
+                        // This columns is in our subdomain.
                         // The index set knows nothing about the permutation.
-                        // therefore we need to apply the permutation to the
+                        // Therefore we need to apply the permutation to the
                         // local index.
                         row[ row_permutation_[found->local()] ] = datum.first;
-                    }
-                    else
-                    {
-                        // We have discarded all matrix row entries to unknows
-                        // that are neither in our owner/interior or our
-                        // ghost/copy region. Therefore data contains all
-                        // connection/columns that are in the region we store.
-                        // If we cannot find a global index than this is an error
-                        DUNE_THROW(Dune::RangeError, "Process is missing a"
-                                   <<" connection from local index "<<i
-                                   <<" to global index "<<datum.second
-                                   <<". Please check the matrix or index set.");
                     }
                 }
             }
