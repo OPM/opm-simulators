@@ -119,7 +119,20 @@ namespace Opm
                 if (wells_ecl[i]->getStatus(timer.currentStepNum()) == WellCommon::SHUT) {
                     continue;
                 }
-                wells_multisegment.push_back(std::make_shared<WellMultiSegment>(wells_ecl[i], timer.currentStepNum(), wells));
+                // checking if the well can be found in the wells
+                const std::string& well_name = wells_ecl[i]->name();
+                // number of wells in wells
+                const int nw_wells = wells->number_of_wells;
+                int index_well;
+                for (index_well = 0; index_well < nw_wells; ++index_well) {
+                    if (well_name == std::string(wells->name[index_well])) {
+                        break;
+                    }
+                }
+
+                if (index_well != nw_wells) { // found in the wells
+                    wells_multisegment.push_back(std::make_shared<WellMultiSegment>(wells_ecl[i], timer.currentStepNum(), wells));
+                }
             }
 
             well_state.init(wells_multisegment, state, prev_well_state);
