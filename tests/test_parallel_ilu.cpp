@@ -360,7 +360,7 @@ T processValuesFromGlobalVector(V& v, const V& global_v,
         for ( std::size_t x = region.overlap_start; x < region.overlap_end; ++x )
         {
             std::size_t local = y * region.no_unknowns + x - region.overlap_start;
-            std::size_t global = y * n + x;
+            std::size_t global = y * region.N + x;
             processor(v[local], global_v[global], local, global);
         }
     }
@@ -379,9 +379,9 @@ void test_parallel_ilu0()
     Communication comm(MPI_COMM_WORLD), self_comm(MPI_COMM_SELF);
     const int    N = 3;
     const int size = comm.communicator().size();
-    const int global_unknowns = size * 5 * 5;
+    const int global_unknowns = size * N * N;
     const OneDRegionInformation region(N, comm.communicator());
-    const OneDRegionInformation global_region(N, comm.communicator());
+    const OneDRegionInformation global_region(size * N, self_comm.communicator());
 
 
     std::unique_ptr<BCRSMat> mat =
