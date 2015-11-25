@@ -271,6 +271,10 @@ private:
         // For convenience we save the intervals that we compute for.
         interior_interval_  =  { offset[0], offset[1] };
         interface_interval_ =  { offset[2], offset[3] };
+        if ( interior_interval_[0] == interior_interval_[1] )
+        {
+            DUNE_THROW(Dune::RangeError, "Subdomain is too small!");
+        }
     }
 
     template<class T, class C>
