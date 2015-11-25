@@ -392,23 +392,11 @@ namespace Opm
 #endif
 
                 int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
-                auto cellCentroid = eclGrid->getCellCenter(cartesianCellIdx);
+                auto cellCenter = eclGrid->getCellCenter(cartesianCellIdx);
 
                 for (int indx = 0; indx < dim; ++indx) {
 
-                    double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx];
-                    switch (indx) {
-                    case 0:
-                        Ci -= std::get<0>(cellCentroid);
-                        break;
-                    case 1:
-                        Ci -= std::get<1>(cellCentroid);
-                        break;
-                    case 2:
-                        Ci -= std::get<2>(cellCentroid);
-                        break;
-
-                    }
+                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] - cellCenter[indx];
                     dist += Ci*Ci;
                     cn += sgn * Ci * scaledFaceNormal[ indx ];
                 }
