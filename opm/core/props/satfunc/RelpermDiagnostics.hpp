@@ -587,6 +587,17 @@ namespace Opm {
                 std::string msg = "In cell: " + std::to_string(c) + "SGL exceed 1.0 - SWU";
                 messager_.push_back(msg);
             }
+        
+            // Mobilility check.
+            if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
+                std::string msg = "In cell: " + std::to_string(c) + "SOWCR + SWCR exceed 1.0";
+                messager_.push_back(msg);
+            }
+
+            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
+                std::string msg = "In cell: " + std::to_string(c) + "SOGCR + SGCR + SWL";
+                messager_.push_back(msg);
+            }
         } 
     }
 
