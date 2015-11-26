@@ -172,7 +172,7 @@ protected:
     unsigned upstreamIndex_(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?exteriorDofIdx_:interiorDofIdx_;
+        return (pressureDifferential_[phaseIdx] >= 0)?exteriorDofIdx_:interiorDofIdx_;
     }
 
     /*!
