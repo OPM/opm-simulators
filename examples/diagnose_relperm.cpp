@@ -102,7 +102,7 @@ try
     Opm::time::StopWatch timer;
     timer.start();
     RelpermDiagnostics diagnostic(eclState);
-    diagnostic.diagnosis(eclState, deck);
+    diagnostic.diagnosis(eclState, deck, grid);
     timer.stop();
     double tt = timer.secsSinceStart();
     std::cout << "relperm diagnostics: " << tt << " seconds." << std::endl;

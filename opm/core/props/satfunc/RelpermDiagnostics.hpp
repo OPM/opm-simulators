@@ -23,6 +23,9 @@
 #include <vector>
 #include <utility>
 
+#include <opm/core/grid.h>
+#include <opm/core/grid/GridManager.hpp>
+#include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -52,7 +55,8 @@ namespace Opm {
         RelpermDiagnostics(EclipseStateConstPtr eclstate);
 
         void diagnosis(EclipseStateConstPtr eclState,
-                       DeckConstPtr deck);
+                       DeckConstPtr deck,
+                       const UnstructuredGrid& grid);
 
     private:
         FluidSystem fluidSystem_;
@@ -60,6 +64,7 @@ namespace Opm {
         SaturationFunctionFamily satFamily_;
 
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
+        std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
         std::vector<std::string> messager_;
         
@@ -79,8 +84,12 @@ namespace Opm {
                          DeckConstPtr deck);
 
         ///Check endpoints in the saturation tables.
-        void endPointsCheck_(DeckConstPtr deck,
-                             EclipseStateConstPtr eclState);
+        void unscaledEndPointsCheck_(DeckConstPtr deck,
+                                     EclipseStateConstPtr eclState);
+
+        void scaledEndPointsCheck_(DeckConstPtr deck,
+                                   EclipseStateConstPtr eclState,
+                                   const UnstructuredGrid& grid);
 
         ///For every table, need to deal with case by case.
         void swofTableCheck_(const Opm::SwofTable& swofTables);
@@ -101,13 +110,15 @@ namespace Opm {
 
 
     void RelpermDiagnostics::diagnosis(Opm::EclipseStateConstPtr eclState,
-                                       Opm::DeckConstPtr deck)
+                                       Opm::DeckConstPtr deck,
+                                       const UnstructuredGrid& grid)
     {
         std::cout << "***************Relperm Diagnostics***************\n";
         phaseCheck_(eclState, deck);
         satFamilyCheck_(eclState);
         tableCheck_(eclState, deck);
-        endPointsCheck_(deck, eclState);
+        unscaledEndPointsCheck_(deck, eclState);
+        scaledEndPointsCheck_(deck, eclState, grid);
         if (!messager_.empty()) {
             int counter = 1;
             std::cout << "***************\nProblem found:\n";
@@ -469,8 +480,8 @@ namespace Opm {
 
 
 
-    void RelpermDiagnostics::endPointsCheck_(DeckConstPtr deck,
-                                             EclipseStateConstPtr eclState)
+    void RelpermDiagnostics::unscaledEndPointsCheck_(DeckConstPtr deck,
+                                                     EclipseStateConstPtr eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
         unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
@@ -481,7 +492,6 @@ namespace Opm {
         const TableContainer&  sgofTables = tables->getSgofTables();
         const TableContainer& slgofTables = tables->getSlgofTables();
         const TableContainer&  sof3Tables = tables->getSof3Tables();
-
 
         for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
              unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
@@ -539,6 +549,46 @@ namespace Opm {
         }
     }
 
+
+
+    void RelpermDiagnostics::scaledEndPointsCheck_(DeckConstPtr deck,
+                                                   EclipseStateConstPtr eclState,
+                                                   const UnstructuredGrid& grid)
+    {
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+
+        const int nc = Opm::UgGridHelpers::numCells(grid);
+        std::vector<int> compressedToCartesianIdx(nc);
+        const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
+        for (int cell = 0; cell < nc; ++cell) {
+            if (global_cell) {
+                compressedToCartesianIdx[cell] = global_cell[cell];
+            } else {
+                compressedToCartesianIdx[cell] = cell;
+            }
+        }
+        scaledEpsInfo_.resize(nc);
+        EclEpsGridProperties epsGridProperties;
+        epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
+
+        for (int c = 0; c < nc; ++c) {
+            int cartIdx = compressedToCartesianIdx[c];
+            scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
+            //std::cout << "Scaled endpoints info:\n";
+            //scaledEpsInfo_[c].print();
+            // SGU <= 1.0 - SWL
+            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
+                std::string msg = "In cell:" + std::to_string(c) + "SGU exceed 1.0 - SWL";
+                messager_.push_back(msg);
+            }
+            
+            // SGL <= 1.0 - SWU
+            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
+                std::string msg = "In cell: " + std::to_string(c) + "SGL exceed 1.0 - SWU";
+                messager_.push_back(msg);
+            }
+        } 
+    }
 
 } //namespace Opm
 
