@@ -315,7 +315,7 @@ try
         std::cout << "\n\n================ Starting main simulation loop ===============\n"
                   << std::flush;
 
-        SimulatorReport fullReport = simulator.run(simtimer, state);
+        SimulatorReport fullReport = simulator.run(eclipseState, simtimer, state);
 
         std::cout << "\n\n================    End of simulation     ===============\n\n";
         fullReport.report(std::cout);

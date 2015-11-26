@@ -254,7 +254,7 @@ try
                   deck,
                   *fis_solver,
                   grav);
-    fullReport= simulator.run(simtimer, state);
+    fullReport= simulator.run(eclipseState, simtimer, state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);

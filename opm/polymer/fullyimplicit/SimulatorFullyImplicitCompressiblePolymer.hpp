@@ -99,7 +99,7 @@ namespace Opm
         /// Initialise from parameters and objects to observe.
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
                                                   const GridT& grid,
-                                                  const DerivedGeology& geo,
+                                                  DerivedGeology& geo,
                                                   BlackoilPropsAdInterface& props,
                                                   const PolymerPropsAd&    polymer_props,
                                                   const RockCompressibility* rock_comp_props,
