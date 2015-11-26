@@ -578,25 +578,62 @@ namespace Opm {
             //scaledEpsInfo_[c].print();
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
-                std::string msg = "In cell:" + std::to_string(c) + "SGU exceed 1.0 - SWL";
+                std::string msg = "In cell:" + std::to_string(c) + " SGU exceed 1.0 - SWL";
                 messager_.push_back(msg);
             }
             
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
-                std::string msg = "In cell: " + std::to_string(c) + "SGL exceed 1.0 - SWU";
+                std::string msg = "In cell: " + std::to_string(c) + " SGL exceed 1.0 - SWU";
                 messager_.push_back(msg);
             }
         
             // Mobilility check.
             if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
-                std::string msg = "In cell: " + std::to_string(c) + "SOWCR + SWCR exceed 1.0";
+                std::string msg = "In cell: " + std::to_string(c) + " SOWCR + SWCR exceed 1.0";
                 messager_.push_back(msg);
             }
 
             if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
-                std::string msg = "In cell: " + std::to_string(c) + "SOGCR + SGCR + SWL";
+                std::string msg = "In cell: " + std::to_string(c) + " SOGCR + SGCR + SWL exceed 1.0";
                 messager_.push_back(msg);
+            }
+
+            ///Following rules come from NEXUS.
+            if (fluidSystem_ != FluidSystem::WaterGas) {
+                if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SWL > SWCR";
+                    messager_.push_back(msg);
+                }
+
+                if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SWCR > SOWCR";
+                    messager_.push_back(msg);
+                }
+            
+                if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SOWCR > SWU";
+                    messager_.push_back(msg);
+                }
+            }
+
+            if (fluidSystem_ != FluidSystem::OilWater) {
+                if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SGL > SGCR";
+                    messager_.push_back(msg);
+                }
+            }
+
+            if (fluidSystem_ != FluidSystem::BlackOil) {
+                if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SGCR > SOGCR";
+                    messager_.push_back(msg);
+                }
+
+                if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
+                    std::string msg = "In cell: " + std::to_string(c) + " SOGCR > SGU";
+                    messager_.push_back(msg);
+                }
             }
         } 
     }
