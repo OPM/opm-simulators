@@ -93,21 +93,21 @@ namespace Opm
 
         // ----------  Main nonlinear solver loop  ----------
         do {
+            // Do the nonlinear step. If we are in a converged state, the
+            // model will usually do an early return without an expensive
+            // solve, unless the minIter() count has not been reached yet.
             IterationReport report = model_->nonlinearIteration(iteration, dt, *this, reservoir_state, well_state);
             if (report.failed) {
                 OPM_THROW(Opm::NumericalProblem, "Failed to complete a nonlinear iteration.");
             }
-            if (report.converged) {
-                assert(report.linear_iterations == 0);
-                converged = true;
-            }
+            converged = report.converged;
             linIters += report.linear_iterations;
             ++iteration;
-        } while ( (!converged && (iteration <= maxIter())) || (minIter() > iteration));
+        } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
         if (!converged) {
             if (model_->terminalOutputEnabled()) {
-                std::cerr << "WARNING: Failed to compute converged solution in " << iteration << " iterations." << std::endl;
+                std::cerr << "WARNING: Failed to compute converged solution in " << iteration - 1 << " iterations." << std::endl;
             }
             return -1; // -1 indicates that the solver has to be restarted
         }

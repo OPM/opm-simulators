@@ -248,7 +248,8 @@ namespace detail {
         asImpl().assemble(reservoir_state, well_state, iteration == 0);
         residual_norms_history_.push_back(asImpl().computeResidualNorms());
         const bool converged = asImpl().getConvergence(dt, iteration);
-        if (!converged) {
+        const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
+        if (must_solve) {
             // Compute the nonlinear update.
             V dx = asImpl().solveJacobianSystem();
 
@@ -271,7 +272,7 @@ namespace detail {
             asImpl().updateState(dx, reservoir_state, well_state);
         }
         const bool failed = false; // Not needed in this model.
-        const int linear_iters = converged ? 0 : asImpl().linearIterationsLastSolve();
+        const int linear_iters = must_solve ? asImpl().linearIterationsLastSolve() : 0;
         return IterationReport{ failed, converged, linear_iters };
     }
 
