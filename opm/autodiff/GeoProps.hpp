@@ -125,7 +125,7 @@ namespace Opm
                 tpfa_htrans_compute(ug, props.permeability(), htrans.data());
             }
             else {
-                tpfa_loc_trans_compute_(grid,props.permeability(),htrans);
+                tpfa_loc_trans_compute_(grid,eclgrid, props.permeability(),htrans);
             }
 
             std::vector<double> mult;
@@ -143,7 +143,7 @@ namespace Opm
 
             // Compute z coordinates
             for (int c = 0; c<numCells; ++c){
-                z_[c] = Opm::UgGridHelpers::cellCentroidCoordinate(grid, c, 2);
+                z_[c] = Opm::UgGridHelpers::cellCenterDepth(grid, c);
             }
 
 
@@ -191,6 +191,7 @@ namespace Opm
 
         template <class Grid>
         void tpfa_loc_trans_compute_(const Grid &grid,
+                                     Opm::EclipseGridConstPtr eclGrid,
                                      const double* perm,
                                      Vector &hTrans);
 
@@ -338,6 +339,7 @@ namespace Opm
 
     template <class GridType>
     inline void DerivedGeology::tpfa_loc_trans_compute_(const GridType& grid,
+                                                        Opm::EclipseGridConstPtr eclGrid,
                                                         const double* perm,
                                                         Vector& hTrans){
 
@@ -358,6 +360,7 @@ namespace Opm
             for(auto cellFaceIter = cellFacesRange.begin(), cellFaceEnd = cellFacesRange.end();
                 cellFaceIter != cellFaceEnd; ++cellFaceIter, ++cellFaceIdx)
             {
+
                 // The index of the face in the compressed grid
                 const int faceIdx = *cellFaceIter;
 
@@ -388,11 +391,14 @@ namespace Opm
                 const double* scaledFaceNormal = faceNormal;
 #endif
 
+                int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
+                auto cellCenter = eclGrid->getCellCenter(cartesianCellIdx);
+
                 for (int indx = 0; indx < dim; ++indx) {
-                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] -
-                        Opm::UgGridHelpers::cellCentroidCoordinate(grid, cellIdx, indx);
+
+                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] - cellCenter[indx];
                     dist += Ci*Ci;
-                    cn += sgn * Ci * scaledFaceNormal[ indx ]; //Opm::UgGridHelpers::faceNormal(grid, faceIdx)[indx];
+                    cn += sgn * Ci * scaledFaceNormal[ indx ];
                 }
 
                 if (cn < 0){
