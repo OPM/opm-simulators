@@ -314,7 +314,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
 
     template <class Grid>
-    std::vector<double> thresholdPressures(const DeckConstPtr& deck,
+    std::vector<double> thresholdPressures(const DeckConstPtr& /* deck */,
                                            EclipseStateConstPtr eclipseState,
                                            const Grid& grid,
                                            const std::map<std::pair<int, int>, double>& maxDp)
