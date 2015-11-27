@@ -335,8 +335,8 @@ public:
         }
 
         OPM_THROW(std::invalid_argument,
-                  "Sampling points should be specified either monotonically "
-                  "ascending or descending.");
+                  "Sampling points must be specified in either monotonically "
+                  "ascending or descending order.");
     }
 
     /*!

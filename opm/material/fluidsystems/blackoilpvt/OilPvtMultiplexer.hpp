@@ -139,6 +139,24 @@ public:
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
+     * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation saturatedViscosity(unsigned regionIdx,
+                                  const Evaluation& temperature,
+                                  const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedViscosity(regionIdx, temperature, pressure)); return 0; }
+
+    /*!
+     * \brief Returns the formation volume factor [-] of the fluid phase.
+     */
+    template <class Evaluation>
+    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
+                                              const Evaluation& temperature,
+                                              const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+
+    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
@@ -157,6 +175,15 @@ public:
                        const Evaluation& pressure,
                        const Evaluation& Rs) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, Rs)); return 0; }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
+     */
+    template <class Evaluation>
+    Evaluation saturatedDensity(unsigned regionIdx,
+                                const Evaluation& temperature,
+                                const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedDensity(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the fugacity coefficient [-] of the oil component in the oil phase
@@ -205,10 +232,10 @@ public:
      * the black-oil PVT interface will just throw an exception...
      */
     template <class Evaluation>
-    Evaluation oilSaturationPressure(unsigned regionIdx,
+    Evaluation saturationPressure(unsigned regionIdx,
                                      const Evaluation& temperature,
                                      const Evaluation& Rs) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.oilSaturationPressure(regionIdx, temperature, Rs)); return 0; }
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rs)); return 0; }
 
     /*!
      * \brief Returns the gas mass fraction of gas-saturated oil at a given temperatire
@@ -218,10 +245,10 @@ public:
      * will be thrown...
      */
     template <class Evaluation>
-    Evaluation saturatedOilGasMassFraction(unsigned regionIdx,
-                                           const Evaluation& temperature,
-                                           const Evaluation& pressure) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedOilGasMassFraction(regionIdx, temperature, pressure)); return 0; }
+    Evaluation saturatedGasMassFraction(unsigned regionIdx,
+                                        const Evaluation& temperature,
+                                        const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedGasMassFraction(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the gas mole fraction of gas-saturated oil at a given temperatire
@@ -231,10 +258,10 @@ public:
      * will be thrown...
      */
     template <class Evaluation>
-    Evaluation saturatedOilGasMoleFraction(unsigned regionIdx,
-                                           const Evaluation& temperature,
-                                           const Evaluation& pressure) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedOilGasMoleFraction(regionIdx, temperature, pressure)); return 0; }
+    Evaluation saturatedGasMoleFraction(unsigned regionIdx,
+                                        const Evaluation& temperature,
+                                        const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedGasMoleFraction(regionIdx, temperature, pressure)); return 0; }
 
     void setApproach(OilPvtApproach oilPvtApproach)
     {

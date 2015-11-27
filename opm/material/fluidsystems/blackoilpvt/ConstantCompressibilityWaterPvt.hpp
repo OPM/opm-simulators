@@ -157,14 +157,15 @@ public:
         // Eclipse calculates the viscosity in a weird way: it
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
-        Scalar BwMuwRef = waterViscosity_[regionIdx]*waterReferenceFormationVolumeFactor_[regionIdx];
-        const Evaluation& Bw = formationVolumeFactor(regionIdx, temperature, pressure);
+        Scalar muwRef = waterViscosity_[regionIdx];
 
+        // note: this is NOT equivalent to the equation given by the ECL RM. It is
+        // equivalent to the code which was used by opm-core at the time when this was
+        // written.
         Scalar pRef = waterReferencePressure_[regionIdx];
-        const Evaluation& Y =
-            (waterCompressibility_[regionIdx] - waterViscosibility_[regionIdx])
-            * (pressure - pRef);
-        return BwMuwRef/((1 + Y*(1 + Y/2))*Bw);
+        const Evaluation& x = (-waterViscosibility_[regionIdx])*(pressure - pRef);
+        const Evaluation& d = 1.0 + x*(1.0 + x/2.0);
+        return muwRef/d;
     }
 
     /*!

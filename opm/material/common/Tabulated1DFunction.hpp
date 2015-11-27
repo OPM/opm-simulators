@@ -28,6 +28,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
+#include <opm/material/localad/Math.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -244,8 +245,11 @@ public:
      *                    extrapolate for \f$ x \not [x_{min}, x_{max}]\f$ will cause a
      *                    failed assertation.
      */
-    Scalar eval(Scalar x, bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
         size_t segIdx;
         if (extrapolate && x < xValues_.front())
             segIdx = 0;
@@ -253,7 +257,7 @@ public:
             segIdx = numSamples() - 2;
         else {
             assert(xValues_.front() <= x && x <= xValues_.back());
-            segIdx = findSegmentIndex_(x);
+            segIdx = findSegmentIndex_(Toolbox::value(x));
         }
 
         Scalar x0 = xValues_[segIdx];
@@ -263,44 +267,6 @@ public:
         Scalar y1 = yValues_[segIdx + 1];
 
         return y0 + (y1 - y0)*(x - x0)/(x1 - x0);
-    }
-
-    /*!
-     * \brief Evaluate the spline at a given position.
-     *
-     * \param x The value on the abscissa where the function ought to be evaluated
-     * \param extrapolate If this parameter is set to true, the function will be extended
-     *                    beyond its range by straight lines, if false calling
-     *                    extrapolate for \f$ x \not [x_{min}, x_{max}]\f$ will cause a
-     *                    failed assertation.
-     */
-    template <class Evaluation>
-    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
-    {
-        size_t segIdx;
-        if (extrapolate && x.value < xValues_.front())
-            segIdx = 0;
-        else if (extrapolate && x.value > xValues_.back())
-            segIdx = numSamples() - 2;
-        else {
-            assert(xValues_.front() <= x.value && x.value <= xValues_.back());
-            segIdx = findSegmentIndex_(x.value);
-        }
-
-        Scalar x0 = xValues_[segIdx];
-        Scalar x1 = xValues_[segIdx + 1];
-
-        Scalar y0 = yValues_[segIdx];
-        Scalar y1 = yValues_[segIdx + 1];
-
-        Scalar m = (y1 - y0)/(x1 - x0);
-
-        Evaluation result;
-        result.value = y0 + m*(x.value - x0);
-        for (unsigned varIdx = 0; varIdx < result.derivatives.size(); ++varIdx)
-            result.derivatives[varIdx] = m*x.derivatives[varIdx];
-
-        return result;
     }
 
     /*!
@@ -314,7 +280,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalDerivative(Scalar x, bool /*extrapolate*/=false) const
+    template <class Evaluation>
+    Evaluation evalDerivative(const Evaluation& x, bool /*extrapolate*/=false) const
     {
         int segIdx = findSegmentIndex_(x);
 
@@ -335,7 +302,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalSecondDerivative(OPM_OPTIM_UNUSED Scalar x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation evalSecondDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -355,7 +323,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalThirdDerivative(OPM_OPTIM_UNUSED Scalar x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation evalThirdDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -512,7 +481,8 @@ private:
         }
     }
 
-    Scalar evalDerivative_(OPM_UNUSED Scalar x, int segIdx) const
+    template <class Evaluation>
+    Evaluation evalDerivative_(OPM_UNUSED const Evaluation& x, int segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
