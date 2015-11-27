@@ -120,6 +120,9 @@ namespace Opm {
         unscaledEndPointsCheck_(deck, eclState);
         scaledEndPointsCheck_(deck, eclState, grid);
         if (!messager_.empty()) {
+            std::sort(messager_.begin(), messager_.end());
+            auto it = std::unique(messager_.begin(), messager_.end());
+            messager_.erase(it, messager_.end());
             int counter = 1;
             std::cout << "***************\nProblem found:\n";
             for (const auto& x : messager_) {
@@ -509,7 +512,7 @@ namespace Opm {
              /// means Krow(Swco) == Krog(Sgco)
              double krow_value = 1e20;
              double krog_value = 1e-20;
-             if (fluidSystem_ = FluidSystem::BlackOil) {
+             if (fluidSystem_ == FluidSystem::BlackOil) {
                 if (satFamily_ == SaturationFunctionFamily::FamilyI) {
                      if (!sgofTables.empty()) {
                          auto sg = sgofTables.getTable<SgofTable>(satnumIdx).getSgColumn();
@@ -555,8 +558,6 @@ namespace Opm {
                                                    EclipseStateConstPtr eclState,
                                                    const UnstructuredGrid& grid)
     {
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
-
         const int nc = Opm::UgGridHelpers::numCells(grid);
         std::vector<int> compressedToCartesianIdx(nc);
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
@@ -574,64 +575,74 @@ namespace Opm {
         for (int c = 0; c < nc; ++c) {
             int cartIdx = compressedToCartesianIdx[c];
             scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
-            //std::cout << "Scaled endpoints info:\n";
-            //scaledEpsInfo_[c].print();
+
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
-                std::string msg = "In cell:" + std::to_string(c) + " SGU exceed 1.0 - SWL";
+                //std::string msg = "In cell:" + std::to_string(c) + " SGU exceed 1.0 - SWL";
+                std::string msg = "WARNING: For scaled endpoints input, SGU exceed 1.0 - SWL";
                 messager_.push_back(msg);
             }
             
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
-                std::string msg = "In cell: " + std::to_string(c) + " SGL exceed 1.0 - SWU";
-                messager_.push_back(msg);
-            }
-        
-            // Mobilility check.
-            if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
-                std::string msg = "In cell: " + std::to_string(c) + " SOWCR + SWCR exceed 1.0";
+                //std::string msg = "In cell: " + std::to_string(c) + " SGL exceed 1.0 - SWU";
+                std::string msg = "WARNING: For scaled endpoints input, SGL exceed 1.0 - SWU";
                 messager_.push_back(msg);
             }
 
-            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
-                std::string msg = "In cell: " + std::to_string(c) + " SOGCR + SGCR + SWL exceed 1.0";
-                messager_.push_back(msg);
-            }
+            if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
+                // Mobilility check.
+                if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
+                    //std::string msg = "In cell: " + std::to_string(c) + " SOWCR + SWCR exceed 1.0";
+                    std::string msg = "WARNING: For scaled endpoints input, SOWCR + SWCR exceed 1.0";
+                    messager_.push_back(msg);
+                }
 
+                if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
+                    //std::string msg = "In cell: " + std::to_string(c) + " SOGCR + SGCR + SWL exceed 1.0";
+                    std::string msg = "WARNING: For scaled endpoints input, SOGCR + SGCR + SWL exceed 1.0";
+                    messager_.push_back(msg);
+                }
+            }
             ///Following rules come from NEXUS.
             if (fluidSystem_ != FluidSystem::WaterGas) {
                 if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SWL > SWCR";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SWL > SWCR";
+                    std::string msg = "WARNING: For scaled endpoints input, SWL > SWCR";
                     messager_.push_back(msg);
                 }
 
                 if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SWCR > SOWCR";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SWCR > SOWCR";
+                    std::string msg = "WARNING: For scaled endpoints input, SWCR > SOWCR";
                     messager_.push_back(msg);
                 }
             
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SOWCR > SWU";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SOWCR > SWU";
+                    std::string msg = "WARNING: For scaled endpoints input, SOWCR > SWU";
                     messager_.push_back(msg);
                 }
             }
 
             if (fluidSystem_ != FluidSystem::OilWater) {
                 if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SGL > SGCR";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SGL > SGCR";
+                    std::string msg = "WARNING: For scaled endpoints input, SGL > SGCR";
                     messager_.push_back(msg);
                 }
             }
 
             if (fluidSystem_ != FluidSystem::BlackOil) {
                 if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SGCR > SOGCR";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SGCR > SOGCR";
+                    std::string msg = "WARNING: For scaled endpoints input, SGCR > SOGCR";
                     messager_.push_back(msg);
                 }
 
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
-                    std::string msg = "In cell: " + std::to_string(c) + " SOGCR > SGU";
+                    //std::string msg = "In cell: " + std::to_string(c) + " SOGCR > SGU";
+                    std::string msg = "WARNIMG: For scaled endpoints input, SOGCR > SGU";
                     messager_.push_back(msg);
                 }
             }
