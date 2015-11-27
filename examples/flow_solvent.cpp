@@ -407,7 +407,7 @@ try
                       << std::flush;
         }
 
-        SimulatorReport fullReport = simulator.run(simtimer, state);
+        SimulatorReport fullReport = simulator.run(eclipseState, simtimer, state);
 
         if( output_cout )
         {

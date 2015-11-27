@@ -106,7 +106,7 @@ namespace Opm
     public:
         SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
                                               const GridT& grid,
-                                              const DerivedGeology& geo,
+                                              DerivedGeology& geo,
                                               BlackoilPropsAdInterface& props,
                                               const SolventPropsAdFromDeck& solvent_props,
                                               const RockCompressibility* rock_comp_props,
