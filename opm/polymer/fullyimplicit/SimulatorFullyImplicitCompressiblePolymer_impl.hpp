@@ -28,7 +28,7 @@ template <class GridT>
 SimulatorFullyImplicitCompressiblePolymer<GridT>::
 SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
                                           const GridT& grid,
-                                          const DerivedGeology& geo,
+                                          DerivedGeology& geo,
                                           BlackoilPropsAdInterface& props,
                                           const PolymerPropsAd&    polymer_props,
                                           const RockCompressibility* rock_comp_props,
