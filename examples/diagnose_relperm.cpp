@@ -78,14 +78,11 @@ try
                               { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE}
                              });
     Opm::DeckConstPtr deck(parser->parseFile(ECLIPSEFILENAME, parseMode));
-    //std::string deck_filename = param.get<std::string>("deck_filename");
-    //deck = parser->parseFile(deck_filename, parseMode);
     eclState.reset(new EclipseState(deck, parseMode));
 
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
     // Write parameters used for later reference.
-    //bool output = param.getDefault("output", true);
     bool output = true;
     std::string output_dir;
     if (output) {
@@ -101,7 +98,7 @@ try
 
     Opm::time::StopWatch timer;
     timer.start();
-    RelpermDiagnostics diagnostic(eclState);
+    RelpermDiagnostics diagnostic;
     diagnostic.diagnosis(eclState, deck, grid);
     timer.stop();
     double tt = timer.secsSinceStart();
