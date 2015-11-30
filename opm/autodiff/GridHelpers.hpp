@@ -23,7 +23,6 @@
 
 #include <functional>
 
-#include <boost/range/iterator_range.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
 
@@ -31,6 +30,8 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
+
+#include <boost/range/iterator_range.hpp>
 
 #ifdef HAVE_DUNE_CORNERPOINT
 #include <dune/grid/CpGrid.hpp>
