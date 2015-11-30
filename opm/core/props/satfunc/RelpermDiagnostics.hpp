@@ -23,7 +23,10 @@
 #include <vector>
 #include <utility>
 
+#if HAVE_CONFIG_H
 #include "config.h"
+#endif // HAVE_CONFIG_H
+
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
@@ -33,19 +36,6 @@
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
-    enum FluidSystem {
-        OilWater,
-        OilGas,
-        WaterGas,
-        BlackOil
-    };
-
-    enum SaturationFunctionFamily {
-        FamilyI,
-        FamilyII,
-        NoFamily
-    };
-
 
     ///This class is intend to be a relpmer diganostics, to detect
     ///wrong input of relperm table and endpoints.
@@ -57,8 +47,21 @@ namespace Opm {
                        const UnstructuredGrid& grid);
 
     private:
-        FluidSystem fluidSystem_;
+        enum FluidSystem {
+            OilWater,
+            OilGas,
+            WaterGas,
+            BlackOil
+        };
         
+        FluidSystem fluidSystem_;
+
+        enum SaturationFunctionFamily {
+            FamilyI,
+            FamilyII,
+            NoFamily
+        };
+  
         SaturationFunctionFamily satFamily_;
 
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
