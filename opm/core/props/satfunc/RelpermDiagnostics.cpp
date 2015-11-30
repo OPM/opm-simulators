@@ -27,18 +27,18 @@ namespace Opm{
                                        const UnstructuredGrid& grid)
     {
         std::cout << "***************Relperm Diagnostics***************\n";
-        phaseCheck_(eclState, deck);
+        phaseCheck_(deck);
         satFamilyCheck_(eclState);
         tableCheck_(eclState, deck);
         unscaledEndPointsCheck_(deck, eclState);
         scaledEndPointsCheck_(deck, eclState, grid);
-        if (!messager_.empty()) {
-            std::sort(messager_.begin(), messager_.end());
-            auto it = std::unique(messager_.begin(), messager_.end());
-            messager_.erase(it, messager_.end());
+        if (!messages_.empty()) {
+            std::sort(messages_.begin(), messages_.end());
+            auto it = std::unique(messages_.begin(), messages_.end());
+            messages_.erase(it, messages_.end());
             int counter = 1;
             std::cout << "***************\nProblem found:\n";
-            for (const auto& x : messager_) {
+            for (const auto& x : messages_) {
                 std::cout << counter << ".  " << x << std::endl;
                 counter++;
             }
@@ -52,8 +52,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::phaseCheck_(EclipseStateConstPtr eclState,
-                                         DeckConstPtr deck)
+    void RelpermDiagnostics::phaseCheck_(DeckConstPtr deck)
     {
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
@@ -98,14 +97,14 @@ namespace Opm{
 
         if (family1 && family2) {
             std::string s = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         if (!family1 && !family2) {
             std::string s = "Saturations function must be specified using either \n \
                              family 1 or family 2 keywords \n \
                              Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         if (family1 && !family2) {
@@ -124,7 +123,7 @@ namespace Opm{
     void RelpermDiagnostics::tableCheck_(EclipseStateConstPtr eclState, 
                                          DeckConstPtr deck)
     {
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
         const auto& tableManager = eclState->getTableManager();
         const TableContainer& swofTables = tableManager->getSwofTables();
         const TableContainer& slgofTables= tableManager->getSlgofTables();
@@ -135,7 +134,7 @@ namespace Opm{
         const TableContainer& sof2Tables = tableManager->getSof2Tables();
         const TableContainer& sgwfnTables= tableManager->getSgwfnTables();
 
-        for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
+        for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (deck->hasKeyword("SWOF")) {
                 swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx));
             }
@@ -173,25 +172,25 @@ namespace Opm{
         const auto& krw = swofTables.getKrwColumn();
         const auto& krow = swofTables.getKrowColumn();
         ///Check sw column.
-        if (sw.front()< 0 || sw.back() > 1) {
+        if (sw.front() < 0.0 || sw.back() > 1.0) {
             std::string s = "In SWOF table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
-        if (krw.front() != 0) {
+        if (krw.front() != 0.0) {
             std::string s = "In SWOF table, first value of krw should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krw.front() < 0 || krw.back() > 1) {
+        if (krw.front() < 0.0 || krw.back() > 1.0) {
             std::string s = "In SWOF table, krw should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krow column.
-        if (krow.front() > 1 || krow.back() < 0) {
+        if (krow.front() > 1.0 || krow.back() < 0.0) {
             std::string s = "In SWOF table, krow should be in range [0, 1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         ///TODO check if run with gas.
     }
@@ -206,29 +205,29 @@ namespace Opm{
         const auto& krg = sgofTables.getKrgColumn();
         const auto& krog = sgofTables.getKrogColumn();
                 ///Check sw column.
-        if (sg.front()< 0 || sg.back() > 1) {
+        if (sg.front() < 0.0 || sg.back() > 1.0) {
             std::string s = "In SGOF table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (sg.front() != 0) {
+        if (sg.front() != 0.0) {
             std::string s = "In SGOF table, first value of sg should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
-        if (krg.front() != 0) {
+        if (krg.front() != 0.0) {
             std::string s = "In SGOF table, first value of krg should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krg.front() < 0 || krg.back() > 1) {
+        if (krg.front() < 0.0 || krg.back() > 1.0) {
             std::string s = "In SGOF table, krg should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krow column.
-        if (krog.front() > 1 || krog.back() < 0) {
+        if (krog.front() > 1.0 || krog.back() < 0.0) {
             std::string s = "In SGOF table, krog should be in range [0, 1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         ///TODO check if run with water.
     }
@@ -241,27 +240,27 @@ namespace Opm{
 
         ///Check sl column.
         ///TODO first value means sl = swco + sor
-        if (sl.front()< 0 || sl.back() > 1) {
+        if (sl.front() < 0.0 || sl.back() > 1.0) {
             std::string s = "In SLGOF table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (sl.back() != 1) {
+        if (sl.back() != 1.0) {
             std::string s = "In SLGOF table, last value of sl should be 1.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
-        if (krg.front() > 1 || krg.back() < 0) {
+        if (krg.front() > 1.0 || krg.back() < 0) {
             std::string s = "In SLGOF table, krg shoule be in range [0, 1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krg.back() != 0) {
+        if (krg.back() != 0.0) {
             std::string s = "In SLGOF table, last value of krg hould be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
-        if (krog.front() < 0 || krog.back() > 1) {
+        if (krog.front() < 0.0 || krog.back() > 1.0) {
             std::string s = "In SLGOF table, krog shoule be in range [0, 1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -275,20 +274,20 @@ namespace Opm{
         const auto& krw = swfnTables.getKrwColumn();
         
         ///Check sw column.
-        if (sw.front() < 0 || sw.back() > 1) {
+        if (sw.front() < 0.0 || sw.back() > 1.0) {
             std::string s = "In SWFN table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         
         ///Check krw column.
-        if (krw.front() < 0 || krw.back() > 1) {
+        if (krw.front() < 0.0 || krw.back() > 1.0) {
             std::string s = "In SWFN table, krw should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
-        if (krw.front() != 0) {
+        if (krw.front() != 0.0) {
             std::string s = "In SWFN table, first value of krw should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -302,19 +301,19 @@ namespace Opm{
         const auto& krg = sgfnTables.getKrgColumn();
         
         ///Check sg column.
-        if (sg.front() < 0 || sg.back() > 1) {
+        if (sg.front() < 0.0 || sg.back() > 1.0) {
             std::string s = "In SGFN table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
         
         ///Check krg column.
-        if (krg.front() < 0 || krg.back() > 1) {
+        if (krg.front() < 0.0 || krg.back() > 1.0) {
             std::string s = "In SGFN table, krg should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krg.front() != 0) {
+        if (krg.front() != 0.0) {
             std::string s = "In SGFN table, first value of krg should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -330,35 +329,35 @@ namespace Opm{
 
         ///Check so column.
         ///TODO: The max so = 1 - Swco
-        if (so.front() < 0 || so.back() > 1) {
+        if (so.front() < 0.0 || so.back() > 1.0) {
             std::string s = "In SOF3 table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krow column.
-        if (krow.front() < 0 || krow.back() > 1) {
+        if (krow.front() < 0.0 || krow.back() > 1.0) {
             std::string s = "In SOF3 table, krow should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krow.front() != 0) {
+        if (krow.front() != 0.0) {
             std::string s = "In SOF3 table, first value of krow should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krog column.
-        if (krog.front() < 0 || krog.back() > 1) {
+        if (krog.front() < 0.0 || krog.back() > 1.0) {
             std::string s = "In SOF3 table, krog should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
-        if (krog.front() != 0) {
+        if (krog.front() != 0.0) {
             std::string s = "In SOF3 table, first value of krog should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     
         if (krog.back() != krow.back()) {
             std::string s = "In SOF3 table, max value of krog and krow should be the same.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -373,19 +372,19 @@ namespace Opm{
 
         ///Check so column.
         ///TODO: The max so = 1 - Swco
-        if (so.front() < 0 || so.back() > 1) {
+        if (so.front() < 0.0 || so.back() > 1.0) {
             std::string s = "In SOF2 table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krow column.
-        if (kro.front() < 0 || kro.back() > 1) {
+        if (kro.front() < 0.0 || kro.back() > 1.0) {
             std::string s = "In SOF2 table, krow should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (kro.front() != 0) {
+        if (kro.front() != 0.0) {
             std::string s = "In SOF2 table, first value of krow should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -400,30 +399,30 @@ namespace Opm{
         const auto& krgw = sgwfnTables.getKrgwColumn();
         
         ///Check sg column.
-        if (sg.front() < 0 || sg.back() > 1) {
+        if (sg.front() < 0.0 || sg.back() > 1.0) {
             std::string s = "In SGWFN table, saturation should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krg column.
-        if (krg.front() < 0 || krg.back() > 1) {
+        if (krg.front() < 0.0 || krg.back() > 1.0) {
             std::string s = "In SGWFN table, krg should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krg.front() != 0) {
+        if (krg.front() != 0.0) {
             std::string s = "In SGWFN table, first value of krg should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
 
         ///Check krgw column.
         ///TODO check saturation sw = 1. - sg
-        if (krgw.front() > 1 || krgw.back() < 0) {
+        if (krgw.front() > 1.0 || krgw.back() < 0.0) {
             std::string s = "In SGWFN table, krgw should be in range [0,1].";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
-        if (krgw.back() != 0) {
+        if (krgw.back() != 0.0) {
             std::string s = "In SGWFN table, last value of krgw should be 0.";
-            messager_.push_back(s);
+            messages_.push_back(s);
         }
     }
 
@@ -434,7 +433,7 @@ namespace Opm{
                                                      EclipseStateConstPtr eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
         unscaledEpsInfo_.resize(numSatRegions);
 
         auto tables = eclState->getTableManager();
@@ -443,16 +442,16 @@ namespace Opm{
         const TableContainer& slgofTables = tables->getSlgofTables();
         const TableContainer&  sof3Tables = tables->getSof3Tables();
 
-        for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
+        for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
              unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
              std::cout << "***************\nEnd-Points In all the Tables\n";
              unscaledEpsInfo_[satnumIdx].print();
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                messager_.push_back("Sgmax should not exceed 1-Swco.");
+                messages_.push_back("Sgmax should not exceed 1-Swco.");
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                messager_.push_back("Sgco should not exceed 1-Swmax.");
+                messages_.push_back("Sgco should not exceed 1-Swmax.");
              }
 
              ///Krow(Sou) == Krog(Sou) for three-phase
@@ -476,7 +475,7 @@ namespace Opm{
                      krow_value = Opm::linearInterpolation(sw, krow,unscaledEpsInfo_[satnumIdx].Swl);
                  }
                  if (satFamily_ == SaturationFunctionFamily::FamilyII) {
-                     assert(!sof3Table.empty());
+                     assert(!sof3Tables.empty());
                      const double Sou = 1.- unscaledEpsInfo_[satnumIdx].Swl - unscaledEpsInfo_[satnumIdx].Sgl;
                      auto so = sof3Tables.getTable<Sof3Table>(satnumIdx).getSoColumn();
                      auto krow = sof3Tables.getTable<Sof3Table>(satnumIdx).getKrowColumn();
@@ -485,16 +484,16 @@ namespace Opm{
                      krog_value = Opm::linearInterpolation(so, krog, Sou);
                  }
                  if (krow_value != krog_value) {
-                     messager_.push_back("Krow(sSomax) should equal Krog(Somax).");
+                     messages_.push_back("Krow(sSomax) should equal Krog(Somax).");
                  }
              }
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                messager_.push_back("Sowcr + Swcr should less than 1.");
+                messages_.push_back("Sowcr + Swcr should less than 1.");
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                messager_.push_back("Sogcr + Sgcr + Swco should less than 1.");
+                messages_.push_back("Sogcr + Sgcr + Swco should less than 1.");
             }
         }
     }
@@ -529,14 +528,14 @@ namespace Opm{
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
                 //std::string msg = "In cell:" + std::to_string(c) + " SGU exceed 1.0 - SWL";
                 std::string msg = "WARNING: For scaled endpoints input, SGU exceed 1.0 - SWL";
-                messager_.push_back(msg);
+                messages_.push_back(msg);
             }
             
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
                 //std::string msg = "In cell: " + std::to_string(c) + " SGL exceed 1.0 - SWU";
                 std::string msg = "WARNING: For scaled endpoints input, SGL exceed 1.0 - SWU";
-                messager_.push_back(msg);
+                messages_.push_back(msg);
             }
 
             if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
@@ -545,13 +544,13 @@ namespace Opm{
                     std::cout << scaledEpsInfo_[c].Sowcr << "  " << scaledEpsInfo_[c].Swcr << std::endl;
                     //std::string msg = "In cell: " + std::to_string(c) + " SOWCR + SWCR exceed 1.0";
                     std::string msg = "WARNING: For scaled endpoints input, SOWCR + SWCR exceed 1.0";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SOGCR + SGCR + SWL exceed 1.0";
                     std::string msg = "WARNING: For scaled endpoints input, SOGCR + SGCR + SWL exceed 1.0";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
             }
             ///Following rules come from NEXUS.
@@ -559,19 +558,19 @@ namespace Opm{
                 if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SWL > SWCR";
                     std::string msg = "WARNING: For scaled endpoints input, SWL > SWCR";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
 
                 if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SWCR > SOWCR";
                     std::string msg = "WARNING: For scaled endpoints input, SWCR > SOWCR";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
             
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SOWCR > SWU";
                     std::string msg = "WARNING: For scaled endpoints input, SOWCR > SWU";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
             }
 
@@ -579,7 +578,7 @@ namespace Opm{
                 if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SGL > SGCR";
                     std::string msg = "WARNING: For scaled endpoints input, SGL > SGCR";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
             }
 
@@ -587,13 +586,13 @@ namespace Opm{
                 if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SGCR > SOGCR";
                     std::string msg = "WARNING: For scaled endpoints input, SGCR > SOGCR";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
 
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
                     //std::string msg = "In cell: " + std::to_string(c) + " SOGCR > SGU";
                     std::string msg = "WARNIMG: For scaled endpoints input, SOGCR > SGU";
-                    messager_.push_back(msg);
+                    messages_.push_back(msg);
                 }
             }
         } 

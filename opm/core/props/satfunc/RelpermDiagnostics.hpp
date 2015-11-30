@@ -67,14 +67,13 @@ namespace Opm {
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
-        std::vector<std::string> messager_;
+        std::vector<std::string> messages_;
         
         ///Display all the tables.
         void keywordsDisplay_(EclipseStateConstPtr eclState);
         
         ///Check the phase that used.
-        void phaseCheck_(EclipseStateConstPtr eclState, 
-                         DeckConstPtr deck);
+        void phaseCheck_(DeckConstPtr deck);
 
         
         ///Check saturation family I and II.
