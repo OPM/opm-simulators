@@ -42,6 +42,12 @@ namespace Opm {
     class RelpermDiagnostics 
     {
     public:
+        ///This function is used to diagnosis relperm in
+        ///eclipse data file. Errors and warings will be 
+        ///output if they're found.
+        ///\param[in] eclState  eclipse state.
+        ///\param[in] deck      ecliplise data file.
+        ///\param[in] grid      unstructured grid.
         void diagnosis(EclipseStateConstPtr eclState,
                        DeckConstPtr deck,
                        const UnstructuredGrid& grid);
@@ -68,9 +74,6 @@ namespace Opm {
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
         std::vector<std::string> messages_;
-        
-        ///Display all the tables.
-        void keywordsDisplay_(EclipseStateConstPtr eclState);
         
         ///Check the phase that used.
         void phaseCheck_(DeckConstPtr deck);
