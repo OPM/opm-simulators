@@ -22,13 +22,18 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
+
 namespace Opm
 {
+
 template<class X, class Y, class C, class T>
 class ParallelRestrictedOverlappingSchwarz;
-}
+
+} // end namespace Opm
+
 namespace Dune
 {
+
 namespace Amg
 {
 template<class X, class Y, class C, class T>
@@ -57,6 +62,7 @@ struct SmootherTraits<Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T> >
 };
 
 } // end namespace Amg
+
 } // end namespace Dune
 
 namespace Opm{

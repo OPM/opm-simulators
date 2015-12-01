@@ -25,11 +25,15 @@
 
 namespace Opm
 {
+
 template<class M, class X, class Y, class C>
 class ParallelOverlappingILU0;
-}
+
+} // end namespace Opm
+
 namespace Dune
 {
+
 namespace Amg
 {
 
@@ -59,7 +63,9 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<M,X,Y,C> >
 
     };*/
 } // end namespace Amg
+
 } // end namespace Dune
+
 namespace Opm
 {
 
