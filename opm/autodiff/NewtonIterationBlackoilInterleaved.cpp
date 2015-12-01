@@ -567,6 +567,116 @@ namespace Opm
             }
         };
 
+
+
+
+
+        std::pair<NewtonIterationBlackoilInterleaved::SolutionVector, Dune::InverseOperatorResult>
+        computePressureIncrement(const LinearisedBlackoilResidual& residual)
+        {
+            typedef LinearisedBlackoilResidual::ADB ADB;
+            typedef ADB::V V;
+
+            // Build the vector of equations (should be just a single material balance equation
+            // in which the pressure equation is stored).
+            const int np = residual.material_balance_eq.size();
+            assert(np == 1);
+            std::vector<ADB> eqs;
+            eqs.reserve(np + 2);
+            for (int phase = 0; phase < np; ++phase) {
+                eqs.push_back(residual.material_balance_eq[phase]);
+            }
+
+            // Check if wells are present.
+            const bool hasWells = residual.well_flux_eq.size() > 0 ;
+            std::vector<ADB> elim_eqs;
+            if (hasWells) {
+                // Eliminate the well-related unknowns, and corresponding equations.
+                eqs.push_back(residual.well_flux_eq);
+                eqs.push_back(residual.well_eq);
+                elim_eqs.reserve(2);
+                elim_eqs.push_back(eqs[np]);
+                eqs = eliminateVariable(eqs, np); // Eliminate well flux unknowns.
+                elim_eqs.push_back(eqs[np]);
+                eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
+                assert(int(eqs.size()) == np);
+            }
+
+            // Solve the linearised oil equation.
+            Eigen::SparseMatrix<double, Eigen::RowMajor> eigenA = eqs[0].derivative()[0].getSparse();
+            DuneMatrix opA(eigenA);
+            const int size = eqs[0].size();
+            typedef Dune::BlockVector<Dune::FieldVector<double, 1> > Vector1;
+            Vector1 x;
+            x.resize(size);
+            x = 0.0;
+            Vector1 b;
+            b.resize(size);
+            b = 0.0;
+            std::copy_n(eqs[0].value().data(), size, b.begin());
+
+            // Solve with AMG solver.
+            typedef Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> > Mat;
+            typedef Dune::MatrixAdapter<Mat, Vector1, Vector1> Operator;
+            Operator sOpA(opA);
+
+            typedef Dune::Amg::SequentialInformation ParallelInformation;
+            typedef Dune::SeqILU0<Mat,Vector1,Vector1> EllipticPreconditioner;
+            typedef EllipticPreconditioner Smoother;
+            typedef Dune::Amg::AMG<Operator, Vector1, Smoother, ParallelInformation> AMG;
+            typedef Dune::Amg::FirstDiagonal CouplingMetric;
+            typedef Dune::Amg::SymmetricCriterion<Mat, CouplingMetric> CritBase;
+            typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
+
+            // TODO: revise choice of parameters
+            const int coarsenTarget = 1200;
+            Criterion criterion(15, coarsenTarget);
+            criterion.setDebugLevel(0); // no debug information, 1 for printing hierarchy information
+            criterion.setDefaultValuesIsotropic(2);
+            criterion.setNoPostSmoothSteps(1);
+            criterion.setNoPreSmoothSteps(1);
+
+            // for DUNE 2.2 we also need to pass the smoother args
+            typedef typename AMG::Smoother Smoother;
+            typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+            SmootherArgs  smootherArgs;
+            smootherArgs.iterations = 1;
+            smootherArgs.relaxationFactor = 1.0;
+
+            AMG precond(sOpA, criterion, smootherArgs);
+
+            const int verbosity = 0;
+            const int maxit = 30;
+            const double tolerance = 1e-5;
+
+            // Construct linear solver.
+            Dune::BiCGSTABSolver<Vector1> linsolve(sOpA, precond, tolerance, maxit, verbosity);
+
+            // Solve system.
+            Dune::InverseOperatorResult result;
+            linsolve.apply(x, b, result);
+
+            // Check for failure of linear solver.
+            if (!result.converged) {
+                OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver in computePressureIncrement().");
+            }
+
+            // Copy solver output to dx.
+            NewtonIterationBlackoilInterleaved::SolutionVector dx(size);
+            for (int i = 0; i < size; ++i) {
+                dx(i)          = x[i];
+            }
+
+            if (hasWells) {
+                // Compute full solution using the eliminated equations.
+                // Recovery in inverse order of elimination.
+                dx = recoverVariable(elim_eqs[1], dx, np);
+                dx = recoverVariable(elim_eqs[0], dx, np);
+            }
+            return std::make_pair(dx, result);
+        }
+
+
     } // end namespace detail
 
 
@@ -575,6 +685,12 @@ namespace Opm
     {
         // get np and call appropriate template method
         const int np = residual.material_balance_eq.size();
+        if (np == 1) {
+            auto result = detail::computePressureIncrement(residual);
+            iterations_ = result.second.iterations;
+            return result.first;
+        }
+
         const NewtonIterationBlackoilInterface& newtonIncrement = residual.singlePrecision ?
             detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
             detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
