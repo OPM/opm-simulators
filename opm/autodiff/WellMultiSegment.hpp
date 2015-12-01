@@ -48,8 +48,7 @@ namespace Opm
     {
     public:
 
-        typedef Eigen::Array<double, Eigen::Dynamic, 1> V;
-        typedef Eigen::SparseMatrix<double> M;
+        typedef Eigen::SparseMatrix<double> Matrix;
 
         /// Constructor of WellMultiSegment
         /// \param[in]       well information from EclipseState
@@ -130,15 +129,15 @@ namespace Opm
         /// Struct for the well operator matrices.
         /// All the operator matrics only apply to the one specifi well.
         struct WellOps {
-            M s2p;              // segment -> perf (scatter)
-            M p2s;              // perf -> segment (gather)
-            M p2s_average;      // perf -> segment (avarage)
-            M s2s_gather;       // segment -> segment (in an accumlative way)
+            Matrix s2p;              // segment -> perf (scatter)
+            Matrix p2s;              // perf -> segment (gather)
+            Matrix p2s_average;      // perf -> segment (avarage)
+            Matrix s2s_gather;       // segment -> segment (in an accumlative way)
                                 // means the outlet segments will gather all the contribution
                                 // from all the inlet segments in a recurisive way
-            M p2s_gather;       // perforation -> segment (in an accumative way)
-            M s2s_inlets;       // segment -> its inlet segments
-            M s2s_outlet;      // segment -> its outlet segment
+            Matrix p2s_gather;       // perforation -> segment (in an accumative way)
+            Matrix s2s_inlets;       // segment -> its inlet segments
+            Matrix s2s_outlet;      // segment -> its outlet segment
         };
 
         /// Well operator matrics

@@ -47,7 +47,6 @@ namespace Opm
     public:
 
         typedef WellStateFullyImplicitBlackoil Base;
-        typedef WellMultiSegment::V V;
 
         typedef struct {
             int well_number;

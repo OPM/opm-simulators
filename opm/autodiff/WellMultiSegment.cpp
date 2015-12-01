@@ -230,8 +230,8 @@ namespace Opm
     }
 
     void WellMultiSegment::updateWellOps() {
-        m_wops_.s2p = M(m_number_of_perforations_, m_number_of_segments_);
-        m_wops_.p2s = M(m_number_of_segments_, m_number_of_perforations_);
+        m_wops_.s2p = Matrix(m_number_of_perforations_, m_number_of_segments_);
+        m_wops_.p2s = Matrix(m_number_of_segments_, m_number_of_perforations_);
 
         typedef Eigen::Triplet<double> Tri;
 
@@ -254,7 +254,7 @@ namespace Opm
         m_wops_.s2p.setFromTriplets(s2p.begin(), s2p.end());
         m_wops_.p2s.setFromTriplets(p2s.begin(), p2s.end());
 
-        m_wops_.s2s_gather = M(m_number_of_segments_, m_number_of_segments_);
+        m_wops_.s2s_gather = Matrix(m_number_of_segments_, m_number_of_segments_);
         std::vector<Tri> s2s_gather;
 
         s2s_gather.reserve(m_number_of_segments_ * m_number_of_segments_);
@@ -280,16 +280,16 @@ namespace Opm
 
         m_wops_.s2s_gather.setFromTriplets(s2s_gather.begin(), s2s_gather.end());
 
-        m_wops_.p2s_gather = M(m_number_of_segments_, m_number_of_perforations_);
+        m_wops_.p2s_gather = Matrix(m_number_of_segments_, m_number_of_perforations_);
         m_wops_.p2s_gather = m_wops_.s2s_gather * m_wops_.p2s;
 
-        m_wops_.s2s_inlets = M(m_number_of_segments_, m_number_of_segments_);
+        m_wops_.s2s_inlets = Matrix(m_number_of_segments_, m_number_of_segments_);
         m_wops_.s2s_inlets.setFromTriplets(s2s_inlets.begin(), s2s_inlets.end());
 
-        m_wops_.s2s_outlet = M(m_number_of_segments_, m_number_of_segments_);
+        m_wops_.s2s_outlet = Matrix(m_number_of_segments_, m_number_of_segments_);
         m_wops_.s2s_outlet.setFromTriplets(s2s_outlet.begin(), s2s_outlet.end());
 
-        m_wops_.p2s_average = M(m_number_of_segments_, m_number_of_perforations_);
+        m_wops_.p2s_average = Matrix(m_number_of_segments_, m_number_of_perforations_);
         std::vector<Tri> p2s_average;
         p2s_average.reserve(m_number_of_segments_);
 
@@ -301,7 +301,7 @@ namespace Opm
         }
 
         // constructing the diagonal matrix to do the averaging for p2s
-        M temp_averaging_p2s = M(m_number_of_segments_, m_number_of_segments_);
+        Matrix temp_averaging_p2s = Matrix(m_number_of_segments_, m_number_of_segments_);
         temp_averaging_p2s.setFromTriplets(p2s_average.begin(), p2s_average.end());
         m_wops_.p2s_average = temp_averaging_p2s * m_wops_.p2s;
     }
