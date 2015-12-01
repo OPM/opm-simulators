@@ -101,6 +101,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND EXAMPLE_SOURCE_FILES
   examples/find_zero.cpp
   examples/flow.cpp
+  examples/flow_sequential.cpp
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
@@ -121,6 +122,7 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/flow.cpp
+  examples/flow_sequential.cpp
   examples/flow_solvent.cpp
   examples/opm_init_check.cpp
   examples/sim_poly2p_comp_reorder.cpp
@@ -143,21 +145,25 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilModelBase_impl.hpp
   opm/autodiff/BlackoilModelEnums.hpp
   opm/autodiff/BlackoilModelParameters.hpp
+  opm/autodiff/BlackoilPressureModel.hpp
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
   opm/autodiff/SolventPropsAdFromDeck.hpp
   opm/autodiff/BlackoilPropsAdInterface.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
+  opm/autodiff/BlackoilSequentialModel.hpp
   opm/autodiff/BlackoilSolventModel.hpp
   opm/autodiff/BlackoilSolventModel_impl.hpp
   opm/autodiff/BlackoilSolventState.hpp
   opm/autodiff/BlackoilMultiSegmentModel.hpp
   opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
+  opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
   opm/autodiff/DuneMatrix.hpp
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
   opm/autodiff/FlowMain.hpp
   opm/autodiff/FlowMainPolymer.hpp
+  opm/autodiff/FlowMainSequential.hpp
   opm/autodiff/FlowMainSolvent.hpp
   opm/autodiff/GeoProps.hpp
   opm/autodiff/GridHelpers.hpp
@@ -185,6 +191,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
+  opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
