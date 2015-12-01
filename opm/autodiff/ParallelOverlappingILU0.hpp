@@ -37,20 +37,26 @@ namespace Dune
 namespace Amg
 {
 
-template<class M, class X, class Y, class C>
-struct ConstructionTraits<Opm::ParallelOverlappingILU0<M,X,Y,C> >
+/// \brief Tells AMG how to construct the Opm::ParallelOverlappingILU0 smoother
+/// \tparam Matrix The type of the Matrix.
+/// \tparam Domain The type of the Vector representing the domain.
+/// \tparam Range The type of the Vector representing the range.
+/// \tparam ParallelInfo The type of the parallel information object
+///         used, e.g. Dune::OwnerOverlapCommunication
+template<class Matrix, class Domain, class Range, class ParallelInfo>
+struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo> >
 {
-    typedef Dune::SeqILU0<M,X,Y> T;
-    typedef DefaultParallelConstructionArgs<T,C> Arguments;
+    typedef Dune::SeqILU0<Matrix,Domain,Range> T;
+    typedef DefaultParallelConstructionArgs<T,ParallelInfo> Arguments;
     typedef ConstructionTraits<T> SeqConstructionTraits;
-    static inline Opm::ParallelOverlappingILU0<M,X,Y,C>* construct(Arguments& args)
+    static inline Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>* construct(Arguments& args)
     {
-        return new Opm::ParallelOverlappingILU0<M,X,Y,C>(args.getMatrix(),
+        return new Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>(args.getMatrix(),
                                                          args.getComm(),
                                                          args.getArgs().relaxationFactor);
     }
 
-    static inline void deconstruct(Opm::ParallelOverlappingILU0<M,X,Y,C>* bp)
+    static inline void deconstruct(Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>* bp)
     {
         delete bp;
     }
@@ -64,17 +70,33 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<M,X,Y,C> >
 namespace Opm
 {
 
-template<class M, class X, class Y, typename C>
-class ParallelOverlappingILU0 : public Dune::Preconditioner<X,Y> {
+/// \brief A two-step version of an overlapping Schwarz preconditioner using one step ILU0 as
+///
+/// This preconditioner differs from a ParallelRestrictedOverlappingSchwarz with
+/// Dune:SeqILU0 in the follwing way:
+/// During apply we make sure that the current residual is consistent (i.e.
+/// each process knows the same value for each index. The we solve
+/// Ly= d for y and make y consistent again. Last we solve Ux = y and
+/// make sure that x is consistent consistent.
+/// In contrast for ParallelRestrictedOverlappingSchwarz we solve (LU)x = d for x
+/// without forcing consistency between the two steps.
+/// \tparam Matrix The type of the Matrix.
+/// \tparam Domain The type of the Vector representing the domain.
+/// \tparam Range The type of the Vector representing the range.
+/// \tparam ParallelInfo The type of the parallel information object
+///         used, e.g. Dune::OwnerOverlapCommunication
+template<class Matrix, class Domain, class Range, class ParallelInfo>
+class ParallelOverlappingILU0
+    : public Dune::Preconditioner<Domain,Range> {
 public:
     //! \brief The matrix type the preconditioner is for.
-    typedef typename Dune::remove_const<M>::type matrix_type;
+    typedef typename Dune::remove_const<Matrix>::type matrix_type;
     //! \brief The domain type of the preconditioner.
-    typedef X domain_type;
+    typedef Domain domain_type;
     //! \brief The range type of the preconditioner.
-    typedef Y range_type;
+    typedef Range range_type;
     //! \brief The field type of the preconditioner.
-    typedef typename X::field_type field_type;
+    typedef typename Domain::field_type field_type;
 
     // define the category
     enum {
@@ -88,7 +110,8 @@ public:
       \param A The matrix to operate on.
       \param w The relaxation factor.
     */
-    ParallelOverlappingILU0 (const M& A, const C& comm, field_type w)
+    ParallelOverlappingILU0 (const Matrix& A, const ParallelInfo& comm,
+                             field_type w)
         : ilu_(A), comm_(comm), w_(w)
     {
         int ilu_setup_successful = 1;
@@ -118,7 +141,7 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    virtual void pre (X& x, Y& b)
+    virtual void pre (Domain& x, Range& b)
     {
         DUNE_UNUSED_PARAMETER(x);
         DUNE_UNUSED_PARAMETER(b);
@@ -129,9 +152,9 @@ public:
 
       \copydoc Preconditioner::apply(X&,const Y&)
     */
-    virtual void apply (X& v, const Y& d)
+    virtual void apply (Domain& v, const Range& d)
     {
-        Y& md = const_cast<Y&>(d);
+        Range& md = const_cast<Range&>(d);
         comm_.copyOwnerToAll(md,md);
         auto endrow=ilu_.end();
         for ( auto row = ilu_.begin(); row != endrow; ++row )
@@ -163,15 +186,15 @@ public:
 
       \copydoc Preconditioner::post(X&)
     */
-    virtual void post (X& x)
+    virtual void post (Range& x)
     {
         DUNE_UNUSED_PARAMETER(x);
     }
 
 private:
     //! \brief The ILU0 decomposition of the matrix.
-    matrix_type ilu_;
-    const C& comm_;
+    Matrix ilu_;
+    const ParallelInfo& comm_;
     //! \brief The relaxation factor to use.
     field_type w_;
 

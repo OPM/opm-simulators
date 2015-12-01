@@ -36,28 +36,59 @@ namespace Dune
 
 namespace Amg
 {
-template<class X, class Y, class C, class T>
-struct ConstructionTraits<Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T> >
+
+/// \brief Tells AMG how to construct the Opm::ParallelOverlappingILU0 smoother
+/// \tparam Domain The type of the Vector representing the domain.
+/// \tparam Range The type of the Vector representing the range.
+/// \tparam ParallelInfo The type of the parallel information object
+///         used, e.g. Dune::OwnerOverlapCommunication
+/// \tparam SeqPreconditioner The underlying sequential preconditioner to use.
+template<class Range, class Domain, class ParallelInfo, class SeqPreconditioner>
+struct ConstructionTraits<Opm::ParallelRestrictedOverlappingSchwarz<Range,
+                                                                    Domain,
+                                                                    ParallelInfo,
+                                                                    SeqPreconditioner> >
 {
-    typedef DefaultParallelConstructionArgs<T,C> Arguments;
-    typedef ConstructionTraits<T> SeqConstructionTraits;
-    static inline Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T>* construct(Arguments& args)
+    typedef DefaultParallelConstructionArgs<SeqPreconditioner,ParallelInfo> Arguments;
+    typedef ConstructionTraits<SeqPreconditioner> SeqConstructionTraits;
+
+    /// \brief Construct a parallel restricted overlapping schwarz preconditioner.
+    static inline Opm::ParallelRestrictedOverlappingSchwarz<Range,
+                                                            Domain,
+                                                            ParallelInfo,
+                                                            SeqPreconditioner>*
+    construct(Arguments& args)
     {
-        return new Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T>(*SeqConstructionTraits::construct(args),
-                                                                      args.getComm());
+        return new Opm::ParallelRestrictedOverlappingSchwarz
+            <Range,Domain,ParallelInfo,SeqPreconditioner>(*SeqConstructionTraits
+                                                          ::construct(args),
+                                                          args.getComm());
     }
 
-    static inline void deconstruct(Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T>* bp)
+    /// \brief Deconstruct and free a parallel restricted overlapping schwarz preconditioner.
+    static inline void deconstruct(Opm::ParallelRestrictedOverlappingSchwarz
+                                   <Range,Domain,ParallelInfo,SeqPreconditioner>* bp)
     {
-        SeqConstructionTraits::deconstruct(static_cast<T*>(&bp->preconditioner));
+        SeqConstructionTraits
+            ::deconstruct(static_cast<SeqPreconditioner*>(&bp->preconditioner));
         delete bp;
     }
 
 };
-template<class X, class Y, class C, class T>
-struct SmootherTraits<Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T> >
+
+/// \brief Tells AMG how to use Opm::ParallelOverlappingILU0 smoother
+/// \tparam Domain The type of the Vector representing the domain.
+/// \tparam Range The type of the Vector representing the range.
+/// \tparam ParallelInfo The type of the parallel information object
+///         used, e.g. Dune::OwnerOverlapCommunication
+/// \tparam SeqPreconditioner The underlying sequential preconditioner to use.
+template<class Range, class Domain, class ParallelInfo, class SeqPreconditioner>
+struct SmootherTraits<Opm::ParallelRestrictedOverlappingSchwarz<Range,
+                                                                Domain,
+                                                                ParallelInfo,
+                                                                SeqPreconditioner> >
 {
-    typedef DefaultSmootherArgs<typename T::matrix_type::field_type> Arguments;
+    typedef DefaultSmootherArgs<typename SeqPreconditioner::matrix_type::field_type> Arguments;
 
 };
 
@@ -67,26 +98,43 @@ struct SmootherTraits<Opm::ParallelRestrictedOverlappingSchwarz<X,Y,C,T> >
 
 namespace Opm{
 
-/**
- * @brief Block parallel preconditioner.
- *
- * This is essentially a wrapper that takes a sequential
- * preconditioner. In each step the sequential preconditioner
- * is applied and then all owner data points are updated on
- * all other processes.
- */
-template<class X, class Y, class C, class T=Dune::Preconditioner<X,Y> >
-class ParallelRestrictedOverlappingSchwarz : public Dune::Preconditioner<X,Y> {
-    friend class Dune::Amg::ConstructionTraits<ParallelRestrictedOverlappingSchwarz<X,Y,C,T> >;
+/// \brief Block parallel preconditioner.
+///
+/// This is essentially a wrapper that takes a sequential
+/// preconditioner. In each step the sequential preconditioner
+/// is applied to the whole subdomain and then all owner data
+/// points are updated on all other processes from the processor
+/// that knows the complete matrix row for this data point (in dune-istl
+/// speak that is the one that owns the data).
+///
+/// Note that this is different from the usual approach in dune-istl where
+/// the application of the sequential preconditioner only takes place on
+/// the (owner) partition of the process disregarding any overlap/ghost region.
+///
+/// For more information see https://www.cs.colorado.edu/~cai/papers/rash.pdf
+///
+/// \tparam Domain The type of the Vector representing the domain.
+/// \tparam Range The type of the Vector representing the range.
+/// \tparam ParallelInfo The type of the parallel information object
+///         used, e.g. Dune::OwnerOverlapCommunication
+/// \tparam SeqPreconditioner The underlying sequential preconditioner to use.
+template<class Range, class Domain, class ParallelInfo, class SeqPreconditioner=Dune::Preconditioner<Range,Domain> >
+class ParallelRestrictedOverlappingSchwarz
+    : public Dune::Preconditioner<Range,Domain> {
+    friend class Dune::Amg
+    ::ConstructionTraits<ParallelRestrictedOverlappingSchwarz<Range,
+                                                              Domain,
+                                                              ParallelInfo,
+                                                              SeqPreconditioner> >;
 public:
     //! \brief The domain type of the preconditioner.
-    typedef X domain_type;
+    typedef Domain domain_type;
     //! \brief The range type of the preconditioner.
-    typedef Y range_type;
+    typedef Range range_type;
     //! \brief The field type of the preconditioner.
-    typedef typename X::field_type field_type;
+    typedef typename Domain::field_type field_type;
     //! \brief The type of the communication object.
-    typedef C communication_type;
+    typedef ParallelInfo communication_type;
 
     // define the category
     enum {
@@ -101,8 +149,8 @@ public:
       \param c The communication object for syncing overlap and copy
       data points. (E.~g. OwnerOverlapCommunication )
     */
-    ParallelRestrictedOverlappingSchwarz (T& p, const communication_type& c)
-        : preconditioner(p), communication(c)
+    ParallelRestrictedOverlappingSchwarz (SeqPreconditioner& p, const communication_type& c)
+        : preconditioner_(p), communication_(c)
     {   }
 
     /*!
@@ -110,10 +158,10 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    virtual void pre (X& x, Y& b)
+    virtual void pre (Domain& x, Range& b)
     {
-        communication.copyOwnerToAll(x,x);     // make dirichlet values consistent
-        preconditioner.pre(x,b);
+        communication_.copyOwnerToAll(x,x);     // make dirichlet values consistent
+        preconditioner_.pre(x,b);
     }
 
     /*!
@@ -121,23 +169,21 @@ public:
 
       \copydoc Preconditioner::apply(X&,const Y&)
     */
-    virtual void apply (X& v, const Y& d)
+    virtual void apply (Domain& v, const Range& d)
     {
-        Y& md = const_cast<Y&>(d);
-        communication.copyOwnerToAll(md,md);
-        preconditioner.apply(v,d);
-        communication.copyOwnerToAll(v,v);
-        communication.project(md);
+        apply<true>(v, d);
     }
 
     template<bool forward>
-    void apply (X& v, const Y& d)
+    void apply (Domain& v, const Range& d)
     {
-        Y& md = const_cast<Y&>(d);
-        communication.copyOwnerToAll(md,md);
-        preconditioner.template apply<forward>(v,d);
-        communication.copyOwnerToAll(v,v);
-        communication.project(md);
+        // hack us a mutable d to prevent copying.
+        Range& md = const_cast<Range&>(d);
+        communication_.copyOwnerToAll(md,md);
+        preconditioner_.template apply<forward>(v,d);
+        communication_.copyOwnerToAll(v,v);
+        // Make sure that d is the same as at the beginning of apply.
+        communication_.project(md);
     }
 
     /*!
@@ -145,17 +191,17 @@ public:
 
       \copydoc Preconditioner::post(X&)
     */
-    virtual void post (X& x)
+    virtual void post (Range& x)
     {
-        preconditioner.post(x);
+        preconditioner_.post(x);
     }
 
 private:
     //! \brief a sequential preconditioner
-    T& preconditioner;
+    SeqPreconditioner& preconditioner_;
 
     //! \brief the communication object
-    const communication_type& communication;
+    const communication_type& communication_;
 };
 
 
