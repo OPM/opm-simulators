@@ -60,29 +60,20 @@ try
         usage();
         exit(1);
     } 
-    static char* ECLIPSEFILENAME(argv[1]);
-    std::ifstream eclipseFile(ECLIPSEFILENAME, std::ios::in);
-    if (eclipseFile.fail()) {
-        std::cerr << "Error: Filename " << ECLIPSEFILENAME << " not found or not readable." << std::endl;
-        usage();
-        exit(1);
-    }
+    const char* eclipseFilename = argv[1];
+    std::ifstream eclipseFile(eclipseFilename, std::ios::in);
     eclipseFile.close();
-    //parameter::ParameterGroup param(argc, argv);
-    // Read saturation tables.
     EclipseStateConstPtr eclState; 
     ParserPtr parser(new Opm::Parser);
-    //ParseMode parseMode;
     Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
                               { ParseMode::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
                               { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE}
                              });
-    Opm::DeckConstPtr deck(parser->parseFile(ECLIPSEFILENAME, parseMode));
+    Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseMode));
     eclState.reset(new EclipseState(deck, parseMode));
 
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
-    // Write parameters used for later reference.
     bool output = true;
     std::string output_dir;
     if (output) {
