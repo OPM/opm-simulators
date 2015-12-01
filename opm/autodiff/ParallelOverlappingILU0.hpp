@@ -55,13 +55,8 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<M,X,Y,C> >
         delete bp;
     }
 
-};/*
-    template<class X, class Y, class C>
-    struct SmootherTraits<Opm::ParallelOverlappingILU0<X,Y,C> >
-    {
-    typedef DefaultSmootherArgs<typename T::matrix_type::field_type> Arguments;
+};
 
-    };*/
 } // end namespace Amg
 
 } // end namespace Dune
