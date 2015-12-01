@@ -264,8 +264,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
     //Dune::SeqILU0<M,X,X>* ilu=new Dune::SeqILU0<M,X,X>(Ae, relax);
     typedef typename CPRSelector<M,X,X,Dune::OwnerOverlapCopyCommunication<I1,I2> >
         ::EllipticPreconditionerPointer EllipticPreconditionerPointer;
-    return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));//,
-    //                                         createParallelDeleter(*ilu, comm));
+    return EllipticPreconditionerPointer(new ParallelPreconditioner(Ae, comm, relax));
 }
 #endif
 } // end namespace

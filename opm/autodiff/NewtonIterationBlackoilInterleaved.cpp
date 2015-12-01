@@ -143,50 +143,15 @@ namespace Opm
 
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-        //typedef Dune::BlockPreconditioner<Vector, Vector, Comm, SeqPreconditioner> ParPreconditioner;
         typedef ParallelOverlappingILU0<Mat,Vector,Vector,Comm> ParPreconditioner;
         template <class Operator>
-        std::unique_ptr<ParPreconditioner /*,
-                                            AdditionalObjectDeleter<SeqPreconditioner> */
-                        >
+        std::unique_ptr<ParPreconditioner>
         constructPrecond(Operator& opA, const Comm& comm) const
         {
-            typedef AdditionalObjectDeleter<SeqPreconditioner> Deleter;
-            //typedef std::unique_ptr<ParPreconditioner, Deleter> Pointer;
             typedef std::unique_ptr<ParPreconditioner> Pointer;
             const double relax = 1.0;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
-            /*
-
-            int ilu_setup_successful = 1;
-            std::string message;
-            const double relax = 1.0;
-            SeqPreconditioner* seq_precond = nullptr;
-            try {
-                seq_precond = new SeqPreconditioner(opA.getmat(), relax);
-            }
-            catch ( Dune::MatrixBlockError error )
-            {
-                message = error.what();
-                std::cerr<<"Exception occured on process " <<
-                    comm.communicator().rank() << " during " <<
-                    "setup of ILU0 preconditioner with message: " <<
-                    message<<std::endl;
-                ilu_setup_successful = 0;
-            }
-            // Check whether there was a problem on some process
-            if ( comm.communicator().min(ilu_setup_successful) == 0 )
-            {
-                if ( seq_precond ) // not null if constructor succeeded
-                {
-                    // prevent memory leak
-                    delete seq_precond;
-                    throw Dune::MatrixBlockError();
-                }
-            }
-            return Pointer(new ParPreconditioner(*seq_precond, comm),
-                                  Deleter(*seq_precond));
-            */
+            
         }
 #endif
 
