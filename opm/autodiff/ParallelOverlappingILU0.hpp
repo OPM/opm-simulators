@@ -77,7 +77,7 @@ namespace Opm
 /// During apply we make sure that the current residual is consistent (i.e.
 /// each process knows the same value for each index. The we solve
 /// Ly= d for y and make y consistent again. Last we solve Ux = y and
-/// make sure that x is consistent consistent.
+/// make sure that x is consistent.
 /// In contrast for ParallelRestrictedOverlappingSchwarz we solve (LU)x = d for x
 /// without forcing consistency between the two steps.
 /// \tparam Matrix The type of the Matrix.
