@@ -61,6 +61,12 @@ namespace Opm
     }
 
     template <class PhysicalModel>
+    PhysicalModel& NonlinearSolver<PhysicalModel>::model()
+    {
+        return *model_;
+    }
+
+    template <class PhysicalModel>
     unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterationsLastStep() const
     {
         return nonlinearIterationsLast_;

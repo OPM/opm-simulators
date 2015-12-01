@@ -100,6 +100,9 @@ namespace Opm {
         /// Reference to physical model.
         const PhysicalModel& model() const;
 
+        /// Mutable reference to physical model.
+        PhysicalModel& model();
+
         /// Detect oscillation or stagnation in a given residual history.
         void detectOscillations(const std::vector<std::vector<double>>& residual_history,
                                 const int it, bool& oscillate, bool& stagnate) const;
