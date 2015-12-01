@@ -154,7 +154,7 @@ struct OneDRegionInformation
 
 template<class M, class G, class L, int s>
 void setupPattern(std::size_t y_size, M& mat, Dune::ParallelIndexSet<G,L,s>& indices,
-                  const OneDRegionInformation& region)
+                  const OneDRegionInformation& region, std::size_t local_size)
 {
     //int n = overlapEnd - overlapStart;
 
@@ -187,8 +187,18 @@ void setupPattern(std::size_t y_size, M& mat, Dune::ParallelIndexSet<G,L,s>& ind
                 iter.insert(iter.index()-1);
 
             if(i < region.overlap_end-1)
-                // We have a rigt neighbour
+                // We have a right neighbour
                 iter.insert(iter.index()+1);
+
+            // There might be wells creating non-neighboring connections
+            // In the overlap/ghost region of another processor.
+            // Simulate these.
+            if( ( (i == region.end - 1 && region.end != region.overlap_end)
+                  || (i%local_size == local_size-1 && i != region.end-1))
+                && (j < y_size - 2) )
+            {
+                iter.insert(iter.index() + 2 * region.no_unknowns);
+            }
 
             // j direction
             if(j > 0)
@@ -257,7 +267,8 @@ void fillValues(M& mat, const OneDRegionInformation& region, T eps)
 
 template<class M, class G, class L, int s>
 std::unique_ptr<M> setupAnisotropic2d(int n, Dune::ParallelIndexSet<G,L,s>& indices,
-                                      const OneDRegionInformation& region, typename M::block_type::value_type eps)
+                                      const OneDRegionInformation& region, typename M::block_type::value_type eps,
+                                      int local_size)
 {
     typedef M BCRSMat;
 
@@ -267,7 +278,7 @@ std::unique_ptr<M> setupAnisotropic2d(int n, Dune::ParallelIndexSet<G,L,s>& indi
     std::unique_ptr<BCRSMat> mat;
     mat.reset(new BCRSMat(no_unknowns*n, no_unknowns*n, no_unknowns*n*5, BCRSMat::row_wise));
 
-    setupPattern(n, *mat, indices, region);
+    setupPattern(n, *mat, indices, region, local_size);
     fillValues(*mat, region, eps);
     return mat;
 }
@@ -377,7 +388,7 @@ void test_parallel_ilu0()
     typedef int GlobalId;
     typedef Dune::OwnerOverlapCopyCommunication<GlobalId> Communication;
     Communication comm(MPI_COMM_WORLD), self_comm(MPI_COMM_SELF);
-    const int    N = 3;
+    const int    N = 3; // Must be >=3 to test nncs created by e.g. wells.
     const int size = comm.communicator().size();
     const int global_unknowns = size * N * N;
     const OneDRegionInformation region(N, comm.communicator());
@@ -385,9 +396,9 @@ void test_parallel_ilu0()
 
 
     std::unique_ptr<BCRSMat> mat =
-        setupAnisotropic2d<BCRSMat>(N, comm.indexSet(), region, 1);
+        setupAnisotropic2d<BCRSMat>(N, comm.indexSet(), region, 1, global_unknowns);
     std::unique_ptr<BCRSMat> global_mat = setupAnisotropic2d<BCRSMat>(N, self_comm.indexSet(),
-                                                                      global_region, 1);
+                                                                      global_region, 1, N);
     ParallelGlobalLinearSystemPermutation permutation(N, size);
 
     std::unique_ptr<BCRSMat> global_mat_permuted = permutation.createPermutedMatrix(*global_mat);
