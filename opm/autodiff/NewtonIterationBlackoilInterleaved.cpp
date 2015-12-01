@@ -27,6 +27,8 @@
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
+#include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
+#include <opm/autodiff/ParallelOverlappingILU0.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
