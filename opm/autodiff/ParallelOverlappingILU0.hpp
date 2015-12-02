@@ -173,7 +173,9 @@ public:
             auto rhs(v[row.index()]);
             auto col = row->beforeEnd();
             for( ; col.index() > row.index(); --col)
+            {
                 col->mmv(v[col.index()], rhs);
+            }
             v[row.index()] = 0;
             col->umv(rhs, v[row.index()]);
         }
