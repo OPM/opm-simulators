@@ -513,26 +513,33 @@ namespace Opm {
                                                 const ADB&              phasePressure,
                                                 const SolutionState&    state)
     {
-        Base::computeMassFlux(actph, transi, kr, phasePressure, state);
+        if (has_solvent_) {
 
-        const int canonicalPhaseIdx = canph_[ actph ];
-        if (canonicalPhaseIdx == Gas) {
-            if (has_solvent_) {
-                const int  nc   = Opm::UgGridHelpers::numCells(grid_);
+            const int  nc   = Opm::UgGridHelpers::numCells(grid_);
 
-                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-                const ADB zero = ADB::constant(V::Zero(nc));
-                const ADB& ss = state.solvent_saturation;
-                const ADB& sg = (active_[ Gas ]
-                                 ? state.saturation[ pu.phase_pos[ Gas ] ]
-                                 : zero);
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            const ADB zero = ADB::constant(V::Zero(nc));
+            const ADB& ss = state.solvent_saturation;
+            const ADB& sg = (active_[ Gas ]
+                             ? state.saturation[ pu.phase_pos[ Gas ] ]
+                             : zero);
+            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+            ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+            V ones = V::Constant(nc, 1.0);
+            const int canonicalPhaseIdx = canph_[ actph ];
+            switch (canonicalPhaseIdx) {
+            case Gas: {
 
-                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-                ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
-                V ones = V::Constant(nc, 1.0);
+                // gas relperm
+                const ADB krg = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr;
+
+                // compute gas mobility and flux
+                Base::computeMassFlux(actph, transi, krg, phasePressure, state);
+
+                // compute solvent mobility and flux
 
                 const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);               
+                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);
 
                 rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
 
@@ -541,18 +548,25 @@ namespace Opm {
                 rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
 
                 UpwindSelector<double> upwind_solvent(grid_, ops_, rq_[solvent_pos_].dh.value());
-                // Compute solvent flux.
                 rq_[solvent_pos_].mflux = upwind_solvent.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
 
-                // Update gas mobility and flux
-                rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
-
-                const ADB& b   = rq_[ actph ].b;
-                const ADB& mob = rq_[ actph ].mob;
-                const ADB& dh  = rq_[ actph ].dh;
-                UpwindSelector<double> upwind_gas(grid_, ops_, dh.value());
-                rq_[ actph ].mflux = upwind_gas.select(b * mob) * (transi * dh);
+                break;
             }
+
+            case Oil: {
+                Base::computeMassFlux(actph, transi, kr, phasePressure, state);
+                break;
+            }
+            case Water: {
+                Base::computeMassFlux(actph, transi, kr, phasePressure, state);
+                break;
+            }
+            default:
+                OPM_THROW(std::runtime_error, "Unknown phase index " << canonicalPhaseIdx);
+            }
+
+        } else {
+            Base::computeMassFlux(actph, transi, kr, phasePressure, state);
         }
 
     }
