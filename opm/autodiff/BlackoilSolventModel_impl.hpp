@@ -82,12 +82,15 @@ namespace Opm {
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              terminal_output,
-                                                     const bool                              has_solvent)
+                                                     const bool                              has_solvent,
+                                                     const bool                              is_miscible)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output),
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
-          solvent_props_(solvent_props)
+          solvent_props_(solvent_props),
+          is_miscible_(is_miscible)
+
     {
         if (has_solvent_) {
 
@@ -523,25 +526,45 @@ namespace Opm {
             const ADB& sg = (active_[ Gas ]
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
+            const ADB& so = (active_[ Oil ]
+                             ? state.saturation[ pu.phase_pos[ Oil ] ]
+                             : zero);
+            const ADB sn = ss + so + sg;
+
+            Selector<double> zeroSn_selector(sn.value(), Selector<double>::Zero);
+            const ADB F_totalGas = zeroSn_selector.select( (ss + sg), (ss + sg) / sn);
+
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+
             V ones = V::Constant(nc, 1.0);
             const int canonicalPhaseIdx = canph_[ actph ];
             switch (canonicalPhaseIdx) {
             case Gas: {
 
                 // gas relperm
-                const ADB krg = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr;
+                ADB krg = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr;
+                if (is_miscible_) {
+                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                    const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    krg = misc * mkrgt + (ones - misc) * krg;
+                }
 
                 // compute gas mobility and flux
                 Base::computeMassFlux(actph, transi, krg, phasePressure, state);
 
                 // compute solvent mobility and flux
-
                 const ADB tr_mult = transMult(state.pressure);
                 const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);
 
-                rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
+                ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr;
+                if (is_miscible_) {
+                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                    const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    krs = misc * mkrgt + (ones - misc) * krs;
+                }
+
+                rq_[solvent_pos_].mob = krs * tr_mult / mu;
 
                 const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
                 const ADB rhoavg_solvent = ops_.caver * rho_solvent;
@@ -554,7 +577,15 @@ namespace Opm {
             }
 
             case Oil: {
+
+                ADB kro = kr;
+                if (is_miscible_) {
+                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                    const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier( (ones - F_totalGas), cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    kro = misc * mkro + (ones - misc) * kr;
+                }
                 Base::computeMassFlux(actph, transi, kr, phasePressure, state);
+
                 break;
             }
             case Water: {

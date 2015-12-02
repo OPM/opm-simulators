@@ -177,6 +177,34 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             } else {
                 OPM_THROW(std::runtime_error, "MSFN must be specified in MISCIBLE (SOLVENT) runs\n");
             }
+
+            const TableContainer& miscTables = tables->getMiscTables();
+            if (!miscTables.empty()) {
+
+                int numRegions = miscTables.size();
+
+                if(numRegions > 1) {
+                    OPM_THROW(std::runtime_error, "Only single table miscibility function supported for MISC");
+                }
+                // resize the attributes of the object
+                misc_.resize(numRegions);
+                for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const Opm::MiscTable& miscTable = miscTables.getTable<MiscTable>(regionIdx);
+
+                    // Copy data
+                    // solventFraction = Ss / (Ss + Sg);
+                    const std::vector<double>& solventFraction = miscTable.getSolventFractionColumn();
+                    const std::vector<double>& misc = miscTable.getMiscibilityColumn();
+
+                    misc_[regionIdx] = NonuniformTableLinear<double>(solventFraction, misc);
+
+                }
+
+            } else {
+                OPM_THROW(std::runtime_error, "MSFN must be specified in MISCIBLE (SOLVENT) runs\n");
+            }
+
+
         }
     }
 
@@ -245,6 +273,12 @@ ADB SolventPropsAdFromDeck::miscibleOilRelPermMultiplier(const ADB& So,
                                  const Cells& cells) const
 {
     return SolventPropsAdFromDeck::makeAD(So, cells, mkro_);
+}
+
+ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
+                                 const Cells& cells) const
+{
+    return SolventPropsAdFromDeck::makeAD(solventFraction, cells, misc_);
 }
 
 ADB SolventPropsAdFromDeck::makeAD(const ADB& X_AD, const Cells& cells, std::vector<NonuniformTableLinear<double>> table) const {

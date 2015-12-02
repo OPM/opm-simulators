@@ -63,6 +63,7 @@ namespace Opm {
         /// \param[in] has_vapoil          turn on vaporized oil feature
         /// \param[in] terminal_output     request output to cout/cerr
         /// \param[in] has_solvent         turn on solvent feature
+        /// \param[in] is_miscible         turn on miscible feature
         BlackoilSolventModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
                              const BlackoilPropsAdInterface&         fluid,
@@ -75,7 +76,8 @@ namespace Opm {
                              const bool                              has_disgas,
                              const bool                              has_vapoil,
                              const bool                              terminal_output,
-                             const bool                              has_solvent);
+                             const bool                              has_solvent,
+                             const bool                              is_miscible);
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -106,6 +108,8 @@ namespace Opm {
         const bool has_solvent_;
         const int solvent_pos_;
         const SolventPropsAdFromDeck& solvent_props_;
+        const bool is_miscible_;
+
 
         // Need to declare Base members we want to use here.
         using Base::grid_;

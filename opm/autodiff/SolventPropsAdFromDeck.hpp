@@ -101,6 +101,13 @@ public:
     ADB miscibleOilRelPermMultiplier (const ADB& So,
               const Cells& cells) const;
 
+    /// Miscible function
+    /// \param[in]  solventFraction Array of n solvent fraction Ss / (Sg + Ss) values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n miscibility values
+    ADB miscibilityFunction (const ADB& solventFraction,
+              const Cells& cells) const;
+
     /// Solvent surface density
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n solvent density values.
@@ -121,6 +128,7 @@ private:
     std::vector<NonuniformTableLinear<double> > krn_;
     std::vector<NonuniformTableLinear<double> > mkro_;
     std::vector<NonuniformTableLinear<double> > mkrsg_;
+    std::vector<NonuniformTableLinear<double> > misc_;
 };
 
 } // namespace OPM
