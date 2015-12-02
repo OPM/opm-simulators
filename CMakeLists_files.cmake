@@ -130,6 +130,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/NonlinearSolver_impl.hpp
 	opm/autodiff/LinearisedBlackoilResidual.hpp
 	opm/autodiff/ParallelDebugOutput.hpp
+	opm/autodiff/ParallelOverlappingILU0.hpp
+	opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
 	opm/autodiff/RateConverter.hpp
 	opm/autodiff/RedistributeDataHandles.hpp
 	opm/autodiff/SimulatorBase.hpp

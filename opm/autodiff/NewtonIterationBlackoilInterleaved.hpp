@@ -25,7 +25,6 @@
 #ifndef OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
 #define OPM_NEWTONITERATIONBLACKOILINTERLEAVED_HEADER_INCLUDED
 
-
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
