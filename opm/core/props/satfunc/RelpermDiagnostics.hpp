@@ -33,6 +33,9 @@
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
+#include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
@@ -42,6 +45,10 @@ namespace Opm {
     class RelpermDiagnostics 
     {
     public:
+
+        ///Constructor for OpmLog.
+        RelpermDiagnostics(std::string& logFile);
+
         ///This function is used to diagnosis relperm in
         ///eclipse data file. Errors and warings will be 
         ///output if they're found.
@@ -51,6 +58,10 @@ namespace Opm {
         void diagnosis(EclipseStateConstPtr eclState,
                        DeckConstPtr deck,
                        const UnstructuredGrid& grid);
+
+        ///return streamLog
+        std::shared_ptr<Opm::StreamLog> getOpmLog() const;
+        std::vector<std::string> getMessages() const;
 
     private:
         enum FluidSystem {
@@ -74,11 +85,13 @@ namespace Opm {
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
         std::vector<std::string> messages_;
-        
+
+        ///Use OpmLog
+        std::shared_ptr<Opm::StreamLog> streamLog_;
+
         ///Check the phase that used.
         void phaseCheck_(DeckConstPtr deck);
 
-        
         ///Check saturation family I and II.
         void satFamilyCheck_(EclipseStateConstPtr eclState);
  

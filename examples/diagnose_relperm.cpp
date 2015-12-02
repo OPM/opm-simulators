@@ -76,6 +76,7 @@ try
     const UnstructuredGrid& grid = *gm.c_grid();
     bool output = true;
     std::string output_dir;
+
     if (output) {
         output_dir = "output";
         boost::filesystem::path fpath(output_dir);
@@ -86,10 +87,10 @@ try
             OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
         }
     }
-
+    std::string logFile = output_dir + "/LOGFILE.txt";
     Opm::time::StopWatch timer;
     timer.start();
-    RelpermDiagnostics diagnostic;
+    RelpermDiagnostics diagnostic(logFile);
     diagnostic.diagnosis(eclState, deck, grid);
     timer.stop();
     double tt = timer.secsSinceStart();
