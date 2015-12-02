@@ -66,17 +66,39 @@ public:
               const Cells& cells) const;
 
     /// Gas relPerm multipliers
-    /// \param[in]  solventFraction Array of n solvent fraction values.
+    /// \param[in]  gasFraction     Array of n gas fraction Sg / (sg + Ss) values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n gas relPerm multiplier values.
     ADB gasRelPermMultiplier(const ADB& solventFraction,
               const Cells& cells) const;
 
     /// Solvent relPerm multipliers
-    /// \param[in]  solventFraction Array of n solvent fraction values.
+    /// \param[in]  solventFraction Array of n solvent fraction Ss / (Sg + Ss) values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n solvent relPerm multiplier values.
     ADB solventRelPermMultiplier(const ADB& solventFraction,
+              const Cells& cells) const;
+
+    /// Miscible hydrocrabon relPerm wrt water
+    /// \param[in]  Sn              Array of n total hyrdrocarbon saturation values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n miscible hyrdrocabon wrt water relPerm values.
+    ADB misicibleHydrocarbonWaterRelPerm(const ADB& Sn,
+              const Cells& cells) const;
+
+    /// Miscible Solvent + Gas relPerm multipleier
+    /// \param[in]  Ssg             Array of n total gas fraction (Sgas + Ssolvent) / Sn values, where
+    ///                             Sn = Sgas + Ssolvent + Soil.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n solvent gas relperm multiplier.
+    ADB miscibleSolventGasRelPermMultiplier (const ADB& Ssg,
+              const Cells& cells) const;
+
+    /// Miscible Oil relPerm multipleier
+    /// \param[in]  So              Array of n oil fraction values. Soil / Sn values, where Sn = Sgas + Ssolvent + Soil.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// \return                     Array of n oil relperm multiplier.
+    ADB miscibleOilRelPermMultiplier (const ADB& So,
               const Cells& cells) const;
 
     /// Solvent surface density
@@ -85,6 +107,9 @@ public:
     V solventSurfaceDensity(const Cells& cells) const;
 
 private:
+
+    ADB makeAD(const ADB& X, const Cells& cells,     std::vector<NonuniformTableLinear<double> > table) const;
+
     // The PVT region which is to be used for each cell
     std::vector<int> cellPvtRegionIdx_;
     std::vector<NonuniformTableLinear<double> > b_;
@@ -93,6 +118,9 @@ private:
     std::vector<double> solvent_surface_densities_;
     std::vector<NonuniformTableLinear<double> > krg_;
     std::vector<NonuniformTableLinear<double> > krs_;
+    std::vector<NonuniformTableLinear<double> > krn_;
+    std::vector<NonuniformTableLinear<double> > mkro_;
+    std::vector<NonuniformTableLinear<double> > mkrsg_;
 };
 
 } // namespace OPM
