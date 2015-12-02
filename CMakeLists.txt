@@ -90,6 +90,7 @@ macro (sources_hook)
 	if(DUNE_CORNERPOINT_FOUND OR dune-cornerpoint_FOUND)
 		list (APPEND examples_SOURCES
 			${PROJECT_SOURCE_DIR}/examples/flow_mpi.cpp
+			${PROJECT_SOURCE_DIR}/examples/flow_multisegment_mpi.cpp
 			)
 	endif()
 endmacro (sources_hook)

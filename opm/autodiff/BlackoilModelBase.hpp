@@ -273,6 +273,7 @@ namespace Opm {
             WellOps(const Wells* wells);
             Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
             Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
+            std::vector<int> well_cells;                  // the set of perforated cells
         };
 
         // ---------  Data members  ---------
@@ -344,6 +345,8 @@ namespace Opm {
         // return wells object
         const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
 
+        int numWellVars() const;
+
         void
         makeConstantState(SolutionState& state) const;
 
@@ -388,6 +391,10 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
+        extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
+                                  std::vector<ADB>& b_perfcells) const;
+
+        bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
@@ -398,12 +405,12 @@ namespace Opm {
                         const std::vector<ADB>& mob_perfcells,
                         const std::vector<ADB>& b_perfcells,
                         V& aliveWells,
-                        std::vector<ADB>& cq_s);
+                        std::vector<ADB>& cq_s) const;
 
         void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
-                                         WellState& xw);
+                                         WellState& xw) const;
 
         void
         addWellFluxEq(const std::vector<ADB>& cq_s,
@@ -534,9 +541,8 @@ namespace Opm {
         ///                   maximum of tempV for the phase i.
         /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
         ///                   of B for the phase i.
-        /// \param[out] maxNormWell The maximum of the well equations for each phase.
+        /// \param[out] maxNormWell The maximum of the well flux equations for each phase.
         /// \param[in]  nc    The number of cells of the local grid.
-        /// \param[in]  nw    The number of wells on the local grid.
         /// \return The total pore volume over all cells.
         double
         convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& B,
@@ -546,8 +552,7 @@ namespace Opm {
                              std::vector<double>& maxCoeff,
                              std::vector<double>& B_avg,
                              std::vector<double>& maxNormWell,
-                             int nc,
-                             int nw) const;
+                             int nc) const;
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }

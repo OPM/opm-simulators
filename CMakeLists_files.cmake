@@ -46,6 +46,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProperties.cpp
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
+	opm/autodiff/WellMultiSegment.cpp
 	)
 
 
@@ -77,6 +78,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND EXAMPLE_SOURCE_FILES
 	examples/find_zero.cpp
 	examples/flow.cpp
+	examples/flow_multisegment.cpp
 	examples/flow_solvent.cpp
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
@@ -114,6 +116,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilSolventModel.hpp
 	opm/autodiff/BlackoilSolventModel_impl.hpp
 	opm/autodiff/BlackoilSolventState.hpp
+	opm/autodiff/BlackoilMultiSegmentModel.hpp
+	opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
 	opm/autodiff/fastSparseProduct.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
@@ -139,6 +143,8 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
 	opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
 	opm/autodiff/SimulatorIncompTwophaseAd.hpp
 	opm/autodiff/TransportSolverTwophaseAd.hpp
 	opm/autodiff/WellDensitySegmented.hpp
@@ -149,5 +155,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/VFPHelpers.hpp
 	opm/autodiff/VFPProdProperties.hpp
 	opm/autodiff/VFPInjProperties.hpp
+	opm/autodiff/WellStateMultiSegment.hpp
+	opm/autodiff/WellMultiSegment.hpp
 	)
 
