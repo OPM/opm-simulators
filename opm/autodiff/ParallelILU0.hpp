@@ -31,6 +31,7 @@ namespace Opm
 
 namespace Detail
 {
+
 class IdProcessMap
 {
 public:
@@ -50,6 +51,259 @@ public:
     }
 private:
     const int rank_;
+};
+
+class LinearSystemPermutation;
+
+template<class I>
+class PermutedGlobalLookupIndexSet
+{
+public:
+    typedef typename I::GlobalIndex GlobalIndex;
+    typedef typename I::IndexPair IndexPair;
+    typedef typename I::const_iterator const_iterator;
+
+    PermutedGlobalLookupIndexSet(const I& indexSet,
+                                 std::size_t size,
+                                 const LinearSystemPermutation& permutation)
+        : indexSet_(indexSet), index_pairs_(size, nullptr)
+    {
+        for( const auto& pair : indexSet_)
+        {
+            assert ( pair.local() < index_pairs_.size() );
+            index_pairs_[ permutation[pair.local()] ] = &pair;
+        }
+    }
+    /**
+     * \brief Get the index pair corresponding to a local index.
+     * \param The permuted local index
+     */
+    const IndexPair* pair(const std::size_t& local) const
+    {
+        return index_pairs_[local];
+    }
+
+    const_iterator begin() const
+    {
+        return indexSet_.begin();
+    }
+
+    const_iterator end() const
+    {
+        return indexSet_.end();
+    }
+private:
+    const I& indexSet_;
+    std::vector<const IndexPair*> index_pairs_;
+};
+
+struct IdentityPermutation
+{
+    template<typename Int>
+    Int operator[](Int i) const
+    {
+        return i;
+    }
+};
+
+template<class Matrix, class GlobalLookupIndexSet>
+struct PermutedSparseMatrixHandle
+{
+    typedef typename GlobalLookupIndexSet::GlobalIndex GlobalIndex;
+    typedef typename Matrix::block_type block_type;
+    typedef std::pair<block_type, GlobalIndex> DataType;
+
+    PermutedSparseMatrixHandle(Matrix& A,
+                               GlobalLookupIndexSet const& indexset,
+                               LinearSystemPermutation const& row_permutation)
+        : A_(A), indexset_(indexset),
+          row_permutation_(row_permutation)
+    {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
+    }
+    bool fixedsize() const
+    {
+        return false;
+    }
+    std::size_t size(std::size_t i) const
+    {
+        return A_[ i ].size(); // Interface index i is already permuted!
+    }
+    template<class B>
+    void gather(B& buffer, std::size_t i) const
+    {
+            auto& row = A_[ i ]; // Interface index i is already permuted!
+            for( auto entry = row.begin(), end_entry = row.end();
+                 entry != end_entry; ++entry)
+            {
+                // global lookup is also already permuted
+                auto index_pair_ptr = indexset_.pair(entry.index());
+                // interior nodes do not need a global index.
+                typedef typename GlobalLookupIndexSet::GlobalIndex
+                    GlobalIndex;
+                GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
+                if ( index_pair_ptr )
+                {
+                    index = index_pair_ptr->global();
+                }
+                buffer.write(std::make_pair(*entry, index));
+            }
+        }
+        template<class B>
+        void scatter(B& buffer, std::size_t i, std::size_t n)
+        {
+            auto& row = A_[ i ]; // Interface index i is already permuted!
+            std::vector<DataType> data(n);
+            for( auto& datum : data)
+            {
+                buffer.read(datum);
+            }
+            // sort by global index. Moved undefined global indices to the end.
+            std::sort(data.begin(), data.end(),
+                      [](const DataType& d1, const DataType& d2)
+                      { return d1.second < d2.second; });
+            // skip undefined global indices at the end.
+            typedef typename GlobalLookupIndexSet::GlobalIndex GlobalIndex;
+            GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
+            while ( data.back().second == std::numeric_limits<GlobalIndex>::max() )
+            {
+                data.pop_back();
+            }
+
+            auto hint = indexset_.begin();
+            for( auto& datum : data)
+            {
+                typedef typename GlobalLookupIndexSet::IndexPair IndexPair;
+                // \todo This search for every element seems rather expensive.
+                // We should try to store the receive values as they are.
+                // and later do only one search per column index.
+                auto found =
+                    std::lower_bound(hint, indexset_.end(), datum,
+                                     [](const IndexPair& d1, const DataType& d2)
+                                     { return d1.global() < d2.second; });
+                if ( found != indexset_.end() )
+                {
+                    hint = found; // we have found->global() <= datum.second !
+                    if( found->global() == datum.second )
+                    {
+                        // This columns is in our subdomain.
+                        // The index set knows nothing about the permutation.
+                        // Therefore we need to apply the permutation to the
+                        // local index.
+                        row[ row_permutation_[found->local()] ] = datum.first;
+                    }
+                }
+            }
+        }
+private:
+    Matrix& A_;
+    GlobalLookupIndexSet const& indexset_;
+    LinearSystemPermutation const& row_permutation_;
+    int rank_;
+};
+
+template<class Matrix, class GlobalLookupIndexSet>
+class SparsityPatternHandle
+{
+public:
+    typedef typename GlobalLookupIndexSet::GlobalIndex GlobalIndex;
+    typedef GlobalIndex DataType;
+    typedef typename Matrix::size_type size_type;
+    typedef typename std::map<size_type,std::set<size_type> > Map;
+
+    SparsityPatternHandle(const Matrix& from, Map& to,
+                          GlobalLookupIndexSet const& indexset,
+                          LinearSystemPermutation const& row_permutation,
+                          std::vector<size_type> const& reverse_permutation)
+        : from_(from), to_(to), indexset_(indexset),
+          row_permutation_(row_permutation),
+          reverse_permutation_(reverse_permutation)
+    {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
+    }
+
+    bool fixedsize() const
+    {
+        return false;
+    }
+
+    std::size_t size(std::size_t i) const
+    {
+        // Interface index i is already permuted -> we need to reverse this
+        return from_[ reverse_permutation_[ i ] ].size();
+    }
+
+    template<class B>
+    void gather(B& buffer, std::size_t i) const
+    {
+        // Interface index i is already permuted -> we need to reverse this
+        auto const& row = from_[ reverse_permutation_[ i ] ];
+
+        for( auto entry = row.begin(), end_entry = row.end();
+             entry != end_entry; ++entry)
+        {
+            // global index lookup
+            auto index_pair_ptr = indexset_.pair(entry.index());
+            // interior nodes do not need a global index.
+            GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
+            if ( index_pair_ptr )
+            {
+                index = index_pair_ptr->global();
+            }
+            buffer.write(index);
+        }
+    }
+    template<class B>
+    void scatter(B& buffer, std::size_t i, std::size_t n)
+    {
+        auto& row = to_[ i ]; // Interface index i is already permuted!
+        std::vector<DataType> data(n);
+        for( auto& datum : data)
+        {
+            buffer.read(datum);
+        }
+        // sort by global index. Moved undefined global indices to the end.
+        std::sort(data.begin(), data.end());
+        // skip undefined global indices at the end.
+        GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
+        while ( data.back() == std::numeric_limits<GlobalIndex>::max() )
+        {
+            data.pop_back();
+        }
+
+        auto hint = indexset_.begin();
+        for( auto& datum : data)
+        {
+            typedef typename GlobalLookupIndexSet::IndexPair IndexPair;
+            // \todo This search for every element seems rather expensive.
+            // We should try to store the receive values as they are.
+            // and later do only one search per column index.
+            auto found =
+                std::lower_bound(hint, indexset_.end(), datum,
+                                 [](const IndexPair& d1, const DataType& d2)
+                                 { return d1.global() < d2; });
+            if ( found != indexset_.end() )
+            {
+                hint = found; // we have found->global() <= datum.second !
+                if( found->global() == datum )
+                {
+                    // This columns is in our subdomain.
+                    // The index set knows nothing about the permutation.
+                    // Therefore we need to apply the permutation to the
+                    // local index.
+                    row.insert(row_permutation_[ found->local() ]);
+                }
+            }
+        }
+    }
+private:
+    Matrix const& from_;
+    Map& to_;
+    GlobalLookupIndexSet const& indexset_;
+    LinearSystemPermutation const& row_permutation_;
+    std::vector<size_type> const& reverse_permutation_;
+    int rank_;
+
 };
 
 /**
@@ -94,7 +348,8 @@ class LinearSystemPermutation
 {
 public:
     LinearSystemPermutation(std::size_t size)
-        : row_permutation_(size, std::numeric_limits<std::size_t>::max())
+        : row_permutation_(size, std::numeric_limits<std::size_t>::max()),
+          no_additional_entries_()
     {}
 
     template<class Y>
@@ -129,25 +384,68 @@ public:
     }
 
     template<class B>
-    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(const Dune::BCRSMatrix<B>& A)
+    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A)
     {
-        std::unique_ptr<Dune::BCRSMatrix<B> > permuted_ptr(new Dune::BCRSMatrix<B>());
+        return createPermutedMatrix(A, A.N(), A.N(), createInverseRowPermutation());
+    }
+
+    std::vector<std::size_t> createInverseRowPermutation()
+    {
+        std::vector<std::size_t> inverse_row_permutation(row_permutation_.size());
+
+        for(typename std::vector<size_t>::size_type index=0, end=row_permutation_.size();
+            index != end; ++index)
+        {
+            inverse_row_permutation[ row_permutation_[ index ] ] = index;
+        }
+        return inverse_row_permutation;
+    }
+
+    template<class B>
+    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A,
+                                                               std::size_t interior_end_index,
+                                                               std::size_t interface_start_index,
+                                                               std::vector<std::size_t>const& inverse_row_permutation)
+    {
+        std::unique_ptr<Dune::BCRSMatrix<B> >
+            permuted_ptr(new Dune::BCRSMatrix<B>(A.N(), A.M(),
+                                                 A.nonzeroes() +
+                                                 no_additional_entries_,
+                                                 Dune::BCRSMatrix<B>::row_wise));
         Dune::BCRSMatrix<B>& permuted = *permuted_ptr;
 
-        Dune::ImplicitMatrixBuilder<Dune::BCRSMatrix<B> >
-            builder(permuted, A.N(), A.M(),
-                    std::ceil(static_cast<double>(A.nonzeroes())/A.M()), .1);
-        for( std::size_t index = 0; index < A.N(); ++index)
+        auto permuted_row = permuted.createbegin();
+
+        insertPermutedRowIndices(A, permuted_row, 0,  interior_end_index,
+                                 inverse_row_permutation);
+
+        // additional_nonzeros in the overlap row might be created by a call to
+        // InteriorInterfacePermutation::exchangeMatrixRows
+        for(auto overlap_row = additional_nonzeros_.begin(),
+            end  = additional_nonzeros_.end(); overlap_row != end;
+            ++overlap_row, ++permuted_row)
         {
-            auto permuted_row = builder[ row_permutation_[index] ];
-            const auto& original_row = A[index];
-            for(auto col = original_row.begin(), endCol = original_row.end();
-                col != endCol; ++col)
+            assert( permuted_row.index() == overlap_row->first );
+            for( auto col : overlap_row->second )
+            {
+                permuted_row.insert(col);
+            }
+        }
+
+        assert( permuted_row.index() == interface_start_index );
+
+        insertPermutedRowIndices(A, permuted_row, interface_start_index,  A.N(),
+                                 inverse_row_permutation);
+
+        // Copy the values from A
+        for(auto row = A.begin(), end_row = A.end(); row != end_row; ++row)
+        {
+            auto& permuted_row = permuted[ row_permutation_[ row.index() ] ];
+            for(auto col = row->begin(), end_col = row->end(); col != end_col; ++col)
             {
                 permuted_row[ row_permutation_[col.index()] ] = *col;
             }
         }
-        permuted.compress();
         return permuted_ptr;
     }
 
@@ -160,9 +458,32 @@ public:
     {
         return row_permutation_.size();
     }
+
 protected:
     /// \brief The permuted indices
     std::vector<std::size_t> row_permutation_;
+    /// \brief Additional nonzero entries to be added
+    std::map<std::size_t,std::set<std::size_t> > additional_nonzeros_;
+    std::size_t no_additional_entries_;
+
+private:
+    template<class Block>
+    void insertPermutedRowIndices(Dune::BCRSMatrix<Block> const& orig_matrix,
+                                  typename Dune::BCRSMatrix<Block>::CreateIterator& permuted_row ,
+                                  std::size_t index, std::size_t end_index,
+                                  std::vector<std::size_t> const& inverse_permutation)
+    {
+        for(; index < end_index; ++index, ++permuted_row)
+        {
+            const auto& original_row = orig_matrix[ inverse_permutation[ index ] ];
+            for(auto col = original_row.begin(), endCol = original_row.end();
+                col != endCol; ++col)
+            {
+                permuted_row.insert(row_permutation_[col.index()]);
+            }
+        }
+        assert( end_index == permuted_row.index() );
+    }
 };
 
 
@@ -190,6 +511,30 @@ public:
     const Detail::IdProcessMap& processMapping() const
     {
         return process_mapping_;
+    }
+
+    template<class Matrix, class ParallelIndexSet>
+    void
+    exchangeMatrixRows(Matrix const& A,
+                       std::vector<typename Matrix::size_type> const& inverse_permutation,
+                       ParallelIndexSet const& indexSet, SendReceiveCommunicator& comm)
+    {
+        typedef Dune::GlobalLookupIndexSet<ParallelIndexSet> IndexSet;
+        typedef Detail::SparsityPatternHandle<Matrix, IndexSet> Handle;
+
+        IndexSet global_indexSet(indexSet, A.N());
+        Handle handle(A, additional_nonzeros_, global_indexSet, *this,
+                      inverse_permutation);
+        no_additional_entries_ = 0;
+
+        comm.receiveData(handle);
+        comm.sendData(handle);
+
+        for(auto& row: additional_nonzeros_)
+        {
+            no_additional_entries_ += row.second.size() -
+                A[ inverse_permutation[ row.first ] ].size();
+        }
     }
 
 private:
@@ -324,41 +669,6 @@ private:
     std::array<std::size_t, 2> interface_interval_;
 };
 
-
-template<class I>
-class PermutedGlobalLookupIndexSet
-{
-public:
-    typedef typename I::GlobalIndex GlobalIndex;
-    typedef Dune::IndexPair<typename I::GlobalIndex, typename I::LocalIndex> IndexPair;
-
-    PermutedGlobalLookupIndexSet(const I& indexSet,
-                                 const InteriorInterfacePermutation& permutation)
-        : indexSet_(indexSet), index_pairs_(permutation.size(), nullptr)
-    {
-        for( const auto& pair : indexSet_)
-        {
-            assert ( pair.local() < index_pairs_.size() );
-            index_pairs_[ permutation[pair.local()] ] = &pair;
-        }
-    }
-    /**
-     * \brief Get the index pair corresponding to a local index.
-     * \param The permuted local index
-     */
-    const IndexPair* pair(const std::size_t& local) const
-    {
-        return index_pairs_[local];
-    }
-
-    const I& indexSet() const
-    {
-        return indexSet_;
-    }
-private:
-    const I& indexSet_;
-    std::vector<const IndexPair*> index_pairs_;
-};
 
 
 
@@ -602,7 +912,17 @@ public:
                                          row_permutation_),
           w_(w)
     {
-        ilu_ = row_permutation_.createPermutedMatrix(A);
+        std::vector<std::size_t> inverse_row_permutation =
+            row_permutation_.createInverseRowPermutation();
+
+        row_permutation_.exchangeMatrixRows(A,
+            inverse_row_permutation,
+            comm.indexSet(),
+            forward_backward_communicator_.getForwardCommunicator());
+        ilu_ = row_permutation_.createPermutedMatrix(A,
+                                                     row_permutation_.interiorInterval()[1],
+                                                     row_permutation_.interfaceInterval()[0],
+                                                     inverse_row_permutation);
         int ilu_setup_successful = decompose();
         // Check whether there was a problem on some process
         if ( comm.communicator().min(ilu_setup_successful) == 0 )
@@ -667,102 +987,10 @@ private:
     typedef Detail::PermutedGlobalLookupIndexSet<typename C::ParallelIndexSet>
     PermutedGlobalLookupIndexSet;
 
-    struct PermutedSparseMatrixHandle
-    {
-        typedef typename PermutedGlobalLookupIndexSet::GlobalIndex GlobalIndex;
-        typedef typename M::block_type block_type;
-        typedef std::pair<block_type, GlobalIndex> DataType;
-
-        PermutedSparseMatrixHandle(M& A, const PermutedGlobalLookupIndexSet& indexset,
-                                   const  Detail::InteriorInterfacePermutation& row_permutation)
-            : A_(A), indexset_(indexset), row_permutation_(row_permutation)
-        {
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
-        }
-        bool fixedsize() const
-        {
-            return false;
-        }
-        std::size_t size(std::size_t i) const
-        {
-            return A_[ i ].size(); // Interface index i is already permuted!
-        }
-        template<class B>
-        void gather(B& buffer, std::size_t i) const
-        {
-            auto& row = A_[ i ]; // Interface index i is already permuted!
-            for( auto entry = row.begin(), end_entry = row.end();
-                 entry != end_entry; ++entry)
-            {
-                // global lookup is also already permuted
-                auto index_pair_ptr = indexset_.pair(entry.index());
-                // interior nodes do not need a global index.
-                typedef typename PermutedGlobalLookupIndexSet::GlobalIndex
-                    GlobalIndex;
-                GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
-                if ( index_pair_ptr )
-                {
-                    index = index_pair_ptr->global();
-                }
-                buffer.write(std::make_pair(*entry, index));
-            }
-        }
-        template<class B>
-        void scatter(B& buffer, std::size_t i, std::size_t n)
-        {
-            auto& row = A_[ i ]; // Interface index i is already permuted!
-            std::vector<DataType> data(n);
-            for( auto& datum : data)
-            {
-                buffer.read(datum);
-            }
-            // sort by global index. Moved undefined global indices to the end.
-            std::sort(data.begin(), data.end(),
-                      [](const DataType& d1, const DataType& d2)
-                      { return d1.second < d2.second; });
-            // skip undefined global indices at the end.
-            typedef typename PermutedGlobalLookupIndexSet::GlobalIndex GlobalIndex;
-            GlobalIndex index = std::numeric_limits<GlobalIndex>::max();
-            while ( data.back().second == std::numeric_limits<GlobalIndex>::max() )
-            {
-                data.pop_back();
-            }
-
-            auto hint = indexset_.indexSet().begin();
-            for( auto& datum : data)
-            {
-                typedef typename C::ParallelIndexSet::IndexPair IndexPair;
-                // \todo This search for every element seems rather expensive.
-                // We should try to store the receive values as they are.
-                // and later do only one search per column index.
-                auto found =
-                    std::lower_bound(hint, indexset_.indexSet().end(), datum,
-                                     [](const IndexPair& d1, const DataType& d2)
-                                     { return d1.global() < d2.second; });
-                if ( found != indexset_.indexSet().end() )
-                {
-                    hint = found; // we have found->global() <= datum.second !
-                    if( found->global() == datum.second )
-                    {
-                        // This columns is in our subdomain.
-                        // The index set knows nothing about the permutation.
-                        // Therefore we need to apply the permutation to the
-                        // local index.
-                        row[ row_permutation_[found->local()] ] = datum.first;
-                    }
-                }
-            }
-        }
-    private:
-        M& A_;
-        const PermutedGlobalLookupIndexSet& indexset_;
-        const Detail::InteriorInterfacePermutation& row_permutation_;
-        int rank_;
-    };
-
     void receiveRowsFromLowerProcs(const PermutedGlobalLookupIndexSet& indexset)
     {
-        PermutedSparseMatrixHandle handle(*ilu_, indexset, row_permutation_);
+        Detail::PermutedSparseMatrixHandle<M, PermutedGlobalLookupIndexSet>
+            handle(*ilu_, indexset, row_permutation_);
         auto& communicator =
             forward_backward_communicator_.getForwardCommunicator();
         communicator.receiveData(handle);
@@ -770,7 +998,8 @@ private:
 
     void sendRowsToHigherProcs(const PermutedGlobalLookupIndexSet& indexset)
     {
-        PermutedSparseMatrixHandle handle(*ilu_, indexset, row_permutation_);
+        Detail::PermutedSparseMatrixHandle<M, PermutedGlobalLookupIndexSet>
+            handle(*ilu_, indexset, row_permutation_);
         auto& communicator =
             forward_backward_communicator_.getForwardCommunicator();
         communicator.sendData(handle);
@@ -844,6 +1073,7 @@ private:
         const auto& interior_interval = row_permutation_.interiorInterval();
         bool success = decomposeRowInterval(interior_interval[0], interior_interval[1]);
         PermutedGlobalLookupIndexSet indexset(comm_.indexSet(),
+                                              row_permutation_.size(),
                                               row_permutation_);
         receiveRowsFromLowerProcs(indexset);
         // decompose interface rows
