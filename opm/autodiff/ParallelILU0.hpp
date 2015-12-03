@@ -439,9 +439,19 @@ public:
             ++overlap_row, ++permuted_row)
         {
             assert( permuted_row.index() == overlap_row->first );
+
             for( auto col : overlap_row->second )
             {
                 permuted_row.insert(col);
+            }
+            // \todo investigate why we need to process A, too.
+            const auto& original_row =
+                A[ inverse_row_permutation[ permuted_row.index() ] ];
+
+            for(auto colA = original_row.begin(), endCol = original_row.end();
+                colA != endCol; ++colA)
+            {
+                permuted_row.insert(row_permutation_[colA.index()]);
             }
         }
 
