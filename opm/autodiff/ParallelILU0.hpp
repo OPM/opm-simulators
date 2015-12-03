@@ -32,38 +32,49 @@ namespace Opm
 namespace Detail
 {
 
+/// \brief Uses the process rank as the label used for global ordering.
 class IdProcessMap
 {
 public:
-    template<class C>
-    explicit IdProcessMap(const C& comm)
+    template<class ParallelInfo>
+    explicit IdProcessMap(ParallelInfo const& comm)
         : rank_(comm.rank())
     {}
+
+    /// \brief Get the label on this process
     std::size_t myMapping() const
     {
         return rank_;
     }
-    template<class T>
+
+    /// \brief Compare our label with the one of another process.
+    /// \tparam Compare Type of the functor for comparison, e.g. std::less<size_t>
+    /// \param other_proc The label of the other proess.
+    /// \param compare functor for comparison.
+    template<class Compare>
     bool compareWithOtherLabel(std::size_t other_proc,
-                               const T& compare) const
+                               Compare const& compare) const
     {
         return compare(other_proc, myMapping());
     }
+
 private:
     const int rank_;
 };
 
 class LinearSystemPermutation;
 
-template<class I>
+/// \brief A tool for looking up the global indices of a permuted index range.
+/// \tparam IndexSet The type of the underlying index set.
+template<class IndexSet>
 class PermutedGlobalLookupIndexSet
 {
 public:
-    typedef typename I::GlobalIndex GlobalIndex;
-    typedef typename I::IndexPair IndexPair;
-    typedef typename I::const_iterator const_iterator;
+    typedef typename IndexSet::GlobalIndex GlobalIndex;
+    typedef typename IndexSet::IndexPair IndexPair;
+    typedef typename IndexSet::const_iterator const_iterator;
 
-    PermutedGlobalLookupIndexSet(const I& indexSet,
+    PermutedGlobalLookupIndexSet(const IndexSet& indexSet,
                                  std::size_t size,
                                  const LinearSystemPermutation& permutation)
         : indexSet_(indexSet), index_pairs_(size, nullptr)
@@ -74,6 +85,7 @@ public:
             index_pairs_[ permutation[pair.local()] ] = &pair;
         }
     }
+
     /**
      * \brief Get the index pair corresponding to a local index.
      * \param The permuted local index
@@ -93,42 +105,38 @@ public:
         return indexSet_.end();
     }
 private:
-    const I& indexSet_;
+    const IndexSet& indexSet_;
     std::vector<const IndexPair*> index_pairs_;
 };
 
-struct IdentityPermutation
-{
-    template<typename Int>
-    Int operator[](Int i) const
-    {
-        return i;
-    }
-};
-
-template<class Matrix, class GlobalLookupIndexSet>
+/// \brief A handle to communicate rows of a permuted matrix.
+template<class Matrix, class IndexSet>
 struct PermutedSparseMatrixHandle
 {
+    typedef PermutedGlobalLookupIndexSet<IndexSet> GlobalLookupIndexSet;
     typedef typename GlobalLookupIndexSet::GlobalIndex GlobalIndex;
     typedef typename Matrix::block_type block_type;
     typedef std::pair<block_type, GlobalIndex> DataType;
 
     PermutedSparseMatrixHandle(Matrix& A,
-                               GlobalLookupIndexSet const& indexset,
+                               PermutedGlobalLookupIndexSet<IndexSet> const& indexset,
                                LinearSystemPermutation const& row_permutation)
         : A_(A), indexset_(indexset),
           row_permutation_(row_permutation)
     {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     }
+
     bool fixedsize() const
     {
         return false;
     }
+
     std::size_t size(std::size_t i) const
     {
         return A_[ i ].size(); // Interface index i is already permuted!
     }
+
     template<class B>
     void gather(B& buffer, std::size_t i) const
     {
@@ -202,6 +210,7 @@ private:
     int rank_;
 };
 
+/// \brief A handle for communicating the sparsity of matrix to a map.
 template<class Matrix, class GlobalLookupIndexSet>
 class SparsityPatternHandle
 {
@@ -253,6 +262,7 @@ public:
             buffer.write(index);
         }
     }
+
     template<class B>
     void scatter(B& buffer, std::size_t i, std::size_t n)
     {
@@ -303,47 +313,50 @@ private:
     LinearSystemPermutation const& row_permutation_;
     std::vector<size_type> const& reverse_permutation_;
     int rank_;
-
 };
 
 /**
- * \brief A simple Wrapper of a BCRSMatrix that just makes modified row iterators available.
+ * \brief A simple Wrapper of a BCRSMatrix that just makes modified row iterators available for subrang of the rows.
  *
  * This is needed for the parallel ILU implementation which needs to neglect
  * rows at the begin and/or end of the matrix.
  */
-template<class M>
+template<class Matrix>
 class SubMatrix
 {
 public:
-    typedef typename M::RowIterator RowIterator;
-    typedef typename M::ColIterator ColIterator;
-    typedef typename M::block_type block_type;
-    typedef typename M::row_type row_type;
-    typedef typename M::size_type size_type;
+    typedef typename Matrix::RowIterator RowIterator;
+    typedef typename Matrix::ColIterator ColIterator;
+    typedef typename Matrix::block_type block_type;
+    typedef typename Matrix::row_type row_type;
+    typedef typename Matrix::size_type size_type;
 
-    SubMatrix(M& mat, const RowIterator& begin, const RowIterator& end)
+    SubMatrix(Matrix& mat, const RowIterator& begin, const RowIterator& end)
         : mat_(mat), begin_(begin), end_(end)
     {}
+
     RowIterator begin()
     {
         return begin_;
     }
+
     RowIterator end()
     {
         return end_;
     }
+
     row_type& operator[](size_type i)
     {
         return mat_[i];
     }
 
 private:
-    M&          mat_;
+    Matrix&          mat_;
     RowIterator begin_;
     RowIterator end_;
 };
 
+/// \brief Utility class for reordering a linear system.
 class LinearSystemPermutation
 {
 public:
@@ -486,7 +499,11 @@ private:
     }
 };
 
-
+/// \brief Utility class that reorder a linear system as needed for e.g. parallel ILU
+///
+/// The interior rows, i.e. those that do not have column indices that belong
+/// to the overlap come first, then the rows that belong to the overlap but are
+/// in the owner region of a process with a lower label, and then the rest.
 class InteriorInterfacePermutation
     : public LinearSystemPermutation
 {
@@ -669,9 +686,7 @@ private:
     std::array<std::size_t, 2> interface_interval_;
 };
 
-
-
-
+/// \brief Utility class describing the communication Interface.
 class InterfaceAndCommunicator
 {
 public:
@@ -728,11 +743,12 @@ private:
     InformationMap interfaces_;
 };
 
-template<class C>
+/// \brief Utility class for sending values to higher/lower labelled processors.
+template<class Communicator>
 class ForwardBackwardLinearSystemCommunicator
 {
 public:
-    ForwardBackwardLinearSystemCommunicator(const C& communicator,
+    ForwardBackwardLinearSystemCommunicator(const Communicator& communicator,
                                             const InteriorInterfacePermutation& permutation)
         : forward_interface_(communicator.communicator()),
           backward_interface_(communicator.communicator())
@@ -747,44 +763,25 @@ public:
                                                backward_interface_.interfaces()));
 
     }
+
     SendReceiveCommunicator& getForwardCommunicator()
     {
         return *forward_communicator_;
     }
+
     SendReceiveCommunicator& getBackwardCommunicator()
     {
         return *backward_communicator_;
     }
 
-    /**
-       template<class Container>
-       void buildForwardBuffers(const Container& container)
-       {
-       forward_communicator_.free();
-       backward_communicator_.free();
-       forward_communicator_.build(container, container, forward_interface_);
-       }
 
-       template<class Container>
-       void buildBuffers(const Container& container)
-       {
-       forward_communicator_.build(container, container, forward_interface_);
-       backward_communicator_.build(container, container, backward_interface_);
-       }
-
-       void freeBuffers()
-       {
-       forward_communicator_.free();
-       backward_communicator_.free();
-       }
-    */
 private:
 
-    template<class R>
-    void calculateInterfaceSizes(const R& remote_indices,
+    template<class RemoteIndices>
+    void calculateInterfaceSizes(const RemoteIndices& remote_indices,
                                  const InteriorInterfacePermutation& permutation)
     {
-        typedef typename R::RemoteIndex RemoteIndex;
+        typedef typename RemoteIndices::RemoteIndex RemoteIndex;
         std::map<std::size_t, std::pair<std::size_t, std::size_t> > forward_sizes;
         std::map<std::size_t, std::pair<std::size_t, std::size_t> > backward_sizes;
         auto size_adder =
@@ -800,12 +797,12 @@ private:
         backward_interface_.reserve(backward_sizes);
     }
 
-    template<class R>
-    void calculateInterfaceEntries(const R& remote_indices,
+    template<class RemoteIndices>
+    void calculateInterfaceEntries(const RemoteIndices& remote_indices,
                                    const InteriorInterfacePermutation& permutation)
     {
         typedef typename InterfaceAndCommunicator::IndexList IndexList;
-        typedef typename R::RemoteIndex RemoteIndex;
+        typedef typename RemoteIndices::RemoteIndex RemoteIndex;
         auto index_adder =
             [&permutation] (IndexList& list, const RemoteIndex& index)
             {
@@ -818,10 +815,10 @@ private:
                              backward_interface_.interfaces());
     }
 
-    template<class R, class I, class P, class T>
-    void processRemoteIndices(const R& remote_indices, const I& index_processor,
-                              const P& process_mapping,
-                              T& forward_interface, T& backward_interface)
+    template<class RemoteIndices, class IndexProcessor, class ProcessMap, class Interface>
+    void processRemoteIndices(const RemoteIndices& remote_indices, const IndexProcessor& index_processor,
+                              const ProcessMap& process_mapping,
+                              Interface& forward_interface, Interface& backward_interface)
     {
         for( const auto& proc_remote_lists : remote_indices)
         {
@@ -846,9 +843,9 @@ private:
         }
     }
 
-    template<class R, class I, class T>
-    void processRemoteIndexList(const R& index_list, I& receive_interface_pair,
-                                I& send_interface_pair, T& index_processor)
+    template<class RemoteIndices, class InterfacePair, class IndexProcessor>
+    void processRemoteIndexList(const RemoteIndices& index_list, InterfacePair& receive_interface_pair,
+                                InterfacePair& send_interface_pair, IndexProcessor& index_processor)
     {
         // For each communication there are two lists: the first with indices
         // we send from and the second one with indices we receive data.
@@ -871,6 +868,7 @@ private:
             }
         }
     }
+
     InterfaceAndCommunicator forward_interface_;
     InterfaceAndCommunicator backward_interface_;
     std::unique_ptr<SendReceiveCommunicator> forward_communicator_;
@@ -880,17 +878,17 @@ private:
 } // end namespace Detail
 
 
-template<class M, class X, class Y, typename C>
-class ParallelILU0 : public Dune::Preconditioner<X,Y> {
+template<class Matrix, class Domain, class Range, typename ParallelInfo>
+class ParallelILU0 : public Dune::Preconditioner<Domain,Range> {
 public:
     //! \brief The matrix type the preconditioner is for.
-    typedef typename Dune::remove_const<M>::type matrix_type;
+    typedef typename Dune::remove_const<Matrix>::type matrix_type;
     //! \brief The domain type of the preconditioner.
-    typedef X domain_type;
+    typedef Domain domain_type;
     //! \brief The range type of the preconditioner.
-    typedef Y range_type;
+    typedef Range range_type;
     //! \brief The field type of the preconditioner.
-    typedef typename X::field_type field_type;
+    typedef typename Domain::field_type field_type;
 
     // define the category
     enum {
@@ -905,7 +903,7 @@ public:
       \param C The parallel information.
       \param w The relaxation factor.
     */
-    ParallelILU0 (const M& A, const C& comm, field_type w)
+    ParallelILU0 (const Matrix& A, const ParallelInfo& comm, field_type w)
         : ilu_(), comm_(comm),
           row_permutation_(A, comm),
           forward_backward_communicator_(comm,
@@ -936,7 +934,7 @@ public:
 
       \copydoc Preconditioner::pre(X&,Y&)
     */
-    virtual void pre (X& x, Y& b)
+    virtual void pre (Domain& x, Range& b)
     {
         DUNE_UNUSED_PARAMETER(x);
         DUNE_UNUSED_PARAMETER(b);
@@ -947,10 +945,10 @@ public:
 
       \copydoc Preconditioner::apply(X&,const Y&)
     */
-    virtual void apply (X& v, const Y& d)
+    virtual void apply (Domain& v, const Range& d)
     {
-        Y permuted_d(d.size());
-        X permuted_v(v.size());
+        Range permuted_d(d.size());
+        Domain permuted_v(v.size());
         const auto& interior_interval = row_permutation_.interiorInterval();
         const auto& interface_interval = row_permutation_.interfaceInterval();
         row_permutation_.permutateOrder(d, permuted_d);
@@ -978,18 +976,19 @@ public:
 
       \copydoc Preconditioner::post(X&)
     */
-    virtual void post (X& x)
+    virtual void post (Domain& x)
     {
         DUNE_UNUSED_PARAMETER(x);
     }
 
 private:
-    typedef Detail::PermutedGlobalLookupIndexSet<typename C::ParallelIndexSet>
+    typedef typename ParallelInfo::ParallelIndexSet IndexSet;
+    typedef Detail::PermutedGlobalLookupIndexSet<IndexSet>
     PermutedGlobalLookupIndexSet;
 
     void receiveRowsFromLowerProcs(const PermutedGlobalLookupIndexSet& indexset)
     {
-        Detail::PermutedSparseMatrixHandle<M, PermutedGlobalLookupIndexSet>
+        Detail::PermutedSparseMatrixHandle<Matrix, IndexSet>
             handle(*ilu_, indexset, row_permutation_);
         auto& communicator =
             forward_backward_communicator_.getForwardCommunicator();
@@ -998,7 +997,7 @@ private:
 
     void sendRowsToHigherProcs(const PermutedGlobalLookupIndexSet& indexset)
     {
-        Detail::PermutedSparseMatrixHandle<M, PermutedGlobalLookupIndexSet>
+        Detail::PermutedSparseMatrixHandle<Matrix, IndexSet>
             handle(*ilu_, indexset, row_permutation_);
         auto& communicator =
             forward_backward_communicator_.getForwardCommunicator();
@@ -1007,9 +1006,9 @@ private:
 
     struct VectorHandle
     {
-        typedef typename X::block_type DataType;
+        typedef typename Domain::block_type DataType;
 
-        VectorHandle(X& x)
+        VectorHandle(Domain& x)
             : x_(x)
         {}
         bool fixedsize() const
@@ -1031,10 +1030,10 @@ private:
             buffer.read(x_[i]);
         }
     private:
-        X& x_;
+        Domain& x_;
     };
 
-    void receiveValuesFromLowerProcs(X& v)
+    void receiveValuesFromLowerProcs(Domain& v)
     {
         VectorHandle handle(v);
         auto& communicator =
@@ -1042,7 +1041,7 @@ private:
         communicator.receiveData(handle);
     }
 
-    void sendValuesToHigherProcs(X& v)
+    void sendValuesToHigherProcs(Domain& v)
     {
         VectorHandle handle(v);
         auto& communicator =
@@ -1050,7 +1049,7 @@ private:
         communicator.sendData(handle);
     }
 
-    void receiveValuesFromHigherProcs(X& v)
+    void receiveValuesFromHigherProcs(Domain& v)
     {
         VectorHandle handle(v);
         auto& communicator =
@@ -1058,7 +1057,7 @@ private:
         communicator.receiveData(handle);
     }
 
-    void sendValuesToLowerProcs(X& v)
+    void sendValuesToLowerProcs(Domain& v)
     {
         VectorHandle handle(v);
         auto& communicator =
@@ -1087,7 +1086,7 @@ private:
 
     bool decomposeRowInterval(std::size_t start, std::size_t end)
     {
-        Detail::SubMatrix<M> interior_sub_matrix(*ilu_, ilu_->begin() + start,
+        Detail::SubMatrix<Matrix> interior_sub_matrix(*ilu_, ilu_->begin() + start,
                                                  ilu_->begin() + end);
         try
         {
@@ -1104,7 +1103,8 @@ private:
         }
         return true;
     }
-    void forwardSolveRowInterval(X& v, const Y& d,
+
+    void forwardSolveRowInterval(Domain& v, const Range& d,
                                  std::size_t start, std::size_t end)
     {
         assert(start<=end);
@@ -1119,7 +1119,8 @@ private:
             v[row.index()] = rhs;
         }
     }
-    void backwardSolveRowInterval(X& v,
+
+    void backwardSolveRowInterval(Domain& v,
                                   std::size_t start, std::size_t end)
     {
         assert(start<=end);
@@ -1138,11 +1139,11 @@ private:
 
     //! \brief The ILU0 decomposition of the matrix.
     std::unique_ptr<matrix_type> ilu_;
-    const C& comm_;
+    const ParallelInfo& comm_;
     //! \brief The indices of the inner rows.
     Detail::InteriorInterfacePermutation row_permutation_;
-
-    Detail::ForwardBackwardLinearSystemCommunicator<C> forward_backward_communicator_;
+    //! \brief The communicator for sending and receiving values
+    Detail::ForwardBackwardLinearSystemCommunicator<ParallelInfo> forward_backward_communicator_;
     //! \brief The relaxation factor to use.
     field_type w_;
 };
