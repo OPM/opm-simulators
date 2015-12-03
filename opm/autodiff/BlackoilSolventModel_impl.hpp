@@ -516,53 +516,68 @@ namespace Opm {
                                                 const ADB&              phasePressure,
                                                 const SolutionState&    state)
     {
+
+
+
+        ADB kr_mod = kr;
         if (has_solvent_) {
 
             const int  nc   = Opm::UgGridHelpers::numCells(grid_);
-
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             const ADB zero = ADB::constant(V::Zero(nc));
+            V ones = V::Constant(nc, 1.0);
+            const int canonicalPhaseIdx = canph_[ actph ];
+
             const ADB& ss = state.solvent_saturation;
             const ADB& sg = (active_[ Gas ]
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
-            const ADB& so = (active_[ Oil ]
-                             ? state.saturation[ pu.phase_pos[ Oil ] ]
-                             : zero);
-            const ADB sn = ss + so + sg;
-
-            Selector<double> zeroSn_selector(sn.value(), Selector<double>::Zero);
-            const ADB F_totalGas = zeroSn_selector.select( (ss + sg), (ss + sg) / sn);
 
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
 
-            V ones = V::Constant(nc, 1.0);
-            const int canonicalPhaseIdx = canph_[ actph ];
-            switch (canonicalPhaseIdx) {
-            case Gas: {
+            if (is_miscible_) {
+                assert(active_[ Oil ]);
+                assert(active_[ Gas ]);
 
-                // gas relperm
-                ADB krg = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr;
-                if (is_miscible_) {
-                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                const ADB& so = state.saturation[ pu.phase_pos[ Oil ] ];
+
+                //V smin = V::Zero(pu.MaxNumPhases);
+                //V smax = V::Constant(pu.MaxNumPhases, 1.0);
+                //fluid_.getSaturationEndpoints(cells_, smin, smax);
+
+                const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                const ADB sn = ss + so + sg;
+
+                ADB sor = V::Constant(nc, 0) * misc; //+ (ones - misc) * sorwmis;
+                ADB sgc = V::Constant(nc, 0) * misc; //+ (ones - misc) * sgcwmis;
+
+                const ADB sn_eff = sn - sor - sgc;
+
+                Selector<double> zeroSn_selector(sn.value(), Selector<double>::Zero);
+                const ADB F_totalGas = zeroSn_selector.select( (ss + sg), (ss + sg) / sn);
+
+
+                if (canonicalPhaseIdx == Gas) {
+                    kr_mod = (ones - misc) * kr_mod;
                     const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
-                    krg = misc * mkrgt + (ones - misc) * krg;
+                    kr_mod += misc * mkrgt;
+                }
+                if (canonicalPhaseIdx == Oil) {
+                    //kr_mod = (ones - misc) * kr_mod;
+                    const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier( (ones - F_totalGas), cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    //kr_mod += misc * mkro;
                 }
 
-                // compute gas mobility and flux
-                Base::computeMassFlux(actph, transi, krg, phasePressure, state);
+            }
+
+            if (canonicalPhaseIdx == Gas) {
 
                 // compute solvent mobility and flux
                 const ADB tr_mult = transMult(state.pressure);
                 const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);
 
-                ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr;
-                if (is_miscible_) {
-                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
-                    const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
-                    krs = misc * mkrgt + (ones - misc) * krs;
-                }
+                ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr_mod;
 
                 rq_[solvent_pos_].mob = krs * tr_mult / mu;
 
@@ -573,32 +588,13 @@ namespace Opm {
                 UpwindSelector<double> upwind_solvent(grid_, ops_, rq_[solvent_pos_].dh.value());
                 rq_[solvent_pos_].mflux = upwind_solvent.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
 
-                break;
-            }
+                // modify gas relperm
+                kr_mod = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr_mod;
 
-            case Oil: {
-
-                ADB kro = kr;
-                if (is_miscible_) {
-                    const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
-                    const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier( (ones - F_totalGas), cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
-                    kro = misc * mkro + (ones - misc) * kr;
-                }
-                Base::computeMassFlux(actph, transi, kr, phasePressure, state);
-
-                break;
             }
-            case Water: {
-                Base::computeMassFlux(actph, transi, kr, phasePressure, state);
-                break;
-            }
-            default:
-                OPM_THROW(std::runtime_error, "Unknown phase index " << canonicalPhaseIdx);
-            }
-
-        } else {
-            Base::computeMassFlux(actph, transi, kr, phasePressure, state);
         }
+        // compute mobility and flux
+        Base::computeMassFlux(actph, transi, kr_mod, phasePressure, state);
 
     }
 
@@ -713,7 +709,6 @@ namespace Opm {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
-
         Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         Base::updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         Base::addWellFluxEq(cq_s, state);
