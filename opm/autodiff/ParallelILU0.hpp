@@ -444,15 +444,6 @@ public:
             {
                 permuted_row.insert(col);
             }
-            // \todo investigate why we need to process A, too.
-            const auto& original_row =
-                A[ inverse_row_permutation[ permuted_row.index() ] ];
-
-            for(auto colA = original_row.begin(), endCol = original_row.end();
-                colA != endCol; ++colA)
-            {
-                permuted_row.insert(row_permutation_[colA.index()]);
-            }
         }
 
         assert( permuted_row.index() == interface_start_index );
@@ -559,8 +550,17 @@ public:
 
         for(auto& row: additional_nonzeros_)
         {
+            // \todo investigate why we need to process A, too.
+            const auto& original_row =
+                A[ inverse_permutation[ row.first ] ];
+
+            for(auto col = original_row.begin(), endCol = original_row.end();
+                col != endCol; ++col)
+            {
+                row.second.insert(row_permutation_[col.index()]);
+            }
             no_additional_entries_ += row.second.size() -
-                A[ inverse_permutation[ row.first ] ].size();
+                original_row.size();
         }
     }
 
