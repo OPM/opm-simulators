@@ -74,8 +74,7 @@ namespace Opm
     }
 
     template <class Implementation>
-    SimulatorReport SimulatorBase<Implementation>::run(EclipseStateConstPtr eclState,
-                                                       SimulatorTimer& timer,
+    SimulatorReport SimulatorBase<Implementation>::run(SimulatorTimer& timer,
                                                        ReservoirState& state)
     {
         WellState prev_well_state;
@@ -89,7 +88,7 @@ namespace Opm
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        const auto& schedule = eclState->getSchedule();
+        const auto& schedule = eclipse_state_->getSchedule();
         const auto& events = schedule->getEvents();
 
         // adaptive time stepping
@@ -177,7 +176,6 @@ namespace Opm
                 // section
                 //
                 // TODO (?): handle the parallel case (maybe this works out of the box)
-                ScheduleConstPtr schedule = eclipse_state_->getSchedule();
                 DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
                 eclipse_state_->applyModifierDeck(miniDeck);
                 geo_.update(grid_, props_, eclipse_state_, gravity_);
