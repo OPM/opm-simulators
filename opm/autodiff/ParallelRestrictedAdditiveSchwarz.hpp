@@ -20,8 +20,10 @@
 #ifndef OPM_PARALLELRESTRICTEDADDITIVESCHWARZ_HEADER_INCLUDED
 #define OPM_PARALLELRESTRICTEDADDITIVESCHWARZ_HEADER_INCLUDED
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 namespace Opm
 {

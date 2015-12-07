@@ -115,7 +115,7 @@ namespace Opm
         /// \param[in] gravity       if non-null, gravity vector
         /// \param[in] disgas        true for dissolved gas option
         /// \param[in] vapoil        true for vaporized oil option
-        /// \param[in] eclipse_state
+        /// \param[in] eclipse_state the object which represents an internalized ECL deck
         /// \param[in] output_writer
         /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
         SimulatorBase(const parameter::ParameterGroup& param,
@@ -134,13 +134,10 @@ namespace Opm
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
         /// modify the reservoir and well states.
-        /// \param[in] eclState        the object which represents an internalized ECL deck
         /// \param[in,out] timer       governs the requested reporting timesteps
         /// \param[in,out] state       state of reservoir: pressure, fluxes
-        /// \param[in,out] well_state  state of wells: bhp, perforation rates
         /// \return                    simulation report, with timing data
-        SimulatorReport run(EclipseStateConstPtr eclState,
-                            SimulatorTimer& timer,
+        SimulatorReport run(SimulatorTimer& timer,
                             ReservoirState& state);
 
     protected:
