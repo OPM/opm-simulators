@@ -35,23 +35,19 @@
 #include <dune/common/mpihelper.hh>
 #endif
 
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 #if HAVE_DUNE_CORNERPOINT && WANT_DUNE_CORNERPOINTGRID
 #define USE_DUNE_CORNERPOINTGRID 1
 #include <dune/grid/CpGrid.hpp>
-#include <dune/grid/common/GridAdapter.hpp>
 #else
 #undef USE_DUNE_CORNERPOINTGRID
 #endif
 
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
-#include <opm/core/pressure/FlowBCManager.hpp>
-
-#include <opm/core/grid.h>
-#include <opm/core/grid/cornerpoint_grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
+#include <opm/autodiff/GridInit.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -253,17 +249,12 @@ try
 
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
 #if USE_DUNE_CORNERPOINTGRID
-    // Dune::CpGrid as grid manager
-    typedef Dune::CpGrid  Grid;
-    // Grid init
-    Grid grid;
-    grid.processEclipseFormat(deck, false, false, false, porv);
+    typedef Dune::CpGrid Grid;
 #else
-    // UnstructuredGrid as grid manager
-    typedef UnstructuredGrid  Grid;
-    GridManager gridManager( eclipseState->getEclipseGrid(), porv );
-    const Grid& grid = *(gridManager.c_grid());
+    typedef UnstructuredGrid Grid;
 #endif
+    GridInit<Grid> grid_init(deck, eclipseState, porv);
+    auto&& grid = grid_init.grid();
 
     // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
     if (param.has("output_interval")) {
