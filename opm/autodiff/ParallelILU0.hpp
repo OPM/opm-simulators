@@ -429,7 +429,7 @@ public:
 
         auto permuted_row = permuted.createbegin();
 
-        insertPermutedRowIndices(A, permuted_row, 0,  interior_end_index,
+        insertPermutedRowIndices(A, permuted_row, interior_end_index,
                                  inverse_row_permutation);
 
         // additional_nonzeros in the overlap row might be created by a call to
@@ -448,7 +448,7 @@ public:
 
         assert( permuted_row.index() == interface_start_index );
 
-        insertPermutedRowIndices(A, permuted_row, interface_start_index,  A.N(),
+        insertPermutedRowIndices(A, permuted_row, A.N(),
                                  inverse_row_permutation);
 
         // Copy the values from A
@@ -484,12 +484,12 @@ private:
     template<class Block>
     void insertPermutedRowIndices(Dune::BCRSMatrix<Block> const& orig_matrix,
                                   typename Dune::BCRSMatrix<Block>::CreateIterator& permuted_row ,
-                                  std::size_t index, std::size_t end_index,
+                                  std::size_t end_index,
                                   std::vector<std::size_t> const& inverse_permutation)
     {
-        for(; index < end_index; ++index, ++permuted_row)
+        for( ;permuted_row.index() < end_index; ++permuted_row)
         {
-            const auto& original_row = orig_matrix[ inverse_permutation[ index ] ];
+            const auto& original_row = orig_matrix[ inverse_permutation[ permuted_row.index() ] ];
             for(auto col = original_row.begin(), endCol = original_row.end();
                 col != endCol; ++col)
             {
