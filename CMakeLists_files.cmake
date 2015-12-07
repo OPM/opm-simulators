@@ -47,6 +47,17 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
 	opm/autodiff/WellMultiSegment.cpp
+	opm/polymer/CompressibleTpfaPolymer.cpp
+	opm/polymer/IncompTpfaPolymer.cpp
+	opm/polymer/PolymerInflow.cpp
+	opm/polymer/PolymerProperties.cpp
+	opm/polymer/polymerUtilities.cpp
+	opm/polymer/SimulatorCompressiblePolymer.cpp
+	opm/polymer/SimulatorPolymer.cpp
+	opm/polymer/TransportSolverTwophaseCompressiblePolymer.cpp
+	opm/polymer/TransportSolverTwophasePolymer.cpp
+	opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.cpp
+	opm/polymer/fullyimplicit/PolymerPropsAd.cpp
 	)
 
 
@@ -64,6 +75,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_transmissibilitymultipliers.cpp
 	tests/test_welldensitysegmented.cpp
 	tests/test_vfpproperties.cpp
+	tests/test_singlecellsolves.cpp
 	)
 
 list (APPEND TEST_DATA_FILES
@@ -83,6 +95,10 @@ list (APPEND EXAMPLE_SOURCE_FILES
 	examples/sim_2p_incomp_ad.cpp
 	examples/sim_simple.cpp
 	examples/opm_init_check.cpp
+	examples/sim_poly2p_comp_reorder.cpp
+	examples/sim_poly2p_incomp_reorder.cpp
+	examples/sim_poly_fi2p_comp_ad.cpp
+	examples/flow_polymer.cpp
 	)
 
 # programs listed here will not only be compiled, but also marked for
@@ -92,6 +108,10 @@ list (APPEND PROGRAM_SOURCE_FILES
 	examples/flow.cpp
 	examples/flow_solvent.cpp
 	examples/opm_init_check.cpp
+	examples/sim_poly2p_comp_reorder.cpp
+	examples/sim_poly2p_incomp_reorder.cpp
+	examples/sim_poly_fi2p_comp_ad.cpp
+	examples/flow_polymer.cpp
 	)
 
 # originally generated with the command:
@@ -157,5 +177,30 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/VFPInjProperties.hpp
 	opm/autodiff/WellStateMultiSegment.hpp
 	opm/autodiff/WellMultiSegment.hpp
+	opm/polymer/CompressibleTpfaPolymer.hpp
+	opm/polymer/GravityColumnSolverPolymer.hpp
+	opm/polymer/GravityColumnSolverPolymer_impl.hpp
+	opm/polymer/IncompPropertiesDefaultPolymer.hpp
+	opm/polymer/IncompTpfaPolymer.hpp
+	opm/polymer/PolymerBlackoilState.hpp
+	opm/polymer/PolymerInflow.hpp
+	opm/polymer/PolymerProperties.hpp
+	opm/polymer/PolymerState.hpp
+	opm/polymer/polymerUtilities.hpp
+	opm/polymer/SimulatorCompressiblePolymer.hpp
+	opm/polymer/SimulatorPolymer.hpp
+	opm/polymer/SinglePointUpwindTwoPhasePolymer.hpp
+	opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp
+	opm/polymer/Point2D.hpp
+	opm/polymer/TransportSolverTwophasePolymer.hpp
+	opm/polymer/fullyimplicit/PolymerPropsAd.hpp
+	opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.hpp
+	opm/polymer/fullyimplicit/SimulatorFullyImplicitCompressiblePolymer.hpp
+	opm/polymer/fullyimplicit/SimulatorFullyImplicitCompressiblePolymer_impl.hpp
+	opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp
+	opm/polymer/fullyimplicit/BlackoilPolymerModel_impl.hpp
+	opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
+	opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
+	opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
 	)
 
