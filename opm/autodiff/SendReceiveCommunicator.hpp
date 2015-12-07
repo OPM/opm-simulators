@@ -347,7 +347,7 @@ private:
             : handle_(&handle)
         {}
         SizeDatahandle(std::size_t max_index)
-            :sizes_(max_index)
+            :sizes_(max_index, std::numeric_limits<std::size_t>::max())
         {}
 
         bool fixedsize() const
