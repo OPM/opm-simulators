@@ -143,6 +143,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
+	opm/autodiff/GridInit.hpp
 	opm/autodiff/ImpesTPFAAD.hpp
 	opm/autodiff/moduleVersion.hpp
 	opm/autodiff/NewtonIterationBlackoilCPR.hpp
