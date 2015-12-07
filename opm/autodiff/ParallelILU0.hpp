@@ -547,6 +547,7 @@ public:
 
         comm.receiveData(handle);
         comm.sendData(handle);
+        comm.incrementTag();
 
         for(auto& row: additional_nonzeros_)
         {

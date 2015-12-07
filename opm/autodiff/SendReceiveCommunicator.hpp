@@ -259,6 +259,14 @@ public:
     template<class Datahandle>
     void receiveData(Datahandle& handle);
 
+    /**
+     * \brief Increment communication tag.
+     */
+    void incrementTag()
+    {
+        tag_ += 2;
+    }
+
 private:
     template<class Datahandle>
     void sendFixedSize(Datahandle& handle);
@@ -480,7 +488,7 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
             assert(buffer.finished());
             MPI_Issend(buffer, buffer_size,
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
-                       infpair->first, tag_, communicator_, &(requests[finished[i]]));
+                        infpair->first, tag_ + 1, communicator_, &(requests[finished[i]]));
         }
     }
     MPI_Waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
@@ -598,7 +606,7 @@ SendReceiveCommunicator::PostProcessReceivedSizes<Type>::operator()(int index)
     buffer.resize(buffer_size);
     MPI_Irecv(buffer, buffer_size,
               Dune::MPITraits<Type>::getType(),
-              infpair->first, tag_, communicator_, &(requests_[index]));
+              infpair->first, tag_ + 1, communicator_, &(requests_[index]));
 }
 
 template<class Datahandle>
