@@ -473,6 +473,7 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
             auto& interface_list = infpair->second.first;
             assert( interface_list.size() );
             std::size_t buffer_size = 0;
+
             for(std::size_t j=0; j < interface_list.size(); ++j)
             {
                 buffer_size += handle.size(interface_list[j]);
@@ -480,6 +481,7 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
 
             buffers.emplace_back(buffer_size);
             auto& buffer = buffers.back();
+
             for(std::size_t j=0; j < interface_list.size(); ++j)
             {
                 handle.gather(buffer, interface_list[j]);
@@ -506,6 +508,7 @@ void SendReceiveCommunicator::receiveFixedSize(Datahandle& handle,
     auto current_request = requests.begin();
     auto current_buffer  = buffers.begin();
     std::size_t size = 0;
+
     for( const auto& infpair : *interfaces_)
     {
         auto& interface_list = infpair.second.second;
@@ -554,6 +557,7 @@ SendReceiveCommunicator
             std::advance(infpair, finished[i]);
             auto& interface_list = infpair->second.second;
             assert ( interface_list.size() );
+
             for(std::size_t j=0; j < interface_list.size(); ++j)
             {
                 // unpack data
