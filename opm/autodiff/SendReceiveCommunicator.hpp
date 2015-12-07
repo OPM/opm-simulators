@@ -421,7 +421,7 @@ SendReceiveCommunicator
             }
             assert(current_buffer->finished());
             MPI_Issend(*current_buffer,
-                       interface_list.size() * handle.size(interface_list[0]),
+                       buffer_size,
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
                        infpair.first, tag_, communicator_, &(*current_request));
         }
@@ -503,10 +503,10 @@ void SendReceiveCommunicator::receiveFixedSize(Datahandle& handle,
         auto& interface_list = infpair.second.second;
         if ( interface_list.size() )
         {
-            current_buffer->resize(interface_list.size());
-            size = handle.size(interface_list[0]);
-            MPI_Irecv(*current_buffer,
-                      interface_list.size() * size,
+            size             = handle.size(interface_list[0]);
+            auto buffer_size = size * interface_list.size();
+            current_buffer->resize(buffer_size);
+            MPI_Irecv(*current_buffer, buffer_size,
                       Dune::MPITraits<typename Datahandle::DataType>::getType(),
                       infpair.first, tag_, communicator_, &(*current_request));
         }
