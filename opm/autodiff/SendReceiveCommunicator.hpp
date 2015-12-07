@@ -193,8 +193,8 @@ private:
  * in two steps (send, and receive).
  *
  * One can  receive data in some parts of the code and send values at
- * different parts in the code. Not the send and receibe methods will
- * still block until the communciation finisched.
+ * different parts in the code. Note that the send and receive methods will
+ * still block until the communciation finished.
  */
 class SendReceiveCommunicator
 {
@@ -419,6 +419,7 @@ SendReceiveCommunicator
             {
                 handle.gather(*current_buffer, interface_list[i]);
             }
+            assert(current_buffer->finished());
             MPI_Issend(*current_buffer,
                        interface_list.size() * handle.size(interface_list[0]),
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
@@ -476,6 +477,7 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
                 handle.gather(buffer, interface_list[j]);
             }
 
+            assert(buffer.finished());
             MPI_Issend(buffer, buffer_size,
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
                        infpair->first, tag_, communicator_, &(requests[finished[i]]));
@@ -550,6 +552,7 @@ SendReceiveCommunicator
                 handle.scatter(current_buffer, interface_list[j],
                                sizes[interface_list[j]]);
             }
+            assert(current_buffer.finished());
             current_buffer.free();
             // Postprocess. In the case this was the size of the variable
             // sized data, then we now send the actual data.
