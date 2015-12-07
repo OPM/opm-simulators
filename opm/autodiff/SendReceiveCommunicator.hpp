@@ -366,10 +366,10 @@ private:
         template<class B>
         void scatter(B& buffer, std::size_t i, std::size_t n)
         {
-            for(std::size_t j = 0; j < n; ++j)
-            {
-                buffer.read(sizes_[i]);
-            }
+            DUNE_UNUSED_PARAMETER(n);
+            assert(n == 1);
+            assert(sizes_[i] == std::numeric_limits<std::size_t>::max());
+            buffer.read(sizes_[i]);
         }
         std::vector<std::size_t> sizes_;
         const Datahandle* handle_;
