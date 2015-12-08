@@ -144,8 +144,9 @@ public:
     void copyOwnerToAll (const T& source, T& dest) const
     {
         typedef Dune::Combine<Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::owner>,Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::overlap>,Dune::OwnerOverlapCopyAttributeSet::AttributeSet> OwnerOverlapSet;
+        typedef Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::owner> OwnerSet;
         typedef Dune::Combine<OwnerOverlapSet, Dune::EnumItem<Dune::OwnerOverlapCopyAttributeSet::AttributeSet,Dune::OwnerOverlapCopyAttributeSet::copy>,Dune::OwnerOverlapCopyAttributeSet::AttributeSet> AllSet;
-      OwnerOverlapSet sourceFlags;
+      OwnerSet sourceFlags;
       AllSet destFlags;
       Dune::Interface interface(communicator_);
       if( !remoteIndices_->isSynced() )
@@ -159,7 +160,7 @@ public:
       communicator.free();
     }
     template<class T>
-    void updateOwnerMask(const T& container) const
+    const std::vector<double>& updateOwnerMask(const T& container) const
     {
         if( ! indexSet_ )
         {
@@ -176,6 +177,7 @@ public:
                 }
             }
         }
+        return ownerMask_;
     }
     /// \brief Compute one or more global reductions.
     ///
