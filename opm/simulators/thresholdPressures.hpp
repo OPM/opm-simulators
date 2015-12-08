@@ -386,10 +386,11 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             auto eqlnumData = eqlnum->getData();
 
             // Set values for each NNC
+
             thpres_vals.resize(nnc.numNNC(), 0.0);
             for (size_t i = 0 ; i < nnc.numNNC(); ++i) {
-                const int gc1 = nnc.nnc1()[i];
-                const int gc2 = nnc.nnc2()[i];
+                const int gc1 = nnc.nncdata()[i].cell1;
+                const int gc2 = nnc.nncdata()[i].cell2;
                 const int eq1 = eqlnumData[gc1];
                 const int eq2 = eqlnumData[gc2];
 
