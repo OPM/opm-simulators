@@ -525,7 +525,7 @@ namespace Opm {
             const int  nc   = Opm::UgGridHelpers::numCells(grid_);
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             const ADB zero = ADB::constant(V::Zero(nc));
-            V ones = V::Constant(nc, 1.0);
+            const V ones = V::Constant(nc, 1.0);
             const int canonicalPhaseIdx = canph_[ actph ];
 
             const ADB& ss = state.solvent_saturation;
@@ -534,39 +534,52 @@ namespace Opm {
                              : zero);
 
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+            ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
 
-            if (is_miscible_) {
+            if (is_miscible_ && canonicalPhaseIdx != Water ) {
                 assert(active_[ Oil ]);
                 assert(active_[ Gas ]);
 
                 const ADB& so = state.saturation[ pu.phase_pos[ Oil ] ];
 
-                //V smin = V::Zero(pu.MaxNumPhases);
-                //V smax = V::Constant(pu.MaxNumPhases, 1.0);
-                //fluid_.getSaturationEndpoints(cells_, smin, smax);
-
                 const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
                 const ADB sn = ss + so + sg;
 
-                ADB sor = V::Constant(nc, 0) * misc; //+ (ones - misc) * sorwmis;
-                ADB sgc = V::Constant(nc, 0) * misc; //+ (ones - misc) * sgcwmis;
+                // adjust endpoints
+                //const int np = fluid_.numPhases();
+                //V smin = V::Zero(np * nc);
+                //V smax = V::Constant(np*nc, 1.0);
+                //fluid_.getSaturationEndpoints(cells_, smin, smax);
+                //ADB sor = subset(smin, Span(nc, np, Oil)) * misc; //+ (ones - misc) * sorwmis;
+                //ADB sgc = subset(smin, Span(nc, np, Gas)) * misc; //+ (ones - misc) * sgcwmis;
+                ADB sor = V::Constant(nc, 0.0) * misc;
+                ADB sgc = V::Constant(nc, 0.0) * misc;
 
-                const ADB sn_eff = sn - sor - sgc;
+                //std::cout << sor.value().maxCoeff() << std::endl;
+                //std::cout << sgc.value().maxCoeff() << std::endl;
 
-                Selector<double> zeroSn_selector(sn.value(), Selector<double>::Zero);
-                const ADB F_totalGas = zeroSn_selector.select( (ss + sg), (ss + sg) / sn);
+                ADB sn_eff = sn - sor - sgc;
+                ADB ssg = ss + sg - sgc;
 
+                Selector<double> negative_selector(ssg.value(), Selector<double>::LessZero);
+                ssg = negative_selector.select(zero,ssg);
 
+                std::cout << sn_eff.value().minCoeff() << std::endl;
+                std::cout << ssg.value().minCoeff() << std::endl;
+                std::cout << sn_eff.value().maxCoeff() << std::endl;
+                std::cout << ssg.value().maxCoeff() << std::endl;
+
+                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::LessEqualZero);
+                const ADB F_totalGas = zeroSn_selector.select( zero, ssg / sn_eff);
+
+                kr_mod = (ones - misc) * kr_mod;
                 if (canonicalPhaseIdx == Gas) {
-                    kr_mod = (ones - misc) * kr_mod;
-                    const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    const ADB mkrgt = F_totalGas * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
                     kr_mod += misc * mkrgt;
                 }
                 if (canonicalPhaseIdx == Oil) {
-                    //kr_mod = (ones - misc) * kr_mod;
-                    const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier( (ones - F_totalGas), cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
-                    //kr_mod += misc * mkro;
+                    const ADB mkro = (ones - F_totalGas) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    kr_mod += misc * mkro;
                 }
 
             }
@@ -622,7 +635,16 @@ namespace Opm {
 
         if (has_solvent_) {
             const ADB& ss = state.solvent_saturation;
-            return fluid_.relperm(sw, so, sg+ss, cells_);
+            if (is_miscible_) {
+                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+                ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+                const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+                ADB sor = V::Constant(nc, 0.18) * misc;
+                ADB sgc = V::Constant(nc, 0.02) * misc;
+                return fluid_.relperm(sw, so, sg+ss, cells_);
+            } else {
+                return fluid_.relperm(sw, so, sg+ss, cells_);
+            }
         } else {
             return fluid_.relperm(sw, so, sg, cells_);
         }
@@ -702,8 +724,26 @@ namespace Opm {
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
             V ones = V::Constant(nperf,1.0);
+
+            V injectedSolventFraction = Eigen::Map<const V>(&well_state.solventFraction()[0], nperf);
+
+            V isProducer = V::Zero(nperf);
+            for (int w = 0; w < nw; ++w) {
+                if(wells().type[w] == PRODUCER) {
+                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                        isProducer[perf] = 1;
+                    }
+                }
+            }
+            F_solvent = isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction;
+
             b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
             b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
+
+            //mob_perfcells[gas_pos] = (ones - F_solvent) * mob_perfcells[gas_pos];
+            //mob_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].mob, well_cells));
+
+
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
