@@ -32,20 +32,12 @@ namespace Opm
 namespace Detail
 {
 
-/// \brief Uses the process rank as the label used for global ordering.
-class IdProcessMap
+class ProcessLabel
 {
 public:
-    template<class ParallelInfo>
-    explicit IdProcessMap(ParallelInfo const& comm)
-        : rank_(comm.rank())
+    explicit ProcessLabel(int my_label)
+        : label_(my_label)
     {}
-
-    /// \brief Get the label on this process
-    std::size_t myMapping() const
-    {
-        return rank_;
-    }
 
     /// \brief Compare our label with the one of another process.
     /// \tparam Compare Type of the functor for comparison, e.g. std::less<size_t>
@@ -55,11 +47,123 @@ public:
     bool compareWithOtherLabel(std::size_t other_proc,
                                Compare const& compare) const
     {
-        return compare(other_proc, myMapping());
+        return compare(this->label(other_proc), myLabel());
+    }
+
+    /// \brief Get the label on this process
+    int myLabel() const
+    {
+        return label_;
+    }
+
+    /// \brief Get the label of the other process.
+    /// \param other_proc the rank of the other process.
+    virtual int label(int other_proc) const = 0;
+
+    virtual ~ProcessLabel()
+    {}
+protected:
+    int label_;
+};
+
+/// \brief Compare our label with the one of another process.
+/// \tparam Compare Type of the functor for comparison, e.g. std::less<size_t>
+/// \param other_proc The label of the other proess.
+/// \param compare functor for comparison.
+template<class Compare>
+bool compareLabels(ProcessLabel const& labels, int other_proc,
+                   Compare const& compare)
+{
+    return compare(labels.label(other_proc), labels.myLabel());
+}
+
+/// \brief Uses the process rank as the label used for global ordering.
+class IdProcessLabel
+    : public ProcessLabel
+{
+public:
+    template<class ParallelInfo>
+    explicit IdProcessLabel(ParallelInfo const& comm)
+        : ProcessLabel(comm.communicator().rank())
+    {}
+
+    virtual int label(int other_proc) const override
+    {
+        return other_proc;
+    }
+};
+
+/// \brief Uses the process rank as the label used for global ordering.
+class ColoredProcessLabel
+    : public ProcessLabel
+{
+public:
+    template<class ParallelInfo>
+    explicit ColoredProcessLabel(ParallelInfo const& comm)
+        : ProcessLabel(comm.communicator().rank()),
+          rank_colors_(comm.communicator().size())
+    {
+        int no_neighbours = comm.remoteIndices().neighbours();
+        std::vector<int> neighbour_ranks;
+        for ( auto neighbour_pair: comm.remoteIndices())
+        {
+            if ( comm.communicator().rank() != neighbour_pair.first )
+            {
+                neighbour_ranks.push_back(neighbour_pair.first);
+            }
+            else
+            {
+                --no_neighbours;
+            }
+        }
+        // MPI needs int here
+        std::vector<int> recv_count(comm.communicator().size(), 0);
+        std::vector<int> offset(comm.communicator().size()+1, 0);
+        comm.communicator().allgather(&no_neighbours, 1, recv_count.data());
+        int no_edges = 0;
+        std::transform(recv_count.begin(), recv_count.end(), offset.begin()+1,
+                       [&no_edges](int i){
+                           return no_edges += i;
+                       });
+
+        std::vector<int> edges(no_edges);
+        MPI_Allgatherv(neighbour_ranks.data(), no_neighbours, MPI_INT,
+                       edges.data(), recv_count.data(), offset.data(), MPI_INT,
+                       comm.communicator());
+        int no_used_colors = 1;
+        std::vector<int>  color_used;
+        color_used.reserve(5);
+        rank_colors_[0] = 0;
+
+        for(int rank = 1, end = comm.communicator().size(); rank != end; ++rank)
+        {
+            color_used.resize(no_used_colors);
+            std::fill_n(color_used.begin(), no_used_colors, 0);
+            for(auto neighbour_idx = offset[rank]; neighbour_idx < offset[rank+1]; ++neighbour_idx)
+            {
+                auto neighbour = edges[ neighbour_idx ];
+                if( neighbour < rank )
+                color_used[ rank_colors_[neighbour] ] = 1;
+            }
+            auto color_it = std::find(color_used.begin(), color_used.end(), 0);
+            if( color_it == color_used.end() )
+            {
+                rank_colors_[ rank ] = no_used_colors++;
+            }else
+            {
+                rank_colors_[ rank ] = color_it - color_used.begin();
+            }
+        }
+        label_ = rank_colors_[ comm.communicator().rank() ];
+    }
+
+    virtual int label(int other_proc) const override
+    {
+        return rank_colors_[other_proc];
     }
 
 private:
-    const int rank_;
+    std::vector<int> rank_colors_;
 };
 
 class LinearSystemPermutation;
@@ -140,6 +244,7 @@ struct PermutedSparseMatrixHandle
     template<class B>
     void gather(B& buffer, std::size_t i) const
     {
+            // A_ is permuted
             auto& row = A_[ i ]; // Interface index i is already permuted!
             for( auto entry = row.begin(), end_entry = row.end();
                  entry != end_entry; ++entry)
@@ -294,7 +399,7 @@ public:
                                  { return d1.global() < d2; });
             if ( found != indexset_.end() )
             {
-                hint = found; // we have found->global() <= datum.second !
+                hint = found; // we have found->global() >= datum.second !
                 if( found->global() == datum )
                 {
                     // This columns is in our subdomain.
@@ -509,9 +614,9 @@ class InteriorInterfacePermutation
     : public LinearSystemPermutation
 {
 public:
-    template<class M, class C>
-    InteriorInterfacePermutation(const M& A, const C& comm)
-        : LinearSystemPermutation(A.N()), process_mapping_(comm.communicator())
+    template<class M, class C, class Label>
+    InteriorInterfacePermutation(const M& A, const C& comm, const Label& label)
+        : LinearSystemPermutation(A.N()), process_mapping_(label)
     {
         computeRowPermutation(A, comm);
     }
@@ -526,7 +631,7 @@ public:
         return interface_interval_;
     }
 
-    const Detail::IdProcessMap& processMapping() const
+    const Detail::ProcessLabel& processMapping() const
     {
         return process_mapping_;
     }
@@ -690,7 +795,7 @@ private:
         return counter-offset;
     }
     // The mapping of the process onto an order
-    Detail::IdProcessMap process_mapping_;
+    const Detail::ProcessLabel& process_mapping_;
     /// \brief Interval in which the indices of the interior are.
     std::array<std::size_t, 2> interior_interval_;
     /// \brief Interval in which the indices of the interface are.
@@ -826,9 +931,9 @@ private:
                              backward_interface_.interfaces());
     }
 
-    template<class RemoteIndices, class IndexProcessor, class ProcessMap, class Interface>
+    template<class RemoteIndices, class IndexProcessor, class Interface>
     void processRemoteIndices(const RemoteIndices& remote_indices, const IndexProcessor& index_processor,
-                              const ProcessMap& process_mapping,
+                              const ProcessLabel& process_mapping,
                               Interface& forward_interface, Interface& backward_interface)
     {
         for( const auto& proc_remote_lists : remote_indices)
@@ -916,9 +1021,9 @@ public:
     */
     ParallelILU0 (const Matrix& A, const ParallelInfo& comm, field_type w)
         : ilu_(), comm_(comm),
-          row_permutation_(A, comm),
-          forward_backward_communicator_(comm,
-                                         row_permutation_),
+          process_mapping_(new Detail::ColoredProcessLabel(comm)),
+          row_permutation_(A, comm, *process_mapping_),
+          forward_backward_communicator_(comm, row_permutation_),
           w_(w)
     {
         std::vector<std::size_t> inverse_row_permutation =
@@ -1151,6 +1256,8 @@ private:
     //! \brief The ILU0 decomposition of the matrix.
     std::unique_ptr<matrix_type> ilu_;
     const ParallelInfo& comm_;
+    //! \brief Mapping of processes onto labels.
+    std::unique_ptr<Detail::ProcessLabel> process_mapping_;
     //! \brief The indices of the inner rows.
     Detail::InteriorInterfacePermutation row_permutation_;
     //! \brief The communicator for sending and receiving values

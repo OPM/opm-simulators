@@ -268,21 +268,42 @@ public:
     }
 
 private:
+    /// \brief Send data with a fixed size per entry
     template<class Datahandle>
     void sendFixedSize(Datahandle& handle);
 
+    /// \brief Send data with a fixed size per entry but do not wait for completion.
+    /// \param  A vector of buffers with one buffer per interface entry.
+    ///         The one at index i will be association with
+    ///         interfaces_.begin()+i
+    /// \return A vector of requests for the send process. There will one request
+    ///         per interface entry. The one at index i will be association with
+    ///         interfaces_.begin()+i
     template<class Datahandle>
     std::vector<MPI_Request>
     sendFixedSizeWithoutWaiting(Datahandle& handle,
                                 std::vector<Detail::MessageBuffer<typename Datahandle::DataType> >& buffers);
 
-    template<class Datahandle, class R>
+    /// \brief Receive data with a fixed size per entry
+    /// \tparam Datahandle The type of the data handle used for gathering
+    ///                    and scattering the data.
+    /// \tparam ReceiveProcessor The type of the processor to process the
+    ///                    scattered data.
+    /// \param data handle The data handle for gathering and scattering.
+    /// \param postprocess_received_size A functor for postprocessing the
+    ///                    scattered data. Has to provide a function taking
+    ///                    the index of the receive request.
+    ///                    Used when receiving variable data to setup the
+    ///                    receives for the actual data.
+    template<class Datahandle, class ReceiveProcessor>
     void receiveFixedSize(Datahandle& handle,
-                          R& postprocess_received_size);
+                          ReceiveProcessor& postprocess_received_size);
 
+    /// \brief Send data with a variable amount of items per index.
     template<class Datahandle>
     void sendVariableSize(Datahandle& handle);
 
+    /// \brief Receive data with a variable amount of items per index.
     template<class Datahandle>
     void receiveVariableSize(Datahandle& handle);
 
@@ -320,6 +341,7 @@ private:
      *
      * In this case we need to receive the size for each data item first.
      * Once on size message is received this functor is used to send the data.
+     * \tparam Type The type of the data that is sent.
      */
     template<class Type>
     class PostProcessReceivedSizes
@@ -422,6 +444,8 @@ SendReceiveCommunicator
     std::vector<MPI_Request> requests(interfaces_->size(), MPI_REQUEST_NULL);
     auto current_request = requests.begin();
     auto current_buffer  = buffers.begin();
+    // The buffer at index i will be associated with interfaces.begin()+i and
+    // requests[i]
 
     for( const auto& infpair : *interfaces_)
     {
@@ -609,12 +633,15 @@ SendReceiveCommunicator::PostProcessReceivedSizes<Type>::operator()(int index)
     std::advance(infpair, index);
     auto& interface_list = infpair->second.second;
     assert ( interface_list.size() );
+
     // Calculate buffer size
     std::size_t buffer_size = 0;
     for(std::size_t j=0; j < interface_list.size(); ++j)
     {
         buffer_size += sizes_[interface_list[j]];
     }
+
+    // The buffer at index index is associated with infpair+inde and requests[index]
     auto& buffer = buffers_[index];
     buffer.resize(buffer_size);
     MPI_Irecv(buffer.data(), buffer_size,
