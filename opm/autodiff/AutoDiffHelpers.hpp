@@ -99,15 +99,13 @@ struct HelperOps
             for (int i = 0; i< nc; ++i) {
                 global2localIdx[ globalCell( grid )[i] ] = i;
             }
-            const std::vector<size_t>& NNC1 = nnc.nnc1();
-            const std::vector<size_t>& NNC2 = nnc.nnc2();
             nnc_cells.resize(numNNC,2);
             nnc_trans.resize(numNNC);
             for (int i = 0; i < numNNC; ++i) {
-                nnc_cells(i,0) = global2localIdx[NNC1[i]];
-                nnc_cells(i,1) = global2localIdx[NNC2[i]];
+                nnc_cells(i,0) = global2localIdx[nnc.nncdata()[i].cell1];
+                nnc_cells(i,1) = global2localIdx[nnc.nncdata()[i].cell2];
                 // store the nnc transmissibilities for later usage.
-                nnc_trans(i) = nnc.trans()[i];
+                nnc_trans(i) = nnc.nncdata()[i].trans;
             }
         }
 
