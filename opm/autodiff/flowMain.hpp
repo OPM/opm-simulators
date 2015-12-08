@@ -62,7 +62,6 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 
-#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
@@ -275,7 +274,7 @@ namespace Opm
             // Gravity.
             gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
-            BlackoilState state;
+            typename Simulator::ReservoirState state;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(Opm::UgGridHelpers::numCells(grid),
