@@ -61,8 +61,6 @@ try
         exit(1);
     } 
     const char* eclipseFilename = argv[1];
-    std::ifstream eclipseFile(eclipseFilename, std::ios::in);
-    eclipseFile.close();
     EclipseStateConstPtr eclState; 
     ParserPtr parser(new Opm::Parser);
     Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
