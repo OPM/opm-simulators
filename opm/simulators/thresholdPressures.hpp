@@ -26,7 +26,8 @@
 #include <vector>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 
@@ -314,25 +315,28 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
 
     template <class Grid>
-    std::vector<double> thresholdPressures(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const Grid& grid)
+    std::vector<double> thresholdPressures(const DeckConstPtr& /* deck */,
+                                           EclipseStateConstPtr eclipseState,
+                                           const Grid& grid,
+                                           const std::map<std::pair<int, int>, double>& maxDp)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
         if (simulationConfig->hasThresholdPressure()) {
             std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
             std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
-            auto eqlnumData = eqlnum->getData();
+            const auto& eqlnumData = eqlnum->getData();
 
-            // Set values for each face.
+            // Set threshold pressure values for each cell face.
             const int num_faces = UgGridHelpers::numFaces(grid);
-            thpres_vals.resize(num_faces, 0.0);
+            const auto& fc = UgGridHelpers::faceCells(grid);
             const int* gc = UgGridHelpers::globalCell(grid);
-            auto fc = UgGridHelpers::faceCells(grid);
+            thpres_vals.resize(num_faces, 0.0);
             for (int face = 0; face < num_faces; ++face) {
                 const int c1 = fc(face, 0);
                 const int c2 = fc(face, 1);
                 if (c1 < 0 || c2 < 0) {
-                    // Boundary face, skip this.
+                    // Boundary face, skip it.
                     continue;
                 }
                 const int gc1 = (gc == 0) ? c1 : gc[c1];
@@ -344,12 +348,35 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                     if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
                         thpres_vals[face] = thresholdPressure->getThresholdPressure(eq1,eq2);
                     }
+                    else {
+                        // set the threshold pressure for faces of PVT regions where the third item
+                        // has been defaulted to the maximum pressure potential difference between
+                        // these regions
+                        const auto barrierId = std::make_pair(eq1, eq2);
+                        thpres_vals[face] = maxDp.at(barrierId);
+                    }
                 }
+
             }
         }
         return thpres_vals;
     }
-     std::vector<double> thresholdPressuresNNC(const ParseMode& parseMode ,EclipseStateConstPtr eclipseState, const NNC& nnc)
+
+    /// \brief Get a vector of pressure thresholds from either EclipseState
+    /// or maxDp (for defaulted values) for all Non-neighbour connections (NNCs).
+    /// \param[in] nnc            The NNCs,
+    /// \param[in] eclipseState   Processed eclipse state, EQLNUM is accessed from it.
+    /// \param[in] maxDp          The maximum gravity corrected pressure differences between
+    ///                           the equilibration regions.
+    /// \return                   A vector of pressure thresholds, one
+    ///                           for each NNC in the grid. A value
+    ///                           of zero means no threshold for that
+    ///                           particular connection. An empty vector is
+    ///                           returned if there is no THPRES
+    ///                           feature used in the deck.
+     std::vector<double> thresholdPressuresNNC(EclipseStateConstPtr eclipseState,
+                                               const NNC& nnc,
+                                               const std::map<std::pair<int, int>, double>& maxDp)
     {
         SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
@@ -370,8 +397,11 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                     if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
                         thpres_vals[i] = thresholdPressure->getThresholdPressure(eq1,eq2);
                     } else {
-                        std::string msg = "Initializing the THPRES pressure values from the initial state is not supported - using 0.0";
-                        parseMode.handleError( ParseMode::UNSUPPORTED_INITIAL_THPRES , msg );
+                        // set the threshold pressure for NNC of PVT regions where the third item
+                        // has been defaulted to the maximum pressure potential difference between
+                        // these regions
+                        const auto barrierId = std::make_pair(eq1, eq2);
+                        thpres_vals[i] = maxDp.at(barrierId);
                     }
                 }
             }
