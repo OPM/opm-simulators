@@ -287,6 +287,8 @@ try
     std::map<std::pair<int, int>, double> maxDp;
     computeMaxDp(maxDp, deck, eclipseState, *grid->c_grid(), state, *props, gravity[2]);
     std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, *grid->c_grid(), maxDp);
+    std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(eclipseState, geology.nnc(), maxDp);
+    threshold_pressures.insert(threshold_pressures.begin(), threshold_pressures_nnc.begin(), threshold_pressures_nnc.end());
 
     Opm::BlackoilOutputWriter
         outputWriter(cGrid, param, eclipseState, pu,
