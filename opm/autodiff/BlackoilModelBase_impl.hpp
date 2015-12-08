@@ -163,7 +163,7 @@ namespace detail {
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid, eclState)
+        , ops_   (grid, geo.nnc())
         , wops_  (wells_)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
