@@ -129,6 +129,10 @@ namespace Opm
                              const double pcow, 
                              double & swat);
 
+        /// Returns a reference to the MaterialLawManager
+        const MaterialLawManager& materialLawManager() const { return *materialLawManager_; }
+
+
     private:
         std::shared_ptr<MaterialLawManager> materialLawManager_;
         PhaseUsage phaseUsage_;
