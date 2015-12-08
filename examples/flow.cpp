@@ -124,16 +124,13 @@ main(int argc, char** argv)
 try
 {
     using namespace Opm;
-#if USE_DUNE_CORNERPOINTGRID
+
     // Must ensure an instance of the helper is created to initialise MPI.
+    // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
+    // be 0 and size 1.
     const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
     const int mpi_rank = mpi_helper.rank();
     const int mpi_size = mpi_helper.size();
-#else
-    // default values for serial run
-    const int mpi_rank = 0;
-    const int mpi_size = 1;
-#endif
 
     // Write parameters used for later reference. (only if rank is zero)
     const bool output_cout = ( mpi_rank == 0 );
