@@ -169,7 +169,7 @@ public:
      * @brief Converts the buffer to a C array.
      * @return The underlying C array.
      */
-    operator T*()
+    T* data()
     {
         return buffer_.data();
     }
@@ -435,7 +435,7 @@ SendReceiveCommunicator
                 handle.gather(*current_buffer, interface_list[i]);
             }
             assert(current_buffer->finished());
-            MPI_Issend(*current_buffer,
+            MPI_Issend(current_buffer->data(),
                        buffer_size,
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
                        infpair.first, tag_, communicator_, &(*current_request));
@@ -450,15 +450,17 @@ template<class Datahandle>
 void
 SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
 {
-    SizeDatahandle<Datahandle> size_handle(handle);
     typedef typename SizeDatahandle<Datahandle>::DataType SizeDataType;
-    std::vector<Detail::MessageBuffer<SizeDataType> >
-        size_buffers(interfaces_->size());
-    std::vector<MPI_Request> size_requests =
+    typedef Detail::MessageBuffer<SizeDataType>           SizeBuffer;
+    typedef typename Datahandle::DataType                 DataType;
+    typedef Detail::MessageBuffer<DataType>               Buffer;
+    SizeDatahandle<Datahandle> size_handle(handle);
+    std::vector<SizeBuffer>    size_buffers(interfaces_->size());
+    std::vector<MPI_Request>   size_requests =
         sendFixedSizeWithoutWaiting(size_handle, size_buffers);
-    std::vector<MPI_Request> requests(size_requests.size(), MPI_REQUEST_NULL);
-    std::vector<Detail::MessageBuffer<typename Datahandle::DataType> > buffers;
-    std::vector<int> finished(size_requests.size(), MPI_UNDEFINED);
+    std::vector<MPI_Request>   requests(size_requests.size(), MPI_REQUEST_NULL);
+    std::vector<Buffer>        buffers(size_buffers.size());
+    std::vector<int>           finished(size_requests.size(), MPI_UNDEFINED);
 
     while ( true )
     {
@@ -486,8 +488,8 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
                 buffer_size += handle.size(interface_list[j]);
             }
 
-            buffers.emplace_back(buffer_size);
-            auto& buffer = buffers.back();
+            auto& buffer = buffers[ finished[ i ] ];
+            buffer.resize(buffer_size);
 
             for(std::size_t j=0; j < interface_list.size(); ++j)
             {
@@ -495,7 +497,7 @@ SendReceiveCommunicator::sendVariableSize(Datahandle& handle)
             }
 
             assert(buffer.finished());
-            MPI_Issend(buffer, buffer_size,
+            MPI_Issend(buffer.data(), buffer.size(),
                        Dune::MPITraits<typename Datahandle::DataType>::getType(),
                         infpair->first, tag_ + 1, communicator_, &(requests[finished[i]]));
         }
@@ -524,7 +526,7 @@ void SendReceiveCommunicator::receiveFixedSize(Datahandle& handle,
             size             = handle.size(interface_list[0]);
             auto buffer_size = size * interface_list.size();
             current_buffer->resize(buffer_size);
-            MPI_Irecv(*current_buffer, buffer_size,
+            MPI_Irecv(current_buffer->data(), buffer_size,
                       Dune::MPITraits<typename Datahandle::DataType>::getType(),
                       infpair.first, tag_, communicator_, &(*current_request));
         }
@@ -560,7 +562,7 @@ SendReceiveCommunicator
         {
             // Unpack the received data
             auto& current_buffer = buffers[finished[i]];
-            auto infpair = interfaces_->begin();
+            auto infpair         = interfaces_->begin();
             std::advance(infpair, finished[i]);
             auto& interface_list = infpair->second.second;
             assert ( interface_list.size() );
@@ -615,7 +617,7 @@ SendReceiveCommunicator::PostProcessReceivedSizes<Type>::operator()(int index)
     }
     auto& buffer = buffers_[index];
     buffer.resize(buffer_size);
-    MPI_Irecv(buffer, buffer_size,
+    MPI_Irecv(buffer.data(), buffer_size,
               Dune::MPITraits<Type>::getType(),
               infpair->first, tag_ + 1, communicator_, &(requests_[index]));
 }
