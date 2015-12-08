@@ -200,3 +200,16 @@ BOOST_FIXTURE_TEST_CASE(ViscosityAD, TestFixture<SetupSimple>)
         BOOST_CHECK_EQUAL(AmuWat.value()[0], VmuWat[i]);
     }
 }
+
+BOOST_FIXTURE_TEST_CASE(criticalSaturations, TestFixture<SetupSimple>)
+{
+   const Opm::BlackoilPropsAdFromDeck::Cells cells(10, 0);
+
+    typedef Opm::BlackoilPropsAdFromDeck::V V;
+
+    V sgcr = boprops_ad.scaledCriticalGasSaturations(cells);
+    V sogcr = boprops_ad.scaledCriticalOilinGasSaturations(cells);
+    BOOST_CHECK_EQUAL(sgcr[0], 0.02);
+    BOOST_CHECK_EQUAL(sogcr[0], 0.13);
+
+}

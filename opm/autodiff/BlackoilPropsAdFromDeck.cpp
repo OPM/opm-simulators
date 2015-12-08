@@ -928,5 +928,44 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     }
 
 
+    /// Obtain the scaled critical oil in gas saturation values.
+    /// \param[in]  cells  Array of cell indices.
+    /// \return Array of critical oil in gas saturaion values.
+    V BlackoilPropsAdFromDeck::scaledCriticalOilinGasSaturations(const Cells& cells) const {
+
+
+        assert(phaseUsage_.phase_used[BlackoilPhases::Gas]);
+        assert(phaseUsage_.phase_used[BlackoilPhases::Oil]);
+
+        const int n = cells.size();
+        V sogcr = V::Zero(n);
+        const MaterialLawManager& materialLawManager = satprops_->materialLawManager();
+        for (int i = 0; i < n; ++i) {
+            const auto& scaledDrainageInfo =
+                materialLawManager.oilWaterScaledEpsInfoDrainage(cells[i]);
+                sogcr[i] = scaledDrainageInfo.Sogcr;
+        }
+        return sogcr;
+    }
+
+    /// Obtain the scaled critical gas saturation values.
+    /// \param[in]  cells  Array of cell indices.
+    /// \return Array of scaled critical gas saturaion values.
+    V BlackoilPropsAdFromDeck::scaledCriticalGasSaturations(const Cells& cells) const {
+
+        assert(phaseUsage_.phase_used[BlackoilPhases::Gas]);
+
+        const int n = cells.size();
+        V sgcr = V::Zero(n);
+        const MaterialLawManager& materialLawManager = satprops_->materialLawManager();
+        for (int i = 0; i < n; ++i) {
+            const auto& scaledDrainageInfo =
+                materialLawManager.oilWaterScaledEpsInfoDrainage(cells[i]);
+                sgcr[i] = scaledDrainageInfo.Sgcr;
+        }
+        return sgcr;
+    }
+
+
 } // namespace Opm
 

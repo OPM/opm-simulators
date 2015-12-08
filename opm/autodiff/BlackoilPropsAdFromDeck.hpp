@@ -360,6 +360,16 @@ namespace Opm
         void setSwatInitScaling(const std::vector<double>& saturation,
                       const std::vector<double>& pc);
 
+        /// Obtain the scaled critical oil in gas saturation values.
+        /// \param[in]  cells  Array of cell indices.
+        /// \return Array of critical oil in gas saturaion values.
+        V scaledCriticalOilinGasSaturations(const Cells& cells) const;
+
+        /// Obtain the scaled critical gas saturation values.
+        /// \param[in]  cells  Array of cell indices.
+        /// \return Array of scaled critical gas saturaion values.
+        V scaledCriticalGasSaturations(const Cells& cells) const;
+
 
     private:
         /// Initializes the properties.
