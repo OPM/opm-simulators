@@ -376,8 +376,15 @@ private:
         {
             DUNE_UNUSED_PARAMETER(n);
             assert(n == 1);
-            assert(sizes_[i] == std::numeric_limits<std::size_t>::max());
+#ifndef NDEBUG
+            std::size_t item;
+            buffer.read(item);
+            assert(sizes_[i] == std::numeric_limits<std::size_t>::max() ||
+                   sizes_[i] == item);
+            sizes_[i] = item;
+#else
             buffer.read(sizes_[i]);
+#endif
         }
         std::vector<std::size_t> sizes_;
         const Datahandle* handle_;
