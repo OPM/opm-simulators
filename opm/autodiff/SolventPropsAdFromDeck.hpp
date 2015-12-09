@@ -108,6 +108,20 @@ public:
     ADB miscibilityFunction (const ADB& solventFraction,
               const Cells& cells) const;
 
+    /// Miscible critical gas saturation function
+    /// \param[in]  Sw              Array of n water saturation values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the saturation values.
+    /// \return                     Array of n miscible critical gas saturation values
+    ADB miscibleCriticalGasSaturationFunction (const ADB& Sw,
+                                               const Cells& cells) const;
+
+    /// Miscible residual oil saturation function
+    /// \param[in]  Sw              Array of n water saturation values.
+    /// \param[in]  cells           Array of n cell indices to be associated with the saturation values.
+    /// \return                     Array of n miscible residual oil saturation values
+    ADB miscibleResidualOilSaturationFunction (const ADB& Sw,
+                                               const Cells& cells) const;
+
     /// Solvent surface density
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// \return                     Array of n solvent density values.
@@ -129,6 +143,8 @@ private:
     std::vector<NonuniformTableLinear<double> > mkro_;
     std::vector<NonuniformTableLinear<double> > mkrsg_;
     std::vector<NonuniformTableLinear<double> > misc_;
+    std::vector<NonuniformTableLinear<double> > sorwmis_;
+    std::vector<NonuniformTableLinear<double> > sgcwmis_;
 };
 
 } // namespace OPM

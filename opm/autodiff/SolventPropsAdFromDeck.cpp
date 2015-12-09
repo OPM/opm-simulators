@@ -141,11 +141,41 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     const std::vector<double>& sn = sof2Table.getSoColumn();
                     const std::vector<double>& krn = sof2Table.getKroColumn();
 
+                    for (size_t i = 0; i < sn.size(); ++i) {
+                        std::cout << sn[i] << " " << krn[i] <<std::endl;
+                    }
+
+
                     krn_[regionIdx] = NonuniformTableLinear<double>(sn, krn);
                 }
 
             } else {
                 OPM_THROW(std::runtime_error, "SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
+            }
+
+            const TableContainer& miscTables = tables->getMiscTables();
+            if (!miscTables.empty()) {
+
+                int numRegions = miscTables.size();
+
+                if(numRegions > 1) {
+                    OPM_THROW(std::runtime_error, "Only single table miscibility function supported for MISC");
+                }
+                // resize the attributes of the object
+                misc_.resize(numRegions);
+                for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const Opm::MiscTable& miscTable = miscTables.getTable<MiscTable>(regionIdx);
+
+                    // Copy data
+                    // solventFraction = Ss / (Ss + Sg);
+                    const std::vector<double>& solventFraction = miscTable.getSolventFractionColumn();
+                    const std::vector<double>& misc = miscTable.getMiscibilityColumn();
+
+                    misc_[regionIdx] = NonuniformTableLinear<double>(solventFraction, misc);
+
+                }
+            } else {
+                OPM_THROW(std::runtime_error, "MISC must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
             // miscible relative permeability multipleiers
@@ -173,37 +203,49 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     mkro_[regionIdx] = NonuniformTableLinear<double>(Ssg, kro);
 
                 }
-
-            } else {
-                OPM_THROW(std::runtime_error, "MSFN must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
-            const TableContainer& miscTables = tables->getMiscTables();
-            if (!miscTables.empty()) {
+            const TableContainer& sorwmisTables = tables->getSorwmisTables();
+            if (!sorwmisTables.empty()) {
 
-                int numRegions = miscTables.size();
+                int numRegions = sorwmisTables.size();
 
                 if(numRegions > 1) {
-                    OPM_THROW(std::runtime_error, "Only single table miscibility function supported for MISC");
+                    OPM_THROW(std::runtime_error, "Only single table miscibility function supported for SORWMIS");
                 }
                 // resize the attributes of the object
-                misc_.resize(numRegions);
+                sorwmis_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                    const Opm::MiscTable& miscTable = miscTables.getTable<MiscTable>(regionIdx);
+                    const Opm::SorwmisTable& sorwmisTable = sorwmisTables.getTable<SorwmisTable>(regionIdx);
 
                     // Copy data
-                    // solventFraction = Ss / (Ss + Sg);
-                    const std::vector<double>& solventFraction = miscTable.getSolventFractionColumn();
-                    const std::vector<double>& misc = miscTable.getMiscibilityColumn();
+                    const std::vector<double>& sw = sorwmisTable.getWaterSaturationColumn();
+                    const std::vector<double>& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
 
-                    misc_[regionIdx] = NonuniformTableLinear<double>(solventFraction, misc);
-
+                    sorwmis_[regionIdx] = NonuniformTableLinear<double>(sw, sorwmis);
                 }
-
-            } else {
-                OPM_THROW(std::runtime_error, "MSFN must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
+            const TableContainer& sgcwmisTables = tables->getSgcwmisTables();
+            if (!sgcwmisTables.empty()) {
+
+                int numRegions = sgcwmisTables.size();
+
+                if(numRegions > 1) {
+                    OPM_THROW(std::runtime_error, "Only single table miscibility function supported for SGCWMIS");
+                }
+                // resize the attributes of the object
+                sgcwmis_.resize(numRegions);
+                for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const Opm::SgcwmisTable& sgcwmisTable = sgcwmisTables.getTable<SgcwmisTable>(regionIdx);
+
+                    // Copy data
+                    const std::vector<double>& sw = sgcwmisTable.getWaterSaturationColumn();
+                    const std::vector<double>& sgcwmis = sgcwmisTable.getMiscibleResidualGasColumn();
+
+                    sgcwmis_[regionIdx] = NonuniformTableLinear<double>(sw, sgcwmis);
+                }
+            }
 
         }
     }
@@ -266,19 +308,48 @@ ADB SolventPropsAdFromDeck::misicibleHydrocarbonWaterRelPerm(const ADB& Sn,
 ADB SolventPropsAdFromDeck::miscibleSolventGasRelPermMultiplier(const ADB& Ssg,
                                  const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(Ssg, cells, mkrsg_);
+    if (mkrsg_.size() > 0) {
+        return SolventPropsAdFromDeck::makeAD(Ssg, cells, mkrsg_);
+    }
+    // trivial function if not specified
+    return Ssg;
 }
 
 ADB SolventPropsAdFromDeck::miscibleOilRelPermMultiplier(const ADB& So,
                                  const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(So, cells, mkro_);
+    if (mkro_.size() > 0) {
+        return SolventPropsAdFromDeck::makeAD(So, cells, mkro_);
+    }
+    // trivial function if not specified
+    return So;
 }
 
 ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
                                  const Cells& cells) const
 {
+
     return SolventPropsAdFromDeck::makeAD(solventFraction, cells, misc_);
+}
+
+
+ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw,
+                                           const Cells& cells) const {
+    if (sgcwmis_.size()>0) {
+        return SolventPropsAdFromDeck::makeAD(Sw, cells, sgcwmis_);
+    }
+    // return zeros if not specified
+    return ADB::constant(V::Zero(Sw.size()));
+}
+
+
+ADB SolventPropsAdFromDeck::miscibleResidualOilSaturationFunction (const ADB& Sw,
+                                           const Cells& cells) const {
+    if (sorwmis_.size()>0) {
+        return SolventPropsAdFromDeck::makeAD(Sw, cells, sorwmis_);
+    }
+    // return zeros if not specified
+    return ADB::constant(V::Zero(Sw.size()));
 }
 
 ADB SolventPropsAdFromDeck::makeAD(const ADB& X_AD, const Cells& cells, std::vector<NonuniformTableLinear<double>> table) const {

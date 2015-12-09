@@ -533,52 +533,48 @@ namespace Opm {
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
+
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
+            const ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
 
             if (is_miscible_ && canonicalPhaseIdx != Water ) {
                 assert(active_[ Oil ]);
                 assert(active_[ Gas ]);
 
                 const ADB& so = state.saturation[ pu.phase_pos[ Oil ] ];
+                const ADB& sw = (active_[ Water ]
+                                 ? state.saturation[ pu.phase_pos[ Water ] ]
+                                 : zero);
 
                 const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+
                 const ADB sn = ss + so + sg;
 
                 // adjust endpoints
-                //const int np = fluid_.numPhases();
-                //V smin = V::Zero(np * nc);
-                //V smax = V::Constant(np*nc, 1.0);
-                //fluid_.getSaturationEndpoints(cells_, smin, smax);
-                //ADB sor = subset(smin, Span(nc, np, Oil)) * misc; //+ (ones - misc) * sorwmis;
-                //ADB sgc = subset(smin, Span(nc, np, Gas)) * misc; //+ (ones - misc) * sgcwmis;
-                ADB sor = V::Constant(nc, 0.0) * misc;
-                ADB sgc = V::Constant(nc, 0.0) * misc;
+                const V sgcr = fluid_.scaledCriticalGasSaturations(cells_);
+                const V sogcr = fluid_.scaledCriticalOilinGasSaturations(cells_);
+                const ADB sorwmis = solvent_props_.miscibleResidualOilSaturationFunction(sw, cells_);
+                const ADB sgcwmis = solvent_props_.miscibleCriticalGasSaturationFunction(sw, cells_);
 
-                //std::cout << sor.value().maxCoeff() << std::endl;
-                //std::cout << sgc.value().maxCoeff() << std::endl;
+                ADB sor = misc * sorwmis + (ones - misc) * sogcr;
+                ADB sgc = misc * sgcwmis + (ones - misc) * sgcr;
 
-                ADB sn_eff = sn - sor - sgc;
-                ADB ssg = ss + sg - sgc;
+                const ADB ssg = ss + sg - sgc;
+                const ADB sn_eff = sn - sor - sgc;
 
-                Selector<double> negative_selector(ssg.value(), Selector<double>::LessZero);
-                ssg = negative_selector.select(zero,ssg);
+                //std::cout << sn.value().minCoeff() << " " << sn.value().maxCoeff() <<std::endl;
+                //std::cout << sn_eff.value().minCoeff() << " " << sn_eff.value().maxCoeff() <<std::endl;
 
-                std::cout << sn_eff.value().minCoeff() << std::endl;
-                std::cout << ssg.value().minCoeff() << std::endl;
-                std::cout << sn_eff.value().maxCoeff() << std::endl;
-                std::cout << ssg.value().maxCoeff() << std::endl;
-
-                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::LessEqualZero);
+                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::Zero);
                 const ADB F_totalGas = zeroSn_selector.select( zero, ssg / sn_eff);
 
                 kr_mod = (ones - misc) * kr_mod;
                 if (canonicalPhaseIdx == Gas) {
-                    const ADB mkrgt = F_totalGas * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
                     kr_mod += misc * mkrgt;
                 }
                 if (canonicalPhaseIdx == Oil) {
-                    const ADB mkro = (ones - F_totalGas) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                    const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier(ones - F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
                     kr_mod += misc * mkro;
                 }
 
