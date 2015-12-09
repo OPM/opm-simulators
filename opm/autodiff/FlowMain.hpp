@@ -126,50 +126,20 @@ namespace Opm
         try {
             setupParallelism(argc, argv);
             printStartupMessage();
-
-            // Read parameters, see if a deck was specified on the command line.
-            if ( output_cout_ )
-                {
-                    std::cout << "---------------    Reading parameters     ---------------" << std::endl;
-                }
-            parameter::ParameterGroup param(argc, argv, false, output_cout_);
-            if( !output_cout_ )
-                {
-                    param.disableOutput();
-                }
-
-
-            if (!param.unhandledArguments().empty()) {
-                if (param.unhandledArguments().size() != 1) {
-                    std::cerr << "You can only specify a single input deck on the command line.\n";
-                    return EXIT_FAILURE;
-                } else {
-                    param.insertParameter("deck_filename", param.unhandledArguments()[0]);
-                }
-            }
-
-            // We must have an input deck. Grid and props will be read from that.
-            if (!param.has("deck_filename")) {
-                std::cerr << "This program must be run with an input deck.\n"
-                    "Specify the deck filename either\n"
-                    "    a) as a command line argument by itself\n"
-                    "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
-                    "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
+            const bool ok = setupParameters(argc, argv);
+            if (!ok) {
                 return EXIT_FAILURE;
             }
 
-            // bool check_well_controls = false;
-            // int max_well_control_iterations = 0;
             double gravity[3] = { 0.0 };
-            std::string deck_filename = param.get<std::string>("deck_filename");
 
             // Write parameters used for later reference. (only if rank is zero)
-            bool output = output_cout_ && param.getDefault("output", true);
+            bool output = output_cout_ && param_.getDefault("output", true);
             std::string output_dir;
             if (output) {
                 // Create output directory if needed.
                 output_dir =
-                    param.getDefault("output_dir", std::string("output"));
+                    param_.getDefault("output_dir", std::string("output"));
                 boost::filesystem::path fpath(output_dir);
                 try {
                     create_directories(fpath);
@@ -179,7 +149,7 @@ namespace Opm
                     return EXIT_FAILURE;
                 }
                 // Write simulation parameters.
-                param.writeParam(output_dir + "/simulation.param");
+                param_.writeParam(output_dir + "/simulation.param");
             }
 
             std::string logFile = output_dir + "/LOGFILE.txt";
@@ -195,6 +165,7 @@ namespace Opm
             Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
             Opm::DeckConstPtr deck;
             std::shared_ptr<EclipseState> eclipseState;
+            std::string deck_filename = param_.get<std::string>("deck_filename");
             try {
                 deck = parser->parseFile(deck_filename, parseMode);
                 Opm::checkDeck(deck);
@@ -211,8 +182,8 @@ namespace Opm
             auto&& grid = grid_init.grid();
 
             // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
-            if (param.has("output_interval")) {
-                int output_interval = param.get<int>("output_interval");
+            if (param_.has("output_interval")) {
+                int output_interval = param_.get<int>("output_interval");
                 IOConfigPtr ioConfig = eclipseState->getIOConfig();
                 ioConfig->overrideRestartWriteInterval((size_t)output_interval);
             }
@@ -231,7 +202,7 @@ namespace Opm
                                               Opm::UgGridHelpers::numCells(grid),
                                               Opm::UgGridHelpers::globalCell(grid),
                                               Opm::UgGridHelpers::cartDims(grid),
-                                              param);
+                                              param_);
 
             BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
             // check_well_controls = param.getDefault("check_well_controls", false);
@@ -245,7 +216,7 @@ namespace Opm
 
             typename Simulator::ReservoirState state;
             // Init state variables (saturation and pressure).
-            if (param.has("init_saturation")) {
+            if (param_.has("init_saturation")) {
                 initStateBasic(Opm::UgGridHelpers::numCells(grid),
                                Opm::UgGridHelpers::globalCell(grid),
                                Opm::UgGridHelpers::cartDims(grid),
@@ -254,7 +225,7 @@ namespace Opm
                                Opm::UgGridHelpers::beginFaceCentroids(grid),
                                Opm::UgGridHelpers::beginCellCentroids(grid),
                                Opm::UgGridHelpers::dimensions(grid),
-                               props, param, gravity[2], state);
+                               props, param_, gravity[2], state);
 
                 initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state);
 
@@ -271,7 +242,7 @@ namespace Opm
                 state.init(Opm::UgGridHelpers::numCells(grid),
                            Opm::UgGridHelpers::numFaces(grid),
                            props.numPhases());
-                const double grav = param.getDefault("gravity", unit::gravity);
+                const double grav = param_.getDefault("gravity", unit::gravity);
                 initStateEquil(grid, props, deck, eclipseState, grav, state);
                 state.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
@@ -299,7 +270,7 @@ namespace Opm
             bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
             const double *grav = use_gravity ? &gravity[0] : 0;
 
-            const bool use_local_perm = param.getDefault("use_local_perm", true);
+            const bool use_local_perm = param_.getDefault("use_local_perm", true);
 
             DerivedGeology geoprops(grid, new_props, eclipseState, use_local_perm, grav);
             boost::any parallel_information;
@@ -315,7 +286,7 @@ namespace Opm
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            Opm::BlackoilOutputWriter outputWriter(grid, param, eclipseState, pu, new_props.permeability() );
+            Opm::BlackoilOutputWriter outputWriter(grid, param_, eclipseState, pu, new_props.permeability() );
 
             // Solver for Newton iterations.
             std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
@@ -328,8 +299,8 @@ namespace Opm
                 std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipseState->getSimulationConfig();
                 std::string solver_approach = flowDefaultSolver;
 
-                if (param.has("solver_approach")) {
-                    solver_approach = param.get<std::string>("solver_approach");
+                if (param_.has("solver_approach")) {
+                    solver_approach = param_.get<std::string>("solver_approach");
                 }  else {
                     if (simCfg->useCPR()) {
                         solver_approach = cprSolver;
@@ -337,11 +308,11 @@ namespace Opm
                 }
 
                 if (solver_approach == cprSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilCPR(param, parallel_information));
+                    fis_solver.reset(new NewtonIterationBlackoilCPR(param_, parallel_information));
                 } else if (solver_approach == interleavedSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilInterleaved(param, parallel_information));
+                    fis_solver.reset(new NewtonIterationBlackoilInterleaved(param_, parallel_information));
                 } else if (solver_approach == directSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilSimple(param, parallel_information));
+                    fis_solver.reset(new NewtonIterationBlackoilSimple(param_, parallel_information));
                 } else {
                     OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
                 }
@@ -359,7 +330,7 @@ namespace Opm
             computeMaxDp(maxDp, deck, eclipseState, grid, state, props, gravity[2]);
             std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, grid, maxDp);
 
-            Simulator simulator(param,
+            Simulator simulator(param_,
                                 grid,
                                 geoprops,
                                 new_props,
@@ -391,7 +362,7 @@ namespace Opm
                     std::string filename = output_dir + "/walltime.txt";
                     std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
                     fullReport.reportParam(tot_os);
-                    warnIfUnusedParams(param);
+                    warnIfUnusedParams(param_);
                 }
             } else {
                 outputWriter.writeInit( simtimer );
@@ -419,6 +390,7 @@ namespace Opm
 
         bool output_cout_ = false;
         bool must_distribute_ = false;
+        parameter::ParameterGroup param_;
 
 
 
@@ -490,6 +462,44 @@ namespace Opm
             }
         }
 
+
+
+
+
+        // Read parameters, see if a deck was specified on the command line, and if
+        // it was, insert it into parameters.
+        // Writes to:
+        //   param_
+        // Returns true if ok, false if not.
+        bool setupParameters(int argc, char** argv)
+        {
+            // Read parameters.
+            if ( output_cout_ ) {
+                std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+            }
+            param_ = parameter::ParameterGroup(argc, argv, false, output_cout_);
+
+            // See if a deck was specified on the command line.
+            if (!param_.unhandledArguments().empty()) {
+                if (param_.unhandledArguments().size() != 1) {
+                    std::cerr << "You can only specify a single input deck on the command line.\n";
+                    return false;
+                } else {
+                    param_.insertParameter("deck_filename", param_.unhandledArguments()[0]);
+                }
+            }
+
+            // We must have an input deck. Grid and props will be read from that.
+            if (!param_.has("deck_filename")) {
+                std::cerr << "This program must be run with an input deck.\n"
+                    "Specify the deck filename either\n"
+                    "    a) as a command line argument by itself\n"
+                    "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
+                    "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
+                return false;
+            }
+            return true;
+        }
 
 
     }; // class FlowMain
