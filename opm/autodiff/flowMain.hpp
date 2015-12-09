@@ -119,7 +119,10 @@ namespace Opm
     /// content of this function used to be in the main() function of
     /// flow.cpp.
     template <class Grid, class Simulator>
-    inline int flowMain(int argc, char** argv)
+    class FlowMain
+    {
+    public:
+        int execute(int argc, char** argv)
         try {
             using namespace Opm;
 
@@ -442,6 +445,8 @@ namespace Opm
             std::cerr << "Program threw an exception: " << e.what() << "\n";
             return EXIT_FAILURE;
         }
+
+    }; // class FlowMain
 
 
 } // namespace Opm

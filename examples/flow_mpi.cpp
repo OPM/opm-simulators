@@ -37,5 +37,6 @@ main(int argc, char** argv)
     typedef Dune::CpGrid Grid;
     typedef Opm::SimulatorFullyImplicitBlackoil<Grid> Simulator;
 
-    return Opm::flowMain<Grid, Simulator>(argc, argv);
+    Opm::FlowMain<Grid, Simulator> mainfunc;
+    return mainfunc.execute(argc, argv);
 }
