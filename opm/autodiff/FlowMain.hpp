@@ -124,19 +124,9 @@ namespace Opm
     public:
         int execute(int argc, char** argv)
         try {
-            using namespace Opm;
+            setupParallelism(argc, argv);
 
-            // Must ensure an instance of the helper is created to initialise MPI.
-            // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
-            // be 0 and size 1.
-            const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-            const int mpi_rank = mpi_helper.rank();
-            const int mpi_size = mpi_helper.size();
-
-            // Write parameters used for later reference. (only if rank is zero)
-            const bool output_cout = ( mpi_rank == 0 );
-
-            if (output_cout)
+            if (output_cout_)
                 {
                     std::string version = moduleVersionName();
                     std::cout << "**********************************************************************\n";
@@ -151,29 +141,14 @@ namespace Opm
                     std::cout << "**********************************************************************\n\n";
                 }
 
-#ifdef _OPENMP
-            if (!getenv("OMP_NUM_THREADS")) {
-                //Default to at most 4 threads, regardless of 
-                //number of cores (unless ENV(OMP_NUM_THREADS) is defined)
-                int num_cores = omp_get_num_procs();
-                int num_threads = std::min(4, num_cores);
-                omp_set_num_threads(num_threads);
-            }
-#pragma omp parallel
-            if (omp_get_thread_num() == 0){
-                //opm_get_num_threads() only works as expected within a parallel region.
-                std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
-            }
-#endif
-
             // Read parameters, see if a deck was specified on the command line.
-            if ( output_cout )
+            if ( output_cout_ )
                 {
                     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
                 }
 
-            parameter::ParameterGroup param(argc, argv, false, output_cout);
-            if( !output_cout )
+            parameter::ParameterGroup param(argc, argv, false, output_cout_);
+            if( !output_cout_ )
                 {
                     param.disableOutput();
                 }
@@ -203,7 +178,7 @@ namespace Opm
             std::string deck_filename = param.get<std::string>("deck_filename");
 
             // Write parameters used for later reference. (only if rank is zero)
-            bool output = ( mpi_rank == 0 ) && param.getDefault("output", true);
+            bool output = output_cout_ && param.getDefault("output", true);
             std::string output_dir;
             if (output) {
                 // Create output directory if needed.
@@ -346,7 +321,7 @@ namespace Opm
             // At this point all properties and state variables are correctly initialized
             // If there are more than one processors involved, we now repartition the grid
             // and initilialize new properties and states for it.
-            if( mpi_size > 1 )
+            if( must_distribute_ )
                 {
                     Opm::distributeGridAndData( grid, deck, eclipseState, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
                 }
@@ -412,7 +387,7 @@ namespace Opm
                                 threshold_pressures);
 
             if (!schedule->initOnly()){
-                if( output_cout )
+                if( output_cout_ )
                     {
                         std::cout << "\n\n================ Starting main simulation loop ===============\n"
                                   << std::flush;
@@ -420,7 +395,7 @@ namespace Opm
 
                 SimulatorReport fullReport = simulator.run(simtimer, state);
 
-                if( output_cout )
+                if( output_cout_ )
                     {
                         std::cout << "\n\n================    End of simulation     ===============\n\n";
                         fullReport.reportFullyImplicit(std::cout);
@@ -434,7 +409,7 @@ namespace Opm
                 }
             } else {
                 outputWriter.writeInit( simtimer );
-                if ( output_cout )
+                if ( output_cout_ )
                     {
                         std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                     }
@@ -445,6 +420,47 @@ namespace Opm
             std::cerr << "Program threw an exception: " << e.what() << "\n";
             return EXIT_FAILURE;
         }
+
+
+
+    private:
+
+        // ------------   Data members   ------------
+
+        bool output_cout_ = false;
+        bool must_distribute_ = false;
+
+        // ------------   Methods   ------------
+
+        void setupParallelism(int argc, char** argv)
+        {
+            // MPI setup.
+            // Must ensure an instance of the helper is created to initialise MPI.
+            // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
+            // be 0 and size 1.
+            const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
+            const int mpi_rank = mpi_helper.rank();
+            const int mpi_size = mpi_helper.size();
+            output_cout_ = ( mpi_rank == 0 );
+            must_distribute_ = ( mpi_size > 1 );
+
+#ifdef _OPENMP
+            // OpenMP setup.
+            if (!getenv("OMP_NUM_THREADS")) {
+                // Default to at most 4 threads, regardless of
+                // number of cores (unless ENV(OMP_NUM_THREADS) is defined)
+                int num_cores = omp_get_num_procs();
+                int num_threads = std::min(4, num_cores);
+                omp_set_num_threads(num_threads);
+            }
+#pragma omp parallel
+            if (omp_get_thread_num() == 0) {
+                // opm_get_num_threads() only works as expected within a parallel region.
+                std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
+            }
+#endif
+        }
+
 
     }; // class FlowMain
 
