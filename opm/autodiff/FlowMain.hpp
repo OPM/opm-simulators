@@ -131,69 +131,38 @@ namespace Opm
                 return EXIT_FAILURE;
             }
             setupOutput();
+            readDeckInput();
 
-            std::string logFile = output_dir_ + "/LOGFILE.txt";
-            Opm::ParserPtr parser(new Opm::Parser());
-            {
-                std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
-                std::shared_ptr<Opm::CounterLog> counterLog = std::make_shared<Opm::CounterLog>(Opm::Log::DefaultMessageTypes);
-
-                Opm::OpmLog::addBackend( "STREAM" , streamLog );
-                Opm::OpmLog::addBackend( "COUNTER" , counterLog );
-            }
-
-            Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-            Opm::DeckConstPtr deck;
-            std::shared_ptr<EclipseState> eclipseState;
-            std::string deck_filename = param_.get<std::string>("deck_filename");
-            try {
-                deck = parser->parseFile(deck_filename, parseMode);
-                Opm::checkDeck(deck);
-                eclipseState.reset(new Opm::EclipseState(deck , parseMode));
-            }
-            catch (const std::invalid_argument& e) {
-                std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
-                return EXIT_FAILURE;
-            }
-
-            std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
-            GridInit<Grid> grid_init(deck, eclipseState, porv);
+            std::vector<double> porv = eclipse_state_->getDoubleGridProperty("PORV")->getData();
+            GridInit<Grid> grid_init(deck_, eclipse_state_, porv);
             auto&& grid = grid_init.grid();
 
-            // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
-            if (param_.has("output_interval")) {
-                int output_interval = param_.get<int>("output_interval");
-                IOConfigPtr ioConfig = eclipseState->getIOConfig();
-                ioConfig->overrideRestartWriteInterval((size_t)output_interval);
-            }
-
-            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck_);
 
             std::vector<int> compressedToCartesianIdx;
             Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
 
             typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
             auto materialLawManager = std::make_shared<MaterialLawManager>();
-            materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+            materialLawManager->initFromDeck(deck_, eclipse_state_, compressedToCartesianIdx);
 
             // Rock and fluid init
-            BlackoilPropertiesFromDeck props( deck, eclipseState, materialLawManager,
+            BlackoilPropertiesFromDeck props( deck_, eclipse_state_, materialLawManager,
                                               Opm::UgGridHelpers::numCells(grid),
                                               Opm::UgGridHelpers::globalCell(grid),
                                               Opm::UgGridHelpers::cartDims(grid),
                                               param_);
 
-            BlackoilPropsAdFromDeck new_props( deck, eclipseState, materialLawManager, grid );
+            BlackoilPropsAdFromDeck new_props( deck_, eclipse_state_, materialLawManager, grid );
             // check_well_controls = param.getDefault("check_well_controls", false);
             // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
             // Rock compressibility.
 
-            RockCompressibility rock_comp(deck, eclipseState);
+            RockCompressibility rock_comp(deck_, eclipse_state_);
 
             // Gravity.
             double gravity[3] = { 0.0 };
-            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            gravity[2] = deck_->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
             typename Simulator::ReservoirState state;
             // Init state variables (saturation and pressure).
@@ -219,12 +188,12 @@ namespace Opm
                             / state.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
                     }
                 }
-            } else if (deck->hasKeyword("EQUIL") && props.numPhases() == 3) {
+            } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
                 state.init(Opm::UgGridHelpers::numCells(grid),
                            Opm::UgGridHelpers::numFaces(grid),
                            props.numPhases());
                 const double grav = param_.getDefault("gravity", unit::gravity);
-                initStateEquil(grid, props, deck, eclipseState, grav, state);
+                initStateEquil(grid, props, deck_, eclipse_state_, grav, state);
                 state.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
                 initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
@@ -234,12 +203,12 @@ namespace Opm
                                           Opm::UgGridHelpers::beginFaceCentroids(grid),
                                           Opm::UgGridHelpers::beginCellCentroids(grid),
                                           Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck, gravity[2], state);
+                                          props, deck_, gravity[2], state);
             }
 
 
             // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
-            if (deck->hasKeyword("SWATINIT")) {
+            if (deck_->hasKeyword("SWATINIT")) {
                 const int numCells = Opm::UgGridHelpers::numCells(grid);
                 std::vector<int> cells(numCells);
                 for (int c = 0; c < numCells; ++c) { cells[c] = c; }
@@ -253,7 +222,7 @@ namespace Opm
 
             const bool use_local_perm = param_.getDefault("use_local_perm", true);
 
-            DerivedGeology geoprops(grid, new_props, eclipseState, use_local_perm, grav);
+            DerivedGeology geoprops(grid, new_props, eclipse_state_, use_local_perm, grav);
             boost::any parallel_information;
 
             // At this point all properties and state variables are correctly initialized
@@ -261,13 +230,13 @@ namespace Opm
             // and initilialize new properties and states for it.
             if( must_distribute_ )
                 {
-                    Opm::distributeGridAndData( grid, deck, eclipseState, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
+                    Opm::distributeGridAndData( grid, deck_, eclipse_state_, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
                 }
 
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            Opm::BlackoilOutputWriter outputWriter(grid, param_, eclipseState, pu, new_props.permeability() );
+            Opm::BlackoilOutputWriter outputWriter(grid, param_, eclipse_state_, pu, new_props.permeability() );
 
             // Solver for Newton iterations.
             std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
@@ -277,7 +246,7 @@ namespace Opm
                 const std::string directSolver = "direct";
                 const std::string flowDefaultSolver = interleavedSolver;
 
-                std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipseState->getSimulationConfig();
+                std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
                 std::string solver_approach = flowDefaultSolver;
 
                 if (param_.has("solver_approach")) {
@@ -300,7 +269,7 @@ namespace Opm
 
             }
 
-            Opm::ScheduleConstPtr schedule = eclipseState->getSchedule();
+            Opm::ScheduleConstPtr schedule = eclipse_state_->getSchedule();
             Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
             SimulatorTimer simtimer;
 
@@ -308,8 +277,8 @@ namespace Opm
             simtimer.init(timeMap);
 
             std::map<std::pair<int, int>, double> maxDp;
-            computeMaxDp(maxDp, deck, eclipseState, grid, state, props, gravity[2]);
-            std::vector<double> threshold_pressures = thresholdPressures(deck, eclipseState, grid, maxDp);
+            computeMaxDp(maxDp, deck_, eclipse_state_, grid, state, props, gravity[2]);
+            std::vector<double> threshold_pressures = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
 
             Simulator simulator(param_,
                                 grid,
@@ -318,9 +287,9 @@ namespace Opm
                                 rock_comp.isActive() ? &rock_comp : 0,
                                 *fis_solver,
                                 grav,
-                                deck->hasKeyword("DISGAS"),
-                                deck->hasKeyword("VAPOIL"),
-                                eclipseState,
+                                deck_->hasKeyword("DISGAS"),
+                                deck_->hasKeyword("VAPOIL"),
+                                eclipse_state_,
                                 outputWriter,
                                 threshold_pressures);
 
@@ -368,13 +337,17 @@ namespace Opm
 
 
 
-
+        // setupParallelism()
         bool output_cout_ = false;
         bool must_distribute_ = false;
+        // setupParameters()
         parameter::ParameterGroup param_;
+        // setupOutput()
         bool output_to_files_ = false;
         std::string output_dir_ = "output";
-
+        // readDeckInput()
+        std::shared_ptr<const Deck> deck_;
+        std::shared_ptr<EclipseState> eclipse_state_;
 
 
 
@@ -512,6 +485,49 @@ namespace Opm
             }
         }
 
+
+
+
+
+        // Parser the input and creates the Deck and EclipseState objects.
+        // Writes to:
+        //   deck_
+        //   eclipse_state_
+        // May throw if errors are encountered, here configured to be somewhat tolerant.
+        void readDeckInput()
+        {
+            // Create Parser
+            std::string logFile = output_dir_ + "/LOGFILE.txt";
+            ParserPtr parser(new Parser());
+            {
+                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(logFile , Log::DefaultMessageTypes);
+                std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
+
+                OpmLog::addBackend( "STREAM" , streamLog );
+                OpmLog::addBackend( "COUNTER" , counterLog );
+            }
+
+            // Create Deck and EclipseState.
+            try {
+                std::string deck_filename = param_.get<std::string>("deck_filename");
+                ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+                deck_ = parser->parseFile(deck_filename, parseMode);
+                checkDeck(deck_);
+                eclipse_state_.reset(new EclipseState(deck_, parseMode));
+            }
+            catch (const std::invalid_argument& e) {
+                std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile << std::endl;
+                std::cerr << "Exception caught: " << e.what() << std::endl;
+                throw;
+            }
+
+            // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
+            if (param_.has("output_interval")) {
+                const int output_interval = param_.get<int>("output_interval");
+                IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
+                ioConfig->overrideRestartWriteInterval(static_cast<size_t>(output_interval));
+            }
+        }
 
     }; // class FlowMain
 
