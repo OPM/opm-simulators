@@ -47,7 +47,7 @@ namespace Opm {
     public:
 
         ///Constructor for OpmLog.
-        RelpermDiagnostics(std::string& logFile);
+        explicit RelpermDiagnostics(std::string& logFile);
 
         ///This function is used to diagnosis relperm in
         ///eclipse data file. Errors and warings will be 
