@@ -130,29 +130,9 @@ namespace Opm
             if (!ok) {
                 return EXIT_FAILURE;
             }
+            setupOutput();
 
-            double gravity[3] = { 0.0 };
-
-            // Write parameters used for later reference. (only if rank is zero)
-            bool output = output_cout_ && param_.getDefault("output", true);
-            std::string output_dir;
-            if (output) {
-                // Create output directory if needed.
-                output_dir =
-                    param_.getDefault("output_dir", std::string("output"));
-                boost::filesystem::path fpath(output_dir);
-                try {
-                    create_directories(fpath);
-                }
-                catch (...) {
-                    std::cerr << "Creating directories failed: " << fpath << std::endl;
-                    return EXIT_FAILURE;
-                }
-                // Write simulation parameters.
-                param_.writeParam(output_dir + "/simulation.param");
-            }
-
-            std::string logFile = output_dir + "/LOGFILE.txt";
+            std::string logFile = output_dir_ + "/LOGFILE.txt";
             Opm::ParserPtr parser(new Opm::Parser());
             {
                 std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
@@ -212,6 +192,7 @@ namespace Opm
             RockCompressibility rock_comp(deck, eclipseState);
 
             // Gravity.
+            double gravity[3] = { 0.0 };
             gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
             typename Simulator::ReservoirState state;
@@ -358,8 +339,8 @@ namespace Opm
                         fullReport.reportFullyImplicit(std::cout);
                     }
 
-                if (output) {
-                    std::string filename = output_dir + "/walltime.txt";
+                if (output_to_files_) {
+                    std::string filename = output_dir_ + "/walltime.txt";
                     std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
                     fullReport.reportParam(tot_os);
                     warnIfUnusedParams(param_);
@@ -391,7 +372,8 @@ namespace Opm
         bool output_cout_ = false;
         bool must_distribute_ = false;
         parameter::ParameterGroup param_;
-
+        bool output_to_files_ = false;
+        std::string output_dir_ = "output";
 
 
 
@@ -499,6 +481,35 @@ namespace Opm
                 return false;
             }
             return true;
+        }
+
+
+
+
+
+        // Set output_to_files_ and set/create output dir. Write parameter file.
+        // Writes to:
+        //   output_to_files_
+        //   output_dir_
+        // Throws std::runtime_error if failed to create (if requested) output dir.
+        void setupOutput()
+        {
+            // Write parameters used for later reference. (only if rank is zero)
+            output_to_files_ = output_cout_ && param_.getDefault("output", true);
+            if (output_to_files_) {
+                // Create output directory if needed.
+                output_dir_ =
+                    param_.getDefault("output_dir", std::string("output"));
+                boost::filesystem::path fpath(output_dir_);
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                }
+                // Write simulation parameters.
+                param_.writeParam(output_dir_ + "/simulation.param");
+            }
         }
 
 
