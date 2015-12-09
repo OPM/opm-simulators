@@ -125,33 +125,19 @@ namespace Opm
         int execute(int argc, char** argv)
         try {
             setupParallelism(argc, argv);
-
-            if (output_cout_)
-                {
-                    std::string version = moduleVersionName();
-                    std::cout << "**********************************************************************\n";
-                    std::cout << "*                                                                    *\n";
-                    std::cout << "*                   This is Flow (version " << version << ")"
-                              << std::string(26 - version.size(), ' ') << "*\n";
-                    std::cout << "*                                                                    *\n";
-                    std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-                    std::cout << "*            and is part of OPM. For more information see:           *\n";
-                    std::cout << "*                       http://opm-project.org                       *\n";
-                    std::cout << "*                                                                    *\n";
-                    std::cout << "**********************************************************************\n\n";
-                }
+            printStartupMessage();
 
             // Read parameters, see if a deck was specified on the command line.
             if ( output_cout_ )
                 {
                     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
                 }
-
             parameter::ParameterGroup param(argc, argv, false, output_cout_);
             if( !output_cout_ )
                 {
                     param.disableOutput();
                 }
+
 
             if (!param.unhandledArguments().empty()) {
                 if (param.unhandledArguments().size() != 1) {
@@ -427,11 +413,27 @@ namespace Opm
 
         // ------------   Data members   ------------
 
+
+
+
+
         bool output_cout_ = false;
         bool must_distribute_ = false;
 
+
+
+
+
         // ------------   Methods   ------------
 
+
+
+
+
+        // Set up MPI and OpenMP.
+        // Writes to:
+        //   output_cout_
+        //   must_distribute_
         void setupParallelism(int argc, char** argv)
         {
             // MPI setup.
@@ -465,6 +467,29 @@ namespace Opm
             }
 #endif
         }
+
+
+
+
+
+        // Print startup message if on output rank.
+        void printStartupMessage()
+        {
+            if (output_cout_) {
+                const std::string version = moduleVersionName();
+                std::cout << "**********************************************************************\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "*                   This is Flow (version " << version << ")"
+                          << std::string(26 - version.size(), ' ') << "*\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+                std::cout << "*            and is part of OPM. For more information see:           *\n";
+                std::cout << "*                       http://opm-project.org                       *\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "**********************************************************************\n\n";
+            }
+        }
+
 
 
     }; // class FlowMain
