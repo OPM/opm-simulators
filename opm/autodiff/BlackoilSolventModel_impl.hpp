@@ -372,7 +372,7 @@ namespace Opm {
         }
         V surf_dens_copy = superset(fluid_.surfaceDensity(0, well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
         for (int phase = 1; phase < pu.num_phases; ++phase) {
-            if ( phase != pu.phase_pos[BlackoilPhases::Vapour]) {
+            if ( phase == pu.phase_pos[BlackoilPhases::Vapour]) {
                 continue; // the gas surface density is added after the solvent is accounted for.
             }
             surf_dens_copy += superset(fluid_.surfaceDensity(phase, well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
@@ -721,24 +721,8 @@ namespace Opm {
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
             V ones = V::Constant(nperf,1.0);
 
-            V injectedSolventFraction = Eigen::Map<const V>(&well_state.solventFraction()[0], nperf);
-
-            V isProducer = V::Zero(nperf);
-            for (int w = 0; w < nw; ++w) {
-                if(wells().type[w] == PRODUCER) {
-                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                        isProducer[perf] = 1;
-                    }
-                }
-            }
-            F_solvent = isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction;
-
             b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
             b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
-
-            //mob_perfcells[gas_pos] = (ones - F_solvent) * mob_perfcells[gas_pos];
-            //mob_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].mob, well_cells));
-
 
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
