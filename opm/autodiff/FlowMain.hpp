@@ -455,8 +455,13 @@ namespace Opm
             }
 #pragma omp parallel
             if (omp_get_thread_num() == 0) {
-                // opm_get_num_threads() only works as expected within a parallel region.
-                std::cout << "OpenMP using " << omp_get_num_threads() << " threads." << std::endl;
+                // omp_get_num_threads() only works as expected within a parallel region.
+                const int num_omp_threads = omp_get_num_threads();
+                if (mpi_size == 1) {
+                    std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
+                } else {
+                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank << "." << std::endl;
+                }
             }
 #endif
         }
