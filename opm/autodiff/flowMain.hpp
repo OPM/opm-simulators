@@ -113,6 +113,11 @@ namespace Opm
     }
 
 
+    /// This is the main function of Flow.
+    /// It runs a complete simulation, with the given grid and
+    /// simulator classes, based on user command-line input.  The
+    /// content of this function used to be in the main() function of
+    /// flow.cpp.
     template <class Grid, class Simulator>
     inline int flowMain(int argc, char** argv)
         try {
