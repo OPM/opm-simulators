@@ -27,7 +27,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/flowMain.hpp>
+#include <opm/autodiff/FlowMain.hpp>
 
 
 // ----------------- Main program -----------------

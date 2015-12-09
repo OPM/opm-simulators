@@ -27,7 +27,7 @@
 
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/flowMain.hpp>
+#include <opm/autodiff/FlowMain.hpp>
 
 
 // ----------------- Main program -----------------
