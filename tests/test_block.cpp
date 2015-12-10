@@ -283,3 +283,45 @@ BOOST_AUTO_TEST_CASE(AssignAddSubtractOperators)
     z += x;
     checkClose(z, yconst, tolerance);
 }
+
+BOOST_AUTO_TEST_CASE(Pow)
+{
+    typedef AutoDiffBlock<double> ADB;
+
+    // Basic testing of derivatives
+    ADB::V vx(3);
+    vx << 0.2, 1.2, 13.4;
+
+    ADB::V vy(3);
+    vy << 1.0, 2.2, 3.4;
+
+    std::vector<ADB::V> vals{ vx, vy };
+    std::vector<ADB> vars = ADB::variables(vals);
+
+    const ADB x = vars[0];
+    const ADB y = vars[1];
+
+    const double tolerance = 1e-14;
+
+    const ADB xx = x * x;
+    ADB xxpow2 = Opm::pow(x,2.0);
+    checkClose(xxpow2, xx, tolerance);
+
+    const ADB xy = x * y;
+    const ADB xxyy = xy * xy;
+    ADB xypow2 = Opm::pow(xy,2.0);
+    checkClose(xypow2, xxyy, tolerance);
+
+    const ADB xxx = x * x * x;
+    ADB xpow3 = Opm::pow(x,3.0);
+    checkClose(xpow3, xxx, tolerance);
+
+    ADB xpowhalf = Opm::pow(x,0.5);
+    ADB::V x_sqrt(3);
+    x_sqrt << 0.447214 , 1.095445 , 3.6606;
+    for (int i = 0 ; i < 3; ++i){
+        BOOST_CHECK_CLOSE(xpowhalf.value()[i], x_sqrt[i], 1e-4);
+    }
+}
+
+

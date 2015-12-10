@@ -622,6 +622,30 @@ namespace Opm
         return rhs * lhs; // Commutative operation.
     }
 
+    /**
+     * @brief Computes the value of base raised to the power of exp
+     *
+     * @param base The AD forward block
+     * @param exp  exponent
+     * @return The value of base raised to the power of exp
+     */
+    template <typename Scalar>
+    AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
+                              const double exp)
+    {
+        const typename AutoDiffBlock<Scalar>::V val = base.value().pow(exp);
+        const typename AutoDiffBlock<Scalar>::V derivative = exp * base.value().pow(exp-1.0);
+        const typename AutoDiffBlock<Scalar>::M derivative_diag(derivative.matrix().asDiagonal());
+
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac (base.numBlocks());
+        for (int block = 0; block < base.numBlocks(); block++) {
+             fastSparseProduct(derivative_diag, base.derivative()[block], jac[block]);
+        }
+
+        return AutoDiffBlock<Scalar>::function( std::move(val), std::move(jac) );
+    }
+
+
 
 } // namespace Opm
 
