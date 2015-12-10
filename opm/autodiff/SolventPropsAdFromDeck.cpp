@@ -247,6 +247,31 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
+            if (deck->hasKeyword("TLMIXPAR")) {
+                const auto tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(0);
+                std::vector<double> mix_params_viscosity = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDoubleData();
+                const int numRegions = mix_params_viscosity.size();
+                if (numRegions > 1) {
+                    OPM_THROW(std::runtime_error, "Only singel miscibility region is supported for TLMIXPAR.");
+                }
+                mix_param_viscosity_ = mix_params_viscosity[0];
+
+                std::vector<double> mix_params_density = tlmixparRecord->getItem("TL_DENSITY_PARAMETER")->getSIDoubleData();
+                const int numDensityItems = mix_params_density.size();
+                if (numDensityItems == 0) {
+                    mix_param_density_ = mix_param_viscosity_;
+                } else if (numDensityItems == 1) {
+                    mix_param_density_ = mix_params_density[0];
+                } else {
+                    OPM_THROW(std::runtime_error, "Only singel miscibility region is supported for TLMIXPAR.");
+                }
+            } else {
+                mix_param_viscosity_ = 0.0;
+                mix_param_density_ = 0.0;
+            }
+
+
+
         }
     }
 
@@ -384,5 +409,14 @@ V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {
     }
     return density;
 }
+
+double SolventPropsAdFromDeck::mixingParamterViscosity() const {
+    return mix_param_viscosity_;
+}
+
+double SolventPropsAdFromDeck::mixingParamterDensity() const {
+    return mix_param_density_;
+}
+
 
 } //namespace OPM

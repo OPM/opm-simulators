@@ -127,6 +127,13 @@ public:
     /// \return                     Array of n solvent density values.
     V solventSurfaceDensity(const Cells& cells) const;
 
+    /// Todd-Longstaff mixing paramter for viscosity calculation
+    double mixingParamterViscosity() const;
+
+    /// Todd-Longstaff mixing paramter for density calculation
+    double mixingParamterDensity() const;
+
+
 private:
 
     ADB makeAD(const ADB& X, const Cells& cells,     std::vector<NonuniformTableLinear<double> > table) const;
@@ -145,6 +152,8 @@ private:
     std::vector<NonuniformTableLinear<double> > misc_;
     std::vector<NonuniformTableLinear<double> > sorwmis_;
     std::vector<NonuniformTableLinear<double> > sgcwmis_;
+    double mix_param_viscosity_;
+    double mix_param_density_;
 };
 
 } // namespace OPM
