@@ -1061,6 +1061,13 @@ namespace detail {
                                                                                 const SolutionState&,
                                                                                 const WellState&)
     {
+        if ( !asImpl().localWellsActive() )
+        {
+            // If there are no wells in the subdomain of the proces then
+            // cq_s has zero size and will cause a segmentation fault below.
+            return;
+        }
+
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
@@ -1258,6 +1265,13 @@ namespace detail {
                                                                                    const SolutionState& state,
                                                                                    WellState& xw) const
     {
+        if ( !asImpl().localWellsActive() )
+        {
+            // If there are no wells in the subdomain of the proces then
+            // cq_s has zero size and will cause a segmentation fault below.
+            return;
+        }
+
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
@@ -1282,6 +1296,13 @@ namespace detail {
     void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
                                                                 const SolutionState& state)
     {
+        if( !asImpl().localWellsActive() )
+        {
+            // If there are no wells in the subdomain of the proces then
+            // cq_s has zero size and will cause a segmentation fault below.
+            return;
+        }
+
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         ADB qs = state.qs;
@@ -1603,9 +1624,14 @@ namespace detail {
 
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
-            b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
+
+        if (asImpl().localWellsActive() ){
+            // If there are non well in the sudomain of the process
+            // thene mob_perfcells_const and b_perfcells_const would be empty
+            for (int phase = 0; phase < np; ++phase) {
+                mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
+                b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
+            }
         }
 
         int it  = 0;
