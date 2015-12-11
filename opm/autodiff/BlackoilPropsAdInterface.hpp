@@ -253,6 +253,19 @@ namespace Opm
         /// Update for max oil saturation.
         virtual                  
         void updateSatOilMax(const std::vector<double>& saturation) = 0;
+
+        /// Obtain the scaled critical oil in gas saturation values.
+        /// \param[in]  cells  Array of cell indices.
+        /// \return Array of critical oil in gas saturaion values.
+        virtual
+        V scaledCriticalOilinGasSaturations(const Cells& cells) const = 0;
+
+        /// Obtain the scaled critical gas saturation values.
+        /// \param[in]  cells  Array of cell indices.
+        /// \return Array of scaled critical gas saturaion values.
+        virtual
+        V scaledCriticalGasSaturations(const Cells& cells) const = 0;
+
     };
 
 } // namespace Opm
