@@ -122,8 +122,11 @@ namespace Opm
     class FlowMain
     {
     public:
+
+
         int execute(int argc, char** argv)
         try {
+            // Setup.
             setupParallelism(argc, argv);
             printStartupMessage();
             const bool ok = setupParameters(argc, argv);
@@ -132,196 +135,15 @@ namespace Opm
             }
             setupOutput();
             readDeckInput();
+            setupGridAndProps();
+            setupState();
+            distributeData();
+            setupOutputWriter();
+            setupLinearSolver();
+            createSimulator();
 
-            std::vector<double> porv = eclipse_state_->getDoubleGridProperty("PORV")->getData();
-            GridInit<Grid> grid_init(deck_, eclipse_state_, porv);
-            auto&& grid = grid_init.grid();
-
-            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck_);
-
-            std::vector<int> compressedToCartesianIdx;
-            Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
-
-            typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
-            auto materialLawManager = std::make_shared<MaterialLawManager>();
-            materialLawManager->initFromDeck(deck_, eclipse_state_, compressedToCartesianIdx);
-
-            // Rock and fluid init
-            BlackoilPropertiesFromDeck props( deck_, eclipse_state_, materialLawManager,
-                                              Opm::UgGridHelpers::numCells(grid),
-                                              Opm::UgGridHelpers::globalCell(grid),
-                                              Opm::UgGridHelpers::cartDims(grid),
-                                              param_);
-
-            BlackoilPropsAdFromDeck new_props( deck_, eclipse_state_, materialLawManager, grid );
-            // check_well_controls = param.getDefault("check_well_controls", false);
-            // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
-            // Rock compressibility.
-
-            RockCompressibility rock_comp(deck_, eclipse_state_);
-
-            // Gravity.
-            double gravity[3] = { 0.0 };
-            gravity[2] = deck_->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
-
-            typename Simulator::ReservoirState state;
-            // Init state variables (saturation and pressure).
-            if (param_.has("init_saturation")) {
-                initStateBasic(Opm::UgGridHelpers::numCells(grid),
-                               Opm::UgGridHelpers::globalCell(grid),
-                               Opm::UgGridHelpers::cartDims(grid),
-                               Opm::UgGridHelpers::numFaces(grid),
-                               Opm::UgGridHelpers::faceCells(grid),
-                               Opm::UgGridHelpers::beginFaceCentroids(grid),
-                               Opm::UgGridHelpers::beginCellCentroids(grid),
-                               Opm::UgGridHelpers::dimensions(grid),
-                               props, param_, gravity[2], state);
-
-                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state);
-
-                enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
-                if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
-                    const int numPhases = props.numPhases();
-                    const int numCells  = Opm::UgGridHelpers::numCells(grid);
-                    for (int c = 0; c < numCells; ++c) {
-                        state.gasoilratio()[c] = state.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
-                            / state.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
-                    }
-                }
-            } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
-                state.init(Opm::UgGridHelpers::numCells(grid),
-                           Opm::UgGridHelpers::numFaces(grid),
-                           props.numPhases());
-                const double grav = param_.getDefault("gravity", unit::gravity);
-                initStateEquil(grid, props, deck_, eclipse_state_, grav, state);
-                state.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
-            } else {
-                initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
-                                          Opm::UgGridHelpers::globalCell(grid),
-                                          Opm::UgGridHelpers::numFaces(grid),
-                                          Opm::UgGridHelpers::faceCells(grid),
-                                          Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                          Opm::UgGridHelpers::beginCellCentroids(grid),
-                                          Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck_, gravity[2], state);
-            }
-
-
-            // The capillary pressure is scaled in new_props to match the scaled capillary pressure in props.
-            if (deck_->hasKeyword("SWATINIT")) {
-                const int numCells = Opm::UgGridHelpers::numCells(grid);
-                std::vector<int> cells(numCells);
-                for (int c = 0; c < numCells; ++c) { cells[c] = c; }
-                std::vector<double> pc = state.saturation();
-                props.capPress(numCells, state.saturation().data(), cells.data(), pc.data(),NULL);
-                new_props.setSwatInitScaling(state.saturation(),pc);
-            }
-
-            bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
-            const double *grav = use_gravity ? &gravity[0] : 0;
-
-            const bool use_local_perm = param_.getDefault("use_local_perm", true);
-
-            DerivedGeology geoprops(grid, new_props, eclipse_state_, use_local_perm, grav);
-            boost::any parallel_information;
-
-            // At this point all properties and state variables are correctly initialized
-            // If there are more than one processors involved, we now repartition the grid
-            // and initilialize new properties and states for it.
-            if( must_distribute_ )
-                {
-                    Opm::distributeGridAndData( grid, deck_, eclipse_state_, state, new_props, geoprops, materialLawManager, parallel_information, use_local_perm );
-                }
-
-            // create output writer after grid is distributed, otherwise the parallel output
-            // won't work correctly since we need to create a mapping from the distributed to
-            // the global view
-            Opm::BlackoilOutputWriter outputWriter(grid, param_, eclipse_state_, pu, new_props.permeability() );
-
-            // Solver for Newton iterations.
-            std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver;
-            {
-                const std::string cprSolver = "cpr";
-                const std::string interleavedSolver = "interleaved";
-                const std::string directSolver = "direct";
-                const std::string flowDefaultSolver = interleavedSolver;
-
-                std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
-                std::string solver_approach = flowDefaultSolver;
-
-                if (param_.has("solver_approach")) {
-                    solver_approach = param_.get<std::string>("solver_approach");
-                }  else {
-                    if (simCfg->useCPR()) {
-                        solver_approach = cprSolver;
-                    }
-                }
-
-                if (solver_approach == cprSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilCPR(param_, parallel_information));
-                } else if (solver_approach == interleavedSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilInterleaved(param_, parallel_information));
-                } else if (solver_approach == directSolver) {
-                    fis_solver.reset(new NewtonIterationBlackoilSimple(param_, parallel_information));
-                } else {
-                    OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
-                }
-
-            }
-
-            Opm::ScheduleConstPtr schedule = eclipse_state_->getSchedule();
-            Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
-            SimulatorTimer simtimer;
-
-            // initialize variables
-            simtimer.init(timeMap);
-
-            std::map<std::pair<int, int>, double> maxDp;
-            computeMaxDp(maxDp, deck_, eclipse_state_, grid, state, props, gravity[2]);
-            std::vector<double> threshold_pressures = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
-
-            Simulator simulator(param_,
-                                grid,
-                                geoprops,
-                                new_props,
-                                rock_comp.isActive() ? &rock_comp : 0,
-                                *fis_solver,
-                                grav,
-                                deck_->hasKeyword("DISGAS"),
-                                deck_->hasKeyword("VAPOIL"),
-                                eclipse_state_,
-                                outputWriter,
-                                threshold_pressures);
-
-            if (!schedule->initOnly()){
-                if( output_cout_ )
-                    {
-                        std::cout << "\n\n================ Starting main simulation loop ===============\n"
-                                  << std::flush;
-                    }
-
-                SimulatorReport fullReport = simulator.run(simtimer, state);
-
-                if( output_cout_ )
-                    {
-                        std::cout << "\n\n================    End of simulation     ===============\n\n";
-                        fullReport.reportFullyImplicit(std::cout);
-                    }
-
-                if (output_to_files_) {
-                    std::string filename = output_dir_ + "/walltime.txt";
-                    std::fstream tot_os(filename.c_str(),std::fstream::trunc | std::fstream::out);
-                    fullReport.reportParam(tot_os);
-                    warnIfUnusedParams(param_);
-                }
-            } else {
-                outputWriter.writeInit( simtimer );
-                if ( output_cout_ )
-                    {
-                        std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
-                    }
-            }
-            return EXIT_SUCCESS;
+            // Run.
+            return runSimulator();
         }
         catch (const std::exception &e) {
             std::cerr << "Program threw an exception: " << e.what() << "\n";
@@ -331,6 +153,10 @@ namespace Opm
 
 
     private:
+
+        typedef BlackoilPropsAdFromDeck FluidProps;
+        typedef FluidProps::MaterialLawManager MaterialLawManager;
+        typedef typename Simulator::ReservoirState ReservoirState;
 
         // ------------   Data members   ------------
 
@@ -348,7 +174,25 @@ namespace Opm
         // readDeckInput()
         std::shared_ptr<const Deck> deck_;
         std::shared_ptr<EclipseState> eclipse_state_;
-
+        // setupGridAndProps()
+        std::unique_ptr<GridInit<Grid>> grid_init_;
+        std::shared_ptr<MaterialLawManager> material_law_manager_;
+        std::unique_ptr<FluidProps> fluidprops_;
+        std::unique_ptr<RockCompressibility> rock_comp_;
+        std::array<double, 3> gravity_;
+        bool use_local_perm_ = true;
+        std::unique_ptr<DerivedGeology> geoprops_;
+        // setupState()
+        ReservoirState state_;
+        std::vector<double> threshold_pressures_;
+        // distributeData()
+        boost::any parallel_information_;
+        // setupOutputWriter()
+        std::unique_ptr<BlackoilOutputWriter> output_writer_;
+        // setupLinearSolver
+        std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
+        // createSimulator()
+        std::unique_ptr<Simulator> simulator_;
 
 
         // ------------   Methods   ------------
@@ -528,6 +372,275 @@ namespace Opm
                 ioConfig->overrideRestartWriteInterval(static_cast<size_t>(output_interval));
             }
         }
+
+
+
+
+
+        // Create grid and property objects.
+        // Writes to:
+        //   grid_init_
+        //   material_law_manager_
+        //   fluidprops_
+        //   rock_comp_
+        //   gravity_
+        //   use_local_perm_
+        //   geoprops_
+        void setupGridAndProps()
+        {
+            // Create grid.
+            const std::vector<double>& porv = eclipse_state_->getDoubleGridProperty("PORV")->getData();
+            grid_init_.reset(new GridInit<Grid>(deck_, eclipse_state_, porv));
+            const Grid& grid = grid_init_->grid();
+
+            // Create material law manager.
+            std::vector<int> compressedToCartesianIdx;
+            Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
+            material_law_manager_.reset(new MaterialLawManager());
+            material_law_manager_->initFromDeck(deck_, eclipse_state_, compressedToCartesianIdx);
+
+            // Rock and fluid properties.
+            fluidprops_.reset(new BlackoilPropsAdFromDeck(deck_, eclipse_state_, material_law_manager_, grid));
+
+            // Rock compressibility.
+            rock_comp_.reset(new RockCompressibility(deck_, eclipse_state_));
+
+            // Gravity.
+            assert(UgGridHelpers::dimensions(grid) == 3);
+            gravity_.fill(0.0);
+            gravity_[2] = deck_->hasKeyword("NOGRAV")
+                ? param_.getDefault("gravity", 0.0)
+                : param_.getDefault("gravity", unit::gravity);
+
+            // Geological properties
+            use_local_perm_ = param_.getDefault("use_local_perm", use_local_perm_);
+            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclipse_state_, use_local_perm_, gravity_.data()));
+        }
+
+
+
+
+
+        // Initialise the reservoir state. Updated fluid props for SWATINIT.
+        // Writes to:
+        //   state_
+        //   threshold_pressures_
+        //   fluidprops_ (if SWATINIT is used)
+        void setupState()
+        {
+            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck_);
+            const Grid& grid = grid_init_->grid();
+
+            // Need old-style fluid object for init purposes (only).
+            BlackoilPropertiesFromDeck props( deck_, eclipse_state_, material_law_manager_,
+                                              Opm::UgGridHelpers::numCells(grid),
+                                              Opm::UgGridHelpers::globalCell(grid),
+                                              Opm::UgGridHelpers::cartDims(grid),
+                                              param_);
+
+            // Init state variables (saturation and pressure).
+            if (param_.has("init_saturation")) {
+                initStateBasic(Opm::UgGridHelpers::numCells(grid),
+                               Opm::UgGridHelpers::globalCell(grid),
+                               Opm::UgGridHelpers::cartDims(grid),
+                               Opm::UgGridHelpers::numFaces(grid),
+                               Opm::UgGridHelpers::faceCells(grid),
+                               Opm::UgGridHelpers::beginFaceCentroids(grid),
+                               Opm::UgGridHelpers::beginCellCentroids(grid),
+                               Opm::UgGridHelpers::dimensions(grid),
+                               props, param_, gravity_[2], state_);
+
+                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state_);
+
+                enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+                if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+                    const int numPhases = props.numPhases();
+                    const int numCells  = Opm::UgGridHelpers::numCells(grid);
+                    for (int c = 0; c < numCells; ++c) {
+                        state_.gasoilratio()[c] = state_.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
+                            / state_.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
+                    }
+                }
+            } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
+                state_.init(Opm::UgGridHelpers::numCells(grid),
+                           Opm::UgGridHelpers::numFaces(grid),
+                           props.numPhases());
+                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], state_);
+                state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
+            } else {
+                initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
+                                          Opm::UgGridHelpers::globalCell(grid),
+                                          Opm::UgGridHelpers::numFaces(grid),
+                                          Opm::UgGridHelpers::faceCells(grid),
+                                          Opm::UgGridHelpers::beginFaceCentroids(grid),
+                                          Opm::UgGridHelpers::beginCellCentroids(grid),
+                                          Opm::UgGridHelpers::dimensions(grid),
+                                          props, deck_, gravity_[2], state_);
+            }
+
+            // Threshold pressures.
+            std::map<std::pair<int, int>, double> maxDp;
+            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), state_, props, gravity_[2]);
+            threshold_pressures_ = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
+
+            // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
+            if (deck_->hasKeyword("SWATINIT")) {
+                const int numCells = Opm::UgGridHelpers::numCells(grid);
+                std::vector<int> cells(numCells);
+                for (int c = 0; c < numCells; ++c) { cells[c] = c; }
+                std::vector<double> pc = state_.saturation();
+                props.capPress(numCells, state_.saturation().data(), cells.data(), pc.data(), nullptr);
+                fluidprops_->setSwatInitScaling(state_.saturation(), pc);
+            }
+        }
+
+
+
+
+
+        // Distribute the grid, properties and state.
+        // Writes to:
+        //   grid_init_->grid()
+        //   state_
+        //   fluidprops_
+        //   geoprops_
+        //   material_law_manager_
+        //   parallel_information_
+        void distributeData()
+        {
+            // At this point all properties and state variables are correctly initialized
+            // If there are more than one processors involved, we now repartition the grid
+            // and initilialize new properties and states for it.
+            if (must_distribute_) {
+                distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_, state_, *fluidprops_, *geoprops_,
+                                      material_law_manager_, parallel_information_, use_local_perm_);
+            }
+        }
+
+
+
+
+
+        // Setup output writer.
+        // Writes to:
+        //   output_writer_
+        void setupOutputWriter()
+        {
+            // create output writer after grid is distributed, otherwise the parallel output
+            // won't work correctly since we need to create a mapping from the distributed to
+            // the global view
+            output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
+                                                          param_,
+                                                          eclipse_state_,
+                                                          Opm::phaseUsageFromDeck(deck_),
+                                                          fluidprops_->permeability()));
+        }
+
+
+
+
+
+        // Setup linear solver.
+        // Writes to:
+        //   fis_solver_
+        void setupLinearSolver()
+        {
+            const std::string cprSolver = "cpr";
+            const std::string interleavedSolver = "interleaved";
+            const std::string directSolver = "direct";
+            const std::string flowDefaultSolver = interleavedSolver;
+
+            std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
+            std::string solver_approach = flowDefaultSolver;
+
+            if (param_.has("solver_approach")) {
+                solver_approach = param_.get<std::string>("solver_approach");
+            }  else {
+                if (simCfg->useCPR()) {
+                    solver_approach = cprSolver;
+                }
+            }
+
+            if (solver_approach == cprSolver) {
+                fis_solver_.reset(new NewtonIterationBlackoilCPR(param_, parallel_information_));
+            } else if (solver_approach == interleavedSolver) {
+                fis_solver_.reset(new NewtonIterationBlackoilInterleaved(param_, parallel_information_));
+            } else if (solver_approach == directSolver) {
+                fis_solver_.reset(new NewtonIterationBlackoilSimple(param_, parallel_information_));
+            } else {
+                OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
+            }
+        }
+
+
+
+
+
+        // Create simulator instance.
+        // Writes to:
+        //   simulator_
+        void createSimulator()
+        {
+            // Create the simulator instance.
+            simulator_.reset(new Simulator(param_,
+                                           grid_init_->grid(),
+                                           *geoprops_,
+                                           *fluidprops_,
+                                           rock_comp_->isActive() ? rock_comp_.get() : nullptr,
+                                           *fis_solver_,
+                                           gravity_.data(),
+                                           deck_->hasKeyword("DISGAS"),
+                                           deck_->hasKeyword("VAPOIL"),
+                                           eclipse_state_,
+                                           *output_writer_,
+                                           threshold_pressures_));
+        }
+
+
+
+
+
+        // Run the simulator.
+        // Returns EXIT_SUCCESS if it does not throw.
+        int runSimulator()
+        {
+            Opm::ScheduleConstPtr schedule = eclipse_state_->getSchedule();
+            Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
+            SimulatorTimer simtimer;
+
+            // initialize variables
+            simtimer.init(timeMap);
+
+
+
+            if (!schedule->initOnly()) {
+                if (output_cout_) {
+                    std::cout << "\n\n================ Starting main simulation loop ===============\n"
+                              << std::flush;
+                }
+
+                SimulatorReport fullReport = simulator_->run(simtimer, state_);
+
+                if (output_cout_) {
+                    std::cout << "\n\n================    End of simulation     ===============\n\n";
+                    fullReport.reportFullyImplicit(std::cout);
+                }
+
+                if (output_to_files_) {
+                    std::string filename = output_dir_ + "/walltime.txt";
+                    std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
+                    fullReport.reportParam(tot_os);
+                    warnIfUnusedParams(param_);
+                }
+            } else {
+                output_writer_->writeInit( simtimer );
+                if (output_cout_) {
+                    std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
+                }
+            }
+            return EXIT_SUCCESS;
+        }
+
 
     }; // class FlowMain
 
