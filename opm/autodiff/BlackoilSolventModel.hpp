@@ -109,6 +109,8 @@ namespace Opm {
         const int solvent_pos_;
         const SolventPropsAdFromDeck& solvent_props_;
         const bool is_miscible_;
+        std::vector<ADB> mu_eff_;
+        std::vector<ADB> b_eff_;
 
 
         // Need to declare Base members we want to use here.
@@ -145,9 +147,9 @@ namespace Opm {
         using Base::computePressures;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;
-        using Base::fluidViscosity;
-        using Base::fluidReciprocFVF;
-        using Base::fluidDensity;
+        //using Base::fluidViscosity;
+        //using Base::fluidReciprocFVF;
+        //using Base::fluidDensity;
         using Base::fluidRsSat;
         using Base::fluidRvSat;
         using Base::poroMult;
@@ -165,6 +167,31 @@ namespace Opm {
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
+
+        void calculateEffectiveProperties(const SolutionState&  state);
+
+
+        ADB
+        fluidViscosity(const int               phase,
+                       const ADB&              p    ,
+                       const ADB&              temp ,
+                       const ADB&              rs   ,
+                       const ADB&              rv   ,
+                       const std::vector<PhasePresence>& cond) const;
+
+        ADB
+        fluidReciprocFVF(const int               phase,
+                         const ADB&              p    ,
+                         const ADB&              temp ,
+                         const ADB&              rs   ,
+                         const ADB&              rv   ,
+                         const std::vector<PhasePresence>& cond) const;
+
+        ADB
+        fluidDensity(const int  phase,
+                     const ADB& b,
+                     const ADB& rs,
+                     const ADB& rv) const;
 
         void
         makeConstantState(SolutionState& state) const;
@@ -202,6 +229,8 @@ namespace Opm {
         computeMassFlux(const int               actph ,
                         const V&                transi,
                         const ADB&              kr    ,
+                        const ADB&              mu    ,
+                        const ADB&              rho   ,
                         const ADB&              p     ,
                         const SolutionState&    state );
 
