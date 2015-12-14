@@ -102,8 +102,8 @@ namespace Opm
 
     /// This class encapsulates the setup and running of
     /// a simulator based on an input deck.
-    template <class Grid, class Simulator>
-    class FlowMain
+    template <class Implementation, class Grid, class Simulator>
+    class FlowMainBase
     {
     public:
 
@@ -116,23 +116,23 @@ namespace Opm
         int execute(int argc, char** argv)
         try {
             // Setup.
-            setupParallelism(argc, argv);
-            printStartupMessage();
-            const bool ok = setupParameters(argc, argv);
+            asImpl().setupParallelism(argc, argv);
+            asImpl().printStartupMessage();
+            const bool ok = asImpl().setupParameters(argc, argv);
             if (!ok) {
                 return EXIT_FAILURE;
             }
-            setupOutput();
-            readDeckInput();
-            setupGridAndProps();
-            setupState();
-            distributeData();
-            setupOutputWriter();
-            setupLinearSolver();
-            createSimulator();
+            asImpl().setupOutput();
+            asImpl().readDeckInput();
+            asImpl().setupGridAndProps();
+            asImpl().setupState();
+            asImpl().distributeData();
+            asImpl().setupOutputWriter();
+            asImpl().setupLinearSolver();
+            asImpl().createSimulator();
 
             // Run.
-            return runSimulator();
+            return asImpl().runSimulator();
         }
         catch (const std::exception &e) {
             std::cerr << "Program threw an exception: " << e.what() << "\n";
@@ -141,7 +141,7 @@ namespace Opm
 
 
 
-    private:
+    protected:
 
 
 
@@ -571,30 +571,6 @@ namespace Opm
 
 
 
-        // Create simulator instance.
-        // Writes to:
-        //   simulator_
-        void createSimulator()
-        {
-            // Create the simulator instance.
-            simulator_.reset(new Simulator(param_,
-                                           grid_init_->grid(),
-                                           *geoprops_,
-                                           *fluidprops_,
-                                           rock_comp_->isActive() ? rock_comp_.get() : nullptr,
-                                           *fis_solver_,
-                                           gravity_.data(),
-                                           deck_->hasKeyword("DISGAS"),
-                                           deck_->hasKeyword("VAPOIL"),
-                                           eclipse_state_,
-                                           *output_writer_,
-                                           threshold_pressures_));
-        }
-
-
-
-
-
         // Run the simulator.
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
@@ -643,7 +619,53 @@ namespace Opm
         }
 
 
-    }; // class FlowMain
+
+
+
+        // Access the most-derived class used for
+        // static polymorphism (CRTP).
+        Implementation& asImpl()
+        {
+            return static_cast<Implementation&>(*this);
+        }
+
+
+    }; // class FlowMainBase
+
+
+
+
+
+
+    // The FlowMain class is the basic black-oil simulator case.
+    template <class Grid, class Simulator>
+    class FlowMain : public FlowMainBase<FlowMain<Grid, Simulator>, Grid, Simulator>
+    {
+    protected:
+        using Base = FlowMainBase<FlowMain<Grid, Simulator>, Grid, Simulator>;
+        friend Base;
+
+        // Create simulator instance.
+        // Writes to:
+        //   simulator_
+        void createSimulator()
+        {
+            // Create the simulator instance.
+            Base::simulator_.reset(new Simulator(Base::param_,
+                                                 Base::grid_init_->grid(),
+                                                 *Base::geoprops_,
+                                                 *Base::fluidprops_,
+                                                 Base::rock_comp_->isActive() ? Base::rock_comp_.get() : nullptr,
+                                                 *Base::fis_solver_,
+                                                 Base::gravity_.data(),
+                                                 Base::deck_->hasKeyword("DISGAS"),
+                                                 Base::deck_->hasKeyword("VAPOIL"),
+                                                 Base::eclipse_state_,
+                                                 *Base::output_writer_,
+                                                 Base::threshold_pressures_));
+        }
+    };
+
 
 
 } // namespace Opm
