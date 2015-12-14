@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/core/grid/PinchProcessor.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
 #include <Eigen/Eigen>
@@ -125,10 +126,14 @@ namespace Opm
             // for MINPV. Note that the change does not effect the pore volume calculations
             // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
             // only the transmissibility calculations.
-            minPvFillProps_(grid, eclState,ntg);
+            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
+            // opmfil is hardcoded to be true. i.e the volume weighting is always used
+            opmfil = true;
+            if (opmfil) {
+                minPvFillProps_(grid, eclState,ntg);
+            }
 
             // Transmissibility
-
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
             Grid* ug = const_cast<Grid*>(& grid);
 
@@ -143,10 +148,36 @@ namespace Opm
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
 
             // Handle NNCs
-            std::shared_ptr<const NNC> nnc_deck = eclState ? eclState->getNNC()
-                             : std::shared_ptr<const Opm::NNC>();
-            NNC nnc (*nnc_deck);
-            nnc_ = nnc;
+            if (eclState) {
+                nnc_ = *(eclState->getNNC());
+            }
+
+            // opmfil is hardcoded to be true. i.e the pinch processor is never used
+            if (~opmfil && eclgrid->isPinchActive()) {
+                const double minpv = eclgrid->getMinpvValue();
+                const double thickness = eclgrid->getPinchThresholdThickness();
+                auto transMode = eclgrid->getPinchOption();
+                auto multzMode = eclgrid->getMultzOption();
+                PinchProcessor<Grid> pinch(minpv, thickness, transMode, multzMode);
+
+                std::vector<double> htrans_copy(htrans.size());
+                std::copy_n(htrans.data(), htrans.size(), htrans_copy.begin());
+
+                std::vector<int> actnum;
+                eclgrid->exportACTNUM(actnum);
+
+                auto transMult = eclState->getTransMult();
+                std::vector<double> multz(numCells, 0.0);
+                const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+
+                for (int i = 0; i < numCells; ++i) {
+                    multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
+                }
+
+                // Note the pore volume from eclState is used and not the pvol_ calculated above
+                std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
+                pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
+            }           
 
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
