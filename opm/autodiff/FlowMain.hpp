@@ -100,17 +100,19 @@
 namespace Opm
 {
 
-    /// This is the main function of Flow.
-    /// It runs a complete simulation, with the given grid and
-    /// simulator classes, based on user command-line input.  The
-    /// content of this function used to be in the main() function of
-    /// flow.cpp.
+    /// This class encapsulates the setup and running of
+    /// a simulator based on an input deck.
     template <class Grid, class Simulator>
     class FlowMain
     {
     public:
 
 
+        /// This is the main function of Flow.
+        /// It runs a complete simulation, with the given grid and
+        /// simulator classes, based on user command-line input.  The
+        /// content of this function used to be in the main() function of
+        /// flow.cpp.
         int execute(int argc, char** argv)
         try {
             // Setup.
@@ -141,14 +143,23 @@ namespace Opm
 
     private:
 
+
+
+
+
+        // ------------   Types   ------------
+
+
         typedef BlackoilPropsAdFromDeck FluidProps;
         typedef FluidProps::MaterialLawManager MaterialLawManager;
         typedef typename Simulator::ReservoirState ReservoirState;
 
+
         // ------------   Data members   ------------
 
 
-
+        // The comments indicate in which method the
+        // members first occur.
 
         // setupParallelism()
         bool output_cout_ = false;
@@ -183,9 +194,6 @@ namespace Opm
 
 
         // ------------   Methods   ------------
-
-
-
 
 
         // Set up MPI and OpenMP.
