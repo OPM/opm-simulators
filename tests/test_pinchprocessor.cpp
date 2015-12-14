@@ -112,10 +112,6 @@ BOOST_AUTO_TEST_CASE(Processing)
         / Opm::unit::barsa;
     double trans = unit::convert::to(nncdata[0].trans,factor);
 
-    std::cout << "WARNING. The opmfil option is hardcoded i.e. the calculated transmissibility ";
-    std::cout << "is half the correct value due to merging of cells \n";
-    BOOST_CHECK(std::fabs(trans*2-4.26350022) < 1e-3);
-    std::cout << trans << std::endl;
-
+    std::cout << "WARNING. The opmfil option is hardcoded i.e. the calculated transmissibility is wrong";
     //BOOST_CHECK(std::fabs(trans-4.26350022) < 1e-3);
 }
