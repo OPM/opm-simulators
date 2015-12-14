@@ -298,7 +298,7 @@ namespace Opm {
         ModelParameters                 param_;
         bool use_threshold_pressure_;
         bool wells_active_;
-        V threshold_pressures_by_interior_face_;
+        V threshold_pressures_by_connection_;
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;

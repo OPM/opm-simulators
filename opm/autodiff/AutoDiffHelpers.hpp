@@ -23,7 +23,11 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/GeoProps.hpp>
 #include <opm/core/grid.h>
+#include <opm/core/grid/PinchProcessor.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -69,7 +73,7 @@ struct HelperOps
 
     /// Constructs all helper vectors and matrices.
     template<class Grid>
-    HelperOps(const Grid& grid, Opm::EclipseStateConstPtr eclState = EclipseStateConstPtr () )
+    HelperOps(const Grid& grid, const NNC& nnc = NNC())
     {
         using namespace AutoDiffGrid;
         const int nc = numCells(grid);
@@ -78,39 +82,31 @@ struct HelperOps
 
         TwoColInt nbi;
         extractInternalFaces(grid, internal_faces, nbi);
-        int num_internal = internal_faces.size();
-        // num_connections may also include non-neighboring connections
-        int num_connections = num_internal;
-        int numNNC = 0;
+        const int num_internal = internal_faces.size();
 
         // handle non-neighboring connections
-        std::shared_ptr<const NNC> nnc = eclState ? eclState->getNNC()
-            : std::shared_ptr<const Opm::NNC>();
-        const bool has_nnc = nnc && nnc->hasNNC();
+        const bool has_nnc = nnc.hasNNC();
+        size_t numNNC = nnc.numNNC();
+
+        // num_connections may also include non-neighboring connections
+        const int num_connections = num_internal + numNNC;
         if (has_nnc) {
-            numNNC = nnc->numNNC();
-            num_connections += numNNC;
-            //std::cout << "Added " << numNNC << " NNC" <<std::endl;
-            nbi.resize(num_internal, 2);
+            const int *cartDims = AutoDiffGrid::cartDims(grid);
+            const int numCartesianCells = cartDims[0] * cartDims[1] * cartDims[2];
 
             // the nnc's acts on global indicies and must be mapped to cell indicies
-            size_t cartesianSize = eclState->getEclipseGrid()->getCartesianSize();
-            std::vector<int> global2localIdx(cartesianSize,0);
+            std::vector<int> global2localIdx(numCartesianCells,0);
             for (int i = 0; i< nc; ++i) {
                 global2localIdx[ globalCell( grid )[i] ] = i;
             }
-            const std::vector<size_t>& NNC1 = nnc->nnc1();
-            const std::vector<size_t>& NNC2 = nnc->nnc2();
             nnc_cells.resize(numNNC,2);
+            nnc_trans.resize(numNNC);
             for (int i = 0; i < numNNC; ++i) {
-                nnc_cells(i,0) = global2localIdx[NNC1[i]];
-                nnc_cells(i,1) = global2localIdx[NNC2[i]];
+                nnc_cells(i,0) = global2localIdx[nnc.nncdata()[i].cell1];
+                nnc_cells(i,1) = global2localIdx[nnc.nncdata()[i].cell2];
+                // store the nnc transmissibilities for later usage.
+                nnc_trans(i) = nnc.nncdata()[i].trans;
             }
-            // store the nnc transmissibilities for later usage.
-            nnc_trans = Eigen::Map<const V>(nnc->trans().data(), numNNC);
-        } else {
-            nnc_trans.resize(0);
-            nnc_cells.resize(0, 2); // Required to have two columns.
         }
 
 
@@ -166,7 +162,6 @@ struct HelperOps
         fulldiv = fullngrad.transpose();
     }
 };
-
 // -------------------- upwinding helper class --------------------
 
 

@@ -169,7 +169,7 @@ namespace Opm {
         using Base::has_vapoil_;
         using Base::param_;
         using Base::use_threshold_pressure_;
-        using Base::threshold_pressures_by_interior_face_;
+        using Base::threshold_pressures_by_connection_;
         using Base::rq_;
         using Base::phaseCondition_;
         using Base::well_perforation_pressure_diffs_;
