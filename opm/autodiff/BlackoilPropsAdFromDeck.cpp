@@ -934,8 +934,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     V BlackoilPropsAdFromDeck::scaledCriticalOilinGasSaturations(const Cells& cells) const {
 
 
-        assert(phaseUsage_.phase_used[BlackoilPhases::Gas]);
-        assert(phaseUsage_.phase_used[BlackoilPhases::Oil]);
+        assert(phase_usage_.phase_used[Gas]);
+        assert(phase_usage_.phase_used[Oil]);
 
         const int n = cells.size();
         V sogcr = V::Zero(n);
@@ -953,7 +953,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// \return Array of scaled critical gas saturaion values.
     V BlackoilPropsAdFromDeck::scaledCriticalGasSaturations(const Cells& cells) const {
 
-        assert(phaseUsage_.phase_used[BlackoilPhases::Gas]);
+        assert(phase_usage_.phase_used[Gas]);
 
         const int n = cells.size();
         V sgcr = V::Zero(n);
