@@ -100,19 +100,6 @@
 namespace Opm
 {
 
-    /// Calling this will print the unused parameters, if any.
-    /// This allows a user to catch typos and misunderstandings in the
-    /// use of simulator parameters.
-    inline void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
-    {
-        if (param.anyUnused()) {
-            std::cout << "--------------------   Unused parameters:   --------------------\n";
-            param.displayUsage();
-            std::cout << "----------------------------------------------------------------" << std::endl;
-        }
-    }
-
-
     /// This is the main function of Flow.
     /// It runs a complete simulation, with the given grid and
     /// simulator classes, based on user command-line input.  The
@@ -624,13 +611,19 @@ namespace Opm
                 if (output_cout_) {
                     std::cout << "\n\n================    End of simulation     ===============\n\n";
                     fullReport.reportFullyImplicit(std::cout);
+                    if (param_.anyUnused()) {
+                        // This allows a user to catch typos and misunderstandings in the
+                        // use of simulator parameters.
+                        std::cout << "--------------------   Unused parameters:   --------------------\n";
+                        param_.displayUsage();
+                        std::cout << "----------------------------------------------------------------" << std::endl;
+                    }
                 }
 
                 if (output_to_files_) {
                     std::string filename = output_dir_ + "/walltime.txt";
                     std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
                     fullReport.reportParam(tot_os);
-                    warnIfUnusedParams(param_);
                 }
             } else {
                 output_writer_->writeInit( simtimer );
