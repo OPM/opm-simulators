@@ -86,7 +86,7 @@ struct HelperOps
 
         // handle non-neighboring connections
         const bool has_nnc = nnc.hasNNC();
-        size_t numNNC = nnc.numNNC();
+        int numNNC = nnc.numNNC();
 
         // num_connections may also include non-neighboring connections
         const int num_connections = num_internal + numNNC;
