@@ -142,6 +142,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
 	opm/autodiff/FlowMain.hpp
+	opm/autodiff/FlowMainPolymer.hpp
 	opm/autodiff/FlowMainSolvent.hpp
 	opm/autodiff/GeoProps.hpp
 	opm/autodiff/GridHelpers.hpp
