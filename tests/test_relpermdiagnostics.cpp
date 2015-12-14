@@ -27,8 +27,12 @@
 #define NVERBOSE  // Suppress own messages when throw()ing
 
 #define BOOST_TEST_MODULE RelpermDiagnostics
+
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <boost/test/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/cart_grid.h>

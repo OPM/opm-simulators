@@ -106,12 +106,12 @@ BOOST_AUTO_TEST_CASE(Processing)
     auto nnc2_index = 1 + cart_dims[0] * (0 + cart_dims[1] * 3);
     BOOST_CHECK_EQUAL(nncdata[0].cell1, nnc1_index);
     BOOST_CHECK_EQUAL(nncdata[0].cell2, nnc2_index);
-    double factor = Opm::prefix::centi*Opm::unit::Poise 
-        * Opm::unit::cubic(Opm::unit::meter)
-        / Opm::unit::day
-        / Opm::unit::barsa;
-    double trans = unit::convert::to(nncdata[0].trans,factor);
 
     std::cout << "WARNING. The opmfil option is hardcoded i.e. the calculated transmissibility is wrong";
-    //BOOST_CHECK(std::fabs(trans-4.26350022) < 1e-3);
+    // double factor = Opm::prefix::centi*Opm::unit::Poise
+    //     * Opm::unit::cubic(Opm::unit::meter)
+    //     / Opm::unit::day
+    //     / Opm::unit::barsa;
+    // double trans = unit::convert::to(nncdata[0].trans, factor);
+    //BOOST_CHECK(std::fabs(trans - 4.26350022) < 1e-3);
 }
