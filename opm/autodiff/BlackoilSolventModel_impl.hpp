@@ -575,9 +575,9 @@ namespace Opm {
                                                 const SolutionState&    state)
     {
 
+        // make a copy to make it possible to modify it
         ADB kr_mod = kr;
         if (has_solvent_) {
-
             const int  nc   = Opm::UgGridHelpers::numCells(grid_);
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
             const ADB zero = ADB::constant(V::Zero(nc));
@@ -588,7 +588,6 @@ namespace Opm {
             const ADB& sg = (active_[ Gas ]
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
-
 
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             const ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
@@ -632,72 +631,45 @@ namespace Opm {
                                                             const ADB&              rv   ,
                                                             const std::vector<PhasePresence>& cond) const
     {
-        if (!is_miscible_) {
-            switch (phase) {
-            case Water:
-                return fluid_.muWat(p, temp, cells_);
-            case Oil:
-                return fluid_.muOil(p, temp, rs, cond, cells_);
-            case Gas:
-                return fluid_.muGas(p, temp, rv, cond, cells_);
-            case Solvent:
-                return solvent_props_.muSolvent(p,cells_);
-            default:
-                OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        if (phase == Solvent) {
+            if (!is_miscible_) {
+                return solvent_props_.muSolvent(p, cells_);
+            } else {
+                return mu_eff_[solvent_pos_];
             }
 
         } else {
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            switch (phase) {
-            case Water:
-            case Oil:
-            case Gas:
+            if (!is_miscible_) {
+                return Base::fluidViscosity(phase, p, temp, rs, rv, cond);
+            } else {
                 return mu_eff_[pu.phase_pos[ phase ]];
-            case Solvent:
-                return mu_eff_[solvent_pos_];
-            default:
-                OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
             }
         }
-    }
-
-
-
-
+     }
 
     template <class Grid>
     ADB
     BlackoilSolventModel<Grid>::fluidReciprocFVF(const int               phase,
-                                                              const ADB&              p    ,
-                                                              const ADB&              temp ,
-                                                              const ADB&              rs   ,
-                                                              const ADB&              rv   ,
-                                                              const std::vector<PhasePresence>& cond) const
+                                                 const ADB&              p    ,
+                                                 const ADB&              temp ,
+                                                 const ADB&              rs   ,
+                                                 const ADB&              rv   ,
+                                                 const std::vector<PhasePresence>& cond) const
     {
-        if (!is_miscible_) {
-            switch (phase) {
-            case Water:
-                return fluid_.bWat(p, temp, cells_);
-            case Oil:
-                return fluid_.bOil(p, temp, rs, cond, cells_);
-            case Gas:
-                return fluid_.bGas(p, temp, rv, cond, cells_);
-            case Solvent:
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        if (phase == Solvent) {
+            if (!is_miscible_) {
                 return solvent_props_.bSolvent(p, cells_);
-            default:
-                OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
-            }
-        } else {
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            switch (phase) {
-            case Water:
-            case Oil:
-            case Gas:
-                return b_eff_[pu.phase_pos[ phase ]];
-            case Solvent:
+            } else {
                 return b_eff_[solvent_pos_];
-            default:
-                OPM_THROW(std::runtime_error, "Unknown phase index " << phase);
+            }
+
+        } else {
+            if (!is_miscible_) {
+                return Base::fluidReciprocFVF(phase, p, temp, rs, rv, cond);
+            } else {
+                return b_eff_[pu.phase_pos[ phase ]];
             }
         }
     }
@@ -710,19 +682,10 @@ namespace Opm {
                                                           const ADB& rv) const
     {
         if (phase == Solvent && has_solvent_) {
-            return solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
+            return solvent_props_.solventSurfaceDensity(cells_) * b;
+        } else {
+            return Base::fluidDensity(phase, b, rs, rv);
         }
-
-        const V& rhos = fluid_.surfaceDensity(phase,  cells_);
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        ADB rho = rhos * b;
-        if (phase == Oil && active_[Gas]) {
-            rho += fluid_.surfaceDensity(pu.phase_pos[ Gas ],  cells_) * rs * b;
-        }
-        if (phase == Gas && active_[Oil]) {
-            rho += fluid_.surfaceDensity(pu.phase_pos[ Oil ],  cells_) * rv * b;
-        }
-        return rho;
     }
 
     template <class Grid>
@@ -798,7 +761,7 @@ namespace Opm {
     void
     BlackoilSolventModel<Grid>::calculateEffectiveProperties(const SolutionState&    state)
     {
-        // viscosity
+        // Viscosity
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         const int np = fluid_.numPhases();
         const int nc   = Opm::UgGridHelpers::numCells(grid_);
