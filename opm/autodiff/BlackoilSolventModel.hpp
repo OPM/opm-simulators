@@ -237,6 +237,9 @@ namespace Opm {
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
 
+        void ToddLongstaffModel(std::vector<ADB> viscosity, std::vector<ADB> density, std::vector<ADB> saturations, const Opm::PhaseUsage pu);
+
+
 
     };
 
