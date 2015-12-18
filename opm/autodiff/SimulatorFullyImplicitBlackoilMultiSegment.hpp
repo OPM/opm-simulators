@@ -49,13 +49,14 @@ template <class GridT>
 class SimulatorFullyImplicitBlackoilMultiSegment
     : public SimulatorBase<SimulatorFullyImplicitBlackoilMultiSegment<GridT> >
 {
+public:
     typedef SimulatorBase<SimulatorFullyImplicitBlackoilMultiSegment<GridT> > Base;
     typedef SimulatorFullyImplicitBlackoilMultiSegment<GridT> ThisType;
     typedef SimulatorTraits<ThisType> Traits;
     typedef typename Traits::ReservoirState ReservoirState;
     typedef typename Traits::WellState WellState;
     typedef typename Traits::Solver Solver;
-public:
+
     // forward the constructor to the base class
     SimulatorFullyImplicitBlackoilMultiSegment(const parameter::ParameterGroup& param,
                                    const GridT& grid,
