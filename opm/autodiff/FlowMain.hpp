@@ -168,7 +168,7 @@ namespace Opm
         parameter::ParameterGroup param_;
         // setupOutput()
         bool output_to_files_ = false;
-        std::string output_dir_ = "output";
+        std::string output_dir_ = std::string("output");
         // readDeckInput()
         std::shared_ptr<const Deck> deck_;
         std::shared_ptr<EclipseState> eclipse_state_;
