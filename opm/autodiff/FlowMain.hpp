@@ -477,6 +477,8 @@ namespace Opm
             std::map<std::pair<int, int>, double> maxDp;
             computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), state_, props, gravity_[2]);
             threshold_pressures_ = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
+            std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(eclipse_state_, geoprops_->nnc(), maxDp);
+            threshold_pressures_.insert(threshold_pressures_.end(), threshold_pressures_nnc.begin(), threshold_pressures_nnc.end());
 
             // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
             if (deck_->hasKeyword("SWATINIT")) {
