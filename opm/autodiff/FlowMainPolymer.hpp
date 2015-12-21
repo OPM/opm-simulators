@@ -87,6 +87,19 @@ namespace Opm
 
 
 
+        // Setup linear solver.
+        // Writes to:
+        //   fis_solver_
+        void setupLinearSolver()
+        {
+            OPM_MESSAGE("Caution: polymer solver currently only works with direct linear solver.");
+            Base::fis_solver_.reset(new NewtonIterationBlackoilSimple(Base::param_, Base::parallel_information_));
+        }
+
+
+
+
+
         // Create simulator instance.
         // Writes to:
         //   simulator_
