@@ -153,7 +153,7 @@ namespace Opm
             }
 
             // opmfil is hardcoded to be true. i.e the pinch processor is never used
-            if (~opmfil && eclgrid->isPinchActive()) {
+            if (!opmfil && eclgrid->isPinchActive()) {
                 const double minpv = eclgrid->getMinpvValue();
                 const double thickness = eclgrid->getPinchThresholdThickness();
                 auto transMode = eclgrid->getPinchOption();
