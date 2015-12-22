@@ -112,6 +112,7 @@ namespace Opm
             }
             polymer_inflow_ptr.reset(new PolymerInflowFromDeck(deck_, BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
         } else {
+            OPM_MESSAGE("Warning: simulating with no WPOLYMER in deck (no polymer will be injected).");
             polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
                                                             1.0*Opm::unit::day,
                                                             0.0));
