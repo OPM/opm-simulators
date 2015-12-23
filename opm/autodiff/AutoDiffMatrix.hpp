@@ -29,11 +29,13 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/fastSparseProduct.hpp>
+#include <opm/autodiff/fastSparseSum.hpp>
 #include <vector>
 
 
 namespace Opm
 {
+
 
     /**
      * AutoDiffMatrix is a wrapper class that optimizes matrix operations.
@@ -459,8 +461,11 @@ namespace Opm
         {
             assert(lhs.type_ == Sparse);
             assert(rhs.type_ == Sparse);
-            AutoDiffMatrix retval = lhs;
-            retval.sparse_ += rhs.sparse_;
+            AutoDiffMatrix retval;
+            retval.type_ = Sparse;
+            retval.rows_ = lhs.rows_;
+            retval.cols_ = lhs.cols_;
+            fastSparseSum(lhs.sparse_, rhs.sparse_, retval.sparse_);
             return retval;
         }
 
@@ -717,6 +722,7 @@ namespace Opm
         fastSparseProduct(lhs, rhs, retval);
         return retval;
     }
+
 
 } // namespace Opm
 
