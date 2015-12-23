@@ -68,6 +68,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_autodiffmatrix.cpp
 	tests/test_block.cpp
 	tests/test_boprops_ad.cpp
+	tests/test_fastsparsesum.cpp
 	tests/test_rateconverter.cpp
 	tests/test_span.cpp
 	tests/test_syntax.cpp
@@ -139,6 +140,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilMultiSegmentModel.hpp
 	opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
 	opm/autodiff/fastSparseProduct.hpp
+	opm/autodiff/fastSparseSum.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
 	opm/autodiff/FlowMain.hpp
