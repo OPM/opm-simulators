@@ -140,9 +140,6 @@ SET_BOOL_PROP(Co2InjectionBaseProblem, NewtonWriteConvergence, false);
 // Enable gravity
 SET_BOOL_PROP(Co2InjectionBaseProblem, EnableGravity, true);
 
-// Reuse linearizations if possible?
-SET_BOOL_PROP(Co2InjectionBaseProblem, EnableLinearizationRecycling, true);
-
 // set the defaults for the problem specific properties
 SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureLow, 3e7);
 SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureHigh, 4e7);

@@ -94,10 +94,6 @@ SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 // Only relinearize the parts where the current solution is sufficiently "bad"
 SET_BOOL_PROP(RichardsLensProblem, EnablePartialRelinearization, true);
 
-// Enable re-use of the linearization of the last iteration of the
-// previous for the first iteration of the current time step?
-SET_BOOL_PROP(RichardsLensProblem, EnableLinearizationRecycling, true);
-
 // Use central differences to approximate the Jacobian matrix
 SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
 
