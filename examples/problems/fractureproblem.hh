@@ -495,7 +495,7 @@ public:
         // and features a fracture, specify the fracture fluid
         // state.
         FluidState fractureFluidState;
-        fractureFluidState.setTemperature(temperature_ + 10);
+        fractureFluidState.setTemperature(temperature_ + 10.0);
 
         fractureFluidState.setSaturation(wettingPhaseIdx, 1.0);
         fractureFluidState.setSaturation(nonWettingPhaseIdx,
