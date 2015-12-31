@@ -197,6 +197,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         std::array<Evaluation, numComponents> gasMassFraction;
 
         std::shared_ptr<ElementPointer> elementPtr;
+        unsigned pvtRegionIdx;
         unsigned localDofIdx;
     };
 
@@ -568,6 +569,7 @@ public:
 
         dofVars.elementPtr.reset(new ElementPointer(context.element()));
         dofVars.localDofIdx = dofIdx;
+        dofVars.pvtRegionIdx = context.problem().pvtRegionIndex(context, dofIdx, /*timeIdx=*/0);
 
         // determine the size of the element
         dofVars.effectiveSize.fill(0.0);
@@ -1209,11 +1211,13 @@ protected:
         // be the same!
         assert(&surfaceRates != &reservoirRate);
 
+        int regionIdx = dofVars.pvtRegionIdx;
+
         // If your compiler bails out here, you have not chosen the correct fluid
         // system. Currently, only Opm::FluidSystems::BlackOil is supported, sorry...
-        Scalar rhoOilSurface = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-        Scalar rhoGasSurface = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-        Scalar rhoWaterSurface = FluidSystem::referenceDensity(waterPhaseIdx, /*regionIdx=*/0);
+        Scalar rhoOilSurface = FluidSystem::referenceDensity(oilPhaseIdx, regionIdx);
+        Scalar rhoGasSurface = FluidSystem::referenceDensity(gasPhaseIdx, regionIdx);
+        Scalar rhoWaterSurface = FluidSystem::referenceDensity(waterPhaseIdx, regionIdx);
 
         // oil
         surfaceRates[oilPhaseIdx] =
