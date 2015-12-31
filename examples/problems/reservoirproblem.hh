@@ -511,7 +511,7 @@ public:
 
             fs.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
 
-            constraints.setAllConstraint();
+            constraints.setActive(true);
             constraints.assignNaive(fs);
         }
         else if (width / 2 - 1 < x && x < width / 2 + 1 && y > height / 2) {
@@ -533,7 +533,7 @@ public:
                                        initialFluidState_.moleFraction(phaseIdx,
                                                                        compIdx));
 
-            constraints.setAllConstraint();
+            constraints.setActive(true);
             constraints.assignNaive(fs);
         }
     }

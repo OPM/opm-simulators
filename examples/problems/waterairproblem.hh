@@ -103,9 +103,6 @@ SET_TYPE_PROP(WaterAirBaseProblem, FluidSystem,
 // Enable gravity
 SET_BOOL_PROP(WaterAirBaseProblem, EnableGravity, true);
 
-// Enable constraints
-SET_BOOL_PROP(WaterAirBaseProblem, EnableConstraints, true);
-
 // Use forward differences instead of central differences
 SET_INT_PROP(WaterAirBaseProblem, NumericDifferenceMethod, +1);
 
@@ -440,24 +437,6 @@ public:
 
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
-    }
-
-    /*!
-     * \copydoc FvBaseProblem::constraints
-     *
-     * In this problem, constraints are used to keep the temperature of the degrees of
-     * freedom which are closest to the inlet constant.
-     */
-    template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
-                     unsigned spaceIdx, unsigned timeIdx) const
-    {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
-
-        if (onInlet_(pos)) {
-            constraints.setConstraint(temperatureIdx, energyEqIdx, 380);
-        }
     }
 
     /*!

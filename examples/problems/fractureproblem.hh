@@ -512,7 +512,7 @@ public:
                                        + (pCFracture[nonWettingPhaseIdx]
                                           - pCFracture[wettingPhaseIdx]));
 
-        constraints.setAllConstraint();
+        constraints.setActive(true);
         constraints.assignNaiveFromFracture(fractureFluidState,
                                             matrixMaterialParams_);
     }

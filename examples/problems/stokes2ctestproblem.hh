@@ -281,18 +281,8 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
-            PrimaryVariables initCond;
-            initial(initCond, context, spaceIdx, timeIdx);
-
-            constraints.setConstraint(pressureIdx, conti0EqIdx,
-                                      initCond[pressureIdx]);
-            ;
-            constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1,
-                                      initCond[moleFrac1Idx]);
-            for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
-                constraints.setConstraint(velocity0Idx + axisIdx,
-                                          momentum0EqIdx + axisIdx,
-                                          initCond[velocity0Idx + axisIdx]);
+            constraints.setActive(true);
+            initial(constraints, context, spaceIdx, timeIdx);
         }
     }
     //! \}
