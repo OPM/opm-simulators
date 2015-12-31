@@ -280,16 +280,8 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
-            PrimaryVariables initCond;
-            initial(initCond, context, spaceIdx, timeIdx);
-
-            constraints.setConstraint(pressureIdx, conti0EqIdx,
-                                      initCond[pressureIdx]);
-            ;
-            for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
-                constraints.setConstraint(velocity0Idx + axisIdx,
-                                          momentum0EqIdx + axisIdx,
-                                          initCond[velocity0Idx + axisIdx]);
+            constraints.setActive(true);
+            initial(constraints, context, spaceIdx, timeIdx);
         }
     }
 

@@ -394,11 +394,11 @@ public:
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos) && !onInlet_(pos)) {
-            constraints.setAllConstraint();
+            constraints.setActive(true);
             constraints.assignNaive(initialFluidState_);
         }
         else if (onLowerBoundary_(pos)) {
-            constraints.setAllConstraint();
+            constraints.setActive(true);
             constraints.assignNaive(initialFluidState_);
         }
     }

@@ -236,12 +236,12 @@ public:
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
+            constraints.setActive(true);
             // lid moves from left to right
             const Scalar lidVelocity = 1.0;
-            constraints.setConstraint(momentum0EqIdx, velocity0Idx + 0,
-                                      lidVelocity);
-            constraints.setConstraint(momentum0EqIdx + 1, velocity0Idx + 1, 0);
-            constraints.setConstraint(conti0EqIdx, pressureIdx, 1e5);
+            constraints[velocity0Idx + 0] = lidVelocity;
+            constraints[velocity0Idx + 1] = 0.0;
+            constraints[pressureIdx + 1] = 1e5;
         }
     }
 
