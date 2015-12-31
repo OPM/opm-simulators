@@ -93,9 +93,6 @@ SET_BOOL_PROP(ReservoirBaseProblem, NewtonWriteConvergence, false);
 // Enable gravity
 SET_BOOL_PROP(ReservoirBaseProblem, EnableGravity, true);
 
-// Reuse the last linearization if possible?
-SET_BOOL_PROP(ReservoirBaseProblem, EnableLinearizationRecycling, true);
-
 // Enable constraint DOFs?
 SET_BOOL_PROP(ReservoirBaseProblem, EnableConstraints, true);
 

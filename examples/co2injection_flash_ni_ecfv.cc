@@ -58,10 +58,6 @@ SET_TYPE_PROP(Co2InjectionFlashNiEcfvProblem, Scalar, quad);
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
 SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LinearSolverSplice, ParallelIterativeLinearSolver);
-
-// somehow the test does not converge if linearization recycling is enabled. TODO: figure
-// out why!
-SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableLinearizationRecycling, false);
 #else
 SET_SCALAR_PROP(Co2InjectionFlashNiEcfvProblem, NewtonRawTolerance, 1e-5);
 #endif
