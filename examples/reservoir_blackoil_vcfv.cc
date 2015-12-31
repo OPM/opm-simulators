@@ -21,22 +21,25 @@
 /*!
  * \file
  *
- * \brief Test for the black-oil VCVF discretization.
+ * \brief Test for the black-oil model using the VCFV discretization.
  */
 #include "config.h"
 
 #include <ewoms/common/start.hh>
 #include <ewoms/models/blackoil/blackoilmodel.hh>
+#include <ewoms/disc/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(ReservoirProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
-}
-}
+NEW_TYPE_TAG(ReservoirBlackOilVcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
+
+// Select the vertex centered finite volume method as spatial discretization
+SET_TAG_PROP(ReservoirBlackOilVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ReservoirProblem) ProblemTypeTag;
+    typedef TTAG(ReservoirBlackOilVcfvProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
