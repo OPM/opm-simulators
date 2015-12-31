@@ -661,10 +661,7 @@ public:
                 unsigned spaceIdx,
                 unsigned timeIdx) const
     {
-        rate = Toolbox::createConstant(0);
-
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-            rate[eqIdx] = Toolbox::createConstant(0.0);
+        rate = 0.0;
 
         wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
