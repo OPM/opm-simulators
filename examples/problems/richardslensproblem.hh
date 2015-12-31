@@ -91,9 +91,6 @@ public:
 // Enable gravitational acceleration
 SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 
-// Only relinearize the parts where the current solution is sufficiently "bad"
-SET_BOOL_PROP(RichardsLensProblem, EnablePartialRelinearization, true);
-
 // Use central differences to approximate the Jacobian matrix
 SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
 
