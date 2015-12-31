@@ -112,9 +112,6 @@ public:
 // Enable gravity
 SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 
-// Reuse the last linearization if possible?
-SET_BOOL_PROP(EclBaseProblem, EnableLinearizationRecycling, false);
-
 // Only relinearize the parts where the current solution is sufficiently "bad"
 SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, false);
 
@@ -420,11 +417,7 @@ public:
     {
         auto& simulator = this->simulator();
         const auto& eclState = simulator.gridManager().eclState();
-        auto& linearizer = this->model().linearizer();
         int episodeIdx = simulator.episodeIndex();
-
-        bool wellsWillChange = wellManager_.wellsChanged(eclState, episodeIdx + 1);
-        linearizer.setLinearizationReusable(!wellsWillChange);
 
         Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
         int numReportSteps = timeMap->size() - 1;
