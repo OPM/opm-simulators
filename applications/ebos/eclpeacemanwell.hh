@@ -1358,7 +1358,10 @@ protected:
             Scalar fStar = wellResidual_(bhp + eps);
             Scalar fPrime = (fStar - f)/eps;
 
-            assert(std::abs(fPrime) > 1e-20);
+            if (std::abs(fPrime) < 1e-20)
+                OPM_THROW(Opm::NumericalProblem,
+                          "Cannot determine the bottom hole pressure for well " << name()
+                          << ": Derivative of the well residual is too small");
             Scalar delta = f/fPrime;
 
             bhp -= delta;
