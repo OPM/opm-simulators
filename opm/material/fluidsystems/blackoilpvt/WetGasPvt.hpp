@@ -78,8 +78,8 @@ public:
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtgTable = pvtgTables[regionIdx];
 
-            const auto saturatedTable = pvtgTable.getOuterTable();
-            assert(saturatedTable->numRows() > 1);
+            const auto saturatedTable = pvtgTable.getSaturatedTable();
+            assert(saturatedTable.numRows() > 1);
 
             auto& gasMu = gasMu_[regionIdx];
             auto& invGasB = inverseGasB_[regionIdx];
@@ -87,18 +87,21 @@ public:
             auto& invSatGasBMu = inverseSaturatedGasBMu_[regionIdx];
             auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
-            oilVaporizationFac.setXYArrays(saturatedTable->numRows(),
-                                           saturatedTable->getPressureColumn(),
-                                           saturatedTable->getOilSolubilityColumn());
+            {
+                std::vector<Scalar> pressure = saturatedTable.getColumn("PG").vectorCopy( );
+                std::vector<Scalar> rv = saturatedTable.getColumn("RV").vectorCopy( );
+                oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
+                                               pressure , rv );
+            }
 
             std::vector<Scalar> invSatGasBArray;
             std::vector<Scalar> invSatGasBMuArray;
 
             // extract the table for the gas dissolution and the oil formation volume factors
-            for (size_t outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
-                Scalar pg = saturatedTable->getPressureColumn()[outerIdx];
-                Scalar B = saturatedTable->getGasFormationFactorColumn()[outerIdx];
-                Scalar mu = saturatedTable->getGasViscosityColumn()[outerIdx];
+            for (unsigned outerIdx = 0; outerIdx < saturatedTable.numRows(); ++ outerIdx) {
+                Scalar pg = saturatedTable.get("PG" , outerIdx);
+                Scalar B = saturatedTable.get("BG" , outerIdx);
+                Scalar mu = saturatedTable.get("MUG" , outerIdx);
 
                 invGasB.appendXPos(pg);
                 gasMu.appendXPos(pg);
@@ -109,20 +112,24 @@ public:
                 assert(invGasB.numX() == outerIdx + 1);
                 assert(gasMu.numX() == outerIdx + 1);
 
-                const auto underSaturatedTable = pvtgTable.getInnerTable(outerIdx);
-                size_t numRows = underSaturatedTable->numRows();
+                const auto underSaturatedTable = pvtgTable.getUnderSaturatedTable(outerIdx);
+                size_t numRows = underSaturatedTable.numRows();
                 for (size_t innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
-                    Scalar Rv = underSaturatedTable->getOilSolubilityColumn()[innerIdx];
-                    Scalar Bg = underSaturatedTable->getGasFormationFactorColumn()[innerIdx];
-                    Scalar mug = underSaturatedTable->getGasViscosityColumn()[innerIdx];
+                    Scalar Rv = underSaturatedTable.get("RV" , innerIdx);
+                    Scalar Bg = underSaturatedTable.get("BG" , innerIdx);
+                    Scalar mug = underSaturatedTable.get("MUG" , innerIdx);
 
                     invGasB.appendSamplePoint(outerIdx, Rv, 1.0/Bg);
                     gasMu.appendSamplePoint(outerIdx, Rv, mug);
                 }
             }
 
-            invSatGasB.setXYContainers(saturatedTable->getPressureColumn(), invSatGasBArray);
-            invSatGasBMu.setXYContainers(saturatedTable->getPressureColumn(), invSatGasBMuArray);
+            {
+                std::vector<Scalar> tmpPressure =  saturatedTable.getColumn("PG").vectorCopy( );
+
+                invSatGasB.setXYContainers(tmpPressure, invSatGasBArray);
+                invSatGasBMu.setXYContainers(tmpPressure, invSatGasBMuArray);
+            }
 
             // make sure to have at least two sample points per gas pressure value
             for (unsigned xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
@@ -138,22 +145,23 @@ public:
                 // current line. We define master table as the first table which has values
                 // for undersaturated gas...
                 size_t masterTableIdx = xIdx + 1;
-                for (; masterTableIdx < pvtgTable.getOuterTable()->numRows(); ++masterTableIdx)
+                for (; masterTableIdx < saturatedTable.numRows(); ++masterTableIdx)
                 {
-                    if (pvtgTable.getInnerTable(masterTableIdx)->numRows() > 1)
+                    if (pvtgTable.getUnderSaturatedTable(masterTableIdx).numRows() > 1)
                         break;
                 }
 
-                if (masterTableIdx >= pvtgTable.getOuterTable()->numRows())
+                if (masterTableIdx >= saturatedTable.numRows())
                     OPM_THROW(std::runtime_error,
                               "PVTG tables are invalid: The last table must exhibit at least one "
                               "entry for undersaturated gas!");
 
+
                 // extend the current table using the master table.
                 extendPvtgTable_(regionIdx,
                                  xIdx,
-                                 *pvtgTable.getInnerTable(xIdx),
-                                 *pvtgTable.getInnerTable(masterTableIdx));
+                                 pvtgTable.getUnderSaturatedTable(xIdx),
+                                 pvtgTable.getUnderSaturatedTable(masterTableIdx));
             }
         }
     }
@@ -161,26 +169,28 @@ public:
 private:
     void extendPvtgTable_(unsigned regionIdx,
                           unsigned xIdx,
-                          const PvtgInnerTable& curTable,
-                          const PvtgInnerTable& masterTable)
+                          const SimpleTable& curTable,
+                          const SimpleTable& masterTable)
     {
-        std::vector<Scalar> RvArray(curTable.getOilSolubilityColumn());
-        std::vector<Scalar> gasBArray(curTable.getGasFormationFactorColumn());
-        std::vector<Scalar> gasMuArray(curTable.getGasViscosityColumn());
+        std::vector<Scalar> RvArray = curTable.getColumn("RV").vectorCopy();
+        std::vector<Scalar> gasBArray = curTable.getColumn("BG").vectorCopy();
+        std::vector<Scalar> gasMuArray = curTable.getColumn("MUG").vectorCopy();
 
         auto& invGasB = inverseGasB_[regionIdx];
         auto& gasMu = gasMu_[regionIdx];
 
-        for (unsigned newRowIdx = 1; newRowIdx < masterTable.numRows(); ++ newRowIdx) {
+        for (size_t newRowIdx = 1; newRowIdx < masterTable.numRows(); ++ newRowIdx) {
+            const auto& RVColumn = masterTable.getColumn("RV");
+            const auto& BGColumn = masterTable.getColumn("BG");
+            const auto& viscosityColumn = masterTable.getColumn("MUG");
+
             // compute the gas pressure for the new entry
-            Scalar diffRv =
-                masterTable.getOilSolubilityColumn()[newRowIdx]
-                - masterTable.getOilSolubilityColumn()[newRowIdx - 1];
+            Scalar diffRv = RVColumn[newRowIdx] - RVColumn[newRowIdx - 1];
             Scalar newRv = RvArray.back() + diffRv;
 
             // calculate the compressibility of the master table
-            Scalar B1 = masterTable.getGasFormationFactorColumn()[newRowIdx];
-            Scalar B2 = masterTable.getGasFormationFactorColumn()[newRowIdx - 1];
+            Scalar B1 = BGColumn[newRowIdx];
+            Scalar B2 = BGColumn[newRowIdx - 1];
             Scalar x = (B1 - B2)/( (B1 + B2)/2.0 );
 
             // calculate the gas formation volume factor which exhibits the same
@@ -188,8 +198,8 @@ private:
             Scalar newBg = gasBArray.back()*(1.0 + x/2.0)/(1.0 - x/2.0);
 
             // calculate the "viscosibility" of the master table
-            Scalar mu1 = masterTable.getGasViscosityColumn()[newRowIdx];
-            Scalar mu2 = masterTable.getGasViscosityColumn()[newRowIdx - 1];
+            Scalar mu1 = viscosityColumn[newRowIdx];
+            Scalar mu2 = viscosityColumn[newRowIdx - 1];
             Scalar xMu = (mu1 - mu2)/( (mu1 + mu2)/2.0 );
 
             // calculate the gas formation volume factor which exhibits the same
