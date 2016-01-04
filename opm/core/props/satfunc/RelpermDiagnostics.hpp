@@ -81,6 +81,16 @@ namespace Opm {
   
         SaturationFunctionFamily satFamily_;
 
+        struct Counter {
+            Counter();
+            int error;
+            int warning;
+            int problem;
+            int bug;
+        };
+
+        Counter counter_;
+        
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 

@@ -29,6 +29,13 @@ namespace Opm{
     }
 
 
+    RelpermDiagnostics::Counter::Counter()
+        :error(0)
+        ,warning(0)
+        ,problem(0)
+        ,bug(0)
+    {
+    }
 
 
     void RelpermDiagnostics::diagnosis(Opm::EclipseStateConstPtr eclState,
@@ -54,6 +61,11 @@ namespace Opm{
         } else {
             std::cout << "****************\nConsistency check all passed!" << std::endl;
         }
+        std::cout << "Error summary:" << std::endl;
+        std::cout << "Warnings          " << counter_.warning << std::endl;
+        std::cout << "Problems          " << counter_.problem << std::endl;
+        std::cout << "Errors            " << counter_.error << std::endl;
+        std::cout << "Bugs              " << counter_.bug << std::endl;
         std::cout << "********************************************************\n";
     }
 
@@ -131,17 +143,19 @@ namespace Opm{
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && (!sof3Tables.empty() || !sof2Tables.empty()) && !sgwfnTables.empty();
 
         if (family1 && family2) {
-            std::string msg = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            std::string msg = "Error: Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (!family1 && !family2) {
-            std::string msg = "Saturations function must be specified using either \n \
+            std::string msg = "Error, Saturations function must be specified using either \n \
                              family 1 or family 2 keywords \n \
                              Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (family1 && !family2) {
@@ -217,6 +231,7 @@ namespace Opm{
             std::string msg = "Error: In SWOF table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
@@ -224,11 +239,13 @@ namespace Opm{
             std::string msg = "Error: In SWOF table, first value of krw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krw.front() < 0.0 || krw.back() > 1.0) {
             std::string msg = "Error: In SWOF table, krw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krow column.
@@ -236,6 +253,7 @@ namespace Opm{
             std::string msg = "Error: In SWOF table, krow should be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         ///TODO check if run with gas.
     }
@@ -255,11 +273,13 @@ namespace Opm{
             std::string msg = "Error: In SGOF table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (sg.front() != 0.0) {
             std::string msg = "Error: In SGOF table, first value of sg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
@@ -267,11 +287,13 @@ namespace Opm{
             std::string msg = "Error: In SGOF table, first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krg.front() < 0.0 || krg.back() > 1.0) {
             std::string msg = "Error: In SGOF table, krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krow column.
@@ -279,6 +301,7 @@ namespace Opm{
             std::string msg = "Error: In SGOF table, krog should be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         ///TODO check if run with water.
     }
@@ -295,28 +318,33 @@ namespace Opm{
             std::string msg = "Error: In SLGOF table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (sl.back() != 1.0) {
             std::string msg = "Error: In SLGOF table, last value of sl should be 1.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (krg.front() > 1.0 || krg.back() < 0) {
             std::string msg = "Error: In SLGOF table, krg shoule be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krg.back() != 0.0) {
             std::string msg = "Error: In SLGOF table, last value of krg hould be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (krog.front() < 0.0 || krog.back() > 1.0) {
             std::string msg = "Error: In SLGOF table, krog shoule be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -334,6 +362,7 @@ namespace Opm{
             std::string msg = "Error: In SWFN table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         
         ///Check krw column.
@@ -341,12 +370,14 @@ namespace Opm{
             std::string msg = "Error: In SWFN table, krw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (krw.front() != 0.0) {
             std::string msg = "Error: In SWFN table, first value of krw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -364,6 +395,7 @@ namespace Opm{
             std::string msg = "Error: In SGFN table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         
         ///Check krg column.
@@ -371,11 +403,13 @@ namespace Opm{
             std::string msg = "Error: In SGFN table, krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krg.front() != 0.0) {
             std::string msg = "Error: In SGFN table, first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -395,6 +429,7 @@ namespace Opm{
             std::string msg = "Error: In SOF3 table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krow column.
@@ -402,11 +437,13 @@ namespace Opm{
             std::string msg = "Error: In SOF3 table, krow should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krow.front() != 0.0) {
             std::string msg = "Error: In SOF3 table, first value of krow should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krog column.
@@ -414,18 +451,21 @@ namespace Opm{
             std::string msg = "Error: In SOF3 table, krog should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         if (krog.front() != 0.0) {
             std::string msg = "Error: In SOF3 table, first value of krog should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     
         if (krog.back() != krow.back()) {
             std::string msg = "Error: In SOF3 table, max value of krog and krow should be the same.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -444,6 +484,7 @@ namespace Opm{
             std::string msg = "Error: In SOF2 table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krow column.
@@ -451,11 +492,13 @@ namespace Opm{
             std::string msg = "Error: In SOF2 table, krow should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (kro.front() != 0.0) {
             std::string msg = "Error: In SOF2 table, first value of krow should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -474,6 +517,7 @@ namespace Opm{
             std::string msg = "Error: In SGWFN table, saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krg column.
@@ -481,11 +525,13 @@ namespace Opm{
             std::string msg = "Error: In SGWFN table, krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krg.front() != 0.0) {
             std::string msg = "Error: In SGWFN table, first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
 
         ///Check krgw column.
@@ -494,11 +540,13 @@ namespace Opm{
             std::string msg = "Error: In SGWFN table, krgw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
         if (krgw.back() != 0.0) {
             std::string msg = "Error: In SGWFN table, last value of krgw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
+            counter_.error += 1;
         }
     }
 
@@ -528,11 +576,13 @@ namespace Opm{
                 std::string msg = "Error: Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                 std::string msg = "Error: Sgco should not exceed 1-Swmax.";
+                std::string msg = "Error: Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
              }
 
              ///Krow(Sou) == Krog(Sou) for three-phase
@@ -566,6 +616,7 @@ namespace Opm{
                      std::string msg = "Error: Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
+                     counter_.error += 1;
                  }
              }
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
@@ -574,11 +625,13 @@ namespace Opm{
                 std::string msg = "Error: Sowcr + Swcr should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
                 std::string msg = "Error: Sogcr + Sgcr + Swco should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
             }
         }
     }
@@ -621,7 +674,8 @@ namespace Opm{
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
                 std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
                 messages_.push_back(msg);
-                streamLog_->addMessage(Log::MessageType::Warning, msg);01_02_NO_PC_CHECK_PC.DATA
+                streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
             }
             
             // SGL <= 1.0 - SWU
@@ -629,6 +683,7 @@ namespace Opm{
                 std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
+                counter_.error += 1;
             }
 
             if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
@@ -637,12 +692,14 @@ namespace Opm{
                     std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.error += 1;
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
                     std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SOGCR + SGCR + SWL exceed 1.0";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.error += 1;
                 }
             }
             ///Following rules come from NEXUS.
@@ -651,18 +708,21 @@ namespace Opm{
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWL > SWCR";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWCR > SOWCR";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Opm::Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
             
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR > SWU";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
             }
 
@@ -671,6 +731,7 @@ namespace Opm{
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL > SGCR";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
             }
 
@@ -679,12 +740,14 @@ namespace Opm{
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGCR > SOGCR";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
                     std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR > SGU";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
+                    counter_.warning += 1;
                 }
             }
         } 
