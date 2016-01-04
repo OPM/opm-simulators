@@ -274,6 +274,10 @@ void checkFluidSystem()
     fs.allowComposition(true);
     fs.restrictToPhase(-1);
 
+    static_assert(std::is_same<typename FluidSystem::Scalar, Scalar>::value,
+                  "The type used for floating point used by the fluid system must be the same"
+                  " as the one passed to the checkFluidSystem() function");
+
     // check whether the parameter cache adheres to the API
     typedef typename FluidSystem::ParameterCache PC;
     PC paramCache;

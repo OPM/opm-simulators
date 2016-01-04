@@ -250,7 +250,7 @@ public:
     }
 
     /****************************************
-     * Component related parameters
+     * Generic component related parameters
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
@@ -292,35 +292,90 @@ public:
     static bool isIdealGas(unsigned /*phaseIdx*/)
     { return false; }
 
+
     /****************************************
-     * thermodynamic relations
+     * black-oil specific parameters
+     ****************************************/
+    /*!
+     * \brief Returns the number of PVT regions which are considered.
+     *
+     * By default, this is 1.
+     */
+    static size_t numRegions()
+    { return molarMass_.size(); }
+
+    /*!
+     * \brief Returns whether the fluid system should consider that the gas component can
+     *        dissolve in the oil phase
+     *
+     * By default, dissolved gas is considered.
+     */
+    static bool enableDissolvedGas()
+    { return enableDissolvedGas_; }
+
+    /*!
+     * \brief Returns whether the fluid system should consider that the oil component can
+     *        dissolve in the gas phase
+     *
+     * By default, vaporized oil is not considered.
+     */
+    static bool enableVaporizedOil()
+    { return enableVaporizedOil_; }
+
+    /*!
+     * \brief Returns the density of a fluid phase at surface pressure [kg/m^3]
+     *
+     * \copydoc Doxygen::phaseIdxParam
+     */
+    static Scalar referenceDensity(unsigned phaseIdx, unsigned regionIdx)
+    { return referenceDensity_[regionIdx][phaseIdx]; }
+
+    /****************************************
+     * thermodynamic relations (generic version, only isothermal)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval density(const FluidState &fluidState,
                            ParameterCache &paramCache,
                            const unsigned phaseIdx)
+    { return density<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
+
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache &paramCache,
+                                       unsigned phaseIdx,
+                                       unsigned compIdx)
+    { return fugacityCoefficient<FluidState, LhsEval>(fluidState, phaseIdx, compIdx, paramCache.regionIndex()); }
+
+    //! \copydoc BaseFluidSystem::viscosity
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval viscosity(const FluidState &fluidState,
+                             const ParameterCache &paramCache,
+                             unsigned phaseIdx)
+    { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
+
+
+    /****************************************
+     * thermodynamic relations (black-oil specific version: Note that the parameter cache
+     * is not used and the PVT region index is explicitly passed as an argument.)
+     ****************************************/
+    //! \copydoc BaseFluidSystem::density
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval density(const FluidState &fluidState,
+                           unsigned phaseIdx,
+                           unsigned regionIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
 
         typedef typename FluidState::Scalar FsEval;
         typedef Opm::MathToolbox<FsEval> FsToolbox;
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        unsigned regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
-        case waterPhaseIdx: return waterDensity<LhsEval>(T, p, regionIdx);
-        case gasPhaseIdx: {
-            if (fluidState.saturation(oilPhaseIdx) > 0.0)
-                return gasPvt_->saturatedDensity(regionIdx, T, p);
-            else {
-                // undersaturated oil
-                const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
-                return gasPvt_->density(regionIdx, T, p, Rv);
-            }
-        }
         case oilPhaseIdx: {
             if (fluidState.saturation(gasPhaseIdx) > 0.0)
                 return oilPvt_->saturatedDensity(regionIdx, T, p);
@@ -330,26 +385,126 @@ public:
                 return oilPvt_->density(regionIdx, T, p, Rs);
             }
         }
+        case gasPhaseIdx: {
+            if (fluidState.saturation(oilPhaseIdx) > 0.0)
+                return gasPvt_->saturatedDensity(regionIdx, T, p);
+            else {
+                // undersaturated oil
+                const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                return gasPvt_->density(regionIdx, T, p, Rv);
+            }
+        }
+        case waterPhaseIdx: return waterPvt_->density(regionIdx, T, p);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
     }
 
-    //! \copydoc BaseFluidSystem::fugacityCoefficient
+    /*!
+     * \brief Compute the density of a saturated fluid phase.
+     *
+     * This means the density of the given fluid phase if the dissolved component (gas
+     * for the oil phase and oil for the gas phase) is at the thermodynamically possible
+     * maximum. For the water phase, there's no difference to the density() method.
+     */
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
-                                       unsigned phaseIdx,
-                                       unsigned compIdx)
+    static LhsEval saturatedDensity(const FluidState &fluidState,
+                                    unsigned phaseIdx,
+                                    unsigned regionIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= compIdx  && compIdx <= numComponents);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
+
+        typedef typename FluidState::Scalar FsEval;
+        typedef Opm::MathToolbox<FsEval> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->saturatedDensity(regionIdx, T, p);
+        case gasPhaseIdx: return gasPvt_->saturatedDensity(regionIdx, T, p);
+        case waterPhaseIdx: return waterPvt_->density(regionIdx, T, p);
+        }
+
+        OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+    }
+
+    /*!
+     * \brief Returns the formation volume factor \f$B_\alpha\f$ of an "undersaturated"
+     *        fluid phase
+     *
+     * For the oil (gas) phase, "undersaturated" means that the concentration of the gas
+     * (oil) component is not assumed to be at the thermodynamically possible maximum at
+     * the given temperature and pressure.
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval formationVolumeFactor(const FluidState& fluidState,
+                                         unsigned phaseIdx,
+                                         unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        unsigned regionIdx = paramCache.regionIndex();
+
+        switch (phaseIdx) {
+        case oilPhaseIdx:
+            return oilPvt_->formationVolumeFactor(regionIdx, T, p, getRs_<LhsEval>(fluidState, regionIdx));
+        case gasPhaseIdx:
+            return gasPvt_->formationVolumeFactor(regionIdx, T, p, getRv_<LhsEval>(fluidState, regionIdx));
+        case waterPhaseIdx:
+            return waterPvt_->formationVolumeFactor(regionIdx, T, p);
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+    }
+
+    /*!
+     * \brief Returns the formation volume factor \f$B_\alpha\f$ of a "saturated" fluid
+     *        phase
+     *
+     * For the oil phase, this means that it is gas saturated, the gas phase is oil
+     * saturated and for the water phase, there is no difference to formationVolumeFactor()
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval saturatedFormationVolumeFactor(const FluidState& fluidState,
+                                                  unsigned phaseIdx,
+                                                  unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
+
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->saturatedFormationVolumeFactor(regionIdx, T, p);
+        case gasPhaseIdx: return gasPvt_->saturatedFormationVolumeFactor(regionIdx, T, p);
+        case waterPhaseIdx: return waterPvt_->formationVolumeFactor(regionIdx, T, p);
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+    }
+
+    //! \copydoc BaseFluidSystem::fugacityCoefficient
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       unsigned phaseIdx,
+                                       unsigned compIdx,
+                                       unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= compIdx  && compIdx <= numComponents);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
+
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
 
         // for the fugacity coefficient of the oil component in the oil phase, we use
         // some pseudo-realistic value for the vapor pressure to ease physical
@@ -437,19 +592,19 @@ public:
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache &paramCache,
-                             unsigned phaseIdx)
+                             unsigned phaseIdx,
+                             unsigned regionIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        unsigned regionIdx = paramCache.regionIndex();
 
         switch (phaseIdx) {
-        case oilPhaseIdx: {
+        case oilPhaseIdx:
             if (fluidState.saturation(gasPhaseIdx) > 0.0)
                 return oilPvt_->saturatedViscosity(regionIdx, T, p);
             else {
@@ -457,10 +612,13 @@ public:
                 const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
                 return oilPvt_->viscosity(regionIdx, T, p, Rs);
             }
-        }
+
         case waterPhaseIdx:
+            // since water is always assumed to be immiscible in the black-oil model,
+            // there is no "saturated water"
             return waterPvt_->viscosity(regionIdx, T, p);
-        case gasPhaseIdx: {
+
+        case gasPhaseIdx:
             if (fluidState.saturation(oilPhaseIdx) > 0.0)
                 return gasPvt_->saturatedViscosity(regionIdx, T, p);
             else {
@@ -469,90 +627,70 @@ public:
                 return gasPvt_->viscosity(regionIdx, T, p, Rv);
             }
         }
-        }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
     }
 
     /*!
-     * \brief Returns whether the fluid system should consider that the gas component can
-     *        dissolve in the oil phase
+     * \brief Returns the dissolution factor \f$R_\alpha\f$ of a saturated fluid phase
      *
-     * By default, dissolved gas is considered.
+     * For the oil (gas) phase, this means the R_S and R_V factors, for the water phase,
+     * it is always 0.
      */
-    static bool enableDissolvedGas()
-    { return enableDissolvedGas_; }
-
-    /*!
-     * \brief Returns whether the fluid system should consider that the oil component can
-     *        dissolve in the gas phase
-     *
-     * By default, vaporized oil is not considered.
-     */
-    static bool enableVaporizedOil()
-    { return enableVaporizedOil_; }
-
-    /*!
-     * \brief Returns the density of a fluid phase at surface pressure [kg/m^3]
-     *
-     * \copydoc Doxygen::phaseIdxParam
-     */
-    static Scalar referenceDensity(unsigned phaseIdx, unsigned regionIdx)
-    { return referenceDensity_[regionIdx][phaseIdx]; }
-
-    /*!
-     * \brief Returns the oil formation volume factor \f$B_o\f$ of saturated oil for a given pressure
-     *
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval saturatedOilFormationVolumeFactor(const LhsEval& temperature,
-                                                     const LhsEval& pressure,
-                                                     unsigned regionIdx)
-    { return oilPvt_->saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the gas formation volume factor \f$B_o\f$ of saturated gas for a given pressure
-     *
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval saturatedGasFormationVolumeFactor(const LhsEval& temperature,
-                                                     const LhsEval& pressure,
-                                                     unsigned regionIdx)
-    { return gasPvt_->saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Return the formation volume factor of water.
-     */
-    template <class LhsEval>
-    static LhsEval waterFormationVolumeFactor(const LhsEval& temperature,
-                                              const LhsEval& pressure,
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval saturatedDissolutionFactor(const FluidState& fluidState,
+                                              unsigned phaseIdx,
                                               unsigned regionIdx)
-    { return waterPvt_->formationVolumeFactor(regionIdx, temperature, pressure); }
+    {
+        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
+
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p);
+        case gasPhaseIdx: return gasPvt_->saturatedOilVaporizationFactor(regionIdx, T, p);
+        case waterPhaseIdx: return 0.0;
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+    }
 
     /*!
-     * \brief Returns the gas dissolution factor \f$R_s\f$ for a given pressure
+     * \brief Returns the saturation pressure of a given phase [Pa] depending on its
+     *        composition.
      *
-     * \param pressure The pressure of interest [Pa]
+     * In the black-oil model, the saturation pressure it the pressure at which the fluid
+     * phase is in equilibrium with the gas phase, i.e., it is the inverse of the
+     * "dissolution factor". Note that a-priori this quantity is undefined for the water
+     * phase (because water is assumed to be immiscible with everything else). This method
+     * here just returns 0, though.
      */
-    template <class LhsEval>
-    static LhsEval gasDissolutionFactor(const LhsEval& temperature,
-                                        const LhsEval& pressure,
-                                        unsigned regionIdx)
-    { return oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure); }
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval saturationPressure(const FluidState& fluidState,
+                                      unsigned phaseIdx,
+                                      unsigned regionIdx)
+    {
+        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= regionIdx  && regionIdx <= numRegions());
 
-    /*!
-     * \brief Returns the oil vaporization factor \f$R_v\f$ for a given pressure
-     *
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval oilVaporizationFactor(const LhsEval& temperature,
-                                         const LhsEval& pressure,
-                                         unsigned regionIdx)
-    { return gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure); }
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
+        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->saturationPressure(regionIdx, T, getRs_<LhsEval>(fluidState, regionIdx));
+        case gasPhaseIdx: return gasPvt_->saturationPressure(regionIdx, T, getRv_<LhsEval>(fluidState, regionIdx));
+        case waterPhaseIdx: return 0.0;
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+    }
+
+    /****************************************
+     * auxiliary and convenience methods for the black-oil model
+     ****************************************/
     /*!
      * \brief Convert the mass fraction of the gas component in the oil phase to the
      *        corresponding gas dissolution factor.
@@ -632,147 +770,34 @@ public:
     }
 
     /*!
-     * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
-     *        fraction of the gas component
-     *
-     * \param Rs The surface volume of gas component dissolved in what will yield one cubic meter of oil at the surface [-]
-     */
-    template <class LhsEval>
-    static LhsEval oilSaturationPressure(const LhsEval& temperature,
-                                         const LhsEval& Rs,
-                                         unsigned regionIdx)
-    { return oilPvt_->saturationPressure(regionIdx, temperature, Rs); }
-
-    /*!
-     * \brief The maximum mass fraction of the gas component in the oil phase.
-     */
-    template <class LhsEval>
-    static LhsEval saturatedOilGasMassFraction(const LhsEval& temperature,
-                                               const LhsEval& pressure,
-                                               unsigned regionIdx)
-    {
-        const auto& Rs = oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
-        return convertRsToXoG(Rs, regionIdx);
-    }
-
-    /*!
-     * \brief Convert an oil vaporization factor to the corresponding mass fraction
-     *        of the oil component in the gas phase.
-     */
-    template <class LhsEval>
-    static LhsEval saturatedOilGasMoleFraction(const LhsEval& temperature,
-                                               const LhsEval& pressure,
-                                               unsigned regionIdx)
-    {
-        const auto& Rs = oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
-        const auto& XoG = convertRsToXoG(Rs, regionIdx);
-        return convertXoGToxoG(XoG, regionIdx);
-    }
-
-    /*!
      * \brief Return a reference to the low-level object which calculates the gas phase
      *        quantities.
      *
-     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
+     * \note It is not recommended to use this method directly, but the black-oil
+     *       specific methods of the fluid systems from above should be used instead.
      */
-    template <class LhsEval>
-    static LhsEval gasSaturationPressure(const LhsEval& temperature,
-                                         const LhsEval& Rv,
-                                         unsigned regionIdx)
-    { return gasPvt_->saturationPressure(regionIdx, temperature, Rv); }
+    static const GasPvt& gasPvt()
+    { return *gasPvt_; }
 
     /*!
-     * \brief The maximum mass fraction of the oil component in the gas phase.
+     * \brief Return a reference to the low-level object which calculates the oil phase
+     *        quantities.
+     *
+     * \note It is not recommended to use this method directly, but the black-oil
+     *       specific methods of the fluid systems from above should be used instead.
      */
-    template <class LhsEval>
-    static LhsEval saturatedGasOilMassFraction(const LhsEval& temperature,
-                                               const LhsEval& pressure,
-                                               unsigned regionIdx)
-    {
-        const auto& Rv = gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure);
-        return convertRvToXgO(Rv, regionIdx);
-    }
+    static const OilPvt& oilPvt()
+    { return *oilPvt_; }
 
     /*!
-     * \brief The maximum mole fraction of the oil component in the gas phase.
+     * \brief Return a reference to the low-level object which calculates the water phase
+     *        quantities.
+     *
+     * \note It is not recommended to use this method directly, but the black-oil
+     *       specific methods of the fluid systems from above should be used instead.
      */
-    template <class LhsEval>
-    static LhsEval saturatedGasOilMoleFraction(const LhsEval& temperature,
-                                               const LhsEval& pressure,
-                                               unsigned regionIdx)
-    {
-        const auto& Rv = gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure);
-        const auto& XgO = convertRvToXgO(Rv, regionIdx);
-        return convertXgOToxgO(XgO, regionIdx);
-    }
-
-    /*!
-     * \brief Return the normalized formation volume factor of (potentially)
-     *        under-saturated oil.
-     */
-    template <class LhsEval>
-    static LhsEval oilFormationVolumeFactor(const LhsEval& temperature,
-                                            const LhsEval& pressure,
-                                            const LhsEval& Rs,
-                                            unsigned regionIdx)
-    { return oilPvt_->formationVolumeFactor(regionIdx, temperature, pressure, Rs); }
-
-    /*!
-     * \brief Return the density of (potentially) under-saturated oil.
-     */
-    template <class LhsEval>
-    static LhsEval oilDensity(const LhsEval& temperature,
-                              const LhsEval& pressure,
-                              const LhsEval& Rs,
-                              unsigned regionIdx)
-    { return oilPvt_->density(regionIdx, temperature, pressure, Rs); }
-
-    /*!
-     * \brief Return the density of gas-saturated oil.
-     */
-    template <class LhsEval>
-    static LhsEval saturatedOilDensity(const LhsEval& temperature,
-                                       const LhsEval& pressure,
-                                       unsigned regionIdx)
-    { return oilPvt_->saturatedDensity(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Return the formation volume factor of gas.
-     */
-    template <class LhsEval>
-    static LhsEval gasFormationVolumeFactor(const LhsEval& temperature,
-                                            const LhsEval& pressure,
-                                            const LhsEval& Rv,
-                                            unsigned regionIdx)
-    { return gasPvt_->formationVolumeFactor(regionIdx, temperature, pressure, Rv); }
-
-    /*!
-     * \brief Return the density of dry gas.
-     */
-    template <class LhsEval>
-    static LhsEval gasDensity(const LhsEval& temperature,
-                              const LhsEval& pressure,
-                              const LhsEval& Rv,
-                              unsigned regionIdx)
-    { return gasPvt_->density(regionIdx, temperature, pressure, Rv); }
-
-    /*!
-     * \brief Return the density of gas-saturated oil.
-     */
-    template <class LhsEval>
-    static LhsEval saturatedGasDensity(const LhsEval& temperature,
-                                       const LhsEval& pressure,
-                                       unsigned regionIdx)
-    { return oilPvt_->saturatedDensity(regionIdx, temperature, pressure);  }
-
-    /*!
-     * \brief Return the density of water.
-     */
-    template <class LhsEval>
-    static LhsEval waterDensity(const LhsEval& temperature,
-                                const LhsEval& pressure,
-                                unsigned regionIdx)
-    { return waterPvt_->density(regionIdx, temperature, pressure); }
+    static const WaterPvt& waterPvt()
+    { return *waterPvt_; }
 
 private:
     static void resizeArrays_(size_t numRegions)
