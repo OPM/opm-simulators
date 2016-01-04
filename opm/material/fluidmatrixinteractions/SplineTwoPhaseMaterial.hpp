@@ -139,12 +139,13 @@ public:
     static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
     {
         // this assumes that the capillary pressure is monotonically decreasing
-        if (Sw <= params.pcnwSpline().xMin())
-            return Evaluation(params.pcnwSpline().yFirst());
-        if (Sw >= params.pcnwSpline().xMax())
-            return Evaluation(params.pcnwSpline().yLast());
+        const auto& pcnwSpline = params.pcnwSpline();
+        if (Sw <= pcnwSpline.xAt(0))
+            return Evaluation(pcnwSpline.valueAt(0));
+        if (Sw >= pcnwSpline.xAt(pcnwSpline.numSamples() - 1))
+            return Evaluation(pcnwSpline.valueAt(pcnwSpline.numSamples() - 1));
 
-        return params.pcnwSpline().eval(Sw);
+        return pcnwSpline.eval(Sw);
     }
 
     template <class Evaluation>
@@ -153,14 +154,15 @@ public:
         static const Evaluation nil(0.0);
 
         // this assumes that the capillary pressure is monotonically decreasing
-        if (pcnw >= params.pcnwSpline().yFirst())
-            return Evaluation(params.pcnwSpline().xMin());
-        if (pcnw <= params.pcnwSpline().yLast())
-            return Evaluation(params.pcnwSpline().xMax());
+        const auto& pcnwSpline = params.pcnwSpline();
+        if (pcnw >= pcnwSpline.valueAt(0))
+            return Evaluation(pcnwSpline.xAt(0));
+        if (pcnw <= pcnwSpline.y(pcnwSpline.numSamples() - 1))
+            return Evaluation(pcnwSpline.xAt(pcnwSpline.numSamples() - 1));
 
         // the intersect() method of splines is a bit slow, but this code path is not too
         // time critical...
-        return params.pcnwSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/pcnw);
+        return pcnwSpline.intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/pcnw);
     }
 
     /*!
@@ -204,12 +206,13 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
     {
-        if (Sw <= params.krnSpline().xMin())
-            return Evaluation(params.krwSpline().yFirst());
-        if (Sw >= params.krnSpline().xMax())
-            return Evaluation(params.krwSpline().yLast());
+        const auto& krwSpline = params.krwSpline();
+        if (Sw <= krwSpline.xAt(0))
+            return Evaluation(krwSpline.valueAt(0));
+        if (Sw >= krwSpline.xAt(krwSpline.numSamples() - 1))
+            return Evaluation(krwSpline.valueAt(krwSpline.numSamples() - 1));
 
-        return params.krwSpline().eval(Sw);
+        return krwSpline.eval(Sw);
     }
 
     template <class Evaluation>
@@ -217,12 +220,13 @@ public:
     {
         static const Evaluation nil(0.0);
 
-        if (krw <= params.krwSpline().yFirst())
-            return Evaluation(params.krwSpline().xMin());
-        if (krw >= params.krwSpline().yLast())
-            return Evaluation(params.krwSpline().xMax());
+        const auto& krwSpline = params.krwSpline();
+        if (krw <= krwSpline.valueAt(0))
+            return Evaluation(krwSpline.xAt(0));
+        if (krw >= krwSpline.valueAt(krwSpline.numSamples() - 1))
+            return Evaluation(krwSpline.xAt(krwSpline.numSamples() - 1));
 
-        return params.krwSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krw);
+        return krwSpline.intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krw);
     }
 
     /*!
@@ -243,12 +247,13 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
     {
-        if (Sw <= params.krnSpline().xMin())
-            return Evaluation(params.krnSpline().yFirst());
-        if (Sw >= params.krnSpline().xMax())
-            return Evaluation(params.krnSpline().yLast());
+        const auto& krnSpline = params.krnSpline();
+        if (Sw <= krnSpline.xAt(0))
+            return Evaluation(krnSpline.valueAt(0));
+        if (Sw >= krnSpline.xAt(krnSpline.numSamples() - 1))
+            return Evaluation(krnSpline.valueAt(krnSpline.numSamples() - 1));
 
-        return params.krnSpline().eval(Sw);
+        return krnSpline.eval(Sw);
     }
 
     template <class Evaluation>
@@ -256,12 +261,13 @@ public:
     {
         static const Evaluation nil(0.0);
 
-        if (krn >= params.krnSpline().yFirst())
-            return Evaluation(params.krnSpline().xMin());
-        if (krn <= params.krnSpline().yLast())
-            return Evaluation(params.krnSpline().xMax());
+        const auto& krnSpline = params.krnSpline();
+        if (krn >= krnSpline.valueAt(0))
+            return Evaluation(krnSpline.xAt(0));
+        if (krn <= krnSpline.valueAt(krnSpline.numSamples() - 1))
+            return Evaluation(krnSpline.xAt(krnSpline.numSamples() - 1));
 
-        return params.krnSpline().intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krn);
+        return krnSpline.intersect(/*a=*/nil, /*b=*/nil, /*c=*/nil, /*d=*/krn);
     }
 };
 } // namespace Opm

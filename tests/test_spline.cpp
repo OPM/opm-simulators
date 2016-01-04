@@ -82,7 +82,9 @@ void testCommon(const Spline &sp,
     // make sure the derivatives are consistent with the curve
     size_t np = 3*n;
     for (size_t i = 0; i < np; ++i) {
-        double xval = sp.xMin() + (sp.xMax() - sp.xMin())*i/np;
+        double xMin = sp.xAt(0);
+        double xMax = sp.xAt(sp.numSamples() - 1);
+        double xval = xMin + (xMax - xMin)*i/np;
 
         // first derivative
         double y1 = sp.eval(xval+epsFD);
