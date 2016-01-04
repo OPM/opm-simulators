@@ -258,7 +258,7 @@ public:
 
         Opm::GasPvtMultiplexer<Scalar> *gasPvt = new Opm::GasPvtMultiplexer<Scalar>;
         gasPvt->setApproach(Opm::GasPvtMultiplexer<Scalar>::DryGasPvt);
-        auto& dryGasPvt = gasPvt->template getRealGasPvt<Opm::GasPvtMultiplexer<Scalar>::DryGasPvt>();
+        auto& dryGasPvt = gasPvt->template getRealPvt<Opm::GasPvtMultiplexer<Scalar>::DryGasPvt>();
         dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
         dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
@@ -266,7 +266,7 @@ public:
 
         Opm::OilPvtMultiplexer<Scalar> *oilPvt = new Opm::OilPvtMultiplexer<Scalar>;
         oilPvt->setApproach(Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt);
-        auto& liveOilPvt = oilPvt->template getRealOilPvt<Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt>();
+        auto& liveOilPvt = oilPvt->template getRealPvt<Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt>();
         liveOilPvt.setNumRegions(/*numPvtRegion=*/1);
         liveOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         liveOilPvt.setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
@@ -275,14 +275,14 @@ public:
 
         Opm::WaterPvtMultiplexer<Scalar> *waterPvt = new Opm::WaterPvtMultiplexer<Scalar>;
         waterPvt->setApproach(Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt);
-        auto& ccWaterPvt = waterPvt->template getRealWaterPvt<Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt>();
+        auto& ccWaterPvt = waterPvt->template getRealPvt<Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt>();
         ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
         ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
         ccWaterPvt.setCompressibility(/*regionIdx=*/0, 1.450377e-10);
 
-        gasPvt->initEnd(oilPvt);
-        oilPvt->initEnd(gasPvt);
+        gasPvt->initEnd();
+        oilPvt->initEnd();
         waterPvt->initEnd();
 
         typedef std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> > GasPvtSharedPtr;
@@ -295,13 +295,6 @@ public:
         FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
 
         FluidSystem::initEnd();
-
-        Scalar MO = FluidSystem::molarMass(oilCompIdx);
-        Scalar MG = FluidSystem::molarMass(gasCompIdx);
-        Scalar MW = FluidSystem::molarMass(waterCompIdx);
-        liveOilPvt.setMolarMasses(/*regionIdx=*/0, MO, MG, MW);
-        dryGasPvt.setMolarMasses(/*regionIdx=*/0, MO, MG, MW);
-        //ccWaterPvt.setMolarMasses(/*regionIdx=*/0, MO, MG, MW);
 
         pReservoir_ = 330e5;
         layerBottom_ = 22.0;
@@ -604,10 +597,12 @@ private:
         //////
         // set composition of the oil phase
         //////
-        Scalar xoG = 0.95*FluidSystem::saturatedOilGasMoleFraction(temperature_,
-                                                                   fs.pressure(oilPhaseIdx),
-                                                                   /*pvtRegionIdx=*/0);
-        Scalar xoO = 1 - xoG;
+        Scalar RsSat =
+            FluidSystem::saturatedDissolutionFactor(fs, oilPhaseIdx, /*pvtRegionIdx=*/0);
+        Scalar XoGSat = FluidSystem::convertRsToXoG(RsSat, /*pvtRegionIdx=*/0);
+        Scalar xoGSat = FluidSystem::convertXoGToxoG(XoGSat, /*pvtRegionIdx=*/0);
+        Scalar xoG = 0.95*xoGSat;
+        Scalar xoO = 1.0 - xoG;
 
         // finally set the oil-phase composition
         fs.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
