@@ -245,7 +245,7 @@ public:
     static const Scalar surfaceTemperature;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(const unsigned phaseIdx)
+    static const char *phaseName(unsigned phaseIdx)
     {
         static const char *name[] = { "water", "oil", "gas" };
 
@@ -254,7 +254,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::isLiquid
-    static bool isLiquid(const unsigned phaseIdx)
+    static bool isLiquid(unsigned phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         return phaseIdx != gasPhaseIdx;
@@ -348,7 +348,7 @@ public:
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval density(const FluidState &fluidState,
                            ParameterCache &paramCache,
-                           const unsigned phaseIdx)
+                           unsigned phaseIdx)
     { return density<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
