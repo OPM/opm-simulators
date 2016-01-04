@@ -46,6 +46,8 @@ namespace FluidSystems {
 /*!
  * \brief A fluid system which uses the black-oil parameters
  *        to calculate termodynamically meaningful quantities.
+ *
+ * \tparam Scalar The type used for scalar floating point values
  */
 template <class Scalar>
 class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
@@ -377,8 +379,24 @@ public:
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
-            if (fluidState.saturation(gasPhaseIdx) > 0.0)
+            if (!enableDissolvedGas())
+                // if the oil phase is immiscible with the gas component, we can use the
+                // "saturated" properties from the outset...
                 return oilPvt_->saturatedDensity(regionIdx, T, p);
+            else if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
+                    // here comes the relatively expensive case: first calculate and then
+                    // interpolate between the saturated and undersaturated quantities to
+                    // avoid a discontinuity
+                    const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
+                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                    const auto& rhoSat = oilPvt_->saturatedDensity(regionIdx, T, p);
+                    const auto& rhoUndersat = oilPvt_->density(regionIdx, T, p, Rs);
+                    return alpha*rhoSat + (1.0 - alpha)*rhoUndersat;
+                }
+
+                return oilPvt_->saturatedDensity(regionIdx, T, p);
+            }
             else {
                 // undersaturated gas
                 const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
@@ -386,8 +404,24 @@ public:
             }
         }
         case gasPhaseIdx: {
-            if (fluidState.saturation(oilPhaseIdx) > 0.0)
+            if (!enableVaporizedOil())
+                // if the gas phase is immiscible with the oil component, we can use the
+                // saturated properties from the outset...
                 return gasPvt_->saturatedDensity(regionIdx, T, p);
+            else if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
+                    // here comes the relatively expensive case: first calculate and then
+                    // interpolate between the saturated and undersaturated quantities to
+                    // avoid a discontinuity
+                    const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                    const auto& rhoSat = gasPvt_->saturatedDensity(regionIdx, T, p);
+                    const auto& rhoUndersat = gasPvt_->density(regionIdx, T, p, Rv);
+                    return alpha*rhoSat + (1.0 - alpha)*rhoUndersat;
+                }
+
+                return gasPvt_->saturatedDensity(regionIdx, T, p);
+            }
             else {
                 // undersaturated oil
                 const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
@@ -524,14 +558,29 @@ public:
             case gasCompIdx:
                 return phi_gG;
 
-            // for the oil component, we calculate the Rv value for saturated oil,
-            // convert that to a mole fraction and convert that to the corresponding
-            // fugacity coefficient
+            // for the oil component, we calculate the Rv value for saturated gas and Rs
+            // for saturated oil, and compute the fugacity coefficients at the
+            // equilibrium. for this, we assume that in equilibrium the fugacities of the
+            // oil component is the same in both phases.
             case oilCompIdx: {
+                if (!enableVaporizedOil())
+                    // if there's no vaporized oil, the gas phase is assumed to be
+                    // immiscible with the oil component
+                    return phi_gG*1e6;
+
                 const auto& R_vSat = gasPvt_->saturatedOilVaporizationFactor(regionIdx, T, p);
                 const auto& X_gOSat = convertRvToXgO(R_vSat, regionIdx);
                 const auto& x_gOSat = convertXgOToxgO(X_gOSat, regionIdx);
-                return phi_oO / x_gOSat;
+
+                const auto& R_sSat = oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p);
+                const auto& X_oGSat = convertRsToXoG(R_sSat, regionIdx);
+                const auto& x_oGSat = convertXoGToxoG(X_oGSat, regionIdx);
+                const auto& x_oOSat = 1.0 - x_oGSat;
+
+                const auto& p_o = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(oilPhaseIdx));
+                const auto& p_g = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(gasPhaseIdx));
+
+                return phi_oO*p_o*x_oOSat / (p_g*x_gOSat);
             }
 
             case waterCompIdx:
@@ -551,10 +600,24 @@ public:
             // for the oil and water components, we proceed analogous to the gas and
             // water components in the gas phase
             case gasCompIdx: {
+                if (!enableDissolvedGas())
+                    // if there's no dissolved gas, the oil phase is assumed to be
+                    // immiscible with the gas component
+                    return phi_oO*1e6;
+
+                const auto& R_vSat = gasPvt_->saturatedOilVaporizationFactor(regionIdx, T, p);
+                const auto& X_gOSat = convertRvToXgO(R_vSat, regionIdx);
+                const auto& x_gOSat = convertXgOToxgO(X_gOSat, regionIdx);
+                const auto& x_gGSat = 1.0 - x_gOSat;
+
                 const auto& R_sSat = oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p);
                 const auto& X_oGSat = convertRsToXoG(R_sSat, regionIdx);
                 const auto& x_oGSat = convertXoGToxoG(X_oGSat, regionIdx);
-                return phi_gG / x_oGSat;
+
+                const auto& p_o = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(oilPhaseIdx));
+                const auto& p_g = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(gasPhaseIdx));
+
+                return phi_gG*p_g*x_gGSat / (p_o*x_oGSat);
             }
 
             case waterCompIdx:
@@ -605,27 +668,59 @@ public:
 
         switch (phaseIdx) {
         case oilPhaseIdx:
-            if (fluidState.saturation(gasPhaseIdx) > 0.0)
+            if (!enableDissolvedGas())
+                // if the oil phase is immiscible with the gas component, we can use the
+                // "saturated" properties from the outset...
                 return oilPvt_->saturatedViscosity(regionIdx, T, p);
+            else if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
+                    // here comes the relatively expensive case: first calculate and then
+                    // interpolate between the saturated and undersaturated quantities to
+                    // avoid a discontinuity
+                    const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
+                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                    const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
+                    const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
+                    return alpha*muSat + (1.0 - alpha)*muUndersat;
+                }
+
+                return oilPvt_->saturatedViscosity(regionIdx, T, p);
+            }
             else {
                 // undersaturated oil
                 const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
                 return oilPvt_->viscosity(regionIdx, T, p, Rs);
             }
 
-        case waterPhaseIdx:
-            // since water is always assumed to be immiscible in the black-oil model,
-            // there is no "saturated water"
-            return waterPvt_->viscosity(regionIdx, T, p);
-
         case gasPhaseIdx:
-            if (fluidState.saturation(oilPhaseIdx) > 0.0)
+            if (!enableVaporizedOil())
+                // if the gas phase is immiscible with the oil component, we can use the
+                // saturated properties from the outset...
                 return gasPvt_->saturatedViscosity(regionIdx, T, p);
+            else if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
+                    // here comes the relatively expensive case: first calculate and then
+                    // interpolate between the saturated and undersaturated quantities to
+                    // avoid a discontinuity
+                    const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                    const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
+                    const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
+                    return alpha*muSat + (1.0 - alpha)*muUndersat;
+                }
+
+                return gasPvt_->saturatedViscosity(regionIdx, T, p);
+            }
             else {
                 // undersaturated gas
                 const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
                 return gasPvt_->viscosity(regionIdx, T, p, Rv);
             }
+
+        case waterPhaseIdx:
+            // since water is always assumed to be immiscible in the black-oil model,
+            // there is no "saturated water"
+            return waterPvt_->viscosity(regionIdx, T, p);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
