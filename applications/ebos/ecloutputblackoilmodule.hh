@@ -165,6 +165,7 @@ public:
 
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto &fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
+            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             unsigned regionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
             Scalar po = Toolbox::value(fs.pressure(oilPhaseIdx));
@@ -186,22 +187,22 @@ public:
             }
             if (gasDissolutionFactorOutput_()) {
                 gasDissolutionFactor_[globalDofIdx] =
-                    FluidSystem::gasDissolutionFactor(To, po, regionIdx);
+                    FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, regionIdx);
                 Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (gasFormationVolumeFactorOutput_()) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::gasFormationVolumeFactor(To, po, XgO, regionIdx);
+                    FluidSystem::template formationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, regionIdx);
                 Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
             if (saturatedOilFormationVolumeFactorOutput_()) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::saturatedOilFormationVolumeFactor(To, po, regionIdx);
+                    FluidSystem::template saturatedFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, regionIdx);
                 Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
-                    FluidSystem::oilSaturationPressure(To, XoG, regionIdx);
+                    FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, regionIdx);
                 Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
             }
         }

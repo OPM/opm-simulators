@@ -105,11 +105,6 @@ public:
                             simulator.problem().gravity()[dimWorld - 1],
                             opmBlackoilState);
 
-        const Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-        const Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-        const Scalar MG = FluidSystem::molarMass(gasCompIdx);
-        const Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numElems);
         for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
@@ -140,7 +135,6 @@ public:
             Scalar po = opmBlackoilState.pressure()[elemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
-            Scalar pg = fluidState.pressure(gasPhaseIdx);
 
             // reset the phase compositions
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -155,15 +149,14 @@ public:
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
                 Scalar Rs = opmBlackoilState.gasoilratio()[elemIdx];
+                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
 
-                // dissolved gas surface volume to mass fraction
-                Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
-                // mass fraction to mole fraction
-                Scalar xoG = XoG*MO / (MG*(1 - XoG) + XoG*MO);
+                if (Rs > RsSat)
+                    Rs = RsSat;
 
-                Scalar xoGMax = FluidSystem::saturatedOilGasMoleFraction(T, pg, regionIdx);
-                if (fluidState.saturation(gasPhaseIdx) > 0.0 || xoG > xoGMax)
-                    xoG = xoGMax;
+                // convert the Rs factor to mole fraction dissolved gas in oil
+                Scalar XoG = FluidSystem::convertRsToXoG(Rs, regionIdx);
+                Scalar xoG = FluidSystem::convertXoGToxoG(XoG, regionIdx);
 
                 fluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1 - xoG);
                 fluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
@@ -172,15 +165,14 @@ public:
             // retrieve the surface volume of vaporized gas
             if (gridManager.deck()->hasKeyword("VAPOIL")) {
                 Scalar Rv = opmBlackoilState.rv()[elemIdx];
+                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 
-                // vaporized oil surface volume to mass fraction
-                Scalar XgO = Rv/(rhogRef/rhooRef + Rv);
-                // mass fraction to mole fraction
-                Scalar xgO = XgO*MG / (MO*(1 - XgO) + XgO*MG);
+                if (Rv > RvSat)
+                    Rv = RvSat;
 
-                Scalar xgOMax = FluidSystem::saturatedGasOilMoleFraction(T, pg, regionIdx);
-                if (fluidState.saturation(oilPhaseIdx) > 0.0 || xgO > xgOMax)
-                    xgO = xgOMax;
+                // convert the Rs factor to mole fraction dissolved gas in oil
+                Scalar XgO = FluidSystem::convertRvToXgO(Rv, regionIdx);
+                Scalar xgO = FluidSystem::convertXgOToxgO(XgO, regionIdx);
 
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);

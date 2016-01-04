@@ -948,6 +948,7 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
 
+            int pvtRegionIdx = pvtRegionIndex(dofIdx);
             size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
@@ -968,7 +969,7 @@ private:
             dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
                                         gasSaturationData[cartesianDofIdx]);
             dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                        1
+                                        1.0
                                         - waterSaturationData[cartesianDofIdx]
                                         - gasSaturationData[cartesianDofIdx]);
 
@@ -986,7 +987,6 @@ private:
             Valgrind::CheckDefined(pc);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-            Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
 
             //////
             // set compositions
@@ -1003,17 +1003,7 @@ private:
             dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
 
             if (enableDisgas) {
-                // set the composition of the oil phase:
-                //
-                // first, retrieve the relevant black-oil parameters from
-                // the fluid system.
-                //
-                // note that we use the gas pressure here. this is because the primary
-                // varibles and the intensive quantities of the black oil model also do
-                // this...
-                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature,
-                                                                 gasPressure,
-                                                                 /*regionIdx=*/0);
+                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, oilPhaseIdx, pvtRegionIdx);
                 Scalar RsReal = (*rsData)[cartesianDofIdx];
 
                 if (RsReal > RsSat) {
@@ -1024,36 +1014,21 @@ private:
                               << "         amount which can be dissolved in oil"
                               << " (R_s,max=" << RsSat << ")"
                               << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Ignoring.\n";
+                              << " Using maximimum.\n";
                     RsReal = RsSat;
                 }
 
-                // calculate composition of the real and the saturated oil phase in terms of
-                // mass fractions.
-                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-                Scalar XoGReal = RsReal/(RsReal + rhooRef/rhogRef);
-
-                // convert mass to mole fractions
-                Scalar MG = FluidSystem::molarMass(gasCompIdx);
-                Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
-                Scalar xoGReal = XoGReal * MO / ((MO - MG) * XoGReal + MG);
-                Scalar xoOReal = 1 - xoGReal;
+                // calculate the initial oil phase composition in terms of mole fractions
+                Scalar XoGReal = FluidSystem::convertRsToXoG(RsReal, pvtRegionIdx);
+                Scalar xoGReal = FluidSystem::convertXoGToxoG(XoGReal, pvtRegionIdx);
 
                 // finally, set the oil-phase composition
                 dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
-                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoOReal);
+                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0 - xoGReal);
             }
 
             if (enableVapoil) {
-                // set the composition of the gas phase:
-                //
-                // first, retrieve the relevant black-gas parameters from
-                // the fluid system.
-                Scalar RvSat = FluidSystem::oilVaporizationFactor(temperature,
-                                                                  gasPressure,
-                                                                  /*regionIdx=*/0);
+                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, gasPhaseIdx, pvtRegionIdx);
                 Scalar RvReal = (*rvData)[cartesianDofIdx];
 
                 if (RvReal > RvSat) {
@@ -1064,26 +1039,17 @@ private:
                               << "         amount which can be dissolved in gas"
                               << " (R_v,max=" << RvSat << ")"
                               << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Ignoring.\n";
+                              << " Using maximimum.\n";
                     RvReal = RvSat;
                 }
 
-                // calculate composition of the real and the saturated gas phase in terms of
-                // mass fractions.
-                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-                Scalar XgOReal = RvReal/(RvReal + rhogRef/rhooRef);
-
-                // convert mass to mole fractions
-                Scalar MG = FluidSystem::molarMass(gasCompIdx);
-                Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
-                Scalar xgOReal = XgOReal * MG / ((MG - MO) * XgOReal + MO);
-                Scalar xgGReal = 1 - xgOReal;
+                // calculate the initial gas phase composition in terms of mole fractions
+                Scalar XgOReal = FluidSystem::convertRvToXgO(RvReal, pvtRegionIdx);
+                Scalar xgOReal = FluidSystem::convertXgOToxgO(XgOReal, pvtRegionIdx);
 
                 // finally, set the gas-phase composition
                 dofFluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgOReal);
-                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, xgGReal);
+                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0 - xgOReal);
             }
         }
     }
