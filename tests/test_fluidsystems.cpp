@@ -93,10 +93,15 @@ void ensureBlackoilApi()
         Evaluation XoG;
         OPM_UNUSED Evaluation dummy;
 
+        // some additional typedefs
+        typedef typename FluidSystem::OilPvt OilPvt;
+        typedef typename FluidSystem::GasPvt GasPvt;
+        typedef typename FluidSystem::WaterPvt WaterPvt;
+
         // check the non-parser initialization
-        std::shared_ptr<typename FluidSystem::GasPvt> gasPvt;
-        std::shared_ptr<typename FluidSystem::OilPvt> oilPvt;
-        std::shared_ptr<typename FluidSystem::WaterPvt> waterPvt;
+        std::shared_ptr<OilPvt> oilPvt;
+        std::shared_ptr<GasPvt> gasPvt;
+        std::shared_ptr<WaterPvt> waterPvt;
 
         unsigned numPvtRegions = 2;
         FluidSystem::initBegin(numPvtRegions);
@@ -138,6 +143,10 @@ void ensureBlackoilApi()
         dummy = FluidSystem::waterDensity(temperature, pressure, /*regionIdx=*/0);
         dummy = FluidSystem::convertXoGToRs(XoG, /*regionIdx=*/0);
         dummy = FluidSystem::convertXgOToRv(XgO, /*regionIdx=*/0);
+        dummy = FluidSystem::convertXoGToxoG(XoG, /*regionIdx=*/0);
+        dummy = FluidSystem::convertXgOToxgO(XgO, /*regionIdx=*/0);
+        dummy = FluidSystem::convertRsToXoG(Rs, /*regionIdx=*/0);
+        dummy = FluidSystem::convertRvToXgO(Rv, /*regionIdx=*/0);
     }
 }
 
