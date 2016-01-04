@@ -150,8 +150,7 @@ public:
 
         if (tolerance <= 0)
             tolerance = std::min<Scalar>(1e-5,
-                                         Opm::geometricMean(Scalar(1.0),
-                                                            1e5*std::numeric_limits<Scalar>::epsilon()));
+                                         1e8*std::numeric_limits<Scalar>::epsilon());
 
         /////////////////////////
         // Newton method
@@ -360,7 +359,7 @@ protected:
 
             // deviate the mole fraction of the i-th component
             const Evaluation& x_i = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7/(quantityWeight_(fluidState, pvIdx));
+            const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e8/(quantityWeight_(fluidState, pvIdx));
 
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, x_i + eps);
 
@@ -721,7 +720,7 @@ protected:
     {
         // first pressure
         if (pvIdx < 1)
-            return 1/1e5;
+            return 1/1e6;
         // first M - 1 saturations
         else if (pvIdx < numPhases)
             return 1.0;
