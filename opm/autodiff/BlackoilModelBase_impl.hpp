@@ -376,7 +376,8 @@ namespace detail {
         const int num_nnc = geo_.nnc().numNNC();
         const int num_connections = num_faces + num_nnc;
         if (int(threshold_pressures.size()) != num_connections) {
-            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures input, must be equal to number of faces + nncs.");
+            OPM_THROW(std::runtime_error, "Illegal size of threshold_pressures input ( " << threshold_pressures.size()
+                      << " ), must be equal to number of faces + nncs ( " << num_faces << " + " << num_nnc << " ).");
         }
         use_threshold_pressure_ = true;
         // Map to interior faces.
