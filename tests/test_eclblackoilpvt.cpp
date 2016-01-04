@@ -147,15 +147,9 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = waterPvt.density(/*regionIdx=*/0,
                                temperature,
                                pressure);
-        tmp = waterPvt.fugacityCoefficientOil(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-        tmp = waterPvt.fugacityCoefficientGas(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-        tmp = waterPvt.fugacityCoefficientWater(/*regionIdx=*/0,
-                                                temperature,
-                                                pressure);
+        tmp = waterPvt.formationVolumeFactor(/*regionIdx=*/0,
+                                             temperature,
+                                             pressure);
 
         /////
         // oil PVT API
@@ -181,21 +175,12 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = oilPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
                                                     temperature,
                                                     pressure);
-        tmp = oilPvt.saturatedGasMassFraction(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-        tmp = oilPvt.saturatedGasMoleFraction(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-        tmp = oilPvt.fugacityCoefficientOil(/*regionIdx=*/0,
-                                            temperature,
-                                            pressure);
-        tmp = oilPvt.fugacityCoefficientGas(/*regionIdx=*/0,
-                                            temperature,
-                                            pressure);
-        tmp = oilPvt.fugacityCoefficientWater(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
+        tmp = oilPvt.saturationPressure(/*regionIdx=*/0,
+                                        temperature,
+                                        Rs);
+        tmp = oilPvt.saturatedGasDissolutionFactor(/*regionIdx=*/0,
+                                                   temperature,
+                                                   pressure);
 
         /////
         // gas PVT API
@@ -208,6 +193,10 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
                              temperature,
                              pressure,
                              Rv);
+        tmp = gasPvt.formationVolumeFactor(/*regionIdx=*/0,
+                                           temperature,
+                                           pressure,
+                                           Rv);
         tmp = gasPvt.saturatedViscosity(/*regionIdx=*/0,
                                         temperature,
                                         pressure);
@@ -217,26 +206,12 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = gasPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
                                                     temperature,
                                                     pressure);
-        tmp = gasPvt.formationVolumeFactor(/*regionIdx=*/0,
-                                           temperature,
-                                           pressure,
-                                           Rv);
-        tmp = gasPvt.saturatedOilMassFraction(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-        tmp = gasPvt.saturatedOilMoleFraction(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
-
-        tmp = gasPvt.fugacityCoefficientOil(/*regionIdx=*/0,
-                                            temperature,
-                                            pressure);
-        tmp = gasPvt.fugacityCoefficientGas(/*regionIdx=*/0,
-                                            temperature,
-                                            pressure);
-        tmp = gasPvt.fugacityCoefficientWater(/*regionIdx=*/0,
-                                              temperature,
-                                              pressure);
+        tmp = gasPvt.saturationPressure(/*regionIdx=*/0,
+                                        temperature,
+                                        Rv);
+        tmp = gasPvt.saturatedOilVaporizationFactor(/*regionIdx=*/0,
+                                                    temperature,
+                                                    pressure);
     }
 }
 
@@ -319,8 +294,8 @@ int main()
     oilPvt.initFromDeck(deck, eclState);
     waterPvt.initFromDeck(deck, eclState);
 
-    gasPvt.initEnd(&oilPvt);
-    oilPvt.initEnd(&gasPvt);
+    gasPvt.initEnd();
+    oilPvt.initEnd();
     waterPvt.initEnd();
 
     struct Foo;

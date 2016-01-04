@@ -131,8 +131,8 @@ public:
         waterPvt_ = std::make_shared<WaterPvt>();
         waterPvt_->initFromDeck(deck, eclState);
 
-        gasPvt_->initEnd(oilPvt_.get());
-        oilPvt_->initEnd(gasPvt_.get());
+        gasPvt_->initEnd();
+        oilPvt_->initEnd();
         waterPvt_->initEnd();
 
         initEnd();
@@ -351,10 +351,84 @@ public:
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
         unsigned regionIdx = paramCache.regionIndex();
 
+        // for the fugacity coefficient of the oil component in the oil phase, we use
+        // some pseudo-realistic value for the vapor pressure to ease physical
+        // interpretation of the results
+        const LhsEval phi_oO = 20e3/p;
+
+        // for the gas component in the gas phase, assume it to be an ideal gas
+        const Scalar phi_gG = 1.0;
+
+        // for the fugacity coefficient of the water component in the water phase, we use
+        // the same approach as for the oil component in the oil phase
+        const LhsEval phi_wW = 30e3/p;
+
         switch (phaseIdx) {
-        case waterPhaseIdx: return fugCoefficientInWater<LhsEval>(compIdx, T, p, regionIdx);
-        case gasPhaseIdx: return fugCoefficientInGas<LhsEval>(compIdx, T, p, regionIdx);
-        case oilPhaseIdx: return fugCoefficientInOil<LhsEval>(compIdx, T, p, regionIdx);
+        case gasPhaseIdx: // fugacity coefficients for all components in the gas phase
+            switch (compIdx) {
+            case gasCompIdx:
+                return phi_gG;
+
+            // for the oil component, we calculate the Rv value for saturated oil,
+            // convert that to a mole fraction and convert that to the corresponding
+            // fugacity coefficient
+            case oilCompIdx: {
+                const auto& R_vSat = gasPvt_->saturatedOilVaporizationFactor(regionIdx, T, p);
+                const auto& X_gOSat = convertRvToXgO(R_vSat, regionIdx);
+                const auto& x_gOSat = convertXgOToxgO(X_gOSat, regionIdx);
+                return phi_oO / x_gOSat;
+            }
+
+            case waterCompIdx:
+                // the water component is assumed to be never miscible with the gas phase
+                return phi_gG*1e6;
+
+            default:
+                OPM_THROW(std::logic_error,
+                          "Invalid component index " << compIdx);
+            }
+
+        case oilPhaseIdx: // fugacity coefficients for all components in the oil phase
+            switch (compIdx) {
+            case oilCompIdx:
+                return phi_oO;
+
+            // for the oil and water components, we proceed analogous to the gas and
+            // water components in the gas phase
+            case gasCompIdx: {
+                const auto& R_sSat = oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p);
+                const auto& X_oGSat = convertRsToXoG(R_sSat, regionIdx);
+                const auto& x_oGSat = convertXoGToxoG(X_oGSat, regionIdx);
+                return phi_gG / x_oGSat;
+            }
+
+            case waterCompIdx:
+                return phi_oO*1e6;
+
+            default:
+                OPM_THROW(std::logic_error,
+                          "Invalid component index " << compIdx);
+            }
+
+        case waterPhaseIdx: // fugacity coefficients for all components in the water phase
+            // the water phase fugacity coefficients are pretty simple: because the water
+            // phase is assumed to consist entirely from the water component, we just
+            // need to make sure that the fugacity coefficients for the other components
+            // are a few orders of magnitude larger than the one of the water
+            // component. (i.e., the affinity of the gas and oil components to the water
+            // phase is lower by a few orders of magnitude)
+            switch (compIdx) {
+            case waterCompIdx: return phi_wW;
+            case oilCompIdx: return 1.1e6*phi_wW;
+            case gasCompIdx: return 1e6*phi_wW;
+            default:
+                OPM_THROW(std::logic_error,
+                          "Invalid component index " << compIdx);
+            }
+
+        default:
+            OPM_THROW(std::logic_error,
+                      "Invalid phase index " << phaseIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase or component index");
@@ -466,7 +540,7 @@ public:
     static LhsEval gasDissolutionFactor(const LhsEval& temperature,
                                         const LhsEval& pressure,
                                         unsigned regionIdx)
-    { return oilPvt_->gasDissolutionFactor(regionIdx, temperature, pressure); }
+    { return oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the oil vaporization factor \f$R_v\f$ for a given pressure
@@ -477,91 +551,7 @@ public:
     static LhsEval oilVaporizationFactor(const LhsEval& temperature,
                                          const LhsEval& pressure,
                                          unsigned regionIdx)
-    { return gasPvt_->oilVaporizationFactor(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the fugacity coefficient of a given component in the water phase
-     *
-     * \param compIdx The index of the component of interest
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval fugCoefficientInWater(unsigned compIdx,
-                                         const LhsEval& temperature,
-                                         const LhsEval& pressure,
-                                         unsigned regionIdx)
-    {
-        switch (compIdx) {
-        case gasCompIdx:
-            return waterPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
-
-        case oilCompIdx:
-            return waterPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
-
-        case waterCompIdx:
-            return waterPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
-
-        default:
-            OPM_THROW(std::logic_error,
-                      "Invalid component index " << compIdx);
-        }
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient of a given component in the gas phase
-     *
-     * \param compIdx The index of the component of interest
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval fugCoefficientInGas(unsigned compIdx,
-                                       const LhsEval& temperature,
-                                       const LhsEval& pressure,
-                                       unsigned regionIdx)
-    {
-        switch (compIdx) {
-        case gasCompIdx:
-            return gasPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
-
-        case oilCompIdx:
-            return gasPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
-
-        case waterCompIdx:
-            return gasPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
-
-        default:
-            OPM_THROW(std::logic_error,
-                      "Invalid component index " << compIdx);
-        }
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient of a given component in the oil phase
-     *
-     * \param compIdx The index of the component of interest
-     * \param pressure The pressure of interest [Pa]
-     */
-    template <class LhsEval>
-    static LhsEval fugCoefficientInOil(unsigned compIdx,
-                                       const LhsEval& temperature,
-                                       const LhsEval& pressure,
-                                       unsigned regionIdx)
-    {
-        switch (compIdx) {
-        case gasCompIdx:
-            return oilPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
-
-        case oilCompIdx:
-            return oilPvt_->fugacityCoefficientOil(regionIdx, temperature, pressure);
-
-        case waterCompIdx:
-            return oilPvt_->fugacityCoefficientWater(regionIdx, temperature, pressure);
-
-        default:
-            OPM_THROW(std::logic_error,
-                      "Invalid component index " << compIdx);
-        }
-    }
+    { return gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
@@ -582,20 +572,80 @@ public:
     static LhsEval saturatedOilGasMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return oilPvt_->saturatedGasMassFraction(regionIdx, temperature, pressure); }
+    {
+        const auto& Rs = oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
+        return convertRsToXoG(Rs, regionIdx);
+    }
 
     /*!
-     * \brief The maximum mole fraction of the gas component in the oil phase.
+     * \brief Convert an oil vaporization factor to the corresponding mass fraction
+     *        of the oil component in the gas phase.
      */
     template <class LhsEval>
     static LhsEval saturatedOilGasMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return oilPvt_->saturatedGasMoleFraction(regionIdx, temperature, pressure); }
+    {
+        const auto& Rs = oilPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
+        const auto& XoG = convertRsToXoG(Rs, regionIdx);
+        return convertXoGToxoG(XoG, regionIdx);
+    }
 
     /*!
-     * \brief Returns the saturation pressure of the oil phase [Pa] depending on its mass
-     *        fraction of the gas component
+     * \brief Convert a gas dissolution factor to the the corresponding mass fraction
+     *        of the gas component in the oil phase.
+     */
+    template <class LhsEval>
+    static LhsEval convertRsToXoG(const LhsEval& Rs, unsigned regionIdx)
+    {
+        Scalar rho_oRef = referenceDensity_[regionIdx][oilPhaseIdx];
+        Scalar rho_gRef = referenceDensity_[regionIdx][gasPhaseIdx];
+
+        const LhsEval& rho_oG = Rs*rho_gRef;
+        return rho_oG/(rho_oRef + rho_oG);
+    }
+
+    /*!
+     * \brief Convert an oil vaporization factor to the corresponding mass fraction
+     *        of the oil component in the gas phase.
+     */
+    template <class LhsEval>
+    static LhsEval convertRvToXgO(const LhsEval& Rv, unsigned regionIdx)
+    {
+        Scalar rho_oRef = referenceDensity_[regionIdx][oilPhaseIdx];
+        Scalar rho_gRef = referenceDensity_[regionIdx][gasPhaseIdx];
+
+        const LhsEval& rho_gO = Rv*rho_oRef;
+        return rho_gO/(rho_gRef + rho_gO);
+    }
+
+    /*!
+     * \brief Convert a gas mass fraction in the oil phase the corresponding mole fraction.
+     */
+    template <class LhsEval>
+    static LhsEval convertXoGToxoG(const LhsEval& XoG, unsigned regionIdx)
+    {
+        Scalar MG = molarMass(gasPhaseIdx, regionIdx);
+        Scalar MO = molarMass(oilPhaseIdx, regionIdx);
+
+        return XoG/(MO + XoG*(MO - MG));
+    }
+
+    /*!
+     * \brief Convert a oil mass fraction in the gas phase the corresponding mole fraction.
+     */
+    template <class LhsEval>
+    static LhsEval convertXgOToxgO(const LhsEval& XgO, unsigned regionIdx)
+    {
+        Scalar MG = molarMass(gasPhaseIdx, regionIdx);
+        Scalar MO = molarMass(oilPhaseIdx, regionIdx);
+
+        return XgO/(MG + XgO*(MG - MO));
+    }
+
+    /*!
+     * \brief Return a reference to the low-level object which calculates the gas phase
+     *        quantities.
      *
      * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
      */
@@ -603,7 +653,7 @@ public:
     static LhsEval gasSaturationPressure(const LhsEval& temperature,
                                          const LhsEval& Rv,
                                          unsigned regionIdx)
-    { return gasPvt_->gasSaturationPressure(regionIdx, temperature, Rv); }
+    { return gasPvt_->saturationPressure(regionIdx, temperature, Rv); }
 
     /*!
      * \brief The maximum mass fraction of the oil component in the gas phase.
@@ -612,7 +662,10 @@ public:
     static LhsEval saturatedGasOilMassFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return gasPvt_->saturatedOilMassFraction(regionIdx, temperature, pressure); }
+    {
+        const auto& Rv = gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure);
+        return convertRvToXgO(Rv, regionIdx);
+    }
 
     /*!
      * \brief The maximum mole fraction of the oil component in the gas phase.
@@ -621,7 +674,11 @@ public:
     static LhsEval saturatedGasOilMoleFraction(const LhsEval& temperature,
                                                const LhsEval& pressure,
                                                unsigned regionIdx)
-    { return gasPvt_->saturatedOilMoleFraction(regionIdx, temperature, pressure); }
+    {
+        const auto& Rv = gasPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure);
+        const auto& XgO = convertRvToXgO(Rv, regionIdx);
+        return convertXgOToxgO(XgO, regionIdx);
+    }
 
     /*!
      * \brief Return the normalized formation volume factor of (potentially)

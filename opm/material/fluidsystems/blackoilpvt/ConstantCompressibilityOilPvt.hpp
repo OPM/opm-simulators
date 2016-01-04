@@ -35,9 +35,6 @@
 #endif
 
 namespace Opm {
-template <class Scalar>
-class GasPvtMultiplexer;
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phase
  *        without dissolved gas and constant compressibility/"viscosibility".
@@ -45,8 +42,6 @@ class GasPvtMultiplexer;
 template <class Scalar>
 class ConstantCompressibilityOilPvt
 {
-    typedef Opm::GasPvtMultiplexer<Scalar> GasPvtMultiplexer;
-
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
@@ -116,15 +111,6 @@ public:
     { oilReferenceDensity_[regionIdx] = rhoRefOil; }
 
     /*!
-     * \brief Initialize the reference densities of all fluids for a given PVT region
-     */
-    void setMolarMasses(unsigned /*regionIdx*/,
-                        Scalar /*MOil*/,
-                        Scalar /*MGas*/,
-                        Scalar /*MWater*/)
-    { }
-
-    /*!
      * \brief Set the viscosity and "viscosibility" of the oil phase.
      */
     void setViscosity(unsigned regionIdx, Scalar muo, Scalar oilViscosibility = 0.0)
@@ -160,7 +146,7 @@ public:
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd(const GasPvtMultiplexer */*gasPvt*/)
+    void initEnd()
     { }
 
     template <class Evaluation>
@@ -245,47 +231,12 @@ public:
     }
 
     /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& pressure) const
-    {
-        // set the oil component fugacity coefficient in oil phase
-        // arbitrarily. we use some pseudo-realistic value for the vapor
-        // pressure to ease physical interpretation of the results
-        return 20e3/pressure;
-    }
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    {
-        // assume that the affinity of the water component to the oil phase is many orders
-        // of magnitude smaller than that of the oil component
-        return 1e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
-    }
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned regionIdx,
-                                      const Evaluation& temperature,
-                                      const Evaluation& pressure) const
-    {
-        // assume that the affinity of the gas component to the oil phase is many orders
-        // of magnitude smaller than that of the oil component
-        return 1.01e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
-    }
-
-    /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class Evaluation>
-    Evaluation gasDissolutionFactor(unsigned /*regionIdx*/,
-                                    const Evaluation& /*temperature*/,
-                                    const Evaluation& /*pressure*/) const
+    Evaluation saturatedGasDissolutionFactor(unsigned /*regionIdx*/,
+                                             const Evaluation& /*temperature*/,
+                                             const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
     /*!
@@ -299,18 +250,6 @@ public:
                                   const Evaluation& /*temperature*/,
                                   const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
-
-    template <class Evaluation>
-    Evaluation saturatedGasMassFraction(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
-    { return 0.0; /* this is dead oil! */ }
-
-    template <class Evaluation>
-    Evaluation saturatedGasMoleFraction(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
-    { return 0.0; /* this is dead oil! */ }
 
 private:
     std::vector<Scalar> oilReferenceDensity_;

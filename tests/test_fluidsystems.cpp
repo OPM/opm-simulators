@@ -122,9 +122,6 @@ void ensureBlackoilApi()
         dummy = FluidSystem::waterFormationVolumeFactor(temperature, pressure, /*regionIdx=*/0);
         dummy = FluidSystem::gasDissolutionFactor(temperature, pressure, /*regionIdx=*/0);
         dummy = FluidSystem::oilVaporizationFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInWater(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInGas(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInOil(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
         dummy = FluidSystem::oilSaturationPressure(temperature, Rs, /*regionIdx=*/0);
         dummy = FluidSystem::saturatedOilGasMassFraction(temperature, pressure, /*regionIdx=*/0);
         dummy = FluidSystem::saturatedOilGasMoleFraction(temperature, pressure, /*regionIdx=*/0);
