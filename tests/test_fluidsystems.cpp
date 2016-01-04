@@ -92,7 +92,7 @@ void ensureBlackoilApi()
         Evaluation XgO = 0.0;
         Evaluation Rs = 0.0;
         Evaluation Rv = 0.0;
-        OPM_UNUSED Evaluation dummy;
+        Evaluation dummy;
 
         // some additional typedefs
         typedef typename FluidSystem::OilPvt OilPvt;
@@ -156,6 +156,10 @@ void ensureBlackoilApi()
                 dummy = FluidSystem::fugacityCoefficient(fluidState, phaseIdx, compIdx,  /*regionIdx=*/0);
             }
         }
+
+        // prevent GCC from producing a "variable assigned but unused" warning
+        dummy = 2.0*dummy;
+
 
         // the "not considered safe to use directly" API
         const OPM_UNUSED OilPvt &oilPvt2 = FluidSystem::oilPvt();

@@ -150,7 +150,7 @@ public:
      */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
-                         const Evaluation& temperature,
+                         const Evaluation& /*temperature*/,
                          const Evaluation& pressure) const
     {
         // Eclipse calculates the viscosity in a weird way: it

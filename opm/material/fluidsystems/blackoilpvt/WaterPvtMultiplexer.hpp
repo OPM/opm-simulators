@@ -114,9 +114,9 @@ public:
                        const Evaluation& pressure) const
     { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); return 0; }
 
-    void setApproach(WaterPvtApproach approach)
+    void setApproach(WaterPvtApproach appr)
     {
-        switch (approach) {
+        switch (appr) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
             break;
@@ -125,7 +125,7 @@ public:
             OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
         }
 
-        approach_ = approach;
+        approach_ = appr;
     }
 
     /*!

@@ -125,7 +125,7 @@ public:
             invSatGasBMu.setXYContainers(saturatedTable->getPressureColumn(), invSatGasBMuArray);
 
             // make sure to have at least two sample points per gas pressure value
-            for (size_t xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
+            for (unsigned xIdx = 0; xIdx < invGasB.numX(); ++xIdx) {
                // a single sample point is definitely needed
                 assert(invGasB.numY(xIdx) > 0);
 
@@ -159,8 +159,8 @@ public:
     }
 
 private:
-    void extendPvtgTable_(int regionIdx,
-                          int xIdx,
+    void extendPvtgTable_(unsigned regionIdx,
+                          unsigned xIdx,
                           const PvtgInnerTable& curTable,
                           const PvtgInnerTable& masterTable)
     {

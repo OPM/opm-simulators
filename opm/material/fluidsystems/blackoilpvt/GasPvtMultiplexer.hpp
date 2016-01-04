@@ -111,9 +111,9 @@ public:
     }
 #endif // HAVE_OPM_PARSER
 
-    void setApproach(GasPvtApproach gasPvtApproach)
+    void setApproach(GasPvtApproach gasPvtAppr)
     {
-        switch (gasPvtApproach) {
+        switch (gasPvtAppr) {
         case DryGasPvt:
             realGasPvt_ = new Opm::DryGasPvt<Scalar>;
             break;
@@ -126,7 +126,7 @@ public:
             OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
         }
 
-        gasPvtApproach_ = gasPvtApproach;
+        gasPvtApproach_ = gasPvtAppr;
     }
 
     void initEnd()

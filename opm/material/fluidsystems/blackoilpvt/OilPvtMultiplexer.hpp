@@ -202,9 +202,9 @@ public:
                                      const Evaluation& Rs) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rs)); return 0; }
 
-    void setApproach(OilPvtApproach approach)
+    void setApproach(OilPvtApproach appr)
     {
-        switch (approach) {
+        switch (appr) {
         case ConstantCompressibilityOilPvt:
             realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>;
             break;
@@ -221,7 +221,7 @@ public:
             OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!");
         }
 
-        approach_ = approach;
+        approach_ = appr;
     }
 
     /*!

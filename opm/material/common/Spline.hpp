@@ -1196,16 +1196,16 @@ protected:
                                DestVector &destY,
                                const SourceVector &srcX,
                                const SourceVector &srcY,
-                               int numSamples)
+                               int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // copy sample points, make sure that the first x value is
         // smaller than the last one
-        for (int i = 0; i < numSamples; ++i) {
+        for (int i = 0; i < nSamples; ++i) {
             int idx = i;
-            if (srcX[0] > srcX[numSamples - 1])
-                idx = numSamples - i - 1;
+            if (srcX[0] > srcX[nSamples - 1])
+                idx = nSamples - i - 1;
             destX[i] = srcX[idx];
             destY[i] = srcY[idx];
         }
@@ -1216,9 +1216,9 @@ protected:
                               DestVector &destY,
                               const ListIterator &srcBegin,
                               const ListIterator &srcEnd,
-                              int numSamples)
+                              int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // find out wether the x values are in reverse order
         ListIterator it = srcBegin;
@@ -1232,7 +1232,7 @@ protected:
         for (int i = 0; it != srcEnd; ++i, ++it) {
             int idx = i;
             if (reverse)
-                idx = numSamples - i - 1;
+                idx = nSamples - i - 1;
             destX[i] = (*it)[0];
             destY[i] = (*it)[1];
         }
@@ -1250,9 +1250,9 @@ protected:
                               DestVector &destY,
                               ListIterator srcBegin,
                               ListIterator srcEnd,
-                              int numSamples)
+                              int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // copy sample points, make sure that the first x value is
         // smaller than the last one
@@ -1269,7 +1269,7 @@ protected:
         for (int i = 0; it != srcEnd; ++i, ++it) {
             int idx = i;
             if (reverse)
-                idx = numSamples - i - 1;
+                idx = nSamples - i - 1;
             destX[i] = std::get<0>(*it);
             destY[i] = std::get<1>(*it);
         }

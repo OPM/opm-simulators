@@ -210,7 +210,7 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& Rv) const
+                       const Evaluation& /*Rv*/) const
     { return saturatedDensity(regionIdx, temperature, pressure); }
 
     /*!

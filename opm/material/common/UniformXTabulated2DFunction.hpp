@@ -85,8 +85,8 @@ public:
     /*!
      * \brief Returns the value of a sampling point.
      */
-    Scalar valueAt(int i, int j) const
-    { return std::get<2>(samples_[static_cast<unsigned>(i)][static_cast<unsigned>(j)]); }
+    Scalar valueAt(size_t i, size_t j) const
+    { return std::get<2>(samples_[i][j]); }
 
     /*!
      * \brief Returns the number of sampling points in X direction.
@@ -228,15 +228,15 @@ public:
         const auto &col2SamplePoints = samples_.at(unsigned(i));
         Scalar alpha = i - int(i);
 
-        Scalar yMin =
+        Scalar minY =
                 alpha*std::get<1>(col1SamplePoints.front()) +
                 (1 - alpha)*std::get<1>(col2SamplePoints.front());
 
-        Scalar yMax =
+        Scalar maxY =
                 alpha*std::get<1>(col1SamplePoints.back()) +
                 (1 - alpha)*std::get<1>(col2SamplePoints.back());
 
-        return yMin <= y && y <= yMax;
+        return minY <= y && y <= maxY;
     }
     /*!
      * \brief Evaluate the function at a given (x,y) position.
@@ -259,7 +259,9 @@ public:
         // bi-linear interpolation: first, calculate the x and y indices in the lookup
         // table ...
         Evaluation alpha = xToI(x, extrapolate);
-        int i = std::max(0, std::min<int>(numX() - 2, Toolbox::value(alpha)));
+        size_t i =
+            static_cast<size_t>(std::max(0, std::min(static_cast<int>(numX() - 2),
+                                                     static_cast<int>(Toolbox::value(alpha)))));
         alpha -= i;
 
         Evaluation beta1;
@@ -268,9 +270,11 @@ public:
         beta1 = yToJ(i, y, extrapolate);
         beta2 = yToJ(i + 1, y, extrapolate);
 
-        int j1 = std::max(0, std::min<int>(numY(i) - 2, Toolbox::value(beta1)));
-        int j2 = std::max(0, std::min<int>(numY(i + 1) - 2, Toolbox::value(beta2)));
-
+        size_t j1 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i) - 2),
+                                                             static_cast<int>(Toolbox::value(beta1)))));
+        size_t j2 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i + 1) - 2),
+                                                             static_cast<int>(Toolbox::value(beta2)))));
+        
         beta1 -= j1;
         beta2 -= j2;
 

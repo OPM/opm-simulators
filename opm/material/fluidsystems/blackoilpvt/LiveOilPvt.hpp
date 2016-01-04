@@ -160,8 +160,8 @@ public:
     }
 
 private:
-    void extendPvtoTable_(int regionIdx,
-                          int xIdx,
+    void extendPvtoTable_(unsigned regionIdx,
+                          unsigned xIdx,
                           const PvtoInnerTable& curTable,
                           const PvtoInnerTable& masterTable)
     {
