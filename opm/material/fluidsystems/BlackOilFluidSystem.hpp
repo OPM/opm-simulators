@@ -44,8 +44,8 @@
 namespace Opm {
 namespace FluidSystems {
 /*!
- * \brief A fluid system which uses the black-oil parameters
- *        to calculate termodynamically meaningful quantities.
+ * \brief A fluid system which uses the black-oil model assumptions to calculate
+ *        termodynamically meaningful quantities.
  *
  * \tparam Scalar The type used for scalar floating point values
  */
@@ -67,6 +67,9 @@ public:
         /*!
          * \brief Return the index of the region which should be used to determine the
          *        thermodynamic properties
+         *
+         * This is only required because "oil" and "gas" are pseudo-components, i.e. for
+         * more comprehensive equations of state there would only be one "region".
          */
         unsigned regionIndex() const
         { return regionIdx_; }
@@ -74,6 +77,9 @@ public:
         /*!
          * \brief Set the index of the region which should be used to determine the
          *        thermodynamic properties
+         *
+         * This is only required because "oil" and "gas" are pseudo-components, i.e. for
+         * more comprehensive equations of state there would only be one "region".
          */
         void setRegionIndex(unsigned val)
         { regionIdx_ = val; }
@@ -83,25 +89,8 @@ public:
     };
 
     /****************************************
-     * Fluid phase parameters
+     * Initialization
      ****************************************/
-
-    //! \copydoc BaseFluidSystem::numPhases
-    static const int numPhases = 3;
-
-    //! Index of the water phase
-    static const int waterPhaseIdx = 0;
-    //! Index of the oil phase
-    static const int oilPhaseIdx = 1;
-    //! Index of the gas phase
-    static const int gasPhaseIdx = 2;
-
-    //! The pressure at the surface
-    static const Scalar surfacePressure;
-
-    //! The temperature at the surface
-    static const Scalar surfaceTemperature;
-
 #if HAVE_OPM_PARSER
     /*!
      * \brief Initialize the fluid system using an ECL deck object
@@ -235,6 +224,26 @@ public:
         }
     }
 
+    /****************************************
+     * Generic phase properties
+     ****************************************/
+
+    //! \copydoc BaseFluidSystem::numPhases
+    static const int numPhases = 3;
+
+    //! Index of the water phase
+    static const int waterPhaseIdx = 0;
+    //! Index of the oil phase
+    static const int oilPhaseIdx = 1;
+    //! Index of the gas phase
+    static const int gasPhaseIdx = 2;
+
+    //! The pressure at the surface
+    static const Scalar surfacePressure;
+
+    //! The temperature at the surface
+    static const Scalar surfaceTemperature;
+
     //! \copydoc BaseFluidSystem::phaseName
     static const char *phaseName(const unsigned phaseIdx)
     {
@@ -252,7 +261,7 @@ public:
     }
 
     /****************************************
-     * Generic component related parameters
+     * Generic component related properties
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
@@ -296,7 +305,7 @@ public:
 
 
     /****************************************
-     * black-oil specific parameters
+     * Black-oil specific properties
      ****************************************/
     /*!
      * \brief Returns the number of PVT regions which are considered.
@@ -333,7 +342,7 @@ public:
     { return referenceDensity_[regionIdx][phaseIdx]; }
 
     /****************************************
-     * thermodynamic relations (generic version, only isothermal)
+     * thermodynamic quantities (generic version, only isothermal)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
@@ -359,8 +368,8 @@ public:
 
 
     /****************************************
-     * thermodynamic relations (black-oil specific version: Note that the parameter cache
-     * is not used and the PVT region index is explicitly passed as an argument.)
+     * thermodynamic quantities (black-oil specific version: Note that the PVT region
+     * index is explicitly passed instead of a parameter cache object)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
@@ -784,7 +793,7 @@ public:
     }
 
     /****************************************
-     * auxiliary and convenience methods for the black-oil model
+     * Auxiliary and convenience methods for the black-oil model
      ****************************************/
     /*!
      * \brief Convert the mass fraction of the gas component in the oil phase to the
