@@ -525,12 +525,12 @@ namespace Opm{
              unscaledEpsInfo_[satnumIdx].print();
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                std::string msg = "Warning: Sgmax should not exceed 1-Swco.";
+                std::string msg = "Error: Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                 std::string msg = "Warning: Sgco should not exceed 1-Swmax.";
+                 std::string msg = "Error: Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
              }
@@ -563,7 +563,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     std::string msg = "Warning: Krow(sSomax) should equal Krog(Somax).";
+                     std::string msg = "Error: Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
                  }
@@ -571,12 +571,12 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                std::string msg = "Warning: Sowcr + Swcr should less than 1.";
+                std::string msg = "Error: Sowcr + Swcr should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                std::string msg = "Warning: Sogcr + Sgcr + Swco should less than 1.";
+                std::string msg = "Error: Sogcr + Sgcr + Swco should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
             }
@@ -619,14 +619,14 @@ namespace Opm{
             
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
-                std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
+                std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);01_02_NO_PC_CHECK_PC.DATA
             }
             
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
-                std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
+                std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
             }
@@ -634,13 +634,13 @@ namespace Opm{
             if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
                 if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
+                    std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR + SGCR + SWL exceed 1.0";
+                    std::string msg = "Error: For scaled endpoints input, cell" + cellIdx + " SOGCR + SGCR + SWL exceed 1.0";
                     messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                 }
