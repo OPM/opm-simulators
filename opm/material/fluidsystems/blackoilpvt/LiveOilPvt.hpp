@@ -96,16 +96,20 @@ public:
             assert(saturatedTable->numRows() > 1);
 
             auto& oilMu = oilMuTable_[regionIdx];
+            auto& satOilMu = saturatedOilMuTable_[regionIdx];
             auto& invOilB = inverseOilBTable_[regionIdx];
             auto& invSatOilB = inverseSaturatedOilBTable_[regionIdx];
             auto& gasDissolutionFac = gasDissolutionFactorTable_[regionIdx];
             std::vector<Scalar> invSatOilBArray;
+            std::vector<Scalar> satOilMuArray;
 
             // extract the table for the gas dissolution and the oil formation volume factors
             for (unsigned outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
                 Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
                 Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[outerIdx];
+                Scalar muoSat = saturatedTable->getOilViscosityColumn()[outerIdx];
 
+                satOilMuArray.push_back(muoSat);
                 invSatOilBArray.push_back(1.0/BoSat);
 
                 invOilB.appendXPos(Rs);
@@ -130,6 +134,8 @@ public:
             // dissolution factor of saturated oil
             invSatOilB.setXYContainers(saturatedTable->getPressureColumn(),
                                        invSatOilBArray);
+            satOilMu.setXYContainers(saturatedTable->getPressureColumn(),
+                                     satOilMuArray);
             gasDissolutionFac.setXYContainers(saturatedTable->getPressureColumn(),
                                               saturatedTable->getGasSolubilityColumn());
 
@@ -229,6 +235,7 @@ public:
         gasReferenceDensity_.resize(numRegions);
         inverseOilBTable_.resize(numRegions);
         inverseOilBMuTable_.resize(numRegions);
+        saturatedOilMuTable_.resize(numRegions);
         inverseSaturatedOilBTable_.resize(numRegions);
         inverseSaturatedOilBMuTable_.resize(numRegions);
         oilMuTable_.resize(numRegions);
@@ -705,6 +712,7 @@ private:
     std::vector<TabulatedTwoDFunction> inverseOilBTable_;
     std::vector<TabulatedTwoDFunction> oilMuTable_;
     std::vector<TabulatedTwoDFunction> inverseOilBMuTable_;
+    std::vector<TabulatedOneDFunction> saturatedOilMuTable_;
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBTable_;
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBMuTable_;
     std::vector<TabulatedOneDFunction> gasDissolutionFactorTable_;
