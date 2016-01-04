@@ -218,10 +218,10 @@ public:
         gasReferenceDensity_.resize(numRegions);
         inverseOilBTable_.resize(numRegions);
         inverseOilBMuTable_.resize(numRegions);
-        saturatedOilMuTable_.resize(numRegions);
         inverseSaturatedOilBTable_.resize(numRegions);
         inverseSaturatedOilBMuTable_.resize(numRegions);
         oilMuTable_.resize(numRegions);
+        saturatedOilMuTable_.resize(numRegions);
         saturatedGasDissolutionFactorTable_.resize(numRegions);
         saturationPressureSpline_.resize(numRegions);
     }
@@ -253,49 +253,29 @@ public:
      * represents the partial density of the oil component in the oil phase at a given
      * pressure. This method only requires the volume factor of gas-saturated oil (which
      * only depends on pressure) while the dependence on the gas mass fraction is
-     * guesstimated...
+     * guesstimated.
      */
     void setSaturatedOilFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
-        auto& invOilB = inverseOilBTable_[regionIdx];
-
-        auto &RsTable = saturatedGasDissolutionFactorTable_[regionIdx];
-
         Scalar T = 273.15 + 15.56; // [K]
-
-        Scalar RsMin = 0.0;
-        Scalar RsMax = RsTable.eval(saturatedGasDissolutionFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
-
-        Scalar poMin = samplePoints.front().first;
-        Scalar poMax = samplePoints.back().first;
-
-        size_t nRs = 20;
-        size_t nP = samplePoints.size()*2;
-
-        Spline oilFormationVolumeFactorSpline;
-        oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        auto& invOilB = inverseOilBTable_[regionIdx];
 
         updateSaturationPressureSpline_(regionIdx);
 
-        // calculate a table of estimated densities depending on pressure and gas mass
-        // fraction
-        for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
-            Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
+        // calculate a table of estimated densities of undersatured gas
+        for (size_t pIdx = 0; pIdx < samplePoints.size(); ++pIdx) {
+            Scalar p1 = std::get<0>(samplePoints[pIdx]);
+            Scalar p2 = p1 * 2.0;
+
+            Scalar Bo1 = std::get<1>(samplePoints[pIdx]);
+            Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
+            Scalar Bo2 = Bo1/(1.0 + (p2 - p1)*drhoo_dp);
+
+            Scalar Rs = saturatedGasDissolutionFactor(regionIdx, T, p1);
 
             invOilB.appendXPos(Rs);
-
-            for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
-                Scalar po = poMin + (poMax - poMin)*pIdx/nP;
-
-                Scalar poSat = saturationPressure(regionIdx, T, Rs);
-                Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
-                Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
-                Scalar rhoo = oilReferenceDensity_[regionIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
-
-                Scalar Bo = oilReferenceDensity_[regionIdx]/rhoo;
-
-                invOilB.appendSamplePoint(RsIdx, po, 1.0/Bo);
-            }
+            invOilB.appendSamplePoint(pIdx, p1, 1.0/Bo1);
+            invOilB.appendSamplePoint(pIdx, p2, 1.0/Bo2);
         }
     }
 
@@ -329,35 +309,28 @@ public:
      * requires the viscosity of gas-saturated oil (which only depends on pressure) while
      * there is assumed to be no dependence on the gas mass fraction...
      */
-    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints &samplePoints  )
+    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
-        auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
+        Scalar T = 273.15 + 15.56; // [K]
 
-        Scalar RsMin = 0.0;
-        Scalar RsMax = gasDissolutionFac.eval(saturatedGasDissolutionFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
+        // update the table for the saturated oil
+        saturatedOilMuTable_[regionIdx].setContainerOfTuples(samplePoints);
 
-        Scalar poMin = samplePoints.front().first;
-        Scalar poMax = samplePoints.back().first;
+        // calculate a table of estimated viscosities depending on pressure and gas mass
+        // fraction for untersaturated oil to make the other code happy
+        for (size_t pIdx = 0; pIdx < samplePoints.size(); ++pIdx) {
+            Scalar p1 = std::get<0>(samplePoints[pIdx]);
+            Scalar p2 = p1 * 2.0;
 
-        size_t nRs = 20;
-        size_t nP = samplePoints.size()*2;
+            // no pressure dependence of the viscosity
+            Scalar mu1 = std::get<1>(samplePoints[pIdx]);
+            Scalar mu2 = mu1;
 
-        Spline muoSpline;
-        muoSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
-
-        // calculate a table of estimated densities depending on pressure and gas mass
-        // fraction
-        for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
-            Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
+            Scalar Rs = saturatedGasDissolutionFactor(regionIdx, T, p1);
 
             oilMuTable_[regionIdx].appendXPos(Rs);
-
-            for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
-                Scalar po = poMin + (poMax - poMin)*pIdx/nP;
-                Scalar muo = muoSpline.eval(po, /*extrapolate=*/true);
-
-                oilMuTable_[regionIdx].appendSamplePoint(RsIdx, po, muo);
-            }
+            oilMuTable_[regionIdx].appendSamplePoint(pIdx, p1, mu1);
+            oilMuTable_[regionIdx].appendSamplePoint(pIdx, p2, mu2);
         }
     }
 
@@ -372,6 +345,7 @@ public:
             // calculate the table which stores the inverse of the product of the oil
             // formation volume factor and the oil viscosity
             const auto& oilMu = oilMuTable_[regionIdx];
+            const auto& satOilMu = saturatedOilMuTable_[regionIdx];
             const auto& invOilB = inverseOilBTable_[regionIdx];
             assert(oilMu.numX() == invOilB.numX());
 
@@ -399,7 +373,7 @@ public:
                 // (i.e., the one for the lowest pressure value)
                 satPressuresArray.push_back(oilMu.yAt(rsIdx, 0));
                 invSatOilBArray.push_back(invOilB.valueAt(rsIdx, 0));
-                invSatOilBMuArray.push_back(invOilBMu.valueAt(rsIdx, 0));
+                invSatOilBMuArray.push_back(invSatOilBArray.back()/satOilMu.valueAt(rsIdx));
             }
 
             invSatOilB.setXYContainers(satPressuresArray, invSatOilBArray);
