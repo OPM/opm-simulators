@@ -371,7 +371,6 @@ private:
         // critical water saturation
         for (size_t rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
             if (swofTable.getKrwColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
                 Swcr = swofTable.getSwColumn()[rowIdx - 1];
                 break;
             };
