@@ -26,9 +26,26 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
-#include <opm/material/localad/Evaluation.hpp>
+// make sure that the EBOS_USE_ALUGRID macro. using the preprocessor for this is slightly
+// hacky...
+#if EBOS_USE_ALUGRID
+//#define DISABLE_ALUGRID_SFC_ORDERING 1
+#if !HAVE_DUNE_ALUGRID || !DUNE_VERSION_NEWER(DUNE_ALUGRID, 2,4)
+#warning "ALUGrid was indicated to be used for the ECL black oil simulator, but this "
+#warning "requires the presence of dune-alugrid >= 2.4. Falling back to Dune::CpGrid"
+#undef EBOS_USE_ALUGRID
+#define EBOS_USE_ALUGRID 0
+#endif
+#else
+#define EBOS_USE_ALUGRID 0
+#endif
 
-#include "eclgridmanager.hh"
+#if EBOS_USE_ALUGRID
+#include "eclalugridmanager.hh"
+#else
+#include "eclpolyhedralgridmanager.hh"
+#include "eclcpgridmanager.hh"
+#endif
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
@@ -53,9 +70,6 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
-// for this simulator to make sense, dune-cornerpoint and opm-parser
-// must be available
-#include <dune/grid/CpGrid.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -73,7 +87,12 @@ template <class TypeTag>
 class EclProblem;
 
 namespace Properties {
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
+#if EBOS_USE_ALUGRID
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridManager, EclOutputBlackOil));
+#else
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridManager, EclOutputBlackOil));
+//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridManager, EclOutputBlackOil));
+#endif
 
 // Write all solutions for visualization, not just the ones for the
 // report steps...
@@ -841,6 +860,9 @@ private:
             readExplicitInitialCondition_();
         else
             readEquilInitialCondition_();
+
+        // release the memory of the EQUIL grid since it's no longer needed after this point
+        this->simulator().gridManager().releaseEquilGrid();
     }
 
     void readEquilInitialCondition_()
@@ -861,9 +883,6 @@ private:
             auto &elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
-
-        // release the equil grid pointer since it's no longer needed.
-        this->simulator().gridManager().releaseEquilGrid();
     }
 
     void readExplicitInitialCondition_()

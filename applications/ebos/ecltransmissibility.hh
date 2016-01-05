@@ -26,8 +26,6 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
-#include "eclgridmanager.hh"
-
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
