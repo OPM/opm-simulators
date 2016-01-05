@@ -242,9 +242,6 @@ struct EclEpsScalingPointsInfo
             extractUnscaledSwfn_(swfnTables.getTable<SwfnTable>(satRegionIdx));
             extractUnscaledSgfn_(sgfnTables.getTable<SgfnTable>(satRegionIdx));
             extractUnscaledSof3_(sof3Tables.getTable<Sof3Table>(satRegionIdx));
-
-            // some consistency requirement mandated by the ECL documentation
-            assert(std::abs(Sowu - (1 - swfnTables.getTable<SwfnTable>(satRegionIdx).getSwColumn().front())) < 1e-30);
         }
         else {
             throw std::domain_error("No valid saturation keyword family specified");
@@ -325,8 +322,6 @@ private:
         // minimum gas and oil-in-gas-oil saturation
         Sgl = 1.0 - slgofTable.getSlColumn().back();
         Sogl = slgofTable.getSlColumn().front();
-
-        assert(std::abs(Sgl) < 1e-10); // this is required in the documentation for SLGOF
 
         // maximum gas and oil-in-gas-oil saturation
         Sgu = 1.0 - slgofTable.getSlColumn().front();
