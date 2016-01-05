@@ -294,10 +294,11 @@ namespace Opm
                             if (rec[i].live_oil_table_index > 0) {
                                 if (rsvdTables.size() > 0 && size_t(rec[i].live_oil_table_index) <= rsvdTables.size()) { 
                                     const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
+                                    std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
+                                    std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
                                     rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
                                                                                            cell,
-                                                                                           rsvdTable.getDepthColumn(),
-                                                                                           rsvdTable.getRsColumn()));
+                                                                                           depthColumn , rsColumn));
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
                                 }
@@ -327,10 +328,13 @@ namespace Opm
                             if (rec[i].wet_gas_table_index > 0) {
                                 if (rvvdTables.size() > 0 && size_t(rec[i].wet_gas_table_index) <= rvvdTables.size()) { 
                                     const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
+                                    std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
+                                    std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
+
                                     rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props,
                                                                                            cell,
-                                                                                           rvvdTable.getDepthColumn(),
-                                                                                           rvvdTable.getRvColumn()));
+                                                                                           depthColumn , rvColumn));
+
                                 } else {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
                                 }
