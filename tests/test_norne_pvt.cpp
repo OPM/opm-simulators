@@ -76,7 +76,8 @@ void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
                               61, 61,
                               70, 70,
                               80, 80,
-                              100, 100, 100};
+                              100, 100 ,
+                              100};
 
 
     std::vector<double> P = {114, 148,
@@ -86,7 +87,7 @@ void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
                              194, 228,
                              214, 248,
                              234, 268,
-                             270 , 300, 330};
+                             270 };
 
 
     std::vector<double> mu_expected = {0.00106736588,   0.00113961037,
@@ -96,7 +97,7 @@ void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
                                        0.00072883113,   0.00076988665,
                                        0.00068250424,   0.00072040786,
                                        0.00062347677,   0.00064963306,
-                                       0.00065122911,   0.00409946846, 0.00472871311};
+                                       0.00065122911};
 
 
     std::vector<double> b_expected = {0.88421444595,   0.88893909117,
@@ -106,7 +107,7 @@ void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
                                       0.81904041272,   0.82404719615,
                                       0.80341044483,   0.80845950744,
                                       0.77131381726,   0.77661604334,
-                                      0.77691738473,   0.98268067196, 0.98617572121};
+                                      0.77691738473};
 
     {
         std::vector<int> tableIndex(P.size() , 0);
