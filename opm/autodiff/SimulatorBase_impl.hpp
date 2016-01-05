@@ -81,6 +81,12 @@ namespace Opm
     {
         WellState prev_well_state;
 
+
+		if (output_writer_.isRestart()) {
+			// This is a restart, populate WellState and ReservoirState state objects from restart file
+			output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid_, state, prev_well_state);
+		}
+
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
         double stime = 0.0;
@@ -143,6 +149,7 @@ namespace Opm
 
             // write simulation state at the report stage
             output_writer_.writeTimeStep( timer, state, well_state );
+
 
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());

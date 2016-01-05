@@ -30,6 +30,9 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BackupRestore.hpp>
 
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+
+
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -280,7 +283,12 @@ namespace Opm
             }
             // ECL output
             if ( eclWriter_ ) {
-                eclWriter_->writeTimeStep(timer, state, wellState, substep );
+                const auto initConfig = eclipseState_->getInitConfig();
+                if (initConfig->getRestartInitiated() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
+                    std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
+                } else {
+                    eclWriter_->writeTimeStep(timer, state, wellState, substep );
+                }
             }
 
             // write backup file
@@ -392,5 +400,11 @@ namespace Opm
         {
             std::cerr << "Warning: Couldn't open restore file '" << filename << "'" << std::endl;
         }
+    }
+
+
+    bool BlackoilOutputWriter::isRestart() const {
+        const auto initconfig = eclipseState_->getInitConfig();
+        return initconfig->getRestartInitiated();
     }
 }
