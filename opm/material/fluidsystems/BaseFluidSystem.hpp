@@ -39,10 +39,15 @@ namespace Opm {
  * \ingroup Fluidsystems
  * \brief The base class for all fluid systems.
  */
-template <class Scalar, class Implementation>
+template <class ScalarT, class Implementation>
 class BaseFluidSystem
 {
 public:
+    /*!
+     * \brief The type used for scalar quantities.
+     */
+    typedef ScalarT Scalar;
+
     /*!
      * \brief The type of the fluid system's parameter cache
      *

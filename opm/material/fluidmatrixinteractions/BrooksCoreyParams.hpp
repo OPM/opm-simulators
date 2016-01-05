@@ -56,8 +56,8 @@ public:
 #endif
     }
 
-    BrooksCoreyParams(Scalar entryPressure, Scalar lambda)
-        : entryPressure_(entryPressure), lambda_(lambda)
+    BrooksCoreyParams(Scalar ePressure, Scalar shapeParam)
+        : entryPressure_(ePressure), lambda_(shapeParam)
     {
         finalize();
     }

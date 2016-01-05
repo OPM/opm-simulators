@@ -39,10 +39,6 @@
 #include <vector>
 
 namespace Opm {
-
-template <class Scalar>
-class OilPvtMultiplexer;
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
@@ -50,7 +46,6 @@ class OilPvtMultiplexer;
 template <class Scalar>
 class DryGasPvt
 {
-    typedef Opm::OilPvtMultiplexer<Scalar> OilPvtMultiplexer;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
@@ -162,10 +157,8 @@ public:
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd(const OilPvtMultiplexer *oilPvt)
+    void initEnd()
     {
-        oilPvt_ = oilPvt;
-
         // calculate the final 2D functions which are used for interpolation.
         size_t numRegions = gasMu_.size();
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
@@ -217,7 +210,7 @@ public:
     Evaluation density(unsigned regionIdx,
                        const Evaluation& temperature,
                        const Evaluation& pressure,
-                       const Evaluation& Rv) const
+                       const Evaluation& /*Rv*/) const
     { return saturatedDensity(regionIdx, temperature, pressure); }
 
     /*!
@@ -253,74 +246,27 @@ public:
     { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& /*pressure*/) const
-    {
-        // make the gas component more affine to the gas phase than the other components
-        return 1.0;
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& /*pressure*/) const
-    { return 1.0e6; }
-
-    /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
-    { return 1.1e6; }
-
-    /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]
      *        depending on its mass fraction of the oil component
      *
      * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
      */
     template <class Evaluation>
-    Evaluation gasSaturationPressure(unsigned /*regionIdx*/,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& /*Rv*/) const
+    Evaluation saturationPressure(unsigned /*regionIdx*/,
+                                  const Evaluation& /*temperature*/,
+                                  const Evaluation& /*Rv*/) const
     { return 0.0; /* this is dry gas! */ }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class Evaluation>
-    Evaluation oilVaporizationFactor(unsigned /*regionIdx*/,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& /*pressure*/) const
-    { return 0.0; /* this is dry gas! */ }
-
-    template <class Evaluation>
-    Evaluation saturatedOilMassFraction(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
-    { return 0.0; /* this is dry gas! */ }
-
-    template <class Evaluation>
-    Evaluation saturatedOilMoleFraction(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& /*pressure*/) const
+    Evaluation saturatedOilVaporizationFactor(unsigned /*regionIdx*/,
+                                              const Evaluation& /*temperature*/,
+                                              const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
 
 private:
-    const OilPvtMultiplexer *oilPvt_;
-
     std::vector<Scalar> gasReferenceDensity_;
     std::vector<TabulatedOneDFunction> inverseGasB_;
     std::vector<TabulatedOneDFunction> gasMu_;

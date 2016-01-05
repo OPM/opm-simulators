@@ -33,13 +33,11 @@
 #include <opm/material/common/Spline.hpp>
 
 #if HAVE_OPM_PARSER
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
 namespace Opm {
-template <class Scalar>
-class GasPvtMultiplexer;
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phas
  *        with dissolved gas.
@@ -47,8 +45,6 @@ class GasPvtMultiplexer;
 template <class Scalar>
 class LiveOilPvt
 {
-    typedef Opm::GasPvtMultiplexer<Scalar> GasPvtMultiplexer;
-
     typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef Opm::Spline<Scalar> Spline;
@@ -75,17 +71,6 @@ public:
             Scalar rhoRefW = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
-
-            // determine the molar masses of the components
-            Scalar p = 1.01325e5; // surface pressure, [Pa]
-            Scalar T = 273.15 + 15.56; // surface temperature, [K]
-            Scalar MO = 175e-3; // [kg/mol]
-            Scalar MG = Opm::Constants<Scalar>::R*T*rhoRefG / p; // [kg/mol], consequence of the ideal gas law
-            Scalar MW = 18.0e-3; // [kg/mol]
-
-            // TODO (?): the molar mass of the components can possibly specified
-            // explicitly in the deck.
-            setMolarMasses(regionIdx, MO, MG, MW);
         }
 
         // initialize the internal table objects
@@ -96,16 +81,20 @@ public:
             assert(saturatedTable->numRows() > 1);
 
             auto& oilMu = oilMuTable_[regionIdx];
+            auto& satOilMu = saturatedOilMuTable_[regionIdx];
             auto& invOilB = inverseOilBTable_[regionIdx];
             auto& invSatOilB = inverseSaturatedOilBTable_[regionIdx];
-            auto& gasDissolutionFac = gasDissolutionFactorTable_[regionIdx];
+            auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
             std::vector<Scalar> invSatOilBArray;
+            std::vector<Scalar> satOilMuArray;
 
             // extract the table for the gas dissolution and the oil formation volume factors
             for (unsigned outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
                 Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
                 Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[outerIdx];
+                Scalar muoSat = saturatedTable->getOilViscosityColumn()[outerIdx];
 
+                satOilMuArray.push_back(muoSat);
                 invSatOilBArray.push_back(1.0/BoSat);
 
                 invOilB.appendXPos(Rs);
@@ -130,6 +119,8 @@ public:
             // dissolution factor of saturated oil
             invSatOilB.setXYContainers(saturatedTable->getPressureColumn(),
                                        invSatOilBArray);
+            satOilMu.setXYContainers(saturatedTable->getPressureColumn(),
+                                     satOilMuArray);
             gasDissolutionFac.setXYContainers(saturatedTable->getPressureColumn(),
                                               saturatedTable->getGasSolubilityColumn());
 
@@ -169,8 +160,8 @@ public:
     }
 
 private:
-    void extendPvtoTable_(int regionIdx,
-                          int xIdx,
+    void extendPvtoTable_(unsigned regionIdx,
+                          unsigned xIdx,
                           const PvtoInnerTable& curTable,
                           const PvtoInnerTable& masterTable)
     {
@@ -223,8 +214,6 @@ public:
 
     void setNumRegions(size_t numRegions)
     {
-        oilMolarMass_.resize(numRegions);
-        gasMolarMass_.resize(numRegions);
         oilReferenceDensity_.resize(numRegions);
         gasReferenceDensity_.resize(numRegions);
         inverseOilBTable_.resize(numRegions);
@@ -232,7 +221,8 @@ public:
         inverseSaturatedOilBTable_.resize(numRegions);
         inverseSaturatedOilBMuTable_.resize(numRegions);
         oilMuTable_.resize(numRegions);
-        gasDissolutionFactorTable_.resize(numRegions);
+        saturatedOilMuTable_.resize(numRegions);
+        saturatedGasDissolutionFactorTable_.resize(numRegions);
         saturationPressureSpline_.resize(numRegions);
     }
 
@@ -249,25 +239,12 @@ public:
     }
 
     /*!
-     * \brief Initialize the reference densities of all fluids for a given PVT region
-     */
-    void setMolarMasses(unsigned regionIdx,
-                        Scalar MOil,
-                        Scalar MGas,
-                        Scalar /*MWater*/)
-    {
-        oilMolarMass_[regionIdx] = MOil;
-        gasMolarMass_[regionIdx] = MGas;
-    }
-
-
-    /*!
      * \brief Initialize the function for the gas dissolution factor \f$R_s\f$
      *
      * \param samplePoints A container of (x,y) values.
      */
     void setSaturatedOilGasDissolutionFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
-    { gasDissolutionFactorTable_[regionIdx].setContainerOfTuples(samplePoints); }
+    { saturatedGasDissolutionFactorTable_[regionIdx].setContainerOfTuples(samplePoints); }
 
     /*!
      * \brief Initialize the function for the oil formation volume factor
@@ -276,49 +253,29 @@ public:
      * represents the partial density of the oil component in the oil phase at a given
      * pressure. This method only requires the volume factor of gas-saturated oil (which
      * only depends on pressure) while the dependence on the gas mass fraction is
-     * guesstimated...
+     * guesstimated.
      */
     void setSaturatedOilFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
-        auto& invOilB = inverseOilBTable_[regionIdx];
-
-        auto &RsTable = gasDissolutionFactorTable_[regionIdx];
-
         Scalar T = 273.15 + 15.56; // [K]
-
-        Scalar RsMin = 0.0;
-        Scalar RsMax = RsTable.eval(gasDissolutionFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
-
-        Scalar poMin = samplePoints.front().first;
-        Scalar poMax = samplePoints.back().first;
-
-        size_t nRs = 20;
-        size_t nP = samplePoints.size()*2;
-
-        Spline oilFormationVolumeFactorSpline;
-        oilFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        auto& invOilB = inverseOilBTable_[regionIdx];
 
         updateSaturationPressureSpline_(regionIdx);
 
-        // calculate a table of estimated densities depending on pressure and gas mass
-        // fraction
-        for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
-            Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
+        // calculate a table of estimated densities of undersatured gas
+        for (size_t pIdx = 0; pIdx < samplePoints.size(); ++pIdx) {
+            Scalar p1 = std::get<0>(samplePoints[pIdx]);
+            Scalar p2 = p1 * 2.0;
+
+            Scalar Bo1 = std::get<1>(samplePoints[pIdx]);
+            Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
+            Scalar Bo2 = Bo1/(1.0 + (p2 - p1)*drhoo_dp);
+
+            Scalar Rs = saturatedGasDissolutionFactor(regionIdx, T, p1);
 
             invOilB.appendXPos(Rs);
-
-            for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
-                Scalar po = poMin + (poMax - poMin)*pIdx/nP;
-
-                Scalar poSat = saturationPressure(regionIdx, T, Rs);
-                Scalar BoSat = oilFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
-                Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
-                Scalar rhoo = oilReferenceDensity_[regionIdx]/BoSat*(1 + drhoo_dp*(po - poSat));
-
-                Scalar Bo = oilReferenceDensity_[regionIdx]/rhoo;
-
-                invOilB.appendSamplePoint(RsIdx, po, 1.0/Bo);
-            }
+            invOilB.appendSamplePoint(pIdx, p1, 1.0/Bo1);
+            invOilB.appendSamplePoint(pIdx, p2, 1.0/Bo2);
         }
     }
 
@@ -352,51 +309,43 @@ public:
      * requires the viscosity of gas-saturated oil (which only depends on pressure) while
      * there is assumed to be no dependence on the gas mass fraction...
      */
-    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints &samplePoints  )
+    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints &samplePoints)
     {
-        auto& gasDissolutionFac = gasDissolutionFactorTable_[regionIdx];
+        Scalar T = 273.15 + 15.56; // [K]
 
-        Scalar RsMin = 0.0;
-        Scalar RsMax = gasDissolutionFac.eval(gasDissolutionFactorTable_[regionIdx].xMax(), /*extrapolate=*/true);
+        // update the table for the saturated oil
+        saturatedOilMuTable_[regionIdx].setContainerOfTuples(samplePoints);
 
-        Scalar poMin = samplePoints.front().first;
-        Scalar poMax = samplePoints.back().first;
+        // calculate a table of estimated viscosities depending on pressure and gas mass
+        // fraction for untersaturated oil to make the other code happy
+        for (size_t pIdx = 0; pIdx < samplePoints.size(); ++pIdx) {
+            Scalar p1 = std::get<0>(samplePoints[pIdx]);
+            Scalar p2 = p1 * 2.0;
 
-        size_t nRs = 20;
-        size_t nP = samplePoints.size()*2;
+            // no pressure dependence of the viscosity
+            Scalar mu1 = std::get<1>(samplePoints[pIdx]);
+            Scalar mu2 = mu1;
 
-        Spline muoSpline;
-        muoSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
-
-        // calculate a table of estimated densities depending on pressure and gas mass
-        // fraction
-        for (size_t RsIdx = 0; RsIdx < nRs; ++RsIdx) {
-            Scalar Rs = RsMin + (RsMax - RsMin)*RsIdx/nRs;
+            Scalar Rs = saturatedGasDissolutionFactor(regionIdx, T, p1);
 
             oilMuTable_[regionIdx].appendXPos(Rs);
-
-            for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
-                Scalar po = poMin + (poMax - poMin)*pIdx/nP;
-                Scalar muo = muoSpline.eval(po, /*extrapolate=*/true);
-
-                oilMuTable_[regionIdx].appendSamplePoint(RsIdx, po, muo);
-            }
+            oilMuTable_[regionIdx].appendSamplePoint(pIdx, p1, mu1);
+            oilMuTable_[regionIdx].appendSamplePoint(pIdx, p2, mu2);
         }
     }
 
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd(const GasPvtMultiplexer *gasPvt)
+    void initEnd()
     {
-        gasPvt_ = gasPvt;
-
         // calculate the final 2D functions which are used for interpolation.
         size_t numRegions = oilMuTable_.size();
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             // calculate the table which stores the inverse of the product of the oil
             // formation volume factor and the oil viscosity
             const auto& oilMu = oilMuTable_[regionIdx];
+            const auto& satOilMu = saturatedOilMuTable_[regionIdx];
             const auto& invOilB = inverseOilBTable_[regionIdx];
             assert(oilMu.numX() == invOilB.numX());
 
@@ -424,7 +373,7 @@ public:
                 // (i.e., the one for the lowest pressure value)
                 satPressuresArray.push_back(oilMu.yAt(rsIdx, 0));
                 invSatOilBArray.push_back(invOilB.valueAt(rsIdx, 0));
-                invSatOilBMuArray.push_back(invOilBMu.valueAt(rsIdx, 0));
+                invSatOilBMuArray.push_back(invSatOilBArray.back()/satOilMu.valueAt(rsIdx));
             }
 
             invSatOilB.setXYContainers(satPressuresArray, invSatOilBArray);
@@ -513,7 +462,7 @@ public:
         // the oil formation volume factor just represents the partial density of the oil
         // component in the oil phase. to get the total density of the phase, we have to
         // add the partial density of the gas component.
-        const Evaluation& RsSat = gasDissolutionFactor(regionIdx, temperature, pressure);
+        const Evaluation& RsSat = saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
         rhoo += rhogRef*RsSat/Bo;
 
         return rhoo;
@@ -545,60 +494,13 @@ public:
     }
 
     /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& pressure) const
-    {
-        // set the oil component fugacity coefficient in oil phase
-        // arbitrarily. we use some pseudo-realistic value for the vapor
-        // pressure to ease physical interpretation of the results
-        return 20e3/pressure;
-    }
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    {
-        // assume that the affinity of the water component to the
-        // oil phase is one million times smaller than that of the
-        // oil component
-        return 1e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
-    }
-
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned regionIdx,
-                                      const Evaluation& temperature,
-                                      const Evaluation& pressure) const
-    {
-        /////////////
-        // the fugacity coefficient of the gas component:
-        //
-        // first, retrieve the mole fraction of gas a saturated oil
-        // would exhibit at the given pressure
-        const Evaluation& x_oGSat = saturatedGasMoleFraction(regionIdx, temperature, pressure);
-
-        // then, scale the gas component's gas phase fugacity
-        // coefficient, so that the oil phase ends up at the right
-        // composition if we were doing a flash experiment
-        const Evaluation& phi_gG = gasPvt_->fugacityCoefficientGas(regionIdx, temperature, pressure);
-
-        return phi_gG / x_oGSat;
-    }
-
-    /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class Evaluation>
-    Evaluation gasDissolutionFactor(unsigned regionIdx,
-                                    const Evaluation& /*temperature*/,
-                                    const Evaluation& pressure) const
-    { return gasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation saturatedGasDissolutionFactor(unsigned regionIdx,
+                                             const Evaluation& /*temperature*/,
+                                             const Evaluation& pressure) const
+    { return saturatedGasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
@@ -621,8 +523,8 @@ public:
         // value is good, this should only take two to three
         // iterations...
         for (int i = 0; i < 20; ++i) {
-            const Evaluation& f = gasDissolutionFactor(regionIdx, temperature, pSat) - Rs;
-            const Evaluation& fPrime = ((gasDissolutionFactor(regionIdx, temperature, pSat + eps) - Rs) - f)/eps;
+            const Evaluation& f = saturatedGasDissolutionFactor(regionIdx, temperature, pSat) - Rs;
+            const Evaluation& fPrime = ((saturatedGasDissolutionFactor(regionIdx, temperature, pSat + eps) - Rs) - f)/eps;
 
             const Evaluation& delta = f/fPrime;
             pSat -= delta;
@@ -635,46 +537,10 @@ public:
         OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^G = " << Rs);
     }
 
-    template <class Evaluation>
-    Evaluation saturatedGasMassFraction(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    {
-        Scalar rho_gRef = gasReferenceDensity_[regionIdx];
-        Scalar rho_oRef = oilReferenceDensity_[regionIdx];
-
-        // calculate the mass of the gas component [kg/m^3] in the oil phase. This is
-        // equivalent to the gas dissolution factor [m^3/m^3] at current pressure times
-        // the gas density [kg/m^3] at standard pressure
-        const Evaluation& rho_oG = gasDissolutionFactor(regionIdx, temperature, pressure) * rho_gRef;
-
-        // we now have the total density of saturated oil and the partial density of the
-        // gas component within it. The gas mass fraction is the ratio of these two.
-        return rho_oG/(rho_oRef + rho_oG);
-    }
-
-    template <class Evaluation>
-    Evaluation saturatedGasMoleFraction(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    {
-        // calculate the mass fractions of gas and oil
-        const Evaluation& XoG = saturatedGasMassFraction(regionIdx, temperature, pressure);
-        Valgrind::CheckDefined(XoG);
-
-        // which can be converted to mole fractions, given the
-        // components' molar masses
-        Scalar MG = gasMolarMass_[regionIdx];
-        Scalar MO = oilMolarMass_[regionIdx];
-
-        Evaluation avgMolarMass = MO/(1 + XoG*(MO/MG - 1));
-        return XoG*avgMolarMass/MG;
-    }
-
 private:
     void updateSaturationPressureSpline_(unsigned regionIdx)
     {
-        auto& gasDissolutionFac = gasDissolutionFactorTable_[regionIdx];
+        auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
 
         // create the spline representing saturation pressure
         // depending of the mass fraction in gas
@@ -685,9 +551,9 @@ private:
         Scalar Rs = 0;
         for (size_t i=0; i <= n; ++ i) {
             Scalar pSat = gasDissolutionFac.xMin() + i*delta;
-            Rs = gasDissolutionFactor(regionIdx,
-                                      /*temperature=*/Scalar(1e100),
-                                      pSat);
+            Rs = saturatedGasDissolutionFactor(regionIdx,
+                                               /*temperature=*/Scalar(1e100),
+                                               pSat);
 
             std::pair<Scalar, Scalar> val(Rs, pSat);
             pSatSamplePoints.push_back(val);
@@ -696,18 +562,15 @@ private:
                                                                   /*type=*/Spline::Monotonic);
     }
 
-    const GasPvtMultiplexer *gasPvt_;
-
-    std::vector<Scalar> gasMolarMass_;
-    std::vector<Scalar> oilMolarMass_;
     std::vector<Scalar> gasReferenceDensity_;
     std::vector<Scalar> oilReferenceDensity_;
     std::vector<TabulatedTwoDFunction> inverseOilBTable_;
     std::vector<TabulatedTwoDFunction> oilMuTable_;
     std::vector<TabulatedTwoDFunction> inverseOilBMuTable_;
+    std::vector<TabulatedOneDFunction> saturatedOilMuTable_;
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBTable_;
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBMuTable_;
-    std::vector<TabulatedOneDFunction> gasDissolutionFactorTable_;
+    std::vector<TabulatedOneDFunction> saturatedGasDissolutionFactorTable_;
     std::vector<Spline> saturationPressureSpline_;
 };
 

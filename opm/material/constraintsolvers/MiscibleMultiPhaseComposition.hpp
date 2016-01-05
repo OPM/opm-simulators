@@ -58,20 +58,20 @@ public:
     MMPCAuxConstraint()
     {}
 
-    MMPCAuxConstraint(unsigned phaseIdx, unsigned compIdx, Scalar value)
-        : phaseIdx_(phaseIdx)
-        , compIdx_(compIdx)
-        , value_(value)
+    MMPCAuxConstraint(unsigned phaseIndex, unsigned compIndex, Scalar val)
+        : phaseIdx_(phaseIndex)
+        , compIdx_(compIndex)
+        , value_(val)
     {}
 
     /*!
      * \brief Specify the auxiliary constraint.
      */
-    void set(unsigned phaseIdx, unsigned compIdx, Scalar value)
+    void set(unsigned phaseIndex, unsigned compIndex, Scalar val)
     {
-        phaseIdx_ = phaseIdx;
-        compIdx_ = compIdx;
-        value_ = value;
+        phaseIdx_ = phaseIndex;
+        compIdx_ = compIndex;
+        value_ = val;
     }
 
     /*!

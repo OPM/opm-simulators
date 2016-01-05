@@ -73,21 +73,21 @@ public:
     }
 
 protected:
-    PLScanningCurve(PLScanningCurve *prev,
-                    PLScanningCurve *next,
+    PLScanningCurve(PLScanningCurve *prevSC,
+                    PLScanningCurve *nextSC,
                     int loopN,
-                    Scalar Sw,
-                    Scalar pcnw,
-                    Scalar SwMic,
-                    Scalar SwMdc)
+                    Scalar SwReversal,
+                    Scalar pcnwReversal,
+                    Scalar SwMiCurve,
+                    Scalar SwMdCurve)
     {
-        prev_ = prev;
-        next_ = next;
+        prev_ = prevSC;
+        next_ = nextSC;
         loopNum_ = loopN;
-        Sw_ = Sw;
-        pcnw_ = pcnw;
-        SwMic_ = SwMic;
-        SwMdc_ = SwMdc;
+        Sw_ = SwReversal;
+        pcnw_ = pcnwReversal;
+        SwMic_ = SwMiCurve;
+        SwMdc_ = SwMdCurve;
     }
 
 public:
@@ -126,10 +126,10 @@ public:
      * curve already has a list of next curves, it is
      * deleted and thus forgotten.
      */
-    void setNext(Scalar Sw,
-                 Scalar pcnw,
-                 Scalar SwMic,
-                 Scalar SwMdc)
+    void setNext(Scalar SwReversal,
+                 Scalar pcnwReversal,
+                 Scalar SwMiCurve,
+                 Scalar SwMdCurve)
     {
         // if next_ is NULL, delete does nothing, so
         // this is valid!!
@@ -138,10 +138,10 @@ public:
         next_ = new PLScanningCurve(this, // prev
                                     NULL, // next
                                     loopNum() + 1,
-                                    Sw,
-                                    pcnw,
-                                    SwMic,
-                                    SwMdc);
+                                    SwReversal,
+                                    pcnwReversal,
+                                    SwMiCurve,
+                                    SwMdCurve);
     }
 
     /*!
@@ -150,20 +150,20 @@ public:
      *        whether Swei is part of the curve's
      *        domain and the curve thus applies to Swi.
      */
-    bool isValidAt_Sw(Scalar Sw)
+    bool isValidAt_Sw(Scalar SwReversal)
     {
         if (isImbib())
             // for inbibition the given saturation
             // must be between the start of the
             // current imbibition and the the start
             // of the last drainage
-            return this->Sw() < Sw && Sw < prev_->Sw();
+            return this->Sw() < SwReversal && SwReversal < prev_->Sw();
         else
             // for drainage the given saturation
             // must be between the start of the
             // last imbibition and the start
             // of the current drainage
-            return prev_->Sw() < Sw && Sw < this->Sw();
+            return prev_->Sw() < SwReversal && SwReversal < this->Sw();
     }
 
     /*!

@@ -85,18 +85,36 @@ void ensureBlackoilApi()
         FluidSystem::initFromDeck(deck, eclState);
 #endif
 
-        Evaluation temperature;
-        Evaluation pressure;
-        Evaluation Rv;
-        Evaluation Rs;
-        Evaluation XgO;
-        Evaluation XoG;
-        OPM_UNUSED Evaluation dummy;
+        typedef typename FluidSystem::Scalar Scalar;
+        typedef Opm::CompositionalFluidState<Evaluation, FluidSystem> FluidState;
+        FluidState fluidState;
+        Evaluation XoG = 0.0;
+        Evaluation XgO = 0.0;
+        Evaluation Rs = 0.0;
+        Evaluation Rv = 0.0;
+        Evaluation dummy;
+
+        // some additional typedefs
+        typedef typename FluidSystem::OilPvt OilPvt;
+        typedef typename FluidSystem::GasPvt GasPvt;
+        typedef typename FluidSystem::WaterPvt WaterPvt;
+
+        // check the black-oil specific enums
+        static_assert(FluidSystem::numPhases == 3, "");
+        static_assert(FluidSystem::numComponents == 3, "");
+
+        static_assert(0 <= FluidSystem::oilPhaseIdx && FluidSystem::oilPhaseIdx < 3, "");
+        static_assert(0 <= FluidSystem::gasPhaseIdx && FluidSystem::gasPhaseIdx < 3, "");
+        static_assert(0 <= FluidSystem::waterPhaseIdx && FluidSystem::waterPhaseIdx < 3, "");
+
+        static_assert(0 <= FluidSystem::oilCompIdx && FluidSystem::oilCompIdx < 3, "");
+        static_assert(0 <= FluidSystem::gasCompIdx && FluidSystem::gasCompIdx < 3, "");
+        static_assert(0 <= FluidSystem::waterCompIdx && FluidSystem::waterCompIdx < 3, "");
 
         // check the non-parser initialization
-        std::shared_ptr<typename FluidSystem::GasPvt> gasPvt;
-        std::shared_ptr<typename FluidSystem::OilPvt> oilPvt;
-        std::shared_ptr<typename FluidSystem::WaterPvt> waterPvt;
+        std::shared_ptr<OilPvt> oilPvt;
+        std::shared_ptr<GasPvt> gasPvt;
+        std::shared_ptr<WaterPvt> waterPvt;
 
         unsigned numPvtRegions = 2;
         FluidSystem::initBegin(numPvtRegions);
@@ -112,35 +130,41 @@ void ensureBlackoilApi()
         FluidSystem::initEnd();
 
         // the molarMass() method has an optional argument for the PVT region
-        FluidSystem::molarMass(FluidSystem::gasCompIdx, /*regionIdx=*/0);
-        FluidSystem::enableDissolvedGas();
-        FluidSystem::enableVaporizedOil();
-        FluidSystem::referenceDensity(/*phaseIdx=*/FluidSystem::oilPhaseIdx, /*regionIdx=*/0);
-
-        dummy = FluidSystem::saturatedOilFormationVolumeFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedGasFormationVolumeFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::waterFormationVolumeFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::gasDissolutionFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::oilVaporizationFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInWater(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInGas(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::fugCoefficientInOil(FluidSystem::gasCompIdx, temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::oilSaturationPressure(temperature, Rs, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedOilGasMassFraction(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedOilGasMoleFraction(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::gasSaturationPressure(temperature, Rv, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedGasOilMassFraction(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedGasOilMoleFraction(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::oilFormationVolumeFactor(temperature, pressure, Rs, /*regionIdx=*/0);
-        dummy = FluidSystem::oilDensity(temperature, pressure, Rs, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedOilDensity(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::gasFormationVolumeFactor(temperature, pressure, Rv, /*regionIdx=*/0);
-        dummy = FluidSystem::gasDensity(temperature, pressure, Rv, /*regionIdx=*/0);
-        dummy = FluidSystem::saturatedGasDensity(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::waterFormationVolumeFactor(temperature, pressure, /*regionIdx=*/0);
-        dummy = FluidSystem::waterDensity(temperature, pressure, /*regionIdx=*/0);
+        unsigned OPM_UNUSED numRegions = FluidSystem::numRegions();
+        Scalar OPM_UNUSED Mg = FluidSystem::molarMass(FluidSystem::gasCompIdx,
+                                                      /*regionIdx=*/0);
+        bool OPM_UNUSED b1 = FluidSystem::enableDissolvedGas();
+        bool OPM_UNUSED b2 = FluidSystem::enableVaporizedOil();
+        Scalar OPM_UNUSED rhoRefOil = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx,
+                                                                    /*regionIdx=*/0);
         dummy = FluidSystem::convertXoGToRs(XoG, /*regionIdx=*/0);
         dummy = FluidSystem::convertXgOToRv(XgO, /*regionIdx=*/0);
+        dummy = FluidSystem::convertXoGToxoG(XoG, /*regionIdx=*/0);
+        dummy = FluidSystem::convertXgOToxgO(XgO, /*regionIdx=*/0);
+        dummy = FluidSystem::convertRsToXoG(Rs, /*regionIdx=*/0);
+        dummy = FluidSystem::convertRvToXgO(Rv, /*regionIdx=*/0);
+
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
+            dummy = FluidSystem::density(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedDensity(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::formationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::viscosity(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedDissolutionFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturationPressure(fluidState, phaseIdx, /*regionIdx=*/0);
+            for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx) {
+                dummy = FluidSystem::fugacityCoefficient(fluidState, phaseIdx, compIdx,  /*regionIdx=*/0);
+            }
+        }
+
+        // prevent GCC from producing a "variable assigned but unused" warning
+        dummy = 2.0*dummy;
+
+
+        // the "not considered safe to use directly" API
+        const OPM_UNUSED OilPvt &oilPvt2 = FluidSystem::oilPvt();
+        const OPM_UNUSED GasPvt &gasPvt2 = FluidSystem::gasPvt();
+        const OPM_UNUSED WaterPvt &waterPvt2 = FluidSystem::waterPvt();
     }
 }
 

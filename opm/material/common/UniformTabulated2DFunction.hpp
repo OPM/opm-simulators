@@ -55,28 +55,28 @@ public:
       * \brief Constructor where the tabulation parameters are already
       *        provided.
       */
-    UniformTabulated2DFunction(Scalar xMin, Scalar xMax, unsigned m,
-                               Scalar yMin, Scalar yMax, unsigned n)
+    UniformTabulated2DFunction(Scalar minX, Scalar maxX, unsigned m,
+                               Scalar minY, Scalar maxY, unsigned n)
     {
-        resize(xMin, xMax, m, yMin, yMax, n);
+        resize(minX, maxX, m, minY, maxY, n);
     }
 
     /*!
      * \brief Resize the tabulation to a new range.
      */
-    void resize(Scalar xMin, Scalar xMax, unsigned m,
-                Scalar yMin, Scalar yMax, unsigned n)
+    void resize(Scalar minX, Scalar maxX, unsigned m,
+                Scalar minY, Scalar maxY, unsigned n)
     {
         samples_.resize(m*n);
 
         m_ = m;
         n_ = n;
 
-        xMin_ = xMin;
-        xMax_ = xMax;
+        xMin_ = minX;
+        xMax_ = maxX;
 
-        yMin_ = yMin;
-        yMax_ = yMax;
+        yMin_ = minY;
+        yMax_ = maxY;
     }
 
     /*!

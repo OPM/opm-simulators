@@ -34,7 +34,6 @@
 #include <vector>
 
 namespace Opm {
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the gas phase
  *        without vaporized oil.
@@ -151,7 +150,7 @@ public:
      */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
-                         const Evaluation& temperature,
+                         const Evaluation& /*temperature*/,
                          const Evaluation& pressure) const
     {
         // Eclipse calculates the viscosity in a weird way: it
@@ -196,60 +195,6 @@ public:
 
         // TODO (?): consider the salt concentration of the brine
         return BwRef/(1 + X*(1 + X/2));
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient [Pa] of the oil component in the water
-     *        phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& pressure) const
-    {
-        // set the affinity of the gas and oil components to the water phase to be 10
-        // orders of magnitude smaller than that of the water component. for this we use
-        // a pseudo-realistic vapor pressure of water as a starting point. (we just set
-        // it to 30 kPa to ease interpreting the results.)
-        const Scalar pvWater = 30e3;
-
-        return 1e10*pvWater / pressure;
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient [Pa] of the gas component in the water
-     *        phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& pressure) const
-    {
-        // set the affinity of the gas and oil components to the water phase to be 10
-        // orders of magnitude smaller than that of the water component. for this we use
-        // a pseudo-realistic vapor pressure of water as a starting point. (we just set
-        // it to 30 kPa to ease interpreting the results.)
-        const Scalar pvWater = 30e3;
-
-        return 1.01e10*pvWater / pressure;
-    }
-
-    /*!
-     * \brief Returns the fugacity coefficient [Pa] of the water component in the water
-     *        phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned /*regionIdx*/,
-                                        const Evaluation& /*temperature*/,
-                                        const Evaluation& pressure) const
-    {
-        // set the affinity of the gas and oil components to the water phase to be 10
-        // orders of magnitude smaller than that of the water component. for this we use
-        // a pseudo-realistic vapor pressure of water as a starting point. (we just set
-        // it to 30 kPa to ease interpreting the results.)
-        const Scalar pvWater = 30e3;
-
-        return pvWater / pressure;
     }
 
 private:

@@ -28,9 +28,9 @@
 #include "ConstantCompressibilityWaterPvt.hpp"
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
-    switch (waterPvtApproach_) {                                        \
+    switch (approach_) {                                                \
     case ConstantCompressibilityWaterPvt: {                             \
-        auto &pvtImpl = getRealWaterPvt<ConstantCompressibilityWaterPvt>(); \
+        auto &pvtImpl = getRealPvt<ConstantCompressibilityWaterPvt>();  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -54,14 +54,14 @@ public:
 
     WaterPvtMultiplexer()
     {
-        waterPvtApproach_ = NoWaterPvt;
+        approach_ = NoWaterPvt;
     }
 
     ~WaterPvtMultiplexer()
     {
-        switch (waterPvtApproach_) {
+        switch (approach_) {
         case ConstantCompressibilityWaterPvt: {
-            delete &getRealWaterPvt<ConstantCompressibilityWaterPvt>();
+            delete &getRealPvt<ConstantCompressibilityWaterPvt>();
             break;
         }
         case NoWaterPvt:
@@ -114,37 +114,9 @@ public:
                        const Evaluation& pressure) const
     { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); return 0; }
 
-    /*!
-     * \brief Returns the fugacity coefficient [-] of the oil component in the water phase given
-     *        a pressure and a temperature.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned regionIdx,
-                                      const Evaluation& temperature,
-                                      const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientOil(regionIdx, temperature, pressure)); return 0; }
-    /*!
-     * \brief Returns the fugacity coefficient [-] of the gas component in the water phase given
-     *        a pressure and a temperature.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned regionIdx,
-                                      const Evaluation& temperature,
-                                      const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientGas(regionIdx, temperature, pressure)); return 0; }
-    /*!
-     * \brief Returns the fugacity coefficient [-] of the water component in the water phase given
-     *        a pressure and a temperature.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.fugacityCoefficientWater(regionIdx, temperature, pressure)); return 0; }
-
-    void setApproach(WaterPvtApproach waterPvtApproach)
+    void setApproach(WaterPvtApproach appr)
     {
-        switch (waterPvtApproach) {
+        switch (appr) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
             break;
@@ -153,29 +125,34 @@ public:
             OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
         }
 
-        waterPvtApproach_ = waterPvtApproach;
+        approach_ = appr;
     }
 
-    WaterPvtApproach waterPvtApproach() const
-    { return waterPvtApproach_; }
+    /*!
+     * \brief Returns the concrete approach for calculating the PVT relations.
+     *
+     * (This is only determined at runtime.)
+     */
+    WaterPvtApproach approach() const
+    { return approach_; }
 
-    // get the parameter object for the dry water case
+    // get the concrete parameter object for the water phase
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilityWaterPvt, Opm::ConstantCompressibilityWaterPvt<Scalar> >::type& getRealWaterPvt()
+    typename std::enable_if<approachV == ConstantCompressibilityWaterPvt, Opm::ConstantCompressibilityWaterPvt<Scalar> >::type& getRealPvt()
     {
-        assert(waterPvtApproach() == approachV);
+        assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityWaterPvt<Scalar>* >(realWaterPvt_);
     }
 
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilityWaterPvt, const Opm::ConstantCompressibilityWaterPvt<Scalar> >::type& getRealWaterPvt() const
+    typename std::enable_if<approachV == ConstantCompressibilityWaterPvt, const Opm::ConstantCompressibilityWaterPvt<Scalar> >::type& getRealPvt() const
     {
-        assert(waterPvtApproach() == approachV);
+        assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityWaterPvt<Scalar>* >(realWaterPvt_);
     }
 
 private:
-    WaterPvtApproach waterPvtApproach_;
+    WaterPvtApproach approach_;
     void *realWaterPvt_;
 };
 

@@ -34,9 +34,6 @@
 #endif
 
 namespace Opm {
-template <class Scalar>
-class GasPvtMultiplexer;
-
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phase
  *        without dissolved gas.
@@ -44,8 +41,6 @@ class GasPvtMultiplexer;
 template <class Scalar>
 class DeadOilPvt
 {
-    typedef Opm::GasPvtMultiplexer<Scalar> GasPvtMultiplexer;
-
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
@@ -131,7 +126,7 @@ public:
     /*!
      * \brief Finish initializing the oil phase PVT properties.
      */
-    void initEnd(const GasPvtMultiplexer */*gasPvt*/)
+    void initEnd()
     {
         // calculate the final 2D functions which are used for interpolation.
         size_t numRegions = oilMu_.size();
@@ -228,47 +223,12 @@ public:
     { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
-     * \brief Returns the fugacity coefficient [Pa] of a component in the fluid phase given
-     *        a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation fugacityCoefficientOil(unsigned /*regionIdx*/,
-                                      const Evaluation& /*temperature*/,
-                                      const Evaluation& pressure) const
-    {
-        // set the oil component fugacity coefficient in oil phase
-        // arbitrarily. we use some pseudo-realistic value for the vapor
-        // pressure to ease physical interpretation of the results
-        return 20e3/pressure;
-    }
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientWater(unsigned regionIdx,
-                                        const Evaluation& temperature,
-                                        const Evaluation& pressure) const
-    {
-        // assume that the affinity of the water component to the
-        // oil phase is one million times smaller than that of the
-        // oil component
-        return 1e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
-    }
-
-    template <class Evaluation>
-    Evaluation fugacityCoefficientGas(unsigned regionIdx,
-                                      const Evaluation& temperature,
-                                      const Evaluation& pressure) const
-    {
-        // gas is immiscible with dead oil as well...
-        return 1.01e8*fugacityCoefficientOil(regionIdx, temperature, pressure);
-    }
-
-    /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
      */
     template <class Evaluation>
-    Evaluation gasDissolutionFactor(unsigned /*regionIdx*/,
-                                    const Evaluation& /*temperature*/,
-                                    const Evaluation& /*pressure*/) const
+    Evaluation saturatedGasDissolutionFactor(unsigned /*regionIdx*/,
+                                             const Evaluation& /*temperature*/,
+                                             const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
     /*!

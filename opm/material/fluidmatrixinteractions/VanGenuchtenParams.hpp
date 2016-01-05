@@ -53,10 +53,10 @@ public:
 #endif
     }
 
-    VanGenuchtenParams(Scalar vgAlpha, Scalar vgN)
+    VanGenuchtenParams(Scalar alphaParam, Scalar nParam)
     {
-        setVgAlpha(vgAlpha);
-        setVgN(vgN);
+        setVgAlpha(alphaParam);
+        setVgN(nParam);
         finalize();
     }
 

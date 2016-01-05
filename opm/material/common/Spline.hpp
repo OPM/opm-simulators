@@ -252,12 +252,6 @@ public:
     { this->setContainerOfPoints(points, m0, m1, sortInputs); }
 
     /*!
-     * \brief Returns the number of sampling points.
-     */
-    size_t numSamples() const
-    { return xPos_.size(); }
-
-    /*!
      * \brief Set the sampling points and the boundary slopes of the
      *        spline with two sampling points.
      *
@@ -717,29 +711,24 @@ public:
         return x_(0) <= x && x <= x_(numSamples() - 1);
     }
 
-    /*!
-     * \brief Return the x value of the leftmost sampling point.
-     */
-    Scalar xMin() const
-    { return x_(0); }
 
     /*!
-     * \brief Return the x value of the rightmost sampling point.
+     * \brief Return the number of (x, y) values.
      */
-    Scalar xMax() const
-    { return x_(numSamples() - 1); }
+    size_t numSamples() const
+    { return xPos_.size(); }
 
     /*!
-     * \brief Return the y value of the leftmost sampling point.
+     * \brief Return the x value of a given sampling point.
      */
-    Scalar yFirst() const
-    { return y_(0); }
+    Scalar xAt(int sampleIdx) const
+    { return x_(sampleIdx); }
 
     /*!
-     * \brief Return the y value of the rightmost sampling point.
+     * \brief Return the x value of a given sampling point.
      */
-    Scalar yLast() const
-    { return y_(numSamples() - 1); }
+    Scalar valueAt(int sampleIdx) const
+    { return y_(sampleIdx); }
 
     /*!
      * \brief Prints k tuples of the format (x, y, dx/dy, isMonotonic)
@@ -812,15 +801,15 @@ public:
 
         // handle extrapolation
         if (extrapolate) {
-            if (x < xMin()) {
-                Scalar m = evalDerivative_(xMin(), /*segmentIdx=*/0);
+            if (x < xAt(0)) {
+                Scalar m = evalDerivative_(xAt(0), /*segmentIdx=*/0);
                 Scalar y0 = y_(0);
-                return y0 + m*(x - xMin());
+                return y0 + m*(x - xAt(0));
             }
-            else if (x > xMax()) {
-                Scalar m = evalDerivative_(xMax(), /*segmentIdx=*/numSamples()-2);
+            else if (x > xAt(numSamples() - 1)) {
+                Scalar m = evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples()-2);
                 Scalar y0 = y_(numSamples() - 1);
-                return y0 + m*(x - xMax());
+                return y0 + m*(x - xAt(numSamples() - 1));
             }
         }
 
@@ -845,15 +834,15 @@ public:
 
         // handle extrapolation
         if (extrapolate) {
-            if (x.value < xMin()) {
-                Scalar m = evalDerivative_(xMin(), /*segmentIdx=*/0);
+            if (x.value < xAt(0)) {
+                Scalar m = evalDerivative_(xAt(0), /*segmentIdx=*/0);
                 Scalar y0 = y_(0);
-                return Evaluation::createConstant(y0 + m*(x.value - xMin()));
+                return Evaluation::createConstant(y0 + m*(x.value - xAt(0)));
             }
-            else if (x > xMax()) {
-                Scalar m = evalDerivative_(xMax(), /*segmentIdx=*/numSamples()-2);
+            else if (x > xAt(numSamples() - 1)) {
+                Scalar m = evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples()-2);
                 Scalar y0 = y_(numSamples() - 1);
-                return Evaluation::createConstant(y0 + m*(x.value - xMax()));
+                return Evaluation::createConstant(y0 + m*(x.value - xAt(numSamples() - 1)));
             }
         }
 
@@ -876,10 +865,10 @@ public:
     {
         assert(extrapolate || applies(x));
         if (extrapolate) {
-            if (x < xMin())
-                return evalDerivative_(xMin(), /*segmentIdx=*/0);
-            else if (x > xMax())
-                return evalDerivative_(xMax(), /*segmentIdx=*/numSamples() - 2);
+            if (x < xAt(0))
+                return evalDerivative_(xAt(0), /*segmentIdx=*/0);
+            else if (x > xAt(numSamples() - 1))
+                return evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples() - 2);
         }
 
         return evalDerivative_(x, segmentIdx_(x));
@@ -939,7 +928,7 @@ public:
                          const Evaluation& c,
                          const Evaluation& d) const
     {
-        return intersectInterval(xMin(), xMax(), a, b, c, d);
+        return intersectInterval(xAt(0), xAt(numSamples() - 1), a, b, c, d);
     }
 
     /*!
@@ -1000,12 +989,12 @@ public:
         assert(x0 < x1);
 
         int r = 3;
-        if (x0 < xMin()) {
+        if (x0 < xAt(0)) {
             assert(extrapolate);
-            Scalar m = evalDerivative_(xMin(), /*segmentIdx=*/0);
+            Scalar m = evalDerivative_(xAt(0), /*segmentIdx=*/0);
             if (std::abs(m) < 1e-20)
                 r = (m < 0)?-1:1;
-            x0 = xMin();
+            x0 = xAt(0);
         };
 
         size_t i = segmentIdx_(x0);
@@ -1033,10 +1022,10 @@ public:
         // if the user asked for a part of the spline which is
         // extrapolated, we need to check the slope at the spline's
         // endpoint
-        if (x1 > xMax()) {
+        if (x1 > xAt(numSamples() - 1)) {
             assert(extrapolate);
 
-            Scalar m = evalDerivative_(xMax(), /*segmentIdx=*/numSamples() - 2);
+            Scalar m = evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples() - 2);
             if (m < 0)
                 return (r < 0 || r==3)?-1:0;
             else if (m > 0)
@@ -1056,7 +1045,7 @@ public:
      *        spline as interval.
      */
     int monotonic() const
-    { return monotonic(xMin(), xMax()); }
+    { return monotonic(xAt(0), xAt(numSamples() - 1)); }
 
 protected:
     /*!
@@ -1207,16 +1196,16 @@ protected:
                                DestVector &destY,
                                const SourceVector &srcX,
                                const SourceVector &srcY,
-                               int numSamples)
+                               int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // copy sample points, make sure that the first x value is
         // smaller than the last one
-        for (int i = 0; i < numSamples; ++i) {
+        for (int i = 0; i < nSamples; ++i) {
             int idx = i;
-            if (srcX[0] > srcX[numSamples - 1])
-                idx = numSamples - i - 1;
+            if (srcX[0] > srcX[nSamples - 1])
+                idx = nSamples - i - 1;
             destX[i] = srcX[idx];
             destY[i] = srcY[idx];
         }
@@ -1227,9 +1216,9 @@ protected:
                               DestVector &destY,
                               const ListIterator &srcBegin,
                               const ListIterator &srcEnd,
-                              int numSamples)
+                              int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // find out wether the x values are in reverse order
         ListIterator it = srcBegin;
@@ -1243,7 +1232,7 @@ protected:
         for (int i = 0; it != srcEnd; ++i, ++it) {
             int idx = i;
             if (reverse)
-                idx = numSamples - i - 1;
+                idx = nSamples - i - 1;
             destX[i] = (*it)[0];
             destY[i] = (*it)[1];
         }
@@ -1261,9 +1250,9 @@ protected:
                               DestVector &destY,
                               ListIterator srcBegin,
                               ListIterator srcEnd,
-                              int numSamples)
+                              int nSamples)
     {
-        assert(numSamples >= 2);
+        assert(nSamples >= 2);
 
         // copy sample points, make sure that the first x value is
         // smaller than the last one
@@ -1280,7 +1269,7 @@ protected:
         for (int i = 0; it != srcEnd; ++i, ++it) {
             int idx = i;
             if (reverse)
-                idx = numSamples - i - 1;
+                idx = nSamples - i - 1;
             destX[i] = std::get<0>(*it);
             destY[i] = std::get<1>(*it);
         }

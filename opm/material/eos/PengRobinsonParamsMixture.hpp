@@ -108,13 +108,13 @@ public:
             Scalar tmp = 1 + f_omega*(1 - std::sqrt(Tr));
             tmp = tmp*tmp;
 
-            Scalar a = 0.4572355*RTc*RTc/pc * tmp;
-            Scalar b = 0.0777961 * RTc / pc;
-            assert(std::isfinite(a));
-            assert(std::isfinite(b));
+            Scalar newA = 0.4572355*RTc*RTc/pc * tmp;
+            Scalar newB = 0.0777961 * RTc / pc;
+            assert(std::isfinite(newA));
+            assert(std::isfinite(newB));
 
-            this->pureParams_[i].setA(a);
-            this->pureParams_[i].setB(b);
+            this->pureParams_[i].setA(newA);
+            this->pureParams_[i].setB(newB);
             Valgrind::CheckDefined(this->pureParams_[i].a());
             Valgrind::CheckDefined(this->pureParams_[i].b());
         }
@@ -141,8 +141,8 @@ public:
         //
         // See: R. Reid, et al.: The Properties of Gases and Liquids,
         // 4th edition, McGraw-Hill, 1987, p. 82
-        Scalar a = 0;
-        Scalar b = 0;
+        Scalar newA = 0;
+        Scalar newB = 0;
         for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
             Scalar xi = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compIIdx)));
             Valgrind::CheckDefined(xi);
@@ -152,19 +152,19 @@ public:
                 Valgrind::CheckDefined(xj);
 
                 // mixing rule from Reid, page 82
-                a +=  xi * xj * aCache_[compIIdx][compJIdx];
+                newA +=  xi * xj * aCache_[compIIdx][compJIdx];
 
-                assert(std::isfinite(a));
+                assert(std::isfinite(newA));
             }
 
             // mixing rule from Reid, page 82
-            b += std::max(0.0, xi) * this->pureParams_[compIIdx].b();
-            assert(std::isfinite(b));
+            newB += std::max(0.0, xi) * this->pureParams_[compIIdx].b();
+            assert(std::isfinite(newB));
         }
 
-        // assert(b > 0);
-        this->setA(a);
-        this->setB(b);
+        // assert(newB > 0);
+        this->setA(newA);
+        this->setB(newB);
 
         Valgrind::CheckDefined(this->a());
         Valgrind::CheckDefined(this->b());
