@@ -18,8 +18,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CARTESIANINDEXMAPPER_HEADER
-#define OPM_CARTESIANINDEXMAPPER_HEADER
+#ifndef EWOMS_ALU_CARTESIANINDEXMAPPER_HH
+#define EWOMS_ALU_CARTESIANINDEXMAPPER_HH
 
 #include <array>
 #include <cassert>
@@ -28,13 +28,13 @@
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
 
-namespace Dune
+namespace Ewoms
 {
     /** \brief Interface class to access the logical Cartesian grid as used in industry
                standard simulator decks.
                */
     template< class Grid >
-    class CartesianIndexMapper
+    class AluCartesianIndexMapper
     {
     public:
         // data handle for communicating global ids during load balance and communication
@@ -148,9 +148,9 @@ namespace Dune
         static const int dimension = Grid :: dimension ;
 
         /** \brief constructor taking grid */
-        CartesianIndexMapper( const Grid& grid,
-                              const std::array<int, dimension>& cartDims,
-                              const std::vector<int>& cartesianIndex )
+        AluCartesianIndexMapper( const Grid& grid,
+                                 const std::array<int, dimension>& cartDims,
+                                 const std::vector<int>& cartesianIndex )
             : grid_( grid ),
               cartesianDimensions_( cartDims ),
               cartesianIndex_( cartesianIndex ),
