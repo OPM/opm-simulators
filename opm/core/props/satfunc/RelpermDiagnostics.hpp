@@ -95,6 +95,8 @@ namespace Opm {
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
         std::vector<std::string> messages_;
+        ///Store scaled information.
+        std::vector<std::string> scaled_messages_;
 
         ///Use OpmLog
         std::shared_ptr<Opm::StreamLog> streamLog_;
