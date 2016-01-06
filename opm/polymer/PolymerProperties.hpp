@@ -147,14 +147,14 @@ namespace Opm
             const auto& plyviscTable = tables->getPlyviscTables().getTable<PlyviscTable>(0);
 
 
-            c_vals_visc_ = plyviscTable.getPolymerConcentrationColumn();
-            visc_mult_vals_ =  plyviscTable.getViscosityMultiplierColumn();
+            c_vals_visc_ = plyviscTable.getPolymerConcentrationColumn().vectorCopy( );
+            visc_mult_vals_ =  plyviscTable.getViscosityMultiplierColumn().vectorCopy( );
 
             // We assume NTSFUN=1
             const auto& plyadsTable = tables->getPlyadsTables().getTable<PlyadsTable>(0);
 
-            c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn();
-            ads_vals_ = plyadsTable.getAdsorbedPolymerColumn();
+            c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn().vectorCopy( );
+            ads_vals_ = plyadsTable.getAdsorbedPolymerColumn().vectorCopy( );
 
             has_plyshlog_ = deck->hasKeyword("PLYSHLOG");
             has_shrate_ = deck->hasKeyword("SHRATE");
@@ -163,8 +163,8 @@ namespace Opm
                 // Assuming NTPVT == 1 always
                 const auto& plyshlogTable = tables->getPlyshlogTables().getTable<PlyshlogTable>(0);
 
-                water_vel_vals_ = plyshlogTable.getWaterVelocityColumn();
-                shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn();
+                water_vel_vals_ = plyshlogTable.getWaterVelocityColumn().vectorCopy( );
+                shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn().vectorCopy( );
 
                 // do the unit version here for the water_vel_vals_
                 Opm::UnitSystem unitSystem = *deck->getActiveUnitSystem();

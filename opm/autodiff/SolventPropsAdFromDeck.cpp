@@ -68,21 +68,18 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                 const Opm::PvdsTable& pvdsTable = pvdsTables.getTable<PvdsTable>(regionIdx);
 
-                // Copy data
-                const std::vector<double>& press = pvdsTable.getPressureColumn();
-                const std::vector<double>& b = pvdsTable.getFormationFactorColumn();
-                const std::vector<double>& visc = pvdsTable.getViscosityColumn();
+                const auto& press = pvdsTable.getPressureColumn();
+                const auto& b = pvdsTable.getFormationFactorColumn();
+                const auto& visc = pvdsTable.getViscosityColumn();
 
                 const int sz = b.size();
+                std::vector<double> inverseBmu(sz);
                 std::vector<double> inverseB(sz);
                 for (int i = 0; i < sz; ++i) {
                     inverseB[i] = 1.0 / b[i];
-                }
-
-                std::vector<double> inverseBmu(sz);
-                for (int i = 0; i < sz; ++i) {
                     inverseBmu[i] = 1.0 / (b[i] * visc[i]);
                 }
+
 
                 b_[regionIdx] = NonuniformTableLinear<double>(press, inverseB);
                 viscosity_[regionIdx] = NonuniformTableLinear<double>(press, visc);
@@ -108,9 +105,9 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 const Opm::SsfnTable& ssfnTable = ssfnTables.getTable<SsfnTable>(regionIdx);
 
                 // Copy data
-                const std::vector<double>& solventFraction = ssfnTable.getSolventFractionColumn();
-                const std::vector<double>& krg = ssfnTable.getGasRelPermMultiplierColumn();
-                const std::vector<double>& krs = ssfnTable.getSolventRelPermMultiplierColumn();
+                const auto& solventFraction = ssfnTable.getSolventFractionColumn();
+                const auto& krg = ssfnTable.getGasRelPermMultiplierColumn();
+                const auto& krs = ssfnTable.getSolventRelPermMultiplierColumn();
 
                 krg_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krg);
                 krs_[regionIdx] = NonuniformTableLinear<double>(solventFraction, krs);
