@@ -832,6 +832,8 @@ private:
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
                 porosity_[dofIdx] *= multpvData[gridManager.cartesianIndex(dofIdx)];
         }
+
+        // the fluid-matrix interactions for ECL problems are dealt with by a separate class
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
             compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
