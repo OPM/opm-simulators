@@ -582,13 +582,13 @@ namespace Opm{
              //unscaledEpsInfo_[satnumIdx].print();
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                std::string msg = "Error:   Sgmax should not exceed 1-Swco.";
+                 std::string msg = "Error:   In region" + std::to_string(satnumIdx) + "Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                std::string msg = "Error:   Sgco should not exceed 1-Swmax.";
+                 std::string msg = "Error:   In region" + std::to_string(satnumIdx) + "Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -622,7 +622,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     std::string msg = "Error:   Krow(sSomax) should equal Krog(Somax).";
+                     std::string msg = "Error:   In region" + std::to_string(satnumIdx) + "Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
                      counter_.error += 1;
@@ -631,13 +631,13 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                std::string msg = "Error:   Sowcr + Swcr should less than 1.";
+                std::string msg = "Error:   In region" + std::to_string(satnumIdx) + "Sowcr + Swcr should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                std::string msg = "Error:   Sogcr + Sgcr + Swco should less than 1.";
+                std::string msg = "Error:   In rgion" + std::to_string(satnumIdx) + "Sogcr + Sgcr + Swco should less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
