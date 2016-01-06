@@ -116,12 +116,12 @@ SET_SCALAR_PROP(FingerBaseProblem, DomainSizeZ, 0.1);
 
 SET_SCALAR_PROP(FingerBaseProblem, InitialWaterSaturation, 0.01);
 
-SET_INT_PROP(FingerBaseProblem, CellsX, 10);
-SET_INT_PROP(FingerBaseProblem, CellsY, 35);
+SET_INT_PROP(FingerBaseProblem, CellsX, 20);
+SET_INT_PROP(FingerBaseProblem, CellsY, 70);
 SET_INT_PROP(FingerBaseProblem, CellsZ, 1);
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(FingerBaseProblem, EndTime, 10e3);
+SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
 
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
