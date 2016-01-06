@@ -26,8 +26,6 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
-#include "eclgridmanager.hh"
-
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -82,18 +80,18 @@ public:
         const auto& gridView = simulator_.gridView();
         const auto& problem = simulator_.problem();
 
-        int numElements = elementMapper.size();
+        unsigned numElements = elementMapper.size();
 
         // this code assumes that the DOFs are the elements. (i.e., an
         // ECFV spatial discretization with TPFA). if you try to use
         // it with something else, you're currently out of luck,
         // sorry!
-        assert((int) simulator_.model().numGridDof() == numElements);
+        assert(simulator_.model().numGridDof() == numElements);
 
         // calculate the axis specific centroids of all elements
         std::array<std::vector<DimVector>, dimWorld> axisCentroids;
 
-        for (int dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
             axisCentroids[dimIdx].resize(numElements);
 
         auto elemIt = gridView.template begin</*codim=*/ 0>();
@@ -101,9 +99,9 @@ public:
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            int elemIdx = elementMapper.index(elem);
+            unsigned elemIdx = elementMapper.index(elem);
 #else
-            int elemIdx = elementMapper.map(elem);
+            unsigned elemIdx = elementMapper.map(elem);
 #endif
 
             // get the geometry of the current element
@@ -111,7 +109,7 @@ public:
 
             // compute the axis specific "centroids" used for the
             // transmissibilities
-            for (int dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
+            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 DimVector x0Local(0.5);
                 DimVector x1Local(0.5);
 
@@ -172,11 +170,11 @@ public:
                 const auto& inside = intersection.inside();
                 const auto& outside = intersection.outside();
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                int insideElemIdx = elementMapper.index(inside);
-                int outsideElemIdx = elementMapper.index(outside);
+                unsigned insideElemIdx = elementMapper.index(inside);
+                unsigned outsideElemIdx = elementMapper.index(outside);
 #else
-                int insideElemIdx = elementMapper.map(*inside);
-                int outsideElemIdx = elementMapper.map(*outside);
+                unsigned insideElemIdx = elementMapper.map(*inside);
+                unsigned outsideElemIdx = elementMapper.map(*outside);
 #endif
 
                 // we only need to calculate a face's transmissibility
@@ -184,13 +182,13 @@ public:
                 if (insideElemIdx > outsideElemIdx)
                     continue;
 
-                int cartesianElemIdxInside = gridManager.cartesianCellId(insideElemIdx);
-                int cartesianElemIdxOutside = gridManager.cartesianCellId(outsideElemIdx);
+                unsigned cartesianElemIdxInside = gridManager.cartesianIndex(insideElemIdx);
+                unsigned cartesianElemIdxOutside = gridManager.cartesianIndex(outsideElemIdx);
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
-                int insideFaceIdx  = intersection.indexInInside();
-                int outsideFaceIdx = intersection.indexInOutside();
+                unsigned insideFaceIdx  = intersection.indexInInside();
+                unsigned outsideFaceIdx = intersection.indexInOutside();
 
                 Scalar halfTrans1;
                 Scalar halfTrans2;
@@ -262,15 +260,15 @@ public:
         }
     }
 
-    Scalar transmissibility(int elemIdx1, int elemIdx2) const
+    Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
 
 private:
-    std::uint64_t isId_(int elemIdx1, int elemIdx2) const
+    std::uint64_t isId_(unsigned elemIdx1, unsigned elemIdx2) const
     {
-        static const int elemIdxShift = 32; // bits
+        static const unsigned elemIdxShift = 32; // bits
 
-        int elemAIdx = std::min(elemIdx1, elemIdx2);
+        unsigned elemAIdx = std::min(elemIdx1, elemIdx2);
         std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
 
         return (elemBIdx<<elemIdxShift) + elemAIdx;
@@ -278,11 +276,11 @@ private:
 
     void computeHalfTrans_(Scalar& halfTrans,
                            const Intersection& is,
-                           int faceIdx, // in the reference element that contains the intersection
+                           unsigned faceIdx, // in the reference element that contains the intersection
                            const DimVector& distance,
                            const DimMatrix& perm) const
     {
-        int dimIdx = faceIdx/2;
+        unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
         halfTrans *= is.geometry().volume();
@@ -297,11 +295,11 @@ private:
     }
 
     DimVector distanceVector_(const Intersection& is,
-                              int faceIdx, // in the reference element that contains the intersection
-                              int elemIdx,
+                              unsigned faceIdx, // in the reference element that contains the intersection
+                              unsigned elemIdx,
                               const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const
     {
-        int dimIdx = faceIdx/2;
+        unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         DimVector x = is.geometry().center();
         x -= axisCentroids[dimIdx][elemIdx];
@@ -310,7 +308,7 @@ private:
     }
 
     template <class MultScalar>
-    void applyMultipliers_(Scalar &trans, int faceIdx, int elemIdx,
+    void applyMultipliers_(Scalar &trans, unsigned faceIdx, unsigned elemIdx,
                            const std::vector<MultScalar>& multx,
                            const std::vector<MultScalar>& multxMinus,
                            const std::vector<MultScalar>& multy,
@@ -346,7 +344,7 @@ private:
     }
 
     template <class NtgScalar>
-    void applyNtg_(Scalar &trans, int faceIdx, int elemIdx,
+    void applyNtg_(Scalar &trans, unsigned faceIdx, unsigned elemIdx,
                    const std::vector<NtgScalar>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the

@@ -58,12 +58,12 @@ public:
     { }
 
     template <bool prepareValues = true, bool prepareGradients = true>
-    void prepare(const ElementContext &elemCtx, int timeIdx)
+    void prepare(const ElementContext &elemCtx, unsigned timeIdx)
     { }
 
     template <class QuantityCallback, class QuantityType = Scalar>
     QuantityType calculateValue(const ElementContext &elemCtx,
-                                int fapIdx,
+                                unsigned fapIdx,
                                 const QuantityCallback &quantityCallback) const
     {
         OPM_THROW(std::logic_error,
@@ -73,7 +73,7 @@ public:
     template <class QuantityCallback>
     void calculateGradient(DimVector &quantityGrad,
                            const ElementContext &elemCtx,
-                           int fapIdx,
+                           unsigned fapIdx,
                            const QuantityCallback &quantityCallback) const
     {
         OPM_THROW(std::logic_error,
@@ -82,7 +82,7 @@ public:
 
     template <class QuantityCallback>
     Scalar calculateBoundaryValue(const ElementContext &elemCtx,
-                                  int fapIdx,
+                                  unsigned fapIdx,
                                   const QuantityCallback &quantityCallback)
     {
         OPM_THROW(std::logic_error,
@@ -92,7 +92,7 @@ public:
     template <class QuantityCallback>
     void calculateBoundaryGradient(DimVector &quantityGrad,
                                    const ElementContext &elemCtx,
-                                   int fapIdx,
+                                   unsigned fapIdx,
                                    const QuantityCallback &quantityCallback) const
     {
         OPM_THROW(std::logic_error,

@@ -76,7 +76,7 @@ public:
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
-        const auto& grid = gridManager.grid();
+        const auto& equilGrid   = gridManager.equilGrid();
 
         // create the data structures which are used by initStateEquil()
         Opm::parameter::ParameterGroup tmpParam;
@@ -84,43 +84,37 @@ public:
             gridManager.deck(),
             gridManager.eclState(),
             materialLawManager,
-            Opm::UgGridHelpers::numCells(grid),
-            Opm::UgGridHelpers::globalCell(grid),
-            Opm::UgGridHelpers::cartDims(grid),
-            Opm::UgGridHelpers::beginCellCentroids(grid),
-            Opm::UgGridHelpers::dimensions(grid),
+            Opm::UgGridHelpers::numCells(equilGrid),
+            Opm::UgGridHelpers::globalCell(equilGrid),
+            Opm::UgGridHelpers::cartDims(equilGrid),
             tmpParam);
 
+        const unsigned numElems = equilGrid.size(/*codim=*/0);
+        assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numElems) );
         // initialize the boiler plate of opm-core the state structure.
         Opm::BlackoilState opmBlackoilState;
-        opmBlackoilState.init(grid.size(/*codim=*/0),
+        opmBlackoilState.init(numElems,
                               /*numFaces=*/0, // we don't care here
                               numPhases);
 
         // do the actual computation.
-        Opm::initStateEquil(gridManager.grid(),
+        Opm::initStateEquil(equilGrid,
                             opmBlackoilProps,
                             gridManager.deck(),
                             gridManager.eclState(),
                             simulator.problem().gravity()[dimWorld - 1],
                             opmBlackoilState);
 
-        const Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-        const Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-        const Scalar MG = FluidSystem::molarMass(gasCompIdx);
-        const Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
         // copy the result into the array of initial fluid states
-        int numElems = gridManager.gridView().size(/*codim=*/0);
         initialFluidStates_.resize(numElems);
-        for (int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto &fluidState = initialFluidStates_[elemIdx];
 
             // get the PVT region index of the current element
-            int regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
+            unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
 
             // set the phase saturations
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar S = opmBlackoilState.saturation()[elemIdx*numPhases + phaseIdx];
                 fluidState.setSaturation(phaseIdx, S);
             }
@@ -135,17 +129,16 @@ public:
             // set the phase pressures. the Opm::BlackoilState only provides the oil
             // phase pressure, so we need to calculate the other phases' pressures
             // ourselfs.
-            Scalar pC[numPhases];
+            Dune::FieldVector< Scalar, numPhases >  pC( 0 );
             const auto& matParams = simulator.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             Scalar po = opmBlackoilState.pressure()[elemIdx];
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
-            Scalar pg = fluidState.pressure(gasPhaseIdx);
 
             // reset the phase compositions
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     fluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
 
             // the composition of the water phase is simple: it only consists of the
@@ -156,15 +149,14 @@ public:
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
                 Scalar Rs = opmBlackoilState.gasoilratio()[elemIdx];
+                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
 
-                // dissolved gas surface volume to mass fraction
-                Scalar XoG = Rs/(rhooRef/rhogRef + Rs);
-                // mass fraction to mole fraction
-                Scalar xoG = XoG*MO / (MG*(1 - XoG) + XoG*MO);
+                if (Rs > RsSat)
+                    Rs = RsSat;
 
-                Scalar xoGMax = FluidSystem::saturatedOilGasMoleFraction(T, pg, regionIdx);
-                if (fluidState.saturation(gasPhaseIdx) > 0.0 || xoG > xoGMax)
-                    xoG = xoGMax;
+                // convert the Rs factor to mole fraction dissolved gas in oil
+                Scalar XoG = FluidSystem::convertRsToXoG(Rs, regionIdx);
+                Scalar xoG = FluidSystem::convertXoGToxoG(XoG, regionIdx);
 
                 fluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1 - xoG);
                 fluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
@@ -173,15 +165,14 @@ public:
             // retrieve the surface volume of vaporized gas
             if (gridManager.deck()->hasKeyword("VAPOIL")) {
                 Scalar Rv = opmBlackoilState.rv()[elemIdx];
+                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 
-                // vaporized oil surface volume to mass fraction
-                Scalar XgO = Rv/(rhogRef/rhooRef + Rv);
-                // mass fraction to mole fraction
-                Scalar xgO = XgO*MG / (MO*(1 - XgO) + XgO*MG);
+                if (Rv > RvSat)
+                    Rv = RvSat;
 
-                Scalar xgOMax = FluidSystem::saturatedGasOilMoleFraction(T, pg, regionIdx);
-                if (fluidState.saturation(oilPhaseIdx) > 0.0 || xgO > xgOMax)
-                    xgO = xgOMax;
+                // convert the Rs factor to mole fraction dissolved gas in oil
+                Scalar XgO = FluidSystem::convertRvToXgO(Rv, regionIdx);
+                Scalar xgO = FluidSystem::convertXgOToxgO(XgO, regionIdx);
 
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
@@ -195,7 +186,7 @@ public:
      *
      * This is supposed to correspond to hydrostatic conditions.
      */
-    const ScalarFluidState& initialFluidState(int elemIdx) const
+    const ScalarFluidState& initialFluidState(unsigned elemIdx) const
     { return initialFluidStates_[elemIdx]; }
 
 protected:

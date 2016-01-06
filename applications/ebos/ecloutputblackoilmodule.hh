@@ -135,11 +135,11 @@ public:
 
         auto bufferType = ParentType::ElementBuffer;
         if (saturationsOutput_()) {
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
                 this->resizeScalarBuffer_(saturation_[phaseIdx], bufferType);
         }
         if (pressuresOutput_()) {
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
                 this->resizeScalarBuffer_(pressure_[phaseIdx], bufferType);
         }
         if (gasDissolutionFactorOutput_())
@@ -163,45 +163,42 @@ public:
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;
 
-        for (int dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto &fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
-            int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            int regionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
-            Scalar po = Toolbox::value(fs.pressure(oilPhaseIdx));
-            Scalar To = Toolbox::value(fs.temperature(oilPhaseIdx));
-            Scalar XoG = Toolbox::value(fs.massFraction(oilPhaseIdx, gasCompIdx));
-            Scalar XgO = Toolbox::value(fs.massFraction(gasPhaseIdx, oilCompIdx));
+            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
 
             if (saturationsOutput_()) {
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                     saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
                     Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
                 }
             }
             if (pressuresOutput_()) {
-                for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                     pressure_[phaseIdx][globalDofIdx] = Toolbox::value(fs.pressure(phaseIdx));
                     Valgrind::CheckDefined(pressure_[phaseIdx][globalDofIdx]);
                 }
             }
             if (gasDissolutionFactorOutput_()) {
                 gasDissolutionFactor_[globalDofIdx] =
-                    FluidSystem::gasDissolutionFactor(To, po, regionIdx);
+                    FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (gasFormationVolumeFactorOutput_()) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::gasFormationVolumeFactor(To, po, XgO, regionIdx);
+                    FluidSystem::template formationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
             if (saturatedOilFormationVolumeFactorOutput_()) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::saturatedOilFormationVolumeFactor(To, po, regionIdx);
+                    FluidSystem::template saturatedFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
-                    FluidSystem::oilSaturationPressure(To, XoG, regionIdx);
+                    FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
             }
         }
@@ -223,7 +220,7 @@ public:
 
         typename ParentType::BufferType bufferType = ParentType::ElementBuffer;
         if (pressuresOutput_()) {
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
                 deckUnits.siToDeck(pressure_[phaseIdx], DeckUnits::pressure);
 
             this->commitScalarBuffer_(writer, "PRESSURE", pressure_[oilPhaseIdx], bufferType);
@@ -231,7 +228,7 @@ public:
             this->commitScalarBuffer_(writer, "PWAT", pressure_[waterPhaseIdx], bufferType);
         }
         if (saturationsOutput_()) {
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx)
                 deckUnits.siToDeck(saturation_[phaseIdx], DeckUnits::saturation);
 
             this->commitScalarBuffer_(writer, "SWAT", saturation_[waterPhaseIdx], bufferType);

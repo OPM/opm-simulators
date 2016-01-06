@@ -26,9 +26,26 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
-#include <opm/material/localad/Evaluation.hpp>
+// make sure that the EBOS_USE_ALUGRID macro. using the preprocessor for this is slightly
+// hacky...
+#if EBOS_USE_ALUGRID
+//#define DISABLE_ALUGRID_SFC_ORDERING 1
+#if !HAVE_DUNE_ALUGRID || !DUNE_VERSION_NEWER(DUNE_ALUGRID, 2,4)
+#warning "ALUGrid was indicated to be used for the ECL black oil simulator, but this "
+#warning "requires the presence of dune-alugrid >= 2.4. Falling back to Dune::CpGrid"
+#undef EBOS_USE_ALUGRID
+#define EBOS_USE_ALUGRID 0
+#endif
+#else
+#define EBOS_USE_ALUGRID 0
+#endif
 
-#include "eclgridmanager.hh"
+#if EBOS_USE_ALUGRID
+#include "eclalugridmanager.hh"
+#else
+#include "eclpolyhedralgridmanager.hh"
+#include "eclcpgridmanager.hh"
+#endif
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
@@ -52,9 +69,6 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
-// for this simulator to make sense, dune-cornerpoint and opm-parser
-// must be available
-#include <dune/grid/CpGrid.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -72,7 +86,12 @@ template <class TypeTag>
 class EclProblem;
 
 namespace Properties {
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclGridManager, EclOutputBlackOil));
+#if EBOS_USE_ALUGRID
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridManager, EclOutputBlackOil));
+#else
+NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridManager, EclOutputBlackOil));
+//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridManager, EclOutputBlackOil));
+#endif
 
 // Write all solutions for visualization, not just the ones for the
 // report steps...
@@ -111,12 +130,6 @@ public:
 // Enable gravity
 SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 
-// Reuse the last linearization if possible?
-SET_BOOL_PROP(EclBaseProblem, EnableLinearizationRecycling, false);
-
-// Only relinearize the parts where the current solution is sufficiently "bad"
-SET_BOOL_PROP(EclBaseProblem, EnablePartialRelinearization, false);
-
 // only write the solutions for the report steps to disk
 SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
 
@@ -150,6 +163,9 @@ SET_BOOL_PROP(EclBaseProblem, EnableEclSummaryOutput, true);
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
+
+// the cache for the storage term can also be used and also yields a decent speedup
+SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, true);
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 SET_TYPE_PROP(EclBaseProblem, FluxModule, Ewoms::EclTransFluxModule<TypeTag>);
@@ -233,7 +249,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
-        EWOMS_REGISTER_PARAM(TypeTag, int, RestartWritingInterval,
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
     }
 
@@ -261,14 +277,13 @@ public:
 
         auto& simulator = this->simulator();
 
-        // invert the direction of the gravity vector for ECL problems
-        // (z coodinates represent depth, not height.)
-        this->gravity_[dim - 1] *= -1;
+        // set the value of the gravity constant to the one used by the FLOW simulator
+        this->gravity_ = 0.0;
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
         const auto& deck = simulator.gridManager().deck();
-        if (deck->hasKeyword("NOGRAV") || !EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
-            this->gravity_ = 0.0;
+        if (!deck->hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
+            this->gravity_[dim - 1] = 9.80665;
 
         initFluidSystem_();
         readRockParameters_();
@@ -365,7 +380,17 @@ public:
      * \brief Called by the simulator before each time integration.
      */
     void beginTimeStep()
-    { wellManager_.beginTimeStep(); }
+    {
+        wellManager_.beginTimeStep();
+
+        // this is a little hack to write the initial condition, which we need to do
+        // before the first time step has finished.
+        static bool initialWritten = false;
+        if (this->simulator().episodeIndex() == 0 && !initialWritten) {
+            summaryWriter_.write(wellManager_, /*isInitial=*/true);
+            initialWritten = true;
+        }
+    }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
@@ -407,13 +432,7 @@ public:
     {
         auto& simulator = this->simulator();
         const auto& eclState = simulator.gridManager().eclState();
-        auto& linearizer = this->model().linearizer();
         int episodeIdx = simulator.episodeIndex();
-
-        std::cout << "Episode " << episodeIdx + 1 << " finished.\n";
-
-        bool wellsWillChange = wellManager_.wellsChanged(eclState, episodeIdx + 1);
-        linearizer.setLinearizationReusable(!wellsWillChange);
 
         Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
         int numReportSteps = timeMap->size() - 1;
@@ -447,8 +466,8 @@ public:
      */
     bool shouldWriteRestartFile() const
     {
-        int n = EWOMS_GET_PARAM(TypeTag, int, RestartWritingInterval);
-        int i = this->simulator().timeStepIndex();
+        unsigned n = EWOMS_GET_PARAM(TypeTag, unsigned, RestartWritingInterval);
+        unsigned i = this->simulator().timeStepIndex();
         if (i > 0 && (i%n) == 0)
             return true; // we don't write a restart file for the initial condition
         return false;
@@ -488,10 +507,10 @@ public:
      */
     template <class Context>
     const DimMatrix &intrinsicPermeability(const Context &context,
-                                           int spaceIdx,
-                                           int timeIdx) const
+                                           unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return intrinsicPermeability_[globalSpaceIdx];
     }
 
@@ -501,22 +520,22 @@ public:
      *
      * Its main (only?) usage is the ECL transmissibility calculation code...
      */
-    const DimMatrix &intrinsicPermeability(int globalElemIdx) const
+    const DimMatrix &intrinsicPermeability(unsigned globalElemIdx) const
     { return intrinsicPermeability_[globalElemIdx]; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::transmissibility
      */
-    Scalar transmissibility(int elem1Idx, int elem2Idx) const
+    Scalar transmissibility(unsigned elem1Idx, unsigned elem2Idx) const
     { return transmissibilities_.transmissibility(elem1Idx, elem2Idx); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return porosity_[globalSpaceIdx];
     }
 
@@ -524,14 +543,14 @@ public:
      * \copydoc BlackoilProblem::rockCompressibility
      */
     template <class Context>
-    Scalar rockCompressibility(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar rockCompressibility(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 0.0;
 
-        int tableIdx = 0;
+        unsigned tableIdx = 0;
         if (!rockTableIdx_.empty()) {
-            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
 
@@ -542,14 +561,14 @@ public:
      * \copydoc BlackoilProblem::rockReferencePressure
      */
     template <class Context>
-    Scalar rockReferencePressure(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar rockReferencePressure(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 1e5;
 
-        int tableIdx = 0;
+        unsigned tableIdx = 0;
         if (!rockTableIdx_.empty()) {
-            int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
             tableIdx = rockTableIdx_[globalSpaceIdx];
         }
 
@@ -561,26 +580,26 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return materialLawParams(globalSpaceIdx);
     }
 
-    const MaterialLawParams& materialLawParams(int globalDofIdx) const
+    const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
     { return materialLawManager_->materialLawParams(globalDofIdx); }
 
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
     template <class Context>
-    int pvtRegionIndex(const Context &context, int spaceIdx, int timeIdx) const
+    unsigned pvtRegionIndex(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return pvtRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
 
     /*!
      * \brief Returns the index the relevant PVT region given a cell index
      */
-    int pvtRegionIndex(int elemIdx) const
+    unsigned pvtRegionIndex(unsigned elemIdx) const
     {
         Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
 
@@ -589,8 +608,7 @@ public:
 
         const auto& gridManager = this->simulator().gridManager();
 
-        int cartesianDofIdx = gridManager.cartesianCellId(elemIdx);
-
+        unsigned cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
         return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
     }
 
@@ -604,11 +622,11 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         // use the temporally constant temperature, i.e. use the initial temperature of
         // the DOF
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
     }
 
@@ -620,8 +638,8 @@ public:
     template <class Context>
     void boundary(BoundaryRateVector &values,
                   const Context &context,
-                  int spaceIdx,
-                  int timeIdx) const
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     { values.setNoFlow(); }
 
     /*!
@@ -631,9 +649,9 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
 
@@ -658,22 +676,27 @@ public:
     template <class Context>
     void source(RateVector &rate,
                 const Context &context,
-                int spaceIdx,
-                int timeIdx) const
+                unsigned spaceIdx,
+                unsigned timeIdx) const
     {
-        rate = Toolbox::createConstant(0);
-
-        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-            rate[eqIdx] = Toolbox::createConstant(0.0);
+        rate = 0.0;
 
         wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
-        int globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        for (int eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
     }
+
+    /*!
+     * \brief Returns a reference to the ECL well manager used by the problem.
+     *
+     * This can be used for inspecting wells outside of the problem.
+     */
+    const EclWellManager<TypeTag>& wellManager() const
+    { return wellManager_; }
 
 private:
     static bool enableEclOutput_()
@@ -709,7 +732,7 @@ private:
             eclState->getIntGridProperty("PVTNUM")->getData();
         rockTableIdx_.resize(gridManager.gridView().size(/*codim=*/0));
         for (size_t elemIdx = 0; elemIdx < rockTableIdx_.size(); ++ elemIdx) {
-            int cartElemIdx = gridManager.cartesianCellId(elemIdx);
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices
             rockTableIdx_[elemIdx] = pvtnumData[cartElemIdx] - 1;
@@ -744,7 +767,7 @@ private:
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 intrinsicPermeability_[dofIdx] = 0.0;
                 intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
                 intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
@@ -772,7 +795,7 @@ private:
                 eclState->getDoubleGridProperty("PORO")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 porosity_[dofIdx] = poroData[cartesianElemIdx];
             }
         }
@@ -784,7 +807,7 @@ private:
                 eclState->getDoubleGridProperty("PORV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                int cartesianElemIdx = gridManager.cartesianCellId(dofIdx);
+                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
                 if (std::isfinite(porvData[cartesianElemIdx])) {
                     Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
                     porosity_[dofIdx] = porvData[cartesianElemIdx]/dofVolume;
@@ -798,7 +821,7 @@ private:
                 eclState->getDoubleGridProperty("NTG")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= ntgData[gridManager.cartesianCellId(dofIdx)];
+                porosity_[dofIdx] *= ntgData[gridManager.cartesianIndex(dofIdx)];
         }
 
         // apply the MULTPV keyword to the porosity
@@ -807,11 +830,11 @@ private:
                 eclState->getDoubleGridProperty("MULTPV")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= multpvData[gridManager.cartesianCellId(dofIdx)];
+                porosity_[dofIdx] *= multpvData[gridManager.cartesianIndex(dofIdx)];
         }
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianCellId(elemIdx);
+            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
@@ -822,131 +845,8 @@ private:
         const auto deck = this->simulator().gridManager().deck();
         const auto eclState = this->simulator().gridManager().eclState();
 
-        auto densityKeyword = deck->getKeyword("DENSITY");
-        int numRegions = densityKeyword->size();
-        FluidSystem::initBegin(numRegions);
-
-        FluidSystem::setEnableDissolvedGas(deck->hasKeyword("DISGAS"));
-        FluidSystem::setEnableVaporizedOil(deck->hasKeyword("VAPOIL"));
-
-        // set the reference densities of all PVT regions
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            Opm::DeckRecordConstPtr densityRecord = densityKeyword->getRecord(regionIdx);
-            FluidSystem::setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
-                                               densityRecord->getItem("WATER")->getSIDouble(0),
-                                               densityRecord->getItem("GAS")->getSIDouble(0),
-                                               regionIdx);
-        }
-
-        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar, Evaluation> > GasPvtSharedPtr;
-        GasPvtSharedPtr gasPvt(createGasPvt_(deck, eclState));
-        FluidSystem::setGasPvt(gasPvt);
-
-        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar, Evaluation> > OilPvtSharedPtr;
-        OilPvtSharedPtr oilPvt(createOilPvt_(deck, eclState));
-        FluidSystem::setOilPvt(oilPvt);
-
-        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar, Evaluation> > WaterPvtSharedPtr;
-        WaterPvtSharedPtr waterPvt(createWaterPvt_(deck, eclState));
-        FluidSystem::setWaterPvt(waterPvt);
-
-        FluidSystem::initEnd();
+        FluidSystem::initFromDeck(deck, eclState);
    }
-
-    Opm::OilPvtInterface<Scalar, Evaluation>* createOilPvt_(Opm::DeckConstPtr deck,
-                                                            Opm::EclipseStateConstPtr eclState)
-    {
-        const auto tableManager = eclState->getTableManager();
-        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
-        int numPvtRegions = densityKeyword->size();
-
-        if (deck->hasKeyword("PVTO")) {
-            Opm::LiveOilPvt<Scalar, Evaluation> *oilPvt = new Opm::LiveOilPvt<Scalar, Evaluation>;
-            oilPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvtoTable(regionIdx, tableManager->getPvtoTables()[regionIdx]);
-
-            oilPvt->initEnd();
-            return oilPvt;
-        }
-        else if (deck->hasKeyword("PVDO")) {
-            Opm::DeadOilPvt<Scalar, Evaluation> *oilPvt = new Opm::DeadOilPvt<Scalar, Evaluation>;
-            oilPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvdoTable(regionIdx, tableManager->getPvdoTables()[regionIdx]);
-
-            oilPvt->initEnd();
-            return oilPvt;
-        }
-        else if (deck->hasKeyword("PVCDO")) {
-            Opm::ConstantCompressibilityOilPvt<Scalar, Evaluation> *oilPvt =
-                new Opm::ConstantCompressibilityOilPvt<Scalar, Evaluation>;
-            oilPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                oilPvt->setPvcdo(regionIdx, deck->getKeyword("PVCDO"));
-
-            oilPvt->initEnd();
-            return oilPvt;
-        }
-        // TODO (?): PVCO (this is not very hard but the opm-parser requires support for
-        // an additional table)
-
-        OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!");
-    }
-
-    Opm::GasPvtInterface<Scalar, Evaluation>* createGasPvt_(Opm::DeckConstPtr deck,
-                                                            Opm::EclipseStateConstPtr eclState)
-    {
-        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
-        const auto tableManager = eclState->getTableManager();
-        int numPvtRegions = densityKeyword->size();
-
-        if (deck->hasKeyword("PVTG")) {
-            Opm::WetGasPvt<Scalar, Evaluation> *gasPvt = new Opm::WetGasPvt<Scalar, Evaluation>;
-            gasPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvtgTable(regionIdx, tableManager->getPvtgTables()[regionIdx]);
-
-            gasPvt->initEnd();
-            return gasPvt;
-        }
-        else if (deck->hasKeyword("PVDG")) {
-            Opm::DryGasPvt<Scalar, Evaluation> *gasPvt = new Opm::DryGasPvt<Scalar, Evaluation>;
-            gasPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                gasPvt->setPvdgTable(regionIdx, tableManager->getPvdgTables()[regionIdx]);
-
-            gasPvt->initEnd();
-            return gasPvt;
-        }
-        OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
-    }
-
-    Opm::WaterPvtInterface<Scalar, Evaluation>* createWaterPvt_(Opm::DeckConstPtr deck,
-                                                                Opm::EclipseStateConstPtr eclState)
-    {
-        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
-        int numPvtRegions = densityKeyword->size();
-
-        if (deck->hasKeyword("PVTW")) {
-            Opm::ConstantCompressibilityWaterPvt<Scalar, Evaluation> *waterPvt =
-                new Opm::ConstantCompressibilityWaterPvt<Scalar, Evaluation>;
-            waterPvt->setNumRegions(numPvtRegions);
-
-            for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx)
-                waterPvt->setPvtw(regionIdx, deck->getKeyword("PVTW"));
-
-            waterPvt->initEnd();
-            return waterPvt;
-        }
-
-        OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
-    }
 
     void readInitialCondition_()
     {
@@ -957,6 +857,9 @@ private:
             readExplicitInitialCondition_();
         else
             readEquilInitialCondition_();
+
+        // release the memory of the EQUIL grid since it's no longer needed after this point
+        this->simulator().gridManager().releaseEquilGrid();
     }
 
     void readEquilInitialCondition_()
@@ -1033,7 +936,7 @@ private:
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
-        const auto &cartSize = this->simulator().gridManager().logicalCartesianSize();
+        const auto &cartSize = this->simulator().gridManager().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
@@ -1048,7 +951,8 @@ private:
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto &dofFluidState = initialFluidStates_[dofIdx];
 
-            size_t cartesianDofIdx = gridManager.cartesianCellId(dofIdx);
+            int pvtRegionIdx = pvtRegionIndex(dofIdx);
+            size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
             assert(0 <= cartesianDofIdx);
             assert(cartesianDofIdx <= numCartesianCells);
 
@@ -1068,7 +972,7 @@ private:
             dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
                                         gasSaturationData[cartesianDofIdx]);
             dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                        1
+                                        1.0
                                         - waterSaturationData[cartesianDofIdx]
                                         - gasSaturationData[cartesianDofIdx]);
 
@@ -1079,22 +983,21 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Scalar pc[numPhases];
+            Dune::FieldVector< Scalar, numPhases > pc( 0 );
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(oilPressure);
             Valgrind::CheckDefined(pc);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-            Scalar gasPressure = dofFluidState.pressure(gasPhaseIdx);
 
             //////
             // set compositions
             //////
 
             // reset all mole fractions to 0
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     dofFluidState.setMoleFraction(phaseIdx, compIdx, 0.0);
 
             // by default, assume immiscibility for all phases
@@ -1103,87 +1006,53 @@ private:
             dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
 
             if (enableDisgas) {
-                // set the composition of the oil phase:
-                //
-                // first, retrieve the relevant black-oil parameters from
-                // the fluid system.
-                //
-                // note that we use the gas pressure here. this is because the primary
-                // varibles and the intensive quantities of the black oil model also do
-                // this...
-                Scalar RsSat = FluidSystem::gasDissolutionFactor(temperature,
-                                                                 gasPressure,
-                                                                 /*regionIdx=*/0);
+                Scalar RsSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, oilPhaseIdx, pvtRegionIdx);
                 Scalar RsReal = (*rsData)[cartesianDofIdx];
 
                 if (RsReal > RsSat) {
                     std::array<int, 3> ijk;
-                    gridManager.getIJK(dofIdx, ijk);
+                    gridManager.cartesianCoordinate(dofIdx, ijk);
                     std::cerr << "Warning: The specified amount gas (R_s = " << RsReal << ") is more"
                               << " than the maximium\n"
                               << "         amount which can be dissolved in oil"
                               << " (R_s,max=" << RsSat << ")"
                               << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Ignoring.\n";
+                              << " Using maximimum.\n";
                     RsReal = RsSat;
                 }
 
-                // calculate composition of the real and the saturated oil phase in terms of
-                // mass fractions.
-                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-                Scalar XoGReal = RsReal/(RsReal + rhooRef/rhogRef);
-
-                // convert mass to mole fractions
-                Scalar MG = FluidSystem::molarMass(gasCompIdx);
-                Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
-                Scalar xoGReal = XoGReal * MO / ((MO - MG) * XoGReal + MG);
-                Scalar xoOReal = 1 - xoGReal;
+                // calculate the initial oil phase composition in terms of mole fractions
+                Scalar XoGReal = FluidSystem::convertRsToXoG(RsReal, pvtRegionIdx);
+                Scalar xoGReal = FluidSystem::convertXoGToxoG(XoGReal, pvtRegionIdx);
 
                 // finally, set the oil-phase composition
                 dofFluidState.setMoleFraction(oilPhaseIdx, gasCompIdx, xoGReal);
-                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, xoOReal);
+                dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0 - xoGReal);
             }
 
             if (enableVapoil) {
-                // set the composition of the gas phase:
-                //
-                // first, retrieve the relevant black-gas parameters from
-                // the fluid system.
-                Scalar RvSat = FluidSystem::oilVaporizationFactor(temperature,
-                                                                  gasPressure,
-                                                                  /*regionIdx=*/0);
+                Scalar RvSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, gasPhaseIdx, pvtRegionIdx);
                 Scalar RvReal = (*rvData)[cartesianDofIdx];
 
                 if (RvReal > RvSat) {
                     std::array<int, 3> ijk;
-                    gridManager.getIJK(dofIdx, ijk);
+                    gridManager.cartesianCoordinate(dofIdx, ijk);
                     std::cerr << "Warning: The specified amount oil (R_v = " << RvReal << ") is more"
                               << " than the maximium\n"
                               << "         amount which can be dissolved in gas"
                               << " (R_v,max=" << RvSat << ")"
                               << " for cell (" << ijk[0] << ", " << ijk[1] << ", " << ijk[2] << ")."
-                              << " Ignoring.\n";
+                              << " Using maximimum.\n";
                     RvReal = RvSat;
                 }
 
-                // calculate composition of the real and the saturated gas phase in terms of
-                // mass fractions.
-                Scalar rhooRef = FluidSystem::referenceDensity(oilPhaseIdx, /*regionIdx=*/0);
-                Scalar rhogRef = FluidSystem::referenceDensity(gasPhaseIdx, /*regionIdx=*/0);
-                Scalar XgOReal = RvReal/(RvReal + rhogRef/rhooRef);
-
-                // convert mass to mole fractions
-                Scalar MG = FluidSystem::molarMass(gasCompIdx);
-                Scalar MO = FluidSystem::molarMass(oilCompIdx);
-
-                Scalar xgOReal = XgOReal * MG / ((MG - MO) * XgOReal + MO);
-                Scalar xgGReal = 1 - xgOReal;
+                // calculate the initial gas phase composition in terms of mole fractions
+                Scalar XgOReal = FluidSystem::convertRvToXgO(RvReal, pvtRegionIdx);
+                Scalar xgOReal = FluidSystem::convertXgOToxgO(XgOReal, pvtRegionIdx);
 
                 // finally, set the gas-phase composition
                 dofFluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgOReal);
-                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, xgGReal);
+                dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0 - xgOReal);
             }
         }
     }
@@ -1206,7 +1075,7 @@ private:
             elemCtx.updateStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            int compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }

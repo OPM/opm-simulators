@@ -84,7 +84,7 @@ class EclTransIntensiveQuantities
 {
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 protected:
-    void update_(const ElementContext &elemCtx, int dofIdx, int timeIdx)
+    void update_(const ElementContext &elemCtx, unsigned dofIdx, unsigned timeIdx)
     { }
 };
 
@@ -121,7 +121,7 @@ public:
      */
     const DimMatrix& intrinsicPermeability() const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide an explicit intrinsic permeability");
     }
 
@@ -131,9 +131,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& potentialGrad(int phaseIdx) const
+    const EvalDimVector& potentialGrad(unsigned phaseIdx) const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit potential gradients");
     }
 
@@ -143,9 +143,9 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& filterVelocity(int phaseIdx) const
+    const EvalDimVector& filterVelocity(unsigned phaseIdx) const
     {
-        OPM_THROW(Opm::NotAvailable,
+        OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit filter velocities");
     }
 
@@ -158,7 +158,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const Evaluation& volumeFlux(int phaseIdx) const
+    const Evaluation& volumeFlux(unsigned phaseIdx) const
     { return volumeFlux_[phaseIdx]; }
 
 protected:
@@ -169,10 +169,10 @@ protected:
      * i.e., the DOF which exhibits a higher effective pressure for
      * the given phase.
      */
-    int upstreamIndex_(int phaseIdx) const
+    unsigned upstreamIndex_(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?exteriorDofIdx_:interiorDofIdx_;
+        return (pressureDifferential_[phaseIdx] >= 0)?exteriorDofIdx_:interiorDofIdx_;
     }
 
     /*!
@@ -182,16 +182,16 @@ protected:
      * i.e., the DOF which exhibits a lower effective pressure for the
      * given phase.
      */
-    int downstreamIndex_(int phaseIdx) const
+    unsigned downstreamIndex_(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (Toolbox::value(pressureDifferential_[phaseIdx]) >= 0)?interiorDofIdx_:exteriorDofIdx_;
+        return (pressureDifferential_[phaseIdx] < 0)?exteriorDofIdx_:interiorDofIdx_;
     }
 
     /*!
      * \brief Update the required gradients for interior faces
      */
-    void calculateGradients_(const ElementContext &elemCtx, int scvfIdx, int timeIdx)
+    void calculateGradients_(const ElementContext &elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
         Valgrind::SetUndefined(*this);
 
@@ -217,35 +217,35 @@ protected:
 
         Scalar zIn = elemCtx.pos(interiorDofIdx_, timeIdx)[dimWorld - 1];
         Scalar zEx = elemCtx.pos(exteriorDofIdx_, timeIdx)[dimWorld - 1];
-        Scalar zFace = scvf.integrationPos()[dimWorld - 1];
 
-        Scalar distZIn = zIn - zFace;
-        Scalar distZEx = zEx - zFace;
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
 
-        for (int phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
-            // do the gravity correction at the face's integration point
+        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            // do the gravity correction: compute the hydrostatic pressure for the
+            // external at the depth of the internal one
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
+            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
-            Evaluation pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
-            Scalar pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
-
-            pressureInterior += - rhoIn*(g*distZIn);
-            pressureExterior += - rhoEx*(g*distZEx);
+            const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+            Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
+            pressureExterior += rhoAvg*(distZ*g);
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
             // this is slightly hacky because in the automatic differentiation case, it
             // only works for the element centered finite volume method. for ebos this
             // does not matter, though.
-            int upstreamIdx = upstreamIndex_(phaseIdx);
+            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx) * (- trans_/faceArea_);
+                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx)*(-trans_/faceArea_);
             else
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx)) * (- trans_/faceArea_));
+                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans_/faceArea_));
 
         }
     }
@@ -253,12 +253,12 @@ protected:
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateFluxes_(const ElementContext &elemCtx, int scvfIdx, int timeIdx)
+    void calculateFluxes_(const ElementContext &elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { }
 
     // the local indices of the interior and exterior degrees of freedom
-    int interiorDofIdx_;
-    int exteriorDofIdx_;
+    unsigned interiorDofIdx_;
+    unsigned exteriorDofIdx_;
 
     // transmissibility [m^3 s]
     Scalar trans_;
