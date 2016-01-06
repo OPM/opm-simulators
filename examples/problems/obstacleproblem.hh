@@ -251,7 +251,7 @@ public:
         this->model().checkConservativeness();
 
         // Calculate storage terms of the individual phases
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             PrimaryVariables phaseStorage;
             this->model().globalPhaseStorage(phaseStorage, phaseIdx);
 
@@ -296,15 +296,15 @@ public:
      * This problem simply assumes a constant temperature.
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         if (isFineMaterial_(context.pos(spaceIdx, timeIdx)))
             return fineK_;
@@ -315,7 +315,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -329,7 +329,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -345,8 +345,8 @@ public:
      * medium is granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx,
-                             int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, unsigned spaceIdx,
+                             unsigned timeIdx) const
     {
         return 790     // specific heat capacity of granite [J / (kg K)]
                * 2700; // density of granite [kg/m^3]
@@ -357,7 +357,7 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams &
-    heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
+    heatConductionParams(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -377,7 +377,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -400,8 +400,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(outletFluidState_, matParams);
@@ -414,8 +414,8 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = 0.0; }
 
     //! \}
@@ -454,8 +454,8 @@ private:
     void initFluidState_(FluidState &fs, const MaterialLawParams &matParams,
                          bool isInlet)
     {
-        int refPhaseIdx;
-        int otherPhaseIdx;
+        unsigned refPhaseIdx;
+        unsigned otherPhaseIdx;
 
         // set the fluid temperatures
         fs.setTemperature(temperature_);

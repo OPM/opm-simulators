@@ -179,7 +179,7 @@ public:
      * This problem assumes a temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 273.15 + 10; /* -> 10 deg C */ }
 
     // \}
@@ -198,7 +198,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -229,8 +229,8 @@ public:
      * 0.5% is set.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
         values = 0.0;
@@ -264,8 +264,8 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -276,23 +276,13 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
-            PrimaryVariables initCond;
-            initial(initCond, context, spaceIdx, timeIdx);
-
-            constraints.setConstraint(pressureIdx, conti0EqIdx,
-                                      initCond[pressureIdx]);
-            ;
-            constraints.setConstraint(moleFrac1Idx, conti0EqIdx + 1,
-                                      initCond[moleFrac1Idx]);
-            for (int axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
-                constraints.setConstraint(velocity0Idx + axisIdx,
-                                          momentum0EqIdx + axisIdx,
-                                          initCond[velocity0Idx + axisIdx]);
+            constraints.setActive(true);
+            initial(constraints, context, spaceIdx, timeIdx);
         }
     }
     //! \}

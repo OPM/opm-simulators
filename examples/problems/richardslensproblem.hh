@@ -91,13 +91,6 @@ public:
 // Enable gravitational acceleration
 SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
 
-// Only relinearize the parts where the current solution is sufficiently "bad"
-SET_BOOL_PROP(RichardsLensProblem, EnablePartialRelinearization, true);
-
-// Enable re-use of the linearization of the last iteration of the
-// previous for the first iteration of the current time step?
-SET_BOOL_PROP(RichardsLensProblem, EnableLinearizationRecycling, true);
-
 // Use central differences to approximate the Jacobian matrix
 SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
 
@@ -228,8 +221,8 @@ public:
         auto elemEndIt = this->gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             stencil.update(*elemIt);
-            for (int dofIdx = 0; dofIdx < stencil.numPrimaryDof(); ++ dofIdx) {
-                int globalDofIdx = stencil.globalSpaceIndex(dofIdx);
+            for (unsigned dofIdx = 0; dofIdx < stencil.numPrimaryDof(); ++ dofIdx) {
+                unsigned globalDofIdx = stencil.globalSpaceIndex(dofIdx);
                 const auto& dofPos = stencil.subControlVolume(dofIdx).center();
                 dofIsInLens_[globalDofIdx] = isInLens_(dofPos);
             }
@@ -275,10 +268,10 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
-    Scalar temperature(int globalSpaceIdx, int timeIdx) const
+    Scalar temperature(unsigned globalSpaceIdx, unsigned timeIdx) const
     { return 273.15 + 10; } // -> 10°C
 
     /*!
@@ -286,8 +279,8 @@ public:
      */
     template <class Context>
     const DimMatrix &intrinsicPermeability(const Context &context,
-                                           int spaceIdx,
-                                           int timeIdx) const
+                                           unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isInLens_(pos))
@@ -299,7 +292,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 0.4; }
 
     /*!
@@ -307,14 +300,14 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx,
-                                               int timeIdx) const
+                                               unsigned spaceIdx,
+                                               unsigned timeIdx) const
     {
-        int globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return materialLawParams(globalSpaceIdx, timeIdx);
     }
 
-    const MaterialLawParams& materialLawParams(int globalSpaceIdx, int timeIdx) const
+    const MaterialLawParams& materialLawParams(unsigned globalSpaceIdx, unsigned timeIdx) const
     {
         if (dofIsInLens_[globalSpaceIdx])
             return lensMaterialParams_;
@@ -328,13 +321,13 @@ public:
      */
     template <class Context>
     Scalar referencePressure(const Context &context,
-                             int spaceIdx,
-                             int timeIdx) const
+                             unsigned spaceIdx,
+                             unsigned timeIdx) const
     { return referencePressure(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
     // the Richards model does not have an element context available at all places
     // where the reference pressure is required...
-    Scalar referencePressure(int globalSpaceIdx, int timeIdx) const
+    Scalar referencePressure(unsigned globalSpaceIdx, unsigned timeIdx) const
     { return pnRef_; }
 
     //! \}
@@ -350,8 +343,8 @@ public:
     template <class Context>
     void boundary(BoundaryRateVector &values,
                   const Context &context,
-                  int spaceIdx,
-                  int timeIdx) const
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
@@ -395,8 +388,8 @@ public:
     template <class Context>
     void initial(PrimaryVariables &values,
                  const Context &context,
-                 int spaceIdx,
-                 int timeIdx) const
+                 unsigned spaceIdx,
+                 unsigned timeIdx) const
     {
         const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
@@ -419,8 +412,8 @@ public:
     template <class Context>
     void source(RateVector &rate,
                 const Context &context,
-                int spaceIdx,
-                int timeIdx) const
+                unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -447,7 +440,7 @@ private:
 
     bool isInLens_(const GlobalPosition &pos) const
     {
-        for (int i = 0; i < dimWorld; ++i) {
+        for (unsigned i = 0; i < dimWorld; ++i) {
             if (pos[i] < lensLowerLeft_[i] || pos[i] > lensUpperRight_[i])
                 return false;
         }
