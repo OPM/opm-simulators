@@ -179,7 +179,7 @@ public:
      * This problem assumes a constant temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return 273.15 + 10; }
 
     //! \}
@@ -194,7 +194,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         /*        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -220,8 +220,8 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+                 unsigned timeIdx) const
     { initial_(values); }
 
     /*!
@@ -231,17 +231,17 @@ public:
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
+            constraints.setActive(true);
             // lid moves from left to right
             const Scalar lidVelocity = 1.0;
-            constraints.setConstraint(momentum0EqIdx, velocity0Idx + 0,
-                                      lidVelocity);
-            constraints.setConstraint(momentum0EqIdx + 1, velocity0Idx + 1, 0);
-            constraints.setConstraint(conti0EqIdx, pressureIdx, 1e5);
+            constraints[velocity0Idx + 0] = lidVelocity;
+            constraints[velocity0Idx + 1] = 0.0;
+            constraints[pressureIdx + 1] = 1e5;
         }
     }
 
@@ -249,8 +249,8 @@ public:
      * \copydoc FvBaseProblem::source
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}

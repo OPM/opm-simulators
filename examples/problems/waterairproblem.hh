@@ -103,9 +103,6 @@ SET_TYPE_PROP(WaterAirBaseProblem, FluidSystem,
 // Enable gravity
 SET_BOOL_PROP(WaterAirBaseProblem, EnableGravity, true);
 
-// Enable constraints
-SET_BOOL_PROP(WaterAirBaseProblem, EnableConstraints, true);
-
 // Use forward differences instead of central differences
 SET_INT_PROP(WaterAirBaseProblem, NumericDifferenceMethod, +1);
 
@@ -302,7 +299,7 @@ public:
      * permeable than the lower one.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx, int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -314,7 +311,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -328,8 +325,8 @@ public:
      */
     template <class Context>
     const MaterialLawParams& materialLawParams(const Context &context,
-                                               int spaceIdx,
-                                               int timeIdx) const
+                                               unsigned spaceIdx,
+                                               unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -344,7 +341,7 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar heatCapacitySolid(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         return
             790 // specific heat capacity of granite [J / (kg K)]
@@ -356,7 +353,7 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams&
-    heatConductionParams(const Context &context, int spaceIdx, int timeIdx) const
+    heatConductionParams(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -382,7 +379,7 @@ public:
     template <class Context>
     void boundary(BoundaryRateVector &values,
                   const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.cvCenter(spaceIdx, timeIdx);
         assert(onLeftBoundary_(pos) ||
@@ -433,31 +430,13 @@ public:
      * liquid water and assume hydrostatic pressure.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
         initialFluidState_(fs, context, spaceIdx, timeIdx);
 
         const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
-    }
-
-    /*!
-     * \copydoc FvBaseProblem::constraints
-     *
-     * In this problem, constraints are used to keep the temperature of the degrees of
-     * freedom which are closest to the inlet constant.
-     */
-    template <class Context>
-    void constraints(Constraints &constraints,
-                     const Context &context,
-                     int spaceIdx, int timeIdx) const
-    {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
-
-        if (onInlet_(pos)) {
-            constraints.setConstraint(temperatureIdx, energyEqIdx, 380);
-        }
     }
 
     /*!
@@ -468,7 +447,7 @@ public:
      */
     template <class Context>
     void source(RateVector &rate,
-                const Context &context, int spaceIdx, int timeIdx) const
+                const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { rate = 0; }
 
     //! \}
@@ -495,8 +474,8 @@ private:
     template <class Context, class FluidState>
     void initialFluidState_(FluidState &fs,
                             const Context &context,
-                            int spaceIdx,
-                            int timeIdx) const
+                            unsigned spaceIdx,
+                            unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
 
@@ -530,18 +509,18 @@ private:
         // create a Fluid state which has all phases present
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
         fs.setTemperature(293.15);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fs.setPressure(phaseIdx, 1.0135e5);
         }
 
         typename FluidSystem::ParameterCache paramCache;
         paramCache.updateAll(fs);
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
             fs.setDensity(phaseIdx, rho);
         }
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar lambdaSaturated;
             if (FluidSystem::isLiquid(phaseIdx)) {
                 Scalar lambdaFluid =

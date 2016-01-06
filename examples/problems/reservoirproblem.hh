@@ -32,6 +32,8 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
@@ -50,9 +52,7 @@
 namespace Ewoms {
 template <class TypeTag>
 class ReservoirProblem;
-}
 
-namespace Ewoms {
 namespace Properties {
 
 NEW_TYPE_TAG(ReservoirBaseProblem);
@@ -61,8 +61,8 @@ NEW_TYPE_TAG(ReservoirBaseProblem);
 NEW_PROP_TAG(MaxDepth);
 // The temperature inside the reservoir
 NEW_PROP_TAG(Temperature);
-// The name of the simulation (used for writing VTK files)
-NEW_PROP_TAG(SimulationName);
+// The width of producer/injector wells as a fraction of the width of the spatial domain
+NEW_PROP_TAG(WellWidth);
 
 // Set the grid type
 SET_TYPE_PROP(ReservoirBaseProblem, Grid, Dune::YaspGrid<2>);
@@ -93,25 +93,47 @@ SET_BOOL_PROP(ReservoirBaseProblem, NewtonWriteConvergence, false);
 // Enable gravity
 SET_BOOL_PROP(ReservoirBaseProblem, EnableGravity, true);
 
-// Reuse the last linearization if possible?
-SET_BOOL_PROP(ReservoirBaseProblem, EnableLinearizationRecycling, true);
-
 // Enable constraint DOFs?
 SET_BOOL_PROP(ReservoirBaseProblem, EnableConstraints, true);
 
 // set the defaults for some problem specific properties
 SET_SCALAR_PROP(ReservoirBaseProblem, MaxDepth, 2500);
 SET_SCALAR_PROP(ReservoirBaseProblem, Temperature, 293.15);
-SET_STRING_PROP(ReservoirBaseProblem, SimulationName, "reservoir");
 
-// The default for the end time of the simulation [s]
-SET_SCALAR_PROP(ReservoirBaseProblem, EndTime, 100);
+//! The default for the end time of the simulation [s].
+//!
+//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
+//! production)
+SET_SCALAR_PROP(ReservoirBaseProblem, EndTime, 1000.0*24*60*60);
 
 // The default for the initial time step size of the simulation [s]
-SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 10);
+SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 100e3);
+
+// The width of producer/injector wells as a fraction of the width of the spatial domain
+SET_SCALAR_PROP(ReservoirBaseProblem, WellWidth, 0.01);
+
+/*!
+ * \brief Explicitly set the fluid system to the black-oil fluid system
+ *
+ * If the black oil model is used, this is superfluous because that model already sets
+ * the FluidSystem property. Setting it explictly for the problem is a good idea anyway,
+ * though because other models are more generic and thus do not assume a particular fluid
+ * system.
+ */
+SET_PROP(ReservoirBaseProblem, FluidSystem)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+
+public:
+    typedef Opm::FluidSystems::BlackOil<Scalar> type;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
+
+// increase the tolerance for this problem to get larger time steps
+SET_SCALAR_PROP(ReservoirBaseProblem, NewtonRawTolerance, 1e-4);
 } // namespace Properties
 
 /*!
@@ -120,18 +142,15 @@ SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
  * \brief Some simple test problem for the black-oil VCVF discretization
  *        inspired by an oil reservoir.
  *
- * The domain is two-dimensional and exhibits a size of 6000m times
- * 60m. Initially, the reservoir is assumed by oil with a bubble point
- * pressure of 20 MPa, which also the initial pressure in the
- * domain. No-flow boundaries are used for all boundaries. The
- * permeability of the lower 10 m is reduced compared to the upper 10
- * m of the domain witch capillary pressure always being
- * neglected. Three wells are approximated using constraints: Two
- * water-injector wells, one at the lower-left boundary one at the
- * lower-right boundary and one producer well in the upper part of the
- * center of the domain. The pressure for the producer is assumed to
- * be 2/3 of the reservoir pressure, the injector wells use a pressure
- * which is 50% above the reservoir pressure.
+ * The domain is two-dimensional and exhibits a size of 6000m times 60m. Initially, the
+ * reservoir is assumed by oil with a bubble point pressure of 20 MPa, which also the
+ * initial pressure in the domain. No-flow boundaries are used for all boundaries. The
+ * permeability of the lower 10 m is reduced compared to the upper 10 m of the domain
+ * witch capillary pressure always being neglected. Three wells are approximated using
+ * constraints: Two water-injector wells, one at the lower-left boundary one at the
+ * lower-right boundary and one producer well in the upper part of the center of the
+ * domain. The pressure for the producer is assumed to be 2/3 of the reservoir pressure,
+ * the injector wells use a pressure which is 50% above the reservoir pressure.
  */
 template <class TypeTag>
 class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
@@ -140,6 +159,7 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // Grid and world dimension
@@ -156,13 +176,13 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
+    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
     typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, BlackOilFluidState) BlackOilFluidState;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -170,6 +190,10 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
     typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
+
+    typedef Opm::CompositionalFluidState<Scalar,
+                                         FluidSystem,
+                                         /*enableEnthalpy=*/true> InitialFluidState;
 
 public:
     /*!
@@ -186,12 +210,10 @@ public:
     {
         ParentType::finishInit();
 
-        eps_ = 1e-6;
-
         temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
         maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
+        wellWidth_ = EWOMS_GET_PARAM(TypeTag, Scalar, WellWidth);
 
-        FluidSystem::initBegin(/*numPvtRegions=*/1);
         std::vector<std::pair<Scalar, Scalar> > Bo = {
             { 101353, 1.062 },
             { 1.82504e+06, 1.15 },
@@ -250,35 +272,50 @@ public:
             { 6.21542e+07, 4.7e-05 }
         };
 
-        FluidSystem::setReferenceDensities(/*oil=*/786,
-                                           /*water=*/1037,
-                                           /*gas=*/0.97,
-                                           /*pvtRegionIdx=*/0);
+        Scalar rhoRefO = 786.0; // [kg]
+        Scalar rhoRefG = 0.97; // [kg]
+        Scalar rhoRefW = 1037.0; // [kg]
+        FluidSystem::initBegin(/*numPvtRegions=*/1);
+        FluidSystem::setEnableDissolvedGas(true);
+        FluidSystem::setEnableVaporizedOil(false);
+        FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
-        Opm::DryGasPvt<Scalar> *gasPvt = new Opm::DryGasPvt<Scalar>;
-        gasPvt->setNumRegions(/*numPvtRegion=*/1);
-        gasPvt->setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
-        gasPvt->setGasViscosity(/*regionIdx=*/0, mug);
+        Opm::GasPvtMultiplexer<Scalar> *gasPvt = new Opm::GasPvtMultiplexer<Scalar>;
+        gasPvt->setApproach(Opm::GasPvtMultiplexer<Scalar>::DryGasPvt);
+        auto& dryGasPvt = gasPvt->template getRealPvt<Opm::GasPvtMultiplexer<Scalar>::DryGasPvt>();
+        dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
+        dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+        dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
+        dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+
+        Opm::OilPvtMultiplexer<Scalar> *oilPvt = new Opm::OilPvtMultiplexer<Scalar>;
+        oilPvt->setApproach(Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt);
+        auto& liveOilPvt = oilPvt->template getRealPvt<Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt>();
+        liveOilPvt.setNumRegions(/*numPvtRegion=*/1);
+        liveOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+        liveOilPvt.setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
+        liveOilPvt.setSaturatedOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
+        liveOilPvt.setSaturatedOilViscosity(/*regionIdx=*/0, muo);
+
+        Opm::WaterPvtMultiplexer<Scalar> *waterPvt = new Opm::WaterPvtMultiplexer<Scalar>;
+        waterPvt->setApproach(Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt);
+        auto& ccWaterPvt = waterPvt->template getRealPvt<Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt>();
+        ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
+        ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+        ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
+        ccWaterPvt.setCompressibility(/*regionIdx=*/0, 1.450377e-10);
+
         gasPvt->initEnd();
-        typedef std::shared_ptr<const Opm::GasPvtInterface<Scalar> > GasPvtSharedPtr;
+        oilPvt->initEnd();
+        waterPvt->initEnd();
+
+        typedef std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> > GasPvtSharedPtr;
         FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
 
-        Opm::LiveOilPvt<Scalar> *oilPvt = new Opm::LiveOilPvt<Scalar>;
-        oilPvt->setNumRegions(/*numPvtRegion=*/1);
-        oilPvt->setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
-        oilPvt->setSaturatedOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
-        oilPvt->setSaturatedOilViscosity(/*regionIdx=*/0, muo);
-        oilPvt->initEnd();
-        typedef std::shared_ptr<const Opm::OilPvtInterface<Scalar> > OilPvtSharedPtr;
+        typedef std::shared_ptr<Opm::OilPvtMultiplexer<Scalar> > OilPvtSharedPtr;
         FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
 
-        Opm::ConstantCompressibilityWaterPvt<Scalar> *waterPvt =
-            new Opm::ConstantCompressibilityWaterPvt<Scalar>;
-        waterPvt->setNumRegions(/*numPvtRegions=*/1);
-        waterPvt->setViscosity(/*regionIdx=*/0, 9.6e-4);
-        waterPvt->setCompressibility(/*regionIdx=*/0, 1.450377e-10);
-        waterPvt->initEnd();
-        typedef std::shared_ptr<const Opm::WaterPvtInterface<Scalar> > WaterPvtSharedPtr;
+        typedef std::shared_ptr<Opm::WaterPvtMultiplexer<Scalar> > WaterPvtSharedPtr;
         FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
 
         FluidSystem::initEnd();
@@ -294,7 +331,7 @@ public:
         finePorosity_ = 0.2;
         coarsePorosity_ = 0.3;
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             fineMaterialParams_.setPcMinSat(phaseIdx, 0.0);
             fineMaterialParams_.setPcMaxSat(phaseIdx, 0.0);
 
@@ -307,6 +344,9 @@ public:
         coarseMaterialParams_.finalize();
 
         initFluidState_();
+
+        // start the first ("settle down") episode for 100 days
+        this->simulator().startNextEpisode(100.0*24*60*60);
     }
 
     /*!
@@ -320,16 +360,28 @@ public:
                              "The temperature [K] in the reservoir");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth,
                              "The maximum depth [m] of the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName,
-                             "The name of the simulation used for the output "
-                             "files");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, WellWidth,
+                             "The width of producer/injector wells as a fraction of the width"
+                             " of the spatial domain");
     }
 
     /*!
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return EWOMS_GET_PARAM(TypeTag, std::string, SimulationName); }
+    { return std::string("reservoir_") + Model::name() + "_" + Model::discretizationName(); }
+
+    /*!
+     * \copydoc FvBaseProblem::endEpisode
+     */
+    void endEpisode()
+    {
+        // in the second episode, the actual work is done (the first is "settle down"
+        // episode). we need to use a pretty short initial time step here as the change
+        // in conditions is quite abrupt.
+        this->simulator().startNextEpisode(1e100);
+        this->simulator().setTimeStepSize(5.0);
+    }
 
     /*!
      * \copydoc FvBaseProblem::endTimeStep
@@ -359,8 +411,8 @@ public:
      * above one with low permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, int spaceIdx,
-                                           int timeIdx) const
+    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+                                           unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -372,7 +424,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -385,7 +437,7 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               int spaceIdx, int timeIdx) const
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
@@ -408,7 +460,7 @@ public:
      * will need it one day?
      */
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature_; }
 
     // \}
@@ -426,7 +478,7 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
         // no flow on top and bottom
         values.setNoFlow();
@@ -446,78 +498,39 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx, int timeIdx) const
-    { values.assignNaive(initialFluidState_); }
+    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    {
+        values.assignNaive(initialFluidState_);
+
+#ifndef NDEBUG
+        for (unsigned pvIdx = 0; pvIdx < values.size(); ++ pvIdx)
+            assert(std::isfinite(values[pvIdx]));
+#endif
+    }
 
     /*!
      * \copydoc FvBaseProblem::constraints
      *
-     * The reservoir problem places two water-injection wells on the
-     * lower parts of the left and right edges of the domains and on
-     * production well in the middle. The injection wells are fully
-     * water saturated with a higher pressure, the producer is fully
-     * oil saturated with a lower pressure than the remaining
-     * reservoir.
+     * The reservoir problem places two water-injection wells on the lower-left and
+     * lower-right of the domain and a production well in the middle. The injection wells
+     * are fully water saturated with a higher pressure, the producer is fully oil
+     * saturated with a lower pressure than the remaining reservoir.
      */
     template <class Context>
     void constraints(Constraints &constraints, const Context &context,
-                     int spaceIdx, int timeIdx) const
+                     unsigned spaceIdx, unsigned timeIdx) const
     {
+        if (this->simulator().episodeIndex() == 1)
+            return; // no constraints during the "settle down" episode
+
         const auto &pos = context.pos(spaceIdx, timeIdx);
-        Scalar x = pos[0] - this->boundingBoxMin()[0];
-        Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
-        Scalar height = this->boundingBoxMax()[dim - 1] - this->boundingBoxMin()[dim - 1];
-        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
-        if ((onLeftBoundary_(pos) || onRightBoundary_(pos)) && y < height / 2) {
-            // injectors
-            auto fs = initialFluidState_;
-
-            Scalar pInj = pReservoir_ * 1.5;
-            fs.setPressure(waterPhaseIdx, pInj);
-            fs.setPressure(oilPhaseIdx, pInj);
-            fs.setPressure(gasPhaseIdx, pInj);
-            fs.setSaturation(waterPhaseIdx, 1.0);
-            fs.setSaturation(oilPhaseIdx, 0.0);
-            fs.setSaturation(gasPhaseIdx, 0.0);
-
-            // set the compositions to only water
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                    fs.setMoleFraction(phaseIdx, compIdx, 0.0);
-
-            // set the composition of the oil phase to the initial
-            // composition
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                fs.setMoleFraction(oilPhaseIdx, compIdx,
-                                   initialFluidState_.moleFraction(oilPhaseIdx,
-                                                                   compIdx));
-
-            fs.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
-
-            constraints.setAllConstraint();
-            constraints.assignNaive(fs);
+        if (isInjector_(pos)) {
+            constraints.setActive(true);
+            constraints.assignNaive(injectorFluidState_);
         }
-        else if (width / 2 - 1 < x && x < width / 2 + 1 && y > height / 2) {
-            // producer
-            auto fs = initialFluidState_;
-
-            Scalar pProd = pReservoir_ / 1.5;
-            fs.setPressure(waterPhaseIdx, pProd);
-            fs.setPressure(oilPhaseIdx, pProd);
-            fs.setPressure(gasPhaseIdx, pProd);
-            fs.setSaturation(waterPhaseIdx, 0.0);
-            fs.setSaturation(oilPhaseIdx, 1.0);
-            fs.setSaturation(gasPhaseIdx, 0.0);
-
-            // set the compositions to the initial composition
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                for (int compIdx = 0; compIdx < numComponents; ++compIdx)
-                    fs.setMoleFraction(phaseIdx, compIdx,
-                                       initialFluidState_.moleFraction(phaseIdx,
-                                                                       compIdx));
-
-            constraints.setAllConstraint();
-            constraints.assignNaive(fs);
+        else if (isProducer_(pos)) {
+            constraints.setActive(true);
+            constraints.assignNaive(producerFluidState_);
         }
     }
 
@@ -527,8 +540,8 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
+                unsigned timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -564,8 +577,8 @@ private:
         fs.setPressure(gasPhaseIdx, pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]));
 
         // reset all mole fractions to 0
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 fs.setMoleFraction(phaseIdx, compIdx, 0.0);
 
         //////
@@ -577,25 +590,100 @@ private:
         //////
         // set composition of the oil phase
         //////
-
-        Scalar xoG = 0.95*FluidSystem::saturatedOilGasMoleFraction(temperature_,
-                                                                   fs.pressure(oilPhaseIdx),
-                                                                   /*pvtRegionIdx=*/0);
-        Scalar xoO = 1 - xoG;
+        Scalar RsSat =
+            FluidSystem::saturatedDissolutionFactor(fs, oilPhaseIdx, /*pvtRegionIdx=*/0);
+        Scalar XoGSat = FluidSystem::convertRsToXoG(RsSat, /*pvtRegionIdx=*/0);
+        Scalar xoGSat = FluidSystem::convertXoGToxoG(XoGSat, /*pvtRegionIdx=*/0);
+        Scalar xoG = 0.95*xoGSat;
+        Scalar xoO = 1.0 - xoG;
 
         // finally set the oil-phase composition
         fs.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
         fs.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
+
+        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        typename FluidSystem::ParameterCache paramCache;
+        CFRP::solve(fs,
+                    paramCache,
+                    /*refPhaseIdx=*/oilPhaseIdx,
+                    /*setViscosities=*/false,
+                    /*setEnthalpies=*/false);
+
+        // set up the fluid state used for the injectors
+        auto& injFs = injectorFluidState_;
+        injFs = initialFluidState_;
+
+        Scalar pInj = pReservoir_ * 1.5;
+        injFs.setPressure(waterPhaseIdx, pInj);
+        injFs.setPressure(oilPhaseIdx, pInj);
+        injFs.setPressure(gasPhaseIdx, pInj);
+        injFs.setSaturation(waterPhaseIdx, 1.0);
+        injFs.setSaturation(oilPhaseIdx, 0.0);
+        injFs.setSaturation(gasPhaseIdx, 0.0);
+
+        // set the composition of the phases to immiscible
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                injFs.setMoleFraction(phaseIdx, compIdx, 0.0);
+
+        injFs.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
+        injFs.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
+        injFs.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
+
+        CFRP::solve(injFs,
+                    paramCache,
+                    /*refPhaseIdx=*/waterPhaseIdx,
+                    /*setViscosities=*/false,
+                    /*setEnthalpies=*/false);
+
+        // set up the fluid state used for the producer
+        auto& prodFs = producerFluidState_;
+        prodFs = initialFluidState_;
+
+        Scalar pProd = pReservoir_ / 1.5;
+        prodFs.setPressure(waterPhaseIdx, pProd);
+        prodFs.setPressure(oilPhaseIdx, pProd);
+        prodFs.setPressure(gasPhaseIdx, pProd);
+        prodFs.setSaturation(waterPhaseIdx, 0.0);
+        prodFs.setSaturation(oilPhaseIdx, 1.0);
+        prodFs.setSaturation(gasPhaseIdx, 0.0);
+
+        CFRP::solve(prodFs,
+                    paramCache,
+                    /*refPhaseIdx=*/oilPhaseIdx,
+                    /*setViscosities=*/false,
+                    /*setEnthalpies=*/false);
     }
 
-    bool onLeftBoundary_(const GlobalPosition &pos) const
-    { return pos[0] < eps_; }
+    bool isProducer_(const GlobalPosition &pos) const
+    {
+        Scalar x = pos[0] - this->boundingBoxMin()[0];
+        Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
+        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
+        Scalar height = this->boundingBoxMax()[dim - 1] - this->boundingBoxMin()[dim - 1];
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
-    { return pos[0] > this->boundingBoxMax()[0] - eps_; }
+        // only the upper half of the center section of the spatial domain is assumed to
+        // be the producer
+        if (y <= height/2.0)
+            return false;
 
-    bool onInlet_(const GlobalPosition &pos) const
-    { return onRightBoundary_(pos) && (5 < pos[1]) && (pos[1] < 15); }
+        return width/2.0 - width*1e-5 < x && x < width/2.0 + width*(wellWidth_ + 1e-5);
+    }
+
+    bool isInjector_(const GlobalPosition &pos) const
+    {
+        Scalar x = pos[0] - this->boundingBoxMin()[0];
+        Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
+        Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
+        Scalar height = this->boundingBoxMax()[dim - 1] - this->boundingBoxMin()[dim - 1];
+
+        // only the lower half of the leftmost and rightmost part of the spatial domain
+        // are assumed to be the water injectors
+        if (y > height/2.0)
+            return false;
+
+        return x < width*wellWidth_ - width*1e-5 || x > width*(1.0 - wellWidth_) + width*1e-5;
+    }
 
     bool isFineMaterial_(const GlobalPosition &pos) const
     { return pos[dim - 1] > layerBottom_; }
@@ -611,11 +699,13 @@ private:
     MaterialLawParams fineMaterialParams_;
     MaterialLawParams coarseMaterialParams_;
 
-    BlackOilFluidState initialFluidState_;
+    InitialFluidState initialFluidState_;
+    InitialFluidState injectorFluidState_;
+    InitialFluidState producerFluidState_;
 
     Scalar temperature_;
     Scalar maxDepth_;
-    Scalar eps_;
+    Scalar wellWidth_;
 };
 } // namespace Ewoms
 

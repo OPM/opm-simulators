@@ -60,7 +60,7 @@ void testQuadrature();
 GlobalPosition::field_type f(const GlobalPosition &pos)
 {
     GlobalPosition::field_type result = 1;
-    for (int i = 0; i < GlobalPosition::dimension; ++i)
+    for (unsigned i = 0; i < GlobalPosition::dimension; ++i)
         result *= pos[i];
     return result;
 }
@@ -80,10 +80,10 @@ void testIdenityMapping()
     foo.setCorners(corners, 8);
 
     std::cout << "testing identity mapping...\n";
-    int n = 100;
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            for (int k = 0; k < n; ++k) {
+    unsigned n = 100;
+    for (unsigned i = 0; i < n; ++i) {
+        for (unsigned j = 0; j < n; ++j) {
+            for (unsigned k = 0; k < n; ++k) {
                 LocalPosition localPos;
 
                 localPos[0] = Scalar(i) / (n - 1);
@@ -119,10 +119,10 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     const auto &eEndIt = gridView.template end<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
-        for (int scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
+        for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
-            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+            for (unsigned i = 0; i < scvLocalGeom.numCorners; ++i) {
                 GlobalPosition pos(
                     eIt->geometry().global(scvLocalGeom.corner(i)));
                 gf2.insertVertex(pos);
@@ -134,11 +134,11 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     eIt = gridView.template begin<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
-        for (int scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
+        for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
             std::vector<unsigned int> vertexIndices;
-            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+            for (unsigned i = 0; i < scvLocalGeom.numCorners; ++i) {
                 vertexIndices.push_back(cornerOffset);
                 ++cornerOffset;
             }
@@ -198,10 +198,10 @@ void writeCubeSubControlVolumes(const Grid &grid)
     const auto &eEndIt = gridView.template end<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
-        for (int scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
+        for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
-            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+            for (unsigned i = 0; i < scvLocalGeom.numCorners; ++i) {
                 GlobalPosition pos(
                     eIt->geometry().global(scvLocalGeom.corner(i)));
                 gf2.insertVertex(pos);
@@ -213,11 +213,11 @@ void writeCubeSubControlVolumes(const Grid &grid)
     eIt = gridView.template begin<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
-        for (int scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
+        for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
             std::vector<unsigned int> vertexIndices;
-            for (int i = 0; i < scvLocalGeom.numCorners; ++i) {
+            for (unsigned i = 0; i < scvLocalGeom.numCorners; ++i) {
                 vertexIndices.push_back(cornerOffset);
                 ++cornerOffset;
             }
@@ -313,7 +313,7 @@ void testQuadrature()
         stencil.update(*eIt);
 
         // loop over all sub-control volumes
-        for (int scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
+        for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
             Dune::GeometryType geomType = scvLocalGeom.type();
