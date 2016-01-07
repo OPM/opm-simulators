@@ -33,9 +33,13 @@
 // we cannot use SFC reordering since it messes up the test case logic
 #define DISABLE_ALUGRID_SFC_ORDERING
 #include <dune/alugrid/grid.hh>
+#include <dune/alugrid/dgf.hh>
 #else
 #include <dune/grid/alugrid.hh>
 #endif
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
@@ -71,7 +75,11 @@ NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
 
+#if HAVE_DUNE_ALUGRID
 SET_TYPE_PROP(FingerGridManager, Grid, Dune::ALUGrid<FINGER_DIM, FINGER_DIM, Dune::cube, Dune::nonconforming>);
+#else
+SET_TYPE_PROP(FingerGridManager, Grid, Dune::YaspGrid<FINGER_DIM> );
+#endif
 SET_TYPE_PROP(FingerGridManager, GridManager, Ewoms::FingerGridManager<TypeTag>);
 
 } // namespace Properties
@@ -139,136 +147,21 @@ public:
             cellRes[2] = EWOMS_GET_PARAM(TypeTag, int, CellsZ);
         }
 
-        Dune::GridFactory<Grid> factory;
+        // create a DGF input stream containing an interval block
+        std::stringstream dgfFile;
+        dgfFile << "DGF"      << std::endl;
+        dgfFile << "Interval" << std::endl;
+        dgfFile << lowerLeft  << std::endl;
+        dgfFile << upperRight << std::endl;
+        dgfFile << cellRes    << std::endl;
+        dgfFile << "#" << std::endl;
+        dgfFile << "GridParameter" << std::endl;
+        dgfFile << "overlap 1"     << std::endl;
+        dgfFile << "#" << std::endl;
+        dgfFile << "Simplex" << std::endl;
+        dgfFile << "#" << std::endl;
 
-        if (dim == 3) {
-            Dune::FieldVector<double, dim> pos;
-            for (int k = 0; k <= cellRes[0]; k++) {
-                pos[2] = upperRight[2] * double(k) / cellRes[2];
-
-                for (int j = 0; j <= cellRes[1]; j++) {
-                    pos[1] = upperRight[1] * double(j) / cellRes[1];
-
-                    for (int i = 0; i <= cellRes[0]; i++) {
-                        pos[0] = upperRight[0] * double(i) / cellRes[0];
-                        factory.insertVertex(pos);
-                    }
-                }
-            }
-        }
-        else {
-            assert(dim == 2);
-            Dune::FieldVector<double, dim> pos;
-            for (int j = 0; j <= cellRes[1]; j++) {
-                pos[1] = upperRight[1] * double(j) / cellRes[1];
-
-                for (int i = 0; i <= cellRes[0]; i++) {
-                    pos[0] = upperRight[0] * double(i) / cellRes[0];
-                    factory.insertVertex(pos);
-                }
-            }
-        }
-
-        for (int i = 0; i < cellRes[0]; ++i) {
-            for (int j = 0; j < cellRes[1]; ++j) {
-#if FINGER_CUBES
-                std::vector<unsigned int> v(1 << dim);
-#else
-                std::vector<unsigned int> v(dim + 1);
-#endif
-                if (dim == 3) {
-                    int m = cellRes[0] + 1;
-                    int n = cellRes[1] + 1;
-                    for (int k = 0; k < cellRes[2]; ++k) {
-                        int i0 = k * m * n + j * m + i;
-                        int i1 = k * m * n + j * m + (i + 1);
-                        int i2 = k * m * n + (j + 1) * m + i;
-                        int i3 = k * m * n + (j + 1) * m + (i + 1);
-                        int i4 = (k + 1) * m * n + j * m + i;
-                        int i5 = (k + 1) * m * n + j * m + (i + 1);
-                        int i6 = (k + 1) * m * n + (j + 1) * m + i;
-                        int i7 = (k + 1) * m * n + (j + 1) * m + (i + 1);
-
-#if FINGER_CUBES
-                        v[0] = i0;
-                        v[1] = i1;
-                        v[2] = i2;
-                        v[3] = i3;
-                        v[4] = i4;
-                        v[5] = i5;
-                        v[6] = i6;
-                        v[7] = i7;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube, 3), v);
-
-#else
-                        v[0] = i0;
-                        v[1] = i1;
-                        v[2] = i2;
-                        v[3] = i4;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-
-                        v[0] = i4;
-                        v[1] = i5;
-                        v[2] = i6;
-                        v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-
-                        v[0] = i2;
-                        v[1] = i5;
-                        v[2] = i4;
-                        v[3] = i1;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-
-                        v[0] = i2;
-                        v[1] = i3;
-                        v[2] = i7;
-                        v[3] = i5;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-
-                        v[0] = i5;
-                        v[1] = i7;
-                        v[2] = i6;
-                        v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-
-                        v[0] = i1;
-                        v[1] = i3;
-                        v[2] = i5;
-                        v[3] = i2;
-                        factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 3), v);
-#endif
-                    }
-                }
-                else {
-                    assert(dim == 2);
-
-                    int m = cellRes[0] + 1;
-                    int i0 = j * m + i;
-                    int i1 = j * m + (i + 1);
-                    int i2 = (j + 1) * m + i;
-                    int i3 = (j + 1) * m + (i + 1);
-#if FINGER_CUBES
-                    v[0] = i0;
-                    v[1] = i1;
-                    v[2] = i2;
-                    v[3] = i3;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::cube, 2), v);
-#else
-                    v[0] = i0;
-                    v[1] = i1;
-                    v[2] = i2;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
-
-                    v[0] = i1;
-                    v[1] = i3;
-                    v[2] = i2;
-                    factory.insertElement(Dune::GeometryType(Dune::GeometryType::simplex, 2), v);
-#endif
-                }
-            }
-        }
-
-        gridPtr_.reset(factory.createGrid());
+        gridPtr_.reset( Dune::GridPtr< Grid >(dgfFile).release() );
 
         unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
         gridPtr_->globalRefine(numRefinments);
