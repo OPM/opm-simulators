@@ -2,6 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright (C) 2012-2013 by Andreas Lauser
+  Copyright (C) 2016      IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,10 +21,10 @@
 */
 /*!
  * \file
- * \copydoc Ewoms::LensGridManager
+ * \copydoc Ewoms::StructuredGridManager
  */
-#ifndef EWOMS_LENS_GRID_MANAGER_HH
-#define EWOMS_LENS_GRID_MANAGER_HH
+#ifndef EWOMS_STRUCTURED_GRID_MANAGER_HH
+#define EWOMS_STRUCTURED_GRID_MANAGER_HH
 
 #include <ewoms/io/basegridmanager.hh>
 #include <ewoms/common/propertysystem.hh>
@@ -32,6 +33,12 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
+//#define TESTS_USE_ALUGRID 1
+#if TESTS_USE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/dgf.hh>
+#endif
+
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
@@ -39,14 +46,12 @@
 #include <memory>
 
 namespace Ewoms {
-template <class TypeTag>
-class LensProblem;
 
 template <class TypeTag>
-class LensGridManager;
+class StructuredGridManager;
 
 namespace Properties {
-NEW_TYPE_TAG(LensGridManager);
+NEW_TYPE_TAG(StructuredGridManager);
 
 // declare the properties required by the for the lens grid manager
 NEW_PROP_TAG(Grid);
@@ -62,10 +67,21 @@ NEW_PROP_TAG(CellsZ);
 
 NEW_PROP_TAG(GridGlobalRefinements);
 
-// set the Grid and GridManager properties
-SET_TYPE_PROP(LensGridManager, Grid, Dune::YaspGrid<2>);
+// GRIDDIM is only set by the finger problem
+#ifndef GRIDDIM
+static const int dim = 2;
+#else
+static const int dim = GRIDDIM;
+#endif
 
-SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
+// set the Grid and GridManager properties
+#if TESTS_USE_ALUGRID
+SET_TYPE_PROP(StructuredGridManager, Grid, Dune::ALUGrid< dim, dim, Dune::cube, Dune::nonconforming >);
+#else
+SET_TYPE_PROP(StructuredGridManager, Grid, Dune::YaspGrid< dim >);
+#endif
+
+SET_TYPE_PROP(StructuredGridManager, GridManager, Ewoms::StructuredGridManager<TypeTag>);
 } // namespace Properties
 
 /*!
@@ -74,7 +90,7 @@ SET_TYPE_PROP(LensGridManager, GridManager, Ewoms::LensGridManager<TypeTag>);
  * \brief Helper class for grid instantiation of the lens problem.
  */
 template <class TypeTag>
-class LensGridManager : public BaseGridManager<TypeTag>
+class StructuredGridManager : public BaseGridManager<TypeTag>
 {
     typedef BaseGridManager<TypeTag> ParentType;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -115,7 +131,7 @@ public:
     /*!
      * \brief Create the grid for the lens problem
      */
-    LensGridManager(Simulator &simulator)
+    StructuredGridManager(Simulator &simulator)
         : ParentType(simulator)
     {
         Dune::FieldVector<int, dim> cellRes;
@@ -143,6 +159,8 @@ public:
         dgffile << "#" << std::endl;
         dgffile << "GridParameter" << std::endl;
         dgffile << "overlap 1" << std::endl;
+        dgffile << "#" << std::endl;
+        dgffile << "Simplex" << std::endl;
         dgffile << "#" << std::endl;
 
         // use DGF parser to create a grid from interval block
