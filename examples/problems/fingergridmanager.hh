@@ -124,8 +124,6 @@ public:
     FingerGridManager(Simulator &simulator)
         : ParentType(simulator)
     {
-        gridPtr_.reset(new Grid);
-
         Dune::FieldVector<int, dim> cellRes;
         Dune::FieldVector<Scalar, dim> upperRight;
         Dune::FieldVector<Scalar, dim> lowerLeft;
