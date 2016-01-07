@@ -312,7 +312,8 @@ public:
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
             elemCtx.updateAll( elem );
-            for (int scvIdx = 0; scvIdx < elemCtx.numDof(/*timeIdx=*/0); ++scvIdx)
+            const int numDofs = elemCtx.numDof(/*timeIdx=*/0);
+            for (int scvIdx = 0; scvIdx < numDofs; ++scvIdx)
             {
                 MaterialLawParams& materialParam = materialLawParams( elemCtx, scvIdx, /*timeIdx=*/0 );
                 const auto &fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
