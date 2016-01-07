@@ -30,6 +30,8 @@
 #include <ewoms/common/parametersystem.hh>
 
 #if HAVE_DUNE_ALUGRID
+// we cannot use SFC reordering since it messes up the test case logic
+#define DISABLE_ALUGRID_SFC_ORDERING
 #include <dune/alugrid/grid.hh>
 #else
 #include <dune/grid/alugrid.hh>
