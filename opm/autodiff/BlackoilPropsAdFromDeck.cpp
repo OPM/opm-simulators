@@ -158,7 +158,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         // retrieve the cell specific PVT table index from the deck
         // and using the grid...
-        extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
+        extractPvtTableIndex(cellPvtRegionIdx_, eclState, number_of_cells, global_cell);
 
         if (init_rock){
             rock_.init(eclState, number_of_cells, global_cell, cart_dims);
