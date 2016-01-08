@@ -541,27 +541,25 @@ namespace Opm{
              if (fluidSystem_ == FluidSystem::BlackOil) {
                 if (satFamily_ == SaturationFunctionFamily::FamilyI) {
                      if (!sgofTables.empty()) {
-                         auto sg = sgofTables.getTable<SgofTable>(satnumIdx).getSgColumn();
-                         auto krog = sgofTables.getTable<SgofTable>(satnumIdx).getKrogColumn();
-                         krog_value=Opm::linearInterpolation(sg, krog,unscaledEpsInfo_[satnumIdx].Sgl);
+                         const auto& table = sgofTables.getTable<SgofTable>(satnumIdx);
+                         krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
                      } else {
                          assert(!slgofTables.empty());
-                         auto sl = slgofTables.getTable<SlgofTable>(satnumIdx).getSlColumn();
-                         auto krog = slgofTables.getTable<SlgofTable>(satnumIdx).getKrogColumn();
-                         krog_value=Opm::linearInterpolation(sl, krog, unscaledEpsInfo_[satnumIdx].Sgl);                        
+                         const auto& table = slgofTables.getTable<SlgofTable>(satnumIdx);
+                         krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
                      }
-                     auto sw = swofTables.getTable<SwofTable>(satnumIdx).getSwColumn();
-                     auto krow = swofTables.getTable<SwofTable>(satnumIdx).getKrowColumn();
-                     krow_value = Opm::linearInterpolation(sw, krow,unscaledEpsInfo_[satnumIdx].Swl);
+                     {
+                         const auto& table = swofTables.getTable<SwofTable>(satnumIdx);
+                         krow_value = table.evaluate("KROW" , unscaledEpsInfo_[satnumIdx].Swl);
+                     }
                  }
                  if (satFamily_ == SaturationFunctionFamily::FamilyII) {
                      assert(!sof3Tables.empty());
+                     const auto& table = sof3Tables.getTable<Sof3Table>(satnumIdx);
                      const double Sou = 1.- unscaledEpsInfo_[satnumIdx].Swl - unscaledEpsInfo_[satnumIdx].Sgl;
-                     auto so = sof3Tables.getTable<Sof3Table>(satnumIdx).getSoColumn();
-                     auto krow = sof3Tables.getTable<Sof3Table>(satnumIdx).getKrowColumn();
-                     auto krog = sof3Tables.getTable<Sof3Table>(satnumIdx).getKrogColumn();
-                     krow_value = Opm::linearInterpolation(so, krow, Sou);
-                     krog_value = Opm::linearInterpolation(so, krog, Sou);
+
+                     krow_value = table.evaluate("KROW" , Sou);
+                     krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
                      std::string msg = "Warning: Krow(sSomax) should equal Krog(Somax).";

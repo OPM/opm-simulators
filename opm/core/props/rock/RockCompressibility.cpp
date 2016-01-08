@@ -50,9 +50,13 @@ namespace Opm
             if (rocktabTables.size() != 1)
                 OPM_THROW(std::runtime_error, "Can only handle a single region in ROCKTAB.");
 
-            p_ = rocktabTable.getPressureColumn();
-            poromult_ = rocktabTable.getPoreVolumeMultiplierColumn();
-            transmult_ =  rocktabTable.getTransmissibilityMultiplierColumn();
+            p_ = rocktabTable.getColumn("PO").vectorCopy( );
+            poromult_ = rocktabTable.getColumn("PV_MULT").vectorCopy();
+            if (rocktabTable.hasColumn("PV_MULT_TRAN")) {
+                transmult_ =  rocktabTable.getColumn("PV_MULT_TRAN").vectorCopy();
+            } else {
+                transmult_ =  rocktabTable.getColumn("PV_MULT_TRANX").vectorCopy();
+            }
         } else if (deck->hasKeyword("ROCK")) {
             Opm::DeckKeywordConstPtr rockKeyword = deck->getKeyword("ROCK");
             if (rockKeyword->size() != 1) {
