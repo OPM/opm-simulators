@@ -37,6 +37,8 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
+
+
 namespace Opm {
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phas
@@ -52,6 +54,7 @@ class LiveOilPvt
 
 public:
 #if HAVE_OPM_PARSER
+
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
@@ -77,8 +80,8 @@ public:
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtoTable = pvtoTables[regionIdx];
 
-            const auto saturatedTable = pvtoTable.getOuterTable();
-            assert(saturatedTable->numRows() > 1);
+            const auto saturatedTable = pvtoTable.getSaturatedTable( );
+            assert(saturatedTable.numRows() > 1);
 
             auto& oilMu = oilMuTable_[regionIdx];
             auto& satOilMu = saturatedOilMuTable_[regionIdx];
@@ -89,10 +92,10 @@ public:
             std::vector<Scalar> satOilMuArray;
 
             // extract the table for the gas dissolution and the oil formation volume factors
-            for (unsigned outerIdx = 0; outerIdx < saturatedTable->numRows(); ++ outerIdx) {
-                Scalar Rs = saturatedTable->getGasSolubilityColumn()[outerIdx];
-                Scalar BoSat = saturatedTable->getOilFormationFactorColumn()[outerIdx];
-                Scalar muoSat = saturatedTable->getOilViscosityColumn()[outerIdx];
+            for (unsigned outerIdx = 0; outerIdx < saturatedTable.numRows(); ++ outerIdx) {
+                Scalar Rs    = saturatedTable.get("RS" , outerIdx);
+                Scalar BoSat = saturatedTable.get("BO" , outerIdx);
+                Scalar muoSat = saturatedTable.get("MUO" , outerIdx);
 
                 satOilMuArray.push_back(muoSat);
                 invSatOilBArray.push_back(1.0/BoSat);
@@ -103,12 +106,12 @@ public:
                 assert(invOilB.numX() == outerIdx + 1);
                 assert(oilMu.numX() == outerIdx + 1);
 
-                const auto underSaturatedTable = pvtoTable.getInnerTable(outerIdx);
-                size_t numRows = underSaturatedTable->numRows();
+                const auto& underSaturatedTable = pvtoTable.getUnderSaturatedTable(outerIdx);
+                size_t numRows = underSaturatedTable.numRows();
                 for (unsigned innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
-                    Scalar po = underSaturatedTable->getPressureColumn()[innerIdx];
-                    Scalar Bo = underSaturatedTable->getOilFormationFactorColumn()[innerIdx];
-                    Scalar muo = underSaturatedTable->getOilViscosityColumn()[innerIdx];
+                    Scalar po = underSaturatedTable.get("P" , innerIdx);
+                    Scalar Bo = underSaturatedTable.get("BO" , innerIdx);
+                    Scalar muo = underSaturatedTable.get("MU" , innerIdx);
 
                     invOilB.appendSamplePoint(outerIdx, po, 1.0/Bo);
                     oilMu.appendSamplePoint(outerIdx, po, muo);
@@ -117,12 +120,15 @@ public:
 
             // update the tables for the formation volume factor and for the gas
             // dissolution factor of saturated oil
-            invSatOilB.setXYContainers(saturatedTable->getPressureColumn(),
-                                       invSatOilBArray);
-            satOilMu.setXYContainers(saturatedTable->getPressureColumn(),
-                                     satOilMuArray);
-            gasDissolutionFac.setXYContainers(saturatedTable->getPressureColumn(),
-                                              saturatedTable->getGasSolubilityColumn());
+            {
+                std::vector<Scalar> tmpPressureColumn = saturatedTable.getColumn("RS").vectorCopy();
+                std::vector<Scalar> tmpGasSolubilityColumn = saturatedTable.getColumn("P").vectorCopy();
+                std::vector<Scalar> tmpMuColumn = saturatedTable.getColumn("MUO").vectorCopy( );
+
+                satOilMu.setXYContainers(tmpMuColumn , satOilMuArray);
+                invSatOilB.setXYContainers(tmpPressureColumn , invSatOilBArray);
+                gasDissolutionFac.setXYContainers(tmpPressureColumn , tmpGasSolubilityColumn);
+            }
 
             updateSaturationPressureSpline_(regionIdx);
             // make sure to have at least two sample points per Rs value
@@ -139,13 +145,13 @@ public:
                 // current line. We define master table as the first table which has values
                 // for undersaturated oil...
                 size_t masterTableIdx = xIdx + 1;
-                for (; masterTableIdx < pvtoTable.getOuterTable()->numRows(); ++masterTableIdx)
+                for (; masterTableIdx < saturatedTable.numRows(); ++masterTableIdx)
                 {
-                    if (pvtoTable.getInnerTable(masterTableIdx)->numRows() > 1)
+                    if (pvtoTable.getUnderSaturatedTable(masterTableIdx).numRows() > 1)
                         break;
                 }
 
-                if (masterTableIdx >= pvtoTable.getOuterTable()->numRows())
+                if (masterTableIdx >= saturatedTable.numRows())
                     OPM_THROW(std::runtime_error,
                               "PVTO tables are invalid: The last table must exhibit at least one "
                               "entry for undersaturated oil!");
@@ -153,8 +159,8 @@ public:
                 // extend the current table using the master table.
                 extendPvtoTable_(regionIdx,
                                  xIdx,
-                                 *pvtoTable.getInnerTable(xIdx),
-                                 *pvtoTable.getInnerTable(masterTableIdx));
+                                 pvtoTable.getUnderSaturatedTable(xIdx),
+                                 pvtoTable.getUnderSaturatedTable(masterTableIdx));
             }
         }
     }
@@ -162,26 +168,28 @@ public:
 private:
     void extendPvtoTable_(unsigned regionIdx,
                           unsigned xIdx,
-                          const PvtoInnerTable& curTable,
-                          const PvtoInnerTable& masterTable)
+                          const SimpleTable& curTable,
+                          const SimpleTable& masterTable)
     {
-        std::vector<Scalar> pressuresArray(curTable.getPressureColumn());
-        std::vector<Scalar> oilBArray(curTable.getOilFormationFactorColumn());
-        std::vector<Scalar> oilMuArray(curTable.getOilViscosityColumn());
+        std::vector<Scalar> pressuresArray = curTable.getColumn("P").vectorCopy( );
+        std::vector<Scalar> oilBArray = curTable.getColumn("BO").vectorCopy( );
+        std::vector<Scalar> oilMuArray = curTable.getColumn("MU").vectorCopy( );
 
         auto& invOilB = inverseOilBTable_[regionIdx];
         auto& oilMu = oilMuTable_[regionIdx];
 
         for (unsigned newRowIdx = 1; newRowIdx < masterTable.numRows(); ++ newRowIdx) {
+            const auto& pressureColumn = masterTable.getColumn("P");
+            const auto& BOColumn = masterTable.getColumn("BO");
+            const auto& viscosityColumn = masterTable.getColumn("MU");
+
             // compute the oil pressure for the new entry
-            Scalar diffPo =
-                masterTable.getPressureColumn()[newRowIdx]
-                - masterTable.getPressureColumn()[newRowIdx - 1];
+            Scalar diffPo = pressureColumn[newRowIdx] - pressureColumn[newRowIdx - 1];
             Scalar newPo = pressuresArray.back() + diffPo;
 
             // calculate the compressibility of the master table
-            Scalar B1 = masterTable.getOilFormationFactorColumn()[newRowIdx];
-            Scalar B2 = masterTable.getOilFormationFactorColumn()[newRowIdx - 1];
+            Scalar B1 = BOColumn[newRowIdx];
+            Scalar B2 = BOColumn[newRowIdx - 1];
             Scalar x = (B1 - B2)/( (B1 + B2)/2.0 );
 
             // calculate the oil formation volume factor which exhibits the same
@@ -189,8 +197,8 @@ private:
             Scalar newBo = oilBArray.back()*(1.0 + x/2.0)/(1.0 - x/2.0);
 
             // calculate the "viscosibility" of the master table
-            Scalar mu1 = masterTable.getOilViscosityColumn()[newRowIdx];
-            Scalar mu2 = masterTable.getOilViscosityColumn()[newRowIdx - 1];
+            Scalar mu1 = viscosityColumn[newRowIdx];
+            Scalar mu2 = viscosityColumn[newRowIdx - 1];
             Scalar xMu = (mu1 - mu2)/( (mu1 + mu2)/2.0 );
 
             // calculate the oil formation volume factor which exhibits the same
