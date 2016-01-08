@@ -194,7 +194,7 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GridView :: Grid Grid;
 
-    typedef Dune::PersistentContainer< Grid, MaterialLawParams* >   MaterialLawParamsContainer;
+    typedef Dune::PersistentContainer< Grid, std::shared_ptr< MaterialLawParams > >   MaterialLawParamsContainer;
     //!\endcond
 
 public:
@@ -270,21 +270,20 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes, resize will resize the container to the number of elements
-        materialParams_.resize( (MaterialLawParams*) 0 );
+        materialParams_.resize();
 
         for (auto it = materialParams_.begin(),
                  end = materialParams_.end(); it != end; ++it ) {
-            MaterialLawParams* materialParams = *it ;
+            std::shared_ptr< MaterialLawParams >& materialParams = *it ;
             if( ! materialParams )
             {
-                materialParams = new MaterialLawParams();
+                materialParams.reset( new MaterialLawParams() );
                 materialParams->setMicParams(&micParams_);
                 materialParams->setMdcParams(&mdcParams_);
                 materialParams->setSwr(0.0);
                 materialParams->setSnr(0.1);
                 materialParams->finalize();
                 ParkerLenhard::reset(*materialParams);
-                *it = materialParams;
             }
         }
 
@@ -368,9 +367,8 @@ public:
                                          const int spaceIdx, const int timeIdx)
     {
         const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        MaterialLawParams* params = materialParams_[ entity ];
-        assert( params );
-        return *params;
+        assert( materialParams_[ entity ] );
+        return *(materialParams_[ entity ] );
     }
 
     /*!
@@ -381,9 +379,8 @@ public:
                                                const int spaceIdx, const int timeIdx) const
     {
         const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        const MaterialLawParams* params = materialParams_[ entity ];
-        assert( params );
-        return *params;
+        assert( materialParams_[ entity ] );
+        return *(materialParams_[ entity ] );
     }
 
     //! \}
