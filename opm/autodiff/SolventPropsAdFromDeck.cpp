@@ -39,7 +39,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
     if (deck->hasKeyword("SOLVENT")) {
         // retrieve the cell specific PVT table index from the deck
         // and using the grid...
-        extractPvtTableIndex(cellPvtRegionIdx_, deck, number_of_cells, global_cell);
+        extractPvtTableIndex(cellPvtRegionIdx_, eclState, number_of_cells, global_cell);
 
         // surface densities
         if (deck->hasKeyword("SDENSITY")) {
