@@ -92,17 +92,8 @@ namespace Opm
         /// \param[in]  deck        Input deck expected to contain WPOLYMER.
         /// \param[in]  wells       Wells structure.
         /// \param[in]  num_cells   Number of cells in grid.
-        PolymerInflowFromDeck(Opm::DeckConstPtr deck,
-                              const Wells& wells,
-                              const int num_cells);
-
-        /// Constructor.
-        /// \param[in]  deck        Input deck expected to contain WPOLYMER.
-        /// \param[in]  wells       Wells structure.
-        /// \param[in]  num_cells   Number of cells in grid.
         /// \param[in]  currentStep Number of current simulation step.
-        PolymerInflowFromDeck(Opm::DeckConstPtr deck,
-                              Opm::EclipseStateConstPtr eclipseState,
+        PolymerInflowFromDeck(Opm::EclipseStateConstPtr eclipseState,
                               const Wells& wells,
                               const int num_cells,
                               size_t currentStep);
@@ -119,8 +110,7 @@ namespace Opm
         SparseVector<double> sparse_inflow_;
         
         std::unordered_map<std::string, double> wellPolymerRate_;
-        void setInflowValues(Opm::DeckConstPtr deck,
-                             Opm::EclipseStateConstPtr eclipseState,
+        void setInflowValues(Opm::EclipseStateConstPtr eclipseState,
                              size_t currentStep);
     };
 

@@ -66,94 +66,31 @@ namespace Opm
     // ---------- Methods of PolymerInflowFromDeck ----------
 
 
-
-    /// Constructor.
-    /// @param[in]  deck     Input deck expected to contain WPOLYMER.
-    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::DeckConstPtr deck,
-                                                 const Wells& wells,
-                                                 const int num_cells)
-        : sparse_inflow_(num_cells)
-    {
-        if (!deck->hasKeyword("WPOLYMER")) {
-            OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
-            return;
-        }
-
-        // Extract concentrations and put into cell->concentration map.
-        Opm::DeckKeywordConstPtr wpolymerKeyword = deck->getKeyword("WPOLYMER");
-        const int num_wpl = wpolymerKeyword->size();
-        std::map<int, double> perfcell_conc;
-        for (int i = 0; i < num_wpl; ++i) {
-            // Only use well name and polymer concentration.
-            // That is, we ignore salt concentration and group
-            // names.
-            int wix = 0;
-            for (; wix < wells.number_of_wells; ++wix) {
-                if (wpolymerKeyword->getRecord(i)->getItem("WELL")->getString(0) == wells.name[wix]) {
-                    break;
-                }
-            }
-            if (wix == wells.number_of_wells) {
-                OPM_THROW(std::runtime_error, "Could not find a match for well "
-                          << wpolymerKeyword->getRecord(i)->getItem("WELL")->getString(0)
-                          << " from WPOLYMER.");
-            }
-            for (int j = wells.well_connpos[wix]; j < wells.well_connpos[wix+1]; ++j) {
-                const int perf_cell = wells.well_cells[j];
-                perfcell_conc[perf_cell] =
-                    wpolymerKeyword->getRecord(i)->getItem("POLYMER_CONCENTRATION")->getSIDouble(0);
-            }
-        }
-
-        // Build sparse vector from map.
-        std::map<int, double>::const_iterator it = perfcell_conc.begin();
-        for (; it != perfcell_conc.end(); ++it) {
-            sparse_inflow_.addElement(it->second, it->first);
-        }
-    }
-
     void
-    PolymerInflowFromDeck::setInflowValues(Opm::DeckConstPtr deck,
-                                           Opm::EclipseStateConstPtr eclipseState,
+    PolymerInflowFromDeck::setInflowValues(Opm::EclipseStateConstPtr eclipseState,
                                            size_t currentStep)
     {
-        Opm::DeckKeywordConstPtr keyword = deck->getKeyword("WPOLYMER");
-        
-        //        Schedule schedule(deck);
         ScheduleConstPtr schedule = eclipseState->getSchedule();
-        for (size_t recordNr = 0; recordNr < keyword->size(); recordNr++) {
-            DeckRecordConstPtr record = keyword->getRecord(recordNr);
-
-            const std::string& wellNamesPattern = record->getItem("WELL")->getTrimmedString(0);
-            std::string wellName = record->getItem("WELL")->getTrimmedString(0);
-            std::vector<WellPtr> wells = schedule->getWells(wellNamesPattern);
-            for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter) {
-                WellPtr well = *wellIter;
-                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
-                if (injection.injectorType == WellInjector::WATER) {
-                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                    wellPolymerRate_.insert(std::make_pair(wellName, polymer.m_polymerConcentration));
-                } else {
-                    OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
-                }
+        for (const auto& well : schedule->getWells(currentStep)) {
+            WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+            if (injection.injectorType == WellInjector::WATER) {
+                WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
+                wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+            } else {
+                OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
             }
         }
     }
 
     /// Constructor.
     /// @param[in]  deck     Input deck expected to contain WPOLYMER.
-    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::DeckConstPtr deck,
-                                                 Opm::EclipseStateConstPtr eclipseState,
+    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::EclipseStateConstPtr eclipseState,
                                                  const Wells& wells,
                                                  const int num_cells,
                                                  size_t currentStep)
         : sparse_inflow_(num_cells)
     {
-        if (!deck->hasKeyword("WPOLYMER")) {
-            OPM_MESSAGE("PolymerInflowFromDeck initialized without WPOLYMER in current epoch.");
-            return;
-        }
-        setInflowValues(deck, eclipseState, currentStep);
+        setInflowValues(eclipseState, currentStep);
         
         std::unordered_map<std::string, double>::const_iterator map_it;
         // Extract concentrations and put into cell->concentration map.

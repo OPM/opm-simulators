@@ -100,40 +100,27 @@ namespace Opm
         const int nw = wells->number_of_wells;
         std::vector<double> perfcells_fraction(wells->well_connpos[nw], 0.0);
 
-        if (deck_->hasKeyword("WSOLVENT")) {
+        size_t currentStep = timer.currentStepNum();
+        ScheduleConstPtr schedule = BaseType::eclipse_state_->getSchedule();
 
-            size_t currentStep = timer.currentStepNum();
-            ScheduleConstPtr schedule = BaseType::eclipse_state_->getSchedule();
-            Opm::DeckKeywordConstPtr keyword = deck_->getKeyword("WSOLVENT");
-            const int num_keywords = keyword->size();
-
-            for (int recordNr = 0; recordNr < num_keywords; ++recordNr) {
-                DeckRecordConstPtr record = keyword->getRecord(recordNr);
-                const std::string& wellNamesPattern = record->getItem("WELL")->getTrimmedString(0);
-                std::vector<WellPtr> wells_solvent = schedule->getWells(wellNamesPattern);
-                for (auto wellIter = wells_solvent.begin(); wellIter != wells_solvent.end(); ++wellIter) {
-                    WellPtr well_solvent = *wellIter;
-                    WellInjectionProperties injection = well_solvent->getInjectionProperties(currentStep);
-                    if (injection.injectorType == WellInjector::GAS) {
-                        double solventFraction = well_solvent->getSolventFraction(currentStep);
-                        // Find the solvent well in the well list and add properties to it
-                        int wix = 0;
-                        for (; wix < nw; ++wix) {
-                            if (wellNamesPattern == wells->name[wix]) {
-                                break;
-                            }
-                        }
-                        if (wix == wells->number_of_wells) {
-                            OPM_THROW(std::runtime_error, "Could not find a match for well "
-                                      << wellNamesPattern
-                                      << " from WSOLVENT.");
-                        }
-                        for (int j = wells->well_connpos[wix]; j < wells->well_connpos[wix+1]; ++j) {
-                            perfcells_fraction[j] = solventFraction;
-                        }
-                    } else {
-                        OPM_THROW(std::logic_error, "For solvent injector you must have a gas injector");
+        for (const auto&  well_solvent : schedule->getWells( currentStep )) {
+            WellInjectionProperties injection = well_solvent->getInjectionProperties(currentStep);
+            if (injection.injectorType == WellInjector::GAS) {
+                double solventFraction = well_solvent->getSolventFraction(currentStep);
+                // Find the solvent well in the well list and add properties to it
+                int wix = 0;
+                for (; wix < nw; ++wix) {
+                    if (well_solvent->name() == wells->name[wix]) {
+                        break;
                     }
+                }
+                if (wix == wells->number_of_wells) {
+                    OPM_THROW(std::runtime_error, "Could not find a match for well "
+                              << well_solvent->name()
+                              << " from WSOLVENT.");
+                }
+                for (int j = wells->well_connpos[wix]; j < wells->well_connpos[wix+1]; ++j) {
+                    perfcells_fraction[j] = solventFraction;
                 }
             }
         }
