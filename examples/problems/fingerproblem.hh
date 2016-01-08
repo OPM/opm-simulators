@@ -29,7 +29,7 @@
 // uncomment to run problem in 3d
 // #define GRIDDIM 3
 
-#include "structuredgridmanager.hh"
+#include <ewoms/io/structuredgridmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -194,7 +194,7 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GridView :: Grid Grid;
 
-    typedef Dune::PersistentContainer< Grid, MaterialLawParams >   MaterialLawParamsContainer;
+    typedef Dune::PersistentContainer< Grid, MaterialLawParams* >   MaterialLawParamsContainer;
     //!\endcond
 
 public:
@@ -206,7 +206,8 @@ public:
     FingerProblem(Simulator &simulator)
         : ParentType(simulator),
           materialParams_( simulator.gridManager().grid(), codim )
-    { }
+    {
+    }
 
     /*!
      * \name Auxiliary methods
@@ -269,17 +270,22 @@ public:
 
         // initialize the material parameter objects of the individual
         // finite volumes, resize will resize the container to the number of elements
-        materialParams_.resize();
+        materialParams_.resize( (MaterialLawParams*) 0 );
 
         for (auto it = materialParams_.begin(),
                  end = materialParams_.end(); it != end; ++it ) {
-            MaterialLawParams& materialParams = *it ;
-            materialParams.setMicParams(&micParams_);
-            materialParams.setMdcParams(&mdcParams_);
-            materialParams.setSwr(0.0);
-            materialParams.setSnr(0.1);
-            materialParams.finalize();
-            ParkerLenhard::reset(materialParams);
+            MaterialLawParams* materialParams = *it ;
+            if( ! materialParams )
+            {
+                materialParams = new MaterialLawParams();
+                materialParams->setMicParams(&micParams_);
+                materialParams->setMdcParams(&mdcParams_);
+                materialParams->setSwr(0.0);
+                materialParams->setSnr(0.1);
+                materialParams->finalize();
+                ParkerLenhard::reset(*materialParams);
+                *it = materialParams;
+            }
         }
 
         K_ = this->toDimMatrix_(4.6e-10);
@@ -359,10 +365,12 @@ public:
      */
     template <class Context>
     MaterialLawParams &materialLawParams(const Context &context,
-                                         int spaceIdx, int timeIdx)
+                                         const int spaceIdx, const int timeIdx)
     {
         const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        return materialParams_[ entity ];
+        MaterialLawParams* params = materialParams_[ entity ];
+        assert( params );
+        return *params;
     }
 
     /*!
@@ -370,10 +378,12 @@ public:
      */
     template <class Context>
     const MaterialLawParams &materialLawParams(const Context &context,
-                                               unsigned spaceIdx, unsigned timeIdx) const
+                                               const int spaceIdx, const int timeIdx) const
     {
         const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        return materialParams_[ entity ];
+        const MaterialLawParams* params = materialParams_[ entity ];
+        assert( params );
+        return *params;
     }
 
     //! \}

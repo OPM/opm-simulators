@@ -26,7 +26,7 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include "structuredgridmanager.hh"
+#include <ewoms/io/structuredgridmanager.hh>
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 
