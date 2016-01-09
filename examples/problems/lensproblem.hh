@@ -26,7 +26,7 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include "lensgridmanager.hh"
+#include <ewoms/io/structuredgridmanager.hh>
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 
@@ -38,12 +38,6 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Dnapl.hpp>
-
-//#define LENS_USE_ALUGRID 1
-#if LENS_USE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/dgf.hh>
-#endif
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -58,11 +52,7 @@ template <class TypeTag>
 class LensProblem;
 
 namespace Properties {
-#if LENS_USE_ALUGRID
-NEW_TYPE_TAG(LensBaseProblem);
-#else
-NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(LensGridManager));
-#endif
+NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridManager));
 
 // declare the properties specific for the lens problem
 NEW_PROP_TAG(LensLowerLeftX);
@@ -94,10 +84,6 @@ private:
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> > type;
 };
-
-#if LENS_USE_ALUGRID
-SET_TYPE_PROP(LensBaseProblem, Grid, Dune::ALUGrid< 2, 2, Dune::cube, Dune::nonconforming > );
-#endif
 
 // Set the material Law
 SET_PROP(LensBaseProblem, MaterialLaw)
