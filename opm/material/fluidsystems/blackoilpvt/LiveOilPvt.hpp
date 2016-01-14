@@ -95,7 +95,7 @@ public:
             for (unsigned outerIdx = 0; outerIdx < saturatedTable.numRows(); ++ outerIdx) {
                 Scalar Rs    = saturatedTable.get("RS" , outerIdx);
                 Scalar BoSat = saturatedTable.get("BO" , outerIdx);
-                Scalar muoSat = saturatedTable.get("MUO" , outerIdx);
+                Scalar muoSat = saturatedTable.get("MU" , outerIdx);
 
                 satOilMuArray.push_back(muoSat);
                 invSatOilBArray.push_back(1.0/BoSat);
@@ -121,13 +121,13 @@ public:
             // update the tables for the formation volume factor and for the gas
             // dissolution factor of saturated oil
             {
-                std::vector<Scalar> tmpPressureColumn = saturatedTable.getColumn("RS").vectorCopy();
-                std::vector<Scalar> tmpGasSolubilityColumn = saturatedTable.getColumn("P").vectorCopy();
-                std::vector<Scalar> tmpMuColumn = saturatedTable.getColumn("MUO").vectorCopy( );
+                std::vector<Scalar> tmpPressureColumn = saturatedTable.getColumn("P").vectorCopy();
+                std::vector<Scalar> tmpGasSolubilityColumn = saturatedTable.getColumn("RS").vectorCopy();
+                std::vector<Scalar> tmpMuColumn = saturatedTable.getColumn("MU").vectorCopy( );
 
-                satOilMu.setXYContainers(tmpMuColumn , satOilMuArray);
-                invSatOilB.setXYContainers(tmpPressureColumn , invSatOilBArray);
-                gasDissolutionFac.setXYContainers(tmpPressureColumn , tmpGasSolubilityColumn);
+                invSatOilB.setXYContainers(tmpPressureColumn, invSatOilBArray);
+                satOilMu.setXYContainers(tmpPressureColumn, satOilMuArray);
+                gasDissolutionFac.setXYContainers(tmpPressureColumn, tmpGasSolubilityColumn);
             }
 
             updateSaturationPressureSpline_(regionIdx);
