@@ -37,8 +37,6 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
-
-
 namespace Opm {
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil phas
@@ -54,7 +52,6 @@ class LiveOilPvt
 
 public:
 #if HAVE_OPM_PARSER
-
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
@@ -80,7 +77,7 @@ public:
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtoTable = pvtoTables[regionIdx];
 
-            const auto saturatedTable = pvtoTable.getSaturatedTable( );
+            const auto saturatedTable = pvtoTable.getSaturatedTable();
             assert(saturatedTable.numRows() > 1);
 
             auto& oilMu = oilMuTable_[regionIdx];
@@ -93,9 +90,9 @@ public:
 
             // extract the table for the gas dissolution and the oil formation volume factors
             for (unsigned outerIdx = 0; outerIdx < saturatedTable.numRows(); ++ outerIdx) {
-                Scalar Rs    = saturatedTable.get("RS" , outerIdx);
-                Scalar BoSat = saturatedTable.get("BO" , outerIdx);
-                Scalar muoSat = saturatedTable.get("MU" , outerIdx);
+                Scalar Rs    = saturatedTable.get("RS", outerIdx);
+                Scalar BoSat = saturatedTable.get("BO", outerIdx);
+                Scalar muoSat = saturatedTable.get("MU", outerIdx);
 
                 satOilMuArray.push_back(muoSat);
                 invSatOilBArray.push_back(1.0/BoSat);
@@ -109,9 +106,9 @@ public:
                 const auto& underSaturatedTable = pvtoTable.getUnderSaturatedTable(outerIdx);
                 size_t numRows = underSaturatedTable.numRows();
                 for (unsigned innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
-                    Scalar po = underSaturatedTable.get("P" , innerIdx);
-                    Scalar Bo = underSaturatedTable.get("BO" , innerIdx);
-                    Scalar muo = underSaturatedTable.get("MU" , innerIdx);
+                    Scalar po = underSaturatedTable.get("P", innerIdx);
+                    Scalar Bo = underSaturatedTable.get("BO", innerIdx);
+                    Scalar muo = underSaturatedTable.get("MU", innerIdx);
 
                     invOilB.appendSamplePoint(outerIdx, po, 1.0/Bo);
                     oilMu.appendSamplePoint(outerIdx, po, muo);
@@ -123,7 +120,7 @@ public:
             {
                 std::vector<Scalar> tmpPressureColumn = saturatedTable.getColumn("P").vectorCopy();
                 std::vector<Scalar> tmpGasSolubilityColumn = saturatedTable.getColumn("RS").vectorCopy();
-                std::vector<Scalar> tmpMuColumn = saturatedTable.getColumn("MU").vectorCopy( );
+                std::vector<Scalar> tmpMuColumn = saturatedTable.getColumn("MU").vectorCopy();
 
                 invSatOilB.setXYContainers(tmpPressureColumn, invSatOilBArray);
                 satOilMu.setXYContainers(tmpPressureColumn, satOilMuArray);
@@ -171,9 +168,9 @@ private:
                           const SimpleTable& curTable,
                           const SimpleTable& masterTable)
     {
-        std::vector<Scalar> pressuresArray = curTable.getColumn("P").vectorCopy( );
-        std::vector<Scalar> oilBArray = curTable.getColumn("BO").vectorCopy( );
-        std::vector<Scalar> oilMuArray = curTable.getColumn("MU").vectorCopy( );
+        std::vector<Scalar> pressuresArray = curTable.getColumn("P").vectorCopy();
+        std::vector<Scalar> oilBArray = curTable.getColumn("BO").vectorCopy();
+        std::vector<Scalar> oilMuArray = curTable.getColumn("MU").vectorCopy();
 
         auto& invOilB = inverseOilBTable_[regionIdx];
         auto& oilMu = oilMuTable_[regionIdx];
