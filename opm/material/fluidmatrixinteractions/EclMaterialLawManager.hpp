@@ -628,7 +628,7 @@ private:
         std::vector<double> SoSamples(sgofTable.numRows());
         std::vector<double> SoKroSamples(sgofTable.numRows());
         for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgofTable.get("SG" , sampleIdx);
+            SoSamples[sampleIdx] = 1 - sgofTable.get("SG", sampleIdx);
             SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
         }
 
@@ -646,8 +646,8 @@ private:
         std::vector<double> SoSamples(slgofTable.numRows());
         std::vector<double> SoKroSamples(slgofTable.numRows());
         for (size_t sampleIdx = 0; sampleIdx < slgofTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = slgofTable.get("SL" , sampleIdx);
-            SoKroSamples[sampleIdx] = slgofTable.get("SL" , sampleIdx) - Swco;
+            SoSamples[sampleIdx] = slgofTable.get("SL", sampleIdx);
+            SoKroSamples[sampleIdx] = slgofTable.get("SL", sampleIdx) - Swco;
         }
 
         effParams.setKrwSamples(SoKroSamples, slgofTable.getColumn("KROG").vectorCopy());
@@ -665,7 +665,7 @@ private:
         std::vector<double> SoSamples(sgfnTable.numRows());
         std::vector<double> SoColumn = sof3Table.getColumn("SO").vectorCopy();
         for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgfnTable.get("SG" , sampleIdx);
+            SoSamples[sampleIdx] = 1 - sgfnTable.get("SG", sampleIdx);
         }
 
         effParams.setKrwSamples(SoColumn, sof3Table.getColumn("KROG").vectorCopy());
@@ -731,7 +731,7 @@ private:
             // convert the saturations of the SOF3 keyword from oil to water saturations
             std::vector<double> SwSamples(sof3Table.numRows());
             for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
-                SwSamples[sampleIdx] = 1 - sof3Table.get("SO" , sampleIdx);
+                SwSamples[sampleIdx] = 1 - sof3Table.get("SO", sampleIdx);
 
             effParams.setKrwSamples(SwColumn, swfnTable.getColumn("KRW").vectorCopy());
             effParams.setKrnSamples(SwSamples, sof3Table.getColumn("KROW").vectorCopy());
