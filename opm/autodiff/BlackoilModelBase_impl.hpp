@@ -299,20 +299,22 @@ namespace detail {
             // Compute the nonlinear update.
             V dx = asImpl().solveJacobianSystem();
 
-            // Stabilize the nonlinear update.
-            bool isOscillate = false;
-            bool isStagnate = false;
-            nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
-            if (isOscillate) {
-                current_relaxation_ -= nonlinear_solver.relaxIncrement();
-                current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
-                if (terminalOutputEnabled()) {
-                    std::string msg = " Oscillating behavior detected: Relaxation set to "
-                        + std::to_string(current_relaxation_);
-                    OpmLog::info(msg);
+            if (param_.use_update_stabilization_) {
+                // Stabilize the nonlinear update.
+                bool isOscillate = false;
+                bool isStagnate = false;
+                nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
+                if (isOscillate) {
+                    current_relaxation_ -= nonlinear_solver.relaxIncrement();
+                    current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
+                    if (terminalOutputEnabled()) {
+                        std::string msg = " Oscillating behavior detected: Relaxation set to "
+                            + std::to_string(current_relaxation_);
+                        OpmLog::info(msg);
+                    }
                 }
+                nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
             }
-            nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
 
             // Apply the update, applying model-dependent
             // limitations and chopping of the update.

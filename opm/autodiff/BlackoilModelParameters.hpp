@@ -53,6 +53,9 @@ namespace Opm
         /// controlled wells
         bool compute_well_potentials_;
 
+        /// Try to detect oscillation or stagnation.
+        bool use_update_stabilization_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const parameter::ParameterGroup& param );
 
