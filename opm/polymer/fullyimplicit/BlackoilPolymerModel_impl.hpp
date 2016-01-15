@@ -122,8 +122,8 @@ namespace Opm {
     void
     BlackoilPolymerModel<Grid>::
     prepareStep(const double dt,
-                ReservoirState& reservoir_state,
-                WellState& well_state)
+                const ReservoirState& reservoir_state,
+                const WellState& well_state)
     {
         Base::prepareStep(dt, reservoir_state, well_state);
         auto& max_concentration = reservoir_state.getCellData( reservoir_state.CMAX );

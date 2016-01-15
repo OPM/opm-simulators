@@ -97,8 +97,8 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         void prepareStep(const double dt,
-                         ReservoirState& reservoir_state,
-                         WellState& well_state);
+                         const ReservoirState& reservoir_state,
+                         const WellState& well_state);
 
         /// Called once after each time step.
         /// \param[in] dt                     time step size
