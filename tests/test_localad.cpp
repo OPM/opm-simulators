@@ -53,19 +53,6 @@ struct TestVariables
     static const int saturationIdx = 2;
 };
 
-template <class Scalar>
-struct Tolerance
-{
-    static constexpr Scalar eps = 1e-10;
-};
-
-template <>
-struct Tolerance< float >
-{
-    static constexpr  float eps = 1e-6;
-};
-
-
 template <class Scalar, class VariablesDescriptor>
 void testOperators(const Scalar tolerance )
 {
@@ -254,7 +241,9 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
         const auto& xEval = Eval::createVariable(x, 0);
         const Eval& yEval = adFn(xEval);
 
-        const Scalar eps = Tolerance< Scalar > :: eps;
+        Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+        eps = std::max(eps, eps*std::abs(x));
+
         Scalar y = classicFn(x);
         Scalar yStar1 = classicFn(x - eps);
         Scalar yStar2 = classicFn(x + eps);
@@ -265,7 +254,7 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
 
         Scalar deltaAbs = std::abs(yPrime - yEval.derivatives[0]);
         Scalar deltaRel = std::abs(deltaAbs/yPrime);
-        if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+        if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
             throw std::logic_error("oops: derivative @"+std::to_string((long double) x)+": "
                                    + std::to_string((long double) yPrime) + " vs "
                                    + std::to_string((long double) yEval.derivatives[0])
@@ -289,18 +278,21 @@ void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax,
         const auto& yEval = Eval::createConstant(y);
         const Eval& zEval = adFn(xEval, yEval);
 
-        const Scalar eps = Tolerance< Scalar > :: eps;
+        Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+        eps = std::max(eps, eps*std::abs(x));
+
         Scalar z = classicFn(x, y);
         Scalar zStar1 = classicFn(x - eps, y);
         Scalar zStar2 = classicFn(x + eps, y);
         Scalar zPrime = (zStar2 - zStar1)/(2.*eps);
 
-        if (z != zEval.value)
+        if (std::abs(z - zEval.value)/std::abs(z + zEval.value)
+            > std::numeric_limits<Scalar>::epsilon()*1e2)
             throw std::logic_error("oops: value");
 
         Scalar deltaAbs = std::abs(zPrime - zEval.derivatives[0]);
         Scalar deltaRel = std::abs(deltaAbs/zPrime);
-        if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+        if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
             throw std::logic_error("oops: derivative @"+std::to_string((long double) x)+": "
                                    + std::to_string((long double) zPrime) + " vs "
                                    + std::to_string((long double) zEval.derivatives[0])
@@ -324,18 +316,21 @@ void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Sc
         const auto& yEval = Eval::createVariable(y, 1);
         const Eval& zEval = adFn(xEval, yEval);
 
-        const Scalar eps = Tolerance< Scalar > :: eps;
+        Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+        eps = std::max(eps, eps*std::abs(y));
+
         Scalar z = classicFn(x, y);
         Scalar zStar1 = classicFn(x, y - eps);
         Scalar zStar2 = classicFn(x, y + eps);
         Scalar zPrime = (zStar2 - zStar1)/(2*eps);
 
-        if (z != zEval.value)
+        if (std::abs(z - zEval.value)/std::abs(z + zEval.value)
+            > std::numeric_limits<Scalar>::epsilon()*1e2)
             throw std::logic_error("oops: value");
 
         Scalar deltaAbs = std::abs(zPrime - zEval.derivatives[1]);
         Scalar deltaRel = std::abs(deltaAbs/zPrime);
-        if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+        if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
             throw std::logic_error("oops: derivative @"+std::to_string((long double) x)+": "
                                    + std::to_string((long double) zPrime) + " vs "
                                    + std::to_string((long double) zEval.derivatives[1])
@@ -359,24 +354,27 @@ void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
         const Eval& zEval1 = pow(baseEval, exp);
         const Eval& zEval2 = pow(baseEval, expEval);
 
-        const Scalar eps = 1e-5;
+        Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+        eps = std::max(eps, eps*std::abs(base));
+
         Scalar z = pow(base, exp);
         Scalar zStar1 = pow(base - eps, exp);
         Scalar zStar2 = pow(base + eps, exp);
         Scalar zPrime = (zStar2 - zStar1)/(2*eps);
 
-        if (z != zEval2.value)
+        if (std::abs(z - zEval2.value)/std::abs(z + zEval2.value)
+            > std::numeric_limits<Scalar>::epsilon()*1e2)
             throw std::logic_error("oops: value");
 
         Scalar deltaAbs = std::abs(zPrime - zEval1.derivatives[0]);
         Scalar deltaRel = std::abs(deltaAbs/zPrime);
-        if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+        if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
             throw std::logic_error("oops: derivative @"+std::to_string((long double) base)+": "
                                    + std::to_string((long double) zPrime) + " vs "
                                    + std::to_string((long double) zEval1.derivatives[0])
                                    + " delta: " + std::to_string((long double) std::abs(zPrime - zEval1.derivatives[0])));
 
-        if (!zEval1.isSame(zEval2, /*tolerance=*/1e-9))
+        if (!zEval1.isSame(zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
             throw std::logic_error("oops: pow(Eval, Scalar) != pow(Eval, Eval)");
     }
 }
@@ -397,24 +395,27 @@ void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
         const Eval& zEval1 = pow(base, expEval);
         const Eval& zEval2 = pow(baseEval, expEval);
 
-        const Scalar eps = 1e-8;
+        Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+        eps = std::max(eps, eps*std::abs(exp));
+
         Scalar z = pow(base, exp);
         Scalar zStar1 = pow(base, exp - eps);
         Scalar zStar2 = pow(base, exp + eps);
         Scalar zPrime = (zStar2 - zStar1)/(2*eps);
 
-        if (z != zEval2.value)
+        if (std::abs(z - zEval2.value)/std::abs(z + zEval2.value)
+            > std::numeric_limits<Scalar>::epsilon()*1e2)
             throw std::logic_error("oops: value");
 
         Scalar deltaAbs = std::abs(zPrime - zEval1.derivatives[1]);
         Scalar deltaRel = std::abs(deltaAbs/zPrime);
-        if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+        if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
             throw std::logic_error("oops: derivative @"+std::to_string((long double) base)+": "
                                    + std::to_string((long double) zPrime) + " vs "
                                    + std::to_string((long double) zEval1.derivatives[1])
                                    + " delta: " + std::to_string((long double) std::abs(zPrime - zEval1.derivatives[1])));
 
-        if (!zEval1.isSame(zEval2, /*tolerance=*/1e-5))
+        if (!zEval1.isSame(zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
             throw std::logic_error("oops: pow(Eval, Scalar) != pow(Eval, Eval)");
     }
 }
@@ -444,18 +445,21 @@ void testAtan2()
             const Eval& yEval = Eval::createVariable(y, 0);
             const Eval& zEval = atan2(xEval, yEval);
 
-            const Scalar eps = 1e-8;
+            Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e7;
+            eps = std::max(eps, eps*std::abs(x));
+
             Scalar z = atan2(x, y);
             Scalar zStar1 = atan2(x - eps, y - eps);
             Scalar zStar2 = atan2(x + eps, y + eps);
             Scalar zPrime = (zStar2 - zStar1)/(2*eps);
 
-            if (z != zEval.value)
+            if (std::abs(z - zEval.value)/std::abs(z + zEval.value)
+                > std::numeric_limits<Scalar>::epsilon()*1e2)
                 throw std::logic_error("oops: value");
 
             Scalar deltaAbs = std::abs(zPrime - zEval.derivatives[0]);
             Scalar deltaRel = std::abs(deltaAbs/zPrime);
-            if (deltaAbs > 1e-3 && deltaRel > 1e-3)
+            if (deltaAbs > 1000*eps && deltaRel > 1000*eps)
                 throw std::logic_error("oops: derivative @("+std::to_string((long double) x)+","+std::to_string((long double) y)+"): "
                                        + std::to_string((long double) zPrime) + " vs "
                                        + std::to_string((long double) zEval.derivatives[0])
@@ -486,7 +490,8 @@ inline void testAll()
     //const auto& result2 = Opm::LocalAd::sqrt(TemperatureEval::createVariable<Pressure>(4.0));
 
     std::cout << "testing operators and constructors\n";
-    testOperators<Scalar, VarsDescriptor>( Tolerance< Scalar > :: eps );
+    const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
+    testOperators<Scalar, VarsDescriptor>(eps);
 
     std::cout << "testing min()\n";
     test2DFunction1<Scalar, VarsDescriptor>(Opm::LocalAd::min<Scalar, VarsDescriptor, VarsDescriptor::size>,
@@ -569,6 +574,6 @@ inline void testAll()
 int main()
 {
     testAll< double >();
-    // testAll< float  >();
+    testAll< float  >();
     return 0;
 }

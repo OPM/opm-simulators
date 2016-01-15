@@ -322,6 +322,6 @@ inline void testAll()
 int main()
 {
     testAll< double >();
-    // testAll< float  >();
+    testAll< float  >();
     return 0;
 }

@@ -706,11 +706,9 @@ public:
     /*!
      * \brief Return true iff the given x is in range [x1, xn].
      */
-    bool applies(Scalar x) const
-    {
-        return x_(0) <= x && x <= x_(numSamples() - 1);
-    }
-
+    template <class Evaluation>
+    bool applies(const Evaluation& x) const
+    { return x_(0) <= x && x <= x_(numSamples() - 1); }
 
     /*!
      * \brief Return the number of (x, y) values.
@@ -795,7 +793,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar eval(Scalar x, bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
 
@@ -817,39 +816,6 @@ public:
     }
 
     /*!
-     * \brief Evaluate the spline for a given function evaluation.
-     *
-     * \param x The value on the abscissa where the spline ought to be
-     *          evaluated
-     * \param extrapolate If this parameter is set to true, the spline
-     *                    will be extended beyond its range by
-     *                    straight lines, if false calling extrapolate
-     *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
-     *                    cause a failed assertation.
-     */
-    template <class Evaluation>
-    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
-    {
-        assert(extrapolate || applies(x.value));
-
-        // handle extrapolation
-        if (extrapolate) {
-            if (x.value < xAt(0)) {
-                Scalar m = evalDerivative_(xAt(0), /*segmentIdx=*/0);
-                Scalar y0 = y_(0);
-                return Evaluation::createConstant(y0 + m*(x.value - xAt(0)));
-            }
-            else if (x > xAt(numSamples() - 1)) {
-                Scalar m = evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples()-2);
-                Scalar y0 = y_(numSamples() - 1);
-                return Evaluation::createConstant(y0 + m*(x.value - xAt(numSamples() - 1)));
-            }
-        }
-
-        return eval_(x, segmentIdx_(x.value));
-    }
-
-    /*!
      * \brief Evaluate the spline's derivative at a given position.
      *
      * \param x The value on the abscissa where the spline's
@@ -861,7 +827,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalDerivative(Scalar x, bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation evalDerivative(const Evaluation& x, bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate) {
@@ -886,7 +853,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalSecondDerivative(Scalar x, bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate)
@@ -907,7 +875,8 @@ public:
      *                    for \f$ x \not [x_{min}, x_{max}]\f$ will
      *                    cause a failed assertation.
      */
-    Scalar evalThirdDerivative(Scalar x, bool extrapolate=false) const
+    template <class Evaluation>
+    Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate=false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate)
@@ -1515,11 +1484,12 @@ protected:
 
     // evaluate the spline at a given the position and given the
     // segment index
-    Scalar eval_(Scalar x, size_t i) const
+    template <class Evaluation>
+    Evaluation eval_(const Evaluation& x, size_t i) const
     {
         // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
         Scalar delta = h_(i + 1);
-        Scalar t = (x - x_(i))/delta;
+        Evaluation t = (x - x_(i))/delta;
 
         return
             h00_(t) * y_(i)
@@ -1528,37 +1498,15 @@ protected:
             + h11_(t) * slope_(i + 1)*delta;
     }
 
-    // evaluate the spline at a given the position and given the
-    // segment index
-    template <class Evaluation>
-    Evaluation eval_(const Evaluation& x, size_t i) const
-    {
-        // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
-        Scalar delta = h_(i + 1);
-        Scalar t = (x.value - x_(i))/delta;
-
-        Evaluation result;
-        result.value =
-            h00_(t) * y_(i)
-            + h10_(t) * slope_(i)*delta
-            + h01_(t) * y_(i + 1)
-            + h11_(t) * slope_(i + 1)*delta;
-
-        Scalar df_dg = evalDerivative_(x.value, i);
-        for (unsigned varIdx = 0; varIdx < result.derivatives.size(); ++ varIdx)
-            result.derivatives[varIdx] = df_dg*x.derivatives[varIdx];
-
-        return result;
-    }
-
     // evaluate the derivative of a spline given the actual position
     // and the segment index
-    Scalar evalDerivative_(Scalar x, size_t i) const
+    template <class Evaluation>
+    Evaluation evalDerivative_(const Evaluation& x, size_t i) const
     {
         // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
         Scalar delta = h_(i + 1);
-        Scalar t = (x - x_(i))/delta;
-        Scalar alpha = 1 / delta;
+        Evaluation t = (x - x_(i))/delta;
+        Evaluation alpha = 1 / delta;
 
         return
             alpha *
@@ -1570,12 +1518,13 @@ protected:
 
     // evaluate the second derivative of a spline given the actual
     // position and the segment index
-    Scalar evalDerivative2_(Scalar x, size_t i) const
+    template <class Evaluation>
+    Evaluation evalDerivative2_(const Evaluation& x, size_t i) const
     {
         // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
         Scalar delta = h_(i + 1);
-        Scalar t = (x - x_(i))/delta;
-        Scalar alpha = 1 / delta;
+        Evaluation t = (x - x_(i))/delta;
+        Evaluation alpha = 1 / delta;
 
         return
             alpha*alpha
@@ -1587,12 +1536,13 @@ protected:
 
     // evaluate the third derivative of a spline given the actual
     // position and the segment index
-    Scalar evalDerivative3_(Scalar x, size_t i) const
+    template <class Evaluation>
+    Evaluation evalDerivative3_(const Evaluation& x, size_t i) const
     {
         // See http://en.wikipedia.org/wiki/Cubic_Hermite_spline
         Scalar delta = h_(i + 1);
-        Scalar t = (x - x_(i))/delta;
-        Scalar alpha = 1 / delta;
+        Evaluation t = (x - x_(i))/delta;
+        Evaluation alpha = 1 / delta;
 
         return
             alpha*alpha*alpha
@@ -1603,55 +1553,71 @@ protected:
     }
 
     // hermite basis functions
-    Scalar h00_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h00_(const Evaluation& t) const
     { return (2*t - 3)*t*t + 1; }
 
-    Scalar h10_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h10_(const Evaluation& t) const
     { return ((t - 2)*t + 1)*t; }
 
-    Scalar h01_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h01_(const Evaluation& t) const
     { return (-2*t + 3)*t*t; }
 
-    Scalar h11_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h11_(const Evaluation& t) const
     { return (t - 1)*t*t; }
 
     // first derivative of the hermite basis functions
-    Scalar h00_prime_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h00_prime_(const Evaluation& t) const
     { return (3*2*t - 2*3)*t; }
 
-    Scalar h10_prime_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h10_prime_(const Evaluation& t) const
     { return (3*t - 2*2)*t + 1; }
 
-    Scalar h01_prime_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h01_prime_(const Evaluation& t) const
     { return (-3*2*t + 2*3)*t; }
 
-    Scalar h11_prime_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h11_prime_(const Evaluation& t) const
     { return (3*t - 2)*t; }
 
     // second derivative of the hermite basis functions
-    Scalar h00_prime2_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h00_prime2_(const Evaluation& t) const
     { return 2*3*2*t - 2*3; }
 
-    Scalar h10_prime2_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h10_prime2_(const Evaluation& t) const
     { return 2*3*t - 2*2; }
 
-    Scalar h01_prime2_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h01_prime2_(const Evaluation& t) const
     { return -2*3*2*t + 2*3; }
 
-    Scalar h11_prime2_(Scalar t) const
+    template <class Evaluation>
+    Evaluation h11_prime2_(const Evaluation& t) const
     { return 2*3*t - 2; }
 
     // third derivative of the hermite basis functions
-    Scalar h00_prime3_(Scalar /*t*/) const
+    template <class Evaluation>
+    Scalar h00_prime3_(const Evaluation& /*t*/) const
     { return 2*3*2; }
 
-    Scalar h10_prime3_(Scalar /*t*/) const
+    template <class Evaluation>
+    Scalar h10_prime3_(const Evaluation& /*t*/) const
     { return 2*3; }
 
-    Scalar h01_prime3_(Scalar /*t*/) const
+    template <class Evaluation>
+    Scalar h01_prime3_(const Evaluation& /*t*/) const
     { return -2*3*2; }
 
-    Scalar h11_prime3_(Scalar /*t*/) const
+    template <class Evaluation>
+    Scalar h11_prime3_(const Evaluation& /*t*/) const
     { return 2*3; }
 
     // returns the monotonicality of an interval of a spline segment
@@ -1758,8 +1724,13 @@ protected:
     }
 
     // find the segment index for a given x coordinate
-    size_t segmentIdx_(Scalar x) const
+    template <class Evaluation>
+    size_t segmentIdx_(const Evaluation& xEval) const
     {
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        Scalar x = Toolbox::value(xEval);
+
         // bisection
         size_t iLow = 0;
         size_t iHigh = numSamples() - 1;
