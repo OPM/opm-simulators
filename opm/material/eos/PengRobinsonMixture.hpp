@@ -130,7 +130,7 @@ public:
         Scalar expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);
 
         Scalar fugCoeff =
-            std::exp(bi_b*(Z - 1))/std::max(1e-9, Z - Bstar) *
+            std::exp(bi_b*(Z - 1))/std::max(Scalar(1e-9), Z - Bstar) *
             std::pow(base, expo);
 
         ////////
@@ -139,12 +139,12 @@ public:
         // on one side, we want the mole fraction to be at
         // least 10^-3 if the fugacity is at the current pressure
         //
-        fugCoeff = std::min(1e10, fugCoeff);
+        fugCoeff = std::min(Scalar(1e10), fugCoeff);
         //
         // on the other hand, if the mole fraction of the component is 100%, we want the
         // fugacity to be at least 10^-3 Pa
         //
-        fugCoeff = std::max(1e-10, fugCoeff);
+        fugCoeff = std::max(Scalar(1e-10), fugCoeff);
         ///////////
 
         return fugCoeff;
