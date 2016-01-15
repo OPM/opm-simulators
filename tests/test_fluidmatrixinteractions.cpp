@@ -269,9 +269,9 @@ void testThreePhaseSatApi()
 
 class TestAdTag;
 
-int main(int argc, char **argv)
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::SimpleH2O<Scalar> H2O;
     typedef Opm::N2<Scalar> N2;
 
@@ -293,8 +293,6 @@ int main(int argc, char **argv)
     typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
     typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
-
-    Dune::MPIHelper::instance(argc, argv);
 
     // test conformance to the capillary pressure APIs
     {
@@ -438,6 +436,12 @@ int main(int argc, char **argv)
         testTwoPhaseApi<MaterialLaw, TwoPhaseFluidState>();
         testTwoPhaseSatApi<MaterialLaw, TwoPhaseFluidState>();
     }
+}
 
+int main(int argc, char **argv)
+{
+    Dune::MPIHelper::instance(argc, argv);
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }

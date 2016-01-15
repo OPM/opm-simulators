@@ -95,16 +95,22 @@ void testAllComponents()
 
 class TestAdTag;
 
-int main(int argc, char **argv)
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
-
-    Dune::MPIHelper::instance(argc, argv);
 
     // ensure that all components are API-compliant
     testAllComponents<Scalar, Scalar>();
     testAllComponents<Scalar, Evaluation>();
+}
 
+
+int main(int argc, char **argv)
+{
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll< double >();
+    testAll< float  >();
     return 0;
 }

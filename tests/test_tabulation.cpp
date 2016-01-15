@@ -45,9 +45,9 @@ void isSame(const char *str, Scalar v, Scalar vRef, Scalar tol=1e-3)
     }
 }
 
-int main()
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::H2O<Scalar> IapwsH2O;
     typedef Opm::TabulatedComponent<Scalar, IapwsH2O> TabulatedH2O;
 
@@ -78,7 +78,8 @@ int main()
         isSame("vaporPressure",
                TabulatedH2O::vaporPressure(T),
                IapwsH2O::vaporPressure(T),
-               1e-3);
+               Scalar(1e-3));
+
         for (unsigned j = 0; j < n; ++j) {
             Scalar p = pMin + (pMax - pMin)*Scalar(j)/n;
             if (p < IapwsH2O::vaporPressure(T) * 1.001) {
@@ -112,5 +113,12 @@ int main()
 
     if (success)
         std::cout << "\nsuccess\n";
+}
+
+
+int main()
+{
+    testAll< double >();
+    testAll< float  >();
     return 0;
 }

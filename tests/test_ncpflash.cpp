@@ -148,9 +148,9 @@ void completeReferenceFluidState(FluidState &fs,
 }
 
 
-int main()
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::FluidSystems::H2ON2<Scalar, false> FluidSystem;
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> CompositionalFluidState;
 
@@ -165,7 +165,7 @@ int main()
     typedef Opm::TwoPhaseMaterialTraits<Scalar, liquidPhaseIdx, gasPhaseIdx> MaterialTraits;
     typedef Opm::RegularizedBrooksCorey<MaterialTraits> EffMaterialLaw;
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
-    typedef MaterialLaw::Params MaterialLawParams;
+    typedef typename MaterialLaw::Params MaterialLawParams;
 
     Scalar T = 273.15 + 25;
 
@@ -249,7 +249,7 @@ int main()
     fsRef.setPressure(liquidPhaseIdx, 1e6);
     fsRef.setPressure(gasPhaseIdx, 1e6);
 
-    FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::ParameterCache paramCache;
     typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,
@@ -291,6 +291,11 @@ int main()
 
     // check the flash calculation
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams2);
+}
 
+int main()
+{
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }

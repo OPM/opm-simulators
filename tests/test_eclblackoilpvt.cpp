@@ -218,10 +218,9 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
     }
 }
 
-int main()
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
-
     Opm::Parser parser;
     Opm::ParseMode parseMode;
 
@@ -309,6 +308,12 @@ int main()
     // make sure that the BlackOil fluid system's initFromDeck() method compiles.
     typedef Opm::FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
     BlackOilFluidSystem::initFromDeck(deck, eclState);
+}
 
+
+int main()
+{
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }

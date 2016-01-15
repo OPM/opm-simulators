@@ -285,9 +285,9 @@ void printResult(const RawTable& rawTable,
     std::cout << "};\n";
 }
 
-int main(int /*argc*/, char** /*argv*/)
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::FluidSystems::Spe5<Scalar> FluidSystem;
 
     enum {
@@ -312,9 +312,9 @@ int main(int /*argc*/, char** /*argv*/)
 
     typedef Opm::ThreePhaseMaterialTraits<Scalar, waterPhaseIdx, oilPhaseIdx, gasPhaseIdx> MaterialTraits;
     typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
-    typedef MaterialLaw::Params MaterialLawParams;
+    typedef typename MaterialLaw::Params MaterialLawParams;
 
-    typedef FluidSystem::ParameterCache ParameterCache;
+    typedef typename FluidSystem::ParameterCache ParameterCache;
 
     ////////////
     // Initialize the fluid system and create the capillary pressure
@@ -399,7 +399,7 @@ int main(int /*argc*/, char** /*argv*/)
     FluidState flashFluidState, surfaceFluidState;
     flashFluidState.assign(fluidState);
     //Flash::guessInitial(flashFluidState, paramCache, totalMolarities);
-    Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, totalMolarities);
+    Flash::template solve<MaterialLaw>(flashFluidState, paramCache, matParams, totalMolarities);
 
     Scalar surfaceAlpha = 1;
     surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, surfaceAlpha, flashFluidState, /*guessInitial=*/true);
@@ -422,7 +422,7 @@ int main(int /*argc*/, char** /*argv*/)
         curTotalMolarities /= alpha;
 
         // "flash" the modified reservoir oil
-        Flash::solve<MaterialLaw>(flashFluidState, paramCache, matParams, curTotalMolarities);
+        Flash::template solve<MaterialLaw>(flashFluidState, paramCache, matParams, curTotalMolarities);
 
         surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState,
                                                               surfaceAlpha,
@@ -471,7 +471,11 @@ int main(int /*argc*/, char** /*argv*/)
     printResult(resultTable,
                 "Rs", /*firstIdx=*/1, /*secondIdx=*/7,
                 /*hiresThreshold=*/hiresThresholdPressure);
+}
 
-
+int main(int /*argc*/, char** /*argv*/)
+{
+    testAll< double >();
+    //testAll< float  >();
     return 0;
 }

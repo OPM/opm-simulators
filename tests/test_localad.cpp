@@ -53,8 +53,21 @@ struct TestVariables
     static const int saturationIdx = 2;
 };
 
+template <class Scalar>
+struct Tolerance
+{
+    static constexpr Scalar eps = 1e-10;
+};
+
+template <>
+struct Tolerance< float >
+{
+    static constexpr  float eps = 1e-6;
+};
+
+
 template <class Scalar, class VariablesDescriptor>
-void testOperators()
+void testOperators(const Scalar tolerance )
 {
     typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
 
@@ -70,57 +83,57 @@ void testOperators()
     // test the non-inplace operators
     {
         Eval a = xEval + yEval;
-        if (std::abs(a.value - (x + y)) > 1e-10)
+        if (std::abs(a.value - (x + y)) > tolerance)
             throw std::logic_error("oops: operator+");
 
         Eval b = xEval + c;
-        if (std::abs(b.value - (x + c)) > 1e-10)
+        if (std::abs(b.value - (x + c)) > tolerance)
             throw std::logic_error("oops: operator+");
 
         Eval d = xEval + cEval;
-        if (std::abs(d.value - (x + c)) > 1e-10)
+        if (std::abs(d.value - (x + c)) > tolerance)
             throw std::logic_error("oops: operator+");
     }
 
     {
         Eval a = xEval - yEval;
-        if (std::abs(a.value - (x - y)) > 1e-10)
+        if (std::abs(a.value - (x - y)) > tolerance)
             throw std::logic_error("oops: operator-");
 
         Eval b = xEval - c;
-        if (std::abs(b.value - (x - c)) > 1e-10)
+        if (std::abs(b.value - (x - c)) > tolerance)
             throw std::logic_error("oops: operator-");
 
         Eval d = xEval - cEval;
-        if (std::abs(d.value - (x - c)) > 1e-10)
+        if (std::abs(d.value - (x - c)) > tolerance)
             throw std::logic_error("oops: operator-");
     }
 
     {
         Eval a = xEval*yEval;
-        if (std::abs(a.value - (x*y)) > 1e-10)
+        if (std::abs(a.value - (x*y)) > tolerance)
             throw std::logic_error("oops: operator*");
 
         Eval b = xEval*c;
-        if (std::abs(b.value - (x*c)) > 1e-10)
+        if (std::abs(b.value - (x*c)) > tolerance)
             throw std::logic_error("oops: operator*");
 
         Eval d = xEval*cEval;
-        if (std::abs(d.value - (x*c)) > 1e-10)
+        if (std::abs(d.value - (x*c)) > tolerance)
             throw std::logic_error("oops: operator*");
     }
 
     {
         Eval a = xEval/yEval;
-        if (std::abs(a.value - (x/y)) > 1e-10)
+        if (std::abs(a.value - (x/y)) > tolerance)
             throw std::logic_error("oops: operator/");
 
         Eval b = xEval/c;
-        if (std::abs(b.value - (x/c)) > 1e-10)
+        if (std::abs(b.value - (x/c)) > tolerance)
             throw std::logic_error("oops: operator/");
 
         Eval d = xEval/cEval;
-        if (std::abs(d.value - (x/c)) > 1e-10)
+        if (std::abs(d.value - (x/c)) > tolerance)
             throw std::logic_error("oops: operator/");
     }
 
@@ -128,68 +141,68 @@ void testOperators()
     {
         Eval a = xEval;
         a += yEval;
-        if (std::abs(a.value - (x + y)) > 1e-10)
+        if (std::abs(a.value - (x + y)) > tolerance)
             throw std::logic_error("oops: operator+");
 
         Eval b = xEval;
         b += c;
-        if (std::abs(b.value - (x + c)) > 1e-10)
+        if (std::abs(b.value - (x + c)) > tolerance)
             throw std::logic_error("oops: operator+");
 
         Eval d = xEval;
         d += cEval;
-        if (std::abs(d.value - (x + c)) > 1e-10)
+        if (std::abs(d.value - (x + c)) > tolerance)
             throw std::logic_error("oops: operator+");
     }
 
     {
         Eval a = xEval;
         a -= yEval;
-        if (std::abs(a.value - (x - y)) > 1e-10)
+        if (std::abs(a.value - (x - y)) > tolerance)
             throw std::logic_error("oops: operator-");
 
         Eval b = xEval;
         b -= c;
-        if (std::abs(b.value - (x - c)) > 1e-10)
+        if (std::abs(b.value - (x - c)) > tolerance)
             throw std::logic_error("oops: operator-");
 
         Eval d = xEval;
         d -= cEval;
-        if (std::abs(d.value - (x - c)) > 1e-10)
+        if (std::abs(d.value - (x - c)) > tolerance)
             throw std::logic_error("oops: operator-");
     }
 
     {
         Eval a = xEval;
         a *= yEval;
-        if (std::abs(a.value - (x*y)) > 1e-10)
+        if (std::abs(a.value - (x*y)) > tolerance)
             throw std::logic_error("oops: operator*");
 
         Eval b = xEval;
         b *= c;
-        if (std::abs(b.value - (x*c)) > 1e-10)
+        if (std::abs(b.value - (x*c)) > tolerance)
             throw std::logic_error("oops: operator*");
 
         Eval d = xEval;
         d *= cEval;
-        if (std::abs(d.value - (x*c)) > 1e-10)
+        if (std::abs(d.value - (x*c)) > tolerance)
             throw std::logic_error("oops: operator*");
     }
 
     {
         Eval a = xEval;
         a /= yEval;
-        if (std::abs(a.value - (x/y)) > 1e-10)
+        if (std::abs(a.value - (x/y)) > tolerance)
             throw std::logic_error("oops: operator/");
 
         Eval b = xEval;
         b /= c;
-        if (std::abs(b.value - (x/c)) > 1e-10)
+        if (std::abs(b.value - (x/c)) > tolerance)
             throw std::logic_error("oops: operator/");
 
         Eval d = xEval;
         d /= cEval;
-        if (std::abs(d.value - (x/c)) > 1e-10)
+        if (std::abs(d.value - (x/c)) > tolerance)
             throw std::logic_error("oops: operator/");
     }
 
@@ -241,7 +254,7 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
         const auto& xEval = Eval::createVariable(x, 0);
         const Eval& yEval = adFn(xEval);
 
-        const Scalar eps = 1e-10;
+        const Scalar eps = Tolerance< Scalar > :: eps;
         Scalar y = classicFn(x);
         Scalar yStar1 = classicFn(x - eps);
         Scalar yStar2 = classicFn(x + eps);
@@ -276,11 +289,11 @@ void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax,
         const auto& yEval = Eval::createConstant(y);
         const Eval& zEval = adFn(xEval, yEval);
 
-        const Scalar eps = 1e-10;
+        const Scalar eps = Tolerance< Scalar > :: eps;
         Scalar z = classicFn(x, y);
         Scalar zStar1 = classicFn(x - eps, y);
         Scalar zStar2 = classicFn(x + eps, y);
-        Scalar zPrime = (zStar2 - zStar1)/(2*eps);
+        Scalar zPrime = (zStar2 - zStar1)/(2.*eps);
 
         if (z != zEval.value)
             throw std::logic_error("oops: value");
@@ -311,7 +324,7 @@ void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Sc
         const auto& yEval = Eval::createVariable(y, 1);
         const Eval& zEval = adFn(xEval, yEval);
 
-        const Scalar eps = 1e-10;
+        const Scalar eps = Tolerance< Scalar > :: eps;
         Scalar z = classicFn(x, y);
         Scalar zStar1 = classicFn(x, y - eps);
         Scalar zStar2 = classicFn(x, y + eps);
@@ -462,10 +475,9 @@ double myScalarMin(double a, double b)
 double myScalarMax(double a, double b)
 { return std::max(a, b); }
 
-int main()
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
-
     typedef TestVariables VarsDescriptor;
 
     // the following is commented out because it is supposed to produce a compiler
@@ -474,7 +486,7 @@ int main()
     //const auto& result2 = Opm::LocalAd::sqrt(TemperatureEval::createVariable<Pressure>(4.0));
 
     std::cout << "testing operators and constructors\n";
-    testOperators<Scalar, VarsDescriptor>();
+    testOperators<Scalar, VarsDescriptor>( Tolerance< Scalar > :: eps );
 
     std::cout << "testing min()\n";
     test2DFunction1<Scalar, VarsDescriptor>(Opm::LocalAd::min<Scalar, VarsDescriptor, VarsDescriptor::size>,
@@ -552,6 +564,11 @@ int main()
     test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::log<Scalar, VarsDescriptor, VarsDescriptor::size>,
                                            static_cast<Scalar (*)(Scalar)>(std::log),
                                            1e-6, 1e9);
+}
 
+int main()
+{
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }

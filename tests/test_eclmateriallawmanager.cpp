@@ -205,14 +205,13 @@ static const char* fam2DeckString =
     "    0.88     1        1    /  \n"
     "\n";
 
-
-int main()
+template <class Scalar>
+inline void testAll()
 {
     enum { numPhases = 3 };
     enum { waterPhaseIdx = 0 };
     enum { oilPhaseIdx = 1 };
     enum { gasPhaseIdx = 2 };
-    typedef double Scalar;
     typedef Opm::ThreePhaseMaterialTraits<Scalar,
                                           /*wettingPhaseIdx=*/waterPhaseIdx,
                                           /*nonWettingPhaseIdx=*/oilPhaseIdx,
@@ -236,7 +235,7 @@ int main()
 
     {
         typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
-        typedef MaterialLawManager::MaterialLaw MaterialLaw;
+        typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
         const auto deck = parser.parseString(fam1DeckString, parseMode);
         const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseMode);
@@ -317,6 +316,12 @@ int main()
             }
         }
     }
+}
 
+
+int main()
+{
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }

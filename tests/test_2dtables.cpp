@@ -34,20 +34,19 @@
 #include <cmath>
 #include <iostream>
 
-typedef double Scalar;
 
-// prototypes
-Scalar testFn1(Scalar x, Scalar y);
-Scalar testFn2(Scalar x, Scalar y);
-Scalar testFn3(Scalar x, Scalar y);
+template <class ScalarT>
+struct Test
+{
+typedef ScalarT  Scalar;
 
-Scalar testFn1(Scalar x, Scalar /* y */)
+static Scalar testFn1(Scalar x, Scalar /* y */)
 { return x; }
 
-Scalar testFn2(Scalar /* x */, Scalar y)
+static Scalar testFn2(Scalar /* x */, Scalar y)
 { return y; }
 
-Scalar testFn3(Scalar x, Scalar y)
+static Scalar testFn3(Scalar x, Scalar y)
 { return x*y; }
 
 template <class Fn>
@@ -166,11 +165,11 @@ bool compareTables(const UniformTablePtr uTable,
                    Scalar tolerance = 1e-8)
 {
     // make sure the uniform and the non-uniform tables exhibit the same dimensions
-    if (std::abs(uTable->xMin() - uXTable->xMin()) > 1e-8) {
+    if (std::abs(uTable->xMin() - uXTable->xMin()) > tolerance) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMin() != uXTable->xMin(): " << uTable->xMin() << " != " << uXTable->xMin() << "\n";
         return false;
     }
-    if (std::abs(uTable->xMax() - uXTable->xMax()) > 1e-8) {
+    if (std::abs(uTable->xMax() - uXTable->xMax()) > tolerance) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->xMax() != uXTable->xMax(): " << uTable->xMax() << " != " << uXTable->xMax() << "\n";
         return false;
     }
@@ -180,12 +179,12 @@ bool compareTables(const UniformTablePtr uTable,
     }
 
     for (unsigned i = 0; i < uTable->numX(); ++i) {
-        if (std::abs(uTable->yMin() - uXTable->yMin(i)) > 1e-8) {
+        if (std::abs(uTable->yMin() - uXTable->yMin(i)) > tolerance) {
             std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMin() != uXTable->yMin("<<i<<"): " << uTable->yMin() << " != " << uXTable->yMin(i) << "\n";
             return false;
         }
 
-        if (std::abs(uTable->yMax() - uXTable->yMax(i)) > 1e-8) {
+        if (std::abs(uTable->yMax() - uXTable->yMax(i)) > tolerance) {
             std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->yMax() != uXTable->yMax("<<i<<"): " << uTable->yMax() << " != " << uXTable->yMax(i) << "\n";
             return false;
         }
@@ -198,13 +197,13 @@ bool compareTables(const UniformTablePtr uTable,
 
     // make sure that the x and y values are identical
     for (unsigned i = 0; i < uTable->numX(); ++i) {
-        if (std::abs(uTable->iToX(i) - uXTable->iToX(i)) > 1e-8) {
+        if (std::abs(uTable->iToX(i) - uXTable->iToX(i)) > tolerance) {
             std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->iToX("<<i<<") != uXTable->iToX("<<i<<"): " << uTable->iToX(i) << " != " << uXTable->iToX(i) << "\n";
             return false;
         }
 
         for (unsigned j = 0; j < uTable->numY(); ++j) {
-            if (std::abs(uTable->jToY(j) - uXTable->jToY(i, j)) > 1e-8) {
+            if (std::abs(uTable->jToY(j) - uXTable->jToY(i, j)) > tolerance) {
                 std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->jToY("<<j<<") != uXTable->jToY("<<i<<","<<j<<"): " << uTable->jToY(i) << " != " << uXTable->jToY(i, j) << "\n";
                 return false;
             }
@@ -218,8 +217,8 @@ bool compareTables(const UniformTablePtr uTable,
     Scalar xMax = uTable->xMax();
     Scalar yMax = uTable->yMax();
 
-    Scalar x = xMin - 1e-8;
-    Scalar y = yMin - 1e-8;
+    Scalar x = xMin - tolerance;
+    Scalar y = yMin - tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -229,8 +228,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMin - 1e-8;
-    y = yMin + 1e-8;
+    x = xMin - tolerance;
+    y = yMin + tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -240,8 +239,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMin + 1e-8;
-    y = yMin - 1e-8;
+    x = xMin + tolerance;
+    y = yMin - tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -251,8 +250,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMin + 1e-8;
-    y = yMin + 1e-8;
+    x = xMin + tolerance;
+    y = yMin + tolerance;
     if (!uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -262,8 +261,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMax + 1e-8;
-    y = yMax + 1e-8;
+    x = xMax + tolerance;
+    y = yMax + tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -273,8 +272,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMax - 1e-8;
-    y = yMax + 1e-8;
+    x = xMax - tolerance;
+    y = yMax + tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -284,8 +283,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMax + 1e-8;
-    y = yMax - 1e-8;
+    x = xMax + tolerance;
+    y = yMax - tolerance;
     if (uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -295,8 +294,8 @@ bool compareTables(const UniformTablePtr uTable,
         return false;
     }
 
-    x = xMax - 1e-8;
-    y = yMax - 1e-8;
+    x = xMax - tolerance;
+    y = yMax - tolerance;
     if (!uTable->applies(x, y)) {
         std::cerr << __FILE__ << ":" << __LINE__ << ": !uTable->applies("<<x<<","<<y<<")\n";
         return false;
@@ -325,29 +324,33 @@ bool compareTables(const UniformTablePtr uTable,
 
     return true;
 }
+};
 
-int main()
+
+template <class TestType>
+inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
 {
-    auto uniformTab = createUniformTabulatedFunction(testFn1);
-    auto uniformXTab = createUniformXTabulatedFunction(testFn1);
-    if (!compareTables(uniformTab, uniformXTab, testFn1, /*tolerance=*/1e-12))
+    TestType test;
+    auto uniformTab = test.createUniformTabulatedFunction(TestType::testFn1);
+    auto uniformXTab = test.createUniformXTabulatedFunction(TestType::testFn1);
+    if (!test.compareTables(uniformTab, uniformXTab, TestType::testFn1, tolerance))
         return 1;
 
-    uniformTab = createUniformTabulatedFunction(testFn2);
-    uniformXTab = createUniformXTabulatedFunction(testFn2);
-    if (!compareTables(uniformTab, uniformXTab, testFn2, /*tolerance=*/1e-12))
+    uniformTab = test.createUniformTabulatedFunction(TestType::testFn2);
+    uniformXTab = test.createUniformXTabulatedFunction(TestType::testFn2);
+    if (!test.compareTables(uniformTab, uniformXTab, TestType::testFn2, tolerance))
         return 1;
 
-    uniformTab = createUniformTabulatedFunction(testFn3);
-    uniformXTab = createUniformXTabulatedFunction(testFn3);
-    if (!compareTables(uniformTab, uniformXTab, testFn3, /*tolerance=*/1e-2))
+    uniformTab = test.createUniformTabulatedFunction(TestType::testFn3);
+    uniformXTab = test.createUniformXTabulatedFunction(TestType::testFn3);
+    if (!test.compareTables(uniformTab, uniformXTab, TestType::testFn3, /*tolerance=*/1e-2))
         return 1;
 
-    uniformXTab = createUniformXTabulatedFunction2(testFn3);
-    if (!compareTableWithAnalyticFn(uniformXTab,
+    uniformXTab = test.createUniformXTabulatedFunction2(TestType::testFn3);
+    if (!test.compareTableWithAnalyticFn(uniformXTab,
                                     -2.0, 3.0, 100,
                                     -4.0, 5.0, 100,
-                                    testFn3,
+                                    TestType::testFn3,
                                     /*tolerance=*/1e-2))
         return 1;
 
@@ -373,6 +376,15 @@ int main()
         std::cout << "\n";
     }
 #endif
+    return 0;
+}
 
+
+int main()
+{
+    if( testAll< Test<double> >( 1e-12 ) )
+        return 1;
+    if( testAll< Test<float> >( 1e-6 ) )
+        return 1;
     return 0;
 }

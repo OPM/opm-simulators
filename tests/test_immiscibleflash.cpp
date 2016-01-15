@@ -144,10 +144,9 @@ void completeReferenceFluidState(FluidState &fs,
     }
 }
 
-
-int main()
+template <class Scalar>
+inline void testAll()
 {
-    typedef double Scalar;
     typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
     typedef Opm::ImmiscibleFluidState<Scalar, FluidSystem> ImmiscibleFluidState;
 
@@ -162,7 +161,7 @@ int main()
     typedef Opm::TwoPhaseMaterialTraits<Scalar, liquidPhaseIdx, gasPhaseIdx> MaterialLawTraits;
     typedef Opm::RegularizedBrooksCorey<MaterialLawTraits> EffMaterialLaw;
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
-    typedef MaterialLaw::Params MaterialLawParams;
+    typedef typename MaterialLaw::Params MaterialLawParams;
 
     Scalar T = 273.15 + 25;
 
@@ -260,6 +259,11 @@ int main()
 
     // check the flash calculation
     checkImmiscibleFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams2);
+}
 
+int main()
+{
+    testAll< double >();
+    // testAll< float  >();
     return 0;
 }
