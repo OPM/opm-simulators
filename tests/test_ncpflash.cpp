@@ -296,6 +296,6 @@ inline void testAll()
 int main()
 {
     testAll< double >();
-    // testAll< float  >();
+    while (false) testAll< float  >();
     return 0;
 }

@@ -442,6 +442,6 @@ int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
     testAll< double >();
-    // testAll< float  >();
+    testAll< float  >();
     return 0;
 }

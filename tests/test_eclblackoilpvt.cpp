@@ -221,6 +221,8 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
 template <class Scalar>
 inline void testAll()
 {
+    static const Scalar tolerance = std::numeric_limits<Scalar>::epsilon()*1e3;
+
     Opm::Parser parser;
     Opm::ParseMode parseMode;
 
@@ -250,7 +252,7 @@ inline void testAll()
     tmp = constCompWaterPvt.viscosity(/*regionIdx=*/0,
                                       /*temperature=*/273.15 + 20.0,
                                       /*pressure=*/1e5);
-    if (std::abs(tmp - refTmp)  > 1e-30)
+    if (std::abs(tmp - refTmp)  > tolerance)
         OPM_THROW(std::logic_error,
                   "The reference water viscosity at region 0 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
@@ -259,7 +261,7 @@ inline void testAll()
     tmp = constCompWaterPvt.viscosity(/*regionIdx=*/1,
                                       /*temperature=*/273.15 + 20.0,
                                       /*pressure=*/2e5);
-    if (std::abs(tmp - refTmp)  > 1e-30)
+    if (std::abs(tmp - refTmp)  > tolerance)
         OPM_THROW(std::logic_error,
                   "The reference water viscosity at region 1 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
@@ -268,7 +270,7 @@ inline void testAll()
     tmp = constCompWaterPvt.density(/*regionIdx=*/0,
                                     /*temperature=*/273.15 + 20.0,
                                     /*pressure=*/1e5);
-    if (std::abs(tmp - refTmp)  > 5e-14)
+    if (std::abs(tmp - refTmp)  > tolerance)
         OPM_THROW(std::logic_error,
                   "The reference water density at region 0 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
@@ -278,7 +280,7 @@ inline void testAll()
     tmp = constCompWaterPvt.density(/*regionIdx=*/1,
                                     /*temperature=*/273.15 + 20.0,
                                     /*pressure=*/2e5);
-    if (std::abs(tmp - refTmp)  > 5e-14)
+    if (std::abs(tmp - refTmp)  > tolerance)
         OPM_THROW(std::logic_error,
                   "The reference water density at region 1 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
@@ -314,6 +316,6 @@ inline void testAll()
 int main()
 {
     testAll< double >();
-    // testAll< float  >();
+    testAll< float  >();
     return 0;
 }
