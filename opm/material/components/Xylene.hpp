@@ -161,8 +161,8 @@ public:
         //                = 0.5 T * (cp(0.2113 T) + cp(0.7887 T) )
 
         // enthalpy may have arbitrary reference state, but the empirical/fitted heatCapacity function needs Kelvin as input
-        return 0.5*temperature*(spHeatCapLiquidPhase(0.2113*temperature,pressure)
-                                + spHeatCapLiquidPhase(0.7887*temperature,pressure));
+        return 0.5*temperature*(spHeatCapLiquidPhase(Evaluation(0.2113*temperature),pressure)
+                                + spHeatCapLiquidPhase(Evaluation(0.7887*temperature),pressure));
     }
 
     /*!
