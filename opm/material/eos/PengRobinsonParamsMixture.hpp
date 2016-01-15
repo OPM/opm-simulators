@@ -135,7 +135,7 @@ public:
         Scalar sumx = 0.0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
             sumx += fs.moleFraction(phaseIdx, compIdx);
-        sumx = std::max(1e-10, sumx);
+        sumx = std::max(Scalar(1e-10), sumx);
 
         // Calculate the Peng-Robinson parameters of the mixture
         //
@@ -144,11 +144,13 @@ public:
         Scalar newA = 0;
         Scalar newB = 0;
         for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
-            Scalar xi = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compIIdx)));
+            const Scalar moleFracJ = fs.moleFraction(phaseIdx, compIIdx);
+            Scalar xi = std::max(Scalar(0), std::min(Scalar(1), moleFracJ));
             Valgrind::CheckDefined(xi);
 
             for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
-                Scalar xj = std::max(0.0, std::min(1.0, fs.moleFraction(phaseIdx, compJIdx)));
+                const Scalar moleFracJ = fs.moleFraction(phaseIdx, compJIdx );
+                Scalar xj = std::max(Scalar(0), std::min(Scalar(1), moleFracJ));
                 Valgrind::CheckDefined(xj);
 
                 // mixing rule from Reid, page 82
@@ -158,7 +160,7 @@ public:
             }
 
             // mixing rule from Reid, page 82
-            newB += std::max(0.0, xi) * this->pureParams_[compIIdx].b();
+            newB += std::max(Scalar(0), xi) * this->pureParams_[compIIdx].b();
             assert(std::isfinite(newB));
         }
 

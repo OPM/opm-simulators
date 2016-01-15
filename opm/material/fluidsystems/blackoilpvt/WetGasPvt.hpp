@@ -88,8 +88,8 @@ public:
             auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
             {
-                std::vector<Scalar> pressure = saturatedTable.getColumn("PG").vectorCopy( );
-                std::vector<Scalar> rv = saturatedTable.getColumn("RV").vectorCopy( );
+                std::vector<double> pressure = saturatedTable.getColumn("PG").vectorCopy( );
+                std::vector<double> rv = saturatedTable.getColumn("RV").vectorCopy( );
                 oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
                                                pressure , rv );
             }
@@ -125,7 +125,7 @@ public:
             }
 
             {
-                std::vector<Scalar> tmpPressure =  saturatedTable.getColumn("PG").vectorCopy( );
+                std::vector<double> tmpPressure =  saturatedTable.getColumn("PG").vectorCopy( );
 
                 invSatGasB.setXYContainers(tmpPressure, invSatGasBArray);
                 invSatGasBMu.setXYContainers(tmpPressure, invSatGasBMuArray);
@@ -172,9 +172,9 @@ private:
                           const SimpleTable& curTable,
                           const SimpleTable& masterTable)
     {
-        std::vector<Scalar> RvArray = curTable.getColumn("RV").vectorCopy();
-        std::vector<Scalar> gasBArray = curTable.getColumn("BG").vectorCopy();
-        std::vector<Scalar> gasMuArray = curTable.getColumn("MUG").vectorCopy();
+        std::vector<double> RvArray = curTable.getColumn("RV").vectorCopy();
+        std::vector<double> gasBArray = curTable.getColumn("BG").vectorCopy();
+        std::vector<double> gasMuArray = curTable.getColumn("MUG").vectorCopy();
 
         auto& invGasB = inverseGasB_[regionIdx];
         auto& gasMu = gasMu_[regionIdx];

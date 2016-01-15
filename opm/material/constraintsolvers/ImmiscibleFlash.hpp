@@ -287,7 +287,7 @@ protected:
             const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
             setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, xI + eps);
             assert(std::abs(getQuantity_(fluidState, pvIdx) - (xI + eps))
-                   <= std::max(1.0, std::abs(xI))*std::numeric_limits<Scalar>::epsilon()*100);
+                   <= std::max<Scalar>(1.0, std::abs(xI))*std::numeric_limits<Scalar>::epsilon()*100);
 
             // compute derivative of the defect
             calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
@@ -338,12 +338,13 @@ protected:
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
-                delta = std::min(0.2, std::max(-0.2, delta));
+                delta = std::min<Scalar>(0.2, std::max<Scalar>(-0.2, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 30% change in pressure per
                 // iteration
-                delta = std::min(0.30*fluidState.pressure(0), std::max(-0.30*fluidState.pressure(0), delta));
+                delta = std::min<Scalar>(0.30*fluidState.pressure(0),
+                                         std::max<Scalar>(-0.30*fluidState.pressure(0), delta));
             };
 
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
@@ -498,7 +499,7 @@ protected:
 
             // make sure that the first M-1 saturations does not get
             // negative
-            value = std::max(0.0, value);
+            value = std::max<Scalar>(0.0, value);
             fs.setSaturation(phaseIdx, value);
         }
     }
