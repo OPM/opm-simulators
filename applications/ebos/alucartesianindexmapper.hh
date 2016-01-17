@@ -21,8 +21,12 @@
 #ifndef EWOMS_ALU_CARTESIANINDEXMAPPER_HH
 #define EWOMS_ALU_CARTESIANINDEXMAPPER_HH
 
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+
 #include <array>
 #include <cassert>
+#include <memory>
 
 #include <dune/common/exceptions.hh>
 #include <dune/grid/common/datahandleif.hh>

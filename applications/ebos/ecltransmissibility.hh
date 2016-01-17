@@ -26,6 +26,10 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
+#include <ewoms/common/propertysystem.hh>
+
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -35,6 +39,12 @@
 #include <unordered_map>
 
 namespace Ewoms {
+namespace Properties {
+NEW_PROP_TAG(GridView);
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(Simulator);
+}
+
 /*!
  * \ingroup EclBlackOilSimulator
  *

@@ -24,6 +24,8 @@
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
 
+#include <ewoms/common/propertysystem.hh>
+
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 // the ordering of these includes matters. do not touch it if you're not prepared to deal
@@ -36,6 +38,14 @@
 #include <vector>
 
 namespace Ewoms {
+namespace Properties {
+NEW_PROP_TAG(Simulator);
+NEW_PROP_TAG(FluidSystem);
+NEW_PROP_TAG(GridView);
+NEW_PROP_TAG(Scalar);
+NEW_PROP_TAG(MaterialLaw);
+}
+
 /*!
  * \ingroup EclBlackOilSimulator
  *
