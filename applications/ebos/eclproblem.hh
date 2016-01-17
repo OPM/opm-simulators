@@ -730,8 +730,9 @@ private:
 
         const std::vector<int>& pvtnumData =
             eclState->getIntGridProperty("PVTNUM")->getData();
-        rockTableIdx_.resize(gridManager.gridView().size(/*codim=*/0));
-        for (size_t elemIdx = 0; elemIdx < rockTableIdx_.size(); ++ elemIdx) {
+        unsigned numElem = gridManager.gridView().size(0);
+        rockTableIdx_.resize(numElem);
+        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices

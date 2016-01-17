@@ -66,10 +66,8 @@ public:
 private:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
-    typedef Grid* GridPointer;
-    typedef EquilGrid* EquilGridPointer;
     typedef Ewoms::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef CartesianIndexMapper* CartesianIndexMapperPointer;
+    typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper;
 
     static const int dimension = Grid::dimension;
 
@@ -82,6 +80,7 @@ public:
     ~EclAluGridManager()
     {
         delete cartesianIndexMapper_;
+        delete equilCartesianIndexMapper_;
         delete grid_;
         delete equilGrid_;
     }
@@ -119,6 +118,9 @@ public:
      */
     void releaseEquilGrid()
     {
+        delete equilCartesianIndexMapper_;
+        equilCartesianIndexMapper_ = 0;
+
         delete equilGrid_;
         equilGrid_ = 0;
     }
@@ -147,6 +149,12 @@ public:
     const CartesianIndexMapper& cartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
 
+    /*!
+     * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
+     */
+    const EquilCartesianIndexMapper& equilCartesianIndexMapper() const
+    { return *equilCartesianIndexMapper_; }
+
 protected:
     void createGrids_()
     {
@@ -167,14 +175,16 @@ protected:
                                          /*clipZ=*/false,
                                          porv);
 
-        /////
-        // create the simulation grid
-        /////
         cartesianCellId_ = equilGrid_->globalCell();
 
         for (unsigned i = 0; i < dimension; ++i)
             cartesianDimension_[i] = equilGrid_->logicalCartesianSize()[i];
 
+        equilCartesianIndexMapper_ = new EquilCartesianIndexMapper(*equilGrid_);
+
+        /////
+        // create the simulation grid
+        /////
         Dune::FromToGridFactory<Grid> factory;
         grid_ = factory.convert(*equilGrid_, cartesianCellId_);
 
@@ -182,11 +192,12 @@ protected:
             new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_);
     }
 
-    GridPointer grid_;
-    EquilGridPointer equilGrid_;
+    Grid* grid_;
+    EquilGrid* equilGrid_;
     std::vector<int> cartesianCellId_;
     std::array<int,dimension> cartesianDimension_;
-    CartesianIndexMapperPointer cartesianIndexMapper_;
+    CartesianIndexMapper* cartesianIndexMapper_;
+    EquilCartesianIndexMapper* equilCartesianIndexMapper_;
 };
 
 } // namespace Ewoms

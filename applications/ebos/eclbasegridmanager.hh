@@ -212,6 +212,21 @@ public:
     void cartesianCoordinate(unsigned cellIdx, std::array<int,3>& ijk) const
     { return asImp_().cartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
 
+    /*!
+     * \brief Returns the Cartesian cell id given an element index for the grid used for equilibration
+     */
+    unsigned equilCartesianIndex(unsigned compressedEquilCellIdx) const
+    { return asImp_().equilCartesianIndexMapper().cartesianIndex(compressedEquilCellIdx); }
+
+    /*!
+     * \brief Extract Cartesian index triplet (i,j,k) of an active cell of the grid used for EQUIL.
+     *
+     * \param [in] cellIdx Active cell index.
+     * \param [out] ijk Cartesian index triplet
+     */
+    void equilCartesianCoordinate(unsigned cellIdx, std::array<int,3>& ijk) const
+    { return asImp_().equilCartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
+
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }

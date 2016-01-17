@@ -62,11 +62,7 @@ public:
 
 private:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-
-    typedef Grid* GridPointer;
-    typedef EquilGrid* EquilGridPointer;
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef CartesianIndexMapper* CartesianIndexMapperPointer;
 
 public:
     /*!
@@ -77,6 +73,7 @@ public:
     ~EclCpGridManager()
     {
         delete cartesianIndexMapper_;
+        delete equilCartesianIndexMapper_;
         delete grid_;
         delete equilGrid_;
     }
@@ -116,6 +113,9 @@ public:
     {
         delete equilGrid_;
         equilGrid_ = 0;
+
+        delete equilCartesianIndexMapper_;
+        equilCartesianIndexMapper_ = 0;
     }
 
     /*!
@@ -137,6 +137,12 @@ public:
      */
     const CartesianIndexMapper& cartesianIndexMapper() const
     { return *cartesianIndexMapper_; }
+
+    /*!
+     * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
+     */
+    const CartesianIndexMapper& equilCartesianIndexMapper() const
+    { return *equilCartesianIndexMapper_; }
 
 protected:
     void createGrids_()
@@ -160,11 +166,13 @@ protected:
                                          /*flipNormals=*/false,
                                          /*clipZ=*/false,
                                          porv);
+        equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
     }
 
-    GridPointer grid_;
-    EquilGridPointer equilGrid_;
-    CartesianIndexMapperPointer cartesianIndexMapper_;
+    Grid* grid_;
+    EquilGrid* equilGrid_;
+    CartesianIndexMapper* cartesianIndexMapper_;
+    CartesianIndexMapper* equilCartesianIndexMapper_;
 };
 
 } // namespace Ewoms
