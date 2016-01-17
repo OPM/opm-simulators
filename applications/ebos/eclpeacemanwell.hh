@@ -359,7 +359,10 @@ public:
             for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
                 // primary variable using forward differences
-                Scalar eps = 1e-6*std::max<Scalar>(1.0, priVars[priVarIdx]);
+                Scalar eps =
+                    1e3
+                    *std::numeric_limits<Scalar>::epsilon()
+                    *std::max<Scalar>(1.0, priVars[priVarIdx]);
                 priVars[priVarIdx] += eps;
 
                 elemCtx.updateIntensiveQuantities(priVars, dofVars.localDofIdx, /*timeIdx=*/0);
@@ -387,7 +390,10 @@ public:
             const auto& fluidState = elemCtx.intensiveQuantities(dofVars.localDofIdx, /*timeIdx=*/0).fluidState();
 
             // first, we need the source term of the grid for the slightly disturbed well.
-            Scalar eps = std::max<Scalar>(1e5, actualBottomHolePressure_)*1e-8;
+            Scalar eps =
+                1e3
+                *std::numeric_limits<Scalar>::epsilon()
+                *std::max<Scalar>(1e5, actualBottomHolePressure_);
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
@@ -421,7 +427,10 @@ public:
         }
 
         // effect of changing the well's bottom hole pressure on the well equation
-        Scalar eps = std::min<Scalar>(1e7, std::max<Scalar>(1e6, targetBottomHolePressure_))*1e-8;
+        Scalar eps =
+            1e3
+            *std::numeric_limits<Scalar>::epsilon()
+            *std::max<Scalar>(1e7, targetBottomHolePressure_);
         Scalar wellResidStar = wellResidual_(actualBottomHolePressure_ + eps);
         diagBlock[0][0] = (wellResidStar - wellResid)/eps;
     }
@@ -1356,7 +1365,9 @@ protected:
 
         // Newton-Raphson method
         for (int iterNum = 0; iterNum < 20; ++iterNum) {
-            Scalar eps = 1e-9*std::abs(bhp);
+            Scalar eps =
+                std::max<Scalar>(1e-8, std::numeric_limits<Scalar>::epsilon()*1e4)
+                *std::abs(bhp);
 
             Scalar f = wellResidual_(bhp);
             Scalar fStar = wellResidual_(bhp + eps);

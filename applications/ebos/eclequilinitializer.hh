@@ -72,11 +72,31 @@ class EclEquilInitializer
 public:
     template <class MaterialLawManager>
     EclEquilInitializer(const Simulator& simulator,
-                        std::shared_ptr<MaterialLawManager> materialLawManager)
+                        std::shared_ptr<MaterialLawManager> /*materialLawManager*/)
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
+        const auto deck = gridManager.deck();
+        const auto eclState = gridManager.eclState();
         const auto& equilGrid   = gridManager.equilGrid();
+
+        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        typedef Opm::ThreePhaseMaterialTraits<double,
+                                              /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                              /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                              /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> EquilTraits;
+
+        // create a separate instance of the material law manager just because opm-core
+        // only supports double as the type for scalars (but ebos may use float or quad)
+        unsigned numEquilElems = gridManager.equilGrid().size(0);
+        unsigned numCartesianElems = gridManager.cartesianSize();
+        std::vector<int> compressedToCartesianElemIdx(numEquilElems);
+        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx)
+            compressedToCartesianElemIdx[equilElemIdx] = gridManager.equilCartesianIndex(equilElemIdx);
+
+        auto materialLawManager =
+            std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
+        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
 
         // create the data structures which are used by initStateEquil()
         Opm::parameter::ParameterGroup tmpParam;
@@ -89,11 +109,10 @@ public:
             Opm::UgGridHelpers::cartDims(equilGrid),
             tmpParam);
 
-        const unsigned numElems = equilGrid.size(/*codim=*/0);
-        assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numElems) );
+        assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numEquilElems) );
         // initialize the boiler plate of opm-core the state structure.
         Opm::BlackoilState opmBlackoilState;
-        opmBlackoilState.init(numElems,
+        opmBlackoilState.init(numEquilElems,
                               /*numFaces=*/0, // we don't care here
                               numPhases);
 
@@ -106,16 +125,17 @@ public:
                             opmBlackoilState);
 
         // copy the result into the array of initial fluid states
-        initialFluidStates_.resize(numElems);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto &fluidState = initialFluidStates_[elemIdx];
+        initialFluidStates_.resize(numCartesianElems);
+        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
+            unsigned cartesianElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
+            auto &fluidState = initialFluidStates_[cartesianElemIdx];
 
             // get the PVT region index of the current element
-            unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
+            unsigned regionIdx = simulator_.problem().pvtRegionIndex(equilElemIdx);
 
             // set the phase saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar S = opmBlackoilState.saturation()[elemIdx*numPhases + phaseIdx];
+                Scalar S = opmBlackoilState.saturation()[equilElemIdx*numPhases + phaseIdx];
                 fluidState.setSaturation(phaseIdx, S);
             }
 
@@ -123,16 +143,16 @@ public:
             const auto& temperatureVector = opmBlackoilState.temperature();
             Scalar T = FluidSystem::surfaceTemperature;
             if (!temperatureVector.empty())
-                T = temperatureVector[elemIdx];
+                T = temperatureVector[equilElemIdx];
             fluidState.setTemperature(T);
 
             // set the phase pressures. the Opm::BlackoilState only provides the oil
             // phase pressure, so we need to calculate the other phases' pressures
             // ourselfs.
             Dune::FieldVector< Scalar, numPhases >  pC( 0 );
-            const auto& matParams = simulator.problem().materialLawParams(elemIdx);
+            const auto& matParams = simulator.problem().materialLawParams(equilElemIdx);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-            Scalar po = opmBlackoilState.pressure()[elemIdx];
+            Scalar po = opmBlackoilState.pressure()[equilElemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
 
@@ -148,7 +168,7 @@ public:
             if (gridManager.deck()->hasKeyword("DISGAS")) {
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
-                Scalar Rs = opmBlackoilState.gasoilratio()[elemIdx];
+                Scalar Rs = opmBlackoilState.gasoilratio()[equilElemIdx];
                 Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
 
                 if (Rs > RsSat)
@@ -164,7 +184,7 @@ public:
 
             // retrieve the surface volume of vaporized gas
             if (gridManager.deck()->hasKeyword("VAPOIL")) {
-                Scalar Rv = opmBlackoilState.rv()[elemIdx];
+                Scalar Rv = opmBlackoilState.rv()[equilElemIdx];
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 
                 if (Rv > RvSat)
@@ -187,7 +207,12 @@ public:
      * This is supposed to correspond to hydrostatic conditions.
      */
     const ScalarFluidState& initialFluidState(unsigned elemIdx) const
-    { return initialFluidStates_[elemIdx]; }
+    {
+        const auto& gridManager = simulator_.gridManager();
+
+        unsigned cartesianElemIdx = gridManager.cartesianIndex(elemIdx);
+        return initialFluidStates_[cartesianElemIdx];
+    }
 
 protected:
     const Simulator& simulator_;
