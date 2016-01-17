@@ -65,6 +65,9 @@ NEW_PROP_TAG(LensUpperRightZ);
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Ewoms::LensProblem<TypeTag>);
 
+// Use Dune-grid's YaspGrid
+SET_TYPE_PROP(LensBaseProblem, Grid, Dune::YaspGrid<2>);
+
 // Set the wetting phase
 SET_PROP(LensBaseProblem, WettingPhase)
 {
