@@ -125,9 +125,15 @@ public:
      */
     void loadBalance()
     {
+#if HAVE_MPI
+#warning "Since Dune::CpGrid is buggy when load balancing, ebos currently disables parallelism"
+#endif
+#if 0
         // distribute the grid and switch to the distributed view
         grid_->loadBalance();
         grid_->switchToDistributedView();
+#endif
+
         cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
     }
 
