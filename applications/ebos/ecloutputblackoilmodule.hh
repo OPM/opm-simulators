@@ -158,6 +158,9 @@ public:
      */
     void processElement(const ElementContext &elemCtx)
     {
+        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
+            return;
+
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
