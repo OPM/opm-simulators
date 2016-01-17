@@ -403,7 +403,8 @@ public:
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             // free flow boundary
-            Scalar densityW = WettingPhase::density(temperature_, /*pressure=*/1e5);
+            Scalar densityW = WettingPhase::density(temperature_,
+                                                     /*pressure=*/Scalar(1e5));
 
             Scalar T = temperature(context, spaceIdx, timeIdx);
             Scalar pw, Sw;
