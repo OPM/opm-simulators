@@ -120,14 +120,22 @@ namespace Opm {
                                    const UnstructuredGrid& grid);
 
         ///For every table, need to deal with case by case.
-        void swofTableCheck_(const Opm::SwofTable& swofTables);
-        void sgofTableCheck_(const Opm::SgofTable& sgofTables);
-        void slgofTableCheck_(const Opm::SlgofTable& slgofTables);
-        void swfnTableCheck_(const Opm::SwfnTable& swfnTables);
-        void sgfnTableCheck_(const Opm::SgfnTable& sgfnTables);
-        void sof3TableCheck_(const Opm::Sof3Table& sof3Tables);
-        void sof2TableCheck_(const Opm::Sof2Table& sof2Tables);
-        void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables);
+        void swofTableCheck_(const Opm::SwofTable& swofTables,
+                             const int satnumIdx);
+        void sgofTableCheck_(const Opm::SgofTable& sgofTables,
+                             const int satnumIdx);
+        void slgofTableCheck_(const Opm::SlgofTable& slgofTables,
+                              const int satnumIdx);
+        void swfnTableCheck_(const Opm::SwfnTable& swfnTables,
+                             const int satnumIdx);
+        void sgfnTableCheck_(const Opm::SgfnTable& sgfnTables,
+                             const int satnumIdx);
+        void sof3TableCheck_(const Opm::Sof3Table& sof3Tables,
+                             const int satnumIdx);
+        void sof2TableCheck_(const Opm::Sof2Table& sof2Tables,
+                             const int satnumIdx);
+        void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
+                              const int satnumIdx);
     };
 
 } //namespace Opm
