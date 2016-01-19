@@ -31,6 +31,13 @@
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
 #endif
 
 #include <array>

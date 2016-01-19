@@ -35,6 +35,8 @@
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 namespace Opm {
