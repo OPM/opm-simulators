@@ -21,6 +21,9 @@
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
+#include <opm/parser/eclipse/EclipseState/Tables/PvdsTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
+
 
 namespace Opm
 {

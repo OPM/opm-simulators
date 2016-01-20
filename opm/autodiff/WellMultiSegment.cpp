@@ -19,6 +19,8 @@
 */
 
 #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 
 
 namespace Opm
