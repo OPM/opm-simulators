@@ -3,6 +3,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <algorithm>
 #include <array>
@@ -141,7 +143,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
         }
 
         {   // COMPDAT handling
-            CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
+            auto completionSet = well->getCompletions(timeStep);
             // shut completions and open ones stored in this process will have 1 others 0.
             std::vector<std::size_t> completion_on_proc(completionSet->size(), 1);
             std::size_t shut_completions_number = 0;
@@ -372,7 +374,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     // For easy lookup:
     std::map<std::string, int> well_names_to_index;
 
-    ScheduleConstPtr          schedule = eclipseState->getSchedule();
+    auto schedule = eclipseState->getSchedule();
     std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
     std::vector<int>          wells_on_proc;
 

@@ -19,6 +19,8 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgwfnTable.hpp>
 
 namespace Opm{
 

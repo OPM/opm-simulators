@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/core/props/pvt/PvtLiveOil.hpp>
 
