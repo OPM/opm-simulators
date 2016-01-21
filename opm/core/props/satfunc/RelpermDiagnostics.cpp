@@ -178,7 +178,7 @@ namespace Opm{
         } 
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
-            const std::string msg = "Relative permeambility input format: Saturation Family II.";
+            const std::string msg = "Relative permeability input format: Saturation Family II.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
         }
