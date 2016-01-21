@@ -72,7 +72,7 @@ namespace Opm{
             }
         }
 
-        std::string summary_msg = "\n\nError summary:" + 
+        const std::string summary_msg = "\n\nError summary:" + 
             std::string("\nWarnings          " + std::to_string(counter_.warning)) +
             std::string("\nProblems          " + std::to_string(counter_.problem)) +
             std::string("\nErrors            " + std::to_string(counter_.error)) + 
@@ -110,25 +110,25 @@ namespace Opm{
         bool hasOil = deck->hasKeyword("OIL");
 
         if (hasWater && hasGas && !hasOil) {
-            std::string msg = "System:  Water-Gas system.";
+            const std::string msg = "System:  Water-Gas system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::WaterGas;
         }
         if (hasWater && hasOil && !hasGas) { 
-            std::string msg = "System:  Oil-Water system.";
+            const std::string msg = "System:  Oil-Water system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::OilWater; 
         }
         if (hasOil && hasGas && !hasWater) { 
-            std::string msg = "System:  Oil-Gas system.";
+            const std::string msg = "System:  Oil-Gas system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::OilGas; 
         }
         if (hasOil && hasWater && hasGas) {
-            std::string msg = "System:  Black-oil system.";
+            const std::string msg = "System:  Black-oil system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::BlackOil;
@@ -155,14 +155,14 @@ namespace Opm{
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && (!sof3Tables.empty() || !sof2Tables.empty()) && !sgwfnTables.empty();
 
         if (family1 && family2) {
-            std::string msg = "Error:   Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            const std::string msg = "Error:   Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
 
         if (!family1 && !family2) {
-            std::string msg = "Error,   Saturations function must be specified using either \n \
+            const std::string msg = "Error,   Saturations function must be specified using either \n \
                              family 1 or family 2 keywords \n \
                              Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
@@ -172,13 +172,13 @@ namespace Opm{
 
         if (family1 && !family2) {
             satFamily_ = SaturationFunctionFamily::FamilyI;
-            std::string msg = "Relative permeability input format: Saturation Family I.";
+            const std::string msg = "Relative permeability input format: Saturation Family I.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
         } 
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
-            std::string msg = "Relative permeambility input format: Saturation Family II.";
+            const std::string msg = "Relative permeambility input format: Saturation Family II.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
         }
@@ -190,8 +190,8 @@ namespace Opm{
     void RelpermDiagnostics::tableCheck_(EclipseStateConstPtr eclState, 
                                          DeckConstPtr deck)
     {
-        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
+        const int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
+        const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
         std::cout << msg << std::endl;
         streamLog_->addMessage(Log::MessageType::Info, msg);
         const auto& tableManager = eclState->getTableManager();
@@ -245,7 +245,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         ///Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            std::string msg = "Error:   In SWOF table region "+ regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SWOF table region "+ regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -253,13 +253,13 @@ namespace Opm{
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
         if (krw.front() != 0.0) {
-            std::string msg = "Error:   In SWOF table region " + regionIdx + ", first value of krw should be 0.";
+            const std::string msg = "Error:   In SWOF table region " + regionIdx + ", first value of krw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krw.front() < 0.0 || krw.back() > 1.0) {
-            std::string msg = "Error:   In SWOF table region " + regionIdx + ", krw should be in range [0,1].";
+            const std::string msg = "Error:   In SWOF table region " + regionIdx + ", krw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -267,7 +267,7 @@ namespace Opm{
 
         ///Check krow column.
         if (krow.front() > 1.0 || krow.back() < 0.0) {
-            std::string msg = "Error:   In SWOF table region "+ regionIdx + ", krow should be in range [0, 1].";
+            const std::string msg = "Error:   In SWOF table region "+ regionIdx + ", krow should be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -288,13 +288,13 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         ///Check sw column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            std::string msg = "Error:   In SGOF table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGOF table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (sg.front() != 0.0) {
-            std::string msg = "Error:   In SGOF table region " + regionIdx + ", first value of sg should be 0.";
+            const std::string msg = "Error:   In SGOF table region " + regionIdx + ", first value of sg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -302,13 +302,13 @@ namespace Opm{
         ///TODO check endpoint sw.back() == 1. - Sor.
         ///Check krw column.
         if (krg.front() != 0.0) {
-            std::string msg = "Error:   In SGOF table region " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGOF table region " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            std::string msg = "Error:   In SGOF table region " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGOF table region " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -316,7 +316,7 @@ namespace Opm{
 
         ///Check krow column.
         if (krog.front() > 1.0 || krog.back() < 0.0) {
-            std::string msg = "Error:   In SGOF table region " + regionIdx + ", krog should be in range [0, 1].";
+            const std::string msg = "Error:   In SGOF table region " + regionIdx + ", krog should be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -334,33 +334,33 @@ namespace Opm{
         ///Check sl column.
         ///TODO first value means sl = swco + sor
         if (sl.front() < 0.0 || sl.back() > 1.0) {
-            std::string msg = "Error:   In SLGOF table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SLGOF table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (sl.back() != 1.0) {
-            std::string msg = "Error:   In SLGOF table region " + regionIdx + ", last value of sl should be 1.";
+            const std::string msg = "Error:   In SLGOF table region " + regionIdx + ", last value of sl should be 1.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
 
         if (krg.front() > 1.0 || krg.back() < 0) {
-            std::string msg = "Error:   In SLGOF table region " + regionIdx + ", krg shoule be in range [0, 1].";
+            const std::string msg = "Error:   In SLGOF table region " + regionIdx + ", krg shoule be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krg.back() != 0.0) {
-            std::string msg = "Error:   In SLGOF table region " + regionIdx + ", last value of krg hould be 0.";
+            const std::string msg = "Error:   In SLGOF table region " + regionIdx + ", last value of krg hould be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
 
         if (krog.front() < 0.0 || krog.back() > 1.0) {
-            std::string msg = "Error:   In SLGOF table region " + regionIdx + ", krog shoule be in range [0, 1].";
+            const std::string msg = "Error:   In SLGOF table region " + regionIdx + ", krog shoule be in range [0, 1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -379,7 +379,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         ///Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            std::string msg = "Error:   In SWFN table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SWFN table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -387,14 +387,14 @@ namespace Opm{
         
         ///Check krw column.
         if (krw.front() < 0.0 || krw.back() > 1.0) {
-            std::string msg = "Error:   In SWFN table region " + regionIdx + ", krw should be in range [0,1].";
+            const std::string msg = "Error:   In SWFN table region " + regionIdx + ", krw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
 
         if (krw.front() != 0.0) {
-            std::string msg = "Error:   In SWFN table region " + regionIdx + ", first value of krw should be 0.";
+            const std::string msg = "Error:   In SWFN table region " + regionIdx + ", first value of krw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -413,7 +413,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         ///Check sg column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            std::string msg = "Error:   In SGFN table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGFN table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -421,13 +421,13 @@ namespace Opm{
         
         ///Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            std::string msg = "Error:   In SGFN table region " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGFN table region " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krg.front() != 0.0) {
-            std::string msg = "Error:   In SGFN table region " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGFN table region " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -448,7 +448,7 @@ namespace Opm{
         ///Check so column.
         ///TODO: The max so = 1 - Swco
         if (so.front() < 0.0 || so.back() > 1.0) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -456,13 +456,13 @@ namespace Opm{
 
         ///Check krow column.
         if (krow.front() < 0.0 || krow.back() > 1.0) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", krow should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", krow should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krow.front() != 0.0) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", first value of krow should be 0.";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", first value of krow should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -470,21 +470,21 @@ namespace Opm{
 
         ///Check krog column.
         if (krog.front() < 0.0 || krog.back() > 1.0) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", krog should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", krog should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
 
         if (krog.front() != 0.0) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", first value of krog should be 0.";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", first value of krog should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
     
         if (krog.back() != krow.back()) {
-            std::string msg = "Error:   In SOF3 table region " + regionIdx + ", max value of krog and krow should be the same.";
+            const std::string msg = "Error:   In SOF3 table region " + regionIdx + ", max value of krog and krow should be the same.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -504,7 +504,7 @@ namespace Opm{
         ///Check so column.
         ///TODO: The max so = 1 - Swco
         if (so.front() < 0.0 || so.back() > 1.0) {
-            std::string msg = "Error:   In SOF2 table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SOF2 table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -512,13 +512,13 @@ namespace Opm{
 
         ///Check krow column.
         if (kro.front() < 0.0 || kro.back() > 1.0) {
-            std::string msg = "Error:   In SOF2 table region " + regionIdx + ", krow should be in range [0,1].";
+            const std::string msg = "Error:   In SOF2 table region " + regionIdx + ", krow should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (kro.front() != 0.0) {
-            std::string msg = "Error:   In SOF2 table region " + regionIdx + ", first value of krow should be 0.";
+            const std::string msg = "Error:   In SOF2 table region " + regionIdx + ", first value of krow should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -538,7 +538,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         ///Check sg column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            std::string msg = "Error:   In SGWFN table region " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table region " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -546,13 +546,13 @@ namespace Opm{
 
         ///Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            std::string msg = "Error:   In SGWFN table region " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table region " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krg.front() != 0.0) {
-            std::string msg = "Error:   In SGWFN table region " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGWFN table region " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -561,13 +561,13 @@ namespace Opm{
         ///Check krgw column.
         ///TODO check saturation sw = 1. - sg
         if (krgw.front() > 1.0 || krgw.back() < 0.0) {
-            std::string msg = "Error:   In SGWFN table region " + regionIdx + ", krgw should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table region " + regionIdx + ", krgw should be in range [0,1].";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
         }
         if (krgw.back() != 0.0) {
-            std::string msg = "Error:   In SGWFN table region " + regionIdx + ", last value of krgw should be 0.";
+            const std::string msg = "Error:   In SGWFN table region " + regionIdx + ", last value of krgw should be 0.";
             messages_.push_back(msg);
             streamLog_->addMessage(Log::MessageType::Error, msg);
             counter_.error += 1;
@@ -581,10 +581,10 @@ namespace Opm{
                                                      EclipseStateConstPtr eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
+        const int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
         unscaledEpsInfo_.resize(numSatRegions);
 
-        auto tables = eclState->getTableManager();
+        const auto tables = eclState->getTableManager();
         const TableContainer&  swofTables = tables->getSwofTables();
         const TableContainer&  sgofTables = tables->getSgofTables();
         const TableContainer& slgofTables = tables->getSlgofTables();
@@ -596,13 +596,13 @@ namespace Opm{
   
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgmax should not exceed 1-Swco.";
+                const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgco should not exceed 1-Swmax.";
+                const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -636,7 +636,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     std::string msg = "Warning: In region " + std::to_string(satnumIdx+1) + ", Krow(sSomax) should equal Krog(Somax).";
+                     const std::string msg = "Warning: In region " + std::to_string(satnumIdx+1) + ", Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
                      counter_.error += 1;
@@ -645,13 +645,13 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sowcr + Swcr should be less than 1.";
+                const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx+1) + ", Sogcr + Sgcr + Swco should be less than 1.";
+                const std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx+1) + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -671,32 +671,25 @@ namespace Opm{
         //std::vector<int> compressedToCartesianIdx(nc);
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
-        //        for (int cell = 0; cell < nc; ++cell) {
-        //            if (global_cell) {
-        //                compressedToCartesianIdx[cell] = global_cell[cell];
-        //            } else {
-        //                compressedToCartesianIdx[cell] = cell;
-        //            }
-        //        }
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
 
         for (int c = 0; c < nc; ++c) {
-            int cartIdx = compressedToCartesianIdx[c];
+            const int cartIdx = compressedToCartesianIdx[c];
             std::array<int, 3> ijk;
             ijk[0] = cartIdx % dims[0];
             ijk[1] = (cartIdx / dims[0]) % dims[1];
             ijk[2] = cartIdx / dims[0] / dims[1];
-            std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " + 
+            const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " + 
                                    std::to_string(ijk[1]) + ", " +
                                    std::to_string(ijk[2]) + ")";
             scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
 
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
-                std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
+                const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
                 scaled_messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -704,7 +697,7 @@ namespace Opm{
             
             // SGL <= 1.0 - SWU
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
-                std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
+                const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
                 scaled_messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -713,14 +706,14 @@ namespace Opm{
             if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
                 if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.error += 1;
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR + SGCR + SWL exceed 1.0";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR + SGCR + SWL exceed 1.0";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.error += 1;
@@ -729,21 +722,21 @@ namespace Opm{
             ///Following rules come from NEXUS.
             if (fluidSystem_ != FluidSystem::WaterGas) {
                 if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWL > SWCR";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWL > SWCR";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWCR > SOWCR";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SWCR > SOWCR";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Opm::Log::MessageType::Warning, msg);
                     counter_.warning += 1;
                 }
             
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR > SWU";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR > SWU";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.warning += 1;
@@ -752,7 +745,7 @@ namespace Opm{
 
             if (fluidSystem_ != FluidSystem::OilWater) {
                 if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL > SGCR";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL > SGCR";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.warning += 1;
@@ -761,14 +754,14 @@ namespace Opm{
 
             if (fluidSystem_ != FluidSystem::BlackOil) {
                 if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGCR > SOGCR";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGCR > SOGCR";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
-                    std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR > SGU";
+                    const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOGCR > SGU";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
                     counter_.warning += 1;
