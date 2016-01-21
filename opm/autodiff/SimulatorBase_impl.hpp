@@ -21,6 +21,8 @@
 
 #include <algorithm>
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+
 namespace Opm
 {
 

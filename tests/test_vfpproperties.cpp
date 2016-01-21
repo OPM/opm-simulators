@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>

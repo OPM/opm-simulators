@@ -22,6 +22,14 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyadsTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlymaxTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyrockTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/PlyviscTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
+
 
 #include <cmath>
 #include <vector>
