@@ -19,6 +19,7 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/core/utility/compressedToCartesian.hpp>
 
 namespace Opm{
 
@@ -171,13 +172,13 @@ namespace Opm{
 
         if (family1 && !family2) {
             satFamily_ = SaturationFunctionFamily::FamilyI;
-            std::string msg = "relperm: Saturation Family I.";
+            std::string msg = "Relative permeability input format: Saturation Family I.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
         } 
         if (!family1 && family2) {
             satFamily_ = SaturationFunctionFamily::FamilyII;
-            std::string msg = "relperm: Saturation Family II.";
+            std::string msg = "Relative permeambility input format: Saturation Family II.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
         }
@@ -190,7 +191,7 @@ namespace Opm{
                                          DeckConstPtr deck)
     {
         int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
-        std::string msg = "Number of saturation region: " + std::to_string(numSatRegions);
+        std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
         std::cout << msg << std::endl;
         streamLog_->addMessage(Log::MessageType::Info, msg);
         const auto& tableManager = eclState->getTableManager();
@@ -644,13 +645,13 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx) + ", Sowcr + Swcr should less than 1.";
+                std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx) + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx) + ", Sogcr + Sgcr + Swco should less than 1.";
+                std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx) + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -667,16 +668,17 @@ namespace Opm{
                                                    const UnstructuredGrid& grid)
     {
         const int nc = Opm::UgGridHelpers::numCells(grid);
-        std::vector<int> compressedToCartesianIdx(nc);
+        //std::vector<int> compressedToCartesianIdx(nc);
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
-        for (int cell = 0; cell < nc; ++cell) {
-            if (global_cell) {
-                compressedToCartesianIdx[cell] = global_cell[cell];
-            } else {
-                compressedToCartesianIdx[cell] = cell;
-            }
-        }
+        //        for (int cell = 0; cell < nc; ++cell) {
+        //            if (global_cell) {
+        //                compressedToCartesianIdx[cell] = global_cell[cell];
+        //            } else {
+        //                compressedToCartesianIdx[cell] = cell;
+        //            }
+        //        }
+        const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
@@ -691,7 +693,7 @@ namespace Opm{
                                    std::to_string(ijk[1]) + ", " +
                                    std::to_string(ijk[2]) + ")";
             scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
-            
+
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
                 std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
