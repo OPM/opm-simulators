@@ -29,6 +29,7 @@
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
