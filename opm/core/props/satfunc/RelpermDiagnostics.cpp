@@ -206,28 +206,28 @@ namespace Opm{
 
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (deck->hasKeyword("SWOF")) {
-                swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx);
+                swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SGOF")) {
-                sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx);
+                sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SLGOF")) {
-                slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx);
+                slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SWFN")) {
-                swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx);
+                swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SGFN")) {
-                sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx);
+                sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SOF3")) {
-                sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx);
+                sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SOF2")) {
-                sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx);
+                sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
             }
             if (deck->hasKeyword("SGWFN")) {
-                sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx);
+                sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
             }
         }
     }
@@ -596,13 +596,13 @@ namespace Opm{
   
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx) + ", Sgmax should not exceed 1-Swco.";
+                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx) + ", Sgco should not exceed 1-Swmax.";
+                 std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
@@ -636,7 +636,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     std::string msg = "Warning: In region " + std::to_string(satnumIdx) + ", Krow(sSomax) should equal Krog(Somax).";
+                     std::string msg = "Warning: In region " + std::to_string(satnumIdx+1) + ", Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
                      counter_.error += 1;
@@ -645,13 +645,13 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx) + ", Sowcr + Swcr should be less than 1.";
+                std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx) + ", Sogcr + Sgcr + Swco should be less than 1.";
+                std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx+1) + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.error += 1;
