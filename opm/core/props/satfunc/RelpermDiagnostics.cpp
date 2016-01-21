@@ -668,7 +668,6 @@ namespace Opm{
                                                    const UnstructuredGrid& grid)
     {
         const int nc = Opm::UgGridHelpers::numCells(grid);
-        //std::vector<int> compressedToCartesianIdx(nc);
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
