@@ -35,6 +35,9 @@ struct UnstructuredGrid;
 
 namespace Opm
 {
+
+    class Schedule;
+
     struct WellData
     {
         WellType type;
@@ -175,7 +178,7 @@ namespace Opm
                                    const NTG& ntg,
                                    std::vector<int>& wells_on_proc);
 
-        void addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage);
+        void addChildGroups(GroupTreeNodeConstPtr parentNode, std::shared_ptr< const Schedule > schedule, size_t timeStep, const PhaseUsage& phaseUsage);
         void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
 
 

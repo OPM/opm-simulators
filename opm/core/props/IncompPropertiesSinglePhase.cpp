@@ -24,7 +24,8 @@
 #include <opm/core/grid.h>
 #include <opm/core/utility/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
-// #include <iostream>
+
+#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 
 namespace Opm
 {

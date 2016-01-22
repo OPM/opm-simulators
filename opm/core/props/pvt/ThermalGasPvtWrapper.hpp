@@ -23,6 +23,7 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/GasvisctTable.hpp>
 
 #include <vector>
 

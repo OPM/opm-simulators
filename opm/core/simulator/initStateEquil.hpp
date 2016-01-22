@@ -31,6 +31,9 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
 
 #include <array>
 #include <cassert>

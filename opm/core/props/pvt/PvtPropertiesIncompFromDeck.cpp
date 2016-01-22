@@ -24,6 +24,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 
 
 namespace Opm

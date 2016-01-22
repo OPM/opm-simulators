@@ -40,6 +40,9 @@
 
 namespace Opm {
 
+    class Sof2Table;
+    class SgwfnTable;
+
     ///This class is intend to be a relpmer diganostics, to detect
     ///wrong input of relperm table and endpoints.
     class RelpermDiagnostics 
