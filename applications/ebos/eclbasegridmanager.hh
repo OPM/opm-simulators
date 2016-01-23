@@ -93,6 +93,11 @@ public:
     EclBaseGridManager(Simulator &simulator)
         : ParentType(simulator)
     {
+        int myRank = 0;
+#if HAVE_MPI
+        MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+#endif
+
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
 
         // compute the base name of the input file name
@@ -118,13 +123,16 @@ public:
         for (size_t i = 0; i < rawCaseName.size(); ++i)
             caseName_ += std::toupper(rawCaseName[i]);
 
+        if (myRank == 0)
+            std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
+
         Opm::ParserPtr parser(new Opm::Parser());
         typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
         ParseModePairs tmp;
         tmp.push_back(ParseModePair(Opm::ParseMode::PARSE_RANDOM_SLASH , Opm::InputError::IGNORE));
         Opm::ParseMode parseMode(tmp);
-        std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
+
         deck_ = parser->parseFile(fileName , parseMode);
         eclState_.reset(new Opm::EclipseState(deck_, parseMode));
 
