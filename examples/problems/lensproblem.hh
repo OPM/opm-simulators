@@ -143,6 +143,12 @@ SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 
 // By default, include the intrinsic permeability tensor to the VTK output files
 SET_BOOL_PROP(LensBaseProblem, VtkWriteIntrinsicPermeabilities, true);
+
+// enable the storage cache by default for this problem
+SET_BOOL_PROP(LensBaseProblem, EnableStorageCache, true);
+
+// enable the cache for intensive quantities by default for this problem
+SET_BOOL_PROP(LensBaseProblem, EnableIntensiveQuantityCache, true);
 } // namespace Properties
 
 /*!

@@ -34,7 +34,12 @@
 namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(LensProblemEcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+
+// use the element centered finite volume spatial discretization
 SET_TAG_PROP(LensProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
+
+// use automatic differentiation for this simulator
+SET_TAG_PROP(LensProblemEcfv, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 }}
 
 int main(int argc, char **argv)
