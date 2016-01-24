@@ -45,6 +45,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/simulator/SimulatorIncompTwophase.hpp>
 
+#include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
