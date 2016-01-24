@@ -24,6 +24,8 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/parser/eclipse/Deck/DeckItem.hpp>
+#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 
 

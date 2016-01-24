@@ -41,9 +41,9 @@ using namespace Opm;
 
 BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     ParserPtr parser(new Parser());
-    boost::filesystem::path scheduleFile("wells_group.data");
+    std::string scheduleFile("wells_group.data");
     ParseMode parseMode;
-    DeckConstPtr deck =  parser->parseFile(scheduleFile.string() , parseMode);
+    DeckConstPtr deck =  parser->parseFile(scheduleFile, parseMode);
     EclipseStateConstPtr eclipseState(new EclipseState(deck, parseMode));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
