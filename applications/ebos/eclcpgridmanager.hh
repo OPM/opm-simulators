@@ -130,12 +130,13 @@ public:
         int mpiSize = 1;
         MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-        if (mpiRank == 0 && mpiSize > 1) {
-            // TODO: remove the two statements below as soon as Dune::CpGrid works
-            // correctly for the Norne deck!
-            std::cerr << "Since Dune::CpGrid is buggy when load balancing, "
-                      << "ebos currently disables parallelism when using Dune::CpGrid.\n";
-            std::abort();
+        if (mpiSize > 1) {
+            // TODO: always load balance as soon as Dune::CpGrid works correctly for the
+            // Norne deck!
+            if (mpiRank == 0)
+                std::cerr << "Since Dune::CpGrid is buggy when load balancing, "
+                          << "ebos currently disables parallelism when using Dune::CpGrid.\n";
+            std::exit(1);
 
             // distribute the grid and switch to the distributed view.
             grid_->loadBalance();
