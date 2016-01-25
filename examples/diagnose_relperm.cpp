@@ -65,7 +65,11 @@ try
     ParserPtr parser(new Opm::Parser);
     Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
                               { ParseMode::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
-                              { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE}
+                              { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE},
+                              { ParseMode::UNSUPPORTED_SCHEDULE_GEO_MODIFIER, InputError::IGNORE},
+                              { ParseMode::UNSUPPORTED_COMPORD_TYPE, InputError::IGNORE},
+                              { ParseMode::UNSUPPORTED_INITIAL_THPRES, InputError::IGNORE},
+                              { ParseMode::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
                              });
     Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseMode));
     eclState.reset(new EclipseState(deck, parseMode));
