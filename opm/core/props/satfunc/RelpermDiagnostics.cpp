@@ -595,16 +595,16 @@ namespace Opm{
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
              unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
-  
+             const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + std::to_string(satnumIdx+1) + ", Sgmax should not exceed 1-Swco.";
+                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.warning += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + std::to_string(satnumIdx+1) + ", Sgco should not exceed 1-Swmax.";
+                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.warning += 1;
@@ -638,7 +638,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     const std::string msg = "-- Warning: In saturation table SATNUM = " + std::to_string(satnumIdx+1) + ", Krow(Somax) should be equal to Krog(Somax).";
+                     const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Krow(Somax) should be equal to Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
                      counter_.warning += 1;
@@ -647,13 +647,13 @@ namespace Opm{
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              ///Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + std::to_string(satnumIdx+1) + ", Sowcr + Swcr should be less than 1.";
+                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.warning += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + std::to_string(satnumIdx+1) + ", Sogcr + Sgcr + Swco should be less than 1.";
+                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
                 counter_.warning += 1;
@@ -676,7 +676,7 @@ namespace Opm{
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
-        auto satnum = eclState->getIntGridProperty("SATNUM");
+        const auto satnum = eclState->getIntGridProperty("SATNUM");
 
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
