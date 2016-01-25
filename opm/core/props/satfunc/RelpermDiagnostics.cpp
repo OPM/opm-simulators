@@ -45,7 +45,7 @@ namespace Opm{
                                        Opm::DeckConstPtr deck,
                                        const UnstructuredGrid& grid)
     {
-        std::cout << "\n\n***************Relperm Diagnostics***************\n\n";
+        std::cout << "\n\n***************Saturation Functions Diagnostics***************\n\n";
         phaseCheck_(deck);
         satFamilyCheck_(eclState);
         tableCheck_(eclState, deck);
