@@ -601,13 +601,13 @@ namespace Opm{
                 const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
                 const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
              }
 
              ///Krow(Sou) == Krog(Sou) for three-phase
@@ -641,7 +641,7 @@ namespace Opm{
                      const std::string msg = "Warning: In region " + std::to_string(satnumIdx+1) + ", Krow(sSomax) should equal Krog(Somax).";
                      messages_.push_back(msg);
                      streamLog_->addMessage(Log::MessageType::Warning, msg);
-                     counter_.error += 1;
+                     counter_.warning += 1;
                  }
              }
              ///Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
@@ -650,13 +650,13 @@ namespace Opm{
                 const std::string msg = "Warning: In saturation region " + std::to_string(satnumIdx+1) + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
                 const std::string msg = "Warning: In saturation rgion " + std::to_string(satnumIdx+1) + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
             }
         }
     }
@@ -693,7 +693,7 @@ namespace Opm{
                 const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGU exceed 1.0 - SWL";
                 scaled_messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
             }
             
             // SGL <= 1.0 - SWU
@@ -701,7 +701,7 @@ namespace Opm{
                 const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SGL exceed 1.0 - SWU";
                 scaled_messages_.push_back(msg);
                 streamLog_->addMessage(Log::MessageType::Warning, msg);
-                counter_.error += 1;
+                counter_.warning += 1;
             }
 
             if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
@@ -710,7 +710,7 @@ namespace Opm{
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SOWCR + SWCR exceed 1.0";
                     scaled_messages_.push_back(msg);
                     streamLog_->addMessage(Log::MessageType::Warning, msg);
-                    counter_.error += 1;
+                    counter_.warning += 1;
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
