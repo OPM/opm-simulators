@@ -22,6 +22,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/Point2D.hpp>
 #include <cmath>
+#include <iostream>
 #include <vector>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/common/ErrorMacros.hpp>
