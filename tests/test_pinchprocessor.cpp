@@ -41,6 +41,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/core/pressure/tpfa/TransTpfa.hpp>
 #include <opm/core/grid/PinchProcessor.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
